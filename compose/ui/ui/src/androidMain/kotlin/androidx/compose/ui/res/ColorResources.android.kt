@@ -39,7 +39,8 @@ fun colorResource(@ColorRes id: Int): Color {
     return if (Build.VERSION.SDK_INT >= 23) {
         ColorResourceHelper.getColor(context, id)
     } else {
-        @Suppress("DEPRECATION") Color(context.resources.getColor(id))
+        @Suppress("DEPRECATION")
+        Color(context.resources.getColor(id))
     }
 }
 

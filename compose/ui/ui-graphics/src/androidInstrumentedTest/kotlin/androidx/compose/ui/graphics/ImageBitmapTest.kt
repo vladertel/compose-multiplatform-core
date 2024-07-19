@@ -31,14 +31,13 @@ class ImageBitmapTest {
     @Test
     fun testCreatedImage() {
         val cs = ColorSpaces.Srgb
-        val image =
-            ImageBitmap(
-                width = 10,
-                height = 20,
-                config = ImageBitmapConfig.Argb8888,
-                hasAlpha = false,
-                colorSpace = cs
-            )
+        val image = ImageBitmap(
+            width = 10,
+            height = 20,
+            config = ImageBitmapConfig.Argb8888,
+            hasAlpha = false,
+            colorSpace = cs
+        )
 
         assertEquals(10, image.width)
         assertEquals(20, image.height)

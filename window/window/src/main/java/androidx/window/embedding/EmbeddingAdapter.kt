@@ -56,11 +56,14 @@ import androidx.window.extensions.embedding.SplitPlaceholderRule.Builder as Spli
 import androidx.window.layout.WindowMetricsCalculator
 import androidx.window.layout.adapter.extensions.ExtensionsWindowLayoutInfoAdapter
 
-/** Adapter class that translates data classes between Extension and Jetpack interfaces. */
-internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) {
+/**
+ * Adapter class that translates data classes between Extension and Jetpack interfaces.
+ */
+internal class EmbeddingAdapter(
+    private val predicateAdapter: PredicateAdapter
+) {
     private val vendorApiLevel
         get() = WindowSdkExtensions.getInstance().extensionVersion
-
     private val api1Impl = VendorApiLevel1Impl(predicateAdapter)
     private val api2Impl = VendorApiLevel2Impl()
 
@@ -100,16 +103,16 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
                     is RatioSplitType -> ratio(splitType.ratio)
                     else -> throw IllegalArgumentException("Unknown split type: $splitType")
                 }
-            )
-            .setLayoutDirection(
+            ).setLayoutDirection(
                 when (val layoutDirection = splitAttributes.layoutDirection) {
                     OEMSplitAttributes.LayoutDirection.LEFT_TO_RIGHT -> LEFT_TO_RIGHT
                     OEMSplitAttributes.LayoutDirection.RIGHT_TO_LEFT -> RIGHT_TO_LEFT
                     OEMSplitAttributes.LayoutDirection.LOCALE -> LOCALE
                     OEMSplitAttributes.LayoutDirection.TOP_TO_BOTTOM -> TOP_TO_BOTTOM
                     OEMSplitAttributes.LayoutDirection.BOTTOM_TO_TOP -> BOTTOM_TO_TOP
-                    else ->
-                        throw IllegalArgumentException("Unknown layout direction: $layoutDirection")
+                    else -> throw IllegalArgumentException(
+                        "Unknown layout direction: $layoutDirection"
+                    )
                 }
             )
             .build()
@@ -117,29 +120,30 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
     fun translateSplitAttributesCalculator(
         calculator: (SplitAttributesCalculatorParams) -> SplitAttributes
     ): Function<OEMSplitAttributesCalculatorParams, OEMSplitAttributes> = Function { oemParams ->
-        translateSplitAttributes(calculator.invoke(translate(oemParams)))
-    }
+            translateSplitAttributes(calculator.invoke(translate(oemParams)))
+        }
 
     @SuppressLint("NewApi")
-    fun translate(params: OEMSplitAttributesCalculatorParams): SplitAttributesCalculatorParams =
-        let {
-            val taskWindowMetrics = params.parentWindowMetrics
-            val taskConfiguration = params.parentConfiguration
-            val windowLayoutInfo = params.parentWindowLayoutInfo
-            val defaultSplitAttributes = params.defaultSplitAttributes
-            val areDefaultConstraintsSatisfied = params.areDefaultConstraintsSatisfied()
-            val splitRuleTag = params.splitRuleTag
-            val windowMetrics = WindowMetricsCalculator.translateWindowMetrics(taskWindowMetrics)
+    fun translate(
+        params: OEMSplitAttributesCalculatorParams
+    ): SplitAttributesCalculatorParams = let {
+        val taskWindowMetrics = params.parentWindowMetrics
+        val taskConfiguration = params.parentConfiguration
+        val windowLayoutInfo = params.parentWindowLayoutInfo
+        val defaultSplitAttributes = params.defaultSplitAttributes
+        val areDefaultConstraintsSatisfied = params.areDefaultConstraintsSatisfied()
+        val splitRuleTag = params.splitRuleTag
+        val windowMetrics = WindowMetricsCalculator.translateWindowMetrics(taskWindowMetrics)
 
-            SplitAttributesCalculatorParams(
-                windowMetrics,
-                taskConfiguration,
-                ExtensionsWindowLayoutInfoAdapter.translate(windowMetrics, windowLayoutInfo),
-                translate(defaultSplitAttributes),
-                areDefaultConstraintsSatisfied,
-                splitRuleTag,
-            )
-        }
+        SplitAttributesCalculatorParams(
+            windowMetrics,
+            taskConfiguration,
+            ExtensionsWindowLayoutInfoAdapter.translate(windowMetrics, windowLayoutInfo),
+            translate(defaultSplitAttributes),
+            areDefaultConstraintsSatisfied,
+            splitRuleTag,
+        )
+    }
 
     private fun translateSplitPairRule(
         context: Context,
@@ -164,27 +168,21 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
                         )
                     }
                 }
-            val windowMetricsPredicate =
-                Predicate<WindowMetrics> { windowMetrics ->
-                    rule.checkParentMetrics(context, windowMetrics)
-                }
+            val windowMetricsPredicate = Predicate<WindowMetrics> { windowMetrics ->
+                rule.checkParentMetrics(context, windowMetrics)
+            }
             val tag = rule.tag
-            val builder =
-                SplitPairRuleBuilder(
-                        activitiesPairPredicate,
-                        activityIntentPredicate,
-                        windowMetricsPredicate,
-                    )
-                    .setDefaultSplitAttributes(
-                        translateSplitAttributes(rule.defaultSplitAttributes)
-                    )
-                    .setFinishPrimaryWithSecondary(
-                        translateFinishBehavior(rule.finishPrimaryWithSecondary)
-                    )
-                    .setFinishSecondaryWithPrimary(
-                        translateFinishBehavior(rule.finishSecondaryWithPrimary)
-                    )
-                    .setShouldClearTop(rule.clearTop)
+            val builder = SplitPairRuleBuilder(
+                activitiesPairPredicate,
+                activityIntentPredicate,
+                windowMetricsPredicate,
+            )
+                .setDefaultSplitAttributes(translateSplitAttributes(rule.defaultSplitAttributes))
+                .setFinishPrimaryWithSecondary(
+                    translateFinishBehavior(rule.finishPrimaryWithSecondary)
+                ).setFinishSecondaryWithPrimary(
+                    translateFinishBehavior(rule.finishSecondaryWithPrimary)
+                ).setShouldClearTop(rule.clearTop)
 
             if (tag != null) {
                 builder.setTag(tag)
@@ -206,10 +204,9 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
                     RIGHT_TO_LEFT -> OEMSplitAttributes.LayoutDirection.RIGHT_TO_LEFT
                     TOP_TO_BOTTOM -> OEMSplitAttributes.LayoutDirection.TOP_TO_BOTTOM
                     BOTTOM_TO_TOP -> OEMSplitAttributes.LayoutDirection.BOTTOM_TO_TOP
-                    else ->
-                        throw IllegalArgumentException(
-                            "Unsupported layoutDirection:" + "$splitAttributes.layoutDirection"
-                        )
+                    else -> throw IllegalArgumentException("Unsupported layoutDirection:" +
+                        "$splitAttributes.layoutDirection"
+                    )
                 }
             )
             .build()
@@ -218,16 +215,17 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
     private fun translateSplitType(splitType: SplitType): OEMSplitType {
         require(vendorApiLevel >= 2)
         return when (splitType) {
-            SPLIT_TYPE_HINGE -> OEMSplitType.HingeSplitType(translateSplitType(SPLIT_TYPE_EQUAL))
+            SPLIT_TYPE_HINGE -> OEMSplitType.HingeSplitType(
+                translateSplitType(SPLIT_TYPE_EQUAL)
+            )
             SPLIT_TYPE_EXPAND -> OEMSplitType.ExpandContainersSplitType()
             else -> {
                 val ratio = splitType.value
                 if (ratio > 0.0 && ratio < 1.0) {
                     RatioSplitType(ratio)
                 } else {
-                    throw IllegalArgumentException(
-                        "Unsupported SplitType: $splitType with value:" + " ${splitType.value}"
-                    )
+                    throw IllegalArgumentException("Unsupported SplitType: $splitType with value:" +
+                        " ${splitType.value}")
                 }
             }
         }
@@ -239,35 +237,33 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
         predicateClass: Class<*>
     ): OEMSplitPlaceholderRule {
         if (vendorApiLevel < 2) {
-            return api1Impl.translateSplitPlaceholderRuleCompat(context, rule, predicateClass)
+            return api1Impl.translateSplitPlaceholderRuleCompat(
+                context,
+                rule,
+                predicateClass
+            )
         } else {
-            val activityPredicate =
-                Predicate<Activity> { activity ->
-                    rule.filters.any { filter -> filter.matchesActivity(activity) }
-                }
-            val intentPredicate =
-                Predicate<Intent> { intent ->
-                    rule.filters.any { filter -> filter.matchesIntent(intent) }
-                }
-            val windowMetricsPredicate =
-                Predicate<WindowMetrics> { windowMetrics ->
-                    rule.checkParentMetrics(context, windowMetrics)
-                }
+            val activityPredicate = Predicate<Activity> { activity ->
+                rule.filters.any { filter -> filter.matchesActivity(activity) }
+            }
+            val intentPredicate = Predicate<Intent> { intent ->
+                rule.filters.any { filter -> filter.matchesIntent(intent) }
+            }
+            val windowMetricsPredicate = Predicate<WindowMetrics> { windowMetrics ->
+                rule.checkParentMetrics(context, windowMetrics)
+            }
             val tag = rule.tag
-            val builder =
-                SplitPlaceholderRuleBuilder(
-                        rule.placeholderIntent,
-                        activityPredicate,
-                        intentPredicate,
-                        windowMetricsPredicate
-                    )
-                    .setSticky(rule.isSticky)
-                    .setDefaultSplitAttributes(
-                        translateSplitAttributes(rule.defaultSplitAttributes)
-                    )
-                    .setFinishPrimaryWithPlaceholder(
-                        translateFinishBehavior(rule.finishPrimaryWithPlaceholder)
-                    )
+            val builder = SplitPlaceholderRuleBuilder(
+                rule.placeholderIntent,
+                activityPredicate,
+                intentPredicate,
+                windowMetricsPredicate
+            )
+                .setSticky(rule.isSticky)
+                .setDefaultSplitAttributes(translateSplitAttributes(rule.defaultSplitAttributes))
+                .setFinishPrimaryWithPlaceholder(
+                    translateFinishBehavior(rule.finishPrimaryWithPlaceholder)
+                )
             if (tag != null) {
                 builder.setTag(tag)
             }
@@ -290,17 +286,14 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
         if (vendorApiLevel < 2) {
             return api1Impl.translateActivityRuleCompat(rule, predicateClass)
         } else {
-            val activityPredicate =
-                Predicate<Activity> { activity ->
-                    rule.filters.any { filter -> filter.matchesActivity(activity) }
-                }
-            val intentPredicate =
-                Predicate<Intent> { intent ->
-                    rule.filters.any { filter -> filter.matchesIntent(intent) }
-                }
-            val builder =
-                ActivityRuleBuilder(activityPredicate, intentPredicate)
-                    .setShouldAlwaysExpand(rule.alwaysExpand)
+            val activityPredicate = Predicate<Activity> { activity ->
+                rule.filters.any { filter -> filter.matchesActivity(activity) }
+            }
+            val intentPredicate = Predicate<Intent> { intent ->
+                rule.filters.any { filter -> filter.matchesIntent(intent) }
+            }
+            val builder = ActivityRuleBuilder(activityPredicate, intentPredicate)
+                .setShouldAlwaysExpand(rule.alwaysExpand)
             val tag = rule.tag
             if (tag != null) {
                 builder.setTag(tag)
@@ -311,35 +304,31 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
 
     fun translate(context: Context, rules: Set<EmbeddingRule>): Set<OEMEmbeddingRule> {
         val predicateClass = predicateAdapter.predicateClassOrNull() ?: return emptySet()
-        return rules
-            .map { rule ->
-                when (rule) {
-                    is SplitPairRule -> translateSplitPairRule(context, rule, predicateClass)
-                    is SplitPlaceholderRule ->
-                        translateSplitPlaceholderRule(context, rule, predicateClass)
-                    is ActivityRule -> translateActivityRule(rule, predicateClass)
-                    else -> throw IllegalArgumentException("Unsupported rule type")
-                }
+        return rules.map { rule ->
+            when (rule) {
+                is SplitPairRule -> translateSplitPairRule(context, rule, predicateClass)
+                is SplitPlaceholderRule ->
+                    translateSplitPlaceholderRule(context, rule, predicateClass)
+                is ActivityRule -> translateActivityRule(rule, predicateClass)
+                else -> throw IllegalArgumentException("Unsupported rule type")
             }
-            .toSet()
+        }.toSet()
     }
 
     /** Provides backward compatibility for Window extensions with API level 2 */
     private inner class VendorApiLevel2Impl {
         fun translateCompat(splitInfo: OEMSplitInfo): SplitInfo {
             val primaryActivityStack = splitInfo.primaryActivityStack
-            val primaryFragment =
-                ActivityStack(
-                    primaryActivityStack.activities,
-                    primaryActivityStack.isEmpty,
-                )
+            val primaryFragment = ActivityStack(
+                primaryActivityStack.activities,
+                primaryActivityStack.isEmpty,
+            )
 
             val secondaryActivityStack = splitInfo.secondaryActivityStack
-            val secondaryFragment =
-                ActivityStack(
-                    secondaryActivityStack.activities,
-                    secondaryActivityStack.isEmpty,
-                )
+            val secondaryFragment = ActivityStack(
+                secondaryActivityStack.activities,
+                secondaryActivityStack.isEmpty,
+            )
             return SplitInfo(
                 primaryFragment,
                 secondaryFragment,
@@ -349,11 +338,15 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
         }
     }
 
-    /** Provides backward compatibility for [WindowSdkExtensions] version 1 */
+    /**
+     * Provides backward compatibility for [WindowSdkExtensions] version 1
+     */
     // Suppress deprecation because this object is to provide backward compatibility.
     @Suppress("DEPRECATION")
     private inner class VendorApiLevel1Impl(val predicateAdapter: PredicateAdapter) {
-        /** Obtains [SplitAttributes] from [OEMSplitInfo] with [WindowSdkExtensions] version 1 */
+        /**
+         * Obtains [SplitAttributes] from [OEMSplitInfo] with [WindowSdkExtensions] version 1
+         */
         fun getSplitAttributesCompat(splitInfo: OEMSplitInfo): SplitAttributes =
             SplitAttributes.Builder()
                 .setSplitType(SplitType.buildSplitTypeFromValue(splitInfo.splitRatio))
@@ -363,14 +356,13 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
         fun translateActivityRuleCompat(
             rule: ActivityRule,
             predicateClass: Class<*>
-        ): OEMActivityRule =
-            ActivityRuleBuilder::class
-                .java
-                .getConstructor(predicateClass, predicateClass)
-                .newInstance(
-                    translateActivityPredicates(rule.filters),
-                    translateIntentPredicates(rule.filters)
-                )
+        ): OEMActivityRule = ActivityRuleBuilder::class.java.getConstructor(
+                predicateClass,
+                predicateClass
+            ).newInstance(
+                translateActivityPredicates(rule.filters),
+                translateIntentPredicates(rule.filters)
+            )
                 .setShouldAlwaysExpand(rule.alwaysExpand)
                 .build()
 
@@ -378,21 +370,21 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
             context: Context,
             rule: SplitPlaceholderRule,
             predicateClass: Class<*>
-        ): OEMSplitPlaceholderRule =
-            SplitPlaceholderRuleBuilder::class
-                .java
-                .getConstructor(Intent::class.java, predicateClass, predicateClass, predicateClass)
-                .newInstance(
-                    rule.placeholderIntent,
-                    translateActivityPredicates(rule.filters),
-                    translateIntentPredicates(rule.filters),
-                    translateParentMetricsPredicate(context, rule)
-                )
+        ): OEMSplitPlaceholderRule = SplitPlaceholderRuleBuilder::class.java.getConstructor(
+                Intent::class.java,
+                predicateClass,
+                predicateClass,
+                predicateClass
+            ).newInstance(
+                rule.placeholderIntent,
+                translateActivityPredicates(rule.filters),
+                translateIntentPredicates(rule.filters),
+                translateParentMetricsPredicate(context, rule)
+            )
                 .setSticky(rule.isSticky)
                 .setFinishPrimaryWithSecondary(
                     translateFinishBehavior(rule.finishPrimaryWithPlaceholder)
-                )
-                .setDefaultSplitAttributesCompat(rule.defaultSplitAttributes)
+                ).setDefaultSplitAttributesCompat(rule.defaultSplitAttributes)
                 .build()
 
         private fun SplitPlaceholderRuleBuilder.setDefaultSplitAttributesCompat(
@@ -408,43 +400,39 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
             context: Context,
             rule: SplitPairRule,
             predicateClass: Class<*>
-        ): OEMSplitPairRule =
-            SplitPairRuleBuilder::class
-                .java
-                .getConstructor(
-                    predicateClass,
-                    predicateClass,
-                    predicateClass,
-                )
-                .newInstance(
-                    translateActivityPairPredicates(rule.filters),
-                    translateActivityIntentPredicates(rule.filters),
-                    translateParentMetricsPredicate(context, rule)
-                )
+        ): OEMSplitPairRule = SplitPairRuleBuilder::class.java.getConstructor(
+                predicateClass,
+                predicateClass,
+                predicateClass,
+            ).newInstance(
+                translateActivityPairPredicates(rule.filters),
+                translateActivityIntentPredicates(rule.filters),
+                translateParentMetricsPredicate(context, rule)
+            )
                 .setDefaultSplitAttributesCompat(rule.defaultSplitAttributes)
                 .setShouldClearTop(rule.clearTop)
                 .setFinishPrimaryWithSecondary(
                     translateFinishBehavior(rule.finishPrimaryWithSecondary)
-                )
-                .setFinishSecondaryWithPrimary(
+                ).setFinishSecondaryWithPrimary(
                     translateFinishBehavior(rule.finishSecondaryWithPrimary)
-                )
-                .build()
+                ).build()
 
         @SuppressLint("ClassVerificationFailure", "NewApi")
         private fun translateActivityPairPredicates(splitPairFilters: Set<SplitPairFilter>): Any {
-            return predicateAdapter.buildPairPredicate(Activity::class, Activity::class) {
-                first: Activity,
-                second: Activity ->
+            return predicateAdapter.buildPairPredicate(
+                Activity::class,
+                Activity::class
+            ) { first: Activity, second: Activity ->
                 splitPairFilters.any { filter -> filter.matchesActivityPair(first, second) }
             }
         }
 
         @SuppressLint("ClassVerificationFailure", "NewApi")
         private fun translateActivityIntentPredicates(splitPairFilters: Set<SplitPairFilter>): Any {
-            return predicateAdapter.buildPairPredicate(Activity::class, Intent::class) {
-                first,
-                second ->
+            return predicateAdapter.buildPairPredicate(
+                Activity::class,
+                Intent::class
+            ) { first, second ->
                 splitPairFilters.any { filter -> filter.matchesActivityIntentPair(first, second) }
             }
         }
@@ -460,7 +448,7 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
         private fun translateSplitAttributesCompatInternal(
             attrs: SplitAttributes
         ): Pair<Float, Int> = // Use a (Float, Integer) pair since SplitAttributes weren't supported
-        if (!isSplitAttributesSupported(attrs)) {
+            if (!isSplitAttributesSupported(attrs)) {
                 // Fallback to expand the secondary container if the SplitAttributes are not
                 // supported.
                 Pair(0.0f, LayoutDirection.LOCALE)
@@ -472,22 +460,18 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
                         LOCALE -> LayoutDirection.LOCALE
                         LEFT_TO_RIGHT -> LayoutDirection.LTR
                         RIGHT_TO_LEFT -> LayoutDirection.RTL
-                        else ->
-                            throw IllegalStateException(
-                                "Unsupported layout direction must be" +
-                                    " covered in @isSplitAttributesSupported!"
-                            )
+                        else -> throw IllegalStateException("Unsupported layout direction must be" +
+                            " covered in @isSplitAttributesSupported!")
                     }
                 )
             }
 
         /**
-         * Returns `true` if `attrs` is compatible with vendor API level 1 and doesn't use the new
-         * features introduced in vendor API level 2 or higher.
+         * Returns `true` if `attrs` is compatible with vendor API level 1 and
+         * doesn't use the new features introduced in vendor API level 2 or higher.
          */
         private fun isSplitAttributesSupported(attrs: SplitAttributes) =
-            attrs.splitType.value in 0.0..1.0 &&
-                attrs.splitType.value != 1.0f &&
+            attrs.splitType.value in 0.0..1.0 && attrs.splitType.value != 1.0f &&
                 attrs.layoutDirection in arrayOf(LEFT_TO_RIGHT, RIGHT_TO_LEFT, LOCALE)
 
         @SuppressLint("ClassVerificationFailure", "NewApi")
@@ -510,8 +494,7 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
                 splitRule.checkParentMetrics(context, windowMetrics)
             }
 
-        fun translateCompat(splitInfo: OEMSplitInfo): SplitInfo =
-            SplitInfo(
+        fun translateCompat(splitInfo: OEMSplitInfo): SplitInfo = SplitInfo(
                 ActivityStack(
                     splitInfo.primaryActivityStack.activities,
                     splitInfo.primaryActivityStack.isEmpty,
@@ -527,8 +510,8 @@ internal class EmbeddingAdapter(private val predicateAdapter: PredicateAdapter) 
 
     internal companion object {
         /**
-         * The default token of [SplitInfo], which provides compatibility for device prior to vendor
-         * API level 3
+         * The default token of [SplitInfo], which provides compatibility for device prior to
+         * vendor API level 3
          */
         val INVALID_SPLIT_INFO_TOKEN = Binder()
         /**

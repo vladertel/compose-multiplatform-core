@@ -26,12 +26,14 @@ import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 
 @DoNotInline
-internal fun ConnectivityManager.unregisterNetworkCallbackCompat(networkCallback: NetworkCallback) =
-    unregisterNetworkCallback(networkCallback)
+internal fun ConnectivityManager.unregisterNetworkCallbackCompat(
+    networkCallback: NetworkCallback
+) = unregisterNetworkCallback(networkCallback)
 
 @DoNotInline
-internal fun ConnectivityManager.getNetworkCapabilitiesCompat(network: Network?) =
-    getNetworkCapabilities(network)
+internal fun ConnectivityManager.getNetworkCapabilitiesCompat(
+    network: Network?
+) = getNetworkCapabilities(network)
 
 @DoNotInline
 internal fun NetworkCapabilities.hasCapabilityCompat(capability: Int) = hasCapability(capability)

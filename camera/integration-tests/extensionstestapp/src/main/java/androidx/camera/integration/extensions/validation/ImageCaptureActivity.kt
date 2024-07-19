@@ -101,19 +101,17 @@ class ImageCaptureActivity : AppCompatActivity() {
     private var flashMode = FLASH_MODE_OFF
     private var evToast: Toast? = null
 
-    private val evFutureCallback: FutureCallback<Int?> =
-        object : FutureCallback<Int?> {
-            override fun onSuccess(result: Int?) {
-                val ev =
-                    result!! * camera.cameraInfo.exposureState.exposureCompensationStep.toFloat()
-                Log.d(TAG, "success new EV: $ev")
-                showEVToast(String.format("EV: %.2f", ev))
-            }
-
-            override fun onFailure(t: Throwable) {
-                Log.d(TAG, "failed $t")
-            }
+    private val evFutureCallback: FutureCallback<Int?> = object : FutureCallback<Int?> {
+        override fun onSuccess(result: Int?) {
+            val ev = result!! * camera.cameraInfo.exposureState.exposureCompensationStep.toFloat()
+            Log.d(TAG, "success new EV: $ev")
+            showEVToast(String.format("EV: %.2f", ev))
         }
+
+        override fun onFailure(t: Throwable) {
+            Log.d(TAG, "failed $t")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -146,7 +144,9 @@ class ImageCaptureActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        lifecycleScope.launch { bindUseCases() }
+        lifecycleScope.launch {
+            bindUseCases()
+        }
     }
 
     override fun onDestroy() {
@@ -155,22 +155,30 @@ class ImageCaptureActivity : AppCompatActivity() {
     }
 
     private suspend fun initialize() {
-        cameraProvider = ProcessCameraProvider.getInstance(this).await()
-        extensionsManager = ExtensionsManager.getInstanceAsync(this, cameraProvider).await()
+        cameraProvider =
+            ProcessCameraProvider.getInstance(this).await()
+        extensionsManager =
+            ExtensionsManager.getInstanceAsync(this, cameraProvider).await()
     }
 
     @SuppressLint("WrongConstant")
     private fun bindUseCases() {
         val cameraSelectorById = createCameraSelectorById(cameraId)
 
-        if (!extensionsManager.isExtensionAvailable(cameraSelectorById, extensionMode)) {
+        if (!extensionsManager.isExtensionAvailable(
+                cameraSelectorById,
+                extensionMode
+            )
+        ) {
             result.putExtra(INTENT_EXTRA_KEY_ERROR_CODE, ERROR_CODE_EXTENSION_MODE_NOT_SUPPORT)
             finish()
             return
         }
 
-        val extensionCameraSelector =
-            extensionsManager.getExtensionEnabledCameraSelector(cameraSelectorById, extensionMode)
+        val extensionCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(
+            cameraSelectorById,
+            extensionMode
+        )
 
         imageCapture = ImageCapture.Builder().setFlashMode(flashMode).build()
         val preview = Preview.Builder().build()
@@ -178,13 +186,12 @@ class ImageCaptureActivity : AppCompatActivity() {
 
         try {
             cameraProvider.unbindAll()
-            camera =
-                cameraProvider.bindToLifecycle(
-                    this,
-                    if (extensionEnabled) extensionCameraSelector else cameraSelectorById,
-                    imageCapture,
-                    preview
-                )
+            camera = cameraProvider.bindToLifecycle(
+                this,
+                if (extensionEnabled) extensionCameraSelector else cameraSelectorById,
+                imageCapture,
+                preview
+            )
 
             Log.d(TAG, "Extension mode is $extensionMode (enabled: $extensionEnabled)")
         } catch (e: IllegalArgumentException) {
@@ -222,16 +229,14 @@ class ImageCaptureActivity : AppCompatActivity() {
                 ContextCompat.getMainExecutor(this),
                 object : ImageCapture.OnImageCapturedCallback() {
                     override fun onCaptureSuccess(image: ImageProxy) {
-                        val filenamePrefix =
-                            "[CameraXExtension][Camera-$cameraId][${
+                        val filenamePrefix = "[CameraXExtension][Camera-$cameraId][${
                             getLensFacingStringFromInt(lensFacing)
                         }][${getExtensionModeStringFromId(extensionMode)}]"
-                        val filename =
-                            if (extensionEnabled) {
-                                "$filenamePrefix[Enabled]"
-                            } else {
-                                "$filenamePrefix[Disabled]"
-                            }
+                        val filename = if (extensionEnabled) {
+                            "$filenamePrefix[Enabled]"
+                        } else {
+                            "$filenamePrefix[Disabled]"
+                        }
 
                         val uri =
                             FileUtil.saveImageToTempFile(image.image!!, filename, "", cacheDir)
@@ -255,8 +260,7 @@ class ImageCaptureActivity : AppCompatActivity() {
                         result.putExtra(INTENT_EXTRA_KEY_ERROR_CODE, ERROR_CODE_TAKE_PICTURE_FAILED)
                         finish()
                     }
-                }
-            )
+                })
         }
     }
 
@@ -266,13 +270,12 @@ class ImageCaptureActivity : AppCompatActivity() {
         val flashToggleButton: ImageButton = findViewById(R.id.flash_toggle)
 
         flashToggleButton.setOnClickListener {
-            flashMode =
-                when (flashMode) {
-                    FLASH_MODE_ON -> FLASH_MODE_OFF
-                    FLASH_MODE_OFF -> FLASH_MODE_AUTO
-                    FLASH_MODE_AUTO -> FLASH_MODE_ON
-                    else -> throw IllegalArgumentException("Invalid flash mode!")
-                }
+            flashMode = when (flashMode) {
+                FLASH_MODE_ON -> FLASH_MODE_OFF
+                FLASH_MODE_OFF -> FLASH_MODE_AUTO
+                FLASH_MODE_AUTO -> FLASH_MODE_ON
+                else -> throw IllegalArgumentException("Invalid flash mode!")
+            }
 
             imageCapture.flashMode = flashMode
             setFlashButtonResource()
@@ -294,10 +297,14 @@ class ImageCaptureActivity : AppCompatActivity() {
 
     private fun setUpEvButtons() {
         val plusEvButton: Button = findViewById(R.id.plus_ev_button)
-        plusEvButton.setOnClickListener { plusEv() }
+        plusEvButton.setOnClickListener {
+            plusEv()
+        }
 
         val decEvButton: Button = findViewById(R.id.dec_ev_button)
-        decEvButton.setOnClickListener { decEv() }
+        decEvButton.setOnClickListener {
+            decEv()
+        }
     }
 
     private fun plusEv() {
@@ -307,7 +314,10 @@ class ImageCaptureActivity : AppCompatActivity() {
         if (range.contains(ec + 1)) {
             val future: ListenableFuture<Int> =
                 camera.cameraControl.setExposureCompensationIndex(ec + 1)
-            Futures.addCallback(future, evFutureCallback, CameraXExecutors.mainThreadExecutor())
+            Futures.addCallback(
+                future, evFutureCallback,
+                CameraXExecutors.mainThreadExecutor()
+            )
         } else {
             showEVToast(
                 String.format(
@@ -325,7 +335,10 @@ class ImageCaptureActivity : AppCompatActivity() {
         if (range.contains(ec - 1)) {
             val future: ListenableFuture<Int> =
                 camera.cameraControl.setExposureCompensationIndex(ec - 1)
-            Futures.addCallback(future, evFutureCallback, CameraXExecutors.mainThreadExecutor())
+            Futures.addCallback(
+                future, evFutureCallback,
+                CameraXExecutors.mainThreadExecutor()
+            )
         } else {
             showEVToast(
                 String.format(
@@ -346,14 +359,15 @@ class ImageCaptureActivity : AppCompatActivity() {
         val onTapGestureListener: GestureDetector.OnGestureListener =
             object : SimpleOnGestureListener() {
                 override fun onSingleTapUp(e: MotionEvent): Boolean {
-                    val factory: MeteringPointFactory =
-                        DisplayOrientedMeteringPointFactory(
-                            viewFinder.getDisplay(),
-                            camera.getCameraInfo(),
-                            viewFinder.getWidth().toFloat(),
-                            viewFinder.getHeight().toFloat()
-                        )
-                    val action = FocusMeteringAction.Builder(factory.createPoint(e.x, e.y)).build()
+                    val factory: MeteringPointFactory = DisplayOrientedMeteringPointFactory(
+                        viewFinder.getDisplay(),
+                        camera.getCameraInfo(),
+                        viewFinder.getWidth().toFloat(),
+                        viewFinder.getHeight().toFloat()
+                    )
+                    val action = FocusMeteringAction.Builder(
+                        factory.createPoint(e.x, e.y)
+                    ).build()
                     Futures.addCallback(
                         camera.getCameraControl().startFocusAndMetering(action),
                         object : FutureCallback<FocusMeteringResult?> {
@@ -375,7 +389,8 @@ class ImageCaptureActivity : AppCompatActivity() {
             object : SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
                     val cameraInfo: CameraInfo = camera.getCameraInfo()
-                    val newZoom = (cameraInfo.zoomState.value!!.zoomRatio * detector.scaleFactor)
+                    val newZoom = (cameraInfo.zoomState.value!!.zoomRatio
+                        * detector.scaleFactor)
                     setZoomRatio(newZoom)
                     return true
                 }
@@ -393,27 +408,24 @@ class ImageCaptureActivity : AppCompatActivity() {
     internal fun setZoomRatio(newZoom: Float) {
         val cameraInfo: CameraInfo = camera.getCameraInfo()
         val cameraControl: CameraControl = camera.getCameraControl()
-        val clampedNewZoom =
-            MathUtils.clamp(
-                newZoom,
-                cameraInfo.zoomState.value!!.minZoomRatio,
-                cameraInfo.zoomState.value!!.maxZoomRatio
-            )
-        Log.d(TAG, "setZoomRatio ratio: $clampedNewZoom")
-        val listenableFuture = cameraControl.setZoomRatio(clampedNewZoom)
-        Futures.addCallback(
-            listenableFuture,
-            object : FutureCallback<Void?> {
-                override fun onSuccess(result: Void?) {
-                    Log.d(TAG, "setZoomRatio onSuccess: $clampedNewZoom")
-                }
-
-                override fun onFailure(t: Throwable) {
-                    Log.d(TAG, "setZoomRatio failed, $t")
-                }
-            },
-            ContextCompat.getMainExecutor(this)
+        val clampedNewZoom = MathUtils.clamp(
+            newZoom,
+            cameraInfo.zoomState.value!!.minZoomRatio,
+            cameraInfo.zoomState.value!!.maxZoomRatio
         )
+        Log.d(TAG, "setZoomRatio ratio: $clampedNewZoom")
+        val listenableFuture = cameraControl.setZoomRatio(
+            clampedNewZoom
+        )
+        Futures.addCallback(listenableFuture, object : FutureCallback<Void?> {
+            override fun onSuccess(result: Void?) {
+                Log.d(TAG, "setZoomRatio onSuccess: $clampedNewZoom")
+            }
+
+            override fun onFailure(t: Throwable) {
+                Log.d(TAG, "setZoomRatio failed, $t")
+            }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     private fun setUpExtensionToggleButton() {
@@ -443,15 +455,14 @@ class ImageCaptureActivity : AppCompatActivity() {
             return
         }
 
-        val resourceId =
-            when (extensionMode) {
-                ExtensionMode.HDR -> R.drawable.outline_hdr_on
-                ExtensionMode.BOKEH -> R.drawable.outline_portrait
-                ExtensionMode.NIGHT -> R.drawable.outline_bedtime
-                ExtensionMode.FACE_RETOUCH -> R.drawable.outline_face_retouching_natural
-                ExtensionMode.AUTO -> R.drawable.outline_auto_awesome
-                else -> throw IllegalArgumentException("Invalid extension mode!")
-            }
+        val resourceId = when (extensionMode) {
+            ExtensionMode.HDR -> R.drawable.outline_hdr_on
+            ExtensionMode.BOKEH -> R.drawable.outline_portrait
+            ExtensionMode.NIGHT -> R.drawable.outline_bedtime
+            ExtensionMode.FACE_RETOUCH -> R.drawable.outline_face_retouching_natural
+            ExtensionMode.AUTO -> R.drawable.outline_auto_awesome
+            else -> throw IllegalArgumentException("Invalid extension mode!")
+        }
 
         extensionToggleButton.setImageResource(resourceId)
     }

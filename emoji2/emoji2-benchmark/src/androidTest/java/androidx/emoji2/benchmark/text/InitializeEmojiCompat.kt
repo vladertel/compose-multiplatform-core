@@ -30,15 +30,12 @@ fun initializeEmojiCompatWithBundledForTest(replaceAll: Boolean = true) {
     config.setMetadataLoadStrategy(EmojiCompat.LOAD_STRATEGY_MANUAL)
     config.setReplaceAll(replaceAll)
     val latch = CountDownLatch(1)
-    config.registerInitCallback(
-        DirectExecutor(),
-        object : EmojiCompat.InitCallback() {
-            override fun onInitialized() {
-                super.onInitialized()
-                latch.countDown()
-            }
+    config.registerInitCallback(DirectExecutor(), object : EmojiCompat.InitCallback() {
+        override fun onInitialized() {
+            super.onInitialized()
+            latch.countDown()
         }
-    )
+    })
     EmojiCompat.reset(config).load()
     latch.await(2, TimeUnit.SECONDS)
 }

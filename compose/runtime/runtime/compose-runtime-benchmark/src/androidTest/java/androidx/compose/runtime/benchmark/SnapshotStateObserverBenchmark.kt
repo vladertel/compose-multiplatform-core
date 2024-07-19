@@ -71,7 +71,9 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
 
     @After
     fun teardown() {
-        runOnUiThread { stateObserver.stop() }
+        runOnUiThread {
+            stateObserver.stop()
+        }
     }
 
     @Test
@@ -80,7 +82,9 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
         runOnUiThread {
             benchmarkRule.measureRepeated {
                 runWithTimingDisabled {
-                    nodes.forEach { node -> stateObserver.clear(node) }
+                    nodes.forEach { node ->
+                        stateObserver.clear(node)
+                    }
                     random = Random(0)
                 }
                 setupObservations()
@@ -93,14 +97,20 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
         assumeTrue(Build.VERSION.SDK_INT != 29)
         runOnUiThread {
             val list = mutableListOf<Any>()
-            repeat(10) { list += nodes[random.nextInt(ScopeCount)] }
+            repeat(10) {
+                list += nodes[random.nextInt(ScopeCount)]
+            }
             benchmarkRule.measureRepeated {
                 runWithTimingDisabled {
                     random = Random(0)
-                    nodes.forEach { node -> stateObserver.clear(node) }
+                    nodes.forEach { node ->
+                        stateObserver.clear(node)
+                    }
                 }
                 stateObserver.observeReads(nodes[0], doNothing) {
-                    list.forEach { node -> observeForNode(node) }
+                    list.forEach { node ->
+                        observeForNode(node)
+                    }
                 }
             }
         }
@@ -117,17 +127,23 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
 
             stateObserver.observeReads(node, doNothing) {
                 // read derived state a few times
-                repeat(10) { derivedState.value }
+                repeat(10) {
+                    derivedState.value
+                }
             }
 
             benchmarkRule.measureRepeated {
                 stateObserver.observeReads(node, doNothing) {
                     // read derived state a few times
-                    repeat(10) { derivedState.value }
+                    repeat(10) {
+                        derivedState.value
+                    }
                 }
 
                 runWithTimingDisabled {
-                    states.forEach { it.value += 1 }
+                    states.forEach {
+                        it.value += 1
+                    }
                     Snapshot.sendApplyNotifications()
                 }
             }
@@ -139,7 +155,9 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
         assumeTrue(Build.VERSION.SDK_INT != 29)
         runOnUiThread {
             val list = mutableListOf<Any>()
-            repeat(100) { list += nodes[random.nextInt(ScopeCount)] }
+            repeat(100) {
+                list += nodes[random.nextInt(ScopeCount)]
+            }
 
             fun observeRecursive(index: Int) {
                 if (index == 100) return
@@ -153,7 +171,9 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
             benchmarkRule.measureRepeated {
                 runWithTimingDisabled {
                     random = Random(0)
-                    nodes.forEach { node -> stateObserver.clear(node) }
+                    nodes.forEach { node ->
+                        stateObserver.clear(node)
+                    }
                 }
                 observeRecursive(0)
             }
@@ -168,9 +188,13 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
             nodeSet.addAll(nodes)
 
             benchmarkRule.measureRepeated {
-                stateObserver.clearIf { node -> node in nodeSet }
+                stateObserver.clearIf { node ->
+                    node in nodeSet
+                }
                 random = Random(0)
-                runWithTimingDisabled { setupObservations() }
+                runWithTimingDisabled {
+                    setupObservations()
+                }
             }
         }
     }
@@ -181,9 +205,13 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
         runOnUiThread {
             benchmarkRule.measureRepeated {
                 for (i in 0 until nodes.size) {
-                    stateObserver.clearIf { node -> (node as Int) < i }
+                    stateObserver.clearIf { node ->
+                        (node as Int) < i
+                    }
                 }
-                runWithTimingDisabled { setupObservations() }
+                runWithTimingDisabled {
+                    setupObservations()
+                }
             }
         }
     }
@@ -193,7 +221,9 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
         assumeTrue(Build.VERSION.SDK_INT != 29)
         runOnUiThread {
             val states = mutableSetOf<Int>()
-            repeat(50) { states += random.nextInt(StateCount) }
+            repeat(50) {
+                states += random.nextInt(StateCount)
+            }
             val snapshot: Snapshot = Snapshot.current
             benchmarkRule.measureRepeated {
                 random = Random(0)
@@ -207,7 +237,6 @@ class SnapshotStateObserverBenchmark : ComposeBenchmarkBase() {
     }
 
     private fun runOnUiThread(block: () -> Unit) = activityRule.runOnUiThread(block)
-
     private fun setupObservations() = nodes.forEach { observeForNode(it) }
 
     private fun observeForNode(node: Any) {

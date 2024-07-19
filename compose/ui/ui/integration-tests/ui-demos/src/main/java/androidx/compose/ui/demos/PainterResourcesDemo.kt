@@ -39,7 +39,9 @@ internal class PainterResourcesDemoActivity : ComponentActivity() {
             )
         )
 
-        composeView.setContent { PainterResourcesDemo() }
+        composeView.setContent {
+            PainterResourcesDemo()
+        }
     }
 }
 

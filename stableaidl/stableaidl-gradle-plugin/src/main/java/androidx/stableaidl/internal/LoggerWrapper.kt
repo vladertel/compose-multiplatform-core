@@ -43,14 +43,13 @@ class LoggerWrapper(private val logger: Logger) : ILogger {
         if (!logger.isEnabled(ILOGGER_ERROR)) {
             return
         }
-        val s =
-            if (sOrig == null) {
-                "[no message defined]"
-            } else if (objects.isNotEmpty()) {
-                String.format(sOrig, *objects)
-            } else {
-                sOrig
-            }
+        val s = if (sOrig == null) {
+            "[no message defined]"
+        } else if (objects.isNotEmpty()) {
+            String.format(sOrig, *objects)
+        } else {
+            sOrig
+        }
         if (throwable == null) {
             logger.log(ILOGGER_ERROR, s)
         } else {
@@ -97,7 +96,6 @@ class LoggerWrapper(private val logger: Logger) : ILogger {
         private val ILOGGER_LIFECYCLE = LogLevel.LIFECYCLE
         private val ILOGGER_INFO = LogLevel.INFO
         private val ILOGGER_VERBOSE = LogLevel.INFO
-
         fun getLogger(klass: Class<*>): LoggerWrapper {
             return LoggerWrapper(Logging.getLogger(klass))
         }

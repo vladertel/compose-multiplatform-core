@@ -20,5 +20,8 @@ import kotlin.math.PI
 
 private const val RadiansToDegrees = (180.0 / PI).toFloat()
 
-/** Converts [radians] to degrees. */
-@PublishedApi internal fun degrees(radians: Float): Float = RadiansToDegrees * radians
+/**
+ * Converts [radians] to degrees.
+ */
+@PublishedApi
+internal fun degrees(radians: Float): Float = RadiansToDegrees * radians

@@ -22,11 +22,13 @@ import android.media.CamcorderProfile;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
 import androidx.camera.camera2.internal.compat.StreamConfigurationMapCompat;
 import androidx.camera.core.Logger;
+import androidx.camera.core.impl.EncoderProfilesResolutionValidator;
 import androidx.camera.core.impl.ImageFormatConstants;
-import androidx.camera.core.impl.Quirk;
+import androidx.camera.core.impl.quirk.ProfileResolutionQuirk;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,8 +52,10 @@ import java.util.List;
  *                  resolution is contained in the list returned.
  *     Device(s): All legacy devices
  *     @see CamcorderProfile#hasProfile
+ *     @see EncoderProfilesResolutionValidator
  */
-public class CamcorderProfileResolutionQuirk implements Quirk {
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+public class CamcorderProfileResolutionQuirk implements ProfileResolutionQuirk {
     private static final String TAG = "CamcorderProfileResolutionQuirk";
 
     static boolean load(@NonNull CameraCharacteristicsCompat characteristicsCompat) {
@@ -70,6 +74,7 @@ public class CamcorderProfileResolutionQuirk implements Quirk {
     }
 
     /** Returns the supported video resolutions. */
+    @Override
     @NonNull
     public List<Size> getSupportedResolutions() {
         if (mSupportedResolutions == null) {

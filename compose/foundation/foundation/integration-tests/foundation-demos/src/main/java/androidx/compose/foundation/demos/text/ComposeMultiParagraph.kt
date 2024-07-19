@@ -64,11 +64,12 @@ fun TextDemoParagraph() {
     val text1 = "paragraph1 paragraph1 paragraph1 paragraph1 paragraph1"
     val text2 = "paragraph2 paragraph2 paragraph2 paragraph2 paragraph2"
     Text(
-        text =
-            buildAnnotatedString {
-                append(text1)
-                withStyle(ParagraphStyle()) { append(text2) }
-            },
+        text = buildAnnotatedString {
+            append(text1)
+            withStyle(ParagraphStyle()) {
+                append(text2)
+            }
+        },
         style = TextStyle(fontSize = fontSize6)
     )
 }
@@ -79,7 +80,9 @@ fun TextDemoParagraphTextAlign() {
     val annotatedString = buildAnnotatedString {
         TextAlign.values().forEach { textAlign ->
             val str = List(4) { "TextAlign.$textAlign" }.joinToString(" ")
-            withStyle(ParagraphStyle(textAlign = textAlign)) { append(str) }
+            withStyle(ParagraphStyle(textAlign = textAlign)) {
+                append(str)
+            }
         }
     }
 
@@ -93,25 +96,27 @@ fun TextDemoParagraphLineHeight() {
     val text3 = "LineHeight=50sp: $lorem"
 
     Text(
-        text =
-            AnnotatedString(
-                text = text1 + text2 + text3,
-                spanStyles = listOf(),
-                paragraphStyles =
-                    listOf(
-                        AnnotatedString.Range(ParagraphStyle(lineHeight = 30.sp), 0, text1.length),
-                        AnnotatedString.Range(
-                            ParagraphStyle(lineHeight = 40.sp),
-                            text1.length,
-                            text1.length + text2.length
-                        ),
-                        AnnotatedString.Range(
-                            ParagraphStyle(lineHeight = 50.sp),
-                            text1.length + text2.length,
-                            text1.length + text2.length + text3.length
-                        )
-                    )
-            ),
+        text = AnnotatedString(
+            text = text1 + text2 + text3,
+            spanStyles = listOf(),
+            paragraphStyles = listOf(
+                AnnotatedString.Range(
+                    ParagraphStyle(lineHeight = 30.sp),
+                    0,
+                    text1.length
+                ),
+                AnnotatedString.Range(
+                    ParagraphStyle(lineHeight = 40.sp),
+                    text1.length,
+                    text1.length + text2.length
+                ),
+                AnnotatedString.Range(
+                    ParagraphStyle(lineHeight = 50.sp),
+                    text1.length + text2.length,
+                    text1.length + text2.length + text3.length
+                )
+            )
+        ),
         style = TextStyle(fontSize = fontSize6)
     )
 }
@@ -123,15 +128,14 @@ fun TextDemoParagraphIndent() {
     val text2 = "TextIndent restLine TextIndent restLine TextIndent restLine"
 
     Text(
-        text =
-            buildAnnotatedString {
-                withStyle(ParagraphStyle(textIndent = TextIndent(firstLine = 20.sp))) {
-                    append(text1)
-                }
-                withStyle(ParagraphStyle(textIndent = TextIndent(restLine = 20.sp))) {
-                    append(text2)
-                }
-            },
+        text = buildAnnotatedString {
+            withStyle(ParagraphStyle(textIndent = TextIndent(firstLine = 20.sp))) {
+                append(text1)
+            }
+            withStyle(ParagraphStyle(textIndent = TextIndent(restLine = 20.sp))) {
+                append(text2)
+            }
+        },
         style = TextStyle(fontSize = fontSize6)
     )
 }
@@ -141,11 +145,14 @@ fun TextDemoParagraphTextDirection() {
     val ltrText = "Hello World! Hello World! Hello World! Hello World! Hello World!"
     val rtlText = "مرحبا بالعالم مرحبا بالعالم مرحبا بالعالم مرحبا بالعالم مرحبا بالعالم"
     Text(
-        text =
-            buildAnnotatedString {
-                withStyle(ParagraphStyle()) { append(ltrText) }
-                withStyle(ParagraphStyle()) { append(rtlText) }
-            },
+        text = buildAnnotatedString {
+            withStyle(ParagraphStyle()) {
+                append(ltrText)
+            }
+            withStyle(ParagraphStyle()) {
+                append(rtlText)
+            }
+        },
         style = TextStyle(fontSize = fontSize6)
     )
 }

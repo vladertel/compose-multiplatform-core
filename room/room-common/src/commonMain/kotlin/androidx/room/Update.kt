@@ -24,10 +24,11 @@ import kotlin.reflect.KClass
  * exists (checked by primary keys). If they don't already exists, this option will not change the
  * database.
  *
- * All of the parameters of the Update method must either be classes annotated with [Entity] or
- * collections/array of it.
+ * All of the parameters of the Update method must either be classes annotated with [Entity]
+ * or collections/array of it.
  *
  * Example:
+ *
  * ```
  * @Dao
  * public interface MusicDao {
@@ -39,8 +40,9 @@ import kotlin.reflect.KClass
  * }
  * ```
  *
- * If the target entity is specified via [entity] then the parameters can be of arbitrary POJO types
- * that will be interpreted as partial entities. For example:
+ * If the target entity is specified via [entity] then the parameters can be of arbitrary
+ * POJO types that will be interpreted as partial entities. For example:
+ *
  * ```
  * @Entity
  * data class Playlist (
@@ -89,19 +91,20 @@ public annotation class Update(
      *
      * By default the target entity is interpreted by the method parameters.
      *
-     * @return the target entity of the update method or none if the method should use the parameter
-     *   type entities.
+     * @return the target entity of the update method or none if the method should use the
+     *         parameter type entities.
      */
     val entity: KClass<*> = Any::class,
 
     /**
      * What to do if a conflict happens.
      *
-     * Use [OnConflictStrategy.ABORT] (default) to roll back the transaction on conflict. Use
-     * [OnConflictStrategy.REPLACE] to replace the existing rows with the new rows. Use
-     * [OnConflictStrategy.IGNORE] to keep the existing rows.
+     * Use [OnConflictStrategy.ABORT] (default) to roll back the transaction on conflict.
+     * Use [OnConflictStrategy.REPLACE] to replace the existing rows with the new rows.
+     * Use [OnConflictStrategy.IGNORE] to keep the existing rows.
      *
      * @return How to handle conflicts. Defaults to [OnConflictStrategy.ABORT].
      */
-    @get:OnConflictStrategy val onConflict: Int = OnConflictStrategy.ABORT
+    @get:OnConflictStrategy
+    val onConflict: Int = OnConflictStrategy.ABORT
 )

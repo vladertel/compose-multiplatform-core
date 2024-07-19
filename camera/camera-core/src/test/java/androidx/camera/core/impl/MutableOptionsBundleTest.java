@@ -17,7 +17,6 @@
 package androidx.camera.core.impl;
 
 import static androidx.camera.core.impl.Config.OptionPriority.ALWAYS_OVERRIDE;
-import static androidx.camera.core.impl.Config.OptionPriority.HIGH_PRIORITY_REQUIRED;
 import static androidx.camera.core.impl.Config.OptionPriority.OPTIONAL;
 import static androidx.camera.core.impl.Config.OptionPriority.REQUIRED;
 
@@ -45,7 +44,6 @@ public class MutableOptionsBundleTest {
     private static final Object VALUE_1 = new Object();
     private static final Object VALUE_1_A = new Object();
     private static final Object VALUE_2 = new Object();
-    private static final Object VALUE_3 = new Object();
     private static final Object VALUE_MISSING = new Object();
 
     @Test
@@ -85,7 +83,6 @@ public class MutableOptionsBundleTest {
         mutOpts.insertOption(OPTION_1, REQUIRED, VALUE_2);
         mutOpts.insertOption(OPTION_1, ALWAYS_OVERRIDE, VALUE_1);
         mutOpts.insertOption(OPTION_1, OPTIONAL, VALUE_1_A);
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_3);
         mutOpts.insertOption(OPTION_1_A, VALUE_1_A);
 
         Config config = OptionsBundle.from(mutOpts);
@@ -99,15 +96,14 @@ public class MutableOptionsBundleTest {
         assertThat(config.listOptions()).containsExactly(OPTION_1, OPTION_1_A);
         assertThat(config2.listOptions()).containsExactly(OPTION_1, OPTION_1_A, OPTION_2);
 
-        assertThat(config2.getPriorities(OPTION_1)).containsExactly(REQUIRED, ALWAYS_OVERRIDE,
-                OPTIONAL, HIGH_PRIORITY_REQUIRED);
+        assertThat(config2.getPriorities(OPTION_1))
+                .containsExactly(REQUIRED, ALWAYS_OVERRIDE, OPTIONAL);
         assertThat(config2.retrieveOptionWithPriority(OPTION_1, REQUIRED)).isEqualTo(VALUE_2);
         assertThat(config2.retrieveOptionWithPriority(OPTION_1, ALWAYS_OVERRIDE)).isEqualTo(
                 VALUE_1);
         assertThat(config2.retrieveOptionWithPriority(OPTION_1, OPTIONAL)).isEqualTo(VALUE_1_A);
-        assertThat(config2.retrieveOptionWithPriority(OPTION_1, HIGH_PRIORITY_REQUIRED)).isEqualTo(
-                VALUE_3);
-        assertThat(config2.getPriorities(OPTION_2)).containsExactly(REQUIRED, OPTIONAL);
+        assertThat(config2.getPriorities(OPTION_2))
+                .containsExactly(REQUIRED, OPTIONAL);
         assertThat(config2.retrieveOptionWithPriority(OPTION_2, REQUIRED)).isEqualTo(VALUE_2);
         assertThat(config2.retrieveOptionWithPriority(OPTION_2, OPTIONAL)).isEqualTo(VALUE_1);
     }
@@ -122,8 +118,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_2);
     }
 
     @Test
@@ -135,8 +131,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test
@@ -149,8 +145,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test
@@ -163,8 +159,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test
@@ -177,8 +173,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_2);
     }
 
     @Test
@@ -191,8 +187,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -214,8 +210,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test
@@ -228,8 +224,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_2);
     }
 
     @Test
@@ -242,8 +238,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_2);
     }
 
     @Test
@@ -256,8 +252,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(OPTIONAL);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_2);
     }
 
     @Test
@@ -270,64 +266,8 @@ public class MutableOptionsBundleTest {
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_1);
         Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
         assertThat(highestPriority).isEqualTo(OPTIONAL);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_1);
-    }
-
-    @Test
-    public void insertOption_HIGHPRIORITY_ALWAYSOVERRIDE() {
-        MutableOptionsBundle mutOpts = MutableOptionsBundle.create();
-
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_1);
-        mutOpts.insertOption(OPTION_1, ALWAYS_OVERRIDE, VALUE_2);
-
-        assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
-        Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
-        assertThat(highestPriority).isEqualTo(ALWAYS_OVERRIDE);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
-    }
-
-    @Test
-    public void insertOption_HIGHPRIORITY_REQUIRED() {
-        MutableOptionsBundle mutOpts = MutableOptionsBundle.create();
-
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_2);
-        mutOpts.insertOption(OPTION_1, REQUIRED, VALUE_1);
-
-        assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
-        Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
-        assertThat(highestPriority).isEqualTo(HIGH_PRIORITY_REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
-    }
-
-    @Test
-    public void insertOption_HIGHPRIORITY_OPTIONAL() {
-        MutableOptionsBundle mutOpts = MutableOptionsBundle.create();
-
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_2);
-        mutOpts.insertOption(OPTION_1, OPTIONAL, VALUE_1);
-
-        assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
-        Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
-        assertThat(highestPriority).isEqualTo(HIGH_PRIORITY_REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
-    }
-
-    @Test
-    public void insertOption_HIGHPRIORITY_HIGHPRIORITY() {
-        MutableOptionsBundle mutOpts = MutableOptionsBundle.create();
-
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_1);
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_2);
-
-        assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
-        Config.OptionPriority highestPriority = Collections.min(mutOpts.getPriorities(OPTION_1));
-        assertThat(highestPriority).isEqualTo(HIGH_PRIORITY_REQUIRED);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority)).isEqualTo(
-                VALUE_2);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, highestPriority))
+                .isEqualTo(VALUE_1);
     }
 
     @Test
@@ -337,21 +277,18 @@ public class MutableOptionsBundleTest {
         mutOpts.insertOption(OPTION_1, OPTIONAL, VALUE_1);
         mutOpts.insertOption(OPTION_1, ALWAYS_OVERRIDE, VALUE_2);
         mutOpts.insertOption(OPTION_1, REQUIRED, VALUE_1_A);
-        mutOpts.insertOption(OPTION_1, HIGH_PRIORITY_REQUIRED, VALUE_3);
 
         mutOpts.insertOption(OPTION_2, OPTIONAL, VALUE_1);
         mutOpts.insertOption(OPTION_2, REQUIRED, VALUE_2);
 
-        assertThat(mutOpts.getPriorities(OPTION_1)).containsExactly(OPTIONAL, ALWAYS_OVERRIDE,
-                REQUIRED, HIGH_PRIORITY_REQUIRED);
+        assertThat(mutOpts.getPriorities(OPTION_1))
+                .containsExactly(OPTIONAL, ALWAYS_OVERRIDE, REQUIRED);
         assertThat(mutOpts.retrieveOption(OPTION_1)).isEqualTo(VALUE_2);
         assertThat(mutOpts.getOptionPriority(OPTION_1)).isEqualTo(ALWAYS_OVERRIDE);
         assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, OPTIONAL)).isEqualTo(VALUE_1);
         assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, REQUIRED)).isEqualTo(VALUE_1_A);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, ALWAYS_OVERRIDE)).isEqualTo(
-                VALUE_2);
-        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, HIGH_PRIORITY_REQUIRED)).isEqualTo(
-                VALUE_3);
+        assertThat(mutOpts.retrieveOptionWithPriority(OPTION_1, ALWAYS_OVERRIDE))
+                .isEqualTo(VALUE_2);
 
         assertThat(mutOpts.getPriorities(OPTION_2)).containsExactly(OPTIONAL, REQUIRED);
         assertThat(mutOpts.retrieveOption(OPTION_2)).isEqualTo(VALUE_2);

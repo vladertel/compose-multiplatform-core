@@ -18,7 +18,6 @@ package androidx.webkit;
 
 import android.webkit.CookieManager;
 
-import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresFeature;
 import androidx.webkit.internal.ApiFeature;
@@ -31,7 +30,6 @@ import java.util.List;
 /**
  * Compatibility version of {@link android.webkit.CookieManager}
  */
-@AnyThread
 public class CookieManagerCompat {
     private CookieManagerCompat() {}
 
@@ -41,7 +39,6 @@ public class CookieManagerCompat {
      * <a href="https://httpwg.org/specs/rfc6265.html#sane-set-cookie-syntax">the RFC6265 spec.</a>
      *  eg. "name=value; domain=.example.com; path=/"
      *
-     * @param cookieManager The CookieManager instance to get info from.
      * @param url the URL for which the API retrieves all available cookies.
      * @return the cookies as a list of strings.
      */

@@ -19,10 +19,15 @@ package androidx.compose.ui.hapticfeedback
 import android.view.HapticFeedbackConstants
 import android.view.View
 
-/** Android implementation for [HapticFeedback] */
-internal class PlatformHapticFeedback(private val view: View) : HapticFeedback {
+/**
+ * Android implementation for [HapticFeedback]
+ */
+internal class PlatformHapticFeedback(private val view: View) :
+    HapticFeedback {
 
-    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+    override fun performHapticFeedback(
+        hapticFeedbackType: HapticFeedbackType
+    ) {
         when (hapticFeedbackType) {
             HapticFeedbackType.LongPress ->
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -33,8 +38,9 @@ internal class PlatformHapticFeedback(private val view: View) : HapticFeedback {
 }
 
 internal actual object PlatformHapticFeedbackType {
-    actual val LongPress: HapticFeedbackType =
-        HapticFeedbackType(HapticFeedbackConstants.LONG_PRESS)
+    actual val LongPress: HapticFeedbackType = HapticFeedbackType(
+        HapticFeedbackConstants.LONG_PRESS
+    )
     actual val TextHandleMove: HapticFeedbackType =
         HapticFeedbackType(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
 }

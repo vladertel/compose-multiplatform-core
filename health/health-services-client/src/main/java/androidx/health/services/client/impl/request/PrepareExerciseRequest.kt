@@ -22,7 +22,10 @@ import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.data.WarmUpConfig
 import androidx.health.services.client.proto.RequestsProto
 
-/** Request for preparing for an exercise. */
+/**
+ * Request for preparing for an exercise.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class PrepareExerciseRequest(
     public val packageName: String,

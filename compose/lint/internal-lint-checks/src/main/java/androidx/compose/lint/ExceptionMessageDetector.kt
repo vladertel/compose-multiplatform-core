@@ -33,14 +33,13 @@ class ExceptionMessageDetector : Detector(), SourceCodeScanner {
 
     override fun getApplicableMethodNames(): List<String> =
         listOf(Check, CheckNotNull, Require, RequireNotNull).map { it.shortName }
-
     override fun visitMethodCall(context: JavaContext, node: UCallExpression, method: PsiMethod) {
 
         // We ignore other functions with the same name.
         if (!method.isInPackageName(KotlinPackage)) return
 
-        val lazyMessage =
-            node.valueArguments.find { node.getParameterForArgument(it)?.name == "lazyMessage" }
+        val lazyMessage = node.valueArguments
+            .find { node.getParameterForArgument(it)?.name == "lazyMessage" }
         if (lazyMessage == null) {
             context.report(
                 ISSUE,
@@ -57,12 +56,10 @@ class ExceptionMessageDetector : Detector(), SourceCodeScanner {
         val CheckNotNull = Name(KotlinPackage, "checkNotNull")
         val Require = Name(KotlinPackage, "require")
         val RequireNotNull = Name(KotlinPackage, "requireNotNull")
-        val ISSUE =
-            Issue.create(
-                id = "ExceptionMessage",
-                briefDescription = "Please provide a string for the lazyMessage parameter",
-                explanation =
-                    """
+        val ISSUE = Issue.create(
+            id = "ExceptionMessage",
+            briefDescription = "Please provide a string for the lazyMessage parameter",
+            explanation = """
                 Calls to check(), checkNotNull(), require() and requireNotNull() should
                 include a message string that can be used to debug issues experienced
                 by users.
@@ -73,14 +70,13 @@ class ExceptionMessageDetector : Detector(), SourceCodeScanner {
                 Consider supplying a lazyMessage parameter to identify the check()
                 or require() call.
             """,
-                category = Category.CORRECTNESS,
-                priority = 3,
-                severity = Severity.ERROR,
-                implementation =
-                    Implementation(
-                        ExceptionMessageDetector::class.java,
-                        EnumSet.of(Scope.JAVA_FILE)
-                    )
+            category = Category.CORRECTNESS,
+            priority = 3,
+            severity = Severity.ERROR,
+            implementation = Implementation(
+                ExceptionMessageDetector::class.java,
+                EnumSet.of(Scope.JAVA_FILE)
             )
+        )
     }
 }

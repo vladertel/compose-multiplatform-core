@@ -22,7 +22,9 @@ import androidx.bluetooth.GattService
 import java.util.UUID
 import kotlinx.coroutines.Job
 
-class DeviceConnection(val bluetoothDevice: BluetoothDevice) {
+class DeviceConnection(
+    val bluetoothDevice: BluetoothDevice
+) {
     var job: Job? = null
     var onCharacteristicActionClick: OnCharacteristicActionClick? = null
     var status = Status.DISCONNECTED

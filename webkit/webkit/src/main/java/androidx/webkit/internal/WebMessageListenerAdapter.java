@@ -36,7 +36,7 @@ import java.lang.reflect.InvocationHandler;
  * corresponding interface shared with the support library glue in the WebView APK).
  */
 public class WebMessageListenerAdapter implements WebMessageListenerBoundaryInterface {
-    private final WebViewCompat.WebMessageListener mWebMessageListener;
+    private WebViewCompat.WebMessageListener mWebMessageListener;
 
     public WebMessageListenerAdapter(@NonNull WebViewCompat.WebMessageListener webMessageListener) {
         mWebMessageListener = webMessageListener;

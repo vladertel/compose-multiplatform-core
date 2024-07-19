@@ -21,7 +21,8 @@ import androidx.work.Data
 import androidx.work.WorkInfo
 
 fun WorkInfo.State.toProto(): WorkManagerInspectorProtocol.WorkInfo.State =
-    WorkManagerInspectorProtocol.WorkInfo.State.forNumber(ordinal + 1)
+    WorkManagerInspectorProtocol.WorkInfo.State
+        .forNumber(ordinal + 1)
 
 fun Data.toProto(): WorkManagerInspectorProtocol.Data {
     return WorkManagerInspectorProtocol.Data.newBuilder()
@@ -39,9 +40,8 @@ fun Data.toProto(): WorkManagerInspectorProtocol.Data {
 fun Constraints.toProto(): WorkManagerInspectorProtocol.Constraints =
     WorkManagerInspectorProtocol.Constraints.newBuilder()
         .setRequiredNetworkType(
-            WorkManagerInspectorProtocol.Constraints.NetworkType.forNumber(
-                requiredNetworkType.ordinal + 1
-            )
+            WorkManagerInspectorProtocol.Constraints.NetworkType
+                .forNumber(requiredNetworkType.ordinal + 1)
         )
         .setRequiresCharging(requiresCharging())
         .setRequiresDeviceIdle(requiresDeviceIdle())

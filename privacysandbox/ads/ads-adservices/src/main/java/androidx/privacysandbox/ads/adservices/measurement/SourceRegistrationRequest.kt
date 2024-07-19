@@ -25,11 +25,13 @@ import androidx.privacysandbox.ads.adservices.common.ExperimentalFeatures
  *
  * @param registrationUris [List] of Registration [Uri]s to fetch sources.
  * @param inputEvent User Interaction [InputEvent] used by the AttributionReporting API to
- *   distinguish clicks from views.
+ * distinguish clicks from views.
  */
 @ExperimentalFeatures.RegisterSourceOptIn
-class SourceRegistrationRequest
-constructor(val registrationUris: List<Uri>, val inputEvent: InputEvent? = null) {
+class SourceRegistrationRequest constructor(
+    val registrationUris: List<Uri>,
+    val inputEvent: InputEvent? = null
+    ) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -56,21 +58,28 @@ constructor(val registrationUris: List<Uri>, val inputEvent: InputEvent? = null)
      *
      * @param registrationUris source registration request [Uri]
      */
-    class Builder(private val registrationUris: List<Uri>) {
+    class Builder(
+        private val registrationUris: List<Uri>
+    ) {
         private var inputEvent: InputEvent? = null
 
         /**
          * Setter for input event.
          *
          * @param inputEvent User Interaction InputEvent used by the AttributionReporting API to
-         *   distinguish clicks from views.
+         *     distinguish clicks from views.
          * @return builder
          */
-        fun setInputEvent(inputEvent: InputEvent): Builder = apply { this.inputEvent = inputEvent }
+        fun setInputEvent(inputEvent: InputEvent): Builder = apply {
+            this.inputEvent = inputEvent
+        }
 
         /** Pre-validates parameters and builds [SourceRegistrationRequest]. */
         fun build(): SourceRegistrationRequest {
-            return SourceRegistrationRequest(registrationUris, inputEvent)
+            return SourceRegistrationRequest(
+                registrationUris,
+                inputEvent
+            )
         }
     }
 }

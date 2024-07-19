@@ -14,30 +14,17 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
 plugins {
     id("AndroidXPlugin")
+    id("com.android.library")
 }
 
 androidXMultiplatform {
     jvm()
-    androidLibrary {
-        namespace = "androidx.window.core"
-        withAndroidTestOnDeviceBuilder {
-            it.compilationName = "instrumentedTest"
-            it.defaultSourceSetName = "androidInstrumentedTest"
-            it.sourceSetTreeName = "test"
-        }
-    }
+    android()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -59,13 +46,11 @@ androidXMultiplatform {
                 implementation(libs.kotlinTestJunit)
             }
         }
-
-        androidInstrumentedTest {
-            dependencies {
-                implementation(libs.testRunner)
-            }
-        }
     }
+}
+
+android {
+    namespace "androidx.window.core"
 }
 
 androidx {
@@ -73,5 +58,5 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2022"
     description = "WindowManager Core Library."
-    legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = true
 }

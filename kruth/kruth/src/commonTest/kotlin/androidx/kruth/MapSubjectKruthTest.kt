@@ -19,7 +19,9 @@ package androidx.kruth
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
-/** Supplemental tests to [MapSubjectTest]. */
+/**
+ * Supplemental tests to [MapSubjectTest].
+ */
 class MapSubjectKruthTest {
     @Test
     fun containsExactlyEntriesIn_mapInOrder() {
@@ -35,6 +37,8 @@ class MapSubjectKruthTest {
         mapInOrderCorrect.inOrder()
 
         val mapInOrderReversed = assertThat(map).containsExactlyEntriesIn(reversedMap)
-        assertFailsWith<AssertionError> { mapInOrderReversed.inOrder() }
+        assertFailsWith<AssertionError> {
+            mapInOrderReversed.inOrder()
+        }
     }
 }

@@ -27,24 +27,21 @@ import org.junit.Test
 
 @SmallTest
 class SparseLongArrayTest {
-    @Test
-    fun sizeProperty() {
+    @Test fun sizeProperty() {
         val array = SparseLongArray()
         assertEquals(0, array.size)
         array.put(1, 11L)
         assertEquals(1, array.size)
     }
 
-    @Test
-    fun containsOperator() {
+    @Test fun containsOperator() {
         val array = SparseLongArray()
         assertFalse(1 in array)
         array.put(1, 11L)
         assertTrue(1 in array)
     }
 
-    @Test
-    fun containsOperatorWithValue() {
+    @Test fun containsOperatorWithValue() {
         val array = SparseLongArray()
 
         array.put(1, 11L)
@@ -54,15 +51,13 @@ class SparseLongArrayTest {
         assertTrue(2 in array)
     }
 
-    @Test
-    fun setOperator() {
+    @Test fun setOperator() {
         val array = SparseLongArray()
         array[1] = 11L
         assertEquals(11L, array.get(1))
     }
 
-    @Test
-    fun plusOperator() {
+    @Test fun plusOperator() {
         val first = SparseLongArray().apply { put(1, 11L) }
         val second = SparseLongArray().apply { put(2, 22L) }
         val combined = first + second
@@ -73,16 +68,14 @@ class SparseLongArrayTest {
         assertEquals(22L, combined.valueAt(1))
     }
 
-    @Test
-    fun containsKey() {
+    @Test fun containsKey() {
         val array = SparseLongArray()
         assertFalse(array.containsKey(1))
         array.put(1, 11L)
         assertTrue(array.containsKey(1))
     }
 
-    @Test
-    fun containsKeyWithValue() {
+    @Test fun containsKeyWithValue() {
         val array = SparseLongArray()
 
         array.put(1, 11L)
@@ -92,24 +85,21 @@ class SparseLongArrayTest {
         assertTrue(array.containsKey(2))
     }
 
-    @Test
-    fun containsValue() {
+    @Test fun containsValue() {
         val array = SparseLongArray()
         assertFalse(array.containsValue(11L))
         array.put(1, 11L)
         assertTrue(array.containsValue(11L))
     }
 
-    @Test
-    fun getOrDefault() {
+    @Test fun getOrDefault() {
         val array = SparseLongArray()
         assertEquals(22L, array.getOrDefault(1, 22L))
         array.put(1, 11L)
         assertEquals(11L, array.getOrDefault(1, 22L))
     }
 
-    @Test
-    fun getOrElse() {
+    @Test fun getOrElse() {
         val array = SparseLongArray()
         assertEquals(22L, array.getOrElse(1) { 22L })
         array.put(1, 11L)
@@ -117,24 +107,21 @@ class SparseLongArrayTest {
         assertEquals(33L, array.getOrElse(2) { 33L })
     }
 
-    @Test
-    fun isEmpty() {
+    @Test fun isEmpty() {
         val array = SparseLongArray()
         assertTrue(array.isEmpty())
         array.put(1, 11L)
         assertFalse(array.isEmpty())
     }
 
-    @Test
-    fun isNotEmpty() {
+    @Test fun isNotEmpty() {
         val array = SparseLongArray()
         assertFalse(array.isNotEmpty())
         array.put(1, 11L)
         assertTrue(array.isNotEmpty())
     }
 
-    @Test
-    fun removeValue() {
+    @Test fun removeValue() {
         val array = SparseLongArray()
         array.put(1, 11L)
         assertFalse(array.remove(2, 11L))
@@ -145,8 +132,7 @@ class SparseLongArrayTest {
         assertEquals(0, array.size())
     }
 
-    @Test
-    fun putAll() {
+    @Test fun putAll() {
         val dest = SparseLongArray()
         val source = SparseLongArray()
         source.put(1, 11L)
@@ -156,8 +142,7 @@ class SparseLongArrayTest {
         assertEquals(1, dest.size())
     }
 
-    @Test
-    fun forEach() {
+    @Test fun forEach() {
         val array = SparseLongArray()
         array.forEach { _, _ -> fail() }
 
@@ -175,8 +160,7 @@ class SparseLongArrayTest {
         assertThat(values).containsExactly(11L, 22L, 66L)
     }
 
-    @Test
-    fun keyIterator() {
+    @Test fun keyIterator() {
         val array = SparseLongArray()
         assertFalse(array.keyIterator().hasNext())
 
@@ -194,8 +178,7 @@ class SparseLongArrayTest {
         assertFalse(iterator.hasNext())
     }
 
-    @Test
-    fun valueIterator() {
+    @Test fun valueIterator() {
         val array = SparseLongArray()
         assertFalse(array.valueIterator().hasNext())
 

@@ -47,7 +47,6 @@ class TestComponent(
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
-
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateController.savedStateRegistry
 

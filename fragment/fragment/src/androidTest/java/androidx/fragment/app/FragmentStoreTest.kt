@@ -39,13 +39,16 @@ import org.mockito.Mockito.mock
 @SmallTest
 class FragmentStoreTest {
 
-    private val dispatcher = FragmentLifecycleCallbacksDispatcher(mock(FragmentManager::class.java))
+    private val dispatcher = FragmentLifecycleCallbacksDispatcher(
+        mock(FragmentManager::class.java)
+    )
 
     private lateinit var fragmentStore: FragmentStore
     private lateinit var emptyFragment: Fragment
     private lateinit var emptyStateManager: FragmentStateManager
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Before
     fun setup() {
@@ -58,9 +61,12 @@ class FragmentStoreTest {
     @Test
     fun testMakeActive() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.activeFragmentStateManagers).containsExactly(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(emptyFragment)
-        assertThat(fragmentStore.activeFragmentCount).isEqualTo(1)
+        assertThat(fragmentStore.activeFragmentStateManagers)
+            .containsExactly(emptyStateManager)
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragmentCount)
+            .isEqualTo(1)
     }
 
     @Suppress("DEPRECATION")
@@ -70,15 +76,19 @@ class FragmentStoreTest {
         fragmentStore.nonConfig = nonConfig
         emptyFragment.retainInstance = true
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(emptyFragment)
-        assertThat(fragmentStore.activeFragmentCount).isEqualTo(1)
-        assertThat(nonConfig.retainedFragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragmentCount)
+            .isEqualTo(1)
+        assertThat(nonConfig.retainedFragments)
+            .containsExactly(emptyFragment)
     }
 
     @Test
     fun testContainsActiveFragment() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho)).isTrue()
+        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho))
+            .isTrue()
     }
 
     @Test
@@ -98,14 +108,18 @@ class FragmentStoreTest {
     @Test
     fun testMakeInactiveBurp() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(emptyFragment)
 
         fragmentStore.makeInactive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(null)
-        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho)).isFalse()
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(null)
+        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho))
+            .isFalse()
 
         fragmentStore.burpActive()
-        assertThat(fragmentStore.activeFragments).isEmpty()
+        assertThat(fragmentStore.activeFragments)
+            .isEmpty()
     }
 
     @Suppress("DEPRECATION")
@@ -115,25 +129,33 @@ class FragmentStoreTest {
         fragmentStore.nonConfig = nonConfig
         emptyFragment.retainInstance = true
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(emptyFragment)
-        assertThat(nonConfig.retainedFragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(emptyFragment)
+        assertThat(nonConfig.retainedFragments)
+            .containsExactly(emptyFragment)
 
         fragmentStore.makeInactive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(null)
-        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho)).isFalse()
-        assertThat(nonConfig.retainedFragments).isEmpty()
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(null)
+        assertThat(fragmentStore.containsActiveFragment(emptyFragment.mWho))
+            .isFalse()
+        assertThat(nonConfig.retainedFragments)
+            .isEmpty()
 
         fragmentStore.burpActive()
-        assertThat(fragmentStore.activeFragments).isEmpty()
+        assertThat(fragmentStore.activeFragments)
+            .isEmpty()
     }
 
     @Test
     fun testResetActiveFragments() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.activeFragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.activeFragments)
+            .containsExactly(emptyFragment)
 
         fragmentStore.resetActiveFragments()
-        assertThat(fragmentStore.activeFragments).isEmpty()
+        assertThat(fragmentStore.activeFragments)
+            .isEmpty()
     }
 
     @Test
@@ -141,27 +163,34 @@ class FragmentStoreTest {
         fragmentStore.makeActive(emptyStateManager)
 
         val savedActiveFragments = fragmentStore.saveActiveFragments()
-        assertThat(savedActiveFragments).hasSize(1)
-        assertThat(savedActiveFragments[0]).isEqualTo(emptyFragment.mWho)
+        assertThat(savedActiveFragments)
+            .hasSize(1)
+        assertThat(savedActiveFragments[0])
+            .isEqualTo(emptyFragment.mWho)
     }
 
     @Test
     fun testAddFragment() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.fragments).isEmpty()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
 
         fragmentStore.addFragment(emptyFragment)
-        assertThat(fragmentStore.fragments).containsExactly(emptyFragment)
-        assertThat(emptyFragment.mAdded).isTrue()
+        assertThat(fragmentStore.fragments)
+            .containsExactly(emptyFragment)
+        assertThat(emptyFragment.mAdded)
+            .isTrue()
     }
 
     @Test(expected = IllegalStateException::class)
     fun testAddAlreadyAddedFragment() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.fragments).isEmpty()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
 
         fragmentStore.addFragment(emptyFragment)
-        assertThat(fragmentStore.fragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.fragments)
+            .containsExactly(emptyFragment)
 
         // Now add the Fragment again, triggering the IllegalStateException
         fragmentStore.addFragment(emptyFragment)
@@ -170,38 +199,49 @@ class FragmentStoreTest {
     @Test
     fun testRestoreAddedFragments() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.fragments).isEmpty()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
 
         val added = listOf(emptyFragment.mWho)
         fragmentStore.restoreAddedFragments(added)
-        assertThat(fragmentStore.fragments).containsExactly(emptyFragment)
-        assertThat(emptyFragment.mAdded).isTrue()
+        assertThat(fragmentStore.fragments)
+            .containsExactly(emptyFragment)
+        assertThat(emptyFragment.mAdded)
+            .isTrue()
     }
 
     @Test
     fun testRemoveFragment() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.fragments).isEmpty()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
 
         fragmentStore.addFragment(emptyFragment)
-        assertThat(fragmentStore.fragments).containsExactly(emptyFragment)
-        assertThat(emptyFragment.mAdded).isTrue()
+        assertThat(fragmentStore.fragments)
+            .containsExactly(emptyFragment)
+        assertThat(emptyFragment.mAdded)
+            .isTrue()
 
         fragmentStore.removeFragment(emptyFragment)
-        assertThat(fragmentStore.fragments).isEmpty()
-        assertThat(emptyFragment.mAdded).isFalse()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
+        assertThat(emptyFragment.mAdded)
+            .isFalse()
     }
 
     @Test
     fun testSaveAddedFragments() {
         fragmentStore.makeActive(emptyStateManager)
-        assertThat(fragmentStore.fragments).isEmpty()
+        assertThat(fragmentStore.fragments)
+            .isEmpty()
 
         fragmentStore.addFragment(emptyFragment)
-        assertThat(fragmentStore.fragments).containsExactly(emptyFragment)
+        assertThat(fragmentStore.fragments)
+            .containsExactly(emptyFragment)
 
         val savedAddedFragments = fragmentStore.saveAddedFragments()
-        assertThat(savedAddedFragments).containsExactly(emptyFragment.mWho)
+        assertThat(savedAddedFragments)
+            .containsExactly(emptyFragment.mWho)
     }
 
     @Test
@@ -211,7 +251,8 @@ class FragmentStoreTest {
         fragmentStore.makeActive(emptyStateManager)
 
         val foundFragment = fragmentStore.findFragmentById(id)
-        assertThat(foundFragment).isSameInstanceAs(emptyFragment)
+        assertThat(foundFragment)
+            .isSameInstanceAs(emptyFragment)
     }
 
     @Test
@@ -227,7 +268,8 @@ class FragmentStoreTest {
         fragmentStore.addFragment(addedFragment)
 
         val foundFragment = fragmentStore.findFragmentById(id)
-        assertThat(foundFragment).isSameInstanceAs(addedFragment)
+        assertThat(foundFragment)
+            .isSameInstanceAs(addedFragment)
     }
 
     @Test
@@ -237,7 +279,8 @@ class FragmentStoreTest {
         fragmentStore.makeActive(emptyStateManager)
 
         val foundFragment = fragmentStore.findFragmentByTag(tag)
-        assertThat(foundFragment).isSameInstanceAs(emptyFragment)
+        assertThat(foundFragment)
+            .isSameInstanceAs(emptyFragment)
     }
 
     @Test
@@ -253,7 +296,8 @@ class FragmentStoreTest {
         fragmentStore.addFragment(addedFragment)
 
         val foundFragment = fragmentStore.findFragmentByTag(tag)
-        assertThat(foundFragment).isSameInstanceAs(addedFragment)
+        assertThat(foundFragment)
+            .isSameInstanceAs(addedFragment)
     }
 
     @Test
@@ -261,37 +305,43 @@ class FragmentStoreTest {
         fragmentStore.makeActive(emptyStateManager)
 
         val foundFragment = fragmentStore.findFragmentByWho(emptyFragment.mWho)
-        assertThat(foundFragment).isSameInstanceAs(emptyFragment)
+        assertThat(foundFragment)
+            .isSameInstanceAs(emptyFragment)
     }
 
     /**
      * As we don't have a mechanism for adding child fragments without a real, attached
-     * FragmentManager, we fake it by using a real FragmentManager, then placing that Fragment in
-     * our test FragmentStore in order to test that findFragmentByWho correctly looks at child
-     * fragments.
+     * FragmentManager, we fake it by using a real FragmentManager, then placing that
+     * Fragment in our test FragmentStore in order to test that findFragmentByWho correctly
+     * looks at child fragments.
      */
     @LargeTest
     @Test
     fun testFindFragmentByWhoChildFragment() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
             val parentFragment = StrictFragment()
-            fm.beginTransaction().add(parentFragment, "parent").commit()
+            fm.beginTransaction()
+                .add(parentFragment, "parent")
+                .commit()
             executePendingTransactions()
             val childFragment: Fragment = StrictFragment()
-            parentFragment.childFragmentManager
-                .beginTransaction()
+            parentFragment.childFragmentManager.beginTransaction()
                 .add(childFragment, "child")
                 .commit()
             executePendingTransactions(parentFragment.childFragmentManager)
 
             // Now fake that the parent Fragment is actually attached to our FragmentStore
-            val parentStateManager = FragmentStateManager(dispatcher, fragmentStore, parentFragment)
+            val parentStateManager = FragmentStateManager(
+                dispatcher, fragmentStore,
+                parentFragment
+            )
             fragmentStore.makeActive(parentStateManager)
             fragmentStore.addFragment(parentFragment)
 
             val foundFragment = fragmentStore.findFragmentByWho(childFragment.mWho)
-            assertThat(foundFragment).isSameInstanceAs(childFragment)
+            assertThat(foundFragment)
+                .isSameInstanceAs(childFragment)
 
             fragmentStore.removeFragment(parentFragment)
             fragmentStore.makeInactive(parentStateManager)
@@ -329,7 +379,9 @@ class FragmentStoreTest {
         container.addView(onTopFragment.mView)
 
         val index = fragmentStore.findFragmentIndexInContainer(emptyFragment)
-        assertWithMessage("New fragment should be before on top fragment").that(index).isEqualTo(0)
+        assertWithMessage("New fragment should be before on top fragment")
+            .that(index)
+            .isEqualTo(0)
     }
 
     @Test
@@ -349,6 +401,8 @@ class FragmentStoreTest {
         fragmentStore.addFragment(onTopFragment)
 
         val index = fragmentStore.findFragmentIndexInContainer(onTopFragment)
-        assertWithMessage("New fragment should be after existing fragment").that(index).isEqualTo(1)
+        assertWithMessage("New fragment should be after existing fragment")
+            .that(index)
+            .isEqualTo(1)
     }
 }

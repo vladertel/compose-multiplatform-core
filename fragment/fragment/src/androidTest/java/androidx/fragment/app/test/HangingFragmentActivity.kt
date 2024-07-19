@@ -25,8 +25,10 @@ class HangingFragmentActivity : RecreatedActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(
-            if (savedInstanceState == null) R.layout.activity_inflated_fragment
-            else R.layout.activity_content
+            if (savedInstanceState == null)
+                R.layout.activity_inflated_fragment
+            else
+                R.layout.activity_content
         )
     }
 }

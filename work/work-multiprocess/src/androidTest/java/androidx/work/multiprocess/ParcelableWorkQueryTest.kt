@@ -39,12 +39,11 @@ public class ParcelableWorkQueryTest {
             return
         }
 
-        val workQuery =
-            WorkQuery.Builder.fromUniqueWorkNames(listOf("name1"))
-                .addTags(listOf("tag1", "tag2"))
-                .addIds(listOf(UUID.randomUUID()))
-                .addStates(listOf(WorkInfo.State.ENQUEUED))
-                .build()
+        val workQuery = WorkQuery.Builder.fromUniqueWorkNames(listOf("name1"))
+            .addTags(listOf("tag1", "tag2"))
+            .addIds(listOf(UUID.randomUUID()))
+            .addStates(listOf(WorkInfo.State.ENQUEUED))
+            .build()
 
         assertOn(workQuery)
     }
@@ -57,7 +56,8 @@ public class ParcelableWorkQueryTest {
             return
         }
 
-        val workQuery = WorkQuery.Builder.fromUniqueWorkNames(listOf("name1")).build()
+        val workQuery = WorkQuery.Builder.fromUniqueWorkNames(listOf("name1"))
+            .build()
 
         assertOn(workQuery)
     }
@@ -70,7 +70,8 @@ public class ParcelableWorkQueryTest {
             return
         }
 
-        val workQuery = WorkQuery.Builder.fromTags(listOf("tag1", "tag2")).build()
+        val workQuery = WorkQuery.Builder.fromTags(listOf("tag1", "tag2"))
+            .build()
 
         assertOn(workQuery)
     }
@@ -83,7 +84,8 @@ public class ParcelableWorkQueryTest {
             return
         }
 
-        val workQuery = WorkQuery.Builder.fromStates(listOf(WorkInfo.State.ENQUEUED)).build()
+        val workQuery = WorkQuery.Builder.fromStates(listOf(WorkInfo.State.ENQUEUED))
+            .build()
 
         assertOn(workQuery)
     }

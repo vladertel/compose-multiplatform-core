@@ -42,10 +42,7 @@ class RecyclerViewKeyEventTest {
     private val context = mActivityTestRule.activity
     private val testItemCount = 10
 
-    enum class InitialPosition {
-        FIRST,
-        LAST
-    }
+    enum class InitialPosition { FIRST, LAST }
 
     private fun setupRecyclerViewAndScrollByKeyEvent(
         viewHeight: Int,
@@ -58,26 +55,25 @@ class RecyclerViewKeyEventTest {
 
         recyclerView.layoutParams = ViewGroup.LayoutParams(viewWidth, viewHeight)
         recyclerView.layoutManager = layoutManager
-        recyclerView.adapter =
-            object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-                    object :
-                        RecyclerView.ViewHolder(
-                            TextView(parent.context).apply {
-                                minWidth = 1024
-                                minHeight = 256
-                            }
-                        ) {}
+        recyclerView.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            override fun onCreateViewHolder(
+                parent: ViewGroup,
+                viewType: Int
+            ) = object : RecyclerView.ViewHolder(
+                TextView(parent.context).apply {
+                    minWidth = 1024
+                    minHeight = 256
+                }
+            ) {}
 
-                override fun getItemCount() = testItemCount
+            override fun getItemCount() = testItemCount
 
-                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {}
-            }
-        val scrollPos =
-            when (initialPosition) {
-                InitialPosition.FIRST -> 0
-                InitialPosition.LAST -> testItemCount - 1
-            }
+            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {}
+        }
+        val scrollPos = when (initialPosition) {
+            InitialPosition.FIRST -> 0
+            InitialPosition.LAST -> testItemCount - 1
+        }
         recyclerView.scrollToPosition(scrollPos)
 
         val testContentView = mActivityTestRule.activity.contentView
@@ -90,25 +86,27 @@ class RecyclerViewKeyEventTest {
         var scrollHeight = 0
         var scrollWidth = 0
 
-        recyclerView.addOnScrollListener(
-            object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        latch.countDown()
-                    }
-                }
-
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    scrollWidth += dx
-                    scrollHeight += dy
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    latch.countDown()
                 }
             }
-        )
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                scrollWidth += dx
+                scrollHeight += dy
+            }
+        })
 
         // Act
         mActivityTestRule.runOnUiThread {
-            recyclerView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyEvent))
-            recyclerView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyEvent))
+            recyclerView.dispatchKeyEvent(
+                KeyEvent(KeyEvent.ACTION_DOWN, keyEvent)
+            )
+            recyclerView.dispatchKeyEvent(
+                KeyEvent(KeyEvent.ACTION_UP, keyEvent)
+            )
         }
 
         MatcherAssert.assertThat(latch.await(2, TimeUnit.SECONDS), CoreMatchers.`is`(true))
@@ -118,13 +116,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun vertical_pageDown() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_PAGE_DOWN,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_PAGE_DOWN, layoutManager)
         // PageUp should scroll down one-page i.e. view height.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(viewHeight))
@@ -133,13 +126,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun vertical_pageUp() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_PAGE_UP,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_PAGE_UP, layoutManager)
         // PageUp should scroll up one-page i.e. view height.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(-viewHeight))
@@ -148,13 +136,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun horizontal_pageUp() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_PAGE_UP,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_PAGE_UP, layoutManager)
         // No scroll for horizontal layout.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(-viewWidth))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
@@ -163,13 +146,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun horizontal_pageDown() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_PAGE_DOWN,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_PAGE_DOWN, layoutManager)
         // No scroll for horizontal layout.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(viewWidth))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
@@ -178,85 +156,52 @@ class RecyclerViewKeyEventTest {
     @Test
     fun vertical_home() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_MOVE_HOME,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_MOVE_HOME, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.not(0))
-        MatcherAssert.assertThat(
-            layoutManager.findFirstCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(0)
-        )
+        MatcherAssert.assertThat(layoutManager.findFirstCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(0))
     }
 
     @Test
     fun vertical_end() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_MOVE_END,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_MOVE_END, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.not(0))
-        MatcherAssert.assertThat(
-            layoutManager.findLastCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(testItemCount - 1)
-        )
+        MatcherAssert.assertThat(layoutManager.findLastCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(testItemCount - 1))
     }
 
     @Test
     fun horizontal_home() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_MOVE_HOME,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_MOVE_HOME, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.not(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
-        MatcherAssert.assertThat(
-            layoutManager.findFirstCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(0)
-        )
+        MatcherAssert.assertThat(layoutManager.findFirstCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(0))
     }
 
     @Test
     fun horizontal_end() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, false)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_MOVE_END,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_MOVE_END, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.not(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
-        MatcherAssert.assertThat(
-            layoutManager.findLastCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(testItemCount - 1)
-        )
+        MatcherAssert.assertThat(layoutManager.findLastCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(testItemCount - 1))
     }
 
     @Test
     fun vertical_pageDown_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_PAGE_DOWN,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_PAGE_DOWN, layoutManager)
         // PageUp should scroll down one-page i.e. view height.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(viewHeight))
@@ -265,13 +210,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun vertical_pageUp_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_PAGE_UP,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_PAGE_UP, layoutManager)
         // PageUp should scroll up one-page i.e. view height.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(-viewHeight))
@@ -280,13 +220,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun horizontal_pageUp_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_PAGE_UP,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_PAGE_UP, layoutManager)
         // No scroll for horizontal layout.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(-viewWidth))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
@@ -295,13 +230,8 @@ class RecyclerViewKeyEventTest {
     @Test
     fun horizontal_pageDown_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_PAGE_DOWN,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_PAGE_DOWN, layoutManager)
         // No scroll for horizontal layout.
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(viewWidth))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
@@ -310,73 +240,45 @@ class RecyclerViewKeyEventTest {
     @Test
     fun vertical_home_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_MOVE_HOME,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_MOVE_HOME, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.not(0))
-        MatcherAssert.assertThat(
-            layoutManager.findLastCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(testItemCount - 1)
-        )
+        MatcherAssert.assertThat(layoutManager.findLastCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(testItemCount - 1))
     }
 
     @Test
     fun vertical_end_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_MOVE_END,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_MOVE_END, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.`is`(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.not(0))
-        MatcherAssert.assertThat(
-            layoutManager.findFirstCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(0)
-        )
+        MatcherAssert.assertThat(layoutManager.findFirstCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(0))
     }
 
     @Test
     fun horizontal_home_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.FIRST,
-                KeyEvent.KEYCODE_MOVE_HOME,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.FIRST, KeyEvent.KEYCODE_MOVE_HOME, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.not(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
-        MatcherAssert.assertThat(
-            layoutManager.findFirstCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(testItemCount - 1)
-        )
+        MatcherAssert.assertThat(layoutManager.findFirstCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(testItemCount - 1))
     }
 
     @Test
     fun horizontal_end_reversed() {
         val layoutManager = LinearLayoutManager(context, RecyclerView.HORIZONTAL, true)
-        val (scrollWidth, scrollHeight) =
-            setupRecyclerViewAndScrollByKeyEvent(
-                viewHeight,
-                InitialPosition.LAST,
-                KeyEvent.KEYCODE_MOVE_END,
-                layoutManager
-            )
+        val (scrollWidth, scrollHeight) = setupRecyclerViewAndScrollByKeyEvent(
+            viewHeight, InitialPosition.LAST, KeyEvent.KEYCODE_MOVE_END, layoutManager)
         MatcherAssert.assertThat(scrollWidth, CoreMatchers.not(0))
         MatcherAssert.assertThat(scrollHeight, CoreMatchers.`is`(0))
-        MatcherAssert.assertThat(
-            layoutManager.findFirstCompletelyVisibleItemPosition(),
-            CoreMatchers.`is`(0)
-        )
+        MatcherAssert.assertThat(layoutManager.findFirstCompletelyVisibleItemPosition(),
+            CoreMatchers.`is`(0))
     }
 
     @Test

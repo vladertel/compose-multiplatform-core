@@ -17,6 +17,7 @@
 package androidx.appcompat.app
 
 import android.content.res.Configuration
+import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
 import androidx.appcompat.testutils.NightModeActivityTestRule
 import androidx.appcompat.testutils.NightModeUtils.NightSetMode
@@ -46,7 +47,11 @@ class NightModePreventOverrideConfigTestCase(private val setMode: NightSetMode) 
         )
 
         // Simulate the user setting night mode, which should force an activity recreate().
-        setNightModeAndWaitForRecreate(activityRule, MODE_NIGHT_YES, setMode)
+        setNightModeAndWaitForRecreate(
+            activityRule,
+            MODE_NIGHT_YES,
+            setMode
+        )
 
         // Activity should be able to reach fully resumed state again.
         waitUntilState(activityRule.activity, Lifecycle.State.RESUMED)
@@ -62,6 +67,10 @@ class NightModePreventOverrideConfigTestCase(private val setMode: NightSetMode) 
     companion object {
         @JvmStatic
         @Parameterized.Parameters
-        fun data() = listOf(NightSetMode.DEFAULT, NightSetMode.LOCAL)
+        fun data() = if (Build.VERSION.SDK_INT >= 17) {
+            listOf(NightSetMode.DEFAULT, NightSetMode.LOCAL)
+        } else {
+            listOf(NightSetMode.DEFAULT)
+        }
     }
 }

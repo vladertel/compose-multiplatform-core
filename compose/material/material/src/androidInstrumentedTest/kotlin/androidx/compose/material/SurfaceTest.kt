@@ -76,20 +76,29 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SurfaceTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun originalOrderingWhenTheDefaultElevationIsUsed() {
         rule.setMaterialContent {
-            Box(Modifier.size(10.dp, 10.dp).semantics(mergeDescendants = true) {}.testTag("box")) {
-                Surface(color = Color.Yellow) { Box(Modifier.fillMaxSize()) }
-                Surface(color = Color.Green) { Box(Modifier.fillMaxSize()) }
+            Box(
+                Modifier
+                    .size(10.dp, 10.dp)
+                    .semantics(mergeDescendants = true) {}
+                    .testTag("box")
+            ) {
+                Surface(color = Color.Yellow) {
+                    Box(Modifier.fillMaxSize())
+                }
+                Surface(color = Color.Green) {
+                    Box(Modifier.fillMaxSize())
+                }
             }
         }
 
-        rule
-            .onNodeWithTag("box")
+        rule.onNodeWithTag("box")
             .captureToImage()
             .assertShape(
                 density = rule.density,
@@ -106,7 +115,9 @@ class SurfaceTest {
         rule.setMaterialContent {
             Surface(elevation = 2.dp) {
                 outerElevation = LocalAbsoluteElevation.current
-                Surface(elevation = 4.dp) { innerElevation = LocalAbsoluteElevation.current }
+                Surface(elevation = 4.dp) {
+                    innerElevation = LocalAbsoluteElevation.current
+                }
             }
         }
 
@@ -122,7 +133,8 @@ class SurfaceTest {
         rule.setMaterialContent {
             Column {
                 Box(
-                    Modifier.padding(10.dp)
+                    Modifier
+                        .padding(10.dp)
                         .size(10.dp, 10.dp)
                         .semantics(mergeDescendants = true) {}
                         .testTag("top level")
@@ -138,7 +150,8 @@ class SurfaceTest {
                 // Nested surface to increase the absolute elevation
                 Surface(elevation = 2.dp) {
                     Box(
-                        Modifier.padding(10.dp)
+                        Modifier
+                            .padding(10.dp)
                             .size(10.dp, 10.dp)
                             .semantics(mergeDescendants = true) {}
                             .testTag("nested")
@@ -155,9 +168,12 @@ class SurfaceTest {
         }
 
         val topLevelSurfaceBitmap = rule.onNodeWithTag("top level").captureToImage()
-        val nestedSurfaceBitmap = rule.onNodeWithTag("nested").captureToImage().asAndroidBitmap()
+        val nestedSurfaceBitmap = rule.onNodeWithTag("nested").captureToImage()
+            .asAndroidBitmap()
 
-        topLevelSurfaceBitmap.assertPixels { Color(nestedSurfaceBitmap.getPixel(it.x, it.y)) }
+        topLevelSurfaceBitmap.assertPixels {
+            Color(nestedSurfaceBitmap.getPixel(it.x, it.y))
+        }
     }
 
     /**
@@ -182,7 +198,9 @@ class SurfaceTest {
             }
         }
 
-        rule.runOnIdle { Truth.assertThat(contentColor).isEqualTo(expectedColor) }
+        rule.runOnIdle {
+            Truth.assertThat(contentColor).isEqualTo(expectedColor)
+        }
     }
 
     @ExperimentalMaterialApi
@@ -190,13 +208,15 @@ class SurfaceTest {
     fun clickableOverload_semantics() {
         val count = mutableStateOf(0)
         rule.setMaterialContent {
-            Surface(onClick = { count.value += 1 }, modifier = Modifier.testTag("surface")) {
+            Surface(
+                onClick = { count.value += 1 },
+                modifier = Modifier.testTag("surface")
+            ) {
                 Text("${count.value}")
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsEnabled()
@@ -219,8 +239,7 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsEnabled()
@@ -235,14 +254,20 @@ class SurfaceTest {
     fun clickableOverload_clickAction() {
         val count = mutableStateOf(0f)
         rule.setMaterialContent {
-            Surface(modifier = Modifier.testTag("surface"), onClick = { count.value += 1 }) {
+            Surface(
+                modifier = Modifier.testTag("surface"),
+                onClick = { count.value += 1 }
+            ) {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule.onNodeWithTag("surface").performClick()
+        rule.onNodeWithTag("surface")
+            .performClick()
         Truth.assertThat(count.value).isEqualTo(1)
 
-        rule.onNodeWithTag("surface").performClick().performClick()
+        rule.onNodeWithTag("surface")
+            .performClick()
+            .performClick()
         Truth.assertThat(count.value).isEqualTo(3)
     }
 
@@ -260,12 +285,19 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule.onNodeWithTag("surface").assertIsEnabled().performClick()
+        rule.onNodeWithTag("surface")
+            .assertIsEnabled()
+            .performClick()
 
         Truth.assertThat(count.value).isEqualTo(1)
-        rule.runOnIdle { enabled.value = false }
+        rule.runOnIdle {
+            enabled.value = false
+        }
 
-        rule.onNodeWithTag("surface").assertIsNotEnabled().performClick().performClick()
+        rule.onNodeWithTag("surface")
+            .assertIsNotEnabled()
+            .performClick()
+            .performClick()
         Truth.assertThat(count.value).isEqualTo(1)
     }
 
@@ -289,18 +321,24 @@ class SurfaceTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope!!.launch { interactionSource.interactions.collect { interactions.add(it) } }
+        scope!!.launch {
+            interactionSource.interactions.collect { interactions.add(it) }
+        }
 
-        rule.runOnIdle { Truth.assertThat(interactions).isEmpty() }
+        rule.runOnIdle {
+            Truth.assertThat(interactions).isEmpty()
+        }
 
-        rule.onNodeWithTag("surface").performTouchInput { down(center) }
+        rule.onNodeWithTag("surface")
+            .performTouchInput { down(center) }
 
         rule.runOnIdle {
             Truth.assertThat(interactions).hasSize(1)
             Truth.assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
 
-        rule.onNodeWithTag("surface").performTouchInput { up() }
+        rule.onNodeWithTag("surface")
+            .performTouchInput { up() }
 
         rule.runOnIdle {
             Truth.assertThat(interactions).hasSize(2)
@@ -324,8 +362,7 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsEnabled()
@@ -348,8 +385,7 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
             .assertIsEnabled()
@@ -367,9 +403,7 @@ class SurfaceTest {
                 selected = selected.value,
                 onClick = { selected.value = !selected.value },
                 modifier = Modifier.testTag("surface")
-            ) {
-                Spacer(Modifier.size(30.dp))
-            }
+            ) { Spacer(Modifier.size(30.dp)) }
         }
         rule.onNodeWithTag("surface").performClick()
         Truth.assertThat(selected.value).isTrue()
@@ -387,9 +421,7 @@ class SurfaceTest {
                 onClick = { selected.value = !selected.value },
                 modifier = Modifier.testTag("surface"),
                 shape = CircleShape
-            ) {
-                Spacer(Modifier.size(100.dp))
-            }
+            ) { Spacer(Modifier.size(100.dp)) }
         }
         // Click inside the circular shape bounds. Expecting a selection change.
         rule.onNodeWithTag("surface").performClick()
@@ -409,9 +441,7 @@ class SurfaceTest {
                 onClick = { selected.value = !selected.value },
                 modifier = Modifier.testTag("surface"),
                 shape = CircleShape
-            ) {
-                Spacer(Modifier.size(40.dp))
-            }
+            ) { Spacer(Modifier.size(40.dp)) }
         }
         // Click inside the circular shape bounds. Expecting a selection change.
         rule.onNodeWithTag("surface").performClick()
@@ -436,8 +466,7 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsEnabled()
@@ -460,8 +489,7 @@ class SurfaceTest {
                 Spacer(Modifier.size(30.dp))
             }
         }
-        rule
-            .onNodeWithTag("surface")
+        rule.onNodeWithTag("surface")
             .assertHasClickAction()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
             .assertIsEnabled()
@@ -479,9 +507,7 @@ class SurfaceTest {
                 checked = toggled.value,
                 onCheckedChange = { toggled.value = !toggled.value },
                 modifier = Modifier.testTag("surface")
-            ) {
-                Spacer(Modifier.size(30.dp))
-            }
+            ) { Spacer(Modifier.size(30.dp)) }
         }
         rule.onNodeWithTag("surface").performClick()
         Truth.assertThat(toggled.value).isTrue()
@@ -499,9 +525,7 @@ class SurfaceTest {
                 onCheckedChange = { checked.value = !checked.value },
                 modifier = Modifier.testTag("surface"),
                 shape = CircleShape
-            ) {
-                Spacer(Modifier.size(100.dp))
-            }
+            ) { Spacer(Modifier.size(100.dp)) }
         }
         // Click inside the circular shape bounds. Expecting a checked state change.
         rule.onNodeWithTag("surface").performClick()
@@ -521,9 +545,7 @@ class SurfaceTest {
                 onCheckedChange = { checked.value = !checked.value },
                 modifier = Modifier.testTag("surface"),
                 shape = CircleShape
-            ) {
-                Spacer(Modifier.size(40.dp))
-            }
+            ) { Spacer(Modifier.size(40.dp)) }
         }
         // Click inside the circular shape bounds. Expecting a checked state change.
         rule.onNodeWithTag("surface").performClick()
@@ -551,7 +573,9 @@ class SurfaceTest {
                 ) {}
             }
         }
-        rule.onNodeWithTag("clickable").assertHasClickAction().performClick()
+        rule.onNodeWithTag("clickable")
+            .assertHasClickAction()
+            .performClick()
         // still 0
         Truth.assertThat(state.value).isEqualTo(0)
     }
@@ -566,21 +590,26 @@ class SurfaceTest {
                     Modifier.fillMaxSize().testTag("surface"),
                 ) {
                     Box(
-                        Modifier.fillMaxSize().testTag("clickable").pointerInput(Unit) {
-                            awaitEachGesture {
-                                hitTested.value = true
-                                val event = awaitPointerEvent(PointerEventPass.Final)
-                                Truth.assertThat(event.changes[0].isConsumed).isFalse()
+                        Modifier
+                            .fillMaxSize()
+                            .testTag("clickable")
+                            .pointerInput(Unit) {
+                                awaitEachGesture {
+                                    hitTested.value = true
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    Truth.assertThat(event.changes[0].isConsumed)
+                                        .isFalse()
+                                }
                             }
-                        }
                     )
                 }
             }
         }
-        rule.onNodeWithTag("clickable").performTouchInput {
-            down(center)
-            up()
-        }
+        rule.onNodeWithTag("clickable")
+            .performTouchInput {
+                down(center)
+                up()
+            }
         Truth.assertThat(hitTested.value).isTrue()
     }
 }

@@ -19,7 +19,9 @@ package androidx.startup
 import android.content.Context
 import android.util.Log
 
-/** Initializer with cyclic dependencies. */
+/**
+ * Initializer with cyclic dependencies.
+ */
 class CyclicDependencyInitializer : Initializer<Unit> {
     override fun create(context: Context) {
         Log.i(TAG, "Initialized")

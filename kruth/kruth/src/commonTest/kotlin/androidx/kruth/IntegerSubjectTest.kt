@@ -33,17 +33,23 @@ class IntegerSubjectTest {
     @Test
     fun equalityWithLongs() {
         assertThat(0).isEqualTo(0L)
-        assertFailsWith<AssertionError> { assertThat(0).isNotEqualTo(0L) }
+        assertFailsWith<AssertionError> {
+            assertThat(0).isNotEqualTo(0L)
+        }
     }
 
     @Test
     fun equalityFail() {
-        assertFailsWith<AssertionError> { assertThat(4).isEqualTo(5) }
+        assertFailsWith<AssertionError> {
+            assertThat(4).isEqualTo(5)
+        }
     }
 
     @Test
     fun inequalityFail() {
-        assertFailsWith<AssertionError> { assertThat(4).isNotEqualTo(4) }
+        assertFailsWith<AssertionError> {
+            assertThat(4).isNotEqualTo(4)
+        }
     }
 
     @Test
@@ -53,7 +59,9 @@ class IntegerSubjectTest {
 
     @Test
     fun equalityOfNullsFail_nullExpected() {
-        assertFailsWith<AssertionError> { assertThat(5).isEqualTo(null) }
+        assertFailsWith<AssertionError> {
+            assertThat(5).isEqualTo(null)
+        }
     }
 
     @Test
@@ -88,12 +96,16 @@ class IntegerSubjectTest {
 
     @Test
     fun overflowBetweenIntegerAndLong_shouldBeDifferent_min() {
-        assertFailsWith<AssertionError> { assertThat(Int.MIN_VALUE).isEqualTo(Long.MIN_VALUE) }
+        assertFailsWith<AssertionError> {
+            assertThat(Int.MIN_VALUE).isEqualTo(Long.MIN_VALUE)
+        }
     }
 
     @Test
     fun overflowBetweenIntegerAndLong_shouldBeDifferent_max() {
-        assertFailsWith<AssertionError> { assertThat(Int.MAX_VALUE).isEqualTo(Long.MAX_VALUE) }
+        assertFailsWith<AssertionError> {
+            assertThat(Int.MAX_VALUE).isEqualTo(Long.MAX_VALUE)
+        }
     }
 
     @Test
@@ -104,22 +116,30 @@ class IntegerSubjectTest {
 
     @Test
     fun testNumericTypeWithSameValue_shouldBeEqual_int_long() {
-        assertFailsWith<AssertionError> { assertThat(42).isNotEqualTo(42L) }
+        assertFailsWith<AssertionError> {
+            assertThat(42).isNotEqualTo(42L)
+        }
     }
 
     @Test
     fun testNumericTypeWithSameValue_shouldBeEqual_int_int() {
-        assertFailsWith<AssertionError> { assertThat(42).isNotEqualTo(42) }
+        assertFailsWith<AssertionError> {
+            assertThat(42).isNotEqualTo(42)
+        }
     }
 
     @Test
     fun testNumericPrimitiveTypes_isNotEqual_shouldFail_intToChar() {
-        assertFailsWith<AssertionError> { assertThat(42).isNotEqualTo(42.toChar()) }
+        assertFailsWith<AssertionError> {
+            assertThat(42).isNotEqualTo(42.toChar())
+        }
     }
 
     @Test
     fun testNumericPrimitiveTypes_isNotEqual_shouldFail_charToInt() {
         // Uses Object overload rather than Integer.
-        assertFailsWith<AssertionError> { assertThat(42.toChar()).isNotEqualTo(42) }
+        assertFailsWith<AssertionError> {
+            assertThat(42.toChar()).isNotEqualTo(42)
+        }
     }
 }

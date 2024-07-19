@@ -36,8 +36,9 @@ import androidx.compose.ui.Modifier
  * Test case that puts the given amount of checkboxes into a column of rows and makes changes by
  * toggling the first checkbox.
  */
-class CheckboxesInRowsTestCase(private val amountOfCheckboxes: Int) :
-    LayeredComposeTestCase(), ToggleableTestCase {
+class CheckboxesInRowsTestCase(
+    private val amountOfCheckboxes: Int
+) : LayeredComposeTestCase(), ToggleableTestCase {
 
     private val states = mutableListOf<MutableState<Boolean>>()
 
@@ -47,7 +48,9 @@ class CheckboxesInRowsTestCase(private val amountOfCheckboxes: Int) :
             repeat(amountOfCheckboxes) {
                 Row {
                     Text(text = "Check Me!")
-                    CheckboxWithState(Modifier.weight(1f).wrapContentSize(Alignment.CenterEnd))
+                    CheckboxWithState(
+                        Modifier.weight(1f).wrapContentSize(Alignment.CenterEnd)
+                    )
                 }
             }
         }
@@ -55,7 +58,11 @@ class CheckboxesInRowsTestCase(private val amountOfCheckboxes: Int) :
 
     @Composable
     override fun ContentWrappers(content: @Composable () -> Unit) {
-        MaterialTheme { Surface { content() } }
+        MaterialTheme {
+            Surface {
+                content()
+            }
+        }
     }
 
     override fun toggleState() {

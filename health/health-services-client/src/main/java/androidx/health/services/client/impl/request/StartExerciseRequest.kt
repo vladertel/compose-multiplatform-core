@@ -22,7 +22,10 @@ import androidx.health.services.client.data.ExerciseConfig
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.RequestsProto
 
-/** Request for starting an exercise. */
+/**
+ * Request for starting an exercise.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class StartExerciseRequest(
     public val packageName: String,

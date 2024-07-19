@@ -17,6 +17,7 @@
 package androidx.camera.camera2.internal.compat.workaround;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.quirk.AutoFlashUnderExposedQuirk;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.impl.Quirks;
@@ -28,6 +29,7 @@ import androidx.camera.core.impl.Quirks;
  * <p>This class is not thread-safe and must be accessed from the same thread.
  * @see AutoFlashUnderExposedQuirk
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class OverrideAeModeForStillCapture {
     private final boolean mHasAutoFlashUnderExposedQuirk;
     private boolean mAePrecaptureStarted = false;

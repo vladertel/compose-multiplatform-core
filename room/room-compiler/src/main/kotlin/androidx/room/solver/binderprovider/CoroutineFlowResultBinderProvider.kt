@@ -18,6 +18,7 @@ package androidx.room.solver.binderprovider
 
 import androidx.room.compiler.processing.XType
 import androidx.room.ext.KotlinTypeNames
+import androidx.room.ext.RoomCoroutinesTypeNames.COROUTINES_ROOM
 import androidx.room.parser.ParsedQuery
 import androidx.room.processor.Context
 import androidx.room.processor.ProcessorErrors
@@ -26,14 +27,25 @@ import androidx.room.solver.TypeAdapterExtras
 import androidx.room.solver.query.result.CoroutineFlowResultBinder
 import androidx.room.solver.query.result.QueryResultBinder
 
-class CoroutineFlowResultBinderProvider(val context: Context) : QueryResultBinderProvider {
+@Suppress("FunctionName")
+fun CoroutineFlowResultBinderProvider(context: Context): QueryResultBinderProvider =
+    CoroutineFlowResultBinderProviderImpl(
+        context
+    ).requireArtifact(
+        context = context,
+        requiredType = COROUTINES_ROOM,
+        missingArtifactErrorMsg = ProcessorErrors.MISSING_ROOM_COROUTINE_ARTIFACT
+    )
+
+private class CoroutineFlowResultBinderProviderImpl(
+    val context: Context
+) : QueryResultBinderProvider {
     companion object {
-        val CHANNEL_TYPE_NAMES =
-            listOf(
-                KotlinTypeNames.CHANNEL,
-                KotlinTypeNames.SEND_CHANNEL,
-                KotlinTypeNames.RECEIVE_CHANNEL
-            )
+        val CHANNEL_TYPE_NAMES = listOf(
+            KotlinTypeNames.CHANNEL,
+            KotlinTypeNames.SEND_CHANNEL,
+            KotlinTypeNames.RECEIVE_CHANNEL
+        )
     }
 
     override fun provide(
@@ -43,8 +55,10 @@ class CoroutineFlowResultBinderProvider(val context: Context) : QueryResultBinde
     ): QueryResultBinder {
         val typeArg = declared.typeArguments.first()
         val adapter = context.typeAdapterStore.findQueryResultAdapter(typeArg, query, extras)
-        val tableNames =
-            ((adapter?.accessedTableNames() ?: emptyList()) + query.tables.map { it.name }).toSet()
+        val tableNames = (
+            (adapter?.accessedTableNames() ?: emptyList()) +
+                query.tables.map { it.name }
+            ).toSet()
         if (tableNames.isEmpty()) {
             context.logger.e(ProcessorErrors.OBSERVABLE_QUERY_NOTHING_TO_OBSERVE)
         }
@@ -58,7 +72,9 @@ class CoroutineFlowResultBinderProvider(val context: Context) : QueryResultBinde
         val typeName = declared.rawType.asTypeName()
         if (typeName in CHANNEL_TYPE_NAMES) {
             context.logger.e(
-                ProcessorErrors.invalidChannelType(typeName.toString(context.codeLanguage))
+                ProcessorErrors.invalidChannelType(
+                    typeName.toString(context.codeLanguage)
+                )
             )
             return false
         }

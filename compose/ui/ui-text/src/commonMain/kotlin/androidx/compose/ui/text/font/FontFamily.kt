@@ -53,9 +53,11 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
          * call to [resolve].
          *
          * This method will suspend until:
+         *
          * 1. All [FontLoadingStrategy.Async] fonts that are reachable have completed loading, or
-         *    failed to load
-         * 2. All reachable fonts in the fallback chain have been loaded and inserted into the cache
+         * failed to load
+         * 2. All reachable fonts in the fallback chain have been loaded and inserted into the
+         * cache
          *
          * After returning, all fonts with [FontLoadingStrategy.Async] and
          * [FontLoadingStrategy.OptionalLocal] will be permanently cached. In contrast to [resolve]
@@ -64,10 +66,12 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
          *
          * All fonts with [FontLoadingStrategy.Blocking] will be cached with normal eviction rules.
          *
-         * @param fontFamily the family to resolve all fonts from
          * @throws IllegalStateException if any reachable font fails to load
+         * @param fontFamily the family to resolve all fonts from
          */
-        suspend fun preload(fontFamily: FontFamily)
+        suspend fun preload(
+            fontFamily: FontFamily
+        )
 
         /**
          * Resolves a typeface using any appropriate logic for the [FontFamily].
@@ -82,8 +86,8 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
          * @param fontWeight desired font weight
          * @param fontStyle desired font style
          * @param fontSynthesis configuration for font synthesis
-         * @return platform-specific Typeface such as [android.graphics.Typeface]
          * @throws IllegalStateException if the FontFamily cannot resolve a to a typeface
+         * @return platform-specific Typeface such as [android.graphics.Typeface]
          */
         fun resolve(
             fontFamily: FontFamily? = null,
@@ -92,9 +96,10 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
             fontSynthesis: FontSynthesis = FontSynthesis.All
         ): State<Any>
     }
-
     companion object {
-        /** The platform default font. */
+        /**
+         * The platform default font.
+         */
         val Default: SystemFontFamily = DefaultFontFamily()
 
         /**
@@ -127,8 +132,8 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
         /**
          * Cursive, hand-written like font family.
          *
-         * If the device doesn't support this font family, the system will fallback to the default
-         * font.
+         * If the device doesn't support this font family, the system will fallback to the
+         * default font.
          *
          * @sample androidx.compose.ui.text.samples.FontFamilyCursiveSample
          *
@@ -145,23 +150,27 @@ sealed class FontFamily(canLoadSynchronously: Boolean) {
     val canLoadSynchronously = canLoadSynchronously
 }
 
-/** A base class of [FontFamily]s that is created from file sources. */
+/**
+ * A base class of [FontFamily]s that is created from file sources.
+ */
 sealed class FileBasedFontFamily : FontFamily(false)
 
-/** A base class of [FontFamily]s installed on the system. */
+/**
+ * A base class of [FontFamily]s installed on the system.
+ */
 sealed class SystemFontFamily : FontFamily(true)
 
 /**
  * Defines a font family with list of [Font].
  *
  * @sample androidx.compose.ui.text.samples.FontFamilySansSerifSample
- *
  * @sample androidx.compose.ui.text.samples.CustomFontFamilySample
  */
 @Immutable
-class FontListFontFamily
-internal constructor(
-    /** The fallback list of fonts used for resolving typefaces for this FontFamily. */
+class FontListFontFamily internal constructor(
+    /**
+     * The fallback list of fonts used for resolving typefaces for this FontFamily.
+     */
     val fonts: List<Font>
 ) : FileBasedFontFamily(), List<Font> by fonts {
     init {
@@ -196,12 +205,16 @@ internal constructor(
  * @see FontFamily.Cursive
  */
 @Immutable
-class GenericFontFamily internal constructor(val name: String, private val fontFamilyName: String) :
-    SystemFontFamily() {
+class GenericFontFamily internal constructor(
+    val name: String,
+    private val fontFamilyName: String
+) : SystemFontFamily() {
     override fun toString(): String = fontFamilyName
 }
 
-/** Defines a default font family. */
+/**
+ * Defines a default font family.
+ */
 @Immutable
 internal class DefaultFontFamily internal constructor() : SystemFontFamily() {
     override fun toString(): String = "FontFamily.Default"
@@ -234,18 +247,21 @@ class LoadedFontFamily internal constructor(val typeface: Typeface) : FontFamily
  *
  * @param fonts list of font files
  */
-@Stable fun FontFamily(fonts: List<Font>): FontFamily = FontListFontFamily(fonts)
+@Stable
+fun FontFamily(fonts: List<Font>): FontFamily = FontListFontFamily(fonts)
 
 /**
  * Construct a font family that contains list of custom font files.
  *
  * @param fonts list of font files
  */
-@Stable fun FontFamily(vararg fonts: Font): FontFamily = FontListFontFamily(fonts.asList())
+@Stable
+fun FontFamily(vararg fonts: Font): FontFamily = FontListFontFamily(fonts.asList())
 
 /**
  * Construct a font family that contains loaded font family: Typeface.
  *
  * @param typeface A typeface instance.
  */
-@Stable fun FontFamily(typeface: Typeface): FontFamily = LoadedFontFamily(typeface)
+@Stable
+fun FontFamily(typeface: Typeface): FontFamily = LoadedFontFamily(typeface)

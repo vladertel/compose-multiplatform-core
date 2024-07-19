@@ -22,16 +22,17 @@ import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
 import com.google.common.truth.Truth
 
-/** Truth extension for ClipDescription. */
-internal class ClipDescriptionSubject
-private constructor(failureMetadata: FailureMetadata?, private val subject: ClipDescription?) :
-    Subject(failureMetadata, subject) {
+/**
+ * Truth extension for ClipDescription.
+ */
+internal class ClipDescriptionSubject private constructor(
+    failureMetadata: FailureMetadata?,
+    private val subject: ClipDescription?
+) : Subject(failureMetadata, subject) {
 
     companion object {
         internal val SUBJECT_FACTORY: Factory<ClipDescriptionSubject?, ClipDescription?> =
-            Factory { failureMetadata, subject ->
-                ClipDescriptionSubject(failureMetadata, subject)
-            }
+            Factory { failureMetadata, subject -> ClipDescriptionSubject(failureMetadata, subject) }
     }
 
     /**
@@ -42,12 +43,10 @@ private constructor(failureMetadata: FailureMetadata?, private val subject: Clip
     fun isEqualToClipDescription(clipDescription: ClipDescription) {
         if (subject === clipDescription) return
         check("isNotNull()").that(subject).isNotNull()
-        check("getMimeTypeCount()")
-            .that(subject!!.mimeTypeCount)
+        check("getMimeTypeCount()").that(subject!!.mimeTypeCount)
             .isEqualTo(clipDescription.mimeTypeCount)
         for (i in 0 until subject.mimeTypeCount) {
-            check("getMimeType($i)")
-                .that(subject.getMimeType(i))
+            check("getMimeType($i)").that(subject.getMimeType(i))
                 .isEqualTo(clipDescription.getMimeType(i))
         }
         if (Build.VERSION.SDK_INT >= 24) {
@@ -55,11 +54,9 @@ private constructor(failureMetadata: FailureMetadata?, private val subject: Clip
         }
         check("getLabel()").that(subject.label).isEqualTo(clipDescription.label)
         if (Build.VERSION.SDK_INT >= 31) {
-            check("isStyledText()")
-                .that(subject.isStyledText)
+            check("isStyledText()").that(subject.isStyledText)
                 .isEqualTo(clipDescription.isStyledText)
-            check("getClassificationStatus()")
-                .that(subject.classificationStatus)
+            check("getClassificationStatus()").that(subject.classificationStatus)
                 .isEqualTo(clipDescription.classificationStatus)
         }
     }

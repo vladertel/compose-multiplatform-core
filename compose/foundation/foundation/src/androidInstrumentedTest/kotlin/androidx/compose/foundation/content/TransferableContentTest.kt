@@ -35,8 +35,9 @@ class TransferableContentTest {
 
     @Test
     fun hasMediaType_genericNonText() {
-        val transferableContent =
-            TransferableContent(createClipData { addUri(mimeType = "image/png") })
+        val transferableContent = TransferableContent(createClipData {
+            addUri(mimeType = "image/png")
+        })
         assertTrue(transferableContent.hasMediaType(MediaType.Image))
         assertTrue(transferableContent.hasMediaType(MediaType("image/png")))
         assertFalse(transferableContent.hasMediaType(MediaType("image/jpeg")))
@@ -44,13 +45,10 @@ class TransferableContentTest {
 
     @Test
     fun hasMediaType_genericText() {
-        val transferableContent =
-            TransferableContent(
-                createClipData {
-                    addText()
-                    addUri(mimeType = "image/png")
-                }
-            )
+        val transferableContent = TransferableContent(createClipData {
+            addText()
+            addUri(mimeType = "image/png")
+        })
         assertTrue(transferableContent.hasMediaType(MediaType.Text))
         assertTrue(transferableContent.hasMediaType(MediaType.PlainText))
         assertFalse(transferableContent.hasMediaType(MediaType.HtmlText))
@@ -59,41 +57,32 @@ class TransferableContentTest {
 
     @Test
     fun readPlainText_concatsTextContent() {
-        val transferableContent =
-            TransferableContent(
-                createClipData {
-                    addText("a")
-                    addText("b")
-                    addText("c")
-                }
-            )
+        val transferableContent = TransferableContent(createClipData {
+            addText("a")
+            addText("b")
+            addText("c")
+        })
 
         assertThat(transferableContent.clipEntry.readPlainText()).isEqualTo("a\nb\nc")
     }
 
     @Test
     fun readPlainText_returnsNull_ifNoText() {
-        val transferableContent =
-            TransferableContent(
-                createClipData {
-                    addUri()
-                    addUri()
-                }
-            )
+        val transferableContent = TransferableContent(createClipData {
+            addUri()
+            addUri()
+        })
 
         assertThat(transferableContent.clipEntry.readPlainText()).isNull()
     }
 
     @Test
     fun readPlainText_singleItem_doesNotHaveNewLine() {
-        val transferableContent =
-            TransferableContent(
-                createClipData {
-                    addText("abc")
-                    addUri()
-                    addIntent()
-                }
-            )
+        val transferableContent = TransferableContent(createClipData {
+            addText("abc")
+            addUri()
+            addIntent()
+        })
 
         assertThat(transferableContent.clipEntry.readPlainText()).isEqualTo("abc")
     }
@@ -114,14 +103,11 @@ class TransferableContentTest {
 
     @Test
     fun consumeEach_remainingMimeTypes_includeConsumedItems() {
-        val transferableContent =
-            TransferableContent(
-                createClipData {
-                    addText()
-                    addUri(mimeType = "video/mp4")
-                    addUri(mimeType = "image/gif")
-                }
-            )
+        val transferableContent = TransferableContent(createClipData {
+            addText()
+            addUri(mimeType = "video/mp4")
+            addUri(mimeType = "image/gif")
+        })
         // only text would remain
         val remaining = transferableContent.consume { it.uri != null }
         assertThat(remaining?.clipEntry?.clipData?.itemCount).isEqualTo(1)

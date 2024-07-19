@@ -25,17 +25,26 @@ import org.xmlpull.v1.XmlPullParserException
 /**
  * Parser for SDK config.
  *
- * The expected XML structure is: <compat-config>
- * <dex-path>RuntimeEnabledSdk-sdk.package.name/dex/classes.dex</dex-path>
- * <dex-path>RuntimeEnabledSdk-sdk.package.name/dex/classes2.dex</dex-path>
- * <java-resources-root-path>RuntimeEnabledSdk-sdk.package.name/res</java-resources-root-path>
- * <compat-entrypoint>com.sdk.EntryPointClass</compat-entrypoint> <resource-id-remapping>
- * <r-package-class>com.test.sdk.RPackage</r-package-class>
- * <resources-package-id>123</resources-package-id> </resource-id-remapping> </compat-config>
+ * The expected XML structure is:
+ * <compat-config>
+ *     <dex-path>RuntimeEnabledSdk-sdk.package.name/dex/classes.dex</dex-path>
+ *     <dex-path>RuntimeEnabledSdk-sdk.package.name/dex/classes2.dex</dex-path>
+ *     <java-resources-root-path>RuntimeEnabledSdk-sdk.package.name/res</java-resources-root-path>
+ *     <compat-entrypoint>com.sdk.EntryPointClass</compat-entrypoint>
+ *     <resource-id-remapping>
+ *         <r-package-class>com.test.sdk.RPackage</r-package-class>
+ *         <resources-package-id>123</resources-package-id>
+ *     </resource-id-remapping>
+ * </compat-config>
  */
-internal class LocalSdkConfigParser private constructor(private val xmlParser: XmlPullParser) {
+internal class LocalSdkConfigParser private constructor(
+    private val xmlParser: XmlPullParser
+) {
 
-    private fun readConfig(packageName: String, versionMajor: Int?): LocalSdkConfig {
+    private fun readConfig(
+        packageName: String,
+        versionMajor: Int?
+    ): LocalSdkConfig {
         xmlParser.require(XmlPullParser.START_DOCUMENT, NAMESPACE, null)
         xmlParser.nextTag()
 
@@ -54,6 +63,7 @@ internal class LocalSdkConfigParser private constructor(private val xmlParser: X
                     val dexPath = xmlParser.nextText()
                     dexPaths.add(dexPath)
                 }
+
                 RESOURCE_ROOT_ELEMENT_NAME -> {
                     if (javaResourcesRoot != null) {
                         throw XmlPullParserException(
@@ -62,12 +72,16 @@ internal class LocalSdkConfigParser private constructor(private val xmlParser: X
                     }
                     javaResourcesRoot = xmlParser.nextText()
                 }
+
                 ENTRYPOINT_ELEMENT_NAME -> {
                     if (entryPoint != null) {
-                        throw XmlPullParserException("Duplicate $ENTRYPOINT_ELEMENT_NAME tag found")
+                        throw XmlPullParserException(
+                            "Duplicate $ENTRYPOINT_ELEMENT_NAME tag found"
+                        )
                     }
                     entryPoint = xmlParser.nextText()
                 }
+
                 RESOURCE_REMAPPING_ENTRY_ELEMENT_NAME -> {
                     if (resourceRemapping != null) {
                         throw XmlPullParserException(
@@ -76,6 +90,7 @@ internal class LocalSdkConfigParser private constructor(private val xmlParser: X
                     }
                     resourceRemapping = readResourceRemappingConfig()
                 }
+
                 else -> xmlParser.skipCurrentTag()
             }
         }
@@ -116,6 +131,7 @@ internal class LocalSdkConfigParser private constructor(private val xmlParser: X
                     }
                     rPackageClassName = xmlParser.nextText()
                 }
+
                 RESOURCE_REMAPPING_ID_ELEMENT_NAME -> {
                     if (packageId != null) {
                         throw XmlPullParserException(
@@ -124,16 +140,21 @@ internal class LocalSdkConfigParser private constructor(private val xmlParser: X
                     }
                     packageId = xmlParser.nextText().toInt()
                 }
+
                 else -> xmlParser.skipCurrentTag()
             }
         }
         xmlParser.require(END_TAG, NAMESPACE, RESOURCE_REMAPPING_ENTRY_ELEMENT_NAME)
 
         if (rPackageClassName == null) {
-            throw XmlPullParserException("No $RESOURCE_REMAPPING_CLASS_ELEMENT_NAME tag found")
+            throw XmlPullParserException(
+                "No $RESOURCE_REMAPPING_CLASS_ELEMENT_NAME tag found"
+            )
         }
         if (packageId == null) {
-            throw XmlPullParserException("No $RESOURCE_REMAPPING_ID_ELEMENT_NAME tag found")
+            throw XmlPullParserException(
+                "No $RESOURCE_REMAPPING_ID_ELEMENT_NAME tag found"
+            )
         }
 
         return ResourceRemappingConfig(rPackageClassName, packageId)

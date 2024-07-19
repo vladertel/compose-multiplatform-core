@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class JetsnackBenchmark {
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val jetsnackCaseFactory = { JetsnackCaseFactory() }
 

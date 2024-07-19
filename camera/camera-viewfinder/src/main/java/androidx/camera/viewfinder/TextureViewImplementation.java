@@ -25,12 +25,12 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.impl.utils.executor.ViewfinderExecutors;
-import androidx.camera.impl.utils.futures.FutureCallback;
-import androidx.camera.impl.utils.futures.Futures;
+import androidx.annotation.RequiresApi;
+import androidx.camera.viewfinder.ViewfinderSurfaceRequest.Result;
 import androidx.camera.viewfinder.internal.utils.Logger;
-import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest;
-import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest.Result;
+import androidx.camera.viewfinder.internal.utils.executor.CameraExecutors;
+import androidx.camera.viewfinder.internal.utils.futures.FutureCallback;
+import androidx.camera.viewfinder.internal.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.content.ContextCompat;
 import androidx.core.util.Consumer;
@@ -41,6 +41,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * The {@link TextureView} implementation for {@link CameraViewfinder}
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class TextureViewImplementation extends ViewfinderImplementation {
 
     private static final String TAG = "TextureViewImpl";
@@ -81,7 +82,6 @@ final class TextureViewImplementation extends ViewfinderImplementation {
         mTextureView.setLayoutParams(
                 new FrameLayout.LayoutParams(mResolution.getWidth(), mResolution.getHeight()));
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @SuppressWarnings("ObjectToString")
             @Override
             public void onSurfaceTextureAvailable(@NonNull final SurfaceTexture surfaceTexture,
                     final int width, final int height) {
@@ -95,7 +95,7 @@ final class TextureViewImplementation extends ViewfinderImplementation {
                 if (mSurfaceReleaseFuture != null && mSurfaceRequest != null) {
                     Preconditions.checkNotNull(mSurfaceRequest);
                     Logger.d(TAG, "Surface invalidated " + mSurfaceRequest);
-                    mSurfaceRequest.markSurfaceSafeToRelease();
+                    mSurfaceRequest.getViewfinderSurface().close();
                 } else {
                     tryToProvideViewfinderSurface();
                 }
@@ -119,7 +119,7 @@ final class TextureViewImplementation extends ViewfinderImplementation {
                             new FutureCallback<Result>() {
                                 @Override
                                 public void onSuccess(Result result) {
-                                    Preconditions.checkState(result.getCode()
+                                    Preconditions.checkState(result.getResultCode()
                                                     != Result.RESULT_SURFACE_ALREADY_PROVIDED,
                                             "Unexpected result from SurfaceRequest. Surface was "
                                                     + "provided twice.");
@@ -222,7 +222,7 @@ final class TextureViewImplementation extends ViewfinderImplementation {
                 completer -> {
                     Logger.d(TAG, "Surface set on viewfinder.");
                     mSurfaceRequest.provideSurface(surface,
-                            ViewfinderExecutors.directExecutor(), new Consumer<Result>() {
+                            CameraExecutors.directExecutor(), new Consumer<Result>() {
                                 @Override
                                 public void accept(Result result) {
                                     Logger.d(TAG, "provide surface result = "

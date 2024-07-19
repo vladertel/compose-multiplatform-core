@@ -42,12 +42,14 @@ class LeakInputMethodManagerTest {
 
     // Detect leaks BEFORE and AFTER activity is destroyed
     @get:Rule
-    val ruleChain: RuleChain =
-        RuleChain.outerRule(DetectLeaksAfterTestSuccess()).around(activityRule)
+    val ruleChain: RuleChain = RuleChain.outerRule(DetectLeaksAfterTestSuccess())
+        .around(activityRule)
 
     @Test
     fun leakThroughRemovedEditText() {
-        activityRule.runOnUiThread { activityRule.activity.removeEditText() }
+        activityRule.runOnUiThread {
+            activityRule.activity.removeEditText()
+        }
         activityRule.activity.blockingFinish()
     }
 }
@@ -56,7 +58,6 @@ class LeakingActivity : ComponentActivity() {
     private val timeout = 10L // sec
     private val latch = CountDownLatch(1)
     private lateinit var editText: EditText
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val layout = LinearLayout(this)

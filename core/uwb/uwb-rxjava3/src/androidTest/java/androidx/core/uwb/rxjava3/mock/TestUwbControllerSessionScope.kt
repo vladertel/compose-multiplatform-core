@@ -32,7 +32,6 @@ class TestUwbControllerSessionScope(
 ) : UwbControllerSessionScope {
     private val uwbClientSessionScope =
         TestUwbClientSessionScope(uwbClient, rangingCapabilities, localAddress)
-
     override suspend fun addControlee(address: UwbAddress) {
         val uwbAddress = com.google.android.gms.nearby.uwb.UwbAddress(address.address)
         uwbClient.addControlee(uwbAddress)
@@ -57,9 +56,6 @@ class TestUwbControllerSessionScope(
         proximityFar: Int
     ) {
         return uwbClientSessionScope.reconfigureRangeDataNtf(
-            configType,
-            proximityNear,
-            proximityFar
-        )
+            configType, proximityNear, proximityFar)
     }
 }

@@ -16,6 +16,7 @@
 
 package androidx.camera.extensions.internal;
 
+import androidx.annotation.RequiresApi;
 import androidx.camera.extensions.impl.ExtenderStateListener;
 
 /**
@@ -24,6 +25,7 @@ import androidx.camera.extensions.impl.ExtenderStateListener;
  * {@link androidx.camera.extensions.impl.ExtenderStateListener#onInit}. {@link #close()} is
  * invoked to close the processor.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface VendorProcessor {
     /**
      * Initialize the processor after {@link ExtenderStateListener#onInit}.

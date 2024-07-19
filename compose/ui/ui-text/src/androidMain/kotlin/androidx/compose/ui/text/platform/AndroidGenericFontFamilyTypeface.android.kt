@@ -26,9 +26,13 @@ import androidx.compose.ui.text.font.GenericFontFamily
 import androidx.compose.ui.text.font.TypefaceHelperMethodsApi28
 import androidx.compose.ui.text.font.getAndroidTypefaceStyle
 
-/** An implementation of [AndroidTypeface] for [GenericFontFamily] */
+/**
+ * An implementation of [AndroidTypeface] for [GenericFontFamily]
+ */
 @Deprecated("This path for preloading loading fonts is not supported.")
-internal class AndroidGenericFontFamilyTypeface(fontFamily: GenericFontFamily) : AndroidTypeface {
+internal class AndroidGenericFontFamilyTypeface(
+    fontFamily: GenericFontFamily
+) : AndroidTypeface {
 
     override val fontFamily: FontFamily = fontFamily
 
@@ -43,7 +47,10 @@ internal class AndroidGenericFontFamilyTypeface(fontFamily: GenericFontFamily) :
 
     private fun buildStyledTypeface(fontWeight: FontWeight, fontStyle: FontStyle) =
         if (Build.VERSION.SDK_INT < 28) {
-            Typeface.create(nativeTypeface, getAndroidTypefaceStyle(fontWeight, fontStyle))
+            Typeface.create(
+                nativeTypeface,
+                getAndroidTypefaceStyle(fontWeight, fontStyle)
+            )
         } else {
             TypefaceHelperMethodsApi28.create(
                 nativeTypeface,

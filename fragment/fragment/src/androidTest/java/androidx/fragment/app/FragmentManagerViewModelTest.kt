@@ -31,7 +31,8 @@ import org.mockito.Mockito.mock
 @LargeTest
 class FragmentManagerViewModelTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     private lateinit var viewModel: FragmentManagerViewModel
 
@@ -185,6 +186,7 @@ class FragmentManagerViewModelTest {
     fun testGetInstance() {
         val viewModeStore = ViewModelStore()
         val viewModel = FragmentManagerViewModel.getInstance(viewModeStore)
-        assertThat(FragmentManagerViewModel.getInstance(viewModeStore)).isSameInstanceAs(viewModel)
+        assertThat(FragmentManagerViewModel.getInstance(viewModeStore))
+            .isSameInstanceAs(viewModel)
     }
 }

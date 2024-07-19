@@ -18,7 +18,6 @@ package androidx.webkit;
 
 import android.content.Context;
 
-import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresFeature;
@@ -47,7 +46,6 @@ import java.util.concurrent.Executor;
  *                        Executors.newSingleThreadExecutor());
  * </pre>
  */
-@AnyThread
 public abstract class TracingController {
     /**
      *
@@ -76,7 +74,7 @@ public abstract class TracingController {
     }
 
     /**
-     * Starts tracing all WebViews. Depending on the trace mode in traceConfig
+     * Starts tracing all webviews. Depending on the trace mode in traceConfig
      * specifies how the trace events are recorded.
      *
      * <p>
@@ -99,7 +97,7 @@ public abstract class TracingController {
 
     /**
      * Stops tracing and flushes tracing data to the specified outputStream.
-     * <p>
+     *
      * The data is sent to the specified output stream in json format typically in chunks
      * by invoking {@link OutputStream#write(byte[])}.
      * On completion the {@link OutputStream#close()} method is called.
@@ -112,7 +110,7 @@ public abstract class TracingController {
      *                     If {@code null} the tracing data will be discarded.
      * @param executor The Executor on which the outputStream {@link OutputStream#write(byte[])} and
      *                 {@link OutputStream#close()} methods will be invoked.
-     * <p>
+     *
      *                 Callback and listener events are dispatched through this Executor,
      *                 providing an easy way to control which thread is used.
      *                 To dispatch events through the main thread of your application,

@@ -37,7 +37,9 @@ import org.junit.runners.Parameterized
 class ClickCounterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { Counter() }
+        setContent {
+            Counter()
+        }
     }
 }
 
@@ -47,7 +49,9 @@ class EmptyActivity : ComponentActivity()
 fun Counter() {
     var counter by remember { mutableStateOf(0) }
     Column {
-        Button(onClick = { counter++ }) { Text("Increment counter") }
+        Button(onClick = { counter++ }) {
+            Text("Increment counter")
+        }
         Text(text = "Clicks: $counter")
     }
 }
@@ -75,16 +79,17 @@ class ClickTestRuleTest(private val config: TestConfig) {
 
     @Suppress("DEPRECATION")
     @get:Rule
-    val composeTestRule =
-        when (config.activityClass) {
-            null -> createComposeRule()
-            else -> createAndroidComposeRule(config.activityClass)
-        }
+    val composeTestRule = when (config.activityClass) {
+        null -> createComposeRule()
+        else -> createAndroidComposeRule(config.activityClass)
+    }
 
     @Test
     fun testClick() {
         if (config.setContentInTest) {
-            composeTestRule.setContent { Counter() }
+            composeTestRule.setContent {
+                Counter()
+            }
         }
         composeTestRule.onNodeWithText("Increment counter").performClick()
         composeTestRule.onNodeWithText("Clicks: 1").assertExists()

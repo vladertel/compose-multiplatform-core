@@ -21,6 +21,7 @@ import android.util.Range;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
 import androidx.camera.core.impl.Quirk;
 
@@ -41,6 +42,7 @@ import androidx.camera.core.impl.Quirk;
  *     Device(s): All legacy devices
  *     @see androidx.camera.camera2.internal.compat.workaround.AeFpsRange
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class AeFpsRangeLegacyQuirk implements Quirk {
 
     @Nullable

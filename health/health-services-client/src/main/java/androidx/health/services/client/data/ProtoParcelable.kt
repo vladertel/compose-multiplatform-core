@@ -27,6 +27,7 @@ import com.google.protobuf.MessageLite
  *
  * Provided [proto] represents everything important to subclasses, they need not implement [equals]
  * and [hashCode].
+ *
  */
 @Suppress("ParcelCreator", "ParcelNotFinal")
 @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -36,10 +37,7 @@ public abstract class ProtoParcelable<T : MessageLite> : Parcelable {
     public abstract val proto: T
 
     /** Serialized representation of this object. */
-    protected val bytes: ByteArray
-        get() {
-            return proto.toByteArray()
-        }
+    protected val bytes: ByteArray get() { return proto.toByteArray() }
 
     public override fun describeContents(): Int = 0
 

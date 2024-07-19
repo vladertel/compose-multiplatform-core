@@ -43,9 +43,10 @@ class BeginCreateCustomCredentialRequestTest {
             IllegalArgumentException::class.java
         ) {
             BeginCreateCustomCredentialRequest(
-                "",
-                Bundle.EMPTY,
-                CallingAppInfo("package", SigningInfo())
+                "", Bundle.EMPTY,
+                CallingAppInfo(
+                    "package", SigningInfo()
+                )
             )
         }
     }

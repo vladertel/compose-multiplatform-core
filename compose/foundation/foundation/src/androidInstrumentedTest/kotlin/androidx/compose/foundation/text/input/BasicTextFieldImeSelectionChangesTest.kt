@@ -36,16 +36,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * This class tests different ways of updating selection in TextFieldState and asserts that IME gets
- * updated for all of them.
+ * This class tests different ways of updating selection in TextFieldState and asserts that
+ * IME gets updated for all of them.
  */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 internal class BasicTextFieldImeSelectionChangesTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val immRule = ComposeInputMethodManagerTestRule()
+    @get:Rule
+    val immRule = ComposeInputMethodManagerTestRule()
 
     private val inputMethodInterceptor = InputMethodInterceptor(rule)
 
@@ -81,7 +83,9 @@ internal class BasicTextFieldImeSelectionChangesTest {
         }
         rule.onNodeWithTag(Tag).requestFocus()
 
-        inputMethodInterceptor.withInputConnection { setSelection(1, 3) }
+        inputMethodInterceptor.withInputConnection {
+            setSelection(1, 3)
+        }
 
         imm.expectCall("updateSelection(1, 3, -1, -1)")
     }

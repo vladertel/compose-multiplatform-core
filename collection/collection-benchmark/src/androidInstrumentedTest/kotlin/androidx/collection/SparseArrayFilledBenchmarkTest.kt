@@ -27,7 +27,8 @@ import org.junit.runners.Parameterized.Parameters
 class SparseArrayFilledBenchmarkTest(size: Int, sparse: Boolean) {
     private val map = createFilledSparseArray(size, sparse)
 
-    @get:Rule val benchmark = BenchmarkRule()
+    @get:Rule
+    val benchmark = BenchmarkRule()
 
     @Test
     fun get() {
@@ -52,6 +53,9 @@ class SparseArrayFilledBenchmarkTest(size: Int, sparse: Boolean) {
     companion object {
         @JvmStatic
         @Parameters(name = "size={0},sparse={1}")
-        fun parameters() = buildParameters(listOf(10, 100, 1_000, 10_000), listOf(true, false))
+        fun parameters() = buildParameters(
+            listOf(10, 100, 1_000, 10_000),
+            listOf(true, false)
+        )
     }
 }

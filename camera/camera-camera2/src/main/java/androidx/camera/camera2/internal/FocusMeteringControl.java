@@ -84,6 +84,7 @@ import java.util.concurrent.TimeUnit;
  * {@link FocusMeteringControl#addFocusMeteringOptions} to construct the 3A regions and append
  * them to all repeating requests and single requests.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @OptIn(markerClass = ExperimentalCamera2Interop.class)
 class FocusMeteringControl {
     private static final String TAG = "FocusMeteringControl";
@@ -403,23 +404,20 @@ class FocusMeteringControl {
             // On many devices, triggering Af with CONTROL_AE_MODE_ON_ALWAYS_FLASH or
             // CONTROL_AE_MODE_ON_AUTO_FLASH will fire the flash when it's low light.
             // Override it to AE_MODE_ON to prevent from this issue.
-            configBuilder.setCaptureRequestOptionWithPriority(CaptureRequest.CONTROL_AE_MODE,
-                    mCameraControl.getSupportedAeMode(CaptureRequest.CONTROL_AE_MODE_ON),
-                    Config.OptionPriority.HIGH_PRIORITY_REQUIRED);
+            configBuilder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE,
+                    mCameraControl.getSupportedAeMode(CaptureRequest.CONTROL_AE_MODE_ON));
         }
         builder.addImplementationOptions(configBuilder.build());
         builder.addCameraCaptureCallback(new CameraCaptureCallback() {
             @Override
-            public void onCaptureCompleted(int captureConfigId,
-                    @NonNull CameraCaptureResult cameraCaptureResult) {
+            public void onCaptureCompleted(@NonNull CameraCaptureResult cameraCaptureResult) {
                 if (completer != null) {
                     completer.set(cameraCaptureResult);
                 }
             }
 
             @Override
-            public void onCaptureFailed(int captureConfigId,
-                    @NonNull CameraCaptureFailure failure) {
+            public void onCaptureFailed(@NonNull CameraCaptureFailure failure) {
                 if (completer != null) {
                     completer.setException(
                             new CameraControlInternal.CameraControlException(failure));
@@ -427,7 +425,7 @@ class FocusMeteringControl {
             }
 
             @Override
-            public void onCaptureCancelled(int captureConfigId) {
+            public void onCaptureCancelled() {
                 if (completer != null) {
                     completer.setException(
                             new CameraControl.OperationCanceledException("Camera is closed"));
@@ -475,8 +473,7 @@ class FocusMeteringControl {
         builder.addImplementationOptions(configBuilder.build());
         builder.addCameraCaptureCallback(new CameraCaptureCallback() {
             @Override
-            public void onCaptureCompleted(int captureConfigId,
-                    @NonNull CameraCaptureResult cameraCaptureResult) {
+            public void onCaptureCompleted(@NonNull CameraCaptureResult cameraCaptureResult) {
                 if (completer != null) {
                     Logger.d(TAG, "triggerAePrecapture: triggering capture request completed");
                     completer.set(null);
@@ -484,8 +481,7 @@ class FocusMeteringControl {
             }
 
             @Override
-            public void onCaptureFailed(int captureConfigId,
-                    @NonNull CameraCaptureFailure failure) {
+            public void onCaptureFailed(@NonNull CameraCaptureFailure failure) {
                 if (completer != null) {
                     completer.setException(
                             new CameraControlInternal.CameraControlException(failure));
@@ -493,7 +489,7 @@ class FocusMeteringControl {
             }
 
             @Override
-            public void onCaptureCancelled(int captureConfigId) {
+            public void onCaptureCancelled() {
                 if (completer != null) {
                     completer.setException(
                             new CameraControl.OperationCanceledException("Camera is closed"));

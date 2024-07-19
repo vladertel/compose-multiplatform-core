@@ -34,6 +34,7 @@ fun Color.onColor(): Color {
  * Calculates if this color is considered light.
  *
  * @return true or false, depending on the higher contrast between [Color.Black] and [Color.White].
+ *
  */
 fun Color.isLightColor(): Boolean {
     val contrastForBlack = calculateContrast(foreground = Color.Black)

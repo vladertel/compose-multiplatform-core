@@ -31,7 +31,8 @@ import org.junit.Test
 
 class AnimatedVisibilityClockTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun checkClockAfterStateChanged() {

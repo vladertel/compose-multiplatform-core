@@ -54,7 +54,6 @@ import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -89,18 +88,14 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         corruptionHandler: CorruptionHandler<Byte> = NoOpCorruptionHandler<Byte>()
     ): DataStore<Byte> {
         return DataStoreImpl(
-            storage =
-                testIO.getStorage(
-                    serializerConfig,
-                    {
-                        MultiProcessCoordinator(
-                            dataStoreScope.coroutineContext,
-                            getJavaFile(testFile)
-                        )
-                    }
-                ) {
-                    file
-                },
+            storage = testIO.getStorage(
+                serializerConfig,
+                {
+                    MultiProcessCoordinator(
+                        dataStoreScope.coroutineContext,
+                        getJavaFile(testFile)
+                    )
+                }) { file },
             scope = scope,
             initTasksList = initTasksList,
             corruptionHandler = corruptionHandler
@@ -113,17 +108,17 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         tempFolder = testIO.newTempFile().also { it.mkdirs() }
         testFile = testIO.newTempFile(parentFile = tempFolder)
         dataStoreScope = TestScope(UnconfinedTestDispatcher() + Job())
-        store =
-            testIO.getStore(
-                serializerConfig,
-                dataStoreScope,
-                { MultiProcessCoordinator(dataStoreScope.coroutineContext, getJavaFile(testFile)) }
-            ) {
-                testFile
-            }
+        store = testIO.getStore(
+            serializerConfig,
+            dataStoreScope,
+            { MultiProcessCoordinator(dataStoreScope.coroutineContext, getJavaFile(testFile)) }
+        ) { testFile }
     }
 
-    @Test fun testReadNewMessage() = runTest { assertThat(store.data.first()).isEqualTo(0) }
+    @Test
+    fun testReadNewMessage() = runTest {
+        assertThat(store.data.first()).isEqualTo(0)
+    }
 
     @Test
     fun testReadWithNewInstance() = runBlocking {
@@ -214,7 +209,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun testWriteToNonExistentDir() = runBlocking {
-        val fileInNonExistentDir = testIO.newTempFile(relativePath = "/this/does/not/exist/ds.txt")
+        val fileInNonExistentDir = testIO.newTempFile(
+            relativePath = "/this/does/not/exist/ds.txt"
+        )
         assertThat(fileInNonExistentDir.exists()).isFalse()
         assertThat(fileInNonExistentDir.parentFile()!!.exists()).isFalse()
         runTest {
@@ -239,8 +236,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun testWriteToDirFails() = runTest {
-        val directoryFile =
-            testIO.newTempFile(relativePath = "this/is/a/directory").also { it.mkdirs() }
+        val directoryFile = testIO.newTempFile(relativePath = "this/is/a/directory").also {
+            it.mkdirs()
+        }
 
         assertThat(directoryFile.isDirectory()).isTrue()
 
@@ -259,22 +257,21 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
             testFile
         }
 
-        val newStore =
-            testIO.getStore(
-                serializerConfig,
-                dataStoreScope,
-                {
-                    MultiProcessCoordinator(
-                        dataStoreScope.coroutineContext,
-                        getJavaFile(fileProducer())
-                    )
-                },
-                fileProducer
-            )
+        val newStore = testIO.getStore(
+            serializerConfig,
+            dataStoreScope,
+            {
+                MultiProcessCoordinator(
+                    dataStoreScope.coroutineContext,
+                    getJavaFile(fileProducer())
+                )
+            },
+            fileProducer
+        )
 
-        assertThrows<IOException> { newStore.data.first() }
-            .hasMessageThat()
-            .isEqualTo("Exception when producing file")
+        assertThrows<IOException> { newStore.data.first() }.hasMessageThat().isEqualTo(
+            "Exception when producing file"
+        )
 
         failFileProducer = false
 
@@ -324,70 +321,71 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     }
 
     @Test
-    fun testCancellingDataStoreScopePropagatesToWrites() =
-        runBlocking<Unit> {
-            val scope = CoroutineScope(Job())
+    fun testCancellingDataStoreScopePropagatesToWrites() = runBlocking<Unit> {
+        val scope = CoroutineScope(Job())
 
-            val dataStore = newDataStore(scope = scope)
+        val dataStore = newDataStore(scope = scope)
 
-            val latch = CompletableDeferred<Unit>()
+        val latch = CompletableDeferred<Unit>()
 
-            val slowUpdate = async {
-                dataStore.updateData {
-                    latch.await()
-                    it.inc()
-                }
+        val slowUpdate = async {
+            dataStore.updateData {
+                latch.await()
+                it.inc()
             }
-
-            val notStartedUpdate = async { dataStore.updateData { it.inc() } }
-
-            scope.cancel()
-
-            assertThrows<CancellationException> { slowUpdate.await() }
-
-            assertThrows<CancellationException> { notStartedUpdate.await() }
-
-            assertThrows<CancellationException> { dataStore.updateData { 123 } }
         }
+
+        val notStartedUpdate = async {
+            dataStore.updateData {
+                it.inc()
+            }
+        }
+
+        scope.cancel()
+
+        assertThrows<CancellationException> { slowUpdate.await() }
+
+        assertThrows<CancellationException> { notStartedUpdate.await() }
+
+        assertThrows<CancellationException> { dataStore.updateData { 123 } }
+    }
 
     @Test
-    fun testCancellingCallerScopePropagatesToWrites() =
-        runBlocking<Unit> {
-            val dsScope = CoroutineScope(Job())
-            val callerScope = CoroutineScope(Job())
+    fun testCancellingCallerScopePropagatesToWrites() = runBlocking<Unit> {
+        val dsScope = CoroutineScope(Job())
+        val callerScope = CoroutineScope(Job())
 
-            val dataStore = newDataStore(scope = dsScope)
+        val dataStore = newDataStore(scope = dsScope)
 
-            val latch = CompletableDeferred<Unit>()
+        val latch = CompletableDeferred<Unit>()
 
-            // The ordering of the following are not guaranteed but I think they won't be flaky with
-            // Dispatchers.Unconfined
-            val awaitingCancellation =
-                callerScope.async(Dispatchers.Unconfined) {
-                    dataStore.updateData { awaitCancellation() }
-                }
-
-            val started =
-                dsScope.async(Dispatchers.Unconfined) {
-                    dataStore.updateData {
-                        latch.await()
-                        it.inc()
-                    }
-                }
-
-            val notStarted =
-                callerScope.async(Dispatchers.Unconfined) { dataStore.updateData { it.inc() } }
-
-            callerScope.coroutineContext.job.cancelAndJoin()
-
-            assertThat(awaitingCancellation.isCancelled).isTrue()
-            assertThat(notStarted.isCancelled).isTrue()
-
-            // wait for coroutine to complete to prevent it from outliving the test, which is flaky
-            latch.complete(Unit)
-            started.await()
-            assertThat(dataStore.data.first()).isEqualTo(1)
+        // The ordering of the following are not guaranteed but I think they won't be flaky with
+        // Dispatchers.Unconfined
+        val awaitingCancellation = callerScope.async(Dispatchers.Unconfined) {
+            dataStore.updateData { awaitCancellation() }
         }
+
+        val started = dsScope.async(Dispatchers.Unconfined) {
+            dataStore.updateData {
+                latch.await()
+                it.inc()
+            }
+        }
+
+        val notStarted = callerScope.async(Dispatchers.Unconfined) {
+            dataStore.updateData { it.inc() }
+        }
+
+        callerScope.coroutineContext.job.cancelAndJoin()
+
+        assertThat(awaitingCancellation.isCancelled).isTrue()
+        assertThat(notStarted.isCancelled).isTrue()
+
+        // wait for coroutine to complete to prevent it from outliving the test, which is flaky
+        latch.complete(Unit)
+        started.await()
+        assertThat(dataStore.data.first()).isEqualTo(1)
+    }
 
     @Test
     fun testCanWriteFromInitTask() = runTest {
@@ -413,15 +411,13 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     @Test
     fun testInitTaskFailsFirstTimeDueToException() = runTest {
         val failInit = AtomicBoolean(true)
-        store =
-            newDataStore(
-                initTasksList =
-                    listOf { _ ->
-                        if (failInit.get()) {
-                            throw IOException("I was asked to fail init")
-                        }
-                    }
-            )
+        store = newDataStore(
+            initTasksList = listOf { _ ->
+                if (failInit.get()) {
+                    throw IOException("I was asked to fail init")
+                }
+            }
+        )
         assertThrows<IOException> { store.updateData { 5 } }
 
         failInit.set(false)
@@ -433,8 +429,12 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     @Test
     fun testInitTaskOnlyRunsOnce() = runTest {
         val count = AtomicInteger()
-        val newStore =
-            newDataStore(testFile, initTasksList = listOf { _ -> count.incrementAndGet() })
+        val newStore = newDataStore(
+            testFile,
+            initTasksList = listOf { _ ->
+                count.incrementAndGet()
+            }
+        )
 
         repeat(10) {
             newStore.updateData { it.inc() }
@@ -448,14 +448,12 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     fun testWriteDuringInit() = runTest {
         val continueInit = CompletableDeferred<Unit>()
 
-        store =
-            newDataStore(
-                initTasksList =
-                    listOf { api ->
-                        continueInit.await()
-                        api.updateData { 1 }
-                    }
-            )
+        store = newDataStore(
+            initTasksList = listOf { api ->
+                continueInit.await()
+                api.updateData { 1 }
+            }
+        )
 
         val update = async {
             store.updateData { b ->
@@ -474,18 +472,20 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     fun testCancelDuringInit() = runTest {
         val continueInit = CompletableDeferred<Unit>()
 
-        store =
-            newDataStore(
-                initTasksList =
-                    listOf { api ->
-                        continueInit.await()
-                        api.updateData { 1 }
-                    }
-            )
+        store = newDataStore(
+            initTasksList = listOf { api ->
+                continueInit.await()
+                api.updateData { 1 }
+            }
+        )
 
-        val update = async { store.updateData { it } }
+        val update = async {
+            store.updateData { it }
+        }
 
-        val read = async { store.data.first() }
+        val read = async {
+            store.data.first()
+        }
 
         update.cancel()
         read.cancel()
@@ -510,7 +510,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
                     it.inc().inc()
                 }
             }
-            api.updateData { it.inc() }
+            api.updateData {
+                it.inc()
+            }
             update1.await()
         }
 
@@ -561,7 +563,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         var otherStorage: Byte = 123
 
         val initializer: suspend (InitializerApi<Byte>) -> Unit = { api ->
-            api.updateData { otherStorage }
+            api.updateData {
+                otherStorage
+            }
             // Similar to cleanUp():
             otherStorage = 0
         }
@@ -579,7 +583,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     fun testInitApiUpdateThrowsAfterInitTasksComplete() = runTest {
         var savedApi: InitializerApi<Byte>? = null
 
-        val initializer: suspend (InitializerApi<Byte>) -> Unit = { api -> savedApi = api }
+        val initializer: suspend (InitializerApi<Byte>) -> Unit = { api ->
+            savedApi = api
+        }
 
         val store = newDataStore(initTasksList = listOf(initializer))
 
@@ -592,10 +598,13 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     fun testFlowReceivesUpdates() = runTest {
         val collectedBytes = mutableListOf<Byte>()
 
-        val flowCollectionJob = async { store.data.take(8).toList(collectedBytes) }
+        val flowCollectionJob = async {
+            store.data.take(8).toList(collectedBytes)
+        }
 
-        runCurrent()
-        repeat(7) { store.updateData { it.inc() } }
+        repeat(7) {
+            store.updateData { it.inc() }
+        }
 
         flowCollectionJob.join()
 
@@ -609,12 +618,17 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         val bytesFromFirstCollect = mutableListOf<Byte>()
         val bytesFromSecondCollect = mutableListOf<Byte>()
 
-        val flowCollection1 = async { flowOf8.toList(bytesFromFirstCollect) }
+        val flowCollection1 = async {
+            flowOf8.toList(bytesFromFirstCollect)
+        }
 
-        val flowCollection2 = async { flowOf8.toList(bytesFromSecondCollect) }
+        val flowCollection2 = async {
+            flowOf8.toList(bytesFromSecondCollect)
+        }
 
-        runCurrent()
-        repeat(7) { store.updateData { it.inc() } }
+        repeat(7) {
+            store.updateData { it.inc() }
+        }
 
         flowCollection1.join()
         flowCollection2.join()
@@ -635,16 +649,19 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
         val failedFlowCollection = async {
             assertThrows<Exception> {
-                    flowOf8.collect { throw Exception("Failure while collecting") }
+                flowOf8.collect {
+                    throw Exception("Failure while collecting")
                 }
-                .hasMessageThat()
-                .contains("Failure while collecting")
+            }.hasMessageThat().contains("Failure while collecting")
         }
 
-        val successfulFlowCollection = async { flowOf8.take(8).toList(collectedBytes) }
+        val successfulFlowCollection = async {
+            flowOf8.take(8).toList(collectedBytes)
+        }
 
-        runCurrent()
-        repeat(7) { store.updateData { it.inc() } }
+        repeat(7) {
+            store.updateData { it.inc() }
+        }
 
         successfulFlowCollection.join()
         failedFlowCollection.await()
@@ -658,12 +675,19 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
         val collectedBytes = mutableListOf<Byte>()
 
-        val flowCollection2 = async { flowOf8.toList(collectedBytes) }
+        val flowCollection2 = async {
+            flowOf8.toList(collectedBytes)
+        }
 
-        val blockedCollection = async { flowOf8.collect { flowCollection2.await() } }
+        val blockedCollection = async {
+            flowOf8.collect {
+                flowCollection2.await()
+            }
+        }
 
-        runCurrent()
-        repeat(15) { store.updateData { it.inc() } }
+        repeat(15) {
+            store.updateData { it.inc() }
+        }
 
         flowCollection2.await()
         assertThat(collectedBytes).isEqualTo(mutableListOf<Byte>(0, 1, 2, 3, 4, 5, 6, 7))
@@ -673,7 +697,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun testHandlerNotCalledGoodData() = runBlocking {
-        runTest { newDataStore(testFile, scope = backgroundScope).updateData { 1 } }
+        runTest {
+            newDataStore(testFile, scope = backgroundScope).updateData { 1 }
+        }
 
         runTest {
             val testingHandler: TestingCorruptionHandler = TestingCorruptionHandler()
@@ -688,7 +714,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun handlerNotCalledNonCorruption() = runBlocking {
-        runTest { newDataStore(testFile, scope = backgroundScope).updateData { 1 } }
+        runTest {
+            newDataStore(testFile, scope = backgroundScope).updateData { 1 }
+        }
 
         runTest {
             val testingHandler = TestingCorruptionHandler()
@@ -714,9 +742,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
             serializerConfig.failReadWithCorruptionException = true
             val newStore = newDataStore(corruptionHandler = testingHandler, file = testFile)
 
-            assertThrows<IOException> { newStore.data.first() }
-                .hasMessageThat()
-                .contains("Handler thrown exception.")
+            assertThrows<IOException> { newStore.data.first() }.hasMessageThat().contains(
+                "Handler thrown exception."
+            )
 
             assertThat(testingHandler.numCalls).isEqualTo(1)
         }
@@ -734,9 +762,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
             serializerConfig.failReadWithCorruptionException = true
             val newStore = newDataStore(corruptionHandler = testingHandler, file = testFile)
 
-            assertThrows<IOException> { newStore.updateData { 1 } }
-                .hasMessageThat()
-                .contains("Handler thrown exception.")
+            assertThrows<IOException> { newStore.updateData { 1 } }.hasMessageThat().contains(
+                "Handler thrown exception."
+            )
 
             assertThat(testingHandler.numCalls).isEqualTo(1)
         }
@@ -744,18 +772,18 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun testHandlerReplaceData() = runBlocking {
-        runTest { newDataStore(file = testFile, scope = backgroundScope).updateData { 1 } }
+        runTest {
+            newDataStore(file = testFile, scope = backgroundScope).updateData { 1 }
+        }
 
         runTest {
             val testingHandler: TestingCorruptionHandler =
                 TestingCorruptionHandler(replaceWith = 10)
             serializerConfig.failReadWithCorruptionException = true
-            val newStore =
-                newDataStore(
-                    corruptionHandler = testingHandler,
-                    file = testFile,
-                    scope = backgroundScope
-                )
+            val newStore = newDataStore(
+                corruptionHandler = testingHandler, file = testFile,
+                scope = backgroundScope
+            )
 
             assertThat(newStore.data.first()).isEqualTo(10)
         }
@@ -763,104 +791,104 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
     @Test
     fun testDefaultValueUsedWhenNoDataOnDisk() = runTest {
-        val dataStore =
-            testIO.getStore(
-                TestingSerializerConfig(defaultValue = 99),
-                dataStoreScope,
-                { MultiProcessCoordinator(dataStoreScope.coroutineContext, getJavaFile(testFile)) }
-            ) {
-                testFile
-            }
+        val dataStore = testIO.getStore(
+            TestingSerializerConfig(defaultValue = 99),
+            dataStoreScope,
+            { MultiProcessCoordinator(dataStoreScope.coroutineContext, getJavaFile(testFile)) }) {
+            testFile
+        }
 
         assertThat(dataStore.data.first()).isEqualTo(99)
     }
 
     @Test
-    fun testTransformRunInCallersContext() =
-        runBlocking<Unit> {
-            suspend fun getContext(): CoroutineContext {
-                return kotlin.coroutines.coroutineContext
-            }
-
-            withContext(TestElement("123")) {
-                store.updateData {
-                    val context = getContext()
-                    assertThat(context[TestElement.Key]!!.name).isEqualTo("123")
-                    it.inc()
-                }
-            }
+    fun testTransformRunInCallersContext() = runBlocking<Unit> {
+        suspend fun getContext(): CoroutineContext {
+            return kotlin.coroutines.coroutineContext
         }
 
-    private class TestElement(val name: String) : AbstractCoroutineContextElement(Key) {
+        withContext(TestElement("123")) {
+            store.updateData {
+                val context = getContext()
+                assertThat(context[TestElement.Key]!!.name).isEqualTo("123")
+                it.inc()
+            }
+        }
+    }
+
+    private class TestElement(
+        val name: String
+    ) : AbstractCoroutineContextElement(Key) {
         companion object Key : CoroutineContext.Key<TestElement>
     }
 
     @Test
-    fun testCancelInflightWrite() =
-        doBlockingWithTimeout(1000) {
-            val myScope =
-                CoroutineScope(Job() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+    fun testCancelInflightWrite() = doBlockingWithTimeout(1000) {
+        val myScope =
+            CoroutineScope(Job() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
-            val updateStarted = CompletableDeferred<Unit>()
-            myScope.launch {
-                store.updateData {
-                    updateStarted.complete(Unit)
-                    awaitCancellation()
-                }
+        val updateStarted = CompletableDeferred<Unit>()
+        myScope.launch {
+            store.updateData {
+                updateStarted.complete(Unit)
+                awaitCancellation()
             }
-            updateStarted.await()
-            myScope.coroutineContext[Job]!!.cancelAndJoin()
         }
+        updateStarted.await()
+        myScope.coroutineContext[Job]!!.cancelAndJoin()
+    }
 
     @Test
-    fun testWrite_afterCanceledWrite_succeeds() =
-        doBlockingWithTimeout(1000) {
-            val myScope =
-                CoroutineScope(Job() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+    fun testWrite_afterCanceledWrite_succeeds() = doBlockingWithTimeout(1000) {
+        val myScope =
+            CoroutineScope(Job() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
-            val cancelNow = CompletableDeferred<Unit>()
+        val cancelNow = CompletableDeferred<Unit>()
 
-            myScope.launch {
-                store.updateData {
-                    cancelNow.complete(Unit)
-                    awaitCancellation()
-                }
+        myScope.launch {
+            store.updateData {
+                cancelNow.complete(Unit)
+                awaitCancellation()
             }
-
-            cancelNow.await()
-            myScope.coroutineContext[Job]!!.cancelAndJoin()
-
-            store.updateData { 123 }
         }
+
+        cancelNow.await()
+        myScope.coroutineContext[Job]!!.cancelAndJoin()
+
+        store.updateData { 123 }
+    }
 
     @Test
     fun testWrite_fromOtherScope_doesntGetCancelledFromDifferentScope() =
-        doBlockingWithTimeout(1000) {
-            val otherScope = CoroutineScope(Job())
+    doBlockingWithTimeout(1000) {
+        val otherScope = CoroutineScope(Job())
 
-            val callerScope = CoroutineScope(Job())
+        val callerScope = CoroutineScope(Job())
 
-            val firstUpdateStarted = CompletableDeferred<Unit>()
-            val finishFirstUpdate = CompletableDeferred<Byte>()
+        val firstUpdateStarted = CompletableDeferred<Unit>()
+        val finishFirstUpdate = CompletableDeferred<Byte>()
 
-            val firstUpdate =
-                otherScope.async(Dispatchers.Unconfined) {
-                    store.updateData {
-                        firstUpdateStarted.complete(Unit)
-                        finishFirstUpdate.await()
-                    }
-                }
-
-            callerScope.launch(Dispatchers.Unconfined) { store.updateData { awaitCancellation() } }
-
-            firstUpdateStarted.await()
-            callerScope.coroutineContext.job.cancelAndJoin()
-            finishFirstUpdate.complete(1)
-            firstUpdate.await()
-
-            // It's still usable:
-            assertThat(store.updateData { it.inc() }).isEqualTo(2)
+        val firstUpdate = otherScope.async(Dispatchers.Unconfined) {
+            store.updateData {
+                firstUpdateStarted.complete(Unit)
+                finishFirstUpdate.await()
+            }
         }
+
+        callerScope.launch(Dispatchers.Unconfined) {
+            store.updateData {
+                awaitCancellation()
+            }
+        }
+
+        firstUpdateStarted.await()
+        callerScope.coroutineContext.job.cancelAndJoin()
+        finishFirstUpdate.complete(1)
+        firstUpdate.await()
+
+        // It's still usable:
+        assertThat(store.updateData { it.inc() }).isEqualTo(2)
+    }
 
     @Test
     fun testCreateDuplicateActiveDataStore() = runTest {
@@ -871,7 +899,9 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
 
         val duplicateDataStore = newDataStore(file = file, scope = CoroutineScope(Job()))
 
-        assertThrows<IllegalStateException> { duplicateDataStore.data.first() }
+        assertThrows<IllegalStateException> {
+            duplicateDataStore.data.first()
+        }
     }
 
     @Test
@@ -893,10 +923,7 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     @Test
     fun testCreateDataStoreAndRead_withStrictMode() = runTest {
         StrictMode.setThreadPolicy(
-            StrictMode.ThreadPolicy.Builder()
-                .detectDiskReads()
-                .detectDiskWrites()
-                .penaltyDeath()
+            StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().penaltyDeath()
                 .build()
         )
         val dataStore =
@@ -909,10 +936,7 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     @Test
     fun testCreateDataStoreAndUpdate_withStrictMode() = runTest {
         StrictMode.setThreadPolicy(
-            StrictMode.ThreadPolicy.Builder()
-                .detectDiskReads()
-                .detectDiskWrites()
-                .penaltyDeath()
+            StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().penaltyDeath()
                 .build()
         )
         val dataStore =
@@ -921,17 +945,6 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         assertThat(dataStore.data.first()).isEqualTo(1)
         StrictMode.allowThreadDiskReads()
         StrictMode.allowThreadDiskWrites()
-    }
-
-    @Test
-    fun testWriteSameValueSkipDisk() = runTest {
-        // write a non-default value to force a disk write
-        store.updateData { 10 }
-        assertThat(serializerConfig.writeCount).isEqualTo(1)
-
-        // write same value again
-        store.updateData { 10 }
-        assertThat(serializerConfig.writeCount).isEqualTo(1)
     }
 
     // Mutable wrapper around a byte
@@ -951,10 +964,12 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
         }
     }
 
-    private class TestingCorruptionHandler(private val replaceWith: Byte? = null) :
-        CorruptionHandler<Byte> {
+    private class TestingCorruptionHandler(
+        private val replaceWith: Byte? = null
+    ) : CorruptionHandler<Byte> {
 
-        @Volatile var numCalls = 0
+        @Volatile
+        var numCalls = 0
 
         override suspend fun handleCorruption(ex: CorruptionException): Byte {
             numCalls++
@@ -968,5 +983,6 @@ abstract class MultiProcessDataStoreSingleProcessTest<F : TestFile<F>>(
     }
 }
 
-fun doBlockingWithTimeout(ms: Long, block: suspend () -> Unit): Unit =
-    runBlocking<Unit> { withTimeout(ms) { block() } }
+fun doBlockingWithTimeout(ms: Long, block: suspend () -> Unit): Unit = runBlocking<Unit> {
+    withTimeout(ms) { block() }
+}

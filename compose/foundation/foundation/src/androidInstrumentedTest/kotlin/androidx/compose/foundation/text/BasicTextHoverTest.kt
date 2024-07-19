@@ -51,7 +51,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.N)
 @RunWith(AndroidJUnit4::class)
 class BasicTextHoverTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun whenSelectableText_andDefaultIcon_inBoxWithDefaultIcon_textIconIsUsed() =
@@ -76,8 +77,10 @@ class BasicTextHoverTest {
         runSelectableTest(
             selectionContainerIconModifier = Modifier,
             expectedSelectionContainerIcon = TYPE_DEFAULT,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -104,8 +107,10 @@ class BasicTextHoverTest {
         runSelectableTest(
             selectionContainerIconModifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             expectedSelectionContainerIcon = TYPE_HAND,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -114,28 +119,29 @@ class BasicTextHoverTest {
         expectedSelectionContainerIcon: Int,
         textIconModifier: Modifier,
         expectedTextIcon: Int,
-    ) =
-        runTest(
-            selectionContainerIconModifier,
-            expectedSelectionContainerIcon,
-            textIconModifier,
-            expectedTextIcon,
-        ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
-            SelectionContainer {
-                Box(
-                    modifier =
-                        Modifier.requiredSize(200.dp)
-                            .then(boxModifier)
-                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                            .testTag(containerTag)
-                ) {
-                    BasicText(
-                        text = "this is selectable text",
-                        modifier = Modifier.then(textModifier).testTag(textTag)
-                    )
-                }
+    ) = runTest(
+        selectionContainerIconModifier,
+        expectedSelectionContainerIcon,
+        textIconModifier,
+        expectedTextIcon,
+    ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
+        SelectionContainer {
+            Box(
+                modifier = Modifier
+                    .requiredSize(200.dp)
+                    .then(boxModifier)
+                    .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                    .testTag(containerTag)
+            ) {
+                BasicText(
+                    text = "this is selectable text",
+                    modifier = Modifier
+                        .then(textModifier)
+                        .testTag(textTag)
+                )
             }
         }
+    }
 
     @Test
     fun whenNonSelectableText_andDefaultIcon_inBoxWithDefaultIcon_textIconIsUsed() =
@@ -160,8 +166,10 @@ class BasicTextHoverTest {
         runNonSelectableTest(
             selectionContainerIconModifier = Modifier,
             expectedSelectionContainerIcon = TYPE_DEFAULT,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -188,8 +196,10 @@ class BasicTextHoverTest {
         runNonSelectableTest(
             selectionContainerIconModifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             expectedSelectionContainerIcon = TYPE_HAND,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -198,26 +208,27 @@ class BasicTextHoverTest {
         expectedSelectionContainerIcon: Int,
         textIconModifier: Modifier,
         expectedTextIcon: Int,
-    ) =
-        runTest(
-            selectionContainerIconModifier,
-            expectedSelectionContainerIcon,
-            textIconModifier,
-            expectedTextIcon,
-        ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
-            Box(
-                modifier =
-                    Modifier.requiredSize(200.dp)
-                        .then(boxModifier)
-                        .border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                        .testTag(containerTag)
-            ) {
-                BasicText(
-                    text = "this is selectable text",
-                    modifier = Modifier.then(textModifier).testTag(textTag)
-                )
-            }
+    ) = runTest(
+        selectionContainerIconModifier,
+        expectedSelectionContainerIcon,
+        textIconModifier,
+        expectedTextIcon,
+    ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
+        Box(
+            modifier = Modifier
+                .requiredSize(200.dp)
+                .then(boxModifier)
+                .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                .testTag(containerTag)
+        ) {
+            BasicText(
+                text = "this is selectable text",
+                modifier = Modifier
+                    .then(textModifier)
+                    .testTag(textTag)
+            )
         }
+    }
 
     @Test
     fun whenDisabledSelectionText_andDefaultIcon_inBoxWithDefaultIcon_textIconIsUsed() =
@@ -242,8 +253,10 @@ class BasicTextHoverTest {
         runDisabledSelectionText(
             selectionContainerIconModifier = Modifier,
             expectedSelectionContainerIcon = TYPE_DEFAULT,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -270,8 +283,10 @@ class BasicTextHoverTest {
         runDisabledSelectionText(
             selectionContainerIconModifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             expectedSelectionContainerIcon = TYPE_HAND,
-            textIconModifier =
-                Modifier.pointerHoverIcon(icon = PointerIcon.Crosshair, overrideDescendants = true),
+            textIconModifier = Modifier.pointerHoverIcon(
+                icon = PointerIcon.Crosshair,
+                overrideDescendants = true
+            ),
             expectedTextIcon = TYPE_CROSSHAIR
         )
 
@@ -280,65 +295,66 @@ class BasicTextHoverTest {
         expectedSelectionContainerIcon: Int,
         textIconModifier: Modifier,
         expectedTextIcon: Int,
-    ) =
-        runTest(
-            selectionContainerIconModifier,
-            expectedSelectionContainerIcon,
-            textIconModifier,
-            expectedTextIcon,
-        ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
-            SelectionContainer {
-                Box(
-                    modifier =
-                        Modifier.requiredSize(200.dp)
-                            .then(boxModifier)
-                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                            .testTag(containerTag)
-                ) {
-                    DisableSelection {
-                        BasicText(
-                            text = "this is selectable text",
-                            modifier = Modifier.then(textModifier).testTag(textTag)
-                        )
-                    }
+    ) = runTest(
+        selectionContainerIconModifier,
+        expectedSelectionContainerIcon,
+        textIconModifier,
+        expectedTextIcon,
+    ) { containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier ->
+        SelectionContainer {
+            Box(
+                modifier = Modifier
+                    .requiredSize(200.dp)
+                    .then(boxModifier)
+                    .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                    .testTag(containerTag)
+            ) {
+                DisableSelection {
+                    BasicText(
+                        text = "this is selectable text",
+                        modifier = Modifier
+                            .then(textModifier)
+                            .testTag(textTag)
+                    )
                 }
             }
         }
+    }
 
     private fun runTest(
         selectionContainerIconModifier: Modifier,
         expectedSelectionContainerIcon: Int,
         textIconModifier: Modifier,
         expectedTextIcon: Int,
-        contentBlock:
-            @Composable
-            (
-                containerTag: String, textTag: String, boxModifier: Modifier, textModifier: Modifier
-            ) -> Unit,
-    ) =
-        with(PointerIconTestScope(rule)) {
-            val selectionContainerTag = "container"
-            val textTag = "text"
+        contentBlock: @Composable (
+            containerTag: String,
+            textTag: String,
+            boxModifier: Modifier,
+            textModifier: Modifier
+        ) -> Unit,
+    ) = with(PointerIconTestScope(rule)) {
+        val selectionContainerTag = "container"
+        val textTag = "text"
 
-            setContent {
-                contentBlock(
-                    selectionContainerTag,
-                    textTag,
-                    selectionContainerIconModifier,
-                    textIconModifier,
-                )
-            }
-
-            // Hover over text
-            rule.onNodeWithTag(textTag).performMouseInput { enter(bottomRight) }
-            assertIcon(expectedTextIcon)
-
-            // Move cursor to hover over portion of the parent box not covered by any descendants
-            rule.onNodeWithTag(selectionContainerTag).performMouseInput { moveTo(bottomRight) }
-            assertIcon(expectedSelectionContainerIcon)
-
-            // Exit hovering over element
-            rule.onNodeWithTag(selectionContainerTag).performMouseInput { exit() }
-            assertIcon(TYPE_DEFAULT)
+        setContent {
+            contentBlock(
+                selectionContainerTag,
+                textTag,
+                selectionContainerIconModifier,
+                textIconModifier,
+            )
         }
+
+        // Hover over text
+        rule.onNodeWithTag(textTag).performMouseInput { enter(bottomRight) }
+        assertIcon(expectedTextIcon)
+
+        // Move cursor to hover over portion of the parent box not covered by any descendants
+        rule.onNodeWithTag(selectionContainerTag).performMouseInput { moveTo(bottomRight) }
+        assertIcon(expectedSelectionContainerIcon)
+
+        // Exit hovering over element
+        rule.onNodeWithTag(selectionContainerTag).performMouseInput { exit() }
+        assertIcon(TYPE_DEFAULT)
+    }
 }

@@ -47,7 +47,9 @@ class ThrowableSubjectTest {
     @Test
     fun hasMessageThat_failure() {
         val actual = NullPointerException("message")
-        assertFailsWith<AssertionError> { assertThat(actual).hasMessageThat().isEqualTo("foobar") }
+        assertFailsWith<AssertionError> {
+            assertThat(actual).hasMessageThat().isEqualTo("foobar")
+        }
     }
 
     @Test
@@ -60,7 +62,9 @@ class ThrowableSubjectTest {
     @Test
     fun hasMessageThat_NullMessageHasMessage_failure() {
         val npe = NullPointerException(null)
-        assertFailsWith<AssertionError> { assertThat(npe).hasMessageThat().isEqualTo("message") }
+        assertFailsWith<AssertionError> {
+            assertThat(npe).hasMessageThat().isEqualTo("message")
+        }
     }
 
     @Test
@@ -111,7 +115,11 @@ class ThrowableSubjectTest {
     fun hasCauseThat_deepNull_failure() {
         val actual = Exception("foobar", RuntimeException("barfoo", IllegalStateException("buzz")))
         assertFailsWith<AssertionError> {
-            assertThat(actual).hasCauseThat().hasCauseThat().hasMessageThat().isEqualTo("message")
+            assertThat(actual)
+                .hasCauseThat()
+                .hasCauseThat()
+                .hasMessageThat()
+                .isEqualTo("message")
         }
     }
 }

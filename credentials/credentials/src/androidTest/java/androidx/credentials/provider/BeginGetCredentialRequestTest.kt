@@ -44,17 +44,18 @@ class BeginGetCredentialRequestTest {
         val expectedType = "mach-10"
         val expectedBeginGetCredentialOptionsSize = 1
 
-        val beginGetCredentialRequest =
-            BeginGetCredentialRequest(
-                listOf(BeginGetCustomCredentialOption(expectedId, expectedType, expectedBundle)),
-                null
-            )
+        val beginGetCredentialRequest = BeginGetCredentialRequest(
+            listOf(
+                BeginGetCustomCredentialOption(expectedId, expectedType, expectedBundle)
+            ),
+            null
+        )
         val actualBeginGetCredentialOptionList = beginGetCredentialRequest.beginGetCredentialOptions
         val actualBeginGetCredentialOptionsSize = actualBeginGetCredentialOptionList.size
         assertThat(actualBeginGetCredentialOptionsSize)
             .isEqualTo(expectedBeginGetCredentialOptionsSize)
-        val actualBundleValue =
-            actualBeginGetCredentialOptionList[0].candidateQueryData.getString(expectedKey)
+        val actualBundleValue = actualBeginGetCredentialOptionList[0].candidateQueryData
+            .getString(expectedKey)
         val actualId = actualBeginGetCredentialOptionList[0].id
         val actualType = actualBeginGetCredentialOptionList[0].type
 
@@ -67,8 +68,10 @@ class BeginGetCredentialRequestTest {
     fun getter_nullCallingAppInfo() {
         val expectedCallingAppInfo: CallingAppInfo? = null
 
-        val beginGetCredentialRequest =
-            BeginGetCredentialRequest(emptyList(), expectedCallingAppInfo)
+        val beginGetCredentialRequest = BeginGetCredentialRequest(
+            emptyList(),
+            expectedCallingAppInfo
+        )
         val actualCallingAppInfo = beginGetCredentialRequest.callingAppInfo
 
         assertThat(actualCallingAppInfo).isEqualTo(expectedCallingAppInfo)
@@ -77,10 +80,15 @@ class BeginGetCredentialRequestTest {
     @Test
     fun getter_nonNullCallingAppInfo() {
         val expectedPackageName = "john.wick.four.credentials"
-        val expectedCallingAppInfo = CallingAppInfo(expectedPackageName, SigningInfo())
+        val expectedCallingAppInfo = CallingAppInfo(
+            expectedPackageName,
+            SigningInfo()
+        )
 
-        val beginGetCredentialRequest =
-            BeginGetCredentialRequest(emptyList(), expectedCallingAppInfo)
+        val beginGetCredentialRequest = BeginGetCredentialRequest(
+            emptyList(),
+            expectedCallingAppInfo
+        )
         val actualCallingAppInfo = beginGetCredentialRequest.callingAppInfo
         val actualPackageName = actualCallingAppInfo!!.packageName
 

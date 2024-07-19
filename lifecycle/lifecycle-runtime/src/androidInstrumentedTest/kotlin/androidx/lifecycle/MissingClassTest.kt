@@ -30,9 +30,13 @@ import org.junit.runner.RunWith
 class MissingClassTest {
     @Suppress("UNUSED")
     class ObserverWithMissingClasses {
-        @Suppress("UNUSED_PARAMETER") fun newApiMethod(params: PictureInPictureParams?) {}
+        @Suppress("UNUSED_PARAMETER")
+        fun newApiMethod(params: PictureInPictureParams?) {
+        }
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_RESUME) fun onResume() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        fun onResume() {
+        }
     }
 
     @Test(expected = IllegalArgumentException::class)

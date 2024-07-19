@@ -52,7 +52,8 @@ private data class MotionDataPoint(val timeMillis: Long, val motionValue: Float)
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class VelocityTrackerBenchmarkTest {
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     @Test
     fun addMovement_differential() {
@@ -95,7 +96,9 @@ class VelocityTrackerBenchmarkTest {
             velocityTracker.addDataPoint(dataPoint.timeMillis, dataPoint.motionValue)
         }
 
-        benchmarkRule.measureRepeated { assert(velocityTracker.calculateVelocity() != 0f) }
+        benchmarkRule.measureRepeated {
+            assert(velocityTracker.calculateVelocity() != 0f)
+        }
     }
 
     companion object {

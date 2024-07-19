@@ -60,9 +60,7 @@ fun SwipeToDismissDemo() {
         var index by remember { mutableIntStateOf(0) }
         Box(Modifier.requiredHeight(300.dp).fillMaxWidth()) {
             Box(
-                Modifier.swipeToDismiss(index)
-                    .align(Alignment.BottomCenter)
-                    .requiredSize(150.dp)
+                Modifier.swipeToDismiss(index).align(Alignment.BottomCenter).requiredSize(150.dp)
                     .background(pastelColors[index])
             )
         }
@@ -72,7 +70,9 @@ fun SwipeToDismissDemo() {
             modifier = Modifier.padding(40.dp).align(Alignment.CenterHorizontally)
         )
         Button(
-            onClick = { index = (index + 1) % pastelColors.size },
+            onClick = {
+                index = (index + 1) % pastelColors.size
+            },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text("New Card")
@@ -83,40 +83,49 @@ fun SwipeToDismissDemo() {
 private fun Modifier.swipeToDismiss(index: Int): Modifier = composed {
     val animatedOffset = remember { Animatable(0f) }
     val height = remember { mutableIntStateOf(0) }
-    LaunchedEffect(index) { animatedOffset.snapTo(0f) }
+    LaunchedEffect(index) {
+        animatedOffset.snapTo(0f)
+    }
     this.pointerInput(Unit) {
-            coroutineScope {
-                while (true) {
-                    height.intValue = size.height
-                    val velocityTracker = VelocityTracker()
-                    awaitPointerEventScope {
-                        val pointerId = awaitFirstDown().id
-                        verticalDrag(pointerId) {
-                            launch {
-                                animatedOffset.snapTo(animatedOffset.value + it.positionChange().y)
-                            }
-                            velocityTracker.addPosition(it.uptimeMillis, it.position)
+        coroutineScope {
+            while (true) {
+                height.intValue = size.height
+                val velocityTracker = VelocityTracker()
+                awaitPointerEventScope {
+                    val pointerId = awaitFirstDown().id
+                    verticalDrag(pointerId) {
+                        launch {
+                            animatedOffset.snapTo(
+                                animatedOffset.value + it.positionChange().y
+                            )
                         }
+                        velocityTracker.addPosition(
+                            it.uptimeMillis,
+                            it.position
+                        )
                     }
-                    val velocity = velocityTracker.calculateVelocity().y
-                    launch {
-                        // Either fling out of the sight, or snap back
-                        val decay = splineBasedDecay<Float>(this@pointerInput)
-                        if (
-                            decay.calculateTargetValue(animatedOffset.value, velocity) >=
-                                -size.height
-                        ) {
-                            // Not enough velocity to be dismissed
-                            animatedOffset.animateTo(0f, initialVelocity = velocity)
-                        } else {
-                            animatedOffset.updateBounds(lowerBound = -size.height.toFloat())
-                            animatedOffset.animateDecay(velocity, decay)
-                        }
+                }
+                val velocity = velocityTracker.calculateVelocity().y
+                launch {
+                    // Either fling out of the sight, or snap back
+                    val decay = splineBasedDecay<Float>(this@pointerInput)
+                    if (decay.calculateTargetValue(
+                            animatedOffset.value,
+                            velocity
+                        ) >= -size.height
+                    ) {
+                        // Not enough velocity to be dismissed
+                        animatedOffset.animateTo(0f, initialVelocity = velocity)
+                    } else {
+                        animatedOffset.updateBounds(
+                            lowerBound = -size.height.toFloat()
+                        )
+                        animatedOffset.animateDecay(velocity, decay)
                     }
                 }
             }
         }
-        .offset { IntOffset(0, animatedOffset.value.roundToInt()) }
+    }.offset { IntOffset(0, animatedOffset.value.roundToInt()) }
         .graphicsLayer(alpha = calculateAlpha(animatedOffset.value, height.intValue))
 }
 
@@ -126,11 +135,10 @@ private fun calculateAlpha(offset: Float, size: Int): Float {
     return alpha.coerceIn(0f, 1f)
 }
 
-internal val pastelColors =
-    listOf(
-        Color(0xFFffd7d7),
-        Color(0xFFffe9d6),
-        Color(0xFFfffbd0),
-        Color(0xFFe3ffd9),
-        Color(0xFFd0fff8)
-    )
+internal val pastelColors = listOf(
+    Color(0xFFffd7d7),
+    Color(0xFFffe9d6),
+    Color(0xFFfffbd0),
+    Color(0xFFe3ffd9),
+    Color(0xFFd0fff8)
+)

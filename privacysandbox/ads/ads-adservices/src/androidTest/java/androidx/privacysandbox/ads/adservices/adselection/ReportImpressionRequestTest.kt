@@ -37,22 +37,19 @@ class ReportImpressionRequestTest {
     private val perBuyerSignals: Map<AdTechIdentifier, AdSelectionSignals> =
         mutableMapOf(Pair(seller, sellerSignals))
     private val trustedScoringSignalsUri: Uri = Uri.parse("www.xyz.com")
-    private val adSelectionConfig =
-        AdSelectionConfig(
-            seller,
-            decisionLogicUri,
-            customAudienceBuyers,
-            adSelectionSignals,
-            sellerSignals,
-            perBuyerSignals,
-            trustedScoringSignalsUri
-        )
+    private val adSelectionConfig = AdSelectionConfig(
+        seller,
+        decisionLogicUri,
+        customAudienceBuyers,
+        adSelectionSignals,
+        sellerSignals,
+        perBuyerSignals,
+        trustedScoringSignalsUri)
 
     @Test
     fun testToString() {
-        val result =
-            "ReportImpressionRequest: adSelectionId=$adSelectionId, " +
-                "adSelectionConfig=$adSelectionConfig"
+        val result = "ReportImpressionRequest: adSelectionId=$adSelectionId, " +
+            "adSelectionConfig=$adSelectionConfig"
         val request = ReportImpressionRequest(adSelectionId, adSelectionConfig)
         Truth.assertThat(request.toString()).isEqualTo(result)
     }
@@ -60,16 +57,14 @@ class ReportImpressionRequestTest {
     @Test
     fun testEquals() {
         val reportImpressionRequest = ReportImpressionRequest(adSelectionId, adSelectionConfig)
-        var adSelectionConfig2 =
-            AdSelectionConfig(
-                AdTechIdentifier("1234"),
-                Uri.parse("www.abc.com"),
-                customAudienceBuyers,
-                adSelectionSignals,
-                sellerSignals,
-                perBuyerSignals,
-                trustedScoringSignalsUri
-            )
+        var adSelectionConfig2 = AdSelectionConfig(
+            AdTechIdentifier("1234"),
+            Uri.parse("www.abc.com"),
+            customAudienceBuyers,
+            adSelectionSignals,
+            sellerSignals,
+            perBuyerSignals,
+            trustedScoringSignalsUri)
         var reportImpressionRequest2 = ReportImpressionRequest(adSelectionId, adSelectionConfig2)
         Truth.assertThat(reportImpressionRequest == reportImpressionRequest2).isTrue()
     }

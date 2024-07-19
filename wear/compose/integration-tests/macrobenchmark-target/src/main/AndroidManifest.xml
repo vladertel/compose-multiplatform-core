@@ -46,23 +46,12 @@
         </activity>
 
         <activity
-            android:name=".SwipeToDismissActivity"
+            android:name=".SwipeActivity"
             android:theme="@style/AppTheme"
             android:exported="true">
             <intent-filter>
                 <action android:name=
-                    "androidx.wear.compose.integration.macrobenchmark.target.SWIPE_TO_DISMISS_ACTIVITY" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".SwipeToRevealActivity"
-            android:theme="@style/AppTheme"
-            android:exported="true">
-            <intent-filter>
-                <action android:name=
-                    "androidx.wear.compose.integration.macrobenchmark.target.SWIPE_TO_REVEAL_ACTIVITY" />
+                    "androidx.wear.compose.integration.macrobenchmark.target.SWIPE_ACTIVITY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

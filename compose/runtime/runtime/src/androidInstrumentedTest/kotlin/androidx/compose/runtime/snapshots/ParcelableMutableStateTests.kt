@@ -29,7 +29,9 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 @RunWith(Parameterized::class)
-class ParcelableMutableStateTests(private val policy: SnapshotMutationPolicy<Int>) {
+class ParcelableMutableStateTests(
+    private val policy: SnapshotMutationPolicy<Int>
+) {
     @Test
     fun saveAndRestoreTheMutableStateOf() {
         val a = mutableStateOf(0, policy)
@@ -50,6 +52,10 @@ class ParcelableMutableStateTests(private val policy: SnapshotMutationPolicy<Int
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun initParameters(): Array<SnapshotMutationPolicy<Int>> =
-            arrayOf(structuralEqualityPolicy(), referentialEqualityPolicy(), neverEqualPolicy())
+            arrayOf(
+                structuralEqualityPolicy(),
+                referentialEqualityPolicy(),
+                neverEqualPolicy()
+            )
     }
 }

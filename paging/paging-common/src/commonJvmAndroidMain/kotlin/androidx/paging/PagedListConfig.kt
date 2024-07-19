@@ -24,9 +24,12 @@ package androidx.paging
  * @param enablePlaceholders False if null placeholders should be disabled.
  * @param initialLoadSizeHint Number of items to load while initializing the PagedList.
  * @param maxSize Maximum number of items to keep in memory, or
- *   [PagedList.Config.MAX_SIZE_UNBOUNDED] to disable page dropping.
+ * [PagedList.Config.MAX_SIZE_UNBOUNDED] to disable page dropping.
  */
-@Suppress("FunctionName", "DEPRECATION", "ReferencesDeprecated")
+@Suppress(
+    "FunctionName",
+    "DEPRECATION"
+)
 @JvmSynthetic
 public fun Config(
     pageSize: Int,

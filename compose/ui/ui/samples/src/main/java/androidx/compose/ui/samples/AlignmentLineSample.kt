@@ -36,7 +36,9 @@ fun AlignmentLineSample() {
     @Composable
     fun LineProviderLayout(exampleLinePosition: Int) {
         val size: Int = 20
-        Layout({}) { _, _ -> layout(size, size, mapOf(exampleLine to exampleLinePosition)) {} }
+        Layout({}) { _, _ ->
+            layout(size, size, mapOf(exampleLine to exampleLinePosition)) {}
+        }
     }
 
     Layout({

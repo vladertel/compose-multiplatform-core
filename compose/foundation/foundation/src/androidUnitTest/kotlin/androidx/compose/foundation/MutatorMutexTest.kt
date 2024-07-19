@@ -58,93 +58,80 @@ class MutatorMutexTest {
     }
 
     @Test
-    fun newMutatorCancelsOld() =
-        runBlocking<Unit> {
-            val mutex = MutatorMutex()
-            runNewMutatorCancelsOld(MutateWithoutReceiverCaller(mutex))
-            runNewMutatorCancelsOld(MutateWithReceiverCaller(mutex))
+    fun newMutatorCancelsOld() = runBlocking<Unit> {
+        val mutex = MutatorMutex()
+        runNewMutatorCancelsOld(MutateWithoutReceiverCaller(mutex))
+        runNewMutatorCancelsOld(MutateWithReceiverCaller(mutex))
+    }
+
+    private suspend fun runNewMutatorCancelsOld(mutex: MutateCaller) = coroutineScope<Unit> {
+        val firstMutatorJob = launch(start = CoroutineStart.UNDISPATCHED) {
+            mutex.mutate {
+                // Suspend forever
+                suspendCancellableCoroutine<Unit> { }
+            }
+            fail("mutator should have thrown CancellationException")
         }
 
-    private suspend fun runNewMutatorCancelsOld(mutex: MutateCaller) =
-        coroutineScope<Unit> {
-            val firstMutatorJob =
-                launch(start = CoroutineStart.UNDISPATCHED) {
-                    mutex.mutate {
-                        // Suspend forever
-                        suspendCancellableCoroutine<Unit> {}
-                    }
-                    fail("mutator should have thrown CancellationException")
-                }
-
-            // Cancel firstMutatorJob
-            mutex.mutate {}
-            assertTrue("first mutator was cancelled", firstMutatorJob.isCancelled)
-        }
+        // Cancel firstMutatorJob
+        mutex.mutate { }
+        assertTrue("first mutator was cancelled", firstMutatorJob.isCancelled)
+    }
 
     @Test
-    fun mutatorsCancelByPriority() =
-        runBlocking<Unit> {
-            val mutex = MutatorMutex()
-            runMutatorsCancelByPriority(MutateWithoutReceiverCaller(mutex))
-            runMutatorsCancelByPriority(MutateWithReceiverCaller(mutex))
-        }
+    fun mutatorsCancelByPriority() = runBlocking<Unit> {
+        val mutex = MutatorMutex()
+        runMutatorsCancelByPriority(MutateWithoutReceiverCaller(mutex))
+        runMutatorsCancelByPriority(MutateWithReceiverCaller(mutex))
+    }
 
     @Test
-    fun tryMutateBlockingSuspendsSubsequentMutate() =
-        runBlocking<Unit> {
-            val mutex = MutatorMutex()
-            val tryMutateJob =
-                launch(start = CoroutineStart.LAZY) {
-                    mutex.tryMutate {
-                        while (true) {
-                            /* Block forever */
-                        }
-                    }
-                }
-            val mutateJob =
-                launch(start = CoroutineStart.LAZY) {
-                    mutex.mutate {
-                        if (tryMutateJob.isActive)
-                            fail("Attempted to mutate before tryMutate finished")
-                    }
-                }
-            tryMutateJob.start()
-            mutateJob.start()
-
-            tryMutateJob.cancelAndJoin()
-            mutateJob.cancelAndJoin()
+    fun tryMutateBlockingSuspendsSubsequentMutate() = runBlocking<Unit> {
+        val mutex = MutatorMutex()
+        val tryMutateJob = launch(start = CoroutineStart.LAZY) {
+            mutex.tryMutate {
+                while (true) { /* Block forever */ }
+            }
         }
+        val mutateJob = launch(start = CoroutineStart.LAZY) {
+            mutex.mutate {
+                if (tryMutateJob.isActive) fail("Attempted to mutate before tryMutate finished")
+            }
+        }
+        tryMutateJob.start()
+        mutateJob.start()
+
+        tryMutateJob.cancelAndJoin()
+        mutateJob.cancelAndJoin()
+    }
 
     @Test
-    fun tryMutateDoesNotOverrideActiveCaller() =
-        runBlocking<Unit> {
-            val mutex = MutatorMutex()
-            val mutateJob =
-                launch(start = CoroutineStart.UNDISPATCHED) {
-                    mutex.mutate {
-                        suspendCancellableCoroutine {} // Suspend forever
-                    }
-                }
-            val tryMutateSuccessful = mutex.tryMutate {}
+    fun tryMutateDoesNotOverrideActiveCaller() = runBlocking<Unit> {
+        val mutex = MutatorMutex()
+        val mutateJob = launch(start = CoroutineStart.UNDISPATCHED) {
+            mutex.mutate {
+                suspendCancellableCoroutine { } // Suspend forever
+            }
+        }
+        val tryMutateSuccessful = mutex.tryMutate { }
+        Assert.assertFalse(
+            "tryMutate should not run if there is an ongoing mutation",
+            tryMutateSuccessful
+        )
+        mutateJob.cancelAndJoin()
+    }
+
+    @Test
+    fun tryMutateBlockingTryMutateLocks() = runBlocking<Unit> {
+        val mutex = MutatorMutex()
+        mutex.tryMutate {
+            val tryMutateSuccessful = mutex.tryMutate { }
             Assert.assertFalse(
                 "tryMutate should not run if there is an ongoing mutation",
                 tryMutateSuccessful
             )
-            mutateJob.cancelAndJoin()
         }
-
-    @Test
-    fun tryMutateBlockingTryMutateLocks() =
-        runBlocking<Unit> {
-            val mutex = MutatorMutex()
-            mutex.tryMutate {
-                val tryMutateSuccessful = mutex.tryMutate {}
-                Assert.assertFalse(
-                    "tryMutate should not run if there is an ongoing mutation",
-                    tryMutateSuccessful
-                )
-            }
-        }
+    }
 
     @Test
     fun tryLockUnlockedMutexLocks() {
@@ -175,39 +162,37 @@ class MutatorMutexTest {
         assertTrue("The mutex was not locked", didLockAfterUnlock)
     }
 
-    private suspend fun runMutatorsCancelByPriority(mutex: MutateCaller) =
-        coroutineScope<Unit> {
-            for (firstPriority in MutatePriority.values()) {
-                for (secondPriority in MutatePriority.values()) {
-                    val firstMutatorJob =
-                        launch(start = CoroutineStart.UNDISPATCHED) {
-                            mutex.mutate(firstPriority) {
-                                // Suspend forever
-                                suspendCancellableCoroutine<Unit> {}
-                            }
-                            fail("mutator should have thrown CancellationException")
-                        }
-
-                    // Attempt mutation and (maybe) cause cancellation
-                    try {
-                        mutex.mutate(secondPriority) {}
-                    } catch (ce: CancellationException) {
-                        assertTrue(
-                            "attempted second mutation was cancelled with lower priority",
-                            secondPriority < firstPriority
-                        )
+    private suspend fun runMutatorsCancelByPriority(mutex: MutateCaller) = coroutineScope<Unit> {
+        for (firstPriority in MutatePriority.values()) {
+            for (secondPriority in MutatePriority.values()) {
+                val firstMutatorJob = launch(start = CoroutineStart.UNDISPATCHED) {
+                    mutex.mutate(firstPriority) {
+                        // Suspend forever
+                        suspendCancellableCoroutine<Unit> { }
                     }
-                    assertEquals(
-                        "first mutator of priority $firstPriority cancelled by second " +
-                            "mutator of priority $secondPriority",
-                        secondPriority >= firstPriority,
-                        firstMutatorJob.isCancelled
-                    )
-
-                    // Cleanup regardless of results
-                    firstMutatorJob.cancel()
-                    firstMutatorJob.join()
+                    fail("mutator should have thrown CancellationException")
                 }
+
+                // Attempt mutation and (maybe) cause cancellation
+                try {
+                    mutex.mutate(secondPriority) { }
+                } catch (ce: CancellationException) {
+                    assertTrue(
+                        "attempted second mutation was cancelled with lower priority",
+                        secondPriority < firstPriority
+                    )
+                }
+                assertEquals(
+                    "first mutator of priority $firstPriority cancelled by second " +
+                        "mutator of priority $secondPriority",
+                    secondPriority >= firstPriority,
+                    firstMutatorJob.isCancelled
+                )
+
+                // Cleanup regardless of results
+                firstMutatorJob.cancel()
+                firstMutatorJob.join()
             }
         }
+    }
 }

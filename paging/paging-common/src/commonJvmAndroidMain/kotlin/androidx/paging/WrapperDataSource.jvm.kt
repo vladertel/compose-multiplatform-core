@@ -28,11 +28,10 @@ internal open class WrapperDataSource<Key : Any, ValueFrom : Any, ValueTo : Any>
     private val source: DataSource<Key, ValueFrom>,
     private val listFunction: Function<List<ValueFrom>, List<ValueTo>>
 ) : DataSource<Key, ValueTo>(source.type) {
-    private val keyMap =
-        when (source.type) {
-            KeyType.ITEM_KEYED -> IdentityHashMap<ValueTo, Key>()
-            else -> null
-        }
+    private val keyMap = when (source.type) {
+        KeyType.ITEM_KEYED -> IdentityHashMap<ValueTo, Key>()
+        else -> null
+    }
 
     override fun addInvalidatedCallback(onInvalidatedCallback: InvalidatedCallback) =
         source.addInvalidatedCallback(onInvalidatedCallback)
@@ -45,16 +44,13 @@ internal open class WrapperDataSource<Key : Any, ValueFrom : Any, ValueTo : Any>
     override val isInvalid
         get() = source.isInvalid
 
-    override fun getKeyInternal(item: ValueTo): Key =
-        when {
-            keyMap != null ->
-                synchronized(keyMap) {
-                    return keyMap[item]!!
-                }
-            // positional / page-keyed
-            else ->
-                throw IllegalStateException("Cannot get key by item in non-item keyed DataSource")
+    override fun getKeyInternal(item: ValueTo): Key = when {
+        keyMap != null -> synchronized(keyMap) {
+            return keyMap[item]!!
         }
+        // positional / page-keyed
+        else -> throw IllegalStateException("Cannot get key by item in non-item keyed DataSource")
+    }
 
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     fun stashKeysIfNeeded(source: List<ValueFrom>, dest: List<ValueTo>) {

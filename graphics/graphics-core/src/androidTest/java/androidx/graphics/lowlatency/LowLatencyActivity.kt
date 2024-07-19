@@ -32,7 +32,9 @@ class LowLatencyActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         window.setBackgroundDrawable(ColorDrawable(Color.WHITE))
         super.onCreate(savedInstanceState)
-        mLowLatencyCanvasView = LowLatencyCanvasView(this).apply { setContentView(this) }
+        mLowLatencyCanvasView = LowLatencyCanvasView(this).apply {
+            setContentView(this)
+        }
     }
 
     fun setOnDestroyCallback(callback: () -> Unit) {

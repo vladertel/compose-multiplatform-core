@@ -34,7 +34,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Tests if [AndroidInputDispatcher.enqueueKeyDown], [AndroidInputDispatcher.enqueueKeyUp] and
+ * Tests if [AndroidInputDispatcher.enqueueKeyDown], [AndroidInputDispatcher.enqueueKeyUp]  and
  * friends work.
  */
 @RunWith(AndroidJUnit4::class)
@@ -82,16 +82,9 @@ class KeyEventsTest : InputDispatcherTest() {
 
         private const val allLockMasks = capsLockMask or numLockMask or scrollLockMask
 
-        private const val allMetaMasks =
-            functionKeyMetaMask or
-                leftCtrlMask or
-                rightCtrlMask or
-                leftAltMask or
-                rightAltMask or
-                leftMetaMask or
-                rightMetaMask or
-                leftShiftMask or
-                rightShiftMask
+        private const val allMetaMasks = functionKeyMetaMask or leftCtrlMask or rightCtrlMask or
+            leftAltMask or rightAltMask or leftMetaMask or rightMetaMask or
+            leftShiftMask or rightShiftMask
 
         private const val allMasks = allLockMasks or allMetaMasks
 
@@ -144,14 +137,15 @@ class KeyEventsTest : InputDispatcherTest() {
         subject.flush()
 
         assertTrue(subject.isCapsLockOn)
-        recorder.events
-            .last()
-            .verifyKeyEvent(keyDown, aKey.nativeKeyCode, 0, 0, capsLockMask or leftShiftMask)
+        recorder.events.last().verifyKeyEvent(
+            keyDown, aKey.nativeKeyCode, 0, 0, capsLockMask or leftShiftMask
+        )
     }
 
     /* Lock key state tests. */
 
-    @Test fun capsLock_startsOff() = assertFalse(subject.isCapsLockOn)
+    @Test
+    fun capsLock_startsOff() = assertFalse(subject.isCapsLockOn)
 
     @Test
     fun capsLockOn_afterDown() {
@@ -172,7 +166,8 @@ class KeyEventsTest : InputDispatcherTest() {
         assertFalse(subject.isCapsLockOn)
     }
 
-    @Test fun numLock_startsOff() = assertFalse(subject.isNumLockOn)
+    @Test
+    fun numLock_startsOff() = assertFalse(subject.isNumLockOn)
 
     @Test
     fun numLockOn_afterDown() {
@@ -193,7 +188,8 @@ class KeyEventsTest : InputDispatcherTest() {
         assertFalse(subject.isNumLockOn)
     }
 
-    @Test fun scrollLock_startsOff() = assertFalse(subject.isScrollLockOn)
+    @Test
+    fun scrollLock_startsOff() = assertFalse(subject.isScrollLockOn)
 
     @Test
     fun scrollLockOn_afterDown() {
@@ -221,33 +217,44 @@ class KeyEventsTest : InputDispatcherTest() {
         verifyMetaKeyMetaState(functionKey, functionKeyMetaMask)
 
     @Test
-    fun leftCtrl_metaState_generatedCorrectly() = verifyMetaKeyMetaState(leftCtrl, leftCtrlMask)
+    fun leftCtrl_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(leftCtrl, leftCtrlMask)
 
     @Test
-    fun rightCtrl_metaState_generatedCorrectly() = verifyMetaKeyMetaState(rightCtrl, rightCtrlMask)
-
-    @Test fun leftAlt_metaState_generatedCorrectly() = verifyMetaKeyMetaState(leftAlt, leftAltMask)
-
-    @Test
-    fun rightAlt_metaState_generatedCorrectly() = verifyMetaKeyMetaState(rightAlt, rightAltMask)
+    fun rightCtrl_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(rightCtrl, rightCtrlMask)
 
     @Test
-    fun leftMeta_metaState_generatedCorrectly() = verifyMetaKeyMetaState(leftMeta, leftMetaMask)
+    fun leftAlt_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(leftAlt, leftAltMask)
 
     @Test
-    fun rightMeta_metaState_generatedCorrectly() = verifyMetaKeyMetaState(rightMeta, rightMetaMask)
+    fun rightAlt_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(rightAlt, rightAltMask)
 
     @Test
-    fun leftShift_metaState_generatedCorrectly() = verifyMetaKeyMetaState(leftShift, leftShiftMask)
+    fun leftMeta_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(leftMeta, leftMetaMask)
+
+    @Test
+    fun rightMeta_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(rightMeta, rightMetaMask)
+
+    @Test
+    fun leftShift_metaState_generatedCorrectly() =
+        verifyMetaKeyMetaState(leftShift, leftShiftMask)
 
     @Test
     fun rightShift_metaState_generatedCorrectly() =
         verifyMetaKeyMetaState(rightShift, rightShiftMask)
 
     @Test
-    fun capsLock_metaState_generatedCorrectly() = verifyLockKeyMetaState(capsLock, capsLockMask)
+    fun capsLock_metaState_generatedCorrectly() =
+        verifyLockKeyMetaState(capsLock, capsLockMask)
 
-    @Test fun numLock_metaState_generatedCorrectly() = verifyLockKeyMetaState(numLock, numLockMask)
+    @Test
+    fun numLock_metaState_generatedCorrectly() =
+        verifyLockKeyMetaState(numLock, numLockMask)
 
     @Test
     fun scrollLock_metaState_generatedCorrectly() =
@@ -262,9 +269,11 @@ class KeyEventsTest : InputDispatcherTest() {
 
         recorder.assertHasValidEventTimes()
         assertEquals(6, recorder.events.size)
-        recorder.events
-            .last()
-            .verifyKeyEvent(keyUp, scrollLock.nativeKeyCode, expectedMetaState = allLockMasks)
+        recorder.events.last().verifyKeyEvent(
+            keyUp,
+            scrollLock.nativeKeyCode,
+            expectedMetaState = allLockMasks
+        )
     }
 
     @Test
@@ -282,9 +291,9 @@ class KeyEventsTest : InputDispatcherTest() {
 
         recorder.assertHasValidEventTimes()
         assertEquals(9, recorder.events.size)
-        recorder.events
-            .last()
-            .verifyKeyEvent(keyDown, rightShift.nativeKeyCode, expectedMetaState = allMetaMasks)
+        recorder.events.last().verifyKeyEvent(
+            keyDown, rightShift.nativeKeyCode, expectedMetaState = allMetaMasks
+        )
     }
 
     @Test
@@ -305,9 +314,9 @@ class KeyEventsTest : InputDispatcherTest() {
 
         recorder.assertHasValidEventTimes()
         assertEquals(15, recorder.events.size)
-        recorder.events
-            .last()
-            .verifyKeyEvent(keyDown, rightShift.nativeKeyCode, expectedMetaState = allMasks)
+        recorder.events.last().verifyKeyEvent(
+            keyDown, rightShift.nativeKeyCode, expectedMetaState = allMasks
+        )
     }
 
     /* Repeat key tests */
@@ -322,9 +331,10 @@ class KeyEventsTest : InputDispatcherTest() {
         recorder.assertHasValidEventTimes()
         assertEquals(2, recorder.events.size)
         recorder.events.first().verifyKeyEvent(keyDown, aKey.nativeKeyCode)
-        recorder.events
-            .last()
-            .verifyKeyEvent(keyUp, aKey.nativeKeyCode, expectedEventTime = initialRepeatDelay - 1)
+        recorder.events.last().verifyKeyEvent(
+            keyUp, aKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay - 1
+        )
     }
 
     @Test
@@ -337,17 +347,10 @@ class KeyEventsTest : InputDispatcherTest() {
         recorder.assertHasValidEventTimes()
         assertEquals(3, recorder.events.size)
         recorder.events[0].verifyKeyEvent(keyDown, aKey.nativeKeyCode)
-        recorder.events[1].verifyKeyEvent(
-            keyDown,
-            aKey.nativeKeyCode,
-            expectedEventTime = initialRepeatDelay,
-            expectedRepeat = 1
-        )
-        recorder.events[2].verifyKeyEvent(
-            keyUp,
-            aKey.nativeKeyCode,
-            expectedEventTime = initialRepeatDelay
-        )
+        recorder.events[1].verifyKeyEvent(keyDown, aKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay, expectedRepeat = 1)
+        recorder.events[2].verifyKeyEvent(keyUp, aKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay)
     }
 
     @Test
@@ -361,12 +364,8 @@ class KeyEventsTest : InputDispatcherTest() {
         recorder.assertHasValidEventTimes()
         assertEquals(2, recorder.events.size)
         recorder.events[0].verifyKeyEvent(keyDown, aKey.nativeKeyCode)
-        recorder.events[1].verifyKeyEvent(
-            keyDown,
-            oneKey.nativeKeyCode,
-            expectedEventTime = initialRepeatDelay - 1,
-            expectedDownTime = initialRepeatDelay - 1
-        )
+        recorder.events[1].verifyKeyEvent(keyDown, oneKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay - 1, expectedDownTime = initialRepeatDelay - 1)
     }
 
     @Test
@@ -381,12 +380,8 @@ class KeyEventsTest : InputDispatcherTest() {
         assertEquals(3, recorder.events.size)
 
         recorder.events[0].verifyKeyEvent(keyDown, aKey.nativeKeyCode)
-        recorder.events[1].verifyKeyEvent(
-            keyDown,
-            oneKey.nativeKeyCode,
-            expectedEventTime = initialRepeatDelay - 1,
-            expectedDownTime = initialRepeatDelay - 1
-        )
+        recorder.events[1].verifyKeyEvent(keyDown, oneKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay - 1, expectedDownTime = initialRepeatDelay - 1)
         recorder.events[2].verifyKeyEvent(
             keyDown,
             oneKey.nativeKeyCode,
@@ -410,12 +405,8 @@ class KeyEventsTest : InputDispatcherTest() {
         assertEquals(4, recorder.events.size)
 
         recorder.events[0].verifyKeyEvent(keyDown, aKey.nativeKeyCode)
-        recorder.events[1].verifyKeyEvent(
-            keyDown,
-            oneKey.nativeKeyCode,
-            expectedEventTime = initialRepeatDelay - 1,
-            expectedDownTime = initialRepeatDelay - 1
-        )
+        recorder.events[1].verifyKeyEvent(keyDown, oneKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay - 1, expectedDownTime = initialRepeatDelay - 1)
         recorder.events[2].verifyKeyEvent(
             keyDown,
             oneKey.nativeKeyCode,
@@ -444,14 +435,8 @@ class KeyEventsTest : InputDispatcherTest() {
         subject.flush()
 
         assertEquals(2, recorder.events.size)
-        recorder.events
-            .last()
-            .verifyKeyEvent(
-                keyDown,
-                aKey.nativeKeyCode,
-                expectedEventTime = initialRepeatDelay,
-                expectedRepeat = 1
-            )
+        recorder.events.last().verifyKeyEvent(keyDown, aKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay, expectedRepeat = 1)
 
         subject.advanceEventTime(subsequentRepeatDelay - 1) // t = 549
         subject.flush()
@@ -461,14 +446,8 @@ class KeyEventsTest : InputDispatcherTest() {
         subject.flush()
 
         assertEquals(3, recorder.events.size)
-        recorder.events
-            .last()
-            .verifyKeyEvent(
-                keyDown,
-                aKey.nativeKeyCode,
-                expectedEventTime = initialRepeatDelay + subsequentRepeatDelay,
-                expectedRepeat = 2
-            )
+        recorder.events.last().verifyKeyEvent(keyDown, aKey.nativeKeyCode,
+            expectedEventTime = initialRepeatDelay + subsequentRepeatDelay, expectedRepeat = 2)
 
         subject.advanceEventTime(subsequentRepeatDelay * 10) // t = 1050
         subject.flush()
@@ -477,12 +456,9 @@ class KeyEventsTest : InputDispatcherTest() {
         assertEquals(13, recorder.events.size)
 
         recorder.events.drop(3).forEachIndexed { i, event ->
-            event.verifyKeyEvent(
-                keyDown,
-                aKey.nativeKeyCode,
+            event.verifyKeyEvent(keyDown, aKey.nativeKeyCode,
                 expectedEventTime = (initialRepeatDelay + subsequentRepeatDelay * (i + 2)),
-                expectedRepeat = 3 + i
-            )
+                expectedRepeat = 3 + i)
         }
     }
 
@@ -493,7 +469,7 @@ class KeyEventsTest : InputDispatcherTest() {
         subject.enqueueKeyDown(oneKey)
         expectError<IllegalStateException>(
             expectedMessage =
-                "Cannot send key down event, Key\\($oneKey\\) is already pressed down."
+            "Cannot send key down event, Key\\($oneKey\\) is already pressed down."
         ) {
             subject.enqueueKeyDown(oneKey)
         }
@@ -520,9 +496,7 @@ class KeyEventsTest : InputDispatcherTest() {
         recorder.assertHasValidEventTimes()
         assertEquals(2, recorder.events.size)
         recorder.events[0].verifyKeyEvent(
-            keyDown,
-            key.nativeKeyCode,
-            expectedMetaState = expectedMetaState
+            keyDown, key.nativeKeyCode, expectedMetaState = expectedMetaState
         )
         recorder.events[1].verifyKeyEvent(keyUp, key.nativeKeyCode)
     }
@@ -535,20 +509,13 @@ class KeyEventsTest : InputDispatcherTest() {
         recorder.assertHasValidEventTimes()
         assertEquals(4, recorder.events.size)
         recorder.events[0].verifyKeyEvent(
-            keyDown,
-            key.nativeKeyCode,
-            expectedMetaState = expectedMetaState
+            keyDown, key.nativeKeyCode, expectedMetaState = expectedMetaState
         )
         recorder.events[1].verifyKeyEvent(
-            keyUp,
-            key.nativeKeyCode,
-            expectedMetaState = expectedMetaState
+            keyUp, key.nativeKeyCode, expectedMetaState = expectedMetaState
         )
-        recorder.events[2].verifyKeyEvent(
-            keyDown,
-            key.nativeKeyCode,
-            expectedMetaState = expectedMetaState
-        )
+        recorder.events[2].verifyKeyEvent(keyDown, key.nativeKeyCode,
+            expectedMetaState = expectedMetaState)
         recorder.events[3].verifyKeyEvent(keyUp, key.nativeKeyCode)
     }
 }

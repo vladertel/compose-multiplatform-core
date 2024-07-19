@@ -31,10 +31,11 @@ class RxJava2QueryTest : TestDatabaseTest() {
         booksDao.addAuthors(TestUtil.AUTHOR_1)
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
-        booksDao
-            .getBookFlowable(TestUtil.BOOK_1.bookId)
+        booksDao.getBookFlowable(TestUtil.BOOK_1.bookId)
             .test()
-            .also { drain() }
+            .also {
+                drain()
+            }
             .assertValue { book -> book == TestUtil.BOOK_1 }
     }
 
@@ -44,14 +45,17 @@ class RxJava2QueryTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        booksDao.getBookSingle(TestUtil.BOOK_1.bookId).test().assertComplete().assertValue { book ->
-            book == TestUtil.BOOK_1
-        }
+        booksDao.getBookSingle(TestUtil.BOOK_1.bookId)
+            .test()
+            .assertComplete()
+            .assertValue { book -> book == TestUtil.BOOK_1 }
     }
 
     @Test
     fun observeBooksByIdSingle_noBook() {
-        booksDao.getBookSingle("x").test().assertError(EmptyResultSetException::class.java)
+        booksDao.getBookSingle("x")
+            .test()
+            .assertError(EmptyResultSetException::class.java)
     }
 
     @Test
@@ -60,14 +64,19 @@ class RxJava2QueryTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        booksDao.getBookMaybe(TestUtil.BOOK_1.bookId).test().assertComplete().assertValue { book ->
-            book == TestUtil.BOOK_1
-        }
+        booksDao.getBookMaybe(TestUtil.BOOK_1.bookId)
+            .test()
+            .assertComplete()
+            .assertValue { book -> book == TestUtil.BOOK_1 }
     }
 
     @Test
     fun observeBooksByIdMaybe_noBook() {
-        booksDao.getBookMaybe("x").test().assertComplete().assertNoErrors().assertNoValues()
+        booksDao.getBookMaybe("x")
+            .test()
+            .assertComplete()
+            .assertNoErrors()
+            .assertNoValues()
     }
 
     @Test
@@ -76,11 +85,18 @@ class RxJava2QueryTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        var expected =
-            BookWithPublisher(TestUtil.BOOK_1.bookId, TestUtil.BOOK_1.title, TestUtil.PUBLISHER)
+        var expected = BookWithPublisher(
+            TestUtil.BOOK_1.bookId, TestUtil.BOOK_1.title,
+            TestUtil.PUBLISHER
+        )
         var expectedList = ArrayList<BookWithPublisher>()
         expectedList.add(expected)
-        booksDao.getBooksWithPublisherFlowable().test().also { drain() }.assertValue(expectedList)
+        booksDao.getBooksWithPublisherFlowable()
+            .test()
+            .also {
+                drain()
+            }
+            .assertValue(expectedList)
     }
 
     @Test
@@ -88,10 +104,11 @@ class RxJava2QueryTest : TestDatabaseTest() {
         booksDao.addAuthors(TestUtil.AUTHOR_1)
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1, TestUtil.BOOK_2)
-        booksDao
-            .getPublisherWithBooksFlowable(TestUtil.PUBLISHER.publisherId)
+        booksDao.getPublisherWithBooksFlowable(TestUtil.PUBLISHER.publisherId)
             .test()
-            .also { drain() }
+            .also {
+                drain()
+            }
             .assertValue {
                 it.publisher == TestUtil.PUBLISHER &&
                     it.books?.size == 2 &&
@@ -103,8 +120,7 @@ class RxJava2QueryTest : TestDatabaseTest() {
     @Test
     fun mainThreadSubscribe_sharedPreparedQuery() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            booksDao
-                .insertPublisherCompletable("a1", "author1")
+            booksDao.insertPublisherCompletable("a1", "author1")
                 .subscribeOn(Schedulers.io())
                 .blockingAwait()
         }
@@ -113,7 +129,9 @@ class RxJava2QueryTest : TestDatabaseTest() {
     @Test
     fun mainThreadSubscribe_preparedQuery() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            booksDao.deleteBookWithIdsSingle("b1", "b2").subscribeOn(Schedulers.io()).blockingGet()
+            booksDao.deleteBookWithIdsSingle("b1", "b2")
+                .subscribeOn(Schedulers.io())
+                .blockingGet()
         }
     }
 }

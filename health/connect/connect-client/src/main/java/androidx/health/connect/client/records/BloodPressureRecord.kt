@@ -107,7 +107,9 @@ public class BloodPressureRecord(
         const val RIGHT_UPPER_ARM = "right_upper_arm"
     }
 
-    /** The user's body position when a health measurement is taken. */
+    /**
+     * The user's body position when a health measurement is taken.
+     */
     internal object BodyPosition {
         const val STANDING_UP = "standing_up"
         const val SITTING_DOWN = "sitting_down"
@@ -115,7 +117,9 @@ public class BloodPressureRecord(
         const val RECLINING = "reclining"
     }
 
-    /** The arm and part of the arm where a blood pressure measurement was taken. */
+    /**
+     * The arm and part of the arm where a blood pressure measurement was taken.
+     */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
@@ -130,7 +134,9 @@ public class BloodPressureRecord(
     )
     annotation class MeasurementLocations
 
-    /** The user's body position when a health measurement is taken. */
+    /**
+     * The user's body position when a health measurement is taken.
+     */
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
         value =

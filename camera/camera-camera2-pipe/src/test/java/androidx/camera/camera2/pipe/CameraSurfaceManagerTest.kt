@@ -94,8 +94,7 @@ internal class CameraSurfaceManagerTest {
                 override fun onSurfaceInactive(surface: Surface) {
                     surfaceManager.removeListener(this)
                 }
-            }
-        )
+            })
         surfaceManager.registerSurface(imageReader1.surface).close()
     }
 

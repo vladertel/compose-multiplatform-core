@@ -45,7 +45,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LazyListSlotsReuseTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     val itemsSizePx = 30f
     val itemsSizeDp = with(rule.density) { itemsSizePx.toDp() }
@@ -55,19 +56,29 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDisplayed()
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(1) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(1)
+            }
+        }
 
-        rule.onNodeWithTag("0").assertIsDeactivated()
-        rule.onNodeWithTag("1").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("1")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -75,21 +86,33 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertIsDisplayed()
-        rule.onNodeWithTag("1").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("1")
+            .assertIsDisplayed()
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(2) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(2)
+            }
+        }
 
-        rule.onNodeWithTag("0").assertIsDeactivated()
-        rule.onNodeWithTag("1").assertIsDeactivated()
-        rule.onNodeWithTag("2").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("1")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("2")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -97,18 +120,30 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * (DefaultMaxItemsToRetain + 0.5f)), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * (DefaultMaxItemsToRetain + 0.5f)),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
             }
         }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(DefaultMaxItemsToRetain + 1) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(DefaultMaxItemsToRetain + 1)
+            }
+        }
 
-        repeat(DefaultMaxItemsToRetain) { rule.onNodeWithTag("$it").assertIsDeactivated() }
-        rule.onNodeWithTag("$DefaultMaxItemsToRetain").assertDoesNotExist()
-        rule.onNodeWithTag("${DefaultMaxItemsToRetain + 1}").assertIsDisplayed()
+        repeat(DefaultMaxItemsToRetain) {
+            rule.onNodeWithTag("$it")
+                .assertIsDeactivated()
+        }
+        rule.onNodeWithTag("$DefaultMaxItemsToRetain")
+            .assertDoesNotExist()
+        rule.onNodeWithTag("${DefaultMaxItemsToRetain + 1}")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -116,15 +151,20 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertIsDisplayed()
-        rule.onNodeWithTag("1").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("1")
+            .assertIsDisplayed()
 
         rule.runOnIdle {
             runBlocking {
@@ -138,15 +178,20 @@ class LazyListSlotsReuseTest {
         }
 
         // recycled
-        rule.onNodeWithTag("1").assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
 
         // in buffer
-        rule.onNodeWithTag("0").assertIsDeactivated()
-        rule.onNodeWithTag("2").assertIsDeactivated()
+        rule.onNodeWithTag("0")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("2")
+            .assertIsDeactivated()
 
         // visible
-        rule.onNodeWithTag("3").assertIsDisplayed()
-        rule.onNodeWithTag("4").assertIsDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("4")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -154,7 +199,10 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
@@ -170,16 +218,22 @@ class LazyListSlotsReuseTest {
         }
 
         // recycled
-        rule.onNodeWithTag("0").assertDoesNotExist()
-        rule.onNodeWithTag("1").assertDoesNotExist()
-        rule.onNodeWithTag("2").assertDoesNotExist()
+        rule.onNodeWithTag("0")
+            .assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
+        rule.onNodeWithTag("2")
+            .assertDoesNotExist()
 
         // in buffer
-        rule.onNodeWithTag("3").assertIsDeactivated()
+        rule.onNodeWithTag("3")
+            .assertIsDeactivated()
 
         // visible
-        rule.onNodeWithTag("4").assertIsDisplayed()
-        rule.onNodeWithTag("5").assertIsDisplayed()
+        rule.onNodeWithTag("4")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("5")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -187,7 +241,10 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState(10)
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
@@ -200,12 +257,16 @@ class LazyListSlotsReuseTest {
         }
 
         // in buffer
-        rule.onNodeWithTag("10").assertIsDeactivated()
-        rule.onNodeWithTag("11").assertIsDeactivated()
+        rule.onNodeWithTag("10")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("11")
+            .assertIsDeactivated()
 
         // visible
-        rule.onNodeWithTag("8").assertIsDisplayed()
-        rule.onNodeWithTag("9").assertIsDisplayed()
+        rule.onNodeWithTag("8")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("9")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -213,7 +274,10 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState(10)
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
                     Spacer(Modifier.height(itemsSizeDp).fillParentMaxWidth().testTag("$it"))
                 }
@@ -228,11 +292,14 @@ class LazyListSlotsReuseTest {
         }
 
         // in buffer
-        rule.onNodeWithTag("8").assertIsDeactivated()
+        rule.onNodeWithTag("8")
+            .assertIsDeactivated()
 
         // visible
-        rule.onNodeWithTag("6").assertIsDisplayed()
-        rule.onNodeWithTag("7").assertIsDisplayed()
+        rule.onNodeWithTag("6")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("7")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -241,32 +308,37 @@ class LazyListSlotsReuseTest {
         var counter0 = 0
         var counter1 = 0
 
-        val measureCountModifier0 =
-            Modifier.layout { measurable, constraints ->
-                counter0++
-                val placeable = measurable.measure(constraints)
-                layout(placeable.width, placeable.height) { placeable.place(IntOffset.Zero) }
+        val measureCountModifier0 = Modifier.layout { measurable, constraints ->
+            counter0++
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) {
+                placeable.place(IntOffset.Zero)
             }
+        }
 
-        val measureCountModifier1 =
-            Modifier.layout { measurable, constraints ->
-                counter1++
-                val placeable = measurable.measure(constraints)
-                layout(placeable.width, placeable.height) { placeable.place(IntOffset.Zero) }
+        val measureCountModifier1 = Modifier.layout { measurable, constraints ->
+            counter1++
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) {
+                placeable.place(IntOffset.Zero)
             }
+        }
 
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 1.5f), state) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 1.5f),
+                state
+            ) {
                 items(100) {
-                    val modifier =
-                        when (it) {
-                            0 -> measureCountModifier0
-                            1 -> measureCountModifier1
-                            else -> Modifier
-                        }
+                    val modifier = when (it) {
+                        0 -> measureCountModifier0
+                        1 -> measureCountModifier1
+                        else -> Modifier
+                    }
                     Spacer(
-                        Modifier.height(itemsSizeDp)
+                        Modifier
+                            .height(itemsSizeDp)
                             .fillParentMaxWidth()
                             .testTag("$it")
                             .then(modifier)
@@ -285,18 +357,20 @@ class LazyListSlotsReuseTest {
 
         rule.runOnIdle {
             Truth.assertWithMessage("Item 0 measured $counter0 times, expected 0.")
-                .that(counter0)
-                .isEqualTo(0)
+                .that(counter0).isEqualTo(0)
             Truth.assertWithMessage("Item 1 measured $counter1 times, expected 0.")
-                .that(counter1)
-                .isEqualTo(0)
+                .that(counter1).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("0").assertIsDisplayed()
-        rule.onNodeWithTag("1").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("1")
+            .assertIsDisplayed()
 
-        rule.onNodeWithTag("2").assertIsDeactivated()
-        rule.onNodeWithTag("3").assertIsDeactivated()
+        rule.onNodeWithTag("2")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("3")
+            .assertIsDeactivated()
     }
 
     @Test
@@ -306,32 +380,48 @@ class LazyListSlotsReuseTest {
         val startOfType1 = DefaultMaxItemsToRetain + 1
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * (visibleItemsCount - 0.5f)), state) {
-                items(100, contentType = { if (it >= startOfType1) 1 else 0 }) {
+            LazyColumn(
+                Modifier.height(itemsSizeDp * (visibleItemsCount - 0.5f)),
+                state
+            ) {
+                items(
+                    100,
+                    contentType = { if (it >= startOfType1) 1 else 0 }
+                ) {
                     Spacer(Modifier.height(itemsSizeDp).fillMaxWidth().testTag("$it"))
                 }
             }
         }
 
         for (i in 0 until visibleItemsCount) {
-            rule.onNodeWithTag("$i").assertIsDisplayed()
+            rule.onNodeWithTag("$i")
+                .assertIsDisplayed()
         }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(visibleItemsCount) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(visibleItemsCount)
+            }
+        }
 
-        rule.onNodeWithTag("$visibleItemsCount").assertIsDisplayed()
+        rule.onNodeWithTag("$visibleItemsCount")
+            .assertIsDisplayed()
 
         // [DefaultMaxItemsToRetain] items of type 0 are left for reuse
         for (i in 0 until DefaultMaxItemsToRetain) {
-            rule.onNodeWithTag("$i").assertIsDeactivated()
+            rule.onNodeWithTag("$i")
+                .assertIsDeactivated()
         }
-        rule.onNodeWithTag("$DefaultMaxItemsToRetain").assertDoesNotExist()
+        rule.onNodeWithTag("$DefaultMaxItemsToRetain")
+            .assertDoesNotExist()
 
         // and 7 items of type 1
         for (i in startOfType1 until startOfType1 + DefaultMaxItemsToRetain) {
-            rule.onNodeWithTag("$i").assertIsDeactivated()
+            rule.onNodeWithTag("$i")
+                .assertIsDeactivated()
         }
-        rule.onNodeWithTag("${startOfType1 + DefaultMaxItemsToRetain}").assertDoesNotExist()
+        rule.onNodeWithTag("${startOfType1 + DefaultMaxItemsToRetain}")
+            .assertDoesNotExist()
     }
 
     @Test
@@ -339,17 +429,22 @@ class LazyListSlotsReuseTest {
         lateinit var state: LazyListState
         rule.setContent {
             state = rememberLazyListState()
-            LazyColumn(Modifier.height(itemsSizeDp * 2.5f), state) {
-                val content =
-                    @Composable { tag: String ->
-                        Spacer(Modifier.height(itemsSizeDp).width(10.dp).testTag(tag))
-                    }
-                item(contentType = "not-to-reuse-0") { content("0") }
-                item(contentType = "reuse") { content("1") }
+            LazyColumn(
+                Modifier.height(itemsSizeDp * 2.5f),
+                state
+            ) {
+                val content = @Composable { tag: String ->
+                    Spacer(Modifier.height(itemsSizeDp).width(10.dp).testTag(tag))
+                }
+                item(contentType = "not-to-reuse-0") {
+                    content("0")
+                }
+                item(contentType = "reuse") {
+                    content("1")
+                }
                 items(
                     List(100) { it + 2 },
-                    contentType = { if (it == 10) "reuse" else "not-to-reuse-$it" }
-                ) {
+                    contentType = { if (it == 10) "reuse" else "not-to-reuse-$it" }) {
                     content("$it")
                 }
             }
@@ -362,8 +457,10 @@ class LazyListSlotsReuseTest {
             }
         }
 
-        rule.onNodeWithTag("0").assertIsDeactivated()
-        rule.onNodeWithTag("1").assertIsDeactivated()
+        rule.onNodeWithTag("0")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("1")
+            .assertIsDeactivated()
 
         rule.runOnIdle {
             runBlocking {
@@ -372,11 +469,16 @@ class LazyListSlotsReuseTest {
             }
         }
 
-        rule.onNodeWithTag("0").assertIsDeactivated()
-        rule.onNodeWithTag("1").assertDoesNotExist()
-        rule.onNodeWithTag("9").assertIsDisplayed()
-        rule.onNodeWithTag("10").assertIsDisplayed()
-        rule.onNodeWithTag("11").assertIsDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsDeactivated()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
+        rule.onNodeWithTag("9")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("10")
+            .assertIsDisplayed()
+        rule.onNodeWithTag("11")
+            .assertIsDisplayed()
     }
 }
 

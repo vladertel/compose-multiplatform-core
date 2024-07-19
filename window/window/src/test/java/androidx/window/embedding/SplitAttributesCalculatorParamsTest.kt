@@ -39,15 +39,14 @@ class SplitAttributesCalculatorParamsTest {
         val areDefaultConstraintsSatisfied = true
         val splitRuleTag = "test"
 
-        val params =
-            SplitAttributesCalculatorParams(
-                parentWindowMetrics,
-                parentConfiguration,
-                parentWindowLayoutInfo,
-                defaultSplitAttributes,
-                areDefaultConstraintsSatisfied,
-                splitRuleTag
-            )
+        val params = SplitAttributesCalculatorParams(
+            parentWindowMetrics,
+            parentConfiguration,
+            parentWindowLayoutInfo,
+            defaultSplitAttributes,
+            areDefaultConstraintsSatisfied,
+            splitRuleTag
+        )
 
         assertEquals(parentWindowMetrics, params.parentWindowMetrics)
         assertEquals(parentConfiguration, params.parentConfiguration)
@@ -66,16 +65,14 @@ class SplitAttributesCalculatorParamsTest {
         val areDefaultConstraintsSatisfied = true
         val splitRuleTag = "test"
 
-        val paramsString =
-            SplitAttributesCalculatorParams(
-                    parentWindowMetrics,
-                    parentConfiguration,
-                    parentWindowLayoutInfo,
-                    defaultSplitAttributes,
-                    areDefaultConstraintsSatisfied,
-                    splitRuleTag
-                )
-                .toString()
+        val paramsString = SplitAttributesCalculatorParams(
+            parentWindowMetrics,
+            parentConfiguration,
+            parentWindowLayoutInfo,
+            defaultSplitAttributes,
+            areDefaultConstraintsSatisfied,
+            splitRuleTag
+        ).toString()
 
         assertTrue(paramsString.contains(parentWindowMetrics.toString()))
         assertTrue(paramsString.contains(parentConfiguration.toString()))

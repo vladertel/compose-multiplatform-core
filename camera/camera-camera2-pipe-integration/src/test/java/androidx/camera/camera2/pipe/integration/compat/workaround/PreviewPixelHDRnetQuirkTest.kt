@@ -25,6 +25,7 @@ import androidx.camera.camera2.pipe.integration.impl.Camera2ImplConfig
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
+import androidx.camera.core.impl.CameraInternal
 import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.core.impl.PreviewConfig
 import androidx.camera.core.impl.StreamSpec
@@ -57,33 +58,29 @@ class PreviewPixelHDRnetQuirkTest(
 ) {
 
     @get:Rule
-    val immediateExecutorRule =
-        object : TestWatcher() {
-            override fun starting(description: Description) {
-                super.starting(description)
-                ArchTaskExecutor.getInstance()
-                    .setDelegate(
-                        object : TaskExecutor() {
-                            override fun executeOnDiskIO(runnable: Runnable) {
-                                runnable.run()
-                            }
+    val immediateExecutorRule = object : TestWatcher() {
+        override fun starting(description: Description) {
+            super.starting(description)
+            ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
+                override fun executeOnDiskIO(runnable: Runnable) {
+                    runnable.run()
+                }
 
-                            override fun postToMainThread(runnable: Runnable) {
-                                runnable.run()
-                            }
+                override fun postToMainThread(runnable: Runnable) {
+                    runnable.run()
+                }
 
-                            override fun isMainThread(): Boolean {
-                                return true
-                            }
-                        }
-                    )
-            }
-
-            override fun finished(description: Description) {
-                super.finished(description)
-                ArchTaskExecutor.getInstance().setDelegate(null)
-            }
+                override fun isMainThread(): Boolean {
+                    return true
+                }
+            })
         }
+
+        override fun finished(description: Description) {
+            super.finished(description)
+            ArchTaskExecutor.getInstance().setDelegate(null)
+        }
+    }
 
     private val resolutionHD: Size = Size(1280, 720)
     private val resolutionVGA: Size = Size(640, 480)
@@ -106,8 +103,10 @@ class PreviewPixelHDRnetQuirkTest(
     @Test
     fun previewShouldApplyToneModeForHDRNet() {
         // Arrange
-        cameraUseCaseAdapter =
-            configureCameraUseCaseAdapter(resolutionVGA, configType = PreviewConfig::class.java)
+        cameraUseCaseAdapter = configureCameraUseCaseAdapter(
+            resolutionVGA,
+            configType = PreviewConfig::class.java
+        )
         val preview = Preview.Builder().build()
 
         // Act. Update UseCase to create SessionConfig
@@ -116,62 +115,55 @@ class PreviewPixelHDRnetQuirkTest(
         // Assert.
         if (shouldApplyQuirk) {
             assertThat(
-                    Camera2ImplConfig(
-                            preview.sessionConfig.repeatingCaptureConfig.implementationOptions
-                        )
-                        .getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
-                )
-                .isEqualTo(CaptureRequest.TONEMAP_MODE_HIGH_QUALITY)
+                Camera2ImplConfig(
+                    preview.sessionConfig.repeatingCaptureConfig.implementationOptions
+                ).getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
+            ).isEqualTo(CaptureRequest.TONEMAP_MODE_HIGH_QUALITY)
         } else {
             assertThat(
-                    Camera2ImplConfig(
-                            preview.sessionConfig.repeatingCaptureConfig.implementationOptions
-                        )
-                        .getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
-                )
-                .isNull()
+                Camera2ImplConfig(
+                    preview.sessionConfig.repeatingCaptureConfig.implementationOptions
+                ).getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
+            ).isNull()
         }
     }
 
     @Test
     fun otherUseCasesNotApplyHDRNet() {
         // Arrange
-        cameraUseCaseAdapter =
-            configureCameraUseCaseAdapter(
-                resolutionVGA,
-                configType = ImageCaptureConfig::class.java
-            )
+        cameraUseCaseAdapter = configureCameraUseCaseAdapter(
+            resolutionVGA,
+            configType = ImageCaptureConfig::class.java
+        )
 
         // Act. Update UseCase to create SessionConfig
         val imageCapture = ImageCapture.Builder().build()
         cameraUseCaseAdapter.addUseCases(setOf<UseCase>(imageCapture))
 
         assertThat(
-                Camera2ImplConfig(
-                        imageCapture.sessionConfig.repeatingCaptureConfig.implementationOptions
-                    )
-                    .getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
-            )
-            .isNull()
+            Camera2ImplConfig(
+                imageCapture.sessionConfig.repeatingCaptureConfig.implementationOptions
+            ).getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
+        ).isNull()
     }
 
     @Test
     fun resolution16x9NotApplyHDRNet() {
         // Arrange
-        cameraUseCaseAdapter =
-            configureCameraUseCaseAdapter(resolutionHD, configType = PreviewConfig::class.java)
+        cameraUseCaseAdapter = configureCameraUseCaseAdapter(
+            resolutionHD,
+            configType = PreviewConfig::class.java
+        )
 
         // Act. Update UseCase to create SessionConfig
         val preview = Preview.Builder().build()
         cameraUseCaseAdapter.addUseCases(setOf<UseCase>(preview))
 
         assertThat(
-                Camera2ImplConfig(
-                        preview.sessionConfig.repeatingCaptureConfig.implementationOptions
-                    )
-                    .getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
-            )
-            .isNull()
+            Camera2ImplConfig(
+                preview.sessionConfig.repeatingCaptureConfig.implementationOptions
+            ).getCaptureRequestOption(CaptureRequest.TONEMAP_MODE)
+        ).isNull()
     }
 
     private fun configureCameraUseCaseAdapter(
@@ -180,7 +172,7 @@ class PreviewPixelHDRnetQuirkTest(
         configType: Class<out UseCaseConfig<*>?>,
     ): CameraUseCaseAdapter {
         return CameraUseCaseAdapter(
-            FakeCamera(fakeCameraId),
+            LinkedHashSet<CameraInternal>(setOf(FakeCamera(fakeCameraId))),
             FakeCameraCoordinator(),
             FakeCameraDeviceSurfaceManager().apply {
                 setSuggestedStreamSpec(
@@ -202,12 +194,11 @@ class PreviewPixelHDRnetQuirkTest(
         @ParameterizedRobolectricTestRunner.Parameters(
             name = "manufacturer={0}, device={1}, shouldApplyQuirk={2}"
         )
-        fun data() =
-            mutableListOf<Array<Any?>>().apply {
-                add(arrayOf("Google", "sunfish", true))
-                add(arrayOf("Google", "barbet", true))
-                add(arrayOf(FAKE_OEM, "barbet", false))
-                add(arrayOf(FAKE_OEM, "not_a_real_device", false))
-            }
+        fun data() = mutableListOf<Array<Any?>>().apply {
+            add(arrayOf("Google", "sunfish", true))
+            add(arrayOf("Google", "barbet", true))
+            add(arrayOf(FAKE_OEM, "barbet", false))
+            add(arrayOf(FAKE_OEM, "not_a_real_device", false))
+        }
     }
 }

@@ -19,6 +19,7 @@ package androidx.camera.viewfinder.internal.transform;
 import android.view.Surface;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.RequiresApi;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -26,6 +27,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Configuration containing options for configuring the output image data of a pipeline.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface Rotation {
     /**
      * Valid integer rotation values.

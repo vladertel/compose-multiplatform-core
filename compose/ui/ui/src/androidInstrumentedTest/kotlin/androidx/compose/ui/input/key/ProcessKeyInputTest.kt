@@ -45,7 +45,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ProcessKeyInputTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun noFocusTarget_doesNotTriggerOnKeyEvent() {
@@ -73,10 +74,12 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                Modifier.focusTarget().onKeyEvent {
-                    receivedKeyEvent = it
-                    true
-                }
+                Modifier
+                    .focusTarget()
+                    .onKeyEvent {
+                        receivedKeyEvent = it
+                        true
+                    }
             )
         }
 
@@ -94,14 +97,18 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         val keyConsumed = rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -122,14 +129,18 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -151,14 +162,18 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onPreviewKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onPreviewKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         val keyConsumed = rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -179,14 +194,18 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onPreviewKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onPreviewKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -209,20 +228,22 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusTarget()
-                        .onKeyEvent {
-                            receivedKeyEvent = it
-                            true
-                        }
-                        .onPreviewKeyEvent {
-                            receivedPreviewKeyEvent = it
-                            true
-                        }
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
+                        receivedKeyEvent = it
+                        true
+                    }
+                    .onPreviewKeyEvent {
+                        receivedPreviewKeyEvent = it
+                        true
+                    }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -244,20 +265,22 @@ class ProcessKeyInputTest {
         var onPreviewKeyEventTrigger = 0
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusTarget()
-                        .onKeyEvent {
-                            onKeyEventTrigger = triggerIndex++
-                            true
-                        }
-                        .onPreviewKeyEvent {
-                            onPreviewKeyEventTrigger = triggerIndex++
-                            false
-                        }
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
+                        onKeyEventTrigger = triggerIndex++
+                        true
+                    }
+                    .onPreviewKeyEvent {
+                        onPreviewKeyEventTrigger = triggerIndex++
+                        false
+                    }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -275,17 +298,18 @@ class ProcessKeyInputTest {
         val focusRequester = FocusRequester()
         var keyEventFromOnKeyEvent1: KeyEvent? = null
         var keyEventFromOnKeyEvent2: KeyEvent? = null
-        var onKeyEvent: (event: KeyEvent) -> Boolean by
-            mutableStateOf(
-                value = {
-                    keyEventFromOnKeyEvent1 = it
-                    true
-                }
-            )
+        var onKeyEvent: (event: KeyEvent) -> Boolean by mutableStateOf(
+            value = {
+                keyEventFromOnKeyEvent1 = it
+                true
+            }
+        )
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).onKeyEvent(onKeyEvent).focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .onKeyEvent(onKeyEvent)
+                    .focusTarget()
             )
         }
         rule.runOnIdle { focusRequester.requestFocus() }
@@ -312,19 +336,18 @@ class ProcessKeyInputTest {
         val focusRequester = FocusRequester()
         var keyEventFromOnPreviewKeyEvent1: KeyEvent? = null
         var keyEventFromOnPreviewKeyEvent2: KeyEvent? = null
-        var onPreviewKeyEvent: (event: KeyEvent) -> Boolean by
-            mutableStateOf(
-                value = {
-                    keyEventFromOnPreviewKeyEvent1 = it
-                    true
-                }
-            )
+        var onPreviewKeyEvent: (event: KeyEvent) -> Boolean by mutableStateOf(
+            value = {
+                keyEventFromOnPreviewKeyEvent1 = it
+                true
+            }
+        )
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .onPreviewKeyEvent(onPreviewKeyEvent)
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .onPreviewKeyEvent(onPreviewKeyEvent)
+                    .focusTarget()
             )
         }
         rule.runOnIdle { focusRequester.requestFocus() }
@@ -356,33 +379,35 @@ class ProcessKeyInputTest {
         var childOnPreviewKeyEventTrigger = 0
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusTarget()
+                modifier = Modifier
+                    .focusTarget()
+                    .onKeyEvent {
+                        parentOnKeyEventTrigger = triggerIndex++
+                        false
+                    }
+                    .onPreviewKeyEvent {
+                        parentOnPreviewKeyEventTrigger = triggerIndex++
+                        false
+                    }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .focusTarget()
                         .onKeyEvent {
-                            parentOnKeyEventTrigger = triggerIndex++
+                            childOnKeyEventTrigger = triggerIndex++
                             false
                         }
                         .onPreviewKeyEvent {
-                            parentOnPreviewKeyEventTrigger = triggerIndex++
+                            childOnPreviewKeyEventTrigger = triggerIndex++
                             false
                         }
-            ) {
-                Box(
-                    modifier =
-                        Modifier.focusRequester(focusRequester)
-                            .focusTarget()
-                            .onKeyEvent {
-                                childOnKeyEventTrigger = triggerIndex++
-                                false
-                            }
-                            .onPreviewKeyEvent {
-                                childOnPreviewKeyEventTrigger = triggerIndex++
-                                false
-                            }
                 )
             }
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -407,32 +432,34 @@ class ProcessKeyInputTest {
         var childOnPreviewKeyEventTrigger = 0
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onKeyEvent {
-                            parentOnKeyEventTrigger = triggerIndex++
+                modifier = Modifier
+                    .onKeyEvent {
+                        parentOnKeyEventTrigger = triggerIndex++
+                        false
+                    }
+                    .onPreviewKeyEvent {
+                        parentOnPreviewKeyEventTrigger = triggerIndex++
+                        false
+                    }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .focusTarget()
+                        .onKeyEvent {
+                            childOnKeyEventTrigger = triggerIndex++
                             false
                         }
                         .onPreviewKeyEvent {
-                            parentOnPreviewKeyEventTrigger = triggerIndex++
+                            childOnPreviewKeyEventTrigger = triggerIndex++
                             false
                         }
-            ) {
-                Box(
-                    modifier =
-                        Modifier.focusRequester(focusRequester)
-                            .focusTarget()
-                            .onKeyEvent {
-                                childOnKeyEventTrigger = triggerIndex++
-                                false
-                            }
-                            .onPreviewKeyEvent {
-                                childOnPreviewKeyEventTrigger = triggerIndex++
-                                false
-                            }
                 )
             }
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -455,20 +482,26 @@ class ProcessKeyInputTest {
         var parentOnPreviewKeyEventTrigger = 0
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onKeyEvent {
-                            parentOnKeyEventTrigger = triggerIndex++
-                            false
-                        }
-                        .onPreviewKeyEvent {
-                            parentOnPreviewKeyEventTrigger = triggerIndex++
-                            false
-                        }
+                modifier = Modifier
+                    .onKeyEvent {
+                        parentOnKeyEventTrigger = triggerIndex++
+                        false
+                    }
+                    .onPreviewKeyEvent {
+                        parentOnPreviewKeyEventTrigger = triggerIndex++
+                        false
+                    }
             ) {
-                Box(modifier = Modifier.focusRequester(focusRequester).focusTarget())
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .focusTarget()
+                )
             }
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -493,46 +526,48 @@ class ProcessKeyInputTest {
         var childOnPreviewKeyEventTrigger = 0
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusTarget()
+                modifier = Modifier
+                    .focusTarget()
+                    .onKeyEvent {
+                        grandParentOnKeyEventTrigger = triggerIndex++
+                        false
+                    }
+                    .onPreviewKeyEvent {
+                        grandParentOnPreviewKeyEventTrigger = triggerIndex++
+                        false
+                    }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .focusTarget()
                         .onKeyEvent {
-                            grandParentOnKeyEventTrigger = triggerIndex++
+                            parentOnKeyEventTrigger = triggerIndex++
                             false
                         }
                         .onPreviewKeyEvent {
-                            grandParentOnPreviewKeyEventTrigger = triggerIndex++
+                            parentOnPreviewKeyEventTrigger = triggerIndex++
                             false
                         }
-            ) {
-                Box(
-                    modifier =
-                        Modifier.focusTarget()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .focusRequester(focusRequester)
+                            .focusTarget()
                             .onKeyEvent {
-                                parentOnKeyEventTrigger = triggerIndex++
+                                childOnKeyEventTrigger = triggerIndex++
                                 false
                             }
                             .onPreviewKeyEvent {
-                                parentOnPreviewKeyEventTrigger = triggerIndex++
+                                childOnPreviewKeyEventTrigger = triggerIndex++
                                 false
                             }
-                ) {
-                    Box(
-                        modifier =
-                            Modifier.focusRequester(focusRequester)
-                                .focusTarget()
-                                .onKeyEvent {
-                                    childOnKeyEventTrigger = triggerIndex++
-                                    false
-                                }
-                                .onPreviewKeyEvent {
-                                    childOnPreviewKeyEventTrigger = triggerIndex++
-                                    false
-                                }
                     )
                 }
             }
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyDown))
@@ -555,20 +590,26 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onPreviewKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onPreviewKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyUp))
 
         // Assert.
-        rule.runOnIdle { assertThat(receivedKeyEvent).isNull() }
+        rule.runOnIdle {
+            assertThat(receivedKeyEvent).isNull()
+        }
     }
 
     @Test
@@ -578,20 +619,26 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Act.
         rule.onRoot().performKeyPress(keyEvent(KeyCodeA, KeyUp))
 
         // Assert.
-        rule.runOnIdle { assertThat(receivedKeyEvent).isNull() }
+        rule.runOnIdle {
+            assertThat(receivedKeyEvent).isNull()
+        }
     }
 
     @Test
@@ -601,16 +648,21 @@ class ProcessKeyInputTest {
         var receivedKeyEvent: KeyEvent? = null
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).focusTarget().onKeyEvent {
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusTarget()
+                    .onKeyEvent {
                         receivedKeyEvent = it
                         true
                     }
             )
         }
-        rule.runOnIdle { focusRequester.requestFocus() }
-        val event =
-            KeyEvent(AndroidKeyEvent(0L, 0L, /* action= */ Int.MAX_VALUE - 1, KeyCodeA, 0, 0))
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
+        val event = KeyEvent(
+            AndroidKeyEvent(0L, 0L, /*action=*/ Int.MAX_VALUE - 1, KeyCodeA, 0, 0)
+        )
 
         // Act.
         val keyConsumed = rule.onRoot().performKeyPress(event)
@@ -632,12 +684,11 @@ class ProcessKeyInputTest {
         @Suppress("SameParameterValue") keycode: Int,
         keyEventType: KeyEventType
     ): KeyEvent {
-        val action =
-            when (keyEventType) {
-                KeyDown -> ACTION_DOWN
-                KeyUp -> ACTION_UP
-                else -> error("Unknown key event type")
-            }
+        val action = when (keyEventType) {
+            KeyDown -> ACTION_DOWN
+            KeyUp -> ACTION_UP
+            else -> error("Unknown key event type")
+        }
         return KeyEvent(AndroidKeyEvent(0L, 0L, action, keycode, 0, 0))
     }
 }

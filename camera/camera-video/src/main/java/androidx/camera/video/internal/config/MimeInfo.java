@@ -17,6 +17,7 @@
 package androidx.camera.video.internal.config;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
 
 /**
@@ -27,6 +28,7 @@ import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
  * {@link VideoValidatedEncoderProfilesProxy}.
  */
 @SuppressWarnings("NullableProblems") // Problem from AutoValue generated class.
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 // Base class for @AutoValue subclasses
 public abstract class MimeInfo {
 

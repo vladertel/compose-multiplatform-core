@@ -37,7 +37,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
-/** Simple [detectVerticalDragGestures] and [detectHorizontalDragGestures] demo. */
+/**
+ * Simple [detectVerticalDragGestures] and [detectHorizontalDragGestures] demo.
+ */
 @Composable
 fun DragGestureFilterDemo() {
 

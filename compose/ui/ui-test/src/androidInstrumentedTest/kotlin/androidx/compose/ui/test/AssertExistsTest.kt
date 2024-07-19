@@ -38,7 +38,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AssertExistsTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     @FlakyTest
@@ -62,28 +63,45 @@ class AssertExistsTest {
             }
         }
 
-        rule.onNodeWithText("Hello").assertExists()
+        rule.onNodeWithText("Hello")
+            .assertExists()
 
-        expectAssertionError { rule.onNodeWithText("Hello").assertDoesNotExist() }
+        expectAssertionError {
+            rule.onNodeWithText("Hello")
+                .assertDoesNotExist()
+        }
 
         val cachedResult = rule.onNodeWithText("Hello")
 
         // Hide
-        rule.onNodeWithTag("MyButton").performClick()
+        rule.onNodeWithTag("MyButton")
+            .performClick()
 
-        rule.onNodeWithText("Hello").assertDoesNotExist()
+        rule.onNodeWithText("Hello")
+            .assertDoesNotExist()
 
-        cachedResult.assertDoesNotExist()
+        cachedResult
+            .assertDoesNotExist()
 
-        expectAssertionError { rule.onNodeWithText("Hello").assertExists() }
+        expectAssertionError {
+            rule.onNodeWithText("Hello")
+                .assertExists()
+        }
 
-        expectAssertionError { cachedResult.assertExists() }
+        expectAssertionError {
+            cachedResult.assertExists()
+        }
 
         // Show
-        rule.onNodeWithTag("MyButton").performClick()
+        rule.onNodeWithTag("MyButton")
+            .performClick()
 
-        rule.onNodeWithText("Hello").assertExists()
+        rule.onNodeWithText("Hello")
+            .assertExists()
 
-        expectAssertionError { rule.onNodeWithText("Hello").assertDoesNotExist() }
+        expectAssertionError {
+            rule.onNodeWithText("Hello")
+                .assertDoesNotExist()
+        }
     }
 }

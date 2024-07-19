@@ -24,8 +24,8 @@ import androidx.annotation.RequiresApi
 /**
  * Returns a new [PersistableBundle] with the given key/value pairs as elements.
  *
- * Supported value types are [Int], [Long], [Double], and [String] and arrays of these types. On API
- * 22 and later [Boolean] and [BooleanArray] are also supported.
+ * Supported value types are [Int], [Long], [Double], and [String] and arrays of these types. On
+ * API 22 and later [Boolean] and [BooleanArray] are also supported.
  *
  * @throws IllegalArgumentException When a value is not a supported type of [PersistableBundle].
  */
@@ -38,7 +38,9 @@ fun persistableBundleOf(vararg pairs: Pair<String, Any?>): PersistableBundle {
     return persistableBundle
 }
 
-/** Returns a new empty [PersistableBundle]. */
+/**
+ * Returns a new empty [PersistableBundle].
+ */
 @RequiresApi(21)
 fun persistableBundleOf(): PersistableBundle {
     return PersistableBundleApi21ImplKt.createPersistableBundle(0)
@@ -47,8 +49,8 @@ fun persistableBundleOf(): PersistableBundle {
 /**
  * Covert this map to a [PersistableBundle] with the key/value pairs as elements.
  *
- * Supported value types are [Int], [Long], [Double], and [String] and arrays of these types. On API
- * 22 and later [Boolean] and [BooleanArray] are also supported.
+ * Supported value types are [Int], [Long], [Double], and [String] and arrays of these types. On
+ * API 22 and later [Boolean] and [BooleanArray] are also supported.
  *
  * @throws IllegalArgumentException When a value is not a supported type of [PersistableBundle].
  */
@@ -85,8 +87,7 @@ private object PersistableBundleApi21ImplKt {
                         PersistableBundleApi22ImplKt.putBoolean(this, key, value)
                     } else {
                         throw IllegalArgumentException(
-                            "Unsupported value type boolean for key \"$key\" (requires API level " +
-                                "22+)"
+                            "Illegal value type boolean for key \"$key\""
                         )
                     }
                 }
@@ -96,7 +97,6 @@ private object PersistableBundleApi21ImplKt {
 
                 // References
                 is String -> putString(key, value)
-                is PersistableBundle -> putPersistableBundle(key, value)
 
                 // Scalar arrays
                 is BooleanArray -> {
@@ -104,8 +104,7 @@ private object PersistableBundleApi21ImplKt {
                         PersistableBundleApi22ImplKt.putBooleanArray(this, key, value)
                     } else {
                         throw IllegalArgumentException(
-                            "Unsupported value type boolean[] for key \"$key\" (requires API " +
-                                "level 22+)"
+                            "Illegal value type boolean[] for key \"$key\""
                         )
                     }
                 }
@@ -124,16 +123,15 @@ private object PersistableBundleApi21ImplKt {
                         else -> {
                             val valueType = componentType.canonicalName
                             throw IllegalArgumentException(
-                                "Unsupported value array type $valueType for key \"$key\""
+                                "Illegal value array type $valueType for key \"$key\""
                             )
                         }
                     }
                 }
+
                 else -> {
                     val valueType = value.javaClass.canonicalName
-                    throw IllegalArgumentException(
-                        "Unsupported value type $valueType for key " + "\"$key\""
-                    )
+                    throw IllegalArgumentException("Illegal value type $valueType for key \"$key\"")
                 }
             }
         }

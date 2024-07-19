@@ -22,6 +22,7 @@ import android.util.Range;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 
@@ -33,6 +34,7 @@ import java.lang.annotation.RetentionPolicy;
 /**
  * Audio specification that is options to config audio source and encoding.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @RestrictTo(Scope.LIBRARY)
 @AutoValue
 public abstract class AudioSpec {

@@ -18,7 +18,9 @@ package androidx.collection.integration
 
 import androidx.collection.SparseArrayCompat
 
-/** Integration (actually build) test that SparseArrayCompat can be subclassed. */
+/**
+ * Integration (actually build) test that SparseArrayCompat can be subclassed.
+ */
 @Suppress("unused")
 class SparseArrayCompatKotlin : SparseArrayCompat<Int>() {
     override fun clone(): SparseArrayCompat<Int> {
@@ -38,7 +40,8 @@ class SparseArrayCompatKotlin : SparseArrayCompat<Int>() {
         replaceWith = ReplaceWith("remove(key)"),
     )
     override fun delete(key: Int) {
-        @Suppress("DEPRECATION") super.delete(key)
+        @Suppress("DEPRECATION")
+        super.delete(key)
     }
 
     override fun remove(key: Int) {
@@ -134,17 +137,21 @@ class SparseArrayCompatKotlin : SparseArrayCompat<Int>() {
     }
 }
 
-/** Sample usage of SparseArrayCompat for ensuring source compatibility. */
+/**
+ * Sample usage of SparseArrayCompat for ensuring source compatibility.
+ */
 @Suppress("unused")
 fun sparseArraySourceCompatibility() {
     val sparseArray = SparseArrayCompat<Int>()
 
     // Property / function syntax.
     sparseArray.isEmpty
-    @Suppress("UsePropertyAccessSyntax") sparseArray.isEmpty()
+    @Suppress("UsePropertyAccessSyntax")
+    sparseArray.isEmpty()
 
     sparseArray.size()
 
     // Operator access
-    @Suppress("UNUSED_VARIABLE") val returnsNullable = sparseArray[0] == null
+    @Suppress("UNUSED_VARIABLE")
+    val returnsNullable = sparseArray[0] == null
 }

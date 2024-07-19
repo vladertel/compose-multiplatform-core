@@ -44,9 +44,11 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class BadgeScreenshotTest {
 
-    @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     @Test
     fun darkTheme_withContent() {
@@ -56,12 +58,16 @@ class BadgeScreenshotTest {
                     Modifier.size(56.dp).semantics(mergeDescendants = true) {}.testTag(TestTag),
                     contentAlignment = Alignment.Center
                 ) {
-                    BadgedBox(badge = { Badge { Text("8") } }) { Icon(Icons.Filled.Favorite, null) }
+                    BadgedBox(badge = { Badge { Text("8") } }) {
+                        Icon(Icons.Filled.Favorite, null)
+                    }
                 }
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_darkTheme_withContent")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_darkTheme_withContent"
+        )
     }
 
     @Test
@@ -73,7 +79,9 @@ class BadgeScreenshotTest {
                 ) {
                     BottomNavigationItem(
                         icon = {
-                            BadgedBox(badge = { Badge() }) { Icon(Icons.Filled.Favorite, null) }
+                            BadgedBox(badge = { Badge() }) {
+                                Icon(Icons.Filled.Favorite, null)
+                            }
                         },
                         selected = true,
                         onClick = {},
@@ -82,7 +90,9 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_noContent_bottomNavigation")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_noContent_bottomNavigation"
+        )
     }
 
     @Test
@@ -95,7 +105,14 @@ class BadgeScreenshotTest {
                     BottomNavigationItem(
                         icon = {
                             BadgedBox(
-                                badge = { Badge { Text("8", textAlign = TextAlign.Center) } }
+                                badge = {
+                                    Badge {
+                                        Text(
+                                            "8",
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             ) {
                                 Icon(Icons.Filled.Favorite, null)
                             }
@@ -122,7 +139,14 @@ class BadgeScreenshotTest {
                     BottomNavigationItem(
                         icon = {
                             BadgedBox(
-                                badge = { Badge { Text("99+", textAlign = TextAlign.Center) } }
+                                badge = {
+                                    Badge {
+                                        Text(
+                                            "99+",
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             ) {
                                 Icon(Icons.Filled.Favorite, null)
                             }
@@ -134,7 +158,9 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_longContent_bottomNavigation")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_longContent_bottomNavigation"
+        )
     }
 
     @Test
@@ -142,7 +168,11 @@ class BadgeScreenshotTest {
         composeTestRule.setContent {
             MaterialTheme(lightColors()) {
                 Tab(
-                    text = { BadgedBox(badge = { Badge() }) { Text("TAB") } },
+                    text = {
+                        BadgedBox(badge = { Badge() }) {
+                            Text("TAB")
+                        }
+                    },
                     selected = true,
                     onClick = {},
                     modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(TestTag)
@@ -150,7 +180,9 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_noContent_tab")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_noContent_tab"
+        )
     }
 
     @Test
@@ -160,7 +192,16 @@ class BadgeScreenshotTest {
                 // A round badge with the text `8` attached to a tab.
                 Tab(
                     text = {
-                        BadgedBox(badge = { Badge { Text("8", textAlign = TextAlign.Center) } }) {
+                        BadgedBox(
+                            badge = {
+                                Badge {
+                                    Text(
+                                        "8",
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        ) {
                             Text("TAB")
                         }
                     },
@@ -171,7 +212,9 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_shortContent_tab")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_shortContent_tab"
+        )
     }
 
     @Test
@@ -181,7 +224,16 @@ class BadgeScreenshotTest {
                 // Tab with a pilled shape badge with the text `99+`.
                 Tab(
                     text = {
-                        BadgedBox(badge = { Badge { Text("99+", textAlign = TextAlign.Center) } }) {
+                        BadgedBox(
+                            badge = {
+                                Badge {
+                                    Text(
+                                        "99+",
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        ) {
                             Text("TAB")
                         }
                     },
@@ -192,7 +244,9 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_longContent_tab")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_longContent_tab"
+        )
     }
 
     @Test
@@ -202,11 +256,22 @@ class BadgeScreenshotTest {
                 // A round badge with the text `8` attached to a leading icon tab.
                 LeadingIconTab(
                     icon = {
-                        BadgedBox(badge = { Badge { Text("8", textAlign = TextAlign.Center) } }) {
+                        BadgedBox(
+                            badge = {
+                                Badge {
+                                    Text(
+                                        "8",
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        ) {
                             Icon(Icons.Filled.Favorite, null)
                         }
                     },
-                    text = { Text("TAB") },
+                    text = {
+                        Text("TAB")
+                    },
                     selected = true,
                     onClick = {},
                     modifier = Modifier.semantics(mergeDescendants = true) {}.testTag(TestTag)
@@ -214,12 +279,13 @@ class BadgeScreenshotTest {
             }
         }
 
-        assertBadgeAgainstGolden(goldenIdentifier = "badge_lightTheme_shortContent_leadingIconTab")
+        assertBadgeAgainstGolden(
+            goldenIdentifier = "badge_lightTheme_shortContent_leadingIconTab"
+        )
     }
 
     private fun assertBadgeAgainstGolden(goldenIdentifier: String) {
-        composeTestRule
-            .onNodeWithTag(TestTag)
+        composeTestRule.onNodeWithTag(TestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenIdentifier)
     }

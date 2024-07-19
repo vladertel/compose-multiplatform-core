@@ -43,11 +43,13 @@ import javax.inject.Singleton
 import kotlinx.coroutines.withContext
 
 /**
- * Provides caching and querying of [CameraMetadata] and [CameraExtensionMetadata] via Camera2.
+ * Provides caching and querying of [CameraMetadata] and [CameraExtensionMetadata]
+ * via Camera2.
  *
  * This class is thread safe and provides suspending functions for querying and accessing
  * [CameraMetadata] and [CameraExtensionMetadata].
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Singleton
 internal class Camera2MetadataCache
 @Inject
@@ -59,7 +61,8 @@ constructor(
     private val timeSource: TimeSource
 ) : Camera2MetadataProvider {
 
-    @GuardedBy("cache") private val cache = ArrayMap<String, CameraMetadata>()
+    @GuardedBy("cache")
+    private val cache = ArrayMap<String, CameraMetadata>()
 
     @GuardedBy("extensionCache")
     private val extensionCache = ArrayMap<String, CameraExtensionMetadata>()
@@ -97,7 +100,7 @@ constructor(
     }
 
     override fun awaitCameraMetadata(cameraId: CameraId): CameraMetadata {
-        return Debug.trace("$cameraId#awaitMetadata") {
+        return Debug.trace("Camera-${cameraId.value}#awaitMetadata") {
             synchronized(cache) {
                 val existing = cache[cameraId.value]
                 if (existing != null) {
@@ -117,7 +120,7 @@ constructor(
         extension: Int
     ): CameraExtensionMetadata {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return Debug.trace("$cameraId#awaitExtensionMetadata") {
+            return Debug.trace("Camera-${cameraId.value}#awaitExtensionMetadata") {
                 synchronized(extensionCache) {
                     val existing = extensionCache[cameraId.value]
                     if (existing != null) {
@@ -138,10 +141,13 @@ constructor(
         }
     }
 
-    private fun createCameraMetadata(cameraId: CameraId, redacted: Boolean): Camera2CameraMetadata {
+    private fun createCameraMetadata(
+        cameraId: CameraId,
+        redacted: Boolean
+    ): Camera2CameraMetadata {
         val start = Timestamps.now(timeSource)
 
-        return Debug.trace("$cameraId#readCameraMetadata") {
+        return Debug.trace("Camera-${cameraId.value}#readCameraMetadata") {
             try {
                 Log.debug { "Loading metadata for $cameraId" }
                 val cameraManager =
@@ -211,7 +217,7 @@ constructor(
     ): Camera2CameraExtensionMetadata {
         val start = Timestamps.now(timeSource)
 
-        return Debug.trace("$cameraId#readCameraExtensionMetadata") {
+        return Debug.trace("Camera-${cameraId.value}#readCameraExtensionMetadata") {
             try {
                 Log.debug { "Loading extension metadata for $cameraId" }
 
@@ -240,8 +246,8 @@ constructor(
                 return@trace extensionMetadata
             } catch (throwable: Throwable) {
                 throw IllegalStateException(
-                    "Failed to load extension metadata " + "for $cameraId!",
-                    throwable
+                    "Failed to load extension metadata " +
+                        "for $cameraId!", throwable
                 )
             }
         }
@@ -261,8 +267,8 @@ constructor(
         val cameraManager =
             cameraPipeContext.getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
-        val extensionCharacteristics =
-            Api31Compat.getCameraExtensionCharacteristics(cameraManager, cameraId.value)
+        val extensionCharacteristics = Api31Compat
+            .getCameraExtensionCharacteristics(cameraManager, cameraId.value)
 
         // This technically shouldn't be null per documentation, but we suspect it could be
         // under certain devices in certain situations.

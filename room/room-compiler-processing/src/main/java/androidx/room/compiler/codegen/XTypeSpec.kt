@@ -33,23 +33,14 @@ interface XTypeSpec : TargetLanguage {
 
     interface Builder : TargetLanguage {
         fun superclass(typeName: XTypeName): Builder
-
         fun addSuperinterface(typeName: XTypeName): Builder
-
         fun addAnnotation(annotation: XAnnotationSpec)
-
         fun addProperty(propertySpec: XPropertySpec): Builder
-
         fun addFunction(functionSpec: XFunSpec): Builder
-
         fun addType(typeSpec: XTypeSpec): Builder
-
         fun setPrimaryConstructor(functionSpec: XFunSpec): Builder
-
         fun setVisibility(visibility: VisibilityModifier)
-
         fun addAbstractModifier(): Builder
-
         fun build(): XTypeSpec
 
         companion object {
@@ -106,26 +97,23 @@ interface XTypeSpec : TargetLanguage {
             isOpen: Boolean = false
         ): Builder {
             return when (language) {
-                CodeLanguage.JAVA ->
-                    JavaTypeSpec.Builder(
-                        className = className,
-                        actual =
-                            JTypeSpec.classBuilder(className.java).apply {
-                                if (!isOpen) {
-                                    addModifiers(Modifier.FINAL)
-                                }
-                            }
-                    )
-                CodeLanguage.KOTLIN ->
-                    KotlinTypeSpec.Builder(
-                        className = className,
-                        actual =
-                            KTypeSpec.classBuilder(className.kotlin).apply {
-                                if (isOpen) {
-                                    addModifiers(KModifier.OPEN)
-                                }
-                            }
-                    )
+                CodeLanguage.JAVA -> JavaTypeSpec.Builder(
+                    className = className,
+                    actual = JTypeSpec.classBuilder(className.java).apply {
+                        if (!isOpen) {
+                            addModifiers(Modifier.FINAL)
+                        }
+                    }
+                )
+
+                CodeLanguage.KOTLIN -> KotlinTypeSpec.Builder(
+                    className = className,
+                    actual = KTypeSpec.classBuilder(className.kotlin).apply {
+                        if (isOpen) {
+                            addModifiers(KModifier.OPEN)
+                        }
+                    }
+                )
             }
         }
 
@@ -135,49 +123,42 @@ interface XTypeSpec : TargetLanguage {
             vararg args: Any
         ): Builder {
             return when (language) {
-                CodeLanguage.JAVA ->
-                    JavaTypeSpec.Builder(
-                        className = null,
-                        actual =
-                            JTypeSpec.anonymousClassBuilder(
+                CodeLanguage.JAVA -> JavaTypeSpec.Builder(
+                    className = null,
+                    actual = JTypeSpec.anonymousClassBuilder(
+                        XCodeBlock.of(language, argsFormat, *args).let {
+                            check(it is JavaCodeBlock)
+                            it.actual
+                        }
+                    )
+                )
+                CodeLanguage.KOTLIN -> KotlinTypeSpec.Builder(
+                    className = null,
+                    actual = KTypeSpec.anonymousClassBuilder().apply {
+                        if (args.isNotEmpty()) {
+                            addSuperclassConstructorParameter(
                                 XCodeBlock.of(language, argsFormat, *args).let {
-                                    check(it is JavaCodeBlock)
+                                    check(it is KotlinCodeBlock)
                                     it.actual
                                 }
                             )
-                    )
-                CodeLanguage.KOTLIN ->
-                    KotlinTypeSpec.Builder(
-                        className = null,
-                        actual =
-                            KTypeSpec.anonymousClassBuilder().apply {
-                                if (args.isNotEmpty()) {
-                                    addSuperclassConstructorParameter(
-                                        XCodeBlock.of(language, argsFormat, *args).let {
-                                            check(it is KotlinCodeBlock)
-                                            it.actual
-                                        }
-                                    )
-                                }
-                            }
-                    )
+                        }
+                    }
+                )
             }
         }
 
         fun companionObjectBuilder(language: CodeLanguage): Builder {
             return when (language) {
-                CodeLanguage.JAVA ->
-                    JavaTypeSpec.Builder(
-                        className = null,
-                        actual =
-                            JTypeSpec.classBuilder("Companion")
-                                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                    )
-                CodeLanguage.KOTLIN ->
-                    KotlinTypeSpec.Builder(
-                        className = null,
-                        actual = KTypeSpec.companionObjectBuilder()
-                    )
+                CodeLanguage.JAVA -> JavaTypeSpec.Builder(
+                    className = null,
+                    actual = JTypeSpec.classBuilder("Companion")
+                        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                )
+                CodeLanguage.KOTLIN -> KotlinTypeSpec.Builder(
+                    className = null,
+                    actual = KTypeSpec.companionObjectBuilder()
+                )
             }
         }
     }

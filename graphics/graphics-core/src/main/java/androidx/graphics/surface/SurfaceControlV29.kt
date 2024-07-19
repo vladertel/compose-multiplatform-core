@@ -35,84 +35,83 @@ import androidx.hardware.SyncFenceImpl
 import androidx.hardware.SyncFenceV19
 import java.util.concurrent.Executor
 
-private typealias ReleaseCallback = (SyncFenceCompat) -> Unit
-
-/** Implementation of [SurfaceControlImpl] that wraps the [SurfaceControlWrapper] API. */
+/**
+ * Implementation of [SurfaceControlImpl] that wraps the [SurfaceControlWrapper] API.
+ */
 @RequiresApi(Build.VERSION_CODES.Q)
-internal class SurfaceControlV29
-internal constructor(internal val surfaceControl: SurfaceControlWrapper) : SurfaceControlImpl {
+internal class SurfaceControlV29 internal constructor(
+    internal val surfaceControl: SurfaceControlWrapper
+) : SurfaceControlImpl {
 
     /**
-     * Helper method to synchronously update the release callback for the buffer specified on this
-     * SurfaceControl and return the previous callback
+     * See [SurfaceControlWrapper.isValid]
      */
-    fun updateReleaseCallback(callback: ReleaseCallback?): ReleaseCallback? {
-        synchronized(this) {
-            val previous = releaseCallback
-            releaseCallback = callback
-            return previous
-        }
-    }
-
-    private var releaseCallback: ReleaseCallback? = null
-
-    fun getPreviousReleaseFd(transactionStats: Long) =
-        JniBindings.nGetPreviousReleaseFenceFd(
-            surfaceControl.mNativeSurfaceControl,
-            transactionStats
-        )
-
-    /** See [SurfaceControlWrapper.isValid] */
     override fun isValid(): Boolean = surfaceControl.isValid()
 
-    /** See [SurfaceControlWrapper.release] */
+    /**
+     * See [SurfaceControlWrapper.release]
+     */
     override fun release() {
         surfaceControl.release()
     }
 
-    /** See [SurfaceControlWrapper.Builder] */
+    /**
+     * See [SurfaceControlWrapper.Builder]
+     */
     class Builder : SurfaceControlImpl.Builder {
         private var builder = SurfaceControlWrapper.Builder()
 
-        /** See [SurfaceControlWrapper.Builder.setParent] */
+        /**
+         * See [SurfaceControlWrapper.Builder.setParent]
+         */
         override fun setParent(surfaceView: SurfaceView): SurfaceControlImpl.Builder {
             builder.setParent(surfaceView.holder.surface)
             return this
         }
 
-        /** See [SurfaceControlWrapper.Builder.setParent] */
+        /**
+         * See [SurfaceControlWrapper.Builder.setParent]
+         */
         override fun setParent(surfaceControl: SurfaceControlCompat): SurfaceControlImpl.Builder {
             builder.setParent(surfaceControl.scImpl.asWrapperSurfaceControl())
             return this
         }
 
-        /** See [SurfaceControlWrapper.Builder.setDebugName] */
+        /**
+         * See [SurfaceControlWrapper.Builder.setDebugName]
+         */
         override fun setName(name: String): SurfaceControlImpl.Builder {
             builder.setDebugName(name)
             return this
         }
 
-        /** See [SurfaceControlWrapper.Builder.build] */
+        /**
+         * See [SurfaceControlWrapper.Builder.build]
+         */
         override fun build(): SurfaceControlImpl = SurfaceControlV29(builder.build())
     }
 
-    /** See [SurfaceControlWrapper.Transaction] */
+    /**
+     * See [SurfaceControlWrapper.Transaction]
+     */
     class Transaction : SurfaceControlImpl.Transaction {
         private val transaction = SurfaceControlWrapper.Transaction()
         private val uncommittedBufferCallbackMap = HashMap<SurfaceControlImpl, BufferData?>()
         private val pendingSetTransformCalls = HashMap<SurfaceControlImpl, Int>()
 
         /**
-         * Class to wrap metadata around setBuffer calls. This is used to appropriately call the
-         * release callbacks as well as configure the buffer transform for older API levels
+         * Class to wrap metadata around setBuffer calls. This is used to appropriately call
+         * the release callbacks as well as configure the buffer transform for older API levels
          */
         private class BufferData(
             val width: Int,
             val height: Int,
-            val releaseCallback: ReleaseCallback?
+            val releaseCallback: ((SyncFenceCompat) -> Unit)?
         )
 
-        /** See [SurfaceControlWrapper.Transaction.commit] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.commit]
+         */
         override fun commit() {
             setPendingBufferTransform()
             updateReleaseCallbacks()
@@ -125,38 +124,34 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             // store prev committed callbacks so we only need 1 onComplete callback
             data class CallbackEntry(
                 val surfaceControl: SurfaceControlV29,
-                val callback: ReleaseCallback?
+                val callback: (SyncFenceCompat) -> Unit
             )
             val callbackInvokeList = mutableListOf<CallbackEntry>()
 
             for (surfaceControl in uncommittedBufferCallbackMap.keys) {
                 (surfaceControl as? SurfaceControlV29)?.apply {
-                    // add active buffers callback to list if we have a new buffer about to
-                    // overwrite
+                    // add active buffers callback to list if we have a new buffer about to overwrite
                     val entry = uncommittedBufferCallbackMap[surfaceControl]
-                    if (entry != null) {
+                    if (entry?.releaseCallback != null) {
                         callbackInvokeList.add(CallbackEntry(this, entry.releaseCallback))
                     }
                 }
             }
 
             if (callbackInvokeList.size > 0) {
-                val callbackListener =
-                    object : SurfaceControlCompat.TransactionCompletedListener {
-                        override fun onTransactionCompleted(transactionStats: Long) {
-                            callbackInvokeList.forEach {
-                                val sc = it.surfaceControl
-                                val currentCallback = it.callback
-                                sc.updateReleaseCallback(currentCallback)?.let { prevCallback ->
-                                    val fileDescriptor = sc.getPreviousReleaseFd(transactionStats)
-                                    prevCallback.invoke(
-                                        SyncFenceCompat(SyncFenceV19(fileDescriptor))
-                                    )
-                                }
-                            }
-                            callbackInvokeList.clear()
+                val callbackListener = object : SurfaceControlCompat.TransactionCompletedListener {
+                    override fun onTransactionCompleted(transactionStats: Long) {
+                        callbackInvokeList.forEach {
+                            val surfaceControl = it.surfaceControl.asWrapperSurfaceControl()
+                            val fileDescriptor = JniBindings.nGetPreviousReleaseFenceFd(
+                                surfaceControl.mNativeSurfaceControl,
+                                transactionStats
+                            )
+                            it.callback.invoke(SyncFenceCompat(SyncFenceV19(fileDescriptor)))
                         }
+                        callbackInvokeList.clear()
                     }
+                }
 
                 this.addTransactionCompletedListener(callbackListener)
             }
@@ -165,14 +160,15 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
         private fun setPendingBufferTransform() {
             for (surfaceControl in pendingSetTransformCalls.keys) {
                 uncommittedBufferCallbackMap[surfaceControl]?.let {
-                    val transformation =
-                        pendingSetTransformCalls.getOrDefault(surfaceControl, UNKNOWN_TRANSFORM)
+                    val transformation = pendingSetTransformCalls.getOrDefault(
+                        surfaceControl,
+                        UNKNOWN_TRANSFORM
+                    )
                     if (transformation != UNKNOWN_TRANSFORM) {
                         val dstWidth: Int
                         val dstHeight: Int
-                        if (
-                            transformation == BUFFER_TRANSFORM_ROTATE_90 ||
-                                transformation == BUFFER_TRANSFORM_ROTATE_270
+                        if (transformation == BUFFER_TRANSFORM_ROTATE_90 ||
+                            transformation == BUFFER_TRANSFORM_ROTATE_270
                         ) {
                             dstWidth = it.height
                             dstHeight = it.width
@@ -193,7 +189,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             }
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setVisibility] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setVisibility]
+         */
         override fun setVisibility(
             surfaceControl: SurfaceControlImpl,
             visible: Boolean
@@ -202,7 +200,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.reparent] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.reparent]
+         */
         override fun reparent(
             surfaceControl: SurfaceControlImpl,
             newParent: SurfaceControlImpl?
@@ -214,26 +214,27 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setBuffer] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setBuffer]
+         */
         override fun setBuffer(
             surfaceControl: SurfaceControlImpl,
             buffer: HardwareBuffer?,
             fence: SyncFenceImpl?,
-            releaseCallback: ReleaseCallback?
+            releaseCallback: ((SyncFenceCompat) -> Unit)?
         ): SurfaceControlImpl.Transaction {
-            val previousEntry: BufferData? =
-                if (buffer != null) {
-                    uncommittedBufferCallbackMap.put(
-                        surfaceControl,
-                        BufferData(
-                            width = buffer.width,
-                            height = buffer.height,
-                            releaseCallback = releaseCallback
-                        )
+            val previousEntry: BufferData? = if (buffer != null) {
+                uncommittedBufferCallbackMap.put(
+                    surfaceControl,
+                    BufferData(
+                        width = buffer.width,
+                        height = buffer.height,
+                        releaseCallback = releaseCallback
                     )
-                } else {
-                    uncommittedBufferCallbackMap.remove(surfaceControl)
-                }
+                )
+            } else {
+                uncommittedBufferCallbackMap.remove(surfaceControl)
+            }
             // we have a previous mapping in the same transaction, invoke callback
             previousEntry?.releaseCallback?.invoke(DefaultSyncFence)
 
@@ -253,7 +254,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setLayer] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setLayer]
+         */
         override fun setLayer(
             surfaceControl: SurfaceControlImpl,
             z: Int
@@ -262,7 +265,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.addTransactionCommittedListener] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.addTransactionCommittedListener]
+         */
         @RequiresApi(Build.VERSION_CODES.S)
         override fun addTransactionCommittedListener(
             executor: Executor,
@@ -272,7 +277,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.addTransactionCompletedListener] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.addTransactionCompletedListener]
+         */
         fun addTransactionCompletedListener(
             listener: SurfaceControlCompat.TransactionCompletedListener
         ): SurfaceControlImpl.Transaction {
@@ -280,7 +287,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setDamageRegion] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setDamageRegion]
+         */
         override fun setDamageRegion(
             surfaceControl: SurfaceControlImpl,
             region: Region?
@@ -289,7 +298,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setOpaque] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setOpaque]
+         */
         override fun setOpaque(
             surfaceControl: SurfaceControlImpl,
             isOpaque: Boolean
@@ -298,7 +309,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setAlpha] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setAlpha]
+         */
         override fun setAlpha(
             surfaceControl: SurfaceControlImpl,
             alpha: Float
@@ -307,7 +320,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setCrop] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setCrop]
+         */
         @RequiresApi(Build.VERSION_CODES.S)
         override fun setCrop(
             surfaceControl: SurfaceControlImpl,
@@ -317,7 +332,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setPosition] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setPosition]
+         */
         @RequiresApi(Build.VERSION_CODES.S)
         override fun setPosition(
             surfaceControl: SurfaceControlImpl,
@@ -328,7 +345,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setScale] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setScale]
+         */
         @RequiresApi(Build.VERSION_CODES.S)
         override fun setScale(
             surfaceControl: SurfaceControlImpl,
@@ -339,7 +358,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.setBufferTransform] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.setBufferTransform]
+         */
         override fun setBufferTransform(
             surfaceControl: SurfaceControlImpl,
             @SurfaceControlCompat.Companion.BufferTransform transformation: Int
@@ -355,7 +376,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlCompat.Transaction.setExtendedRangeBrightness] */
+        /**
+         * See [SurfaceControlCompat.Transaction.setExtendedRangeBrightness]
+         */
         @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
         override fun setExtendedRangeBrightness(
             surfaceControl: SurfaceControlImpl,
@@ -367,7 +390,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             )
         }
 
-        /** See [SurfaceControlCompat.Transaction.setDataSpace] */
+        /**
+         * See [SurfaceControlCompat.Transaction.setDataSpace]
+         */
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun setDataSpace(
             surfaceControl: SurfaceControlImpl,
@@ -377,7 +402,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlCompat.Transaction.setFrameRate] */
+        /**
+         * See [SurfaceControlCompat.Transaction.setFrameRate]
+         */
         override fun setFrameRate(
             scImpl: SurfaceControlImpl,
             frameRate: Float,
@@ -393,7 +420,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlCompat.Transaction.clearFrameRate] */
+        /**
+         * See [SurfaceControlCompat.Transaction.clearFrameRate]
+         */
         override fun clearFrameRate(scImpl: SurfaceControlImpl): SurfaceControlImpl.Transaction {
             setFrameRate(
                 scImpl,
@@ -404,7 +433,9 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
             return this
         }
 
-        /** See [SurfaceControlWrapper.Transaction.close] */
+        /**
+         * See [SurfaceControlWrapper.Transaction.close]
+         */
         override fun close() {
             transaction.close()
         }
@@ -430,7 +461,8 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
                 this
             } else {
                 throw IllegalArgumentException(
-                    "Expected SyncFenceCompat implementation " + "for API level 19"
+                    "Expected SyncFenceCompat implementation " +
+                        "for API level 19"
                 )
             }
     }
@@ -445,8 +477,13 @@ internal constructor(internal val surfaceControl: SurfaceControlWrapper) : Surfa
         // So instead change the buffer to a 1 x 1 placeholder to achieve a similar effect
         // with more consistent behavior.
         @SuppressLint("WrongConstant")
-        val PlaceholderBuffer =
-            HardwareBuffer.create(1, 1, HardwareBuffer.RGBA_8888, 1, FrontBufferUtils.BaseFlags)
+        val PlaceholderBuffer = HardwareBuffer.create(
+            1,
+            1,
+            HardwareBuffer.RGBA_8888,
+            1,
+            FrontBufferUtils.BaseFlags
+        )
 
         val DefaultSyncFence = SyncFenceCompat(SyncFenceV19(-1))
 

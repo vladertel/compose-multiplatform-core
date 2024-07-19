@@ -37,7 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 fun ClickableText() {
     ClickableText(
         text = AnnotatedString("Click Me"),
-        onClick = { offset -> Log.d("ClickableText", "$offset -th character is clicked.") }
+        onClick = { offset ->
+            Log.d("ClickableText", "$offset -th character is clicked.")
+        }
     )
 }
 
@@ -54,16 +56,15 @@ fun LongClickableText(
     onLongClick: (offset: Int) -> Unit
 ) {
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val gesture =
-        Modifier.pointerInput(onLongClick) {
-            detectTapGestures(
-                onLongPress = { pos ->
-                    layoutResult.value?.let { layout ->
-                        onLongClick(layout.getOffsetForPosition(pos))
-                    }
+    val gesture = Modifier.pointerInput(onLongClick) {
+        detectTapGestures(
+            onLongPress = { pos ->
+                layoutResult.value?.let { layout ->
+                    onLongClick(layout.getOffsetForPosition(pos))
                 }
-            )
-        }
+            }
+        )
+    }
 
     Text(
         text = text,

@@ -195,7 +195,6 @@ public class NavigationService extends Service {
     /** Clears the currently used {@link CarContext}. */
     public void clearCarContext() {
         mCarContext = null;
-        mNavigationManager.clearNavigationManagerCallback();
         mNavigationManager = null;
     }
 

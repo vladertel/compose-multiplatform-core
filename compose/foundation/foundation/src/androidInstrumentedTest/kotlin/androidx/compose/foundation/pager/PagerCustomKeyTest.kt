@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PagerCustomKeyTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun keysLambdaIsCalledOnlyOnce() {
@@ -51,6 +52,8 @@ class PagerCustomKeyTest {
             }
         }
 
-        rule.runOnIdle { Truth.assertThat(keyCalls).isEqualTo(1) }
+        rule.runOnIdle {
+            Truth.assertThat(keyCalls).isEqualTo(1)
+        }
     }
 }

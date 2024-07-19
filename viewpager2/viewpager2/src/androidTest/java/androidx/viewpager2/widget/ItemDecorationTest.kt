@@ -166,7 +166,14 @@ class ItemDecorationTest : BaseTest() {
         assertThat(
             viewPager.itemDecorations,
             equalTo(
-                initialDecorations.plus(listOf(decoration3, decoration4, decoration5, decoration6))
+                initialDecorations.plus(
+                    listOf(
+                        decoration3,
+                        decoration4,
+                        decoration5,
+                        decoration6
+                    )
+                )
             )
         )
     }

@@ -31,7 +31,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class RememberTextFieldStateTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val restorationTester = StateRestorationTester(rule)
 
@@ -39,7 +40,10 @@ class RememberTextFieldStateTest {
     fun rememberTextFieldState_withInitialTextAndSelection() {
         lateinit var state: TextFieldState
         rule.setContent {
-            state = rememberTextFieldState(initialText = "hello", initialSelection = TextRange(2))
+            state = rememberTextFieldState(
+                initialText = "hello",
+                initialSelection = TextRange(2)
+            )
         }
 
         rule.runOnIdle {
@@ -82,11 +86,10 @@ class RememberTextFieldStateTest {
         lateinit var restoredState: TextFieldState
         var rememberCount = 0
         restorationTester.setContent {
-            val state =
-                rememberTextFieldState(
-                    initialText = "this should be ignored",
-                    initialSelection = TextRange.Zero
-                )
+            val state = rememberTextFieldState(
+                initialText = "this should be ignored",
+                initialSelection = TextRange.Zero
+            )
             if (remember { rememberCount++ } == 0) {
                 originalState = state
             } else {

@@ -34,7 +34,9 @@ class AidlInterfaceSpecTest {
         val interfaceBuilder = AidlInterfaceSpec.Builder(Type("com.mysdk", "MySdk"))
 
         interfaceBuilder.addMethod(methodA)
-        val thrown = assertThrows<IllegalStateException> { interfaceBuilder.addMethod(methodB) }
+        val thrown = assertThrows<IllegalStateException> {
+            interfaceBuilder.addMethod(methodB)
+        }
         thrown.hasMessageThat().contains("'methodA'")
         thrown.hasMessageThat().contains("'methodB'")
         thrown.hasMessageThat().contains("'MySdk'")

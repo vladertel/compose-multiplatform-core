@@ -16,7 +16,9 @@
 
 package androidx.glance.text
 
-/** Describes the style of the font: [Normal]] or [Italic]. */
+/**
+ * Describes the style of the font: [Normal]] or [Italic].
+ */
 @JvmInline
 value class FontStyle private constructor(private val style: Int) {
     companion object {

@@ -34,12 +34,15 @@ import org.junit.runner.RunWith
 class ContextAwareHelperTest {
     private val contextAware = TestContextAware()
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun addOnContextAvailableListener() {
         var callbackCount = 0
-        val listener = OnContextAvailableListener { callbackCount++ }
+        val listener = OnContextAvailableListener {
+            callbackCount++
+        }
         contextAware.addOnContextAvailableListener(listener)
         assertThat(contextAware.peekAvailableContext()).isNull()
         contextAware.dispatchOnContextAvailable()
@@ -51,7 +54,9 @@ class ContextAwareHelperTest {
     @Test
     fun removeOnContextAvailableListener() {
         var callbackCount = 0
-        val listener = OnContextAvailableListener { callbackCount++ }
+        val listener = OnContextAvailableListener {
+            callbackCount++
+        }
         contextAware.addOnContextAvailableListener(listener)
         contextAware.dispatchOnContextAvailable()
 
@@ -67,13 +72,12 @@ class ContextAwareHelperTest {
     @Test
     fun reentrantRemove() {
         var callbackCount = 0
-        val listener =
-            object : OnContextAvailableListener {
-                override fun onContextAvailable(context: Context) {
-                    callbackCount++
-                    contextAware.removeOnContextAvailableListener(this)
-                }
+        val listener = object : OnContextAvailableListener {
+            override fun onContextAvailable(context: Context) {
+                callbackCount++
+                contextAware.removeOnContextAvailableListener(this)
             }
+        }
         contextAware.addOnContextAvailableListener(listener)
         contextAware.dispatchOnContextAvailable()
 
@@ -89,7 +93,9 @@ class ContextAwareHelperTest {
     fun postAvailableAddOnContextAvailableListener() {
         contextAware.dispatchOnContextAvailable()
         var callbackCount = 0
-        val listener = OnContextAvailableListener { callbackCount++ }
+        val listener = OnContextAvailableListener {
+            callbackCount++
+        }
         contextAware.addOnContextAvailableListener(listener)
 
         assertThat(callbackCount).isEqualTo(1)
@@ -100,36 +106,42 @@ class ContextAwareHelperTest {
         contextAware.dispatchOnContextAvailable()
         contextAware.clearAvailableContext()
         var callbackCount = 0
-        val listener = OnContextAvailableListener { callbackCount++ }
+        val listener = OnContextAvailableListener {
+            callbackCount++
+        }
         contextAware.addOnContextAvailableListener(listener)
 
         assertThat(callbackCount).isEqualTo(0)
     }
 
     @Test
-    fun alreadyAvailable() =
-        runBlocking(Dispatchers.Main) {
-            val contextAware = TestContextAware()
-            contextAware.dispatchOnContextAvailable()
-            var result = "initial"
-            val receivedResult = contextAware.withContextAvailable { result }
-            result = "after"
-            assertThat(receivedResult).isEqualTo("initial")
+    fun alreadyAvailable() = runBlocking(Dispatchers.Main) {
+        val contextAware = TestContextAware()
+        contextAware.dispatchOnContextAvailable()
+        var result = "initial"
+        val receivedResult = contextAware.withContextAvailable {
+            result
         }
+        result = "after"
+        assertThat(receivedResult).isEqualTo("initial")
+    }
 
     @Test
-    fun suspending() =
-        runBlocking(Dispatchers.Main) {
-            val contextAware = TestContextAware()
-            var result = "initial"
-            launch {
-                contextAware.dispatchOnContextAvailable()
-                result = "post dispatch"
-            }
-            val receivedResult = contextAware.withContextAvailable { result }
-            contextAware.addOnContextAvailableListener { result = "after" }
-            assertThat(receivedResult).isEqualTo("initial")
+    fun suspending() = runBlocking(Dispatchers.Main) {
+        val contextAware = TestContextAware()
+        var result = "initial"
+        launch {
+            contextAware.dispatchOnContextAvailable()
+            result = "post dispatch"
         }
+        val receivedResult = contextAware.withContextAvailable {
+            result
+        }
+        contextAware.addOnContextAvailableListener {
+            result = "after"
+        }
+        assertThat(receivedResult).isEqualTo("initial")
+    }
 }
 
 class TestContextAware : ContextAware {
@@ -146,7 +158,9 @@ class TestContextAware : ContextAware {
     }
 
     fun dispatchOnContextAvailable() {
-        contextAwareHelper.dispatchOnContextAvailable(ApplicationProvider.getApplicationContext())
+        contextAwareHelper.dispatchOnContextAvailable(
+            ApplicationProvider.getApplicationContext()
+        )
     }
 
     fun clearAvailableContext() {

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+
 package androidx.camera.camera2.pipe.graph
 
 import android.hardware.camera2.CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
@@ -24,12 +26,12 @@ import android.hardware.camera2.params.OutputConfiguration
 import android.os.Build
 import android.util.Size
 import android.view.Surface
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.CameraStream
 import androidx.camera.camera2.pipe.InputStream
-import androidx.camera.camera2.pipe.InputStreamId
 import androidx.camera.camera2.pipe.OutputId
 import androidx.camera.camera2.pipe.OutputStream
 import androidx.camera.camera2.pipe.StreamFormat
@@ -40,10 +42,33 @@ import androidx.camera.camera2.pipe.config.CameraGraphScope
 import javax.inject.Inject
 import kotlinx.atomicfu.atomic
 
+private val streamIds = atomic(0)
+
+internal fun nextStreamId(): StreamId = StreamId(streamIds.incrementAndGet())
+
+private val outputIds = atomic(0)
+
+internal fun nextOutputId(): OutputId = OutputId(outputIds.incrementAndGet())
+
+private val configIds = atomic(0)
+
+internal fun nextConfigId(): OutputConfigId = OutputConfigId(configIds.incrementAndGet())
+
+private val groupIds = atomic(0)
+
+internal fun nextGroupId(): Int = groupIds.incrementAndGet()
+
+private val previewOutputTypes = listOf(
+    OutputStream.OutputType.SURFACE_VIEW,
+    OutputStream.OutputType.SURFACE_TEXTURE
+)
+
+private val previewFormats = listOf(StreamFormat.UNKNOWN, StreamFormat.PRIVATE)
+
 /**
- * This object builds an internal graph of inputs and outputs from a graphConfig. It is responsible
- * for defining the identifiers for each input and output stream, and for building an abstract
- * representation of the internal camera output configuration(s).
+ * This object keeps track of which surfaces have been configured for each stream. In addition, it
+ * will keep track of which surfaces have changed or replaced so that the CaptureSession can be
+ * reconfigured if the configured surfaces change.
  */
 @CameraGraphScope
 internal class StreamGraphImpl
@@ -57,7 +82,7 @@ constructor(
     internal val outputConfigs: List<OutputConfig>
 
     // TODO: Build InputStream(s)
-    override val inputs: List<InputStream>
+    override val input: InputStream? = null
     override val streams: List<CameraStream>
     override val streamIds: Set<StreamId>
     override val outputs: List<OutputStream>
@@ -76,8 +101,8 @@ constructor(
 
         // Compute groupNumbers for buffer sharing.
         val groupNumbers = mutableMapOf<CameraStream.Config, Int>()
-        for (group in graphConfig.exclusiveStreamGroups) {
-            check(group.isNotEmpty())
+        for (group in graphConfig.streamSharingGroups) {
+            check(group.size > 1)
             val surfaceGroupId = computeNextSurfaceGroupId(graphConfig)
             for (config in group) {
                 check(!groupNumbers.containsKey(config))
@@ -101,18 +126,18 @@ constructor(
                         output.camera ?: graphConfig.camera,
                         groupNumber = groupNumbers[streamConfig],
                         deferredOutputType =
-                            if (deferredOutputsAllowed) {
-                                (output as? OutputStream.Config.LazyOutputConfig)?.outputType
-                            } else {
-                                null
-                            },
+                        if (deferredOutputsAllowed) {
+                            (output as? OutputStream.Config.LazyOutputConfig)?.outputType
+                        } else {
+                            null
+                        },
                         mirrorMode = output.mirrorMode,
                         timestampBase = output.timestampBase,
                         dynamicRangeProfile = output.dynamicRangeProfile,
                         streamUseCase = output.streamUseCase,
                         streamUseHint = output.streamUseHint,
-                        sensorPixelModes = output.sensorPixelModes,
-                        externalOutputConfig = getOutputConfigurationOrNull(output),
+                        externalOutputConfig =
+                        (output as? OutputStream.Config.ExternalOutputConfig)?.output
                     )
                 outputConfigMap[output] = outputConfig
                 outputConfigListBuilder.add(outputConfig)
@@ -153,26 +178,15 @@ constructor(
                 outputConfigMap[cameraOutputConfig]!!.streamBuilder.add(stream)
             }
         }
-        inputs =
-            graphConfig.input?.map {
-                InputStreamImpl(
-                    nextInputId(),
-                    it.maxImages,
-                    it.streamFormat,
-                )
-            } ?: emptyList()
 
-        val streamSortedByPreview = sortOutputsByPreviewStream(streamListBuilder)
-        val streamSortedByVideo = sortOutputsByVideoStream(streamSortedByPreview)
-
-        streams = streamSortedByVideo
+        streams = streamListBuilder
         streamIds = streams.map { it.id }.toSet()
         _streamMap = streamMapBuilder
-        outputConfigs =
-            outputConfigListBuilder.sortedBy {
-                it.streams.minOf { stream -> streams.indexOf(stream) }
-            }
-        outputs = streams.flatMap { it.outputs }
+        outputConfigs = outputConfigListBuilder
+
+        val unsortedOutputs = streams.flatMap { it.outputs }
+        val outputsSortedByPreview = sortOutputsByPreviewStream(unsortedOutputs)
+        outputs = sortOutputsByVideoStream(outputsSortedByPreview)
     }
 
     class OutputConfig(
@@ -187,18 +201,14 @@ constructor(
         val timestampBase: OutputStream.TimestampBase?,
         val dynamicRangeProfile: OutputStream.DynamicRangeProfile?,
         val streamUseCase: OutputStream.StreamUseCase?,
-        val streamUseHint: OutputStream.StreamUseHint?,
-        val sensorPixelModes: List<OutputStream.SensorPixelMode>,
+        val streamUseHint: OutputStream.StreamUseHint?
     ) {
         internal val streamBuilder = mutableListOf<CameraStream>()
         val streams: List<CameraStream>
             get() = streamBuilder
-
         val deferrable: Boolean
             get() = deferredOutputType != null
-
         val surfaceSharing = streamBuilder.size > 1
-
         override fun toString(): String = id.toString()
     }
 
@@ -215,27 +225,11 @@ constructor(
         override val streamUseHint: OutputStream.StreamUseHint?
     ) : OutputStream {
         override lateinit var stream: CameraStream
-
         override fun toString(): String = id.toString()
     }
 
-    private class InputStreamImpl(
-        override val id: InputStreamId,
-        override val maxImages: Int,
-        override val format: StreamFormat
-    ) : InputStream
-
     interface SurfaceListener {
         fun onSurfaceMapUpdated(surfaces: Map<StreamId, Surface>)
-    }
-
-    private fun getOutputConfigurationOrNull(
-        outputConfig: OutputStream.Config
-    ): OutputConfiguration? {
-        if (Build.VERSION.SDK_INT >= 33) {
-            return (outputConfig as? OutputStream.Config.ExternalOutputConfig)?.output
-        }
-        return null
     }
 
     private fun computeNextSurfaceGroupId(graphConfig: CameraGraph.Config): Int {
@@ -282,89 +276,74 @@ constructor(
     }
 
     override fun toString(): String {
-        return "StreamGraph($_streamMap)"
+        return "StreamGraphImpl $_streamMap"
     }
 
     /**
-     * Sort the output streams to move preview streams to the head of the list. The order of the
-     * outputs is determined by the following:
-     * 1. StreamUseCase: Check if any streams have PREVIEW StreamUseCase set and move them to the
-     *    head of the list. Otherwise, go to step 2.
-     * 2. OutputType: Check if any streams have SURFACE_VIEW and SURFACE_TEXTURE OutputType and move
-     *    them in respective order to the head of the list. Otherwise, go to step 3.
-     * 3. StreamFormat: Check if any streams have UNKNOWN and PRIVATE StreamFormats and move them in
-     *    respective order to the head of the list. Otherwise, return list in original order.
+     * Sort the output streams to move preview streams to the head of the list.
+     * The order of the outputs is determined by the following:
+     *
+     * 1. StreamUseCase: Check if any streams have PREVIEW StreamUseCase set and move them
+     *                   to the head of the list. Otherwise, go to step 2.
+     * 2. OutputType: Check if any streams have SURFACE_VIEW and SURFACE_TEXTURE OutputType and
+     *                move them in respective order to the head of the list. Otherwise, go to step 3.
+     * 3. StreamFormat: Check if any streams have UNKNOWN and PRIVATE StreamFormats and move them
+     *                  in respective order to the head of the list. Otherwise, return list in
+     *                  original order.
      */
     private fun sortOutputsByPreviewStream(
-        unsortedStreams: List<CameraStream>
-    ): List<CameraStream> {
+        unsortedOutputs: List<OutputStream>
+    ): List<OutputStream> {
 
-        // If any stream explicitly specifies "PREVIEW" for its use case, prioritize those streams
-        val (previewStreamPartition, nonPreviewStreamPartition) =
-            unsortedStreams.partition {
-                it.outputs.any { output ->
-                    output.streamUseCase == OutputStream.StreamUseCase.PREVIEW
-                }
-            }
+        // Check if any streams have PREVIEW StreamUseCase set
+        val (previewStreamPartition, nonPreviewStreamPartition) = unsortedOutputs.partition {
+            it.streamUseCase == OutputStream.StreamUseCase.PREVIEW
+        }
+        // Move streams with PREVIEW StreamUseCase to head of list
         if (previewStreamPartition.isNotEmpty()) {
             return previewStreamPartition + nonPreviewStreamPartition
         }
 
-        // If no streams explicitly specify the PREVIEW UseCase, fall back to ordering by
-        // SURFACE_VIEW / SURFACE_TEXTURE output types.
-        val (previewTypePartition, nonPreviewTypePartition) =
-            unsortedStreams.partition {
-                it.outputs.any { output -> output.outputType in previewOutputTypes }
-            }
-        if (previewTypePartition.isNotEmpty()) {
-            return previewTypePartition.sortedWith(previewOutputTypesComparator) +
-                nonPreviewTypePartition
+        // Check if any streams have SURFACE_VIEW and SURFACE_TEXTURE OutputTypes
+        val (previewOutputTypePartition, nonPreviewOutputTypePartition) =
+            unsortedOutputs.partition { it.outputType in previewOutputTypes }
+        // Move streams with SURFACE_VIEW and SURFACE_TEXTURE OutputTypes to head of list
+        if (previewOutputTypePartition.isNotEmpty()) {
+            val comparator = compareBy<OutputStream> { previewOutputTypes.indexOf(it.outputType) }
+            return previewOutputTypePartition.sortedWith(comparator) + nonPreviewOutputTypePartition
         }
 
         // Check if any streams have UNKNOWN and PRIVATE StreamFormats
-        val (previewFormatPartition, nonPreviewFormatPartition) =
-            unsortedStreams.partition {
-                it.outputs.any { output -> output.format in previewFormats }
-            }
+        val (previewFormatPartition, nonPreviewFormatPartition) = unsortedOutputs.partition {
+            it.format in previewFormats
+        }
         // Move streams with UNKNOWN and PRIVATE StreamFormats to head of list
         if (previewFormatPartition.isNotEmpty()) {
-            return previewFormatPartition.sortedWith(previewFormatComparator) +
-                nonPreviewFormatPartition
+            val comparator = compareBy<OutputStream> { previewFormats.indexOf(it.format) }
+            return previewFormatPartition.sortedWith(comparator) + nonPreviewFormatPartition
         }
 
         // Return outputs in original order if no preview streams found
-        return unsortedStreams
+        return unsortedOutputs
     }
 
-    /**
-     * Sort the output streams to move video streams to the bottom of the list. The order of the
-     * outputs is determined by the following:
-     * 1. StreamUseCase: Check if any streams have StreamUseCase.VIDEO_RECORD and move these to the
-     *    bottom of the list. Otherwise, go to step 2.
-     * 2. StreamUseHint: Check if any streams have StreamUseHint.VIDEO_RECORD and move these to the
-     *    bottom of the list.
-     */
-    private fun sortOutputsByVideoStream(unsortedOutputs: List<CameraStream>): List<CameraStream> {
+    private fun sortOutputsByVideoStream(
+        unsortedOutputs: List<OutputStream>
+    ): List<OutputStream> {
 
         // Check if any streams have VIDEO StreamUseCase set
-        val (videoStreamPartition, nonVideoStreamPartition) =
-            unsortedOutputs.partition {
-                it.outputs.any { output ->
-                    output.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
-                }
-            }
+        val (videoStreamPartition, nonVideoStreamPartition) = unsortedOutputs.partition {
+            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
+        }
         // Move streams with VIDEO StreamUseCase to end of list
         if (videoStreamPartition.isNotEmpty()) {
             return nonVideoStreamPartition + videoStreamPartition
         }
 
         // Check if any streams have VIDEO StreamUseCaseHint set
-        val (videoStreamHintPartition, nonVideoStreamHintPartition) =
-            unsortedOutputs.partition {
-                it.outputs.any { output ->
-                    output.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
-                }
-            }
+        val (videoStreamHintPartition, nonVideoStreamHintPartition) = unsortedOutputs.partition {
+            it.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
+        }
 
         // Move streams with VIDEO StreamUseCaseHint to end of list
         if (videoStreamHintPartition.isNotEmpty()) {
@@ -373,43 +352,6 @@ constructor(
 
         // Return outputs in original order if no video streams found
         return unsortedOutputs
-    }
-
-    companion object {
-        private val streamIds = atomic(0)
-
-        internal fun nextStreamId(): StreamId = StreamId(streamIds.incrementAndGet())
-
-        private val outputIds = atomic(0)
-
-        internal fun nextOutputId(): OutputId = OutputId(outputIds.incrementAndGet())
-
-        private val inputIds = atomic(0)
-
-        internal fun nextInputId(): InputStreamId = InputStreamId(inputIds.incrementAndGet())
-
-        private val configIds = atomic(0)
-
-        internal fun nextConfigId(): OutputConfigId = OutputConfigId(configIds.incrementAndGet())
-
-        private val groupIds = atomic(0)
-
-        internal fun nextGroupId(): Int = groupIds.incrementAndGet()
-
-        private val previewOutputTypes =
-            listOf(OutputStream.OutputType.SURFACE_VIEW, OutputStream.OutputType.SURFACE_TEXTURE)
-
-        private val previewOutputTypesComparator =
-            compareBy<CameraStream> {
-                it.outputs.maxOf { output -> previewOutputTypes.indexOf(output.outputType) }
-            }
-
-        private val previewFormats = listOf(StreamFormat.UNKNOWN, StreamFormat.PRIVATE)
-
-        private val previewFormatComparator =
-            compareBy<CameraStream> {
-                it.outputs.maxOf { output -> previewFormats.indexOf(output.format) }
-            }
     }
 }
 

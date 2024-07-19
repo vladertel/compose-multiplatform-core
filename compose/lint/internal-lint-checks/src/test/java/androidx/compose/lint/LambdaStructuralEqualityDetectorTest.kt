@@ -25,19 +25,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+/* ktlint-disable max-line-length */
 @RunWith(JUnit4::class)
 class LambdaStructuralEqualityDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = LambdaStructuralEqualityDetector()
 
-    override fun getIssues(): MutableList<Issue> =
-        mutableListOf(LambdaStructuralEqualityDetector.ISSUE)
+    override fun getIssues(): MutableList<Issue> = mutableListOf(
+        LambdaStructuralEqualityDetector.ISSUE
+    )
 
     @Test
     fun noErrors() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 val lambda1 = { 1 }
@@ -48,18 +49,17 @@ class LambdaStructuralEqualityDetectorTest : LintDetectorTest() {
                     lambda1 !== lambda2
                 }
             """
-                )
             )
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun errors() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 val lambda1 = { 1 }
@@ -73,8 +73,8 @@ class LambdaStructuralEqualityDetectorTest : LintDetectorTest() {
                     lambda3?.equals(lambda2)
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -107,3 +107,4 @@ Autofix for src/test/test.kt line 10: Change to !==:
             )
     }
 }
+/* ktlint-enable max-line-length */

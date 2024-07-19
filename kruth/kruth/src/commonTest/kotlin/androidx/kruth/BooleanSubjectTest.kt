@@ -37,17 +37,23 @@ class BooleanSubjectTest {
 
     @Test
     fun nullIsTrueFailing() {
-        assertFailsWith<AssertionError> { assertThat(null as Boolean?).isTrue() }
+        assertFailsWith<AssertionError> {
+            assertThat(null as Boolean?).isTrue()
+        }
     }
 
     @Test
     fun nullIsFalseFailing() {
-        assertFailsWith<AssertionError> { assertThat(null as Boolean?).isFalse() }
+        assertFailsWith<AssertionError> {
+            assertThat(null as Boolean?).isFalse()
+        }
     }
 
     @Test
     fun isTrueFailing() {
-        assertFailsWith<AssertionError> { assertThat(false).isTrue() }
+        assertFailsWith<AssertionError> {
+            assertThat(false).isTrue()
+        }
     }
 
     @Test
@@ -57,6 +63,8 @@ class BooleanSubjectTest {
 
     @Test
     fun isFalseFailing() {
-        assertFailsWith<AssertionError> { assertThat(true).isFalse() }
+        assertFailsWith<AssertionError> {
+            assertThat(true).isFalse()
+        }
     }
 }

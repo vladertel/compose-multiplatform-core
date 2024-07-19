@@ -40,37 +40,39 @@ internal class KspFiler(
     private val messager: XMessager,
 ) : XFiler {
     override fun write(javaFile: JavaFile, mode: XFiler.Mode) {
-        val originatingElements = javaFile.typeSpec.originatingElements.toOriginatingElements()
+        val originatingElements = javaFile.typeSpec.originatingElements
+            .toOriginatingElements()
 
         createNewFile(
-                originatingElements = originatingElements,
-                packageName = javaFile.packageName,
-                fileName = javaFile.typeSpec.name,
-                extensionName = "java",
-                aggregating = mode == XFiler.Mode.Aggregating
-            )
-            .use { outputStream ->
-                outputStream.bufferedWriter(Charsets.UTF_8).use { javaFile.writeTo(it) }
+            originatingElements = originatingElements,
+            packageName = javaFile.packageName,
+            fileName = javaFile.typeSpec.name,
+            extensionName = "java",
+            aggregating = mode == XFiler.Mode.Aggregating
+        ).use { outputStream ->
+            outputStream.bufferedWriter(Charsets.UTF_8).use {
+                javaFile.writeTo(it)
             }
+        }
     }
 
     override fun write(fileSpec: FileSpec, mode: XFiler.Mode) {
-        val originatingElements =
-            fileSpec.members
-                .filterIsInstance<OriginatingElementsHolder>()
-                .flatMap { it.originatingElements }
-                .toOriginatingElements()
+        val originatingElements = fileSpec.members
+            .filterIsInstance<OriginatingElementsHolder>()
+            .flatMap { it.originatingElements }
+            .toOriginatingElements()
 
         createNewFile(
-                originatingElements = originatingElements,
-                packageName = fileSpec.packageName,
-                fileName = fileSpec.name,
-                extensionName = "kt",
-                aggregating = mode == XFiler.Mode.Aggregating
-            )
-            .use { outputStream ->
-                outputStream.bufferedWriter(Charsets.UTF_8).use { fileSpec.writeTo(it) }
+            originatingElements = originatingElements,
+            packageName = fileSpec.packageName,
+            fileName = fileSpec.name,
+            extensionName = "kt",
+            aggregating = mode == XFiler.Mode.Aggregating
+        ).use { outputStream ->
+            outputStream.bufferedWriter(Charsets.UTF_8).use {
+                fileSpec.writeTo(it)
             }
+        }
     }
 
     override fun writeSource(
@@ -83,8 +85,9 @@ internal class KspFiler(
         require(extension == "java" || extension == "kt") {
             "Source file extension must be either 'java' or 'kt', but was: $extension"
         }
-        val kspFilerOriginatingElements =
-            originatingElements.map { it.originatingElementForPoet() }.toOriginatingElements()
+        val kspFilerOriginatingElements = originatingElements
+            .mapNotNull { it.originatingElementForPoet() }
+            .toOriginatingElements()
         return createNewFile(
             originatingElements = kspFilerOriginatingElements,
             packageName = packageName,
@@ -103,8 +106,9 @@ internal class KspFiler(
             "Could not create resource file with a source type extension. File must not be " +
                 "neither '.java' nor '.kt', but was: $filePath"
         }
-        val kspFilerOriginatingElements =
-            originatingElements.map { it.originatingElementForPoet() }.toOriginatingElements()
+        val kspFilerOriginatingElements = originatingElements
+            .mapNotNull { it.originatingElementForPoet() }
+            .toOriginatingElements()
         return createNewFile(
             originatingElements = kspFilerOriginatingElements,
             packageName = filePath.parent?.toString() ?: "",
@@ -121,25 +125,24 @@ internal class KspFiler(
         extensionName: String,
         aggregating: Boolean
     ): OutputStream {
-        val dependencies =
-            if (originatingElements.isEmpty()) {
-                val isSourceFile = extensionName == "java" || extensionName == "kt"
-                if (isSourceFile) {
-                    val filePath = "$packageName.$fileName.$extensionName"
-                    messager.printMessage(
-                        Diagnostic.Kind.WARNING,
-                        "No dependencies reported for generated source $filePath which will" +
-                            "prevent incremental compilation.\n" +
-                            "Please file a bug at $ISSUE_TRACKER_LINK."
-                    )
-                }
-                Dependencies.ALL_FILES
-            } else {
-                Dependencies(
-                    aggregating = aggregating,
-                    sources = originatingElements.files.distinct().toTypedArray()
+        val dependencies = if (originatingElements.isEmpty()) {
+            val isSourceFile = extensionName == "java" || extensionName == "kt"
+            if (isSourceFile) {
+                val filePath = "$packageName.$fileName.$extensionName"
+                messager.printMessage(
+                    Diagnostic.Kind.WARNING,
+                    "No dependencies reported for generated source $filePath which will" +
+                        "prevent incremental compilation.\n" +
+                        "Please file a bug at $ISSUE_TRACKER_LINK."
                 )
             }
+            Dependencies.ALL_FILES
+        } else {
+            Dependencies(
+                aggregating = aggregating,
+                sources = originatingElements.files.distinct().toTypedArray()
+            )
+        }
 
         if (originatingElements.classes.isNotEmpty()) {
             delegate.associateWithClasses(

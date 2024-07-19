@@ -68,7 +68,9 @@ private const val EDGE_FUZZ_FACTOR = 0.2f
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class TransformableTest {
-    @Suppress("DEPRECATION") @get:Rule val rule = createComposeRule()
+    @Suppress("DEPRECATION")
+    @get:Rule
+    val rule = createComposeRule()
 
     private lateinit var scope: CoroutineScope
 
@@ -96,7 +98,9 @@ class TransformableTest {
 
         setTransformableContent {
             Modifier.transformable(
-                state = rememberTransformableState { zoom, _, _ -> cumulativeScale *= zoom }
+                state = rememberTransformableState { zoom, _, _ ->
+                    cumulativeScale *= zoom
+                }
             )
         }
 
@@ -127,7 +131,9 @@ class TransformableTest {
         setTransformableContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Modifier.transformable(
-                state = rememberTransformableState { _, pan, _ -> cumulativePan += pan }
+                state = rememberTransformableState { _, pan, _ ->
+                    cumulativePan += pan
+                }
             )
         }
 
@@ -155,7 +161,9 @@ class TransformableTest {
         setTransformableContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Modifier.transformable(
-                state = rememberTransformableState { _, pan, _ -> cumulativePan += pan }
+                state = rememberTransformableState { _, pan, _ ->
+                    cumulativePan += pan
+                }
             )
         }
 
@@ -178,11 +186,16 @@ class TransformableTest {
         var cumulativePan = Offset.Zero
         var touchSlop = 0f
         val canStartPanState = mutableStateOf(false)
-        val state = TransformableState { _, pan, _ -> cumulativePan += pan }
+        val state = TransformableState { _, pan, _ ->
+            cumulativePan += pan
+        }
 
         setTransformableContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
-            Modifier.transformable(state = state, canPan = { canStartPanState.value })
+            Modifier.transformable(
+                state = state,
+                canPan = { canStartPanState.value }
+            )
         }
 
         val expected = Offset(50f + touchSlop, 0f)
@@ -208,8 +221,7 @@ class TransformableTest {
 
         rule.runOnIdle {
             assertWithMessage("Should have panned the amount equal to finger move")
-                .that(cumulativePan)
-                .isEqualTo(expected)
+                .that(cumulativePan).isEqualTo(expected)
         }
     }
 
@@ -221,15 +233,20 @@ class TransformableTest {
 
         rule.setContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
-            Column(Modifier.size(100.dp).testTag(TEST_TAG).verticalScroll(scrollState)) {
+            Column(
+                Modifier
+                    .size(100.dp)
+                    .testTag(TEST_TAG)
+                    .verticalScroll(scrollState)
+            ) {
                 repeat(3) {
                     Box(
-                        Modifier.size(100.dp)
+                        Modifier
+                            .size(100.dp)
                             .transformable(
-                                state =
-                                    rememberTransformableState { _, _, _ ->
-                                        // no-op
-                                    },
+                                state = rememberTransformableState { _, _, _ ->
+                                    // no-op
+                                },
                                 canPan = { false }
                             )
                     )
@@ -245,7 +262,9 @@ class TransformableTest {
             up(1)
         }
 
-        rule.runOnIdle { assertThat(scrollState.value).isEqualTo(50) }
+        rule.runOnIdle {
+            assertThat(scrollState.value).isEqualTo(50)
+        }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
@@ -254,15 +273,19 @@ class TransformableTest {
         var lastCanPanOffset = Offset.Zero
 
         rule.setContent {
-            Column(Modifier.size(100.dp).testTag(TEST_TAG)) {
+            Column(
+                Modifier
+                    .size(100.dp)
+                    .testTag(TEST_TAG)
+            ) {
                 repeat(3) {
                     Box(
-                        Modifier.size(100.dp)
+                        Modifier
+                            .size(100.dp)
                             .transformable(
-                                state =
-                                    rememberTransformableState { _, _, _ ->
-                                        // no-op
-                                    },
+                                state = rememberTransformableState { _, _, _ ->
+                                    // no-op
+                                },
                                 canPan = { offset ->
                                     lastCanPanOffset = offset
                                     false
@@ -280,15 +303,23 @@ class TransformableTest {
             moveBy(1, expected)
         }
 
-        rule.runOnIdle { assertThat(lastCanPanOffset).isEqualTo(expected) }
+        rule.runOnIdle {
+            assertThat(lastCanPanOffset).isEqualTo(expected)
+        }
 
         val expected2 = Offset(30f, 0f)
 
-        rule.onNodeWithTag(TEST_TAG).performTouchInput { moveBy(1, expected2) }
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
+            moveBy(1, expected2)
+        }
 
-        rule.runOnIdle { assertThat(lastCanPanOffset).isEqualTo(expected2) }
+        rule.runOnIdle {
+            assertThat(lastCanPanOffset).isEqualTo(expected2)
+        }
 
-        rule.onNodeWithTag(TEST_TAG).performTouchInput { up(1) }
+        rule.onNodeWithTag(TEST_TAG).performTouchInput {
+            up(1)
+        }
     }
 
     @Test
@@ -297,8 +328,9 @@ class TransformableTest {
 
         setTransformableContent {
             Modifier.transformable(
-                state =
-                    rememberTransformableState { _, _, rotation -> cumulativeRotation += rotation }
+                state = rememberTransformableState { _, _, rotation ->
+                    cumulativeRotation += rotation
+                }
             )
         }
 
@@ -325,8 +357,9 @@ class TransformableTest {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Modifier.transformable(
                 lockRotationOnZoomPan = rotationLock.value,
-                state =
-                    rememberTransformableState { _, _, rotation -> cumulativeRotation += rotation }
+                state = rememberTransformableState { _, _, rotation ->
+                    cumulativeRotation += rotation
+                }
             )
         }
 
@@ -380,7 +413,9 @@ class TransformableTest {
 
         setTransformableContent {
             Modifier.transformable(
-                state = rememberTransformableState { zoom, _, _ -> cumulativeScale *= zoom }
+                state = rememberTransformableState { zoom, _, _ ->
+                    cumulativeScale *= zoom
+                }
             )
         }
 
@@ -408,7 +443,9 @@ class TransformableTest {
     @Test
     fun transformable_startStop_notify() {
         var cumulativeScale = 1.0f
-        val state = TransformableState { zoom, _, _ -> cumulativeScale *= zoom }
+        val state = TransformableState { zoom, _, _ ->
+            cumulativeScale *= zoom
+        }
         var slop: Float = 0f
 
         setTransformableContent {
@@ -416,7 +453,9 @@ class TransformableTest {
             Modifier.transformable(state = state)
         }
 
-        rule.runOnIdle { assertThat(state.isTransformInProgress).isEqualTo(false) }
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isEqualTo(false)
+        }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(pointerId = 1, center)
@@ -431,7 +470,9 @@ class TransformableTest {
             up(pointerId = 2)
         }
 
-        rule.runOnIdle { assertThat(state.isTransformInProgress).isEqualTo(false) }
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isEqualTo(false)
+        }
     }
 
     @Test
@@ -442,7 +483,9 @@ class TransformableTest {
         setTransformableContent {
             Modifier.transformable(
                 enabled = enabled.value,
-                state = rememberTransformableState { zoom, _, _ -> cumulativeScale *= zoom }
+                state = rememberTransformableState { zoom, _, _ ->
+                    cumulativeScale *= zoom
+                }
             )
         }
 
@@ -460,13 +503,10 @@ class TransformableTest {
             )
         }
 
-        val prevScale =
-            rule.runOnIdle {
-                assertWithMessage("Should have scaled at least 4x")
-                    .that(cumulativeScale)
-                    .isAtLeast(4f)
-                cumulativeScale
-            }
+        val prevScale = rule.runOnIdle {
+            assertWithMessage("Should have scaled at least 4x").that(cumulativeScale).isAtLeast(4f)
+            cumulativeScale
+        }
         enabled.value = false
         rule.waitForIdle()
 
@@ -492,124 +532,113 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_animateTo_zoom() =
-        runBlocking(AutoTestFrameClock()) {
-            rule.mainClock.autoAdvance = false
-            var cumulativeScale = 1.0f
-            var callbackCount = 0
-            val state = TransformableState { zoom, _, _ ->
-                cumulativeScale *= zoom
-                callbackCount += 1
-            }
-            setTransformableContent { Modifier.transformable(state) }
-
-            state.animateZoomBy(4f)
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(1)
-            }
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(2)
-            }
-
-            rule.mainClock.advanceTimeBy(milliseconds = 100000)
-
-            rule.runOnIdle {
-                assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(3)
-                // Include a bit of tolerance for floating point discrepancies.
-                assertWithMessage("Should have scaled ~4x").that(cumulativeScale).isAtLeast(3.9f)
-            }
+    fun transformable_animateTo_zoom() = runBlocking(AutoTestFrameClock()) {
+        rule.mainClock.autoAdvance = false
+        var cumulativeScale = 1.0f
+        var callbackCount = 0
+        val state = TransformableState { zoom, _, _ ->
+            cumulativeScale *= zoom
+            callbackCount += 1
         }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
+
+        state.animateZoomBy(4f)
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(1)
+        }
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(2)
+        }
+
+        rule.mainClock.advanceTimeBy(milliseconds = 100000)
+
+        rule.runOnIdle {
+            assertWithMessage("Zoom should have been smooth").that(callbackCount).isAtLeast(3)
+            // Include a bit of tolerance for floating point discrepancies.
+            assertWithMessage("Should have scaled ~4x").that(cumulativeScale).isAtLeast(3.9f)
+        }
+    }
 
     @Test
-    fun transformable_animateTo_rotate() =
-        runBlocking(AutoTestFrameClock()) {
-            rule.mainClock.autoAdvance = false
-            var totalRotation = 0f
-            var callbackCount = 0
-            val state = TransformableState { _, _, rotation ->
-                totalRotation += rotation
-                callbackCount += 1
-            }
-            setTransformableContent { Modifier.transformable(state) }
-
-            state.animateRotateBy(180f)
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Rotation should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(1)
-            }
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Rotation should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(2)
-            }
-
-            rule.mainClock.advanceTimeBy(milliseconds = 100000)
-
-            rule.runOnIdle {
-                assertWithMessage("Rotation should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(3)
-                // Include a bit of tolerance for floating point discrepancies.
-                assertWithMessage("Should have rotated 180").that(totalRotation).isAtLeast(179f)
-            }
+    fun transformable_animateTo_rotate() = runBlocking(AutoTestFrameClock()) {
+        rule.mainClock.autoAdvance = false
+        var totalRotation = 0f
+        var callbackCount = 0
+        val state = TransformableState { _, _, rotation ->
+            totalRotation += rotation
+            callbackCount += 1
         }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
+
+        state.animateRotateBy(180f)
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Rotation should have been smooth").that(callbackCount).isAtLeast(1)
+        }
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Rotation should have been smooth").that(callbackCount).isAtLeast(2)
+        }
+
+        rule.mainClock.advanceTimeBy(milliseconds = 100000)
+
+        rule.runOnIdle {
+            assertWithMessage("Rotation should have been smooth").that(callbackCount).isAtLeast(3)
+            // Include a bit of tolerance for floating point discrepancies.
+            assertWithMessage("Should have rotated 180").that(totalRotation).isAtLeast(179f)
+        }
+    }
 
     @Test
-    fun transformable_animateTo_pan() =
-        runBlocking(AutoTestFrameClock()) {
-            rule.mainClock.autoAdvance = false
-            var totalPan = Offset.Zero
-            var callbackCount = 0
-            val state = TransformableState { _, pan, _ ->
-                totalPan += pan
-                callbackCount += 1
-            }
-            setTransformableContent { Modifier.transformable(state) }
-
-            val expected = Offset(100f, 80f)
-            state.animatePanBy(expected)
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Panning should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(1)
-            }
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Panning should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(2)
-            }
-
-            rule.mainClock.advanceTimeBy(milliseconds = 100000)
-
-            rule.runOnIdle {
-                assertWithMessage("Panning should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(3)
-                // Include a bit of tolerance for floating point discrepancies.
-                assertWithMessage("Should have panned to 100 / 80")
-                    .that(totalPan)
-                    .isEqualTo(expected)
-            }
+    fun transformable_animateTo_pan() = runBlocking(AutoTestFrameClock()) {
+        rule.mainClock.autoAdvance = false
+        var totalPan = Offset.Zero
+        var callbackCount = 0
+        val state = TransformableState { _, pan, _ ->
+            totalPan += pan
+            callbackCount += 1
         }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
+
+        val expected = Offset(100f, 80f)
+        state.animatePanBy(expected)
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Panning should have been smooth").that(callbackCount).isAtLeast(1)
+        }
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Panning should have been smooth").that(callbackCount).isAtLeast(2)
+        }
+
+        rule.mainClock.advanceTimeBy(milliseconds = 100000)
+
+        rule.runOnIdle {
+            assertWithMessage("Panning should have been smooth").that(callbackCount).isAtLeast(3)
+            // Include a bit of tolerance for floating point discrepancies.
+            assertWithMessage("Should have panned to 100 / 80").that(totalPan).isEqualTo(expected)
+        }
+    }
 
     @Test
     fun transformable_snapTo_zoom() = runBlocking {
@@ -619,7 +648,9 @@ class TransformableTest {
             cumulativeScale *= zoom
             callbackCount += 1
         }
-        setTransformableContent { Modifier.transformable(state) }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
 
         state.zoomBy(4f)
 
@@ -636,7 +667,9 @@ class TransformableTest {
             totalRotation += rotation
             callbackCount += 1
         }
-        setTransformableContent { Modifier.transformable(state) }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
 
         state.rotateBy(180f)
 
@@ -653,7 +686,9 @@ class TransformableTest {
             totalPan += pan
             callbackCount += 1
         }
-        setTransformableContent { Modifier.transformable(state) }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
 
         val expected = Offset(100f, 80f)
         state.panBy(expected)
@@ -664,68 +699,71 @@ class TransformableTest {
     }
 
     @Test
-    fun transformable_stopTransformations() =
-        runBlocking(AutoTestFrameClock()) {
-            rule.mainClock.autoAdvance = false
-            var totalRotation = 0f
-            var callbackCount = 0
-            val state = TransformableState { _, _, rotation ->
-                totalRotation += rotation
-                callbackCount += 1
-            }
-            setTransformableContent { Modifier.transformable(state) }
-
-            state.animateRotateBy(180f)
-
-            rule.mainClock.advanceTimeByFrame()
-
-            rule.runOnIdle {
-                assertWithMessage("Rotation should have been smooth")
-                    .that(callbackCount)
-                    .isAtLeast(1)
-            }
-
-            rule.mainClock.advanceTimeByFrame()
-
-            val lastCallbackCount =
-                rule.runOnIdle {
-                    assertWithMessage("Rotation should have been smooth")
-                        .that(callbackCount)
-                        .isAtLeast(2)
-                    callbackCount
-                }
-
-            state.stopTransformation()
-
-            rule.mainClock.advanceTimeBy(milliseconds = 100000)
-
-            rule.runOnIdle {
-                assertWithMessage("Rotation should have been stopped")
-                    .that(callbackCount)
-                    .isEqualTo(lastCallbackCount)
-            }
+    fun transformable_stopTransformations() = runBlocking(AutoTestFrameClock()) {
+        rule.mainClock.autoAdvance = false
+        var totalRotation = 0f
+        var callbackCount = 0
+        val state = TransformableState { _, _, rotation ->
+            totalRotation += rotation
+            callbackCount += 1
         }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
+
+        state.animateRotateBy(180f)
+
+        rule.mainClock.advanceTimeByFrame()
+
+        rule.runOnIdle {
+            assertWithMessage("Rotation should have been smooth").that(callbackCount).isAtLeast(1)
+        }
+
+        rule.mainClock.advanceTimeByFrame()
+
+        val lastCallbackCount = rule.runOnIdle {
+            assertWithMessage("Rotation should have been smooth").that(callbackCount).isAtLeast(2)
+            callbackCount
+        }
+
+        state.stopTransformation()
+
+        rule.mainClock.advanceTimeBy(milliseconds = 100000)
+
+        rule.runOnIdle {
+            assertWithMessage("Rotation should have been stopped").that(callbackCount)
+                .isEqualTo(lastCallbackCount)
+        }
+    }
 
     @Test
     fun transformable_animateCancelledUpdatesIsTransformInProgress() {
         rule.mainClock.autoAdvance = false
         val state = TransformableState { _, _, _ -> }
-        setTransformableContent { Modifier.transformable(state) }
+        setTransformableContent {
+            Modifier.transformable(state)
+        }
 
         lateinit var animateJob: Job
 
         rule.runOnIdle {
             assertThat(state.isTransformInProgress).isFalse()
-            animateJob = scope.launch { state.animateZoomBy(4f, tween(1000)) }
+            animateJob = scope.launch {
+                state.animateZoomBy(4f, tween(1000))
+            }
         }
 
         rule.mainClock.advanceTimeBy(500)
 
-        rule.runOnIdle { assertThat(state.isTransformInProgress).isTrue() }
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isTrue()
+        }
 
         animateJob.cancel()
 
-        rule.runOnIdle { assertThat(state.isTransformInProgress).isFalse() }
+        rule.runOnIdle {
+            assertThat(state.isTransformInProgress).isFalse()
+        }
     }
 
     @Test
@@ -735,14 +773,23 @@ class TransformableTest {
             val modifier = Modifier.transformable(state) as InspectableValue
             assertThat(modifier.nameFallback).isEqualTo("transformable")
             assertThat(modifier.valueOverride).isNull()
-            assertThat(modifier.inspectableElements.map { it.name }.asIterable())
-                .containsExactly("state", "lockRotationOnZoomPan", "enabled", "canPan")
+            assertThat(modifier.inspectableElements.map { it.name }.asIterable()).containsExactly(
+                "state",
+                "lockRotationOnZoomPan",
+                "enabled",
+                "canPan"
+            )
         }
     }
 
     private fun setTransformableContent(getModifier: @Composable () -> Modifier) {
         rule.setContentAndGetScope {
-            Box(Modifier.size(600.dp).testTag(TEST_TAG).then(getModifier()))
+            Box(
+                Modifier
+                    .size(600.dp)
+                    .testTag(TEST_TAG)
+                    .then(getModifier())
+            )
         }
     }
 }

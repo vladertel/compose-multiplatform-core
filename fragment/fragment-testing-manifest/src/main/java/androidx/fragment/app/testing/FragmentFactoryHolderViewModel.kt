@@ -23,7 +23,9 @@ import androidx.fragment.app.FragmentFactory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
-/** A view-model to hold a fragment factory. */
+/**
+ * A view-model to hold a fragment factory.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class FragmentFactoryHolderViewModel : ViewModel() {
     var fragmentFactory: FragmentFactory? = null
@@ -39,7 +41,8 @@ class FragmentFactoryHolderViewModel : ViewModel() {
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val viewModel = FragmentFactoryHolderViewModel()
+                    val viewModel =
+                        FragmentFactoryHolderViewModel()
                     return viewModel as T
                 }
             }

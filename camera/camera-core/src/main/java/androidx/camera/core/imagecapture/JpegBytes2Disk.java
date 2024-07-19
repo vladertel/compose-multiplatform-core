@@ -27,6 +27,7 @@ import android.provider.MediaStore;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.impl.utils.Exif;
@@ -48,6 +49,7 @@ import java.util.UUID;
 /**
  * Saves JPEG bytes to disk.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class JpegBytes2Disk implements Operation<JpegBytes2Disk.In, ImageCapture.OutputFileResults> {
 
     private static final String TEMP_FILE_PREFIX = "CameraX";

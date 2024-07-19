@@ -124,6 +124,7 @@ public class PowerRecord(
      *
      * @param time The point in time when the measurement was taken.
      * @param power Power generated, in [Power] unit. Valid range: 0-100000 Watts.
+     *
      * @see PowerRecord
      */
     public class Sample(

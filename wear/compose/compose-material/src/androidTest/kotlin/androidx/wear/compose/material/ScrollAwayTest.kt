@@ -47,7 +47,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 public class ScrollAwayTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun hidesTimeTextWithScalingLazyColumn() {
@@ -137,16 +138,18 @@ public class ScrollAwayTest {
     ) {
         WithTouchSlop(0f) {
             Scaffold(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
                 timeText = {
                     TimeText(
-                        modifier =
-                            Modifier.scrollAway(
-                                    scrollState = scrollState,
-                                    itemIndex = itemIndex,
-                                    offset = offset,
-                                )
-                                .testTag(TIME_TEXT_TAG)
+                        modifier = Modifier
+                            .scrollAway(
+                                scrollState = scrollState,
+                                itemIndex = itemIndex,
+                                offset = offset,
+                            )
+                            .testTag(TIME_TEXT_TAG)
                     )
                 },
             ) {
@@ -156,9 +159,13 @@ public class ScrollAwayTest {
                     autoCentering = AutoCenteringParams(itemIndex = 1, itemOffset = 0),
                     modifier = Modifier.testTag(SCROLL_TAG)
                 ) {
-                    item { ListHeader { Text("Chips") } }
+                    item {
+                        ListHeader { Text("Chips") }
+                    }
 
-                    items(5) { i -> ChipTest(Modifier.fillParentMaxHeight(0.5f), i) }
+                    items(5) { i ->
+                        ChipTest(Modifier.fillParentMaxHeight(0.5f), i)
+                    }
                 }
             }
         }
@@ -173,32 +180,36 @@ public class ScrollAwayTest {
     ) {
         WithTouchSlop(0f) {
             Scaffold(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
                 timeText = {
                     TimeText(
-                        modifier =
-                            Modifier.scrollAway(
-                                    scrollState = scrollState,
-                                    itemIndex = itemIndex,
-                                    offset = offset,
-                                )
-                                .testTag(TIME_TEXT_TAG)
+                        modifier = Modifier
+                            .scrollAway(
+                                scrollState = scrollState,
+                                itemIndex = itemIndex,
+                                offset = offset,
+                            )
+                            .testTag(TIME_TEXT_TAG)
                     )
                 },
             ) {
                 ScalingLazyColumn(
                     contentPadding = PaddingValues(10.dp),
                     state = scrollState,
-                    autoCentering =
-                        androidx.wear.compose.material.AutoCenteringParams(
-                            itemIndex = 1,
-                            itemOffset = 0
-                        ),
+                    autoCentering = androidx.wear.compose.material.AutoCenteringParams(
+                        itemIndex = 1, itemOffset = 0
+                    ),
                     modifier = Modifier.testTag(SCROLL_TAG)
                 ) {
-                    item { ListHeader { Text("Chips") } }
+                    item {
+                        ListHeader { Text("Chips") }
+                    }
 
-                    items(5) { i -> ChipTest(Modifier.fillParentMaxHeight(0.5f), i) }
+                    items(5) { i ->
+                        ChipTest(Modifier.fillParentMaxHeight(0.5f), i)
+                    }
                 }
             }
         }
@@ -230,7 +241,9 @@ public class ScrollAwayTest {
                 rememberLazyListState(
                     initialFirstVisibleItemIndex = 1,
                 )
-            LazyColumnTest(itemIndex = scrollAwayItemIndex, offset = 0.dp, scrollState)
+            LazyColumnTest(
+                itemIndex = scrollAwayItemIndex, offset = 0.dp, scrollState
+            )
         }
 
         rule.onNodeWithTag(SCROLL_TAG).performTouchInput { swipeUp() }
@@ -241,25 +254,38 @@ public class ScrollAwayTest {
     }
 
     @Composable
-    private fun LazyColumnTest(itemIndex: Int, offset: Dp, scrollState: LazyListState) {
+    private fun LazyColumnTest(
+        itemIndex: Int,
+        offset: Dp,
+        scrollState: LazyListState
+    ) {
         WithTouchSlop(0f) {
             Scaffold(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
                 timeText = {
                     TimeText(
-                        modifier =
-                            Modifier.scrollAway(
-                                    scrollState = scrollState,
-                                    itemIndex = itemIndex,
-                                    offset = offset,
-                                )
-                                .testTag(TIME_TEXT_TAG)
+                        modifier = Modifier
+                            .scrollAway(
+                                scrollState = scrollState,
+                                itemIndex = itemIndex,
+                                offset = offset,
+                            )
+                            .testTag(TIME_TEXT_TAG)
                     )
                 },
             ) {
-                LazyColumn(state = scrollState, modifier = Modifier.testTag(SCROLL_TAG)) {
-                    item { ListHeader { Text("Chips") } }
-                    items(5) { i -> ChipTest(Modifier.fillParentMaxHeight(0.5f), i) }
+                LazyColumn(
+                    state = scrollState,
+                    modifier = Modifier.testTag(SCROLL_TAG)
+                ) {
+                    item {
+                        ListHeader { Text("Chips") }
+                    }
+                    items(5) { i ->
+                        ChipTest(Modifier.fillParentMaxHeight(0.5f), i)
+                    }
                 }
             }
         }
@@ -269,7 +295,7 @@ public class ScrollAwayTest {
     private fun ChipTest(modifier: Modifier, i: Int) {
         Chip(
             modifier = modifier,
-            onClick = {},
+            onClick = { },
             colors = ChipDefaults.primaryChipColors(),
             border = ChipDefaults.chipBorder()
         ) {

@@ -26,5 +26,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object ReleaseModule {
 
-    @Provides @Singleton fun someObject(): SomeObject = SomeObject("release")
+    @Provides
+    @Singleton
+    fun someObject(): SomeObject = SomeObject("release")
 }

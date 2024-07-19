@@ -25,10 +25,9 @@ import org.junit.Test
 class BadConfigurationProviderTest {
     @Test
     fun testNoConfigurationProviderUsage() {
-        val customApplication =
-            kotlin(
-                    "com/example/App.kt",
-                    """
+        val customApplication = kotlin(
+            "com/example/App.kt",
+            """
             package com.example
 
             import android.app.Application
@@ -39,23 +38,22 @@ class BadConfigurationProviderTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(ANDROID_APPLICATION, WORK_MANAGER_CONFIGURATION_PROVIDER, customApplication)
-            .issues(BadConfigurationProviderIssueDetector.ISSUE)
+        lint().files(
+            ANDROID_APPLICATION,
+            WORK_MANAGER_CONFIGURATION_PROVIDER,
+            customApplication
+        ).issues(BadConfigurationProviderIssueDetector.ISSUE)
             .run()
             .expectClean()
     }
 
     @Test
     fun testWithInvalidConfigurationProvider() {
-        val customApplication =
-            kotlin(
-                    "com/example/App.kt",
-                    """
+        val customApplication = kotlin(
+            "com/example/App.kt",
+            """
             package com.example
 
             import android.app.Application
@@ -66,14 +64,11 @@ class BadConfigurationProviderTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        val invalidProvider =
-            kotlin(
-                    "com/example/CustomProvider.kt",
-                    """
+        val invalidProvider = kotlin(
+            "com/example/CustomProvider.kt",
+            """
             package com.example
 
             import androidx.work.Configuration
@@ -82,34 +77,30 @@ class BadConfigurationProviderTest {
                 override fun getWorkManagerConfiguration(): Configuration = TODO()
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(
-                ANDROID_APPLICATION,
-                WORK_MANAGER_CONFIGURATION_PROVIDER,
-                customApplication,
-                invalidProvider
-            )
-            .issues(BadConfigurationProviderIssueDetector.ISSUE)
+        /* ktlint-disable max-line-length */
+        lint().files(
+            ANDROID_APPLICATION,
+            WORK_MANAGER_CONFIGURATION_PROVIDER,
+            customApplication,
+            invalidProvider
+        ).issues(BadConfigurationProviderIssueDetector.ISSUE)
             .run()
             .expect(
                 """
                 src/com/example/App.kt: Error: Expected Application subtype to implement Configuration.Provider [BadConfigurationProvider]
                 1 errors, 0 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 
     @Test
     fun testWithValidConfigurationProvider() {
-        val customApplication =
-            kotlin(
-                    "com/example/App.kt",
-                    """
+        val customApplication = kotlin(
+            "com/example/App.kt",
+            """
             package com.example
 
             import android.app.Application
@@ -123,13 +114,13 @@ class BadConfigurationProviderTest {
                 override fun getWorkManagerConfiguration(): Configuration = TODO()
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(ANDROID_APPLICATION, WORK_MANAGER_CONFIGURATION_PROVIDER, customApplication)
-            .issues(BadConfigurationProviderIssueDetector.ISSUE)
+        lint().files(
+            ANDROID_APPLICATION,
+            WORK_MANAGER_CONFIGURATION_PROVIDER,
+            customApplication
+        ).issues(BadConfigurationProviderIssueDetector.ISSUE)
             .run()
             .expectClean()
     }
@@ -137,10 +128,9 @@ class BadConfigurationProviderTest {
     @Test
     fun testNoApp() {
         // If no application class is found then we don't report an incident.
-        val invalidProvider =
-            kotlin(
-                    "com/example/CustomProvider.kt",
-                    """
+        val invalidProvider = kotlin(
+            "com/example/CustomProvider.kt",
+            """
             package com.example
 
             import androidx.work.Configuration
@@ -149,13 +139,13 @@ class BadConfigurationProviderTest {
                 override fun getWorkManagerConfiguration(): Configuration = TODO()
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(ANDROID_APPLICATION, WORK_MANAGER_CONFIGURATION_PROVIDER, invalidProvider)
-            .issues(BadConfigurationProviderIssueDetector.ISSUE)
+        lint().files(
+            ANDROID_APPLICATION,
+            WORK_MANAGER_CONFIGURATION_PROVIDER,
+            invalidProvider
+        ).issues(BadConfigurationProviderIssueDetector.ISSUE)
             .run()
             .expectClean()
     }
@@ -163,10 +153,9 @@ class BadConfigurationProviderTest {
     @Test
     fun testWithAbstractApp() {
         // Abstract application classes are ignored, so no incident will be reported.
-        val customApplication =
-            kotlin(
-                    "com/example/App.kt",
-                    """
+        val customApplication = kotlin(
+            "com/example/App.kt",
+            """
             package com.example
 
             import android.app.Application
@@ -177,14 +166,11 @@ class BadConfigurationProviderTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        val invalidProvider =
-            kotlin(
-                    "com/example/CustomProvider.kt",
-                    """
+        val invalidProvider = kotlin(
+            "com/example/CustomProvider.kt",
+            """
             package com.example
 
             import androidx.work.Configuration
@@ -193,18 +179,14 @@ class BadConfigurationProviderTest {
                 override fun getWorkManagerConfiguration(): Configuration = TODO()
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(
-                ANDROID_APPLICATION,
-                WORK_MANAGER_CONFIGURATION_PROVIDER,
-                customApplication,
-                invalidProvider
-            )
-            .issues(BadConfigurationProviderIssueDetector.ISSUE)
+        lint().files(
+            ANDROID_APPLICATION,
+            WORK_MANAGER_CONFIGURATION_PROVIDER,
+            customApplication,
+            invalidProvider
+        ).issues(BadConfigurationProviderIssueDetector.ISSUE)
             .run()
             .expectClean()
     }

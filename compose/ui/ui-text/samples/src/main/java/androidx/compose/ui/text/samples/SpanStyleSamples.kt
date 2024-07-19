@@ -31,11 +31,14 @@ import androidx.compose.ui.unit.sp
 fun SpanStyleSample() {
     Text(
         fontSize = 16.sp,
-        text =
-            buildAnnotatedString {
-                withStyle(style = SpanStyle(color = Color.Red)) { append("Hello") }
-                withStyle(SpanStyle(color = Color.Blue)) { append(" World") }
+        text = buildAnnotatedString {
+            withStyle(style = SpanStyle(color = Color.Red)) {
+                append("Hello")
             }
+            withStyle(SpanStyle(color = Color.Blue)) {
+                append(" World")
+            }
+        }
     )
 }
 
@@ -45,12 +48,17 @@ fun SpanStyleBrushSample() {
     val brushColors = listOf(Color.Red, Color.Blue, Color.Green, Color.Yellow)
     Text(
         fontSize = 16.sp,
-        text =
-            buildAnnotatedString {
-                withStyle(SpanStyle(brush = Brush.radialGradient(brushColors))) { append("Hello") }
-                withStyle(SpanStyle(brush = Brush.radialGradient(brushColors.asReversed()))) {
-                    append(" World")
-                }
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(
+                brush = Brush.radialGradient(brushColors)
+            )) {
+                append("Hello")
             }
+            withStyle(SpanStyle(
+                brush = Brush.radialGradient(brushColors.asReversed())
+            )) {
+                append(" World")
+            }
+        }
     )
 }

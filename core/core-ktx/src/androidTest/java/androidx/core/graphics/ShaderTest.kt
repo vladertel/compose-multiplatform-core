@@ -31,7 +31,9 @@ class ShaderTest {
         val values = FloatArray(9)
         val matrix = Matrix()
 
-        shader.transform { setTranslate(10f, 30f) }
+        shader.transform {
+            setTranslate(10f, 30f)
+        }
 
         // Now read matrix from Shader
         shader.getLocalMatrix(matrix)

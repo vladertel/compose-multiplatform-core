@@ -39,8 +39,8 @@ interface HapticManager {
         /**
          * Creates a haptic manager for the system vibrator.
          *
-         * This returns a manager instance only if the device has a vibrator motor, i.e. the system
-         * vibrator check [Vibrator.hasVibrator] returns true, and returns null otherwise.
+         * This returns a manager instance only if the device has a vibrator motor, i.e. the
+         * system vibrator check [Vibrator.hasVibrator] returns true, and returns null otherwise.
          *
          * @sample androidx.core.haptics.samples.PlaySystemStandardClick
          *
@@ -51,15 +51,14 @@ interface HapticManager {
         @JvmStatic
         fun create(context: Context): HapticManager? {
             return requireNotNull(ContextCompat.getSystemService(context, Vibrator::class.java)) {
-                    "Vibrator service not found"
+                "Vibrator service not found"
+            }.let { systemVibrator ->
+                if (systemVibrator.hasVibrator()) {
+                    HapticManagerImpl(VibratorWrapperImpl(systemVibrator))
+                } else {
+                    null
                 }
-                .let { systemVibrator ->
-                    if (systemVibrator.hasVibrator()) {
-                        HapticManagerImpl(VibratorWrapperImpl(systemVibrator))
-                    } else {
-                        null
-                    }
-                }
+            }
         }
 
         /** Creates a haptic manager for the given vibrator. */
@@ -73,7 +72,9 @@ interface HapticManager {
         }
     }
 
-    /** A [HapticDeviceProfile] describing the vibrator hardware capabilities for the device. */
+    /**
+     * A [HapticDeviceProfile] describing the vibrator hardware capabilities for the device.
+     */
     val deviceProfile: HapticDeviceProfile
 
     /**
@@ -104,7 +105,9 @@ interface HapticManager {
      */
     @RequiresPermission(android.Manifest.permission.VIBRATE)
     fun play(signal: ResolvableSignal, attrs: HapticAttributes) {
-        signal.resolve(deviceProfile)?.let { resolvedSignal -> play(resolvedSignal, attrs) }
+        signal.resolve(deviceProfile)?.let { resolvedSignal ->
+            play(resolvedSignal, attrs)
+        }
     }
 
     /**
@@ -112,5 +115,6 @@ interface HapticManager {
      *
      * @sample androidx.core.haptics.samples.PlayThenCancel
      */
-    @RequiresPermission(android.Manifest.permission.VIBRATE) fun cancel()
+    @RequiresPermission(android.Manifest.permission.VIBRATE)
+    fun cancel()
 }

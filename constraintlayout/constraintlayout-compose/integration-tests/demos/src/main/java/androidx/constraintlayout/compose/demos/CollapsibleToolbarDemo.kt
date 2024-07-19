@@ -67,9 +67,8 @@ import androidx.constraintlayout.compose.MotionScene
  *  modifier = Modifier.verticalScroll(scroll)
  * )
  * ```
- *
- * The Column's modifier Modifier.verticalScroll(scroll) will modify scroll.value as it scrolls. We
- * can use this value with a little math to calculate the appropriate progress.
+ * The Column's modifier  Modifier.verticalScroll(scroll) will modify scroll.value as it scrolls.
+ * We can use this value with a little math to calculate the appropriate progress.
  *
  * When the Column is at the start the MotionLayout sits on top of the Spacer. As the user scrolls
  * up the MotionLayout shrinks with the scrolling Spacer then, stops.
@@ -130,16 +129,24 @@ fun ToolBarDslDemo() {
         repeat(5) {
             Text(
                 text = LoremIpsum(222).values.first(),
-                modifier = Modifier.background(Color.White).padding(16.dp)
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(16.dp)
             )
         }
     }
     val gap = with(LocalDensity.current) { big.toPx() - small.toPx() }
     val progress = minOf(scroll.value / gap, 1f)
 
-    MotionLayout(modifier = Modifier.fillMaxSize(), motionScene = scene, progress = progress) {
+    MotionLayout(
+        modifier = Modifier.fillMaxSize(),
+        motionScene = scene,
+        progress = progress
+    ) {
         Image(
-            modifier = Modifier.layoutId("image").background(customColor("image", "cover")),
+            modifier = Modifier
+                .layoutId("image")
+                .background(customColor("image", "cover")),
             imageVector = Icons.Default.Face,
             contentDescription = null,
             contentScale = ContentScale.Crop,
@@ -260,9 +267,15 @@ fun ToolBarLazyDslDemo() {
     val progress = 1 - (toolbarHeight.floatValue - minPx) / (maxPx - minPx)
 
     Column {
-        MotionLayout(modifier = Modifier, motionScene = scene, progress = progress) {
+        MotionLayout(
+            modifier = Modifier,
+            motionScene = scene,
+            progress = progress
+        ) {
             Image(
-                modifier = Modifier.layoutId("image").background(customColor("image", "cover")),
+                modifier = Modifier
+                    .layoutId("image")
+                    .background(customColor("image", "cover")),
                 imageVector = Icons.Default.Face,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -281,8 +294,14 @@ fun ToolBarLazyDslDemo() {
                 color = Color.White
             )
         }
-        LazyColumn(Modifier.fillMaxWidth().nestedScroll(nestedScrollConnection)) {
-            items(100) { Text(text = "item $it", modifier = Modifier.padding(4.dp)) }
+        LazyColumn(
+            Modifier
+                .fillMaxWidth()
+                .nestedScroll(nestedScrollConnection)
+        ) {
+            items(100) {
+                Text(text = "item $it", modifier = Modifier.padding(4.dp))
+            }
         }
     }
 }

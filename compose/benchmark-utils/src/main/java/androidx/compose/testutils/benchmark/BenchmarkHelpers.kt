@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.Canvas
 // potentially unloaded class, RenderNodeCapture.
 interface DrawCapture {
     fun beginRecording(width: Int, height: Int): Canvas
-
     fun endRecording()
 }
 

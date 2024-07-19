@@ -23,7 +23,10 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 import androidx.camera.core.CameraFilter;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraProvider;
@@ -53,6 +56,7 @@ import java.util.List;
  * to get the specified {@link CameraSelector} to bind use cases and enable the extension mode on
  * the camera.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class ExtensionsInfo {
     private static final String EXTENDED_CAMERA_CONFIG_PROVIDER_ID_PREFIX = ":camera:camera"
             + "-extensions-";
@@ -148,6 +152,7 @@ final class ExtensionsInfo {
      *                                  extension mode.
      */
     @Nullable
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
     Range<Long> getEstimatedCaptureLatencyRange(
             @NonNull CameraSelector cameraSelector,
             @ExtensionMode.Mode int mode, @Nullable Size resolution) {
@@ -237,9 +242,6 @@ final class ExtensionsInfo {
                         .setUseCaseConfigFactory(factory)
                         .setCompatibilityId(id)
                         .setZslDisabled(true)
-                        .setPostviewSupported(vendorExtender.isPostviewAvailable())
-                        .setCaptureProcessProgressSupported(
-                                vendorExtender.isCaptureProcessProgressAvailable())
                         .setUseCaseCombinationRequiredRule(
                                 CameraConfig.REQUIRED_RULE_COEXISTING_PREVIEW_AND_IMAGE_CAPTURE);
 

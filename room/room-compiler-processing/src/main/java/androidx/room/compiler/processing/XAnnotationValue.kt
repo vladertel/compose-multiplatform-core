@@ -16,9 +16,13 @@
 
 package androidx.room.compiler.processing
 
-/** This wraps information about an argument in an annotation. */
+/**
+ * This wraps information about an argument in an annotation.
+ */
 interface XAnnotationValue {
-    /** The property name. */
+    /**
+     * The property name.
+     */
     val name: String
 
     /**
@@ -190,7 +194,7 @@ interface XAnnotationValue {
     /** Returns true if the value is a list. */
     fun hasListValue(): Boolean
 
-    /** Returns the value a list of [XAnnotationValue]. */
+    /**Returns the value a list of [XAnnotationValue]. */
     @Suppress("UNCHECKED_CAST") // Values in a list are always wrapped in XAnnotationValue
     fun asAnnotationValueList(): List<XAnnotationValue> = value as List<XAnnotationValue>
 }

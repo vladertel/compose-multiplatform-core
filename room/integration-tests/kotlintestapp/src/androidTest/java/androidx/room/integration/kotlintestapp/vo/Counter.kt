@@ -19,4 +19,8 @@ package androidx.room.integration.kotlintestapp.vo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity data class Counter(@PrimaryKey val id: Long, val value: Int)
+@Entity
+data class Counter(
+    @PrimaryKey val id: Long,
+    val value: Int
+)

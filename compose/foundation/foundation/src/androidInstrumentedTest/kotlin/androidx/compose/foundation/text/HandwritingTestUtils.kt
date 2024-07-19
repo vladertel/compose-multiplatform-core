@@ -37,8 +37,9 @@ import kotlin.math.roundToInt
 // We don't have StylusInjectionScope at the moment. This is a simplified implementation for
 // the basic use cases in this test. It only supports single stylus pointer, and the pointerId
 // is totally ignored.
-internal class HandwritingTestStylusInjectScope(semanticsNode: SemanticsNode) :
-    TouchInjectionScope, Density by semanticsNode.layoutInfo.density {
+internal class HandwritingTestStylusInjectScope(
+    semanticsNode: SemanticsNode
+) : TouchInjectionScope, Density by semanticsNode.layoutInfo.density {
     private val root = semanticsNode.root as ViewRootForTest
     private val downTime: Long = System.currentTimeMillis()
 
@@ -49,7 +50,8 @@ internal class HandwritingTestStylusInjectScope(semanticsNode: SemanticsNode) :
     override val visibleSize: IntSize =
         IntSize(boundsInRoot.width.roundToInt(), boundsInRoot.height.roundToInt())
 
-    override val viewConfiguration: ViewConfiguration = semanticsNode.layoutInfo.viewConfiguration
+    override val viewConfiguration: ViewConfiguration =
+        semanticsNode.layoutInfo.viewConfiguration
 
     private fun localToRoot(position: Offset): Offset {
         return position + boundsInRoot.topLeft
@@ -99,49 +101,46 @@ internal class HandwritingTestStylusInjectScope(semanticsNode: SemanticsNode) :
     }
 
     private fun sendTouchEvent(action: Int) {
-        val motionEvent =
-            MotionEvent.obtain(
-                /* downTime = */ downTime,
-                /* eventTime = */ currentTime,
-                /* action = */ action,
-                /* pointerCount = */ 1,
-                /* pointerProperties = */ arrayOf(
-                    MotionEvent.PointerProperties().apply {
-                        id = 0
-                        toolType = MotionEvent.TOOL_TYPE_STYLUS
-                    }
-                ),
-                /* pointerCoords = */ arrayOf(
-                    MotionEvent.PointerCoords().apply {
-                        val startOffset = lastPosition
+        val motionEvent = MotionEvent.obtain(
+            /* downTime = */ downTime,
+            /* eventTime = */ currentTime,
+            /* action = */ action,
+            /* pointerCount = */ 1,
+            /* pointerProperties = */ arrayOf(
+                MotionEvent.PointerProperties().apply {
+                    id = 0
+                    toolType = MotionEvent.TOOL_TYPE_STYLUS
+                }
+            ),
+            /* pointerCoords = */ arrayOf(
+                MotionEvent.PointerCoords().apply {
+                    val startOffset = lastPosition
 
-                        // Allows for non-valid numbers/Offsets to be passed along to Compose to
-                        // test if it handles them properly (versus breaking here and we not knowing
-                        // if Compose properly handles these values).
-                        x =
-                            if (startOffset.isValid()) {
-                                startOffset.x
-                            } else {
-                                Float.NaN
-                            }
-
-                        y =
-                            if (startOffset.isValid()) {
-                                startOffset.y
-                            } else {
-                                Float.NaN
-                            }
+                    // Allows for non-valid numbers/Offsets to be passed along to Compose to
+                    // test if it handles them properly (versus breaking here and we not knowing
+                    // if Compose properly handles these values).
+                    x = if (startOffset.isValid()) {
+                        startOffset.x
+                    } else {
+                        Float.NaN
                     }
-                ),
-                /* metaState = */ 0,
-                /* buttonState = */ 0,
-                /* xPrecision = */ 1f,
-                /* yPrecision = */ 1f,
-                /* deviceId = */ 0,
-                /* edgeFlags = */ 0,
-                /* source = */ InputDeviceCompat.SOURCE_TOUCHSCREEN,
-                /* flags = */ 0
-            )
+
+                    y = if (startOffset.isValid()) {
+                        startOffset.y
+                    } else {
+                        Float.NaN
+                    }
+                }
+            ),
+            /* metaState = */ 0,
+            /* buttonState = */ 0,
+            /* xPrecision = */ 1f,
+            /* yPrecision = */ 1f,
+            /* deviceId = */ 0,
+            /* edgeFlags = */ 0,
+            /* source = */ InputDeviceCompat.SOURCE_TOUCHSCREEN,
+            /* flags = */ 0
+        )
 
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             root.view.dispatchTouchEvent(motionEvent)
@@ -180,7 +179,10 @@ internal fun SemanticsNodeInteraction.performStylusLongPressAndDrag() {
         val startPosition = visibleSize.center.toOffset()
         down(visibleSize.center.toOffset())
         val position = startPosition + Offset(viewConfiguration.handwritingSlop * 2, 0f)
-        moveTo(position = position, delayMillis = viewConfiguration.longPressTimeoutMillis + 1)
+        moveTo(
+            position = position,
+            delayMillis = viewConfiguration.longPressTimeoutMillis + 1
+        )
         up()
     }
 }
@@ -188,7 +190,8 @@ internal fun SemanticsNodeInteraction.performStylusLongPressAndDrag() {
 private fun SemanticsNodeInteraction.performStylusInput(
     block: TouchInjectionScope.() -> Unit
 ): SemanticsNodeInteraction {
-    @OptIn(ExperimentalTestApi::class) invokeGlobalAssertions()
+    @OptIn(ExperimentalTestApi::class)
+    invokeGlobalAssertions()
     val node = fetchSemanticsNode("Failed to inject stylus input.")
     val stylusInjectionScope = HandwritingTestStylusInjectScope(node)
     block.invoke(stylusInjectionScope)

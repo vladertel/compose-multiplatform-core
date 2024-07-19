@@ -27,9 +27,7 @@ import dagger.assisted.AssistedInject
 import javax.inject.Inject
 
 @HiltWorker
-class SimpleWorker
-@AssistedInject
-constructor(
+class SimpleWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val logger: MyLogger
@@ -41,9 +39,7 @@ constructor(
 }
 
 @HiltWorker
-class SimpleCoroutineWorker
-@AssistedInject
-constructor(
+class SimpleCoroutineWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val logger: MyLogger
@@ -56,9 +52,7 @@ constructor(
 
 object TopClass {
     @HiltWorker
-    class NestedWorker
-    @AssistedInject
-    constructor(
+    class NestedWorker @AssistedInject constructor(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         private val logger: MyLogger

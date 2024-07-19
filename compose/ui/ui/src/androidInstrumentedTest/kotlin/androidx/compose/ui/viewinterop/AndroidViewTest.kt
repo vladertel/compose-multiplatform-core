@@ -145,12 +145,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalComposeUiApi::class)
 class AndroidViewTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun androidViewWithConstructor() {
-        rule.setContent { AndroidView({ TextView(it).apply { text = "Test" } }) }
-        Espresso.onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        rule.setContent {
+            AndroidView({ TextView(it).apply { text = "Test" } })
+        }
+        Espresso
+            .onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
     }
 
     @Test
@@ -158,7 +163,9 @@ class AndroidViewTest {
         rule.setContent {
             AndroidView({ LayoutInflater.from(it).inflate(R.layout.test_layout, null) })
         }
-        Espresso.onView(instanceOf(RelativeLayout::class.java)).check(matches(isDisplayed()))
+        Espresso
+            .onView(instanceOf(RelativeLayout::class.java))
+            .check(matches(isDisplayed()))
     }
 
     @Test
@@ -169,24 +176,28 @@ class AndroidViewTest {
         rule.setContent {
             AndroidView(
                 factory = {
-                    val view: View =
-                        LayoutInflater.from(it)
-                            .inflate(R.layout.test_multiple_invalidation_layout, null)
+                    val view: View = LayoutInflater.from(it)
+                        .inflate(R.layout.test_multiple_invalidation_layout, null)
                     customView = view.findViewById<InvalidatedTextView>(R.id.custom_draw_view)
                     customView!!.timesToInvalidate = timesToInvalidate
-                    customView!!.onDraw = { ++drawCount }
+                    customView!!.onDraw = {
+                        ++drawCount
+                    }
                     view
-                }
-            )
+                })
         }
         // the first drawn was not caused by invalidation, thus add it to expected draw count.
         var expectedDraws = timesToInvalidate + 1
-        repeat(expectedDraws) { rule.mainClock.advanceTimeByFrame() }
+        repeat(expectedDraws) {
+            rule.mainClock.advanceTimeByFrame()
+        }
 
         // Ensure we wait until the time advancement actually happened as sometimes we can race if
         // we use runOnIdle directly making the test fail, so providing a big enough timeout to
         // give plenty of time for the frame advancement to happen.
-        rule.waitUntil(3000) { drawCount == expectedDraws }
+        rule.waitUntil(3000) {
+            drawCount == expectedDraws
+        }
 
         rule.runOnIdle {
             // Verify that we only drew once per invalidation
@@ -199,44 +210,45 @@ class AndroidViewTest {
     fun androidViewWithViewTest() {
         lateinit var frameLayout: FrameLayout
         rule.activityRule.scenario.onActivity { activity ->
-            frameLayout =
-                FrameLayout(activity).apply { layoutParams = ViewGroup.LayoutParams(300, 300) }
+            frameLayout = FrameLayout(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(300, 300)
+            }
         }
-        rule.setContent { AndroidView({ frameLayout }) }
-        Espresso.onView(equalTo(frameLayout)).check(matches(isDisplayed()))
+        rule.setContent {
+            AndroidView({ frameLayout })
+        }
+        Espresso
+            .onView(equalTo(frameLayout))
+            .check(matches(isDisplayed()))
     }
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R)
     fun androidViewAccessibilityDelegate() {
         rule.setContent {
-            AndroidView({
-                TextView(it).apply {
-                    text = "Test"
-                    setScreenReaderFocusable(true)
+             AndroidView({ TextView(it).apply { text = "Test"; setScreenReaderFocusable(true) } })
+        }
+        Espresso
+            .onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
+            .check { view, exception ->
+                val viewParent = view.getParent()
+                if (viewParent !is View) {
+                    throw exception
                 }
-            })
-        }
-        Espresso.onView(instanceOf(TextView::class.java)).check(matches(isDisplayed())).check {
-            view,
-            exception ->
-            val viewParent = view.getParent()
-            if (viewParent !is View) {
-                throw exception
+                val delegate = viewParent.getAccessibilityDelegate()
+                if (viewParent.getAccessibilityDelegate() == null) {
+                    throw exception
+                }
+                val info: AccessibilityNodeInfo = AccessibilityNodeInfo()
+                delegate.onInitializeAccessibilityNodeInfo(view, info)
+                if (!info.isVisibleToUser()) {
+                    throw exception
+                }
+                if (!info.isScreenReaderFocusable()) {
+                    throw exception
+                }
             }
-            val delegate = viewParent.getAccessibilityDelegate()
-            if (viewParent.getAccessibilityDelegate() == null) {
-                throw exception
-            }
-            val info: AccessibilityNodeInfo = AccessibilityNodeInfo()
-            delegate.onInitializeAccessibilityNodeInfo(view, info)
-            if (!info.isVisibleToUser()) {
-                throw exception
-            }
-            if (!info.isScreenReaderFocusable()) {
-                throw exception
-            }
-        }
     }
 
     @Test
@@ -246,7 +258,8 @@ class AndroidViewTest {
                 LayoutInflater.from(it).inflate(R.layout.test_layout, FrameLayout(it), false)
             })
         }
-        Espresso.onView(withClassName(endsWith("RelativeLayout")))
+        Espresso
+            .onView(withClassName(endsWith("RelativeLayout")))
             .check(matches(isDisplayed()))
             .check { view, exception ->
                 if (view.layoutParams.width != 300.dp.toPx(view.context.resources.displayMetrics)) {
@@ -262,8 +275,9 @@ class AndroidViewTest {
     fun androidViewProperlyDetached() {
         lateinit var frameLayout: FrameLayout
         rule.activityRule.scenario.onActivity { activity ->
-            frameLayout =
-                FrameLayout(activity).apply { layoutParams = ViewGroup.LayoutParams(300, 300) }
+            frameLayout = FrameLayout(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(300, 300)
+            }
         }
         var emit by mutableStateOf(true)
         rule.setContent {
@@ -285,7 +299,9 @@ class AndroidViewTest {
         }
 
         // Assert view reattached when added back to the composition hierarchy
-        rule.runOnIdle { assertThat(frameLayout.parent).isNotNull() }
+        rule.runOnIdle {
+            assertThat(frameLayout.parent).isNotNull()
+        }
     }
 
     @Test
@@ -304,7 +320,9 @@ class AndroidViewTest {
 
             activity.setContentView(root)
             root.addView(composeView)
-            composeView.setContent { AndroidView({ viewInsideCompose }) }
+            composeView.setContent {
+                AndroidView({ viewInsideCompose })
+            }
         }
 
         var viewInsideComposeHolder: ViewGroup? = null
@@ -336,7 +354,8 @@ class AndroidViewTest {
                 Modifier.requiredSize(size)
             )
         }
-        Espresso.onView(instanceOf(RelativeLayout::class.java))
+        Espresso
+            .onView(instanceOf(RelativeLayout::class.java))
             .check(matches(isDisplayed()))
             .check { view, exception ->
                 val expectedSize = size.toPx(view.context.resources.displayMetrics)
@@ -350,16 +369,22 @@ class AndroidViewTest {
     fun androidViewWithView_modifierIsApplied() {
         val size = 20.dp
         lateinit var frameLayout: FrameLayout
-        rule.activityRule.scenario.onActivity { activity -> frameLayout = FrameLayout(activity) }
-        rule.setContent { AndroidView({ frameLayout }, Modifier.requiredSize(size)) }
-
-        Espresso.onView(equalTo(frameLayout)).check(matches(isDisplayed())).check { view, exception
-            ->
-            val expectedSize = size.toPx(view.context.resources.displayMetrics)
-            if (view.width != expectedSize || view.height != expectedSize) {
-                throw exception
-            }
+        rule.activityRule.scenario.onActivity { activity ->
+            frameLayout = FrameLayout(activity)
         }
+        rule.setContent {
+            AndroidView({ frameLayout }, Modifier.requiredSize(size))
+        }
+
+        Espresso
+            .onView(equalTo(frameLayout))
+            .check(matches(isDisplayed()))
+            .check { view, exception ->
+                val expectedSize = size.toPx(view.context.resources.displayMetrics)
+                if (view.width != expectedSize || view.height != expectedSize) {
+                    throw exception
+                }
+            }
     }
 
     @Test
@@ -369,14 +394,20 @@ class AndroidViewTest {
         val size = 300
         lateinit var frameLayout: FrameLayout
         rule.activityRule.scenario.onActivity { activity ->
-            frameLayout =
-                FrameLayout(activity).apply { layoutParams = ViewGroup.LayoutParams(size, size) }
+            frameLayout = FrameLayout(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(size, size)
+            }
         }
         rule.setContent {
-            AndroidView({ frameLayout }, Modifier.testTag("view").background(color = Color.Blue))
+            AndroidView({ frameLayout },
+                Modifier
+                    .testTag("view")
+                    .background(color = Color.Blue))
         }
 
-        rule.onNodeWithTag("view").captureToImage().assertPixels(IntSize(size, size)) { Color.Blue }
+        rule.onNodeWithTag("view").captureToImage().assertPixels(IntSize(size, size)) {
+            Color.Blue
+        }
     }
 
     @Test
@@ -388,7 +419,8 @@ class AndroidViewTest {
                 Modifier.requiredSize(size.value)
             )
         }
-        Espresso.onView(instanceOf(RelativeLayout::class.java))
+        Espresso
+            .onView(instanceOf(RelativeLayout::class.java))
             .check(matches(isDisplayed()))
             .check { view, exception ->
                 val expectedSize = size.value.toPx(view.context.resources.displayMetrics)
@@ -397,7 +429,8 @@ class AndroidViewTest {
                 }
             }
         rule.runOnIdle { size.value = 30.dp }
-        Espresso.onView(instanceOf(RelativeLayout::class.java))
+        Espresso
+            .onView(instanceOf(RelativeLayout::class.java))
             .check(matches(isDisplayed()))
             .check { view, exception ->
                 val expectedSize = size.value.toPx(view.context.resources.displayMetrics)
@@ -410,12 +443,26 @@ class AndroidViewTest {
     @Test
     fun androidView_notDetachedFromWindowTwice() {
         // Should not crash.
-        rule.setContent { Box { AndroidView(::ComposeView) { it.setContent { Box(Modifier) } } } }
+        rule.setContent {
+            Box {
+                AndroidView(::ComposeView) {
+                    it.setContent {
+                        Box(Modifier)
+                    }
+                }
+            }
+        }
     }
 
     @Test
     fun androidView_updateIsRanInitially() {
-        rule.setContent { Box { AndroidView(::UpdateTestView) { view -> view.counter = 1 } } }
+        rule.setContent {
+            Box {
+                AndroidView(::UpdateTestView) { view ->
+                    view.counter = 1
+                }
+            }
+        }
 
         onView(instanceOf(UpdateTestView::class.java)).check { view, _ ->
             assertIs<UpdateTestView>(view)
@@ -427,7 +474,13 @@ class AndroidViewTest {
     fun androidView_updateObservesMultipleStateChanges() {
         var counter by mutableStateOf(1)
 
-        rule.setContent { Box { AndroidView(::UpdateTestView) { view -> view.counter = counter } } }
+        rule.setContent {
+            Box {
+                AndroidView(::UpdateTestView) { view ->
+                    view.counter = counter
+                }
+            }
+        }
 
         counter = 2
         onView(instanceOf(UpdateTestView::class.java)).check { view, _ ->
@@ -458,7 +511,11 @@ class AndroidViewTest {
                 onDispose {}
             }
 
-            Box { AndroidView(::UpdateTestView) { view -> view.counter = counter } }
+            Box {
+                AndroidView(::UpdateTestView) { view ->
+                    view.counter = counter
+                }
+            }
         }
 
         onView(instanceOf(UpdateTestView::class.java)).check { view, _ ->
@@ -472,9 +529,15 @@ class AndroidViewTest {
         var counter by mutableStateOf(1)
 
         rule.setContent {
-            LaunchedEffect(Unit) { counter = 2 }
+            LaunchedEffect(Unit) {
+                counter = 2
+            }
 
-            Box { AndroidView(::UpdateTestView) { view -> view.counter = counter } }
+            Box {
+                AndroidView(::UpdateTestView) { view ->
+                    view.counter = counter
+                }
+            }
         }
 
         onView(instanceOf(UpdateTestView::class.java)).check { view, _ ->
@@ -490,10 +553,16 @@ class AndroidViewTest {
         rule.setContent {
             LaunchedEffect(Unit) {
                 counter = 2
-                withFrameNanos { counter = 3 }
+                withFrameNanos {
+                    counter = 3
+                }
             }
 
-            Box { AndroidView(::UpdateTestView) { view -> view.counter = counter } }
+            Box {
+                AndroidView(::UpdateTestView) { view ->
+                    view.counter = counter
+                }
+            }
         }
 
         onView(instanceOf(UpdateTestView::class.java)).check { view, _ ->
@@ -508,8 +577,10 @@ class AndroidViewTest {
         var obtainedSize: IntSize = IntSize.Zero
         rule.setContent {
             Box {
-                AndroidView(::View, Modifier.onGloballyPositioned { obtainedSize = it.size }) { view
-                    ->
+                AndroidView(
+                    ::View,
+                    Modifier.onGloballyPositioned { obtainedSize = it.size }
+                ) { view ->
                     view.layoutParams = ViewGroup.LayoutParams(size, size)
                 }
             }
@@ -518,7 +589,9 @@ class AndroidViewTest {
             assertThat(obtainedSize).isEqualTo(IntSize(size, size))
             size = 40
         }
-        rule.runOnIdle { assertThat(obtainedSize).isEqualTo(IntSize(size, size)) }
+        rule.runOnIdle {
+            assertThat(obtainedSize).isEqualTo(IntSize(size, size))
+        }
     }
 
     @Test
@@ -530,9 +603,11 @@ class AndroidViewTest {
             CompositionLocalProvider(LocalDensity provides density) {
                 AndroidView(
                     { FrameLayout(it) },
-                    Modifier.requiredSize(size).onGloballyPositioned {
-                        assertThat(it.size).isEqualTo(IntSize(sizeIpx, sizeIpx))
-                    }
+                    Modifier
+                        .requiredSize(size)
+                        .onGloballyPositioned {
+                            assertThat(it.size).isEqualTo(IntSize(sizeIpx, sizeIpx))
+                        }
                 )
             }
         }
@@ -544,11 +619,14 @@ class AndroidViewTest {
         lateinit var parentComposeView: ComposeView
         lateinit var compositionChildView: View
         rule.activityRule.scenario.onActivity { activity ->
-            parentComposeView =
-                ComposeView(activity).apply {
-                    setContent { AndroidView(::View) { compositionChildView = it } }
-                    activity.setContentView(this)
+            parentComposeView = ComposeView(activity).apply {
+                setContent {
+                    AndroidView(::View) {
+                        compositionChildView = it
+                    }
                 }
+                activity.setContentView(this)
+            }
         }
         rule.runOnIdle {
             assertThat(compositionChildView.findViewTreeCompositionContext())
@@ -565,13 +643,17 @@ class AndroidViewTest {
                 AndroidView(
                     factory = {
                         ComposeView(it).apply {
-                            setContent { childComposedAmbientValue = ambient.current }
+                            setContent {
+                                childComposedAmbientValue = ambient.current
+                            }
                         }
                     }
                 )
             }
         }
-        rule.runOnIdle { assertThat(childComposedAmbientValue).isEqualTo("setByParent") }
+        rule.runOnIdle {
+            assertThat(childComposedAmbientValue).isEqualTo("setByParent")
+        }
     }
 
     @Test
@@ -619,7 +701,11 @@ class AndroidViewTest {
         var childViewTreeLifecycleOwner: LifecycleOwner? = null
 
         rule.setContent {
-            LocalLifecycleOwner.current.also { SideEffect { parentLifecycleOwner = it } }
+            LocalLifecycleOwner.current.also {
+                SideEffect {
+                    parentLifecycleOwner = it
+                }
+            }
 
             CompositionLocalProvider(LocalLifecycleOwner provides compositionLifecycleOwner) {
                 AndroidView(
@@ -654,7 +740,9 @@ class AndroidViewTest {
 
         rule.setContent {
             LocalSavedStateRegistryOwner.current.also {
-                SideEffect { parentSavedStateRegistryOwner = it }
+                SideEffect {
+                    parentSavedStateRegistryOwner = it
+                }
             }
 
             CompositionLocalProvider(
@@ -687,12 +775,11 @@ class AndroidViewTest {
         var factoryRunCount = 0
         rule.setContent {
             val view = remember { View(rule.activity) }
-            AndroidView({
-                ++factoryRunCount
-                view
-            })
+            AndroidView({ ++factoryRunCount; view })
         }
-        rule.runOnIdle { assertThat(factoryRunCount).isEqualTo(1) }
+        rule.runOnIdle {
+            assertThat(factoryRunCount).isEqualTo(1)
+        }
     }
 
     @Test
@@ -703,15 +790,9 @@ class AndroidViewTest {
             val view = remember { View(rule.activity) }
             AndroidView(
                 if (first) {
-                    {
-                        ++factoryRunCount
-                        view
-                    }
+                    { ++factoryRunCount; view }
                 } else {
-                    {
-                        ++factoryRunCount
-                        view
-                    }
+                    { ++factoryRunCount; view }
                 }
             )
         }
@@ -719,7 +800,9 @@ class AndroidViewTest {
             assertThat(factoryRunCount).isEqualTo(1)
             first = false
         }
-        rule.runOnIdle { assertThat(factoryRunCount).isEqualTo(1) }
+        rule.runOnIdle {
+            assertThat(factoryRunCount).isEqualTo(1)
+        }
     }
 
     @Ignore
@@ -730,12 +813,18 @@ class AndroidViewTest {
         val sizeDp = with(rule.density) { size.toDp() }
         rule.setContent {
             Column {
-                Box(Modifier.size(sizeDp).background(Color.Blue).testTag("box"))
+                Box(
+                    Modifier
+                        .size(sizeDp)
+                        .background(Color.Blue)
+                        .testTag("box"))
                 AndroidView(factory = { SurfaceView(it) })
             }
         }
 
-        rule.onNodeWithTag("box").captureToImage().assertPixels(IntSize(size, size)) { Color.Blue }
+        rule.onNodeWithTag("box").captureToImage().assertPixels(IntSize(size, size)) {
+            Color.Blue
+        }
     }
 
     @Test
@@ -752,19 +841,20 @@ class AndroidViewTest {
             }
         }
 
-        onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
 
         assertEquals("onRelease() was called unexpectedly", 0, releaseCount)
 
         showContent = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "onRelease() should be called exactly once after " +
                 "removing the view from the composition hierarchy",
-            1,
-            releaseCount
+            1, releaseCount
         )
     }
 
@@ -780,7 +870,9 @@ class AndroidViewTest {
         ) {
             val saveableStateHolder = rememberSaveableStateHolder()
             Box(modifier) {
-                saveableStateHolder.SaveableStateProvider(currentScreen) { content(currentScreen) }
+                saveableStateHolder.SaveableStateProvider(currentScreen) {
+                    content(currentScreen)
+                }
             }
         }
 
@@ -803,41 +895,51 @@ class AndroidViewTest {
 
         rule.runOnIdle { screen = "screen2" }
         rule.runOnIdle { screen = "screen1" }
-        rule.runOnIdle { assertThat(result).isEqualTo("testValue") }
+        rule.runOnIdle {
+            assertThat(result).isEqualTo("testValue")
+        }
     }
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun androidView_noClip() {
         rule.setContent {
-            Box(Modifier.fillMaxSize().background(Color.White)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White)) {
                 with(LocalDensity.current) {
-                    Box(Modifier.requiredSize(150.toDp()).testTag("box")) {
+                    Box(
+                        Modifier
+                            .requiredSize(150.toDp())
+                            .testTag("box")) {
                         Box(
-                            Modifier.size(100.toDp(), 100.toDp()).align(AbsoluteAlignment.TopLeft)
+                            Modifier
+                                .size(100.toDp(), 100.toDp())
+                                .align(AbsoluteAlignment.TopLeft)
                         ) {
-                            AndroidView(
-                                factory = { context ->
-                                    object : View(context) {
-                                        init {
-                                            clipToOutline = false
-                                        }
+                            AndroidView(factory = { context ->
+                                object : View(context) {
+                                    init {
+                                        clipToOutline = false
+                                    }
 
-                                        override fun onDraw(canvas: Canvas) {
-                                            val paint = Paint()
-                                            paint.color = Color.Blue.toArgb()
-                                            paint.style = Paint.Style.FILL
-                                            canvas.drawRect(0f, 0f, 150f, 150f, paint)
-                                        }
+                                    override fun onDraw(canvas: Canvas) {
+                                        val paint = Paint()
+                                        paint.color = Color.Blue.toArgb()
+                                        paint.style = Paint.Style.FILL
+                                        canvas.drawRect(0f, 0f, 150f, 150f, paint)
                                     }
                                 }
-                            )
+                            })
                         }
                     }
                 }
             }
         }
-        rule.onNodeWithTag("box").captureToImage().assertPixels(IntSize(150, 150)) { Color.Blue }
+        rule.onNodeWithTag("box").captureToImage().assertPixels(IntSize(150, 150)) {
+            Color.Blue
+        }
     }
 
     @Test
@@ -852,7 +954,8 @@ class AndroidViewTest {
             }
         }
 
-        onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -948,7 +1051,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         attached = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -971,7 +1075,8 @@ class AndroidViewTest {
             }
         }
 
-        onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -990,7 +1095,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         attached = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1002,7 +1108,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         attached = true
 
-        onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1048,7 +1155,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         active = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1060,7 +1168,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         emit = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1083,7 +1192,8 @@ class AndroidViewTest {
             }
         }
 
-        onView(instanceOf(TextView::class.java)).check(matches(isDisplayed()))
+        onView(instanceOf(TextView::class.java))
+            .check(matches(isDisplayed()))
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1102,7 +1212,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         includeViewInComposition = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1152,7 +1263,8 @@ class AndroidViewTest {
             .check(matches(withText("Test")))
 
         assertEquals(
-            "AndroidView did not experience the expected lifecycle when " + "reused in composition",
+            "AndroidView did not experience the expected lifecycle when " +
+                "reused in composition",
             listOf(OnReset, OnUpdate),
             lifecycleEvents
         )
@@ -1195,7 +1307,10 @@ class AndroidViewTest {
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
                 "its host transitioned from RESUMED to CREATED while the view was attached",
-            listOf(ViewLifecycleEvent(ON_PAUSE), ViewLifecycleEvent(ON_STOP)),
+            listOf(
+                ViewLifecycleEvent(ON_PAUSE),
+                ViewLifecycleEvent(ON_STOP)
+            ),
             lifecycleEvents
         )
 
@@ -1206,7 +1321,10 @@ class AndroidViewTest {
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
                 "its host transitioned from CREATED to RESUMED while the view was attached",
-            listOf(ViewLifecycleEvent(ON_START), ViewLifecycleEvent(ON_RESUME)),
+            listOf(
+                ViewLifecycleEvent(ON_START),
+                ViewLifecycleEvent(ON_RESUME)
+            ),
             lifecycleEvents
         )
     }
@@ -1247,7 +1365,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         attach = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1280,13 +1399,12 @@ class AndroidViewTest {
         var attached by mutableStateOf(true)
         rule.setContent {
             ReusableContentHost(attached) {
-                val content =
-                    @Composable {
-                        ReusableAndroidViewWithLifecycleTracking(
-                            factory = { TextView(it).apply { text = "Test" } },
-                            onLifecycleEvent = lifecycleEvents::add
-                        )
-                    }
+                val content = @Composable {
+                    ReusableAndroidViewWithLifecycleTracking(
+                        factory = { TextView(it).apply { text = "Test" } },
+                        onLifecycleEvent = lifecycleEvents::add
+                    )
+                }
 
                 // Placing items when they are in reused state is not supported for now.
                 // Reusing only happens in SubcomposeLayout atm which never places reused nodes
@@ -1322,7 +1440,8 @@ class AndroidViewTest {
         lifecycleEvents.clear()
         attached = false
 
-        onView(instanceOf(TextView::class.java)).check(doesNotExist())
+        onView(instanceOf(TextView::class.java))
+            .check(doesNotExist())
 
         assertEquals(
             "AndroidView did not experience the expected lifecycle when " +
@@ -1338,7 +1457,10 @@ class AndroidViewTest {
         assertEquals(
             "AndroidView did not receive callbacks when its host transitioned from " +
                 "RESUMED to CREATED while the view was detached",
-            listOf(ViewLifecycleEvent(ON_PAUSE), ViewLifecycleEvent(ON_STOP)),
+            listOf(
+                ViewLifecycleEvent(ON_PAUSE),
+                ViewLifecycleEvent(ON_STOP)
+            ),
             lifecycleEvents
         )
 
@@ -1349,7 +1471,10 @@ class AndroidViewTest {
         assertEquals(
             "AndroidView did not receive callbacks when its host transitioned from " +
                 "CREATED to RESUMED while the view was detached",
-            listOf(ViewLifecycleEvent(ON_START), ViewLifecycleEvent(ON_RESUME)),
+            listOf(
+                ViewLifecycleEvent(ON_START),
+                ViewLifecycleEvent(ON_RESUME)
+            ),
             lifecycleEvents
         )
     }
@@ -1363,7 +1488,9 @@ class AndroidViewTest {
             val movableContext = remember {
                 movableContentOf {
                     ReusableAndroidViewWithLifecycleTracking(
-                        factory = { context -> StateSavingView(context, "") },
+                        factory = { context ->
+                            StateSavingView(context, "")
+                        },
                         onLifecycleEvent = lifecycleEvents::add
                     )
                 }
@@ -1373,7 +1500,9 @@ class AndroidViewTest {
                 repeat(10) { slot ->
                     key(slot) {
                         if (slot == slotWithContent) {
-                            ReusableContent(Unit) { movableContext() }
+                            ReusableContent(Unit) {
+                                movableContext()
+                            }
                         } else {
                             Text("Slot $slot")
                         }
@@ -1384,7 +1513,11 @@ class AndroidViewTest {
 
         rule.activityRule.withActivity {
             val view = findViewById<StateSavingView>(StateSavingView.ID)
-            assertEquals("View didn't have the expected initial value", "", view.value)
+            assertEquals(
+                "View didn't have the expected initial value",
+                "",
+                view.value
+            )
             view.value = "Value 1"
         }
 
@@ -1409,14 +1542,21 @@ class AndroidViewTest {
         assertEquals(
             "AndroidView experienced unexpected lifecycle events when " +
                 "moved in the composition",
-            listOf(OnViewDetach, OnViewAttach),
+            listOf(
+                OnViewDetach,
+                OnViewAttach
+            ),
             lifecycleEvents
         )
 
         // Check that the state of the view is retained
         rule.activityRule.withActivity {
             val view = findViewById<StateSavingView>(StateSavingView.ID)
-            assertEquals("View didn't retain its state across reuse", "Value 1", view.value)
+            assertEquals(
+                "View didn't retain its state across reuse",
+                "Value 1",
+                view.value
+            )
         }
     }
 
@@ -1431,9 +1571,9 @@ class AndroidViewTest {
                             factory = { context ->
                                 StateSavingView(context, "screen1 first value")
                             },
-                            update = {},
-                            onReset = {},
-                            onRelease = {}
+                            update = { },
+                            onReset = { },
+                            onRelease = { }
                         )
                     }
                 }
@@ -1479,17 +1619,24 @@ class AndroidViewTest {
         val columnHeightDp = with(rule.density) { columnHeight.toDp() }
         var viewSize = IntSize.Zero
         rule.setContent {
-            Column(Modifier.height(columnHeightDp).fillMaxWidth()) {
+            Column(
+                Modifier
+                    .height(columnHeightDp)
+                    .fillMaxWidth()) {
                 AndroidView(
                     factory = { View(it) },
-                    modifier = Modifier.weight(1f).onGloballyPositioned { viewSize = it.size }
+                    modifier = Modifier
+                        .weight(1f)
+                        .onGloballyPositioned { viewSize = it.size }
                 )
 
                 Box(Modifier.height(columnHeightDp / 4))
             }
         }
 
-        rule.runOnIdle { assertEquals(columnHeight * 3 / 4, viewSize.height) }
+        rule.runOnIdle {
+            assertEquals(columnHeight * 3 / 4, viewSize.height)
+        }
     }
 
     @Test
@@ -1500,7 +1647,9 @@ class AndroidViewTest {
         val viewSize = with(rule.density) { viewSizeDp.roundToPx() }
         rule.setContent {
             AndroidView(
-                modifier = Modifier.testTag("wrapper").heightIn(max = viewSizeDp),
+                modifier = Modifier
+                    .testTag("wrapper")
+                    .heightIn(max = viewSizeDp),
                 factory = {
                     object : View(it) {
                         override fun dispatchDraw(canvas: Canvas) {
@@ -1516,14 +1665,16 @@ class AndroidViewTest {
             )
         }
 
-        rule.onNodeWithTag("wrapper").assertHeightIsEqualTo(viewSizeDp)
+        rule.onNodeWithTag("wrapper")
+            .assertHeightIsEqualTo(viewSizeDp)
 
         rule.runOnUiThread {
             drawCount = 0
             view?.visibility = View.GONE
         }
 
-        rule.onNodeWithTag("wrapper").assertHeightIsEqualTo(0.dp)
+        rule.onNodeWithTag("wrapper")
+            .assertHeightIsEqualTo(0.dp)
         assertEquals(0, drawCount)
     }
 
@@ -1535,27 +1686,35 @@ class AndroidViewTest {
         rule.setContent {
             Column {
                 AndroidView(
-                    modifier = Modifier.testTag("wrapper").heightIn(max = viewSizeDp),
-                    factory = { View(it) },
+                    modifier = Modifier
+                        .testTag("wrapper")
+                        .heightIn(max = viewSizeDp),
+                    factory = {
+                        View(it)
+                    },
                     update = {
                         view = it
                         it.layoutParams = ViewGroup.LayoutParams(viewSize, WRAP_CONTENT)
                     },
                 )
 
-                Box(Modifier.size(viewSizeDp).testTag("box"))
+                Box(
+                    Modifier
+                        .size(viewSizeDp)
+                        .testTag("box")
+                )
             }
         }
 
-        rule
-            .onNodeWithTag("box")
+        rule.onNodeWithTag("box")
             .assertTopPositionInRootIsEqualTo(viewSizeDp)
             .assertLeftPositionInRootIsEqualTo(0.dp)
 
-        rule.runOnUiThread { view?.visibility = View.GONE }
+        rule.runOnUiThread {
+            view?.visibility = View.GONE
+        }
 
-        rule
-            .onNodeWithTag("box")
+        rule.onNodeWithTag("box")
             .assertTopPositionInRootIsEqualTo(0.dp)
             .assertLeftPositionInRootIsEqualTo(0.dp)
     }
@@ -1697,8 +1856,8 @@ class AndroidViewTest {
         rule.waitForIdle()
 
         assertWithMessage(
-                "Expected exactly one invocation of the viewTreeObserver's OnGlobalLayoutListener " +
-                    "after re-laying out the contained AndroidView."
+                "Expected exactly one invocation of the viewTreeObserver's " +
+                    "OnGlobalLayoutListener after re-laying out the contained AndroidView."
             )
             .that(callbackInvocations)
             .isEqualTo(1)
@@ -1719,8 +1878,8 @@ class AndroidViewTest {
         rule.waitForIdle()
 
         assertWithMessage(
-                "Expected exactly one invocation of the viewTreeObserver's OnGlobalLayoutListener " +
-                    "after re-laying out multiple AndroidViews."
+                "Expected exactly one invocation of the viewTreeObserver's " +
+                    "OnGlobalLayoutListener after re-laying out multiple AndroidViews."
             )
             .that(callbackInvocations)
             .isEqualTo(1)
@@ -1732,9 +1891,9 @@ class AndroidViewTest {
         crossinline factory: (Context) -> T,
         noinline onLifecycleEvent: @DisallowComposableCalls (AndroidViewLifecycleEvent) -> Unit,
         modifier: Modifier = Modifier,
-        crossinline update: (T) -> Unit = {},
-        crossinline reuse: (T) -> Unit = {},
-        crossinline release: (T) -> Unit = {}
+        crossinline update: (T) -> Unit = { },
+        crossinline reuse: (T) -> Unit = { },
+        crossinline release: (T) -> Unit = { }
     ) {
         AndroidView(
             factory = {
@@ -1786,16 +1945,15 @@ class AndroidViewTest {
         object OnCreate : AndroidViewLifecycleEvent()
 
         object OnUpdate : AndroidViewLifecycleEvent()
-
         object OnReset : AndroidViewLifecycleEvent()
-
         object OnRelease : AndroidViewLifecycleEvent()
 
         object OnViewAttach : AndroidViewLifecycleEvent()
-
         object OnViewDetach : AndroidViewLifecycleEvent()
 
-        data class ViewLifecycleEvent(val event: Lifecycle.Event) : AndroidViewLifecycleEvent() {
+        data class ViewLifecycleEvent(
+            val event: Lifecycle.Event
+        ) : AndroidViewLifecycleEvent() {
             override fun toString() = "ViewLifecycleEvent($event)"
         }
     }
@@ -1836,7 +1994,11 @@ class AndroidViewTest {
     }
 
     private fun Dp.toPx(displayMetrics: DisplayMetrics) =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, displayMetrics).roundToInt()
+        TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value,
+            displayMetrics
+        ).roundToInt()
 
     private class RequestLayoutTrackingFrameLayout(context: Context) : FrameLayout(context) {
         var requestLayoutCalled = false

@@ -25,12 +25,16 @@ public class CircularIntArrayTest {
 
     @Test
     public fun creatingWithZeroCapacity() {
-        assertFailsWith<IllegalArgumentException> { CircularIntArray(0) }
+        assertFailsWith<IllegalArgumentException> {
+            CircularIntArray(0)
+        }
     }
 
     @Test
     public fun creatingWithOverCapacity() {
-        assertFailsWith<IllegalArgumentException> { CircularIntArray(Int.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> {
+            CircularIntArray(Int.MAX_VALUE)
+        }
     }
 
     @Test
@@ -60,7 +64,9 @@ public class CircularIntArrayTest {
         val array = CircularIntArray()
         array.addFirst(42)
         array.popFirst()
-        assertFailsWith<IndexOutOfBoundsException> { array.popFirst() }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.popFirst()
+        }
     }
 
     @Test
@@ -68,7 +74,9 @@ public class CircularIntArrayTest {
         val array = CircularIntArray()
         array.addFirst(42)
         array.popLast()
-        assertFailsWith<IndexOutOfBoundsException> { array.popLast() }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.popLast()
+        }
     }
 
     @Test
@@ -97,7 +105,9 @@ public class CircularIntArrayTest {
         array.addFirst(42)
         array.addFirst(43)
         array.addLast(-1)
-        assertFailsWith<IndexOutOfBoundsException> { array.removeFromStart(4) }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.removeFromStart(4)
+        }
     }
 
     @Test
@@ -106,14 +116,18 @@ public class CircularIntArrayTest {
         array.addFirst(42)
         array.addFirst(43)
         array.addLast(-1)
-        assertFailsWith<IndexOutOfBoundsException> { array.removeFromEnd(4) }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.removeFromEnd(4)
+        }
     }
 
     @Test
     public fun grow() {
         val array = CircularIntArray(1)
         val expectedSize = 32768
-        repeat(expectedSize) { array.addFirst(it) }
+        repeat(expectedSize) {
+            array.addFirst(it)
+        }
         assertEquals(expectedSize, array.size())
     }
 }

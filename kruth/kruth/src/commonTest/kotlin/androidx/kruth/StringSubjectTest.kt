@@ -43,7 +43,9 @@ class StringSubjectTest {
 
     @Test
     fun stringContainsFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").contains("d") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").contains("d")
+        }
     }
 
     @Test
@@ -58,12 +60,16 @@ class StringSubjectTest {
 
     @Test
     fun hasLengthFails() {
-        assertFailsWith<AssertionError> { assertThat("kurt").hasLength(5) }
+        assertFailsWith<AssertionError> {
+            assertThat("kurt").hasLength(5)
+        }
     }
 
     @Test
     fun hasLengthNegative() {
-        assertFailsWith<IllegalArgumentException> { assertThat("kurt").hasLength(-1) }
+        assertFailsWith<IllegalArgumentException> {
+            assertThat("kurt").hasLength(-1)
+        }
     }
 
     @Test
@@ -73,12 +79,16 @@ class StringSubjectTest {
 
     @Test
     fun stringIsEmptyFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").isEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").isEmpty()
+        }
     }
 
     @Test
     fun stringIsEmptyFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).isEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).isEmpty()
+        }
     }
 
     @Test
@@ -88,12 +98,16 @@ class StringSubjectTest {
 
     @Test
     fun stringIsNotEmptyFail() {
-        assertFailsWith<AssertionError> { assertThat("").isNotEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat("").isNotEmpty()
+        }
     }
 
     @Test
     fun stringIsNotEmptyFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).isNotEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).isNotEmpty()
+        }
     }
 
     @Test
@@ -110,7 +124,9 @@ class StringSubjectTest {
 
     @Test
     fun stringDoesNotContainFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").doesNotContain("b") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").doesNotContain("b")
+        }
     }
 
     @Test
@@ -120,7 +136,9 @@ class StringSubjectTest {
 
     @Test
     fun stringStartsWithFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").startsWith("bc") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").startsWith("bc")
+        }
     }
 
     @Test
@@ -130,7 +148,9 @@ class StringSubjectTest {
 
     @Test
     fun stringEndsWithFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").endsWith("ab") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").endsWith("ab")
+        }
     }
 
     @Test
@@ -150,17 +170,23 @@ class StringSubjectTest {
 
     @Test
     fun stringMatchesStringWithFail() {
-        assertFailsWith<AssertionError> { assertThat("abcaqadev").matches(".*aaa.*") }
+        assertFailsWith<AssertionError> {
+            assertThat("abcaqadev").matches(".*aaa.*")
+        }
     }
 
     @Test
     fun stringMatchesStringFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).matches(".*aaa.*") }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).matches(".*aaa.*")
+        }
     }
 
     @Test
     fun stringMatchesStringLiteralFail() {
-        assertFailsWith<AssertionError> { assertThat("\$abc").matches("\$abc") }
+        assertFailsWith<AssertionError> {
+            assertThat("\$abc").matches("\$abc")
+        }
     }
 
     @Test
@@ -170,17 +196,23 @@ class StringSubjectTest {
 
     @Test
     fun stringMatchesPatternWithFail() {
-        assertFailsWith<AssertionError> { assertThat("abcaqadev").matches(".*aaa.*".toRegex()) }
+        assertFailsWith<AssertionError> {
+            assertThat("abcaqadev").matches(".*aaa.*".toRegex())
+        }
     }
 
     @Test
     fun stringMatchesPatternFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).matches(".*aaa.*".toRegex()) }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).matches(".*aaa.*".toRegex())
+        }
     }
 
     @Test
     fun stringMatchesPatternLiteralFail() {
-        assertFailsWith<AssertionError> { assertThat("\$abc").matches("\$abc".toRegex()) }
+        assertFailsWith<AssertionError> {
+            assertThat("\$abc").matches("\$abc".toRegex())
+        }
     }
 
     @Test
@@ -190,12 +222,16 @@ class StringSubjectTest {
 
     @Test
     fun stringDoesNotMatchStringWithFail() {
-        assertFailsWith<AssertionError> { assertThat("abcaaadev").doesNotMatch(".*aaa.*") }
+        assertFailsWith<AssertionError> {
+            assertThat("abcaaadev").doesNotMatch(".*aaa.*")
+        }
     }
 
     @Test
     fun stringDoesNotMatchStringFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).doesNotMatch(".*aaa.*") }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).doesNotMatch(".*aaa.*")
+        }
     }
 
     @Test
@@ -226,18 +262,24 @@ class StringSubjectTest {
     @Test
     fun stringContainsMatchString() {
         assertThat("aba").containsMatch(".*b.*")
-        assertFailsWith<AssertionError> { assertThat("aaa").containsMatch(".*b.*") }
+        assertFailsWith<AssertionError> {
+            assertThat("aaa").containsMatch(".*b.*")
+        }
     }
 
     @Test
     fun stringContainsMatchStringFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).containsMatch(".*b.*") }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).containsMatch(".*b.*")
+        }
     }
 
     @Test
     fun stringContainsMatchPattern() {
         assertThat("aba").containsMatch(".*b.*".toRegex())
-        assertFailsWith<AssertionError> { assertThat("aaa").containsMatch(".*b.*".toRegex()) }
+        assertFailsWith<AssertionError> {
+            assertThat("aaa").containsMatch(".*b.*".toRegex())
+        }
     }
 
     @Test
@@ -250,18 +292,26 @@ class StringSubjectTest {
     @Test
     fun stringDoesNotContainMatchString() {
         assertThat("aaa").doesNotContainMatch(".*b.*")
-        assertFailsWith<AssertionError> { assertThat("aba").doesNotContainMatch(".*b.*") }
-        assertFailsWith<AssertionError> { assertThat("zzabazz").doesNotContainMatch(".b.") }
+        assertFailsWith<AssertionError> {
+            assertThat("aba").doesNotContainMatch(".*b.*")
+        }
+        assertFailsWith<AssertionError> {
+            assertThat("zzabazz").doesNotContainMatch(".b.")
+        }
     }
 
     @Test
     fun stringDoesNotContainMatchStringUsesFind() {
-        assertFailsWith<AssertionError> { assertThat("aba").doesNotContainMatch("[b]") }
+        assertFailsWith<AssertionError> {
+            assertThat("aba").doesNotContainMatch("[b]")
+        }
     }
 
     @Test
     fun stringDoesNotContainMatchStringUsesFindFailNull() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).doesNotContainMatch("[b]") }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).doesNotContainMatch("[b]")
+        }
     }
 
     @Test
@@ -291,7 +341,9 @@ class StringSubjectTest {
 
     @Test
     fun stringEqualityIgnoringCaseFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").ignoringCase().isEqualTo("abd") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").ignoringCase().isEqualTo("abd")
+        }
     }
 
     @Test
@@ -303,7 +355,9 @@ class StringSubjectTest {
 
     @Test
     fun stringEqualityIgnoringCaseFailWithNullExpectedString() {
-        assertFailsWith<AssertionError> { assertThat("abc").ignoringCase().isEqualTo(null) }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").ignoringCase().isEqualTo(null)
+        }
     }
 
     @Test
@@ -323,7 +377,9 @@ class StringSubjectTest {
 
     @Test
     fun stringInequalityIgnoringCaseFail() {
-        assertFailsWith<AssertionError> { assertThat("café").ignoringCase().isNotEqualTo("CAFÉ") }
+        assertFailsWith<AssertionError> {
+            assertThat("café").ignoringCase().isNotEqualTo("CAFÉ")
+        }
     }
 
     @Test
@@ -361,17 +417,23 @@ class StringSubjectTest {
 
     @Test
     fun stringContainsIgnoringCaseFail() {
-        assertFailsWith<AssertionError> { assertThat("abc").ignoringCase().contains("d") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").ignoringCase().contains("d")
+        }
     }
 
     @Test
     fun stringContainsIgnoringCaseFailBecauseTooLarge() {
-        assertFailsWith<AssertionError> { assertThat("abc").ignoringCase().contains("abcc") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").ignoringCase().contains("abcc")
+        }
     }
 
     @Test
     fun stringContainsIgnoringCaseFailBecauseNullSubject() {
-        assertFailsWith<AssertionError> { assertThat(null as String?).ignoringCase().contains("d") }
+        assertFailsWith<AssertionError> {
+            assertThat(null as String?).ignoringCase().contains("d")
+        }
     }
 
     @Test
@@ -387,12 +449,16 @@ class StringSubjectTest {
 
     @Test
     fun stringDoesNotContainIgnoringCaseFail() {
-        assertFailsWith<AssertionError> { assertThat("äbc").ignoringCase().doesNotContain("Äb") }
+        assertFailsWith<AssertionError> {
+            assertThat("äbc").ignoringCase().doesNotContain("Äb")
+        }
     }
 
     @Test
     fun stringDoesNotContainIgnoringCaseFailWithEmptyString() {
-        assertFailsWith<AssertionError> { assertThat("abc").ignoringCase().doesNotContain("") }
+        assertFailsWith<AssertionError> {
+            assertThat("abc").ignoringCase().doesNotContain("")
+        }
     }
 
     @Test

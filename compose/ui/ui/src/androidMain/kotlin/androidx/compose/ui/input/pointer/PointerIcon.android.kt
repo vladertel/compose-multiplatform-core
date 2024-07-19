@@ -21,7 +21,8 @@ import android.view.PointerIcon.TYPE_DEFAULT
 import android.view.PointerIcon.TYPE_HAND
 import android.view.PointerIcon.TYPE_TEXT
 
-internal class AndroidPointerIconType(val type: Int) : PointerIcon {
+internal class AndroidPointerIconType(val type: Int) :
+    PointerIcon {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -42,7 +43,8 @@ internal class AndroidPointerIconType(val type: Int) : PointerIcon {
     }
 }
 
-internal class AndroidPointerIcon(val pointerIcon: android.view.PointerIcon) : PointerIcon {
+internal class AndroidPointerIcon(val pointerIcon: android.view.PointerIcon) :
+    PointerIcon {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -61,12 +63,17 @@ internal class AndroidPointerIcon(val pointerIcon: android.view.PointerIcon) : P
     }
 }
 
-/** Creates [PointerIcon] from [android.view.PointerIcon] */
+/**
+ * Creates [PointerIcon] from [android.view.PointerIcon]
+ */
 fun PointerIcon(pointerIcon: android.view.PointerIcon): PointerIcon =
     AndroidPointerIcon(pointerIcon)
 
-/** Creates [PointerIcon] from pointer icon type (see [android.view.PointerIcon.getSystemIcon] */
-fun PointerIcon(pointerIconType: Int): PointerIcon = AndroidPointerIconType(pointerIconType)
+/**
+ * Creates [PointerIcon] from pointer icon type (see [android.view.PointerIcon.getSystemIcon]
+ */
+fun PointerIcon(pointerIconType: Int): PointerIcon =
+    AndroidPointerIconType(pointerIconType)
 
 internal actual val pointerIconDefault: PointerIcon = AndroidPointerIconType(TYPE_DEFAULT)
 internal actual val pointerIconCrosshair: PointerIcon = AndroidPointerIconType(TYPE_CROSSHAIR)

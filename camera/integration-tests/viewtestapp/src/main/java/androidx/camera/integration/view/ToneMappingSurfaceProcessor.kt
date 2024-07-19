@@ -41,10 +41,9 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
 
     companion object {
         // A fragment shader that applies a yellow hue.
-        private val TONE_MAPPING_SHADER_PROVIDER =
-            object : ShaderProvider {
-                override fun createFragmentShader(sampler: String, fragCoords: String): String {
-                    return """
+        private val TONE_MAPPING_SHADER_PROVIDER = object : ShaderProvider {
+            override fun createFragmentShader(sampler: String, fragCoords: String): String {
+                return """
                     #extension GL_OES_EGL_image_external : require
                     precision mediump float;
                     uniform samplerExternalOES $sampler;
@@ -58,8 +57,8 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
                            1.0);
                      }
                     """
-                }
             }
+        }
 
         private const val GL_THREAD_NAME = "ToneMappingSurfaceProcessor"
     }
@@ -83,7 +82,9 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
         glThread.start()
         glHandler = Handler(glThread.looper)
         glExecutor = newHandlerExecutor(glHandler)
-        glExecutor.execute { glRenderer.init(DynamicRange.SDR, TONE_MAPPING_SHADER_PROVIDER) }
+        glExecutor.execute {
+            glRenderer.init(DynamicRange.SDR, TONE_MAPPING_SHADER_PROVIDER)
+        }
     }
 
     override fun onInputSurface(surfaceRequest: SurfaceRequest) {
@@ -95,8 +96,7 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
         surfaceRequested = true
         val surfaceTexture = SurfaceTexture(glRenderer.textureName)
         surfaceTexture.setDefaultBufferSize(
-            surfaceRequest.resolution.width,
-            surfaceRequest.resolution.height
+            surfaceRequest.resolution.width, surfaceRequest.resolution.height
         )
         val surface = Surface(surfaceTexture)
         surfaceRequest.provideSurface(surface, glExecutor) {
@@ -114,13 +114,12 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
             surfaceOutput.close()
             return
         }
-        val surface =
-            surfaceOutput.getSurface(glExecutor) {
-                surfaceOutput.close()
-                outputSurfaces.remove(surfaceOutput)?.let { removedSurface ->
-                    glRenderer.unregisterOutputSurface(removedSurface)
-                }
+        val surface = surfaceOutput.getSurface(glExecutor) {
+            surfaceOutput.close()
+            outputSurfaces.remove(surfaceOutput)?.let { removedSurface ->
+                glRenderer.unregisterOutputSurface(removedSurface)
             }
+        }
         glRenderer.registerOutputSurface(surface)
         outputSurfaces[surfaceOutput] = surface
     }
@@ -131,7 +130,9 @@ class ToneMappingSurfaceProcessor : SurfaceProcessor, OnFrameAvailableListener {
     }
 
     fun release() {
-        glExecutor.execute { releaseInternal() }
+        glExecutor.execute {
+            releaseInternal()
+        }
     }
 
     private fun releaseInternal() {

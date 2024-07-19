@@ -66,14 +66,18 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         val largePaddingSize = itemSize
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(containerSize).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(containerSize)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
-                contentPadding =
-                    PaddingValues(mainAxis = largePaddingSize, crossAxis = smallPaddingSize)
+                contentPadding = PaddingValues(
+                    mainAxis = largePaddingSize,
+                    crossAxis = smallPaddingSize
+                )
             ) {
                 items(listOf(1)) {
                     Spacer(
-                        Modifier.then(fillParentMaxCrossAxis())
+                        Modifier
+                            .then(fillParentMaxCrossAxis())
                             .mainAxisSize(itemSize)
                             .testTag(ItemTag)
                     )
@@ -81,8 +85,7 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
             }
         }
 
-        rule
-            .onNodeWithTag(ItemTag)
+        rule.onNodeWithTag(ItemTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertStartPositionInRootIsEqualTo(largePaddingSize)
             .assertCrossAxisSizeIsEqualTo(containerSize - smallPaddingSize * 2)
@@ -90,8 +93,7 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
 
         state.scrollBy(largePaddingSize)
 
-        rule
-            .onNodeWithTag(ItemTag)
+        rule.onNodeWithTag(ItemTag)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSize)
     }
@@ -101,16 +103,17 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         lateinit var state: TvLazyListState
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(itemSize * 2).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(itemSize * 2)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
                 contentPadding = PaddingValues(mainAxis = itemSize)
             ) {
                 items(listOf(1)) {
                     Spacer(
-                        Modifier.then(fillParentMaxCrossAxis())
+                        Modifier
+                            .then(fillParentMaxCrossAxis())
                             .mainAxisSize(itemSize)
-                            .testTag(ItemTag)
-                    )
+                            .testTag(ItemTag))
                 }
             }
         }
@@ -128,7 +131,8 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         val padding = itemSize * 1.5f
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
                 contentPadding = PaddingValues(mainAxis = padding)
             ) {
@@ -138,18 +142,25 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
             }
         }
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(padding)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize + padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 2 + padding)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize + padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2 + padding)
 
         state.scrollBy(padding)
 
         state.assertScrollPosition(1, padding - itemSize)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 2)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize * 3)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize * 3)
     }
 
     @Test
@@ -158,7 +169,8 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         val padding = itemSize * 1.5f
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(itemSize + padding * 2).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(itemSize + padding * 2)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
                 contentPadding = PaddingValues(mainAxis = padding)
             ) {
@@ -173,10 +185,14 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
 
         state.assertScrollPosition(1, itemSize * 0.5f)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(itemSize * 1.5f - padding)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize * 2.5f - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 3.5f - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize * 4.5f - padding)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(itemSize * 1.5f - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2.5f - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 3.5f - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize * 4.5f - padding)
     }
 
     @Test
@@ -185,7 +201,8 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         val padding = itemSize * 1.5f
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
                 contentPadding = PaddingValues(mainAxis = padding)
             ) {
@@ -199,18 +216,24 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
 
         state.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 2 - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize * 3 - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2 - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize * 3 - padding)
 
         // there are no space to scroll anymore, so it should change nothing
         state.scrollBy(10.dp)
 
         state.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 2 - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize * 3 - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2 - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize * 3 - padding)
     }
 
     @Test
@@ -219,7 +242,8 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         val padding = itemSize * 1.5f
         rule.setContent {
             LazyColumnOrRow(
-                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize)
+                    .testTag(LazyListTag),
                 state = rememberTvLazyListState().also { state = it },
                 contentPadding = PaddingValues(mainAxis = padding)
             ) {
@@ -234,9 +258,12 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
 
         state.assertScrollPosition(2, itemSize / 2)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize * 1.5f - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize * 2.5f - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize * 3.5f - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize * 1.5f - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize * 2.5f - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize * 3.5f - padding)
     }
 
     @Test
@@ -244,28 +271,27 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         rule.setContent {
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 LazyColumnOrRow(
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        )
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    )
                 ) {
-                    items(listOf(1)) { Spacer(Modifier.requiredSize(itemSize).testTag(ItemTag)) }
+                    items(listOf(1)) {
+                        Spacer(Modifier.requiredSize(itemSize).testTag(ItemTag))
+                    }
                 }
             }
         }
 
-        rule
-            .onNodeWithTag(ItemTag)
+        rule.onNodeWithTag(ItemTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(2.dp)
             .assertStartPositionInRootIsEqualTo(4.dp)
             .assertCrossAxisSizeIsEqualTo(itemSize)
             .assertMainAxisSizeIsEqualTo(itemSize)
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(itemSize + 2.dp + 6.dp)
@@ -277,19 +303,17 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         rule.setContent {
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 LazyColumnOrRow(
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        )
-                ) {}
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    )
+                ) { }
             }
         }
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(8.dp)
@@ -301,21 +325,19 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         rule.setContent {
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 LazyColumnOrRow(
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        )
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    )
                 ) {
-                    items(0) {}
+                    items(0) { }
                 }
             }
         }
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(8.dp)
@@ -333,21 +355,24 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                 reverseLayout = true,
                 state = rememberTvLazyListState().also { state = it },
                 modifier = Modifier.requiredSize(listSize),
-                contentPadding =
-                    PaddingValues(beforeContent = topPadding, afterContent = bottomPadding),
+                contentPadding = PaddingValues(
+                    beforeContent = topPadding,
+                    afterContent = bottomPadding
+                ),
             ) {
-                items(3) { index -> Box(Modifier.requiredSize(itemSize).testTag("$index")) }
+                items(3) { index ->
+                    Box(Modifier.requiredSize(itemSize).testTag("$index"))
+                }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(listSize - bottomPadding - itemSize)
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(listSize - bottomPadding - itemSize * 2)
         // Partially visible.
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(-itemSize / 2)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(-itemSize / 2)
 
         // Scroll to the top.
         state.scrollBy(itemSize * 2.5f)
@@ -368,18 +393,18 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = smallPaddingSize)
                 ) {
-                    items(2) { Box(Modifier.testTag("$it").fillParentMaxSize()) }
+                    items(2) {
+                        Box(Modifier.testTag("$it").fillParentMaxSize())
+                    }
                 }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertMainAxisSizeIsEqualTo(itemSize)
 
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize + itemSize)
             .assertMainAxisSizeIsEqualTo(itemSize)
 
@@ -392,13 +417,11 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
             }
         }
 
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertMainAxisSizeIsEqualTo(itemSize)
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize - itemSize)
             .assertMainAxisSizeIsEqualTo(itemSize)
     }
@@ -413,14 +436,18 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("1").assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -440,18 +467,23 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollBy(itemSize)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(1, 0.dp)
@@ -469,18 +501,23 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollTo(3)
 
-        rule.onNodeWithTag("1").assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -498,18 +535,23 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollBy(itemSize * 3)
 
-        rule.onNodeWithTag("1").assertIsNotDisplayed()
+        rule.onNodeWithTag("1")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -528,16 +570,20 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollBy(itemSize * 4.5f)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(-itemSize * 0.5f)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(-itemSize * 0.5f)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, itemSize * 1.5f)
@@ -555,12 +601,15 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize * 2)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -579,18 +628,23 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize * 2)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollBy(itemSize * 2)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(2, 0.dp)
@@ -608,20 +662,26 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize * 2)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollTo(3)
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -639,20 +699,26 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize * 2)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
 
         state.scrollBy(itemSize * 3)
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -671,7 +737,9 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                     state = state,
                     contentPadding = PaddingValues(mainAxis = itemSize * 2)
                 ) {
-                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
+                    items(4) {
+                        Box(Modifier.testTag("$it").size(itemSize))
+                    }
                 }
             }
         }
@@ -682,7 +750,8 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
                 itemSize * 3 // all items
         )
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, itemSize * 3.5f)
@@ -690,17 +759,15 @@ class LazyListsContentPaddingTest(orientation: Orientation) :
         }
     }
 
-    private fun TvLazyListState.assertScrollPosition(index: Int, offset: Dp) =
-        with(rule.density) {
-            assertThat(firstVisibleItemIndex).isEqualTo(index)
-            assertThat(firstVisibleItemScrollOffset.toDp().value).isWithin(0.5f).of(offset.value)
-        }
+    private fun TvLazyListState.assertScrollPosition(index: Int, offset: Dp) = with(rule.density) {
+        assertThat(firstVisibleItemIndex).isEqualTo(index)
+        assertThat(firstVisibleItemScrollOffset.toDp().value).isWithin(0.5f).of(offset.value)
+    }
 
-    private fun TvLazyListState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) =
-        with(rule.density) {
-            assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
-                .isEqualTo(from.roundToPx() to to.roundToPx())
-        }
+    private fun TvLazyListState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) = with(rule.density) {
+        assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
+            .isEqualTo(from.roundToPx() to to.roundToPx())
+    }
 
     private fun TvLazyListState.assertVisibleItems(vararg expected: Pair<Int, Dp>) =
         with(rule.density) {

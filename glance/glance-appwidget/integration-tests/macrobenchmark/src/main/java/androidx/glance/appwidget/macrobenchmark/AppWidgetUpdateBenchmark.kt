@@ -35,57 +35,55 @@ import org.junit.runners.Parameterized
 class AppWidgetUpdateBenchmark(
     private val startupMode: StartupMode,
 ) {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
-    @get:Rule val appWidgetHostRule = AppWidgetHostRule()
-
-    @OptIn(ExperimentalMetricApi::class)
-    @Test
-    fun initialUpdate() =
-        benchmarkRule.measureRepeated(
-            packageName = "androidx.glance.appwidget.macrobenchmark.target",
-            metrics =
-                listOf(
-                    TraceSectionMetric(
-                        "appWidgetInitialUpdate",
-                        targetPackageOnly = false
-                    ), // from test
-                    TraceSectionMetric(
-                        "GlanceAppWidget::update",
-                        targetPackageOnly = true
-                    ), // from target
-                ),
-            iterations = 5,
-            compilationMode = CompilationMode.DEFAULT,
-            startupMode = startupMode,
-        ) {
-            runBlocking { appWidgetHostRule.startHost() }
-        }
+    @get:Rule
+    val appWidgetHostRule = AppWidgetHostRule()
 
     @OptIn(ExperimentalMetricApi::class)
     @Test
-    fun appWidgetUpdate() =
-        benchmarkRule.measureRepeated(
-            packageName = "androidx.glance.appwidget.macrobenchmark.target",
-            metrics =
-                listOf(
-                    TraceSectionMetric("appWidgetUpdate", targetPackageOnly = false), // from test
-                    TraceSectionMetric(
-                        "GlanceAppWidget::update",
-                        targetPackageOnly = true
-                    ), // from target
-                ),
-            iterations = 5,
-            compilationMode = CompilationMode.DEFAULT,
-            startupMode = startupMode,
-            setupBlock = { runBlocking { appWidgetHostRule.startHost() } }
-        ) {
-            runBlocking { appWidgetHostRule.updateAppWidget() }
+    fun initialUpdate() = benchmarkRule.measureRepeated(
+        packageName = "androidx.glance.appwidget.macrobenchmark.target",
+        metrics = listOf(
+            TraceSectionMetric("appWidgetInitialUpdate", targetPackageOnly = false), // from test
+            TraceSectionMetric("GlanceAppWidget::update", targetPackageOnly = true), // from target
+        ),
+        iterations = 5,
+        compilationMode = CompilationMode.DEFAULT,
+        startupMode = startupMode,
+    ) {
+       runBlocking {
+           appWidgetHostRule.startHost()
+       }
+    }
+
+    @OptIn(ExperimentalMetricApi::class)
+    @Test
+    fun appWidgetUpdate() = benchmarkRule.measureRepeated(
+        packageName = "androidx.glance.appwidget.macrobenchmark.target",
+        metrics = listOf(
+            TraceSectionMetric("appWidgetUpdate", targetPackageOnly = false), // from test
+            TraceSectionMetric("GlanceAppWidget::update", targetPackageOnly = true), // from target
+        ),
+        iterations = 5,
+        compilationMode = CompilationMode.DEFAULT,
+        startupMode = startupMode,
+        setupBlock = {
+            runBlocking {
+                appWidgetHostRule.startHost()
+            }
         }
+    ) {
+        runBlocking {
+            appWidgetHostRule.updateAppWidget()
+        }
+    }
 
     companion object {
         @Parameterized.Parameters(name = "startup={0}")
         @JvmStatic
-        fun parameters() = listOf(arrayOf(StartupMode.COLD), arrayOf(StartupMode.WARM))
+        fun parameters() =
+            listOf(arrayOf(StartupMode.COLD), arrayOf(StartupMode.WARM))
     }
 }

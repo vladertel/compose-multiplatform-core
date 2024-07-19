@@ -32,8 +32,7 @@ class CanvasTest {
     private val canvas = Canvas(createBitmap(1, 1))
 
     @Suppress("DEPRECATION")
-    @Test
-    fun withSave() {
+    @Test fun withSave() {
         val beforeCount = canvas.saveCount
 
         canvas.matrix.getValues(values)
@@ -52,13 +51,13 @@ class CanvasTest {
         assertEquals(beforeCount, canvas.saveCount)
     }
 
-    @Test
-    fun withTranslation() {
+    @Test fun withTranslation() {
         val beforeCount = canvas.saveCount
         canvas.withTranslation(x = 16.0f, y = 32.0f) {
             assertThat(beforeCount).isLessThan(saveCount)
 
-            @Suppress("DEPRECATION") matrix.getValues(values) // will work for a software canvas
+            @Suppress("DEPRECATION")
+            matrix.getValues(values) // will work for a software canvas
 
             assertEquals(16.0f, values[Matrix.MTRANS_X])
             assertEquals(32.0f, values[Matrix.MTRANS_Y])
@@ -66,13 +65,13 @@ class CanvasTest {
         assertEquals(beforeCount, canvas.saveCount)
     }
 
-    @Test
-    fun withRotation() {
+    @Test fun withRotation() {
         val beforeCount = canvas.saveCount
         canvas.withRotation(degrees = 90.0f, pivotX = 16.0f, pivotY = 32.0f) {
             assertThat(beforeCount).isLessThan(saveCount)
 
-            @Suppress("DEPRECATION") matrix.getValues(values) // will work for a software canvas
+            @Suppress("DEPRECATION")
+            matrix.getValues(values) // will work for a software canvas
 
             assertEquals(48.0f, values[Matrix.MTRANS_X])
             assertEquals(16.0f, values[Matrix.MTRANS_Y])
@@ -82,13 +81,13 @@ class CanvasTest {
         assertEquals(beforeCount, canvas.saveCount)
     }
 
-    @Test
-    fun withScale() {
+    @Test fun withScale() {
         val beforeCount = canvas.saveCount
         canvas.withScale(x = 2.0f, y = 4.0f, pivotX = 16.0f, pivotY = 32.0f) {
             assertThat(beforeCount).isLessThan(saveCount)
 
-            @Suppress("DEPRECATION") matrix.getValues(values) // will work for a software canvas
+            @Suppress("DEPRECATION")
+            matrix.getValues(values) // will work for a software canvas
 
             assertEquals(-16.0f, values[Matrix.MTRANS_X])
             assertEquals(-96.0f, values[Matrix.MTRANS_Y])
@@ -98,13 +97,13 @@ class CanvasTest {
         assertEquals(beforeCount, canvas.saveCount)
     }
 
-    @Test
-    fun withSkew() {
+    @Test fun withSkew() {
         val beforeCount = canvas.saveCount
         canvas.withSkew(x = 2.0f, y = 4.0f) {
             assertThat(beforeCount).isLessThan(saveCount)
 
-            @Suppress("DEPRECATION") matrix.getValues(values) // will work for a software canvas
+            @Suppress("DEPRECATION")
+            matrix.getValues(values) // will work for a software canvas
 
             assertEquals(2.0f, values[Matrix.MSKEW_X])
             assertEquals(4.0f, values[Matrix.MSKEW_Y])
@@ -113,8 +112,7 @@ class CanvasTest {
     }
 
     @Suppress("DEPRECATION")
-    @Test
-    fun withMatrix() {
+    @Test fun withMatrix() {
         val originMatrix = canvas.matrix
 
         val inputMatrix = Matrix()
@@ -132,15 +130,16 @@ class CanvasTest {
         assertEquals(beforeCount, canvas.saveCount)
     }
 
-    @Test
-    fun withClipRect() {
+    @Test fun withClipRect() {
         val b = createBitmap(4, 4)
 
         // clipRect(Int...)
         // Use white and red
         b.applyCanvas {
             drawARGB(255, 255, 255, 255)
-            withClip(0, 0, 2, 2) { drawARGB(255, 255, 0, 0) }
+            withClip(0, 0, 2, 2) {
+                drawARGB(255, 255, 0, 0)
+            }
         }
         assertEquals(0xff_ff_00_00.toInt(), b[1, 1])
         assertEquals(0xff_ff_ff_ff.toInt(), b[3, 3])
@@ -149,7 +148,9 @@ class CanvasTest {
         // Use black and green
         b.applyCanvas {
             drawARGB(255, 0, 0, 0)
-            withClip(0.0f, 0.0f, 2.0f, 2.0f) { drawARGB(255, 0, 255, 0) }
+            withClip(0.0f, 0.0f, 2.0f, 2.0f) {
+                drawARGB(255, 0, 255, 0)
+            }
         }
         assertEquals(0xff_00_ff_00.toInt(), b[1, 1])
         assertEquals(0xff_00_00_00.toInt(), b[3, 3])
@@ -158,7 +159,9 @@ class CanvasTest {
         // Use white and red
         b.applyCanvas {
             drawARGB(255, 255, 255, 255)
-            withClip(Rect(0, 0, 2, 2)) { drawARGB(255, 255, 0, 0) }
+            withClip(Rect(0, 0, 2, 2)) {
+                drawARGB(255, 255, 0, 0)
+            }
         }
         assertEquals(0xff_ff_00_00.toInt(), b[1, 1])
         assertEquals(0xff_ff_ff_ff.toInt(), b[3, 3])
@@ -167,14 +170,15 @@ class CanvasTest {
         // Use black and green
         b.applyCanvas {
             drawARGB(255, 0, 0, 0)
-            withClip(RectF(0.0f, 0.0f, 2.0f, 2.0f)) { drawARGB(255, 0, 255, 0) }
+            withClip(RectF(0.0f, 0.0f, 2.0f, 2.0f)) {
+                drawARGB(255, 0, 255, 0)
+            }
         }
         assertEquals(0xff_00_ff_00.toInt(), b[1, 1])
         assertEquals(0xff_00_00_00.toInt(), b[3, 3])
     }
 
-    @Test
-    fun withClipPath() {
+    @Test fun withClipPath() {
         val b = createBitmap(4, 4)
 
         b.applyCanvas {

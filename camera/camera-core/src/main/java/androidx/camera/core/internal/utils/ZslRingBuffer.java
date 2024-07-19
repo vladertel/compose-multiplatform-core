@@ -17,6 +17,7 @@
 package androidx.camera.core.internal.utils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageInfo;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.impl.CameraCaptureMetaData.AeState;
@@ -36,6 +37,7 @@ import androidx.camera.core.impl.CameraCaptureResults;
  * - AWB Converged
  * </p>
  */
+@RequiresApi(21)
 public final class ZslRingBuffer extends ArrayRingBuffer<ImageProxy> {
 
     public ZslRingBuffer(int ringBufferCapacity,

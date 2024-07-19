@@ -26,10 +26,7 @@ import kotlinx.coroutines.sync.withLock
  * SingleProcessCoordinator does coordination within a single process. It is used as the default
  * [InterProcessCoordinator] immplementation unless otherwise specified.
  */
-internal class SingleProcessCoordinator(
-    /** The canonical file path of the file managed by [SingleProcessCoordinator]. */
-    private val filePath: String
-) : InterProcessCoordinator {
+internal class SingleProcessCoordinator() : InterProcessCoordinator {
     private val mutex = Mutex()
     private val version = AtomicInt(0)
 
@@ -37,14 +34,18 @@ internal class SingleProcessCoordinator(
 
     // run block with the exclusive lock
     override suspend fun <T> lock(block: suspend () -> T): T {
-        return mutex.withLock { block() }
+        return mutex.withLock {
+            block()
+        }
     }
 
     // run block with an attempt to get the exclusive lock, still run even if
     // attempt fails. Pass a boolean to indicate if the attempt succeeds.
     @OptIn(ExperimentalContracts::class) // withTryLock
     override suspend fun <T> tryLock(block: suspend (Boolean) -> T): T {
-        return mutex.withTryLock { block(it) }
+        return mutex.withTryLock {
+            block(it)
+        }
     }
 
     // get the current version

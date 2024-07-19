@@ -80,12 +80,8 @@ class WorkConstraintsTrackerTest {
         val workConstraintsTracker = WorkConstraintsTracker(tracker)
         val executor = Executors.newSingleThreadExecutor()
         val callback = Callback()
-        val job =
-            workConstraintsTracker.listen(
-                TEST_WORKSPECS[0],
-                executor.asCoroutineDispatcher(),
-                callback
-            )
+        val job = workConstraintsTracker.listen(TEST_WORKSPECS[0],
+            executor.asCoroutineDispatcher(), callback)
         assertThat(callback.channel.receive()).isEqualTo(ConstraintsNotMet)
         tracker.constraintState = true
         assertThat(callback.channel.receive()).isEqualTo(ConstraintsMet)
@@ -120,19 +116,17 @@ class WorkConstraintsTrackerTest {
 
     class Callback : OnConstraintsStateChangedListener {
         val channel = Channel<ConstraintsState>(10)
-
         override fun onConstraintsStateChanged(workSpec: WorkSpec, state: ConstraintsState) {
             channel.trySend(state)
         }
     }
 }
 
-private val TEST_WORKSPECS =
-    listOf(
-        WorkSpec("A", "Worker1"),
-        WorkSpec("B", "Worker2"),
-        WorkSpec("C", "Worker3"),
-    )
+private val TEST_WORKSPECS = listOf(
+    WorkSpec("A", "Worker1"),
+    WorkSpec("B", "Worker2"),
+    WorkSpec("C", "Worker3"),
+)
 private val TEST_WORKSPEC_IDS = TEST_WORKSPECS.map { it.id }
 
 internal fun WorkConstraintsTracker(

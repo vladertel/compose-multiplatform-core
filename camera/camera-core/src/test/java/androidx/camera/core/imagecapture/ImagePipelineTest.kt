@@ -21,8 +21,6 @@ import android.graphics.Rect
 import android.hardware.camera2.CameraDevice
 import android.os.Build
 import android.os.Looper.getMainLooper
-import android.util.Size
-import androidx.camera.core.DynamicRange.HLG_10_BIT
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY
 import androidx.camera.core.ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
@@ -34,7 +32,6 @@ import androidx.camera.core.SafeCloseImageReaderProxy
 import androidx.camera.core.imagecapture.CaptureNode.MAX_IMAGES
 import androidx.camera.core.imagecapture.ImagePipeline.JPEG_QUALITY_MAX_QUALITY
 import androidx.camera.core.imagecapture.ImagePipeline.JPEG_QUALITY_MIN_LATENCY
-import androidx.camera.core.imagecapture.TakePictureManager.CaptureError
 import androidx.camera.core.imagecapture.Utils.CROP_RECT
 import androidx.camera.core.imagecapture.Utils.FULL_RECT
 import androidx.camera.core.imagecapture.Utils.HEIGHT
@@ -46,24 +43,20 @@ import androidx.camera.core.imagecapture.Utils.SIZE
 import androidx.camera.core.imagecapture.Utils.WIDTH
 import androidx.camera.core.imagecapture.Utils.createCameraCaptureResultImageInfo
 import androidx.camera.core.imagecapture.Utils.injectRotationOptionQuirk
-import androidx.camera.core.impl.CaptureConfig.OPTION_JPEG_QUALITY
+import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.CaptureConfig.OPTION_ROTATION
 import androidx.camera.core.impl.ImageCaptureConfig
 import androidx.camera.core.impl.ImageCaptureConfig.OPTION_BUFFER_FORMAT
 import androidx.camera.core.impl.ImageInputConfig
-import androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_DYNAMIC_RANGE
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.IoConfig.OPTION_IO_EXECUTOR
 import androidx.camera.testing.impl.TestImageUtil.createJpegBytes
 import androidx.camera.testing.impl.TestImageUtil.createJpegFakeImageProxy
-import androidx.camera.testing.impl.TestImageUtil.createJpegrBytes
-import androidx.camera.testing.impl.TestImageUtil.createJpegrFakeImageProxy
 import androidx.camera.testing.impl.TestImageUtil.createYuvFakeImageProxy
 import androidx.camera.testing.impl.fakes.FakeImageInfo
 import androidx.camera.testing.impl.fakes.FakeImageReaderProxy
 import androidx.camera.testing.impl.fakes.GrayscaleImageEffect
-import androidx.core.util.Pair
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Before
@@ -74,7 +67,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 
-/** Unit tests for [ImagePipeline]. */
+/**
+ * Unit tests for [ImagePipeline].
+ */
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -93,7 +88,14 @@ class ImagePipelineTest {
 
     @Before
     fun setUp() {
-        imageCaptureConfig = createImageCaptureConfig()
+        // Create ImageCaptureConfig.
+        val builder = ImageCapture.Builder()
+            .setCaptureOptionUnpacker { _, builder ->
+                builder.templateType = TEMPLATE_TYPE
+            }
+        builder.mutableConfig.insertOption(OPTION_IO_EXECUTOR, mainThreadExecutor())
+        builder.mutableConfig.insertOption(ImageInputConfig.OPTION_INPUT_FORMAT, ImageFormat.JPEG)
+        imageCaptureConfig = builder.useCaseConfig
         imagePipeline = ImagePipeline(imageCaptureConfig, SIZE)
     }
 
@@ -108,16 +110,18 @@ class ImagePipelineTest {
         val imageReaderProxyProvider = ImageReaderProxyProvider { _, _, _, _, _ ->
             FakeImageReaderProxy(MAX_IMAGES)
         }
-        val builder =
-            ImageCapture.Builder()
-                .setImageReaderProxyProvider(imageReaderProxyProvider)
-                .setCaptureOptionUnpacker { _, builder -> builder.templateType = TEMPLATE_TYPE }
+        val builder = ImageCapture.Builder()
+            .setImageReaderProxyProvider(imageReaderProxyProvider)
+            .setCaptureOptionUnpacker { _, builder ->
+                builder.templateType = TEMPLATE_TYPE
+            }
         builder.mutableConfig.insertOption(ImageInputConfig.OPTION_INPUT_FORMAT, ImageFormat.JPEG)
         // Act.
         val pipeline = ImagePipeline(builder.useCaseConfig, SIZE)
         // Assert.
-        assertThat(pipeline.captureNode.inputEdge.imageReaderProxyProvider)
-            .isEqualTo(imageReaderProxyProvider)
+        assertThat(pipeline.captureNode.inputEdge.imageReaderProxyProvider).isEqualTo(
+            imageReaderProxyProvider
+        )
     }
 
     @Test
@@ -130,12 +134,7 @@ class ImagePipelineTest {
         // Arrange: close the pipeline and create a new one not expecting metadata.
         imagePipeline.close()
         imagePipeline =
-            ImagePipeline(
-                imageCaptureConfig,
-                SIZE,
-                /*cameraEffect=*/ null,
-                /*isVirtualCamera=*/ true
-            )
+            ImagePipeline(imageCaptureConfig, SIZE, /*cameraEffect=*/null, /*isVirtualCamera=*/true)
 
         // Act & assert: send and receive ImageProxy.
         sendInMemoryRequest_receivesImageProxy()
@@ -149,11 +148,13 @@ class ImagePipelineTest {
     @Test
     fun createPipelineWithEffect_processingNodeContainsEffect() {
         assertThat(
-                ImagePipeline(imageCaptureConfig, SIZE, GrayscaleImageEffect(), false)
-                    .processingNode
-                    .mImageProcessor
-            )
-            .isNotNull()
+            ImagePipeline(
+                imageCaptureConfig,
+                SIZE,
+                GrayscaleImageEffect(),
+                false
+            ).processingNode.mImageProcessor
+        ).isNotNull()
     }
 
     @Test
@@ -164,25 +165,24 @@ class ImagePipelineTest {
         // Act: create requests
         val result =
             imagePipeline.createRequests(IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null))
-
         // Assert: CameraRequest is constructed correctly.
-        verifyCaptureRequest(captureInput, result)
-    }
+        val cameraRequest = result.first!!
+        val captureConfig = cameraRequest.captureConfigs.single()
+        assertThat(captureConfig.cameraCaptureCallbacks)
+            .containsExactly(captureInput.cameraCaptureCallback)
+        assertThat(captureConfig.surfaces).containsExactly(captureInput.surface)
+        assertThat(captureConfig.templateType).isEqualTo(TEMPLATE_TYPE)
+        val jpegQuality = captureConfig.implementationOptions
+            .retrieveOption(CaptureConfig.OPTION_JPEG_QUALITY)
+        assertThat(jpegQuality).isEqualTo(JPEG_QUALITY)
+        assertThat(captureConfig.implementationOptions.retrieveOption(OPTION_ROTATION))
+            .isEqualTo(ROTATION_DEGREES)
 
-    @Config(minSdk = 34)
-    @Test
-    fun createRequests_verifyCameraRequest_whenFormatIsJpegr() {
-        // Arrange.
-        imageCaptureConfig = createImageCaptureConfig(inputFormat = ImageFormat.JPEG_R)
-        imagePipeline = ImagePipeline(imageCaptureConfig, SIZE)
-        val captureInput = imagePipeline.captureNode.inputEdge
-
-        // Act: create requests
-        val result =
-            imagePipeline.createRequests(IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null))
-
-        // Assert: CameraRequest is constructed correctly.
-        verifyCaptureRequest(captureInput, result)
+        // Act: fail the processing request.
+        val processingRequest = result.second!!
+        processingRequest.onCaptureFailure(FAILURE)
+        // Assert: The failure is propagated.
+        assertThat(CALLBACK.captureFailure).isEqualTo(FAILURE)
     }
 
     @Test
@@ -221,108 +221,62 @@ class ImagePipelineTest {
 
     @Test
     fun createRequestWithCroppingAndMaxQuality_cameraRequestJpegQualityIsMaxQuality() {
-        assertThat(getCameraRequestJpegQuality(CROP_RECT, CAPTURE_MODE_MAXIMIZE_QUALITY))
-            .isEqualTo(JPEG_QUALITY_MAX_QUALITY)
+        assertThat(
+            getCameraRequestJpegQuality(
+                CROP_RECT,
+                CAPTURE_MODE_MAXIMIZE_QUALITY
+            )
+        ).isEqualTo(
+            JPEG_QUALITY_MAX_QUALITY
+        )
     }
 
     @Test
     fun createRequestWithCroppingAndMinLatency_cameraRequestJpegQualityIsMinLatency() {
-        assertThat(getCameraRequestJpegQuality(CROP_RECT, CAPTURE_MODE_MINIMIZE_LATENCY))
-            .isEqualTo(JPEG_QUALITY_MIN_LATENCY)
+        assertThat(
+            getCameraRequestJpegQuality(
+                CROP_RECT,
+                CAPTURE_MODE_MINIMIZE_LATENCY
+            )
+        ).isEqualTo(
+            JPEG_QUALITY_MIN_LATENCY
+        )
     }
 
     @Test
     fun createRequestWithoutCroppingAndMaxQuality_cameraRequestJpegQualityIsOriginal() {
-        assertThat(getCameraRequestJpegQuality(FULL_RECT, CAPTURE_MODE_MAXIMIZE_QUALITY))
-            .isEqualTo(JPEG_QUALITY)
-    }
-
-    @Test
-    fun createSessionConfigBuilderWithYuvPostviewEnabled() {
-        // Arrange.
-        val postviewSize = Size(640, 480)
-        imagePipeline =
-            ImagePipeline(
-                imageCaptureConfig,
-                SIZE,
-                null,
-                false,
-                postviewSize,
-                ImageFormat.YUV_420_888
+        assertThat(
+            getCameraRequestJpegQuality(
+                FULL_RECT,
+                CAPTURE_MODE_MAXIMIZE_QUALITY
             )
-
-        // Act: create SessionConfig
-        val sessionConfig = imagePipeline.createSessionConfigBuilder(SIZE).build()
-
-        // Assert: SessionConfig contains the postview output config.
-        assertThat(sessionConfig.postviewOutputConfig).isNotNull()
-        assertThat(sessionConfig.postviewOutputConfig!!.surface.prescribedSize)
-            .isEqualTo(postviewSize)
-        assertThat(sessionConfig.postviewOutputConfig!!.surface.prescribedStreamFormat)
-            .isEqualTo(ImageFormat.YUV_420_888)
+        ).isEqualTo(
+            JPEG_QUALITY
+        )
     }
 
-    @Test
-    fun createSessionConfigBuilderWithJpegPostviewEnabled() {
-        // Arrange.
-        val postviewSize = Size(640, 480)
-        imagePipeline =
-            ImagePipeline(imageCaptureConfig, SIZE, null, false, postviewSize, ImageFormat.JPEG)
-
-        // Act: create SessionConfig
-        val sessionConfig = imagePipeline.createSessionConfigBuilder(SIZE).build()
-
-        // Assert: SessionConfig contains the postview output config.
-        assertThat(sessionConfig.postviewOutputConfig).isNotNull()
-        assertThat(sessionConfig.postviewOutputConfig!!.surface.prescribedSize)
-            .isEqualTo(postviewSize)
-        assertThat(sessionConfig.postviewOutputConfig!!.surface.prescribedStreamFormat)
-            .isEqualTo(ImageFormat.JPEG)
-    }
-
-    @Test
-    fun createCameraRequestWithPostviewEnabled() {
-        // Arrange.
-        val postviewSize = Size(640, 480)
-        imagePipeline =
-            ImagePipeline(
-                imageCaptureConfig,
-                SIZE,
-                null,
-                false,
-                postviewSize,
-                ImageFormat.YUV_420_888
-            )
-
-        // Act: create requests
-        val result =
-            imagePipeline.createRequests(IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null))
-
-        // Assert: isPostviewEnabled is true on CaptureConfig.
-        val cameraRequest = result.first!!
-        val captureConfig = cameraRequest.captureConfigs.single()
-        assertThat(captureConfig.isPostviewEnabled).isTrue()
-    }
-
-    private fun getCameraRequestJpegQuality(cropRect: Rect, @CaptureMode captureMode: Int): Int {
+    private fun getCameraRequestJpegQuality(
+        cropRect: Rect,
+        @CaptureMode captureMode: Int
+    ): Int {
         // Arrange: TakePictureRequest with cropping
-        val request =
-            TakePictureRequest.of(
-                mainThreadExecutor(),
-                null,
-                object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {}
+        val request = TakePictureRequest.of(
+            mainThreadExecutor(), null,
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                }
 
-                    override fun onError(exception: ImageCaptureException) {}
-                },
-                OUTPUT_FILE_OPTIONS,
-                cropRect,
-                SENSOR_TO_BUFFER,
-                ROTATION_DEGREES,
-                JPEG_QUALITY,
-                captureMode,
-                listOf()
-            )
+                override fun onError(exception: ImageCaptureException) {
+                }
+            },
+            OUTPUT_FILE_OPTIONS,
+            cropRect,
+            SENSOR_TO_BUFFER,
+            ROTATION_DEGREES,
+            JPEG_QUALITY,
+            captureMode,
+            listOf()
+        )
 
         // Act: create camera request.
         val result = imagePipeline.createRequests(request, CALLBACK, Futures.immediateFuture(null))
@@ -330,7 +284,9 @@ class ImagePipelineTest {
         // Get JPEG quality and return.
         val cameraRequest = result.first!!
         val captureConfig = cameraRequest.captureConfigs.single()
-        return captureConfig.implementationOptions.retrieveOption(OPTION_JPEG_QUALITY)!!
+        return captureConfig.implementationOptions.retrieveOption(
+            CaptureConfig.OPTION_JPEG_QUALITY
+        )!!
     }
 
     @Test
@@ -349,17 +305,28 @@ class ImagePipelineTest {
 
     @Test
     fun createPipelineWithYuvOutput_getsYuvImage() {
-        val builder =
-            ImageCapture.Builder().setCaptureOptionUnpacker { _, builder ->
-                builder.templateType = TEMPLATE_TYPE
-            }
+        val builder = ImageCapture.Builder().setCaptureOptionUnpacker { _, builder ->
+            builder.templateType = TEMPLATE_TYPE
+        }
         builder.mutableConfig.insertOption(OPTION_BUFFER_FORMAT, ImageFormat.YUV_420_888)
         builder.mutableConfig.insertOption(OPTION_IO_EXECUTOR, mainThreadExecutor())
         builder.mutableConfig.insertOption(ImageInputConfig.OPTION_INPUT_FORMAT, ImageFormat.JPEG)
         val pipeline = ImagePipeline(builder.useCaseConfig, SIZE)
 
-        // Arrange & act.
-        sendInMemoryRequest(pipeline, ImageFormat.YUV_420_888)
+        // Arrange.
+        val processingRequest = imagePipeline.createRequests(
+            IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null)
+        ).second!!
+        val imageInfo = createCameraCaptureResultImageInfo(
+            processingRequest.tagBundleKey,
+            processingRequest.stageIds.single()
+        )
+        val image = createYuvFakeImageProxy(imageInfo, WIDTH, HEIGHT)
+
+        // Act: send processing request and the image.
+        pipeline.submitProcessingRequest(processingRequest)
+        pipeline.captureNode.onImageProxyAvailable(image)
+        shadowOf(getMainLooper()).idle()
 
         assertThat(CALLBACK.inMemoryResult!!.format).isEqualTo(ImageFormat.YUV_420_888)
     }
@@ -370,57 +337,23 @@ class ImagePipelineTest {
         val image = sendInMemoryRequest(imagePipeline)
 
         // Assert: the image is received by TakePictureCallback.
-        assertThat(image.format).isEqualTo(ImageFormat.JPEG)
-        assertThat(CALLBACK.inMemoryResult!!.format).isEqualTo(ImageFormat.JPEG)
         assertThat(CALLBACK.inMemoryResult!!.planes).isEqualTo(image.planes)
     }
 
-    @Config(minSdk = 34)
-    @Test
-    fun sendInMemoryRequest_receivesImageProxy_whenFormatIsJpegr() {
-        // Arrange & act.
-        imageCaptureConfig = createImageCaptureConfig(inputFormat = ImageFormat.JPEG_R)
-        imagePipeline = ImagePipeline(imageCaptureConfig, SIZE)
-        val image = sendInMemoryRequest(imagePipeline, ImageFormat.JPEG_R)
-
-        // Assert: the image is received by TakePictureCallback.
-        assertThat(image.format).isEqualTo(ImageFormat.JPEG_R)
-        assertThat(CALLBACK.inMemoryResult!!.format).isEqualTo(ImageFormat.JPEG_R)
-        assertThat(CALLBACK.inMemoryResult!!.planes).isEqualTo(image.planes)
-    }
-
-    /** Creates a ImageProxy and sends it to the pipeline. */
-    private fun sendInMemoryRequest(
-        pipeline: ImagePipeline,
-        format: Int = ImageFormat.JPEG
-    ): ImageProxy {
+    /**
+     * Creates a ImageProxy and sends it to the pipeline.
+     */
+    private fun sendInMemoryRequest(pipeline: ImagePipeline): ImageProxy {
         // Arrange.
-        val processingRequest =
-            imagePipeline
-                .createRequests(IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null))
-                .second!!
-        val imageInfo =
-            createCameraCaptureResultImageInfo(
-                processingRequest.tagBundleKey,
-                processingRequest.stageIds.single()
-            )
-        val image =
-            when (format) {
-                ImageFormat.YUV_420_888 -> {
-                    createYuvFakeImageProxy(imageInfo, WIDTH, HEIGHT)
-                }
-                ImageFormat.JPEG_R -> {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        throw IllegalArgumentException("JPEG_R is supported after API 34.")
-                    }
-                    val jpegBytes = createJpegrBytes(WIDTH, HEIGHT)
-                    createJpegrFakeImageProxy(imageInfo, jpegBytes)
-                }
-                else -> {
-                    val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
-                    createJpegFakeImageProxy(imageInfo, jpegBytes)
-                }
-            }
+        val processingRequest = imagePipeline.createRequests(
+            IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null)
+        ).second!!
+        val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
+        val imageInfo = createCameraCaptureResultImageInfo(
+            processingRequest.tagBundleKey,
+            processingRequest.stageIds.single()
+        )
+        val image = createJpegFakeImageProxy(imageInfo, jpegBytes)
 
         // Act: send processing request and the image.
         pipeline.submitProcessingRequest(processingRequest)
@@ -443,9 +376,8 @@ class ImagePipelineTest {
         for (i in 0 until MAX_IMAGES) {
             val imageInfo = FakeImageInfo()
             imageReaderProxy.triggerImageAvailable(imageInfo.tagBundle, 0)
-            imagePipeline.captureNode.mSafeCloseImageReaderProxy!!.acquireNextImage()?.let {
-                images.add(it)
-            }
+            imagePipeline.captureNode.mSafeCloseImageReaderProxy!!.acquireNextImage()
+                ?.let { images.add(it) }
         }
 
         // Assert: the capacity of queue is 0.
@@ -455,55 +387,15 @@ class ImagePipelineTest {
     @Test
     fun notifyCallbackError_captureFailureIsCalled() {
         // Arrange.
-        val processingRequest =
-            imagePipeline
-                .createRequests(IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null))
-                .second!!
+        val processingRequest = imagePipeline.createRequests(
+            IN_MEMORY_REQUEST, CALLBACK, Futures.immediateFuture(null)
+        ).second!!
 
         // Act: send processing request and the image.
         imagePipeline.submitProcessingRequest(processingRequest)
-        imagePipeline.notifyCaptureError(CaptureError.of(processingRequest.requestId, FAILURE))
+        imagePipeline.notifyCaptureError(FAILURE)
 
         shadowOf(getMainLooper()).idle()
-        // Assert: The failure is propagated.
-        assertThat(CALLBACK.captureFailure).isEqualTo(FAILURE)
-    }
-
-    private fun createImageCaptureConfig(
-        templateType: Int = TEMPLATE_TYPE,
-        inputFormat: Int = ImageFormat.JPEG,
-    ): ImageCaptureConfig {
-        val builder =
-            ImageCapture.Builder().setCaptureOptionUnpacker { _, builder ->
-                builder.templateType = templateType
-            }
-        builder.mutableConfig.insertOption(OPTION_IO_EXECUTOR, mainThreadExecutor())
-        builder.mutableConfig.insertOption(ImageInputConfig.OPTION_INPUT_FORMAT, inputFormat)
-        if (Build.VERSION.SDK_INT >= 34 && inputFormat == ImageFormat.JPEG_R) {
-            builder.mutableConfig.insertOption(OPTION_INPUT_DYNAMIC_RANGE, HLG_10_BIT)
-        }
-        builder.setSessionOptionUnpacker { _, _, _ -> }
-        return builder.useCaseConfig
-    }
-
-    private fun verifyCaptureRequest(
-        captureInput: CaptureNode.In,
-        result: Pair<CameraRequest, ProcessingRequest>
-    ) {
-        val cameraRequest = result.first!!
-        val captureConfig = cameraRequest.captureConfigs.single()
-        assertThat(captureConfig.cameraCaptureCallbacks)
-            .containsExactly(captureInput.cameraCaptureCallback)
-        assertThat(captureConfig.surfaces).containsExactly(captureInput.surface)
-        assertThat(captureConfig.templateType).isEqualTo(TEMPLATE_TYPE)
-        val jpegQuality = captureConfig.implementationOptions.retrieveOption(OPTION_JPEG_QUALITY)
-        assertThat(jpegQuality).isEqualTo(JPEG_QUALITY)
-        assertThat(captureConfig.implementationOptions.retrieveOption(OPTION_ROTATION))
-            .isEqualTo(ROTATION_DEGREES)
-
-        // Act: fail the processing request.
-        val processingRequest = result.second!!
-        processingRequest.onCaptureFailure(FAILURE)
         // Assert: The failure is propagated.
         assertThat(CALLBACK.captureFailure).isEqualTo(FAILURE)
     }

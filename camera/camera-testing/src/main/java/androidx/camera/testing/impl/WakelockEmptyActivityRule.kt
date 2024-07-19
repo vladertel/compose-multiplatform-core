@@ -26,7 +26,6 @@ import androidx.annotation.RequiresApi
 import androidx.camera.core.Logger
 import androidx.camera.testing.impl.Api27Impl.setShowWhenLocked
 import androidx.camera.testing.impl.Api27Impl.setTurnScreenOn
-import androidx.camera.testing.impl.CoreAppTestUtil.clearDeviceUI
 import androidx.camera.testing.impl.activity.EmptyActivity
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
@@ -34,46 +33,45 @@ import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 
-/** A rule that opens an empty Activity and wakes the device to prevent test failures. */
+/**
+ * A rule that opens an empty Activity and wakes the device to prevent test failures.
+ */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class WakelockEmptyActivityRule : TestRule {
     override fun apply(base: Statement, description: Description): Statement =
         object : Statement() {
             override fun evaluate() {
                 val instrumentation = InstrumentationRegistry.getInstrumentation()
-                clearDeviceUI(instrumentation)
                 var activityRef: EmptyActivity? = null
                 try {
-                    activityRef =
-                        CoreAppTestUtil.launchActivity(
-                                instrumentation,
-                                EmptyActivity::class.java,
-                                Intent(Intent.ACTION_MAIN).apply {
-                                    setClassName(
-                                        ApplicationProvider.getApplicationContext<Context>()
-                                            .packageName,
-                                        EmptyActivity::class.java.name
-                                    )
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
+                    activityRef = CoreAppTestUtil.launchActivity(
+                        instrumentation,
+                        EmptyActivity::class.java,
+                        Intent(Intent.ACTION_MAIN).apply {
+                            setClassName(
+                                ApplicationProvider.getApplicationContext<Context>().packageName,
+                                EmptyActivity::class.java.name
                             )
-                            ?.also { activity ->
-                                instrumentation.runOnMainSync {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                                        activity.setShowWhenLocked()
-                                        activity.setTurnScreenOn()
-                                        activity.window.addFlags(
-                                            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                                        )
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        activity.window.addFlags(
-                                            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                                                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-                                        )
-                                    }
-                                }
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    )?.also { activity ->
+                        instrumentation.runOnMainSync {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                                activity.setShowWhenLocked()
+                                activity.setTurnScreenOn()
+                                activity.window.addFlags(
+                                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                                )
+                            } else {
+                                @Suppress("DEPRECATION")
+                                activity.window.addFlags(
+                                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                                        or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                                        or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                                )
                             }
+                        }
+                    }
                 } catch (exception: Exception) {
                     Logger.w("WakelockEmptyActivityRule", "Fail to open Activity + wakelock")
                 }

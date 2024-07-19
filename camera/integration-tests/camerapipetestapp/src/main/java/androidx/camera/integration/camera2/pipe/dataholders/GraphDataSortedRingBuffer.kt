@@ -51,7 +51,8 @@ class GraphDataSortedRingBuffer {
 
         if (timeWindowEndNanos <= dataPoints.first().timestampNanos)
             throw IllegalArgumentException(
-                "Time window's end must be after the first point's " + "timestamp"
+                "Time window's end must be after the first point's " +
+                    "timestamp"
             )
 
         val timeWindowStartNanos = timeWindowEndNanos - timeWindowLengthNanos

@@ -32,7 +32,8 @@ import org.junit.runners.JUnit4
 @RunWith(JUnit4::class)
 class TestNavigatorTest {
 
-    @get:Rule val instantTaskExecutorRule = InstantTaskExecutorRule()
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test

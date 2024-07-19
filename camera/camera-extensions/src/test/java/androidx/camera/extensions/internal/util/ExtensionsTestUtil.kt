@@ -16,16 +16,22 @@
 
 package androidx.camera.extensions.internal.util
 
+import androidx.annotation.RequiresApi
 import androidx.camera.extensions.impl.ExtensionVersionImpl
 import androidx.camera.extensions.internal.ExtensionVersion
 import java.lang.reflect.Field
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 
-/** Util functions for extensions related robolectric test */
+/**
+ * Util functions for extensions related robolectric test
+ */
+@RequiresApi(21)
 object ExtensionsTestUtil {
 
-    /** Resets the field of the specified class */
+    /**
+     * Resets the field of the specified class
+     */
     @JvmStatic
     fun resetSingleton(clazz: Class<*>, fieldName: String) {
         val instance: Field
@@ -38,19 +44,25 @@ object ExtensionsTestUtil {
         }
     }
 
-    /** Sets vendor library extension version to the specified value. */
+    /**
+     * Sets vendor library extension version to the specified value.
+     */
     @JvmStatic
     fun setTestApiVersion(testString: String) {
         setTestApiVersionAndAdvancedExtender(testString, false)
     }
 
-    /** Sets vendor library extension version to the specified value. */
+    /**
+     * Sets vendor library extension version to the specified value.
+     */
     @JvmStatic
     fun setTestApiVersionAndAdvancedExtender(
         testString: String,
         isAdvancedExtenderImplemented: Boolean
     ) {
-        val mockExtensionVersionImpl = Mockito.mock(ExtensionVersionImpl::class.java)
+        val mockExtensionVersionImpl = Mockito.mock(
+            ExtensionVersionImpl::class.java
+        )
         Mockito.`when`(mockExtensionVersionImpl.checkApiVersion(ArgumentMatchers.anyString()))
             .thenReturn(testString)
         Mockito.`when`(mockExtensionVersionImpl.isAdvancedExtenderImplemented())

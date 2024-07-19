@@ -67,7 +67,10 @@ class CamcorderProfileResolutionQuirkTest {
     fun canGetCorrectSupportedSizes() {
         val cameraCharacteristicsCompat =
             createCameraCharacteristicsCompat(
-                supportedSizes = arrayOf(RESOLUTION_2160P, RESOLUTION_1080P)
+                supportedSizes = arrayOf(
+                    RESOLUTION_2160P,
+                    RESOLUTION_1080P
+                )
             )
         val quirk = CamcorderProfileResolutionQuirk(cameraCharacteristicsCompat)
 

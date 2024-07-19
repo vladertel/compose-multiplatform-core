@@ -30,7 +30,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Benchmark that runs [AndroidTextViewTestCase]. */
+/**
+ * Benchmark that runs [AndroidTextViewTestCase].
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 class AndroidTextViewBenchmark(private val textLength: Int) {
@@ -41,18 +43,21 @@ class AndroidTextViewBenchmark(private val textLength: Int) {
         fun initParameters(): Array<Any> = arrayOf(32, 512)
     }
 
-    @get:Rule val textBenchmarkRule = TextBenchmarkTestRule()
+    @get:Rule
+    val textBenchmarkRule = TextBenchmarkTestRule()
 
-    @get:Rule val benchmarkRule = AndroidBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = AndroidBenchmarkRule()
 
     private val caseFactory = {
         textBenchmarkRule.generator { textGenerator ->
             AndroidTextViewTestCase(
-                List(textBenchmarkRule.repeatTimes) { textGenerator.nextParagraph(textLength) }
+                List(textBenchmarkRule.repeatTimes) {
+                    textGenerator.nextParagraph(textLength)
+                }
             )
         }
     }
-
     @Test
     fun first_setContent() {
         benchmarkRule.benchmarkFirstSetContent(caseFactory)
@@ -69,9 +74,13 @@ class AndroidTextViewBenchmark(private val textLength: Int) {
             runBenchmarkFor(caseFactory) {
                 measureRepeatedOnUiThread {
                     setupContent()
-                    runWithTimingDisabled { requestLayout() }
+                    runWithTimingDisabled {
+                        requestLayout()
+                    }
                     measure()
-                    runWithTimingDisabled { disposeContent() }
+                    runWithTimingDisabled {
+                        disposeContent()
+                    }
                 }
             }
         }

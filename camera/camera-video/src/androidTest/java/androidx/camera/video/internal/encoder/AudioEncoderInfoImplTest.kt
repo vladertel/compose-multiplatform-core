@@ -43,15 +43,14 @@ class AudioEncoderInfoImplTest {
 
     @Before
     fun setup() {
-        encoderConfig =
-            AudioEncoderConfig.builder()
-                .setMimeType(MIME_TYPE)
-                .setInputTimebase(TIMEBASE)
-                .setProfile(ENCODER_PROFILE)
-                .setBitrate(BIT_RATE)
-                .setSampleRate(SAMPLE_RATE)
-                .setChannelCount(CHANNEL_COUNT)
-                .build()
+        encoderConfig = AudioEncoderConfig.builder()
+            .setMimeType(MIME_TYPE)
+            .setInputTimebase(TIMEBASE)
+            .setProfile(ENCODER_PROFILE)
+            .setBitrate(BIT_RATE)
+            .setSampleRate(SAMPLE_RATE)
+            .setChannelCount(CHANNEL_COUNT)
+            .build()
     }
 
     @Test

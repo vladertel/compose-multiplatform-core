@@ -57,7 +57,8 @@ import org.junit.Test
 @MediumTest
 class PositionsTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun testCornersEdgesAndCenter() {

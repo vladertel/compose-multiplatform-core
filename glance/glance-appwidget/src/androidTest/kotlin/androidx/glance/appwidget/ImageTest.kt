@@ -40,7 +40,8 @@ import org.junit.Test
 @MediumTest
 class ImageTest {
 
-    @get:Rule val mHostRule = AppWidgetHostRule()
+    @get:Rule
+    val mHostRule = AppWidgetHostRule()
 
     @Test
     fun colorFilter_toggle() = runBlocking {
@@ -52,12 +53,11 @@ class ImageTest {
                     provider = androidx.glance.ImageProvider(R.drawable.oval),
                     contentDescription = null,
                     modifier = GlanceModifier.size(24.dp),
-                    colorFilter =
-                        if (shouldTint) {
-                            ColorFilter.tint(GlanceTheme.colors.onSurface)
-                        } else {
-                            null
-                        }
+                    colorFilter = if (shouldTint) {
+                        ColorFilter.tint(GlanceTheme.colors.onSurface)
+                    } else {
+                        null
+                    }
                 )
             }
         }

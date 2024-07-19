@@ -29,7 +29,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class SpringEstimationBenchmark {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     @Test
     @LargeTest

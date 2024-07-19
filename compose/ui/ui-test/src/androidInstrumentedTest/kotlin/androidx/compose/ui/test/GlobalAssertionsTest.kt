@@ -37,9 +37,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
 class GlobalAssertionsTest {
-    @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
-    @Before fun setUp() {}
+    @Before
+    fun setUp() {
+    }
 
     @Test
     fun performClick_withGlobalAssertion_triggersGlobalAssertion() {

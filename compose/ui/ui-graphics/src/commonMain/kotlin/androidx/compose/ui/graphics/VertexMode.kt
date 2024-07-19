@@ -28,10 +28,14 @@ import androidx.compose.runtime.Immutable
 value class VertexMode internal constructor(@Suppress("unused") private val value: Int) {
 
     companion object {
-        /** Draw each sequence of three points as the vertices of a triangle. */
+        /**
+         * Draw each sequence of three points as the vertices of a triangle.
+         */
         val Triangles = VertexMode(0)
 
-        /** Draw each sliding window of three points as the vertices of a triangle. */
+        /**
+         *  Draw each sliding window of three points as the vertices of a triangle.
+         */
         val TriangleStrip = VertexMode(1)
 
         /**
@@ -40,11 +44,10 @@ value class VertexMode internal constructor(@Suppress("unused") private val valu
         val TriangleFan = VertexMode(2)
     }
 
-    override fun toString() =
-        when (this) {
-            Triangles -> "Triangles"
-            TriangleStrip -> "TriangleStrip"
-            TriangleFan -> "TriangleFan"
-            else -> "Unknown"
-        }
+    override fun toString() = when (this) {
+        Triangles -> "Triangles"
+        TriangleStrip -> "TriangleStrip"
+        TriangleFan -> "TriangleFan"
+        else -> "Unknown"
+    }
 }

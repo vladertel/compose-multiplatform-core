@@ -32,7 +32,8 @@ import org.junit.Rule
 
 class DensityForcedSizeTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun wrapsRequestedSize_smallPortraitAspectRatio() {
@@ -43,7 +44,9 @@ class DensityForcedSizeTest {
             density = LocalDensity.current
             DensityForcedSize(
                 size = DpSize(30.dp, 40.dp),
-                modifier = Modifier.onPlaced { layoutCoordinates = it }
+                modifier = Modifier.onPlaced {
+                    layoutCoordinates = it
+                }
             ) {
                 Spacer(modifier = Modifier.fillMaxSize())
             }
@@ -52,7 +55,11 @@ class DensityForcedSizeTest {
         // The size should be within 0.5 pixels of the specified size
         // Due to rounding, we can't expect to have the DensityForcedSize take exactly the requested
         // size which is true in normal Compose code as well
-        assertEquals(with(density) { 30.dp.toPx() }, layoutCoordinates!!.size.width.toFloat(), 0.5f)
+        assertEquals(
+            with(density) { 30.dp.toPx() },
+            layoutCoordinates!!.size.width.toFloat(),
+            0.5f
+        )
         assertEquals(
             with(density) { 40.dp.toPx() },
             layoutCoordinates!!.size.height.toFloat(),
@@ -69,7 +76,9 @@ class DensityForcedSizeTest {
             density = LocalDensity.current
             DensityForcedSize(
                 size = DpSize(40.dp, 30.dp),
-                modifier = Modifier.onPlaced { layoutCoordinates = it }
+                modifier = Modifier.onPlaced {
+                    layoutCoordinates = it
+                }
             ) {
                 Spacer(modifier = Modifier.fillMaxSize())
             }
@@ -78,7 +87,11 @@ class DensityForcedSizeTest {
         // The size should be within 0.5 pixels of the specified size
         // Due to rounding, we can't expect to have the DensityForcedSize take exactly the requested
         // size which is true in normal Compose code as well
-        assertEquals(with(density) { 40.dp.toPx() }, layoutCoordinates!!.size.width.toFloat(), 0.5f)
+        assertEquals(
+            with(density) { 40.dp.toPx() },
+            layoutCoordinates!!.size.width.toFloat(),
+            0.5f
+        )
         assertEquals(
             with(density) { 30.dp.toPx() },
             layoutCoordinates!!.size.height.toFloat(),

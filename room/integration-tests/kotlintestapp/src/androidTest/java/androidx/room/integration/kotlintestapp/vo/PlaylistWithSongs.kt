@@ -20,12 +20,16 @@ import androidx.room.Junction
 import androidx.room.Relation
 
 data class PlaylistWithSongs(
-    @Embedded var playlist: Playlist,
+    @Embedded
+    var playlist: Playlist,
+
     @Relation(
         parentColumn = "mPlaylistId",
         entity = Song::class,
         entityColumn = "mSongId",
-        associateBy = Junction(PlaylistSongXRef::class)
+        associateBy = Junction(
+            PlaylistSongXRef::class
+        )
     )
     var songs: List<Song>
 )

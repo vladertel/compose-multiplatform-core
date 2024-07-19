@@ -35,7 +35,9 @@ fun androidx.test.rule.ActivityTestRule<out FragmentActivity>.startupFragmentCon
 ): FragmentController {
     lateinit var fc: FragmentController
     runOnUiThreadRethrow {
-        fc = FragmentController.createController(ControllerHostCallbacks(activity, viewModelStore))
+        fc = FragmentController.createController(
+            ControllerHostCallbacks(activity, viewModelStore)
+        )
         fc.attachHost(null)
         fc.restoreSaveState(savedState)
         fc.dispatchCreate()
@@ -50,12 +52,15 @@ fun androidx.test.rule.ActivityTestRule<out FragmentActivity>.startupFragmentCon
 }
 
 fun FragmentController.restart(
-    @Suppress("DEPRECATION") rule: androidx.test.rule.ActivityTestRule<out FragmentActivity>,
+    @Suppress("DEPRECATION")
+    rule: androidx.test.rule.ActivityTestRule<out FragmentActivity>,
     viewModelStore: ViewModelStore,
     destroyNonConfig: Boolean = true
 ): FragmentController {
     var savedState: Parcelable? = null
-    rule.runOnUiThreadRethrow { savedState = shutdown(viewModelStore, destroyNonConfig) }
+    rule.runOnUiThreadRethrow {
+        savedState = shutdown(viewModelStore, destroyNonConfig)
+    }
     return rule.startupFragmentController(viewModelStore, savedState)
 }
 
@@ -64,7 +69,8 @@ fun FragmentController.shutdown(
     destroyNonConfig: Boolean = true
 ): Parcelable? {
     dispatchPause()
-    @Suppress("DEPRECATION") val savedState = saveAllState()
+    @Suppress("DEPRECATION")
+    val savedState = saveAllState()
     dispatchStop()
     if (destroyNonConfig) {
         viewModelStore.clear()
@@ -74,9 +80,9 @@ fun FragmentController.shutdown(
 }
 
 class ControllerHostCallbacks(
-    private val fragmentActivity: FragmentActivity,
+    private val activity: FragmentActivity,
     private val vmStore: ViewModelStore
-) : FragmentHostCallback<FragmentActivity>(fragmentActivity), ViewModelStoreOwner {
+) : FragmentHostCallback<FragmentActivity>(activity), ViewModelStoreOwner {
 
     override val viewModelStore: ViewModelStore = vmStore
 
@@ -85,26 +91,31 @@ class ControllerHostCallbacks(
         fd: FileDescriptor?,
         writer: PrintWriter,
         args: Array<String>?
-    ) {}
+    ) {
+    }
 
     override fun onShouldSaveFragmentState(fragment: Fragment): Boolean {
-        return !fragmentActivity.isFinishing
+        return !activity.isFinishing
     }
 
     override fun onGetLayoutInflater(): LayoutInflater {
-        return fragmentActivity.layoutInflater.cloneInContext(fragmentActivity)
+        return activity.layoutInflater.cloneInContext(activity)
     }
 
-    override fun onGetHost(): FragmentActivity {
-        return fragmentActivity
+    override fun onGetHost(): FragmentActivity? {
+        return activity
     }
 
     override fun onSupportInvalidateOptionsMenu() {
-        fragmentActivity.invalidateOptionsMenu()
+        activity.invalidateOptionsMenu()
     }
 
-    override fun onStartActivityFromFragment(fragment: Fragment, intent: Intent, requestCode: Int) {
-        fragmentActivity.startActivityFromFragment(fragment, intent, requestCode)
+    override fun onStartActivityFromFragment(
+        fragment: Fragment,
+        intent: Intent,
+        requestCode: Int
+    ) {
+        activity.startActivityFromFragment(fragment, intent, requestCode)
     }
 
     override fun onStartActivityFromFragment(
@@ -113,17 +124,9 @@ class ControllerHostCallbacks(
         requestCode: Int,
         options: Bundle?
     ) {
-        fragmentActivity.startActivityFromFragment(fragment, intent, requestCode, options)
+        activity.startActivityFromFragment(fragment, intent, requestCode, options)
     }
 
-    @Suppress("DeprecatedCallableAddReplaceWith")
-    @Deprecated(
-        """Have your FragmentHostCallback implement {@link ActivityResultRegistryOwner}
-      to allow Fragments to use
-      {@link Fragment#registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
-      with {@link RequestMultiplePermissions}. This method will still be called when Fragments
-      call the deprecated <code>requestPermissions()</code> method."""
-    )
     override fun onRequestPermissionsFromFragment(
         fragment: Fragment,
         permissions: Array<String>,
@@ -133,20 +136,22 @@ class ControllerHostCallbacks(
     }
 
     override fun onShouldShowRequestPermissionRationale(permission: String): Boolean {
-        return ActivityCompat.shouldShowRequestPermissionRationale(fragmentActivity, permission)
+        return ActivityCompat.shouldShowRequestPermissionRationale(
+            activity, permission
+        )
     }
 
-    override fun onHasWindowAnimations() = fragmentActivity.window != null
+    override fun onHasWindowAnimations() = activity.window != null
 
     override fun onGetWindowAnimations() =
-        fragmentActivity.window?.attributes?.windowAnimations ?: 0
+        activity.window?.attributes?.windowAnimations ?: 0
 
     override fun onFindViewById(id: Int): View? {
-        return fragmentActivity.findViewById(id)
+        return activity.findViewById(id)
     }
 
     override fun onHasView(): Boolean {
-        val w = fragmentActivity.window
+        val w = activity.window
         return w?.peekDecorView() != null
     }
 }

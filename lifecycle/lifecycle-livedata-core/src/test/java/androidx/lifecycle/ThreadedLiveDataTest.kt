@@ -31,7 +31,9 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class ThreadedLiveDataTest {
-    @JvmField @Rule var taskExecutorRule = JunitTaskExecutorRule(1, false)
+    @JvmField
+    @Rule
+    var taskExecutorRule = JunitTaskExecutorRule(1, false)
 
     private lateinit var liveData: LiveData<String>
     private lateinit var lifecycleOwner: TestLifecycleOwner
@@ -40,8 +42,10 @@ class ThreadedLiveDataTest {
     @Before
     fun init() {
         liveData = MutableLiveData()
-        lifecycleOwner =
-            TestLifecycleOwner(Lifecycle.State.INITIALIZED, UnconfinedTestDispatcher(null, null))
+        lifecycleOwner = TestLifecycleOwner(
+            Lifecycle.State.INITIALIZED,
+            UnconfinedTestDispatcher(null, null)
+        )
     }
 
     @Test
@@ -49,15 +53,14 @@ class ThreadedLiveDataTest {
     fun testPostValue() {
         val taskExecutor = taskExecutorRule.taskExecutor
         val finishTestLatch = CountDownLatch(1)
-        val observer =
-            Observer<String?> { newValue ->
-                try {
-                    assertThat(taskExecutor.isMainThread, `is`(true))
-                    assertThat(newValue, `is`("success"))
-                } finally {
-                    finishTestLatch.countDown()
-                }
+        val observer = Observer<String?> { newValue ->
+            try {
+                assertThat(taskExecutor.isMainThread, `is`(true))
+                assertThat(newValue, `is`("success"))
+            } finally {
+                finishTestLatch.countDown()
             }
+        }
         taskExecutor.executeOnMainThread {
             lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
             liveData.observe(lifecycleOwner, observer)
@@ -68,12 +71,18 @@ class ThreadedLiveDataTest {
                 latch.countDown()
             }
             try {
-                assertThat(latch.await(TIMEOUT_SECS.toLong(), SECONDS), `is`(true))
+                assertThat(
+                    latch.await(TIMEOUT_SECS.toLong(), SECONDS),
+                    `is`(true)
+                )
             } catch (e: InterruptedException) {
                 throw RuntimeException(e)
             }
         }
-        assertThat(finishTestLatch.await(TIMEOUT_SECS.toLong(), SECONDS), `is`(true))
+        assertThat(
+            finishTestLatch.await(TIMEOUT_SECS.toLong(), SECONDS),
+            `is`(true)
+        )
     }
 
     companion object {

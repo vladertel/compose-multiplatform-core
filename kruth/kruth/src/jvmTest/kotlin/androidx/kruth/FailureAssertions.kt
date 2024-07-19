@@ -17,6 +17,7 @@
 package androidx.kruth
 
 /** Convenience methods for Truth Subject tests. */
+
 fun ExpectFailure.assertFailureKeys(vararg keys: String?) {
     assertThatFailure().factKeys().containsExactlyElementsIn(keys).inOrder()
 }

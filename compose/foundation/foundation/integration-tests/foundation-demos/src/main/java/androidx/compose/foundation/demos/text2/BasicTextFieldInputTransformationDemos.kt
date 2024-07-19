@@ -54,7 +54,11 @@ import androidx.core.text.isDigitsOnly
 
 @Composable
 fun BasicTextFieldInputTransformationDemos() {
-    Column(Modifier.imePadding().verticalScroll(rememberScrollState())) {
+    Column(
+        Modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+    ) {
         TagLine(tag = "allCaps")
         FilterDemo(filter = InputTransformation.allCaps(Locale.current))
 
@@ -99,38 +103,39 @@ fun BasicTextFieldInputTransformationDemos() {
 
 @Composable
 private fun DigitsOnlyDemo() {
-    FilterDemo(
-        filter =
-            object : InputTransformation {
-                override val keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    FilterDemo(filter = object : InputTransformation {
+        override val keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number
+        )
 
-                override fun TextFieldBuffer.transformInput() {
-                    if (!asCharSequence().isDigitsOnly()) {
-                        revertAllChanges()
-                    }
-                }
+        override fun TextFieldBuffer.transformInput() {
+            if (!asCharSequence().isDigitsOnly()) {
+                revertAllChanges()
             }
-    )
+        }
+    })
 }
 
 @Composable
 private fun AdditiveInputTransformationDemo() {
-    FilterDemo(
-        filter = {
-            changes.forEachChange { range, originalRange ->
-                // only extend the insertions
-                if (!range.collapsed && originalRange.collapsed) {
-                    replace(range.end, range.end, "a")
-                }
+    FilterDemo(filter = {
+        changes.forEachChange { range, originalRange ->
+            // only extend the insertions
+            if (!range.collapsed && originalRange.collapsed) {
+                replace(range.end, range.end, "a")
             }
         }
-    )
+    })
 }
 
 @Composable
 private fun FilterDemo(filter: InputTransformation) {
     val state = remember { TextFieldState() }
-    BasicTextField(state = state, inputTransformation = filter, modifier = demoTextFieldModifiers)
+    BasicTextField(
+        state = state,
+        inputTransformation = filter,
+        modifier = demoTextFieldModifiers
+    )
 }
 
 @Composable
@@ -141,13 +146,9 @@ private fun ChangeFilterDemo() {
     Column {
         Row(horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Filter enabled?")
-            Switch(
-                checked = filter != null,
-                onCheckedChange = {
-                    filter =
-                        if (filter == null) InputTransformation.allCaps(Locale.current) else null
-                }
-            )
+            Switch(checked = filter != null, onCheckedChange = {
+                filter = if (filter == null) InputTransformation.allCaps(Locale.current) else null
+            })
         }
         BasicTextField(
             state = state,

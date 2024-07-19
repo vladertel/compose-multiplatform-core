@@ -34,19 +34,14 @@ sealed class ImageCaptureResult {
 
     class InMemory(private val imageProxy: ImageProxy) : ImageCaptureResult() {
         override fun getResolution() = Size(imageProxy.width, imageProxy.height)
-
         override fun getRotation() = imageProxy.imageInfo.rotationDegrees
-
         override fun delete() {}
     }
 
     class FileOrOutputStream(private val file: File) : ImageCaptureResult() {
         private val exif = Exif.createFromFile(file)
-
         override fun getResolution() = Size(exif.width, exif.height)
-
         override fun getRotation() = exif.rotation
-
         override fun delete() {
             file.delete()
         }
@@ -63,9 +58,7 @@ sealed class ImageCaptureResult {
         }
 
         override fun getResolution() = Size(exif.width, exif.height)
-
         override fun getRotation() = exif.rotation
-
         override fun delete() {
             contentResolver.delete(uri, null, null)
         }

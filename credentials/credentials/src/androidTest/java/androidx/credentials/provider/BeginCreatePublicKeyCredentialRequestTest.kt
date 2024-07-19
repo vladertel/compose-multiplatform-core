@@ -38,7 +38,10 @@ class BeginCreatePublicKeyCredentialRequestTest {
         ) {
             BeginCreatePublicKeyCredentialRequest(
                 "",
-                CallingAppInfo("sample_package_name", SigningInfo()),
+                CallingAppInfo(
+                    "sample_package_name",
+                    SigningInfo()
+                ),
                 Bundle()
             )
         }
@@ -52,7 +55,10 @@ class BeginCreatePublicKeyCredentialRequestTest {
         ) {
             BeginCreatePublicKeyCredentialRequest(
                 "invalid",
-                CallingAppInfo("sample_package_name", SigningInfo()),
+                CallingAppInfo(
+                    "sample_package_name",
+                    SigningInfo()
+                ),
                 Bundle()
             )
         }
@@ -62,7 +68,9 @@ class BeginCreatePublicKeyCredentialRequestTest {
     fun constructor_success() {
         BeginCreatePublicKeyCredentialRequest(
             "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}",
-            CallingAppInfo("sample_package_name", SigningInfo()),
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            ),
             Bundle()
         )
     }
@@ -71,7 +79,9 @@ class BeginCreatePublicKeyCredentialRequestTest {
     fun constructorWithClientDataHash_success() {
         BeginCreatePublicKeyCredentialRequest(
             "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}",
-            CallingAppInfo("sample_package_name", SigningInfo()),
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            ),
             Bundle(),
             "client_data_hash".toByteArray()
         )
@@ -85,7 +95,9 @@ class BeginCreatePublicKeyCredentialRequestTest {
 
         BeginCreatePublicKeyCredentialRequest.createForTest(
             bundle,
-            CallingAppInfo("sample_package_name", SigningInfo())
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            )
         )
     }
 
@@ -97,7 +109,9 @@ class BeginCreatePublicKeyCredentialRequestTest {
         ) {
             BeginCreatePublicKeyCredentialRequest.createForTest(
                 Bundle(),
-                CallingAppInfo("sample_package_name", SigningInfo())
+                CallingAppInfo(
+                    "sample_package_name", SigningInfo()
+                )
             )
         }
     }
@@ -106,12 +120,13 @@ class BeginCreatePublicKeyCredentialRequestTest {
     fun getter_requestJson_success() {
         val testJsonExpected = "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}"
 
-        val createPublicKeyCredentialReq =
-            BeginCreatePublicKeyCredentialRequest(
-                testJsonExpected,
-                CallingAppInfo("sample_package_name", SigningInfo()),
-                Bundle()
-            )
+        val createPublicKeyCredentialReq = BeginCreatePublicKeyCredentialRequest(
+            testJsonExpected,
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            ),
+            Bundle()
+        )
 
         val testJsonActual = createPublicKeyCredentialReq.requestJson
         assertThat(testJsonActual).isEqualTo(testJsonExpected)
@@ -121,13 +136,14 @@ class BeginCreatePublicKeyCredentialRequestTest {
     @Test
     fun getter_clientDataHash_success() {
         val testClientDataHashExpected = "client_data_hash".toByteArray()
-        val createPublicKeyCredentialReq =
-            BeginCreatePublicKeyCredentialRequest(
-                "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}",
-                CallingAppInfo("sample_package_name", SigningInfo()),
-                Bundle(),
-                testClientDataHashExpected
-            )
+        val createPublicKeyCredentialReq = BeginCreatePublicKeyCredentialRequest(
+            "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}",
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            ),
+            Bundle(),
+            testClientDataHashExpected
+        )
 
         val testClientDataHashActual = createPublicKeyCredentialReq.clientDataHash
         assertThat(testClientDataHashActual).isEqualTo(testClientDataHashExpected)
@@ -138,12 +154,13 @@ class BeginCreatePublicKeyCredentialRequestTest {
     fun conversion() {
         val testJsonExpected = "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}"
 
-        val req =
-            BeginCreatePublicKeyCredentialRequest(
-                testJsonExpected,
-                CallingAppInfo("sample_package_name", SigningInfo()),
-                Bundle()
-            )
+        val req = BeginCreatePublicKeyCredentialRequest(
+            testJsonExpected,
+            CallingAppInfo(
+                "sample_package_name", SigningInfo()
+            ),
+            Bundle()
+        )
 
         val bundle = BeginCreateCredentialRequest.asBundle(req)
         assertThat(bundle).isNotNull()

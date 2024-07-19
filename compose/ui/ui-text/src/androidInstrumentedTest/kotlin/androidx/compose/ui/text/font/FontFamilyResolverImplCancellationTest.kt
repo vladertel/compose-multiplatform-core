@@ -57,13 +57,11 @@ class FontFamilyResolverImplCancellationTest {
         val dispatcher = StandardTestDispatcher()
         scope = TestCoroutineScope(dispatcher)
         val injectedContext = scope.coroutineContext.minusKey(CoroutineExceptionHandler)
-        subject =
-            FontFamilyResolverImpl(
-                fontLoader,
-                fontResolveInterceptor,
-                typefaceRequestCache,
-                FontListFontFamilyTypefaceAdapter(asyncTypefaceCache, injectedContext)
-            )
+        subject = FontFamilyResolverImpl(
+            fontLoader,
+            fontResolveInterceptor,
+            typefaceRequestCache,
+            FontListFontFamilyTypefaceAdapter(asyncTypefaceCache, injectedContext))
         typefaceLoader = AsyncTestTypefaceLoader()
     }
 
@@ -82,16 +80,15 @@ class FontFamilyResolverImplCancellationTest {
         val fontFamily = asyncFont.toFontFamily()
         subject.resolve(fontFamily)
 
-        fun currentCacheItem(): TypefaceResult =
-            typefaceRequestCache.get(
-                TypefaceRequest(
-                    fontFamily,
-                    FontWeight.Normal,
-                    FontStyle.Normal,
-                    FontSynthesis.All,
-                    fontLoader.cacheKey
-                )
-            )!!
+        fun currentCacheItem(): TypefaceResult = typefaceRequestCache.get(
+            TypefaceRequest(
+                fontFamily,
+                FontWeight.Normal,
+                FontStyle.Normal,
+                FontSynthesis.All,
+                fontLoader.cacheKey
+            )
+        )!!
 
         scope.runCurrent()
         val beforeCacheEntry = currentCacheItem()

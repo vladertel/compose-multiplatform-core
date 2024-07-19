@@ -22,6 +22,7 @@ package androidx.compose.ui.test
  * For usage patterns and semantics concepts see [SemanticsNodeInteraction]
  *
  * @param useUnmergedTree Find within merged composables like Buttons.
+ *
  * @see SemanticsNodeInteractionsProvider.onNode for general find method.
  */
 fun SemanticsNodeInteractionsProvider.onNodeWithTag(
@@ -35,6 +36,7 @@ fun SemanticsNodeInteractionsProvider.onNodeWithTag(
  * For usage patterns and semantics concepts see [SemanticsNodeInteraction]
  *
  * @param useUnmergedTree Find within merged composables like Buttons.
+ *
  * @see SemanticsNodeInteractionsProvider.onAllNodes for general find method.
  */
 fun SemanticsNodeInteractionsProvider.onAllNodesWithTag(
@@ -50,6 +52,7 @@ fun SemanticsNodeInteractionsProvider.onAllNodesWithTag(
  * @param substring Whether to use substring matching.
  * @param ignoreCase Whether case should be ignored.
  * @param useUnmergedTree Find within merged composables like Buttons.
+ *
  * @see SemanticsNodeInteractionsProvider.onNode for general find method.
  */
 fun SemanticsNodeInteractionsProvider.onNodeWithContentDescription(

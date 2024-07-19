@@ -36,7 +36,9 @@ import java.util.Locale
  * star projection (select *) turn into explicit column lists and embedded fields are re-named to
  * avoid conflicts in the response data set.
  */
-class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter {
+class ProjectionExpander(
+    private val tables: List<EntityOrView>
+) : QueryRewriter {
 
     private class IdentifierMap<V> : HashMap<String, V>() {
         override fun put(key: String, value: V): V? {
@@ -50,18 +52,24 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
 
     /**
      * Rewrites the specified [query] in the context of the provided [pojo]. Expanding its start
-     * projection ('SELECT *') and converting its named binding templates to positional templates
-     * (i.e. ':VVV' to '?').
+     * projection ('SELECT *') and converting its named binding templates to positional
+     * templates (i.e. ':VVV' to '?').
      */
     @VisibleForTesting
-    fun interpret(query: ParsedQuery, pojo: Pojo?) =
-        interpret(
-            query =
-                ExpandableSqlParser.parse(query.original).also { it.resultInfo = query.resultInfo },
-            pojo = pojo
-        )
+    fun interpret(
+        query: ParsedQuery,
+        pojo: Pojo?
+    ) = interpret(
+        query = ExpandableSqlParser.parse(query.original).also {
+            it.resultInfo = query.resultInfo
+        },
+        pojo = pojo
+    )
 
-    override fun rewrite(query: ParsedQuery, resultAdapter: QueryResultAdapter): ParsedQuery {
+    override fun rewrite(
+        query: ParsedQuery,
+        resultAdapter: QueryResultAdapter
+    ): ParsedQuery {
         if (resultAdapter.rowAdapters.isEmpty()) {
             return query
         }
@@ -71,21 +79,26 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
         }
         val rowAdapter = resultAdapter.rowAdapters.single()
         return if (rowAdapter is PojoRowAdapter) {
-            interpret(query = ExpandableSqlParser.parse(query.original), pojo = rowAdapter.pojo)
-                .let {
-                    val reParsed = SqlParser.parse(it)
-                    if (reParsed.errors.isEmpty()) {
-                        reParsed
-                    } else {
-                        query // return original, expansion somewhat failed
-                    }
+            interpret(
+                query = ExpandableSqlParser.parse(query.original),
+                pojo = rowAdapter.pojo
+            ).let {
+                val reParsed = SqlParser.parse(it)
+                if (reParsed.errors.isEmpty()) {
+                    reParsed
+                } else {
+                    query // return original, expansion somewhat failed
                 }
+            }
         } else {
             query
         }
     }
 
-    private fun interpret(query: ExpandableParsedQuery, pojo: Pojo?): String {
+    private fun interpret(
+        query: ExpandableParsedQuery,
+        pojo: Pojo?
+    ): String {
         val queriedTableNames = query.tables.map { it.name }
         return query.sections.joinToString("") { section ->
             when (section) {
@@ -109,13 +122,14 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
         pojo: Pojo,
         queriedTableNames: List<String>
     ): String {
-        val aliasToName = query.tables.map { (name, alias) -> alias to name }.toMap(IdentifierMap())
-        val nameToAlias =
-            query.tables
-                .groupBy { it.name.lowercase(Locale.ENGLISH) }
-                .filter { (_, pairs) -> pairs.size == 1 }
-                .map { (name, pairs) -> name to pairs.first().alias }
-                .toMap(IdentifierMap())
+        val aliasToName = query.tables
+            .map { (name, alias) -> alias to name }
+            .toMap(IdentifierMap())
+        val nameToAlias = query.tables
+            .groupBy { it.name.lowercase(Locale.ENGLISH) }
+            .filter { (_, pairs) -> pairs.size == 1 }
+            .map { (name, pairs) -> name to pairs.first().alias }
+            .toMap(IdentifierMap())
         return when (section) {
             is ExpandableSection.Projection.All -> {
                 expand(
@@ -132,24 +146,22 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
                 val embedded = findEmbeddedField(pojo, section.tableAlias)
                 if (embedded != null) {
                     expandEmbeddedField(
-                            embedded = embedded,
-                            table = findEntityOrView(embedded.pojo),
-                            shallow = false,
-                            tableToAlias = nameToAlias
-                        )
-                        .joinToString(", ")
+                        embedded = embedded,
+                        table = findEntityOrView(embedded.pojo),
+                        shallow = false,
+                        tableToAlias = nameToAlias
+                    ).joinToString(", ")
                 } else {
-                    val tableName = aliasToName[section.tableAlias] ?: section.tableAlias
+                    val tableName =
+                        aliasToName[section.tableAlias] ?: section.tableAlias
                     val table = tables.find { it.tableName == tableName }
-                    pojo.fields
-                        .filter { field ->
-                            field.parent == null &&
-                                field.columnName !in query.explicitColumns &&
-                                table?.columnNames?.contains(field.columnName) == true
-                        }
-                        .joinToString(", ") { field ->
-                            "`${section.tableAlias}`.`${field.columnName}`"
-                        }
+                    pojo.fields.filter { field ->
+                        field.parent == null &&
+                            field.columnName !in query.explicitColumns &&
+                            table?.columnNames?.contains(field.columnName) == true
+                    }.joinToString(", ") { field ->
+                        "`${section.tableAlias}`.`${field.columnName}`"
+                    }
                 }
             }
         }
@@ -159,7 +171,10 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
         return tables.find { it.typeName == pojo.typeName }
     }
 
-    private fun findEmbeddedField(pojo: Pojo, tableAlias: String): EmbeddedField? {
+    private fun findEmbeddedField(
+        pojo: Pojo,
+        tableAlias: String
+    ): EmbeddedField? {
         // Try to find by the prefix.
         val matchByPrefix = pojo.embeddedFields.find { it.prefix == tableAlias }
         if (matchByPrefix != null) {
@@ -167,7 +182,8 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
         }
         // Try to find by the table name.
         return pojo.embeddedFields.find {
-            it.prefix.isEmpty() && findEntityOrView(it.pojo)?.tableName == tableAlias
+            it.prefix.isEmpty() &&
+                findEntityOrView(it.pojo)?.tableName == tableAlias
         }
     }
 
@@ -179,27 +195,24 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
         resultInfo: QueryResultInfo?
     ): String {
         val table = findEntityOrView(pojo)
-        return (pojo.embeddedFields.flatMap {
+        return (
+            pojo.embeddedFields.flatMap {
                 expandEmbeddedField(it, findEntityOrView(it.pojo), shallow, nameToAlias)
-            } +
-                pojo.fields
-                    .filter { field ->
-                        field.parent == null &&
-                            field.columnName !in ignoredColumnNames &&
-                            (resultInfo == null || resultInfo.hasColumn(field.columnName))
-                    }
-                    .map { field ->
-                        if (table != null && table is Entity) {
-                            // Should not happen when defining a view
-                            val tableAlias =
-                                nameToAlias[table.tableName.lowercase(Locale.ENGLISH)]
-                                    ?: table.tableName
-                            "`$tableAlias`.`${field.columnName}` AS `${field.columnName}`"
-                        } else {
-                            "`${field.columnName}`"
-                        }
-                    })
-            .joinToString(", ")
+            } + pojo.fields.filter { field ->
+                field.parent == null &&
+                    field.columnName !in ignoredColumnNames &&
+                    (resultInfo == null || resultInfo.hasColumn(field.columnName))
+            }.map { field ->
+                if (table != null && table is Entity) {
+                    // Should not happen when defining a view
+                    val tableAlias = nameToAlias[table.tableName.lowercase(Locale.ENGLISH)]
+                        ?: table.tableName
+                    "`$tableAlias`.`${field.columnName}` AS `${field.columnName}`"
+                } else {
+                    "`${field.columnName}`"
+                }
+            }
+            ).joinToString(", ")
     }
 
     private fun QueryResultInfo.hasColumn(columnName: String): Boolean {
@@ -234,15 +247,18 @@ class ProjectionExpander(private val tables: List<EntityOrView>) : QueryRewriter
                 }
             }
         } else {
-            if (
-                !shallow && embedded.prefix.isNotEmpty() && embedded.prefix in tableToAlias.values
+            if (!shallow &&
+                embedded.prefix.isNotEmpty() &&
+                embedded.prefix in tableToAlias.values
             ) {
                 pojo.fields.map { field ->
                     "`${embedded.prefix}`.`${field.columnNameWithoutPrefix(embedded.prefix)}` " +
                         "AS `${field.columnName}`"
                 }
             } else {
-                pojo.fields.map { field -> "`${field.columnName}`" }
+                pojo.fields.map { field ->
+                    "`${field.columnName}`"
+                }
             }
         }
     }

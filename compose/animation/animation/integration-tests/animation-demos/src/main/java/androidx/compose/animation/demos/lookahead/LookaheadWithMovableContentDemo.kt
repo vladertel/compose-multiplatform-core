@@ -64,24 +64,26 @@ import androidx.compose.ui.unit.round
 @Preview
 @Composable
 fun LookaheadWithMovableContentDemo() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         var isSingleColumn by remember { mutableStateOf(true) }
 
         Column(
-            Modifier.padding(100.dp).fillMaxWidth(),
+            Modifier
+                .padding(100.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.clickable { isSingleColumn = true },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.clickable {
+                isSingleColumn = true
+            }, verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(isSingleColumn, { isSingleColumn = true })
                 Text("Single Column")
             }
-            Row(
-                modifier = Modifier.clickable { isSingleColumn = false },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.clickable {
+                isSingleColumn = false
+            }, verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(!isSingleColumn, { isSingleColumn = false })
                 Text("Double Column")
             }
@@ -91,7 +93,8 @@ fun LookaheadWithMovableContentDemo() {
             colors.mapIndexed { id, color ->
                 movableContentWithReceiverOf<LookaheadScope, Float> { weight ->
                     Box(
-                        Modifier.padding(15.dp)
+                        Modifier
+                            .padding(15.dp)
                             .height(80.dp)
                             .fillMaxWidth(weight)
                             .animateBoundsInScope()
@@ -100,25 +103,19 @@ fun LookaheadWithMovableContentDemo() {
                     ) {
                         when (id) {
                             0 -> CircularProgressIndicator(color = Color.White)
-                            1 ->
-                                Box(
-                                    Modifier.graphicsLayer {
-                                        scaleX = 0.5f
-                                        scaleY = 0.5f
-                                        translationX = 100f
-                                    }
-                                ) {
-                                    AnimatedDotsDemo()
-                                }
-                            2 ->
-                                Box(
-                                    Modifier.graphicsLayer {
-                                        scaleX = 0.5f
-                                        scaleY = 0.5f
-                                    }
-                                ) {
-                                    InfinitePulsingHeart()
-                                }
+                            1 -> Box(Modifier.graphicsLayer {
+                                scaleX = 0.5f
+                                scaleY = 0.5f
+                                translationX = 100f
+                            }) {
+                                AnimatedDotsDemo()
+                            }
+
+                            2 -> Box(Modifier.graphicsLayer {
+                                scaleX = 0.5f
+                                scaleY = 0.5f
+                            }) { InfinitePulsingHeart() }
+
                             else -> InfiniteProgress()
                         }
                     }
@@ -132,7 +129,9 @@ fun LookaheadWithMovableContentDemo() {
                         Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        items.forEach { it(0.8f) }
+                        items.forEach {
+                            it(0.8f)
+                        }
                     }
                 } else {
                     Row {
@@ -157,7 +156,7 @@ fun LookaheadWithMovableContentDemo() {
     }
 }
 
-context(LookaheadScope)
+context (LookaheadScope)
 @OptIn(ExperimentalAnimatableApi::class)
 fun Modifier.animateBoundsInScope(): Modifier = composed {
     val sizeAnim = remember { DeferredTargetAnimation(IntSize.VectorConverter) }
@@ -174,20 +173,34 @@ fun Modifier.animateBoundsInScope(): Modifier = composed {
             !offsetAnim.isIdle
         }
     ) { measurable, _ ->
-        val (animWidth, animHeight) = sizeAnim.updateTarget(lookaheadSize, scope, spring())
-        measurable.measure(Constraints.fixed(animWidth, animHeight)).run {
-            layout(width, height) {
-                coordinates?.let {
-                    val target = lookaheadScopeCoordinates.localLookaheadPositionOf(it).round()
-                    val animOffset = offsetAnim.updateTarget(target, scope, spring())
-                    val current = lookaheadScopeCoordinates.localPositionOf(it, Offset.Zero).round()
-                    val (x, y) = animOffset - current
-                    place(x, y)
-                } ?: place(0, 0)
+        val (animWidth, animHeight) = sizeAnim.updateTarget(
+            lookaheadSize,
+            scope,
+            spring()
+        )
+        measurable.measure(Constraints.fixed(animWidth, animHeight))
+            .run {
+                layout(width, height) {
+                    coordinates?.let {
+                        val target =
+                            lookaheadScopeCoordinates.localLookaheadPositionOf(it)
+                                .round()
+                        val animOffset = offsetAnim.updateTarget(target, scope, spring())
+                        val current = lookaheadScopeCoordinates.localPositionOf(
+                            it,
+                            Offset.Zero
+                        ).round()
+                        val (x, y) = animOffset - current
+                        place(x, y)
+                    } ?: place(0, 0)
+                }
             }
-        }
     }
 }
 
-private val colors =
-    listOf(Color(0xffff6f69), Color(0xffffcc5c), Color(0xff264653), Color(0xff2a9d84))
+private val colors = listOf(
+    Color(0xffff6f69),
+    Color(0xffffcc5c),
+    Color(0xff264653),
+    Color(0xff2a9d84)
+)

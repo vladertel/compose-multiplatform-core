@@ -20,18 +20,11 @@ import android.media.CamcorderProfile
 import android.media.EncoderProfiles.VideoProfile.HDR_NONE
 import android.media.EncoderProfiles.VideoProfile.YUV_420
 import android.os.Build
-import android.util.Size
-import androidx.annotation.RequiresApi
-import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat
-import androidx.camera.camera2.internal.compat.quirk.CamcorderProfileResolutionQuirk
-import androidx.camera.camera2.internal.compat.quirk.CameraQuirks
 import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks
 import androidx.camera.camera2.internal.compat.quirk.InvalidVideoProfilesQuirk
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy.BIT_DEPTH_8
-import androidx.camera.core.impl.Quirks
 import androidx.camera.testing.impl.CameraUtil
-import androidx.camera.testing.impl.LabTestRule
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
@@ -51,32 +44,29 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters
-        fun data(): Array<Array<Int>> =
-            arrayOf(
-                arrayOf(CamcorderProfile.QUALITY_LOW),
-                arrayOf(CamcorderProfile.QUALITY_HIGH),
-                arrayOf(CamcorderProfile.QUALITY_QCIF),
-                arrayOf(CamcorderProfile.QUALITY_CIF),
-                arrayOf(CamcorderProfile.QUALITY_480P),
-                arrayOf(CamcorderProfile.QUALITY_720P),
-                arrayOf(CamcorderProfile.QUALITY_1080P),
-                arrayOf(CamcorderProfile.QUALITY_QVGA),
-                arrayOf(CamcorderProfile.QUALITY_2160P),
-                arrayOf(CamcorderProfile.QUALITY_VGA),
-                arrayOf(CamcorderProfile.QUALITY_4KDCI),
-                arrayOf(CamcorderProfile.QUALITY_QHD),
-                arrayOf(CamcorderProfile.QUALITY_2K)
-            )
+        fun data(): Array<Array<Int>> = arrayOf(
+            arrayOf(CamcorderProfile.QUALITY_LOW),
+            arrayOf(CamcorderProfile.QUALITY_HIGH),
+            arrayOf(CamcorderProfile.QUALITY_QCIF),
+            arrayOf(CamcorderProfile.QUALITY_CIF),
+            arrayOf(CamcorderProfile.QUALITY_480P),
+            arrayOf(CamcorderProfile.QUALITY_720P),
+            arrayOf(CamcorderProfile.QUALITY_1080P),
+            arrayOf(CamcorderProfile.QUALITY_QVGA),
+            arrayOf(CamcorderProfile.QUALITY_2160P),
+            arrayOf(CamcorderProfile.QUALITY_VGA),
+            arrayOf(CamcorderProfile.QUALITY_4KDCI),
+            arrayOf(CamcorderProfile.QUALITY_QHD),
+            arrayOf(CamcorderProfile.QUALITY_2K)
+        )
     }
 
     private lateinit var encoderProfilesProvider: Camera2EncoderProfilesProvider
     private var cameraId = ""
     private var intCameraId = -1
-    private lateinit var cameraQuirks: Quirks
 
-    @get:Rule val useCamera = CameraUtil.grantCameraPermissionAndPreTestAndPostTest()
-
-    @get:Rule val labTestRule = LabTestRule()
+    @get:Rule
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest()
 
     @Before
     fun setup() {
@@ -84,17 +74,21 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
 
         cameraId = CameraUtil.getCameraIdWithLensFacing(CameraSelector.LENS_FACING_BACK)!!
         intCameraId = cameraId.toInt()
-        setUptEncoderProfileProvider()
+
+        encoderProfilesProvider = Camera2EncoderProfilesProvider(cameraId)
     }
 
-    private fun setUptEncoderProfileProvider() {
-        val characteristics =
-            CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
-                CameraUtil.getCameraCharacteristics(cameraId)!!,
-                cameraId
-            )
-        cameraQuirks = CameraQuirks.get(cameraId, characteristics)
-        encoderProfilesProvider = Camera2EncoderProfilesProvider(cameraId, cameraQuirks)
+    @Test
+    fun hasProfile_returnSameResult() {
+        assertThat(encoderProfilesProvider.hasProfile(quality))
+            .isEqualTo(CamcorderProfile.hasProfile(intCameraId, quality))
+    }
+
+    @Test
+    fun hasProfile_getReturnNonNull() {
+        assumeTrue(CamcorderProfile.hasProfile(intCameraId, quality))
+
+        assertThat(encoderProfilesProvider.getAll(quality)).isNotNull()
     }
 
     @Test
@@ -107,11 +101,11 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
     @Suppress("DEPRECATION")
     @Test
     fun hasSameContentAsCamcorderProfile() {
-        assumeValidCamcorderProfile(quality)
+        assumeTrue(CamcorderProfile.hasProfile(quality))
 
-        val profile = CamcorderProfile.get(intCameraId, quality)
-        val encoderProfiles = encoderProfilesProvider.getAll(quality)!!
-        val videoProfile = encoderProfiles.videoProfiles[0]
+        val profile = CamcorderProfile.get(quality)
+        val encoderProfiles = encoderProfilesProvider.getAll(quality)
+        val videoProfile = encoderProfiles!!.videoProfiles[0]
         val audioProfile = encoderProfiles.audioProfiles[0]
 
         assertThat(encoderProfiles.defaultDurationSeconds).isEqualTo(profile.duration)
@@ -130,10 +124,10 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
     @SdkSuppress(minSdkVersion = 31, maxSdkVersion = 32)
     @Test
     fun api31Api32_hasSameContentAsEncoderProfiles() {
-        assumeValidEncoderProfiles(quality)
+        assumeTrue(CamcorderProfile.hasProfile(quality))
 
-        val profiles = CamcorderProfile.getAll(cameraId, quality)!!
-        val video = profiles.videoProfiles[0]
+        val profiles = CamcorderProfile.getAll(cameraId, quality)
+        val video = profiles!!.videoProfiles[0]
         val audio = profiles.audioProfiles[0]
         val profilesProxy = encoderProfilesProvider.getAll(quality)
         val videoProxy = profilesProxy!!.videoProfiles[0]
@@ -162,10 +156,11 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
     @SdkSuppress(minSdkVersion = 33)
     @Test
     fun afterApi33_hasSameContentAsEncoderProfiles() {
-        assumeValidEncoderProfiles(quality)
+        assumeTrue(CamcorderProfile.hasProfile(quality))
+        skipTestOnDevicesWithProblematicBuild()
 
-        val profiles = CamcorderProfile.getAll(cameraId, quality)!!
-        val video = profiles.videoProfiles[0]
+        val profiles = CamcorderProfile.getAll(cameraId, quality)
+        val video = profiles!!.videoProfiles[0]
         val audio = profiles.audioProfiles[0]
         val profilesProxy = encoderProfilesProvider.getAll(quality)
         val videoProxy = profilesProxy!!.videoProfiles[0]
@@ -191,26 +186,6 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
         assertThat(audioProxy.profile).isEqualTo(audio.profile)
     }
 
-    @LabTestRule.LabTestOnly
-    @SdkSuppress(minSdkVersion = 31)
-    @Test
-    fun detectNullVideoProfile() {
-        assumeTrue(CamcorderProfile.hasProfile(intCameraId, quality))
-        skipTestOnDevicesWithProblematicBuild()
-        val profiles = CamcorderProfile.getAll(cameraId, quality)!!
-        assertThat(profiles.videoProfiles[0]).isNotNull()
-    }
-
-    @LabTestRule.LabTestOnly
-    @Test
-    fun qualityHighAndLowIsNotNull() {
-        assumeTrue(
-            quality == CamcorderProfile.QUALITY_HIGH || quality == CamcorderProfile.QUALITY_LOW
-        )
-
-        assertThat(encoderProfilesProvider.getAll(quality)).isNotNull()
-    }
-
     private fun skipTestOnDevicesWithProblematicBuild() {
         // Skip test for b/265613005, b/223439995 and b/277174217
         val hasVideoProfilesQuirk = DeviceQuirks.get(InvalidVideoProfilesQuirk::class.java) != null
@@ -223,34 +198,5 @@ class Camera2EncoderProfilesProviderTest(private val quality: Int) {
     private fun isProblematicCuttlefishBuild(): Boolean {
         return Build.MODEL.contains("Cuttlefish", true) &&
             (Build.ID.startsWith("TP1A", true) || Build.ID.startsWith("TSE4", true))
-    }
-
-    @Suppress("DEPRECATION")
-    private fun assumeValidCamcorderProfile(quality: Int) {
-        assumeTrue(CamcorderProfile.hasProfile(intCameraId, quality))
-        val profile = CamcorderProfile.get(intCameraId, quality)
-        assumeSizeValidForCamcorderProfileResolutionQuirk(
-            Size(profile.videoFrameWidth, profile.videoFrameHeight)
-        )
-    }
-
-    @RequiresApi(31)
-    private fun assumeValidEncoderProfiles(quality: Int) {
-        assumeTrue(CamcorderProfile.hasProfile(intCameraId, quality))
-        val profiles = CamcorderProfile.getAll(cameraId, quality)!!
-        val video = profiles.videoProfiles[0]
-        assumeTrue(video != null)
-        assumeSizeValidForCamcorderProfileResolutionQuirk(Size(video.width, video.height))
-    }
-
-    private fun assumeSizeValidForCamcorderProfileResolutionQuirk(profileSize: Size) {
-        val resolutionQuirk =
-            cameraQuirks.get(CamcorderProfileResolutionQuirk::class.java) ?: return
-        val cameraResolutions = resolutionQuirk.supportedResolutions
-        assumeTrue(
-            "The profile size $profileSize is not in camera supported " +
-                "resolutions $cameraResolutions, which is an invalid profile.",
-            cameraResolutions.contains(profileSize)
-        )
     }
 }

@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @MediumTest
 class PrimitiveResourcesTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun integerResourceTest() {

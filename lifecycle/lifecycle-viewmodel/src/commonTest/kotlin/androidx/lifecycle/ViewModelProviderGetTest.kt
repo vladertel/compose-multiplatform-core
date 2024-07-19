@@ -24,14 +24,11 @@ import kotlin.test.Test
 class ViewModelProviderGetTest {
     @Test
     fun get_withReifiedType() {
-        val factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(
-                    modelClass: KClass<T>,
-                    extras: CreationExtras
-                ): T = TestViewModel() as T
-            }
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T =
+                TestViewModel() as T
+        }
         val provider = ViewModelProvider.create(ViewModelStore(), factory)
 
         val viewModel = provider.get<TestViewModel>()

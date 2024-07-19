@@ -19,7 +19,6 @@ package androidx.webkit;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-import androidx.annotation.AnyThread;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresFeature;
@@ -35,7 +34,6 @@ import java.util.Set;
  * The settings are similar to {@link WebSettings} but only settings relevant to
  * Service Workers are supported.
  */
-@AnyThread
 public abstract class ServiceWorkerWebSettingsCompat {
     /**
      */
@@ -207,7 +205,7 @@ public abstract class ServiceWorkerWebSettingsCompat {
      * discontinued.
      * <p>
      * Apps can use this method to restore the legacy behavior for servers that still rely on
-     * the deprecated header, but it should not be used to identify the WebView to first-party
+     * the deprecated header, but it should not be used to identify the webview to first-party
      * servers under the control of the app developer.
      * <p>
      * The format of the strings in the allow-list follows the origin rules of

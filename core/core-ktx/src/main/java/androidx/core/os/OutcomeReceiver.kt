@@ -16,7 +16,6 @@
 
 // OutcomeReceiver was added in API 31
 @file:RequiresApi(31)
-
 package androidx.core.os
 
 import android.os.OutcomeReceiver
@@ -31,6 +30,7 @@ import kotlin.coroutines.resumeWithException
  *
  * Useful for writing `suspend` bindings to async Android platform methods that accept
  * [OutcomeReceiver]:
+ *
  * ```
  * public suspend fun FancinessManager.query(
  *     query: FancinessManager.Query

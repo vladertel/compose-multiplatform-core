@@ -28,11 +28,15 @@ class NightModeActivityTestRule<T : AppCompatActivity>(
     override fun beforeActivityLaunched() {
         // By default we'll set the night mode to NO, which allows us to make better
         // assumptions in the test below
-        runOnUiThread { AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) }
+        runOnUiThread {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        }
     }
 
     override fun afterActivityFinished() {
         // Reset the default night mode
-        runOnUiThread { AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO) }
+        runOnUiThread {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        }
     }
 }

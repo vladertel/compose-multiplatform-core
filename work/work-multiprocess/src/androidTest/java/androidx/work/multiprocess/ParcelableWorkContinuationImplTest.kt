@@ -58,44 +58,46 @@ public class ParcelableWorkContinuationImplTest {
         }
 
         context = ApplicationProvider.getApplicationContext<Context>()
-        val taskExecutor =
-            object : TaskExecutor() {
-                override fun executeOnDiskIO(runnable: Runnable) {
-                    runnable.run()
-                }
-
-                override fun isMainThread(): Boolean {
-                    return true
-                }
-
-                override fun postToMainThread(runnable: Runnable) {
-                    runnable.run()
-                }
+        val taskExecutor = object : TaskExecutor() {
+            override fun executeOnDiskIO(runnable: Runnable) {
+                runnable.run()
             }
+
+            override fun isMainThread(): Boolean {
+                return true
+            }
+
+            override fun postToMainThread(runnable: Runnable) {
+                runnable.run()
+            }
+        }
         ArchTaskExecutor.getInstance().setDelegate(taskExecutor)
 
         val scheduler = mock(Scheduler::class.java)
-        val configuration = Configuration.Builder().setExecutor(SynchronousExecutor()).build()
+        val configuration = Configuration.Builder()
+            .setExecutor(SynchronousExecutor())
+            .build()
 
-        workManager =
-            spy(
-                WorkManagerImpl(
-                    context,
-                    configuration,
-                    object : androidx.work.impl.utils.taskexecutor.TaskExecutor {
-                        val executor = Executor { it.run() }
-                        val serialExecutor = SerialExecutorImpl(executor)
-
-                        override fun getMainThreadExecutor(): Executor {
-                            return serialExecutor
-                        }
-
-                        override fun getSerialTaskExecutor(): SerialExecutor {
-                            return serialExecutor
-                        }
+        workManager = spy(
+            WorkManagerImpl(
+                context,
+                configuration,
+                object : androidx.work.impl.utils.taskexecutor.TaskExecutor {
+                    val executor = Executor {
+                        it.run()
                     }
-                )
+                    val serialExecutor = SerialExecutorImpl(executor)
+
+                    override fun getMainThreadExecutor(): Executor {
+                        return serialExecutor
+                    }
+
+                    override fun getSerialTaskExecutor(): SerialExecutor {
+                        return serialExecutor
+                    }
+                }
             )
+        )
         `when`<List<Scheduler>>(workManager.schedulers).thenReturn(listOf(scheduler))
         WorkManagerImpl.setDelegate(workManager)
     }
@@ -141,10 +143,9 @@ public class ParcelableWorkContinuationImplTest {
 
         val first = OneTimeWorkRequest.Builder(TestWorker::class.java).build()
         val second = OneTimeWorkRequest.Builder(TestWorker::class.java).build()
-        val continuation =
-            workManager
-                .beginUniqueWork("test", ExistingWorkPolicy.REPLACE, listOf(first))
-                .then(second)
+        val continuation = workManager.beginUniqueWork(
+            "test", ExistingWorkPolicy.REPLACE, listOf(first)
+        ).then(second)
         val parcelable = ParcelableWorkContinuationImpl(continuation as WorkContinuationImpl)
         assertOn(parcelable)
     }
@@ -159,10 +160,9 @@ public class ParcelableWorkContinuationImplTest {
 
         val first = OneTimeWorkRequest.Builder(TestWorker::class.java).build()
         val second = OneTimeWorkRequest.Builder(TestWorker::class.java).build()
-        val continuation =
-            workManager
-                .beginUniqueWork("test", ExistingWorkPolicy.REPLACE, listOf(first))
-                .then(second)
+        val continuation = workManager.beginUniqueWork(
+            "test", ExistingWorkPolicy.REPLACE, listOf(first)
+        ).then(second)
         val parcelable = ParcelableWorkContinuationImpl(continuation as WorkContinuationImpl)
         val continuation2 = parcelable.info.toWorkContinuationImpl(workManager)
         equal(
@@ -219,6 +219,8 @@ public class ParcelableWorkContinuationImplTest {
     }
 
     private fun assertRequests(listOne: List<WorkRequest>, listTwo: List<WorkRequest>) {
-        listOne.forEachIndexed { i, workRequest -> assertRequest(workRequest, listTwo[i]) }
+        listOne.forEachIndexed { i, workRequest ->
+            assertRequest(workRequest, listTwo[i])
+        }
     }
 }

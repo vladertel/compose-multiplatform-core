@@ -29,7 +29,10 @@ abstract class AbstractApiCompilerDiffTest : AbstractDiffTest() {
 
     open val extraProcessorOptions: Map<String, String> = mapOf()
 
-    override fun generateSources(inputSources: List<Source>, outputDirectory: Path): List<Source> {
+    override fun generateSources(
+        inputSources: List<Source>,
+        outputDirectory: Path
+    ): List<Source> {
         val result = compileWithPrivacySandboxKspCompiler(inputSources, extraProcessorOptions)
         CompilationTestHelper.assertThat(result).succeeds()
         val sources = result.generatedSources

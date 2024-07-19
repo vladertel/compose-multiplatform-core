@@ -19,6 +19,7 @@ package androidx.camera.video.internal.encoder;
 import android.media.MediaCodec;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.util.Preconditions;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p> To reduce the memory used, the capacity of the copied byte buffer may not equal to its
  * source, only the required size is allocated to put the copied data.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class BufferCopiedEncodedData implements EncodedData {
 
     private final ByteBuffer mByteBuffer;

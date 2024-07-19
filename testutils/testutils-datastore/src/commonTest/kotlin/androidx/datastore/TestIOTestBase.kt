@@ -22,7 +22,9 @@ import kotlin.test.Test
 
 class OkioTestIOTest : TestIOTestBase(OkioTestIO())
 
-abstract class TestIOTestBase(private val testIO: TestIO<*, *>) {
+abstract class TestIOTestBase(
+    private val testIO: TestIO<*, *>
+) {
     @Test
     fun writeNewFile() {
         val file = testIO.newTempFile()
@@ -41,7 +43,9 @@ abstract class TestIOTestBase(private val testIO: TestIO<*, *>) {
         assertThat(file.isDirectory()).isTrue()
 
         // try to re-create over it, should fail
-        assertThrows<Throwable> { file.mkdirs(mustCreate = true) }
+        assertThrows<Throwable> {
+            file.mkdirs(mustCreate = true)
+        }
         // don't need to create so should be fine
         file.mkdirs(mustCreate = false)
     }
@@ -50,15 +54,21 @@ abstract class TestIOTestBase(private val testIO: TestIO<*, *>) {
     fun createDirectory_overFile() {
         val file = testIO.newTempFile(relativePath = "some/sub/file")
         file.write("test")
-        assertThrows<Throwable> { file.mkdirs(mustCreate = false) }
-        assertThrows<Throwable> { file.mkdirs(mustCreate = true) }
+        assertThrows<Throwable> {
+            file.mkdirs(mustCreate = false)
+        }
+        assertThrows<Throwable> {
+            file.mkdirs(mustCreate = true)
+        }
     }
 
     @Test
     fun writeToDirectory() {
         val file = testIO.newTempFile(relativePath = "some/dir")
         file.mkdirs()
-        assertThrows<Throwable> { file.write("some text") }
+        assertThrows<Throwable> {
+            file.write("some text")
+        }
     }
 
     @Test
@@ -68,7 +78,9 @@ abstract class TestIOTestBase(private val testIO: TestIO<*, *>) {
         val file2 = testIO.newTempFile(relativePath = "dir1/dir2/file")
         assertThat(file2.readText()).isEqualTo("test")
         val parent = testIO.newTempFile(relativePath = "dir1")
-        assertThat(parent.resolve("dir2/file").readText()).isEqualTo("test")
+        assertThat(
+            parent.resolve("dir2/file").readText()
+        ).isEqualTo("test")
     }
 
     @Test
@@ -93,9 +105,13 @@ abstract class TestIOTestBase(private val testIO: TestIO<*, *>) {
     fun readBytes() {
         val file = testIO.newTempFile()
         // cannot read non-existing file
-        assertThrows<Throwable> { file.readBytes() }
+        assertThrows<Throwable> {
+            file.readBytes()
+        }
         file.mkdirs()
         // cannot read a directory
-        assertThrows<Throwable> { file.readBytes() }
+        assertThrows<Throwable> {
+            file.readBytes()
+        }
     }
 }

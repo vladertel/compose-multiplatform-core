@@ -38,11 +38,11 @@ import java.util.concurrent.Executor
  * register a new credential or to consent to a saved credential from supported credential
  * providers, which can then be used to authenticate to the app.
  *
- * This class contains its own exception types. They represent unique failures during the Credential
- * Manager flow. As required, they can be extended for unique types containing new and unique
- * versions of the exception - either with new 'exception types' (same credential class, different
- * exceptions), or inner subclasses and their exception types (a subclass credential class and all
- * their exception types).
+ * This class contains its own exception types.
+ * They represent unique failures during the Credential Manager flow. As required, they
+ * can be extended for unique types containing new and unique versions of the exception - either
+ * with new 'exception types' (same credential class, different exceptions), or inner subclasses
+ * and their exception types (a subclass credential class and all their exception types).
  *
  * For example, if there is an UNKNOWN exception type, assuming the base Exception is
  * [ClearCredentialException], we can add an 'exception type' class for it as follows:
@@ -58,9 +58,9 @@ import java.util.concurrent.Executor
  * }
  * ```
  *
- * Furthermore, the base class can be subclassed to a new more specific credential type, which then
- * can further be subclassed into individual exception types. The first is an example of a 'inner
- * credential type exception', and the next is a 'exception type' of this subclass exception.
+ * Furthermore, the base class can be subclassed to a new more specific credential type, which
+ * then can further be subclassed into individual exception types. The first is an example of a
+ * 'inner credential type exception', and the next is a 'exception type' of this subclass exception.
  *
  * ```
  * class UniqueCredentialBasedOnClearCredentialException(
@@ -82,16 +82,21 @@ import java.util.concurrent.Executor
  *   }
  * }
  * ```
+ *
+ *
  */
+@RequiresApi(16)
 @SuppressLint("ObsoleteSdkInt") // Accommodate dependencies with a lower min sdk requirement
-internal class CredentialManagerImpl internal constructor(private val context: Context) :
-    CredentialManager {
+internal class CredentialManagerImpl internal constructor(
+    private val context: Context
+) : CredentialManager {
     companion object {
         /**
          * An intent action that shows a screen that let user enable a Credential Manager provider.
          */
-        private const val INTENT_ACTION_FOR_CREDENTIAL_PROVIDER_SETTINGS: String =
-            "android.settings.CREDENTIAL_PROVIDER"
+        private const val
+        INTENT_ACTION_FOR_CREDENTIAL_PROVIDER_SETTINGS: String =
+        "android.settings.CREDENTIAL_PROVIDER"
     }
 
     /**
@@ -102,8 +107,8 @@ internal class CredentialManagerImpl internal constructor(private val context: C
      * The execution potentially launches framework UI flows for a user to view available
      * credentials, consent to using one of them, etc.
      *
-     * @param context the context used to launch any UI needed; use an activity context to make sure
-     *   the UI will be launched within the same task stack
+     * @param context the context used to launch any UI needed; use an activity context to make
+     * sure the UI will be launched within the same task stack
      * @param request the request for getting the credential
      * @param cancellationSignal an optional signal that allows for cancelling this call
      * @param executor the callback will take place on this executor
@@ -116,14 +121,13 @@ internal class CredentialManagerImpl internal constructor(private val context: C
         executor: Executor,
         callback: CredentialManagerCallback<GetCredentialResponse, GetCredentialException>,
     ) {
-        val provider: CredentialProvider? =
-            CredentialProviderFactory(context).getBestAvailableProvider()
+        val provider: CredentialProvider? = CredentialProviderFactory
+            .getBestAvailableProvider(this.context)
         if (provider == null) {
             callback.onError(
                 GetCredentialProviderConfigurationException(
                     "getCredentialAsync no provider dependencies found - please ensure " +
-                        "the desired provider dependencies are added"
-                )
+                        "the desired provider dependencies are added")
             )
             return
         }
@@ -136,16 +140,16 @@ internal class CredentialManagerImpl internal constructor(private val context: C
      * This API uses callbacks instead of Kotlin coroutines.
      *
      * Different from the other `getCredentialAsync(GetCredentialRequest, Activity)` API, this API
-     * launches the remaining flows to retrieve an app credential from the user, after the completed
-     * prefetch work corresponding to the given `pendingGetCredentialHandle`. Use this API to
-     * complete the full credential retrieval operation after you initiated a request through the
-     * [prepareGetCredentialAsync] API.
+     * launches the remaining flows to retrieve an app credential from the user, after the
+     * completed prefetch work corresponding to the given `pendingGetCredentialHandle`. Use this
+     * API to complete the full credential retrieval operation after you initiated a request through
+     * the [prepareGetCredentialAsync] API.
      *
-     * The execution can potentially launch UI flows to collect user consent to using a credential,
-     * display a picker when multiple credentials exist, etc.
+     * The execution can potentially launch UI flows to collect user consent to using a
+     * credential, display a picker when multiple credentials exist, etc.
      *
-     * @param context the context used to launch any UI needed; use an activity context to make sure
-     *   the UI will be launched within the same task stack
+     * @param context the context used to launch any UI needed; use an activity context to make
+     * sure the UI will be launched within the same task stack
      * @param pendingGetCredentialHandle the handle representing the pending operation to resume
      * @param cancellationSignal an optional signal that allows for cancelling this call
      * @param executor the callback will take place on this executor
@@ -159,34 +163,22 @@ internal class CredentialManagerImpl internal constructor(private val context: C
         executor: Executor,
         callback: CredentialManagerCallback<GetCredentialResponse, GetCredentialException>,
     ) {
-        val provider: CredentialProvider? =
-            CredentialProviderFactory(context)
-                .getBestAvailableProvider(shouldFallbackToPreU = false)
-        if (provider == null) {
-            callback.onError(
-                GetCredentialProviderConfigurationException("No Credential Manager provider found")
-            )
-            return
-        }
+        val provider = CredentialProviderFactory.getUAndAboveProvider(context)
         provider.onGetCredential(
-            context,
-            pendingGetCredentialHandle,
-            cancellationSignal,
-            executor,
-            callback
-        )
+            context, pendingGetCredentialHandle, cancellationSignal, executor, callback)
     }
 
     /**
-     * Prepares for a get-credential operation. Returns a [PrepareGetCredentialResponse] that can
-     * later be used to launch the credential retrieval UI flow to finalize a user credential for
-     * your app.
+     * Prepares for a get-credential operation. Returns a [PrepareGetCredentialResponse]
+     * that can later be used to launch the credential retrieval UI flow to finalize a user
+     * credential for your app.
      *
      * This API uses callbacks instead of Kotlin coroutines.
      *
-     * This API doesn't invoke any UI. It only performs the preparation work so that you can later
-     * launch the remaining get-credential operation (involves UIs) through the [getCredentialAsync]
-     * API which incurs less latency than executing the whole operation in one call.
+     * This API doesn't invoke any UI. It only performs the preparation work so that you can
+     * later launch the remaining get-credential operation (involves UIs) through the
+     * [getCredentialAsync] API which incurs less latency than executing the whole operation in one
+     * call.
      *
      * @param request the request for getting the credential
      * @param cancellationSignal an optional signal that allows for cancelling this call
@@ -200,29 +192,21 @@ internal class CredentialManagerImpl internal constructor(private val context: C
         executor: Executor,
         callback: CredentialManagerCallback<PrepareGetCredentialResponse, GetCredentialException>,
     ) {
-        val provider: CredentialProvider? =
-            CredentialProviderFactory(context)
-                .getBestAvailableProvider(shouldFallbackToPreU = false)
-        if (provider == null) {
-            callback.onError(
-                GetCredentialProviderConfigurationException("No Credential Manager provider found")
-            )
-            return
-        }
+        val provider = CredentialProviderFactory.getUAndAboveProvider(context)
         provider.onPrepareCredential(request, cancellationSignal, executor, callback)
     }
 
     /**
-     * Registers a user credential that can be used to authenticate the user to the app in the
-     * future.
+     * Registers a user credential that can be used to authenticate the user to
+     * the app in the future.
      *
      * This API uses callbacks instead of Kotlin coroutines.
      *
      * The execution potentially launches framework UI flows for a user to view their registration
      * options, grant consent, etc.
      *
-     * @param context the context used to launch any UI needed; use an activity context to make sure
-     *   the UI will be launched within the same task stack
+     * @param context the context used to launch any UI needed; use an activity context to make
+     * sure the UI will be launched within the same task stack
      * @param request the request for creating the credential
      * @param cancellationSignal an optional signal that allows for cancelling this call
      * @param executor the callback will take place on this executor
@@ -235,15 +219,12 @@ internal class CredentialManagerImpl internal constructor(private val context: C
         executor: Executor,
         callback: CredentialManagerCallback<CreateCredentialResponse, CreateCredentialException>,
     ) {
-        val provider: CredentialProvider? =
-            CredentialProviderFactory(this.context).getBestAvailableProvider()
+        val provider: CredentialProvider? = CredentialProviderFactory
+            .getBestAvailableProvider(this.context)
         if (provider == null) {
-            callback.onError(
-                CreateCredentialProviderConfigurationException(
-                    "createCredentialAsync no provider dependencies found - please ensure the " +
-                        "desired provider dependencies are added"
-                )
-            )
+            callback.onError(CreateCredentialProviderConfigurationException(
+                "createCredentialAsync no provider dependencies found - please ensure the " +
+                    "desired provider dependencies are added"))
             return
         }
         provider.onCreateCredential(context, request, cancellationSignal, executor, callback)
@@ -274,24 +255,19 @@ internal class CredentialManagerImpl internal constructor(private val context: C
         executor: Executor,
         callback: CredentialManagerCallback<Void?, ClearCredentialException>,
     ) {
-        val provider: CredentialProvider? =
-            CredentialProviderFactory(context).getBestAvailableProvider()
+        val provider: CredentialProvider? = CredentialProviderFactory
+            .getBestAvailableProvider(context)
         if (provider == null) {
-            callback.onError(
-                ClearCredentialProviderConfigurationException(
-                    "clearCredentialStateAsync no provider dependencies found - please ensure the " +
-                        "desired provider dependencies are added"
-                )
-            )
+            callback.onError(ClearCredentialProviderConfigurationException(
+                "clearCredentialStateAsync no provider dependencies found - please ensure the " +
+                    "desired provider dependencies are added"))
             return
         }
         provider.onClearCredential(request, cancellationSignal, executor, callback)
     }
 
     /**
-     * Returns a pending intent that shows a screen that lets a user enable a Credential Manager
-     * provider.
-     *
+     * Returns a pending intent that shows a screen that lets a user enable a Credential Manager provider.
      * @return the pending intent that can be launched
      */
     @RequiresApi(34)

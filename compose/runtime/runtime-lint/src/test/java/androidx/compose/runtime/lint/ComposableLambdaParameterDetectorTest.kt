@@ -27,24 +27,25 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+/* ktlint-disable max-line-length */
 @RunWith(JUnit4::class)
 
-/** Test for [ComposableLambdaParameterDetector]. */
+/**
+ * Test for [ComposableLambdaParameterDetector].
+ */
 class ComposableLambdaParameterDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = ComposableLambdaParameterDetector()
 
-    override fun getIssues(): MutableList<Issue> =
-        mutableListOf(
-            ComposableLambdaParameterDetector.ComposableLambdaParameterNaming,
-            ComposableLambdaParameterDetector.ComposableLambdaParameterPosition
-        )
+    override fun getIssues(): MutableList<Issue> = mutableListOf(
+        ComposableLambdaParameterDetector.ComposableLambdaParameterNaming,
+        ComposableLambdaParameterDetector.ComposableLambdaParameterPosition
+    )
 
     @Test
     fun incorrectNaming() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -54,9 +55,9 @@ class ComposableLambdaParameterDetectorTest : LintDetectorTest() {
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .skipTestModes(TestMode.TYPE_ALIAS)
             .run()
             .expect(
@@ -79,10 +80,9 @@ Fix for src/androidx/compose/ui/foo/test.kt line 7: Rename text to content:
 
     @Test
     fun notTrailing() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -92,9 +92,9 @@ Fix for src/androidx/compose/ui/foo/test.kt line 7: Rename text to content:
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .skipTestModes(TestMode.TYPE_ALIAS)
             .run()
             .expect(
@@ -109,10 +109,9 @@ src/androidx/compose/ui/foo/test.kt:7: Warning: Composable lambda parameter shou
 
     @Test
     fun incorrectNamingAndNotTrailing() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -122,9 +121,9 @@ src/androidx/compose/ui/foo/test.kt:7: Warning: Composable lambda parameter shou
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .skipTestModes(TestMode.TYPE_ALIAS)
             .run()
             .expect(
@@ -150,10 +149,9 @@ Fix for src/androidx/compose/ui/foo/test.kt line 7: Rename text to content:
 
     @Test
     fun lambdaParameterWithReceiver() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -165,9 +163,9 @@ Fix for src/androidx/compose/ui/foo/test.kt line 7: Rename text to content:
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .run()
             .expect(
                 """
@@ -189,10 +187,9 @@ Fix for src/androidx/compose/ui/foo/Foo.kt line 9: Rename text to content:
 
     @Test
     fun multipleParameters() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -202,19 +199,18 @@ Fix for src/androidx/compose/ui/foo/Foo.kt line 9: Rename text to content:
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun nullableComposableLambdas() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -231,9 +227,9 @@ Fix for src/androidx/compose/ui/foo/Foo.kt line 9: Rename text to content:
                     foo: Int
                 ) {}
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .skipTestModes(TestMode.TYPE_ALIAS)
             .run()
             .expect(
@@ -269,10 +265,9 @@ Fix for src/androidx/compose/ui/foo/test.kt line 14: Rename text to content:
 
     @Test
     fun receiverScopedComposableFunction() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -282,19 +277,18 @@ Fix for src/androidx/compose/ui/foo/test.kt line 14: Rename text to content:
                 @Composable
                 fun FooScope.Button(foo: Int) {}
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun composableLambdaWithParameter() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -304,19 +298,18 @@ Fix for src/androidx/compose/ui/foo/test.kt line 14: Rename text to content:
                 @Composable
                 fun Button(foo: @Composable (Int, Boolean) -> Unit) {}
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun nonComposableLambda() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.ui.foo
 
                 import androidx.compose.runtime.Composable
@@ -326,10 +319,11 @@ Fix for src/androidx/compose/ui/foo/test.kt line 14: Rename text to content:
 
                 }
             """
-                ),
-                Stubs.Composable
-            )
+            ),
+            Stubs.Composable
+        )
             .run()
             .expectClean()
     }
 }
+/* ktlint-enable max-line-length */

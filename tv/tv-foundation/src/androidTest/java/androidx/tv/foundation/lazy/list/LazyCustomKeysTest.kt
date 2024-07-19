@@ -47,15 +47,24 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LazyCustomKeysTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    val itemSize = with(rule.density) { 100.toDp() }
+    val itemSize = with(rule.density) {
+        100.toDp()
+    }
 
     @Test
     fun itemsWithKeysAreLaidOutCorrectly() {
         val list = listOf(MyClass(0), MyClass(1), MyClass(2))
 
-        rule.setContent { TvLazyColumn { items(list, key = { it.id }) { Item("${it.id}") } } }
+        rule.setContent {
+            TvLazyColumn {
+                items(list, key = { it.id }) {
+                    Item("${it.id}")
+                }
+            }
+        }
 
         assertItems("0", "1", "2")
     }
@@ -65,17 +74,27 @@ class LazyCustomKeysTest {
         var list by mutableStateOf(listOf(MyClass(0), MyClass(1), MyClass(2)))
 
         rule.setContent {
-            TvLazyColumn { items(list, key = { it.id }) { Item(remember { "${it.id}" }) } }
+            TvLazyColumn {
+                items(list, key = { it.id }) {
+                    Item(remember { "${it.id}" })
+                }
+            }
         }
 
-        rule.runOnIdle { list = listOf(list[0], list[2]) }
+        rule.runOnIdle {
+            list = listOf(list[0], list[2])
+        }
 
         assertItems("0", "2")
     }
 
     @Test
     fun reordering_statesAreMoved_list() {
-        testReordering { list -> items(list, key = { it.id }) { Item(remember { "${it.id}" }) } }
+        testReordering { list ->
+            items(list, key = { it.id }) {
+                Item(remember { "${it.id}" })
+            }
+        }
     }
 
     @Test
@@ -91,7 +110,9 @@ class LazyCustomKeysTest {
     fun reordering_statesAreMoved_array() {
         testReordering { list ->
             val array = list.toTypedArray()
-            items(array, key = { it.id }) { Item(remember { "${it.id}" }) }
+            items(array, key = { it.id }) {
+                Item(remember { "${it.id}" })
+            }
         }
     }
 
@@ -108,7 +129,9 @@ class LazyCustomKeysTest {
     @Test
     fun reordering_statesAreMoved_itemsWithCount() {
         testReordering { list ->
-            items(list.size, key = { list[it].id }) { Item(remember { "${list[it].id}" }) }
+            items(list.size, key = { list[it].id }) {
+                Item(remember { "${list[it].id}" })
+            }
         }
     }
 
@@ -119,11 +142,15 @@ class LazyCustomKeysTest {
 
         rule.setContent {
             TvLazyColumn {
-                items(list, key = { it.id }) { Item(remember { counter++ }.toString()) }
+                items(list, key = { it.id }) {
+                    Item(remember { counter++ }.toString())
+                }
             }
         }
 
-        rule.runOnIdle { list = listOf(MyClass(3), MyClass(4), MyClass(5), MyClass(6)) }
+        rule.runOnIdle {
+            list = listOf(MyClass(3), MyClass(4), MyClass(5), MyClass(6))
+        }
 
         assertItems("3", "4", "5", "6")
     }
@@ -135,11 +162,15 @@ class LazyCustomKeysTest {
 
         rule.setContent {
             TvLazyColumn {
-                items(list, key = { it.id }) { Item(remember { counter++ }.toString()) }
+                items(list, key = { it.id }) {
+                    Item(remember { counter++ }.toString())
+                }
             }
         }
 
-        rule.runOnIdle { list = listOf(MyClass(1)) }
+        rule.runOnIdle {
+            list = listOf(MyClass(1))
+        }
 
         assertItems("1")
     }
@@ -151,11 +182,15 @@ class LazyCustomKeysTest {
 
         rule.setContent {
             TvLazyColumn {
-                items(list, key = { it.id }) { Item(remember { counter++ }.toString()) }
+                items(list, key = { it.id }) {
+                    Item(remember { counter++ }.toString())
+                }
             }
         }
 
-        rule.runOnIdle { list = listOf(MyClass(1), MyClass(3)) }
+        rule.runOnIdle {
+            list = listOf(MyClass(1), MyClass(3))
+        }
 
         assertItems("1", "3")
     }
@@ -163,7 +198,9 @@ class LazyCustomKeysTest {
     @Test
     fun mixingKeyedItemsAndNot() {
         testReordering { list ->
-            item { Item("${list.first().id}") }
+            item {
+                Item("${list.first().id}")
+            }
             items(list.subList(fromIndex = 1, toIndex = list.size), key = { it.id }) {
                 Item(remember { "${it.id}" })
             }
@@ -175,18 +212,27 @@ class LazyCustomKeysTest {
         val state = mutableStateOf(emptyList<Int>())
 
         rule.setContent {
-            LaunchedEffect(Unit) { state.value = listOf(4, 1, 3) }
+            LaunchedEffect(Unit) {
+                state.value = listOf(4, 1, 3)
+            }
 
             val list = state.value
 
-            TvLazyColumn(Modifier.fillMaxSize(), pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                items(list, key = { it }) { Item(it.toString()) }
+            TvLazyColumn(
+                Modifier.fillMaxSize(),
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
+                items(list, key = { it }) {
+                    Item(it.toString())
+                }
             }
         }
 
         assertItems("4", "1", "3")
 
-        rule.runOnIdle { state.value = listOf(2, 4, 6, 1, 3, 5) }
+        rule.runOnIdle {
+            state.value = listOf(2, 4, 6, 1, 3, 5)
+        }
 
         assertItems("2", "4", "6", "1", "3", "5")
     }
@@ -196,10 +242,16 @@ class LazyCustomKeysTest {
         val list = mutableStateListOf(MyClass(0), MyClass(1), MyClass(2))
 
         rule.setContent {
-            TvLazyColumn { items(list, key = { it.id }) { Item(remember { "${it.id}" }) } }
+            TvLazyColumn {
+                items(list, key = { it.id }) {
+                    Item(remember { "${it.id}" })
+                }
+            }
         }
 
-        rule.runOnIdle { list.add(list.removeAt(1)) }
+        rule.runOnIdle {
+            list.add(list.removeAt(1))
+        }
 
         assertItems("0", "2", "1")
     }
@@ -211,12 +263,20 @@ class LazyCustomKeysTest {
 
         rule.setContent {
             state = rememberTvLazyListState()
-            TvLazyColumn(state = state, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                items(list, key = { it.id }) { Item(remember { "${it.id}" }) }
+            TvLazyColumn(
+                state = state,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)) {
+                items(list, key = { it.id }) {
+                    Item(remember { "${it.id}" })
+                }
             }
         }
 
-        rule.runOnIdle { assertThat(state.visibleKeys).isEqualTo(listOf(0, 1, 2)) }
+        rule.runOnIdle {
+            assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(0, 1, 2))
+        }
     }
 
     @Test
@@ -226,14 +286,25 @@ class LazyCustomKeysTest {
 
         rule.setContent {
             state = rememberTvLazyListState()
-            TvLazyColumn(state = state, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                items(list, key = { it.id }) { Item(remember { "${it.id}" }) }
+            TvLazyColumn(
+                state = state,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
+                items(list, key = { it.id }) {
+                    Item(remember { "${it.id}" })
+                }
             }
         }
 
-        rule.runOnIdle { list = listOf(list[0], list[2], list[1]) }
+        rule.runOnIdle {
+            list = listOf(list[0], list[2], list[1])
+        }
 
-        rule.runOnIdle { assertThat(state.visibleKeys).isEqualTo(listOf(0, 2, 1)) }
+        rule.runOnIdle {
+            assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(0, 2, 1))
+        }
     }
 
     @Test
@@ -248,13 +319,19 @@ class LazyCustomKeysTest {
                 state,
                 pivotOffsets = PivotOffsets(parentFraction = 0f)
             ) {
-                items(list) { Item(remember { "$it" }) }
+                items(list) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
-        rule.runOnIdle { list = (0..15).toList() }
+        rule.runOnIdle {
+            list = (0..15).toList()
+        }
 
-        rule.runOnIdle { assertThat(state.firstVisibleItemIndex).isEqualTo(0) }
+        rule.runOnIdle {
+            assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+        }
     }
 
     @Test
@@ -269,15 +346,21 @@ class LazyCustomKeysTest {
                 state,
                 pivotOffsets = PivotOffsets(parentFraction = 0f)
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
-        rule.runOnIdle { list = (0..15).toList() }
+        rule.runOnIdle {
+            list = (0..15).toList()
+        }
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(10)
-            assertThat(state.visibleKeys).isEqualTo(listOf(10, 11, 12))
+            assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(10, 11, 12))
         }
     }
 
@@ -293,15 +376,21 @@ class LazyCustomKeysTest {
                 state,
                 pivotOffsets = PivotOffsets(parentFraction = 0f)
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
-        rule.runOnIdle { list = (0..15).toList() }
+        rule.runOnIdle {
+            list = (0..15).toList()
+        }
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(5)
-            assertThat(state.visibleKeys).isEqualTo(listOf(5, 6, 7))
+            assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(5, 6, 7))
         }
     }
 
@@ -317,15 +406,21 @@ class LazyCustomKeysTest {
                 state,
                 pivotOffsets = PivotOffsets(parentFraction = 0f)
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
-        rule.runOnIdle { list = (0..30).toList() }
+        rule.runOnIdle {
+            list = (0..30).toList()
+        }
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(20)
-            assertThat(state.visibleKeys).isEqualTo(listOf(20, 21, 22))
+            assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(20, 21, 22))
         }
     }
 
@@ -341,11 +436,15 @@ class LazyCustomKeysTest {
                 state,
                 pivotOffsets = PivotOffsets(parentFraction = 0f)
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
-        rule.runOnIdle { list = (0..20) - 5 }
+        rule.runOnIdle {
+            list = (0..20) - 5
+        }
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(5)
@@ -356,9 +455,15 @@ class LazyCustomKeysTest {
     private fun testReordering(content: TvLazyListScope.(List<MyClass>) -> Unit) {
         var list by mutableStateOf(listOf(MyClass(0), MyClass(1), MyClass(2)))
 
-        rule.setContent { TvLazyColumn { content(list) } }
+        rule.setContent {
+            TvLazyColumn {
+                content(list)
+            }
+        }
 
-        rule.runOnIdle { list = listOf(list[0], list[2], list[1]) }
+        rule.runOnIdle {
+            list = listOf(list[0], list[2], list[1])
+        }
 
         assertItems("0", "2", "1")
     }
@@ -366,8 +471,7 @@ class LazyCustomKeysTest {
     private fun assertItems(vararg tags: String) {
         var currentTop = 0.dp
         tags.forEach {
-            rule
-                .onNodeWithTag(it)
+            rule.onNodeWithTag(it)
                 .assertTopPositionInRootIsEqualTo(currentTop)
                 .assertHeightIsEqualTo(itemSize)
             currentTop += itemSize
@@ -376,11 +480,12 @@ class LazyCustomKeysTest {
 
     @Composable
     private fun Item(tag: String) {
-        Spacer(Modifier.testTag(tag).size(itemSize))
+        Spacer(
+            Modifier.testTag(tag).size(itemSize)
+        )
     }
 
     private class MyClass(val id: Int)
 }
 
-val TvLazyListState.visibleKeys: List<Any>
-    get() = layoutInfo.visibleItemsInfo.map { it.key }
+val TvLazyListState.visibleKeys: List<Any> get() = layoutInfo.visibleItemsInfo.map { it.key }

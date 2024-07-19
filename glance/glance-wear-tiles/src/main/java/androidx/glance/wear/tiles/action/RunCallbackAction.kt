@@ -20,10 +20,16 @@ import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.Action
 
-internal class RunCallbackAction(public val callbackClass: Class<out ActionCallback>) : Action {
+internal class RunCallbackAction(
+    public val callbackClass: Class<out ActionCallback>
+) : Action {
     companion object {
 
-        public suspend fun run(context: Context, className: String, glanceId: GlanceId) {
+        public suspend fun run(
+            context: Context,
+            className: String,
+            glanceId: GlanceId
+        ) {
             val workClass = Class.forName(className)
 
             if (!ActionCallback::class.java.isAssignableFrom(workClass)) {
@@ -38,8 +44,8 @@ internal class RunCallbackAction(public val callbackClass: Class<out ActionCallb
 
 /**
  * A callback executed in response to the user action, before the content is updated. The
- * implementing class must have a public zero argument constructor, this is used to instantiate the
- * class at runtime.
+ * implementing class must have a public zero argument constructor, this is used to instantiate
+ * the class at runtime.
  */
 public interface ActionCallback {
     /**
@@ -56,10 +62,13 @@ public interface ActionCallback {
  *
  * @param callbackClass the class that implements [ActionCallback]
  */
-public fun <T : ActionCallback> actionRunCallback(callbackClass: Class<T>): Action =
-    RunCallbackAction(callbackClass)
+public fun <T : ActionCallback> actionRunCallback(
+    callbackClass: Class<T>
+): Action = RunCallbackAction(callbackClass)
 
-/** Creates an [Action] that executes a given [ActionCallback] implementation */
+/**
+ * Creates an [Action] that executes a given [ActionCallback] implementation
+ */
 @Suppress("MissingNullability") // Shouldn't need to specify @NonNull. b/199284086
 public inline fun <reified T : ActionCallback> actionRunCallback(): Action =
     actionRunCallback(T::class.java)

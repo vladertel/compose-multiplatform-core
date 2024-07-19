@@ -37,7 +37,10 @@ fun CameraControlButton(
     tint: Color = Color.Unspecified,
     onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick, modifier = modifier.size(CAMERA_CONTROL_BUTTON_SIZE)) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(CAMERA_CONTROL_BUTTON_SIZE)
+    ) {
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
@@ -48,8 +51,14 @@ fun CameraControlButton(
 }
 
 @Composable
-fun CameraControlText(text: String, modifier: Modifier = Modifier) {
-    Text(text = text, modifier = modifier.size(CAMERA_CONTROL_BUTTON_SIZE))
+fun CameraControlText(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        modifier = modifier.size(CAMERA_CONTROL_BUTTON_SIZE)
+    )
 }
 
 @Composable

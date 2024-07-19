@@ -21,7 +21,10 @@ import androidx.annotation.RestrictTo
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.RequestsProto
 
-/** Request for capabilities. */
+/**
+ * Request for capabilities.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class CapabilitiesRequest(public val packageName: String) :
     ProtoParcelable<RequestsProto.CapabilitiesRequest>() {

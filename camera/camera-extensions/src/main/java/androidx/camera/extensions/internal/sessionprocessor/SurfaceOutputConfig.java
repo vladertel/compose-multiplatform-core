@@ -20,6 +20,7 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import com.google.auto.value.AutoValue;
 
@@ -29,6 +30,8 @@ import java.util.List;
 /**
  * Use Surface directly to create the OutputConfiguration.
  */
+@RequiresApi(21) // T
+// TODO(b/200306659): Remove and replace with annotation on package-info.java
 @AutoValue
 public abstract class SurfaceOutputConfig implements Camera2OutputConfig {
     /**

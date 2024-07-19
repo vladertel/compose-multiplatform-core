@@ -34,7 +34,8 @@ class TvImeOptionsTest {
         val keyboardAlignment = TvKeyboardAlignment.Left
         val imeOptions = PlatformImeOptions(privateImeOptions).keyboardAlignment(keyboardAlignment)
 
-        assertThat(imeOptions.privateImeOptions == "$privateImeOptions,${keyboardAlignment.option}")
-            .isTrue()
+        assertThat(
+            imeOptions.privateImeOptions == "$privateImeOptions,${keyboardAlignment.option}"
+        ).isTrue()
     }
 }

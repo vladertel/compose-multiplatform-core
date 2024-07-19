@@ -48,12 +48,13 @@ class EmittableCircularProgressIndicator : Emittable {
     override var modifier: GlanceModifier = GlanceModifier
     var color: ColorProvider = ProgressIndicatorDefaults.IndicatorColorProvider
 
-    override fun copy(): Emittable =
-        EmittableCircularProgressIndicator().also {
-            it.modifier = modifier
-            it.color = color
-        }
+    override fun copy(): Emittable = EmittableCircularProgressIndicator().also {
+        it.modifier = modifier
+        it.color = color
+    }
 
-    override fun toString(): String =
-        "EmittableCircularProgressIndicator(" + "modifier=$modifier, " + "color=$color" + ")"
+    override fun toString(): String = "EmittableCircularProgressIndicator(" +
+        "modifier=$modifier, " +
+        "color=$color" +
+        ")"
 }

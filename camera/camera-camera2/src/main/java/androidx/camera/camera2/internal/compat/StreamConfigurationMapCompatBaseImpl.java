@@ -27,6 +27,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.ImageFormatConstants;
 
+@RequiresApi(21)
 class StreamConfigurationMapCompatBaseImpl
         implements StreamConfigurationMapCompat.StreamConfigurationMapCompatImpl {
 
@@ -34,12 +35,6 @@ class StreamConfigurationMapCompatBaseImpl
 
     StreamConfigurationMapCompatBaseImpl(@NonNull StreamConfigurationMap map) {
         mStreamConfigurationMap = map;
-    }
-
-    @Nullable
-    @Override
-    public int[] getOutputFormats() {
-        return mStreamConfigurationMap.getOutputFormats();
     }
 
     @Nullable

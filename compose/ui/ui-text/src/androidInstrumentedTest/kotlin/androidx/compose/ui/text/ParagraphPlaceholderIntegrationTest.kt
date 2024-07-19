@@ -40,13 +40,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
         // Height won't be increased. Notice: in fontFamilyMeasureFont lineHeight = 1.2 * fontSize
@@ -68,20 +67,20 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
         // In the measure font, descent = 0.2 * fontSize, ascent = 1 * fontSize.
         // In this case, ascent is pushed by placeholder to 2 * fontSize, so that
         // lineHeight  = 0.2 * fontSize + 2 * fontSize.
-        assertThat(paragraph.getLineHeight(0)).isEqualTo(0.2f * fontSize + fontSize * height.value)
+        assertThat(paragraph.getLineHeight(0))
+            .isEqualTo(0.2f * fontSize + fontSize * height.value)
 
         val bound = placeholderRects[0]!!
         assertThat(bound.bottom).isEqualTo(paragraph.firstBaseline)
@@ -99,13 +98,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Bottom)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -113,7 +111,8 @@ class ParagraphPlaceholderIntegrationTest {
 
         val bound = placeholderRects[0]!!
         assertThat(bound.bottom).isEqualTo(paragraph.getLineBottom(0))
-        assertThat(bound.top).isEqualTo(paragraph.getLineBottom(0) - height.value * fontSize)
+        assertThat(bound.top)
+            .isEqualTo(paragraph.getLineBottom(0) - height.value * fontSize)
         // There is one character to the left of this placeholder.
         assertThat(bound.left).isEqualTo(fontSize.toFloat())
         assertThat(bound.right).isEqualTo(fontSize + fontSize * width.value)
@@ -127,13 +126,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Bottom)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -141,7 +139,8 @@ class ParagraphPlaceholderIntegrationTest {
 
         val bound = placeholderRects[0]!!
         assertThat(bound.bottom).isEqualTo(paragraph.getLineBottom(0))
-        assertThat(bound.top).isEqualTo(paragraph.getLineBottom(0) - height.value * fontSize)
+        assertThat(bound.top)
+            .isEqualTo(paragraph.getLineBottom(0) - height.value * fontSize)
         // There is one character to the left of this placeholder.
         assertThat(bound.left).isEqualTo(fontSize.toFloat())
         assertThat(bound.right).isEqualTo(fontSize + fontSize * width.value)
@@ -155,13 +154,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Top)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -170,7 +168,8 @@ class ParagraphPlaceholderIntegrationTest {
         val bound = placeholderRects[0]!!
         // TODO(haoyuchang): use getLineTop instead
         assertThat(bound.top).isEqualTo(paragraph.getLineBottom(-1))
-        assertThat(bound.bottom).isEqualTo(paragraph.getLineBottom(-1) + height.value * fontSize)
+        assertThat(bound.bottom)
+            .isEqualTo(paragraph.getLineBottom(-1) + height.value * fontSize)
         // There is one character to the left of this placeholder.
         assertThat(bound.left).isEqualTo(fontSize.toFloat())
         assertThat(bound.right).isEqualTo(fontSize + fontSize * width.value)
@@ -184,13 +183,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Top)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -199,7 +197,8 @@ class ParagraphPlaceholderIntegrationTest {
         val bound = placeholderRects[0]!!
         // TODO(haoyuchang): use getLineTop instead
         assertThat(bound.top).isEqualTo(paragraph.getLineBottom(-1))
-        assertThat(bound.bottom).isEqualTo(paragraph.getLineBottom(-1) + height.value * fontSize)
+        assertThat(bound.bottom)
+            .isEqualTo(paragraph.getLineBottom(-1) + height.value * fontSize)
         // There is one character to the left of this placeholder.
         assertThat(bound.left).isEqualTo(fontSize.toFloat())
         assertThat(bound.right).isEqualTo(fontSize + fontSize * width.value)
@@ -213,13 +212,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Center)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -245,13 +243,12 @@ class ParagraphPlaceholderIntegrationTest {
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.Center)
 
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                fontSize = fontSize.sp,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            fontSize = fontSize.sp,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -278,15 +275,15 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 0.5.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.TextTop)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                spanStyles =
-                    listOf(AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)),
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                fontSize = fontSize.sp,
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            spanStyles = listOf(
+                AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)
+            ),
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            fontSize = fontSize.sp,
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -310,15 +307,15 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 0.5.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.TextBottom)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                spanStyles =
-                    listOf(AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)),
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                fontSize = fontSize.sp,
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            spanStyles = listOf(
+                AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)
+            ),
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            fontSize = fontSize.sp,
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -342,15 +339,15 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 0.5.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.TextCenter)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                spanStyles =
-                    listOf(AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)),
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                fontSize = fontSize.sp,
-                width = Float.MAX_VALUE
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            spanStyles = listOf(
+                AnnotatedString.Range(SpanStyle(fontSize = fontSizeSpan.sp), 2, 3)
+            ),
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            fontSize = fontSize.sp,
+            width = Float.MAX_VALUE
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
 
@@ -375,13 +372,12 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 1.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                fontSize = fontSize.sp,
-                width = paragraphWidth
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            fontSize = fontSize.sp,
+            width = paragraphWidth
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
         assertThat(paragraph.lineCount).isEqualTo(1)
@@ -405,13 +401,12 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 1.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
-                fontSize = fontSize.sp,
-                width = paragraphWidth
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 2)),
+            fontSize = fontSize.sp,
+            width = paragraphWidth
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
         assertThat(paragraph.lineCount).isEqualTo(1)
@@ -435,13 +430,12 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 1.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 2, 3)),
-                fontSize = fontSize.sp,
-                width = paragraphWidth
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 2, 3)),
+            fontSize = fontSize.sp,
+            width = paragraphWidth
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
         assertThat(paragraph.lineCount).isEqualTo(1)
@@ -465,13 +459,12 @@ class ParagraphPlaceholderIntegrationTest {
         val height = 1.em
         val width = 1.em
         val placeholder = Placeholder(width, height, PlaceholderVerticalAlign.AboveBaseline)
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = listOf(AnnotatedString.Range(placeholder, 1, 3)),
-                fontSize = fontSize.sp,
-                width = paragraphWidth
-            )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = listOf(AnnotatedString.Range(placeholder, 1, 3)),
+            fontSize = fontSize.sp,
+            width = paragraphWidth
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(1)
         assertThat(paragraph.lineCount).isEqualTo(1)
@@ -492,20 +485,18 @@ class ParagraphPlaceholderIntegrationTest {
         val fontSize = 20f
 
         val placeholder = Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)
-        val placeholders =
-            listOf(
-                AnnotatedString.Range(placeholder, 0, 1),
-                AnnotatedString.Range(placeholder, 2, 3)
-            )
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = placeholders,
-                fontSize = fontSize.sp,
-                width = 2 * fontSize,
-                maxLines = 1,
-                ellipsis = true
-            )
+        val placeholders = listOf(
+            AnnotatedString.Range(placeholder, 0, 1),
+            AnnotatedString.Range(placeholder, 2, 3)
+        )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = placeholders,
+            fontSize = fontSize.sp,
+            width = 2 * fontSize,
+            maxLines = 1,
+            ellipsis = true
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(placeholders.size)
         assertThat(placeholderRects[0]).isNotNull()
@@ -519,20 +510,18 @@ class ParagraphPlaceholderIntegrationTest {
         val fontSize = 20f
 
         val placeholder = Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)
-        val placeholders =
-            listOf(
-                AnnotatedString.Range(placeholder, 0, 1),
-                AnnotatedString.Range(placeholder, 2, 3)
-            )
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = placeholders,
-                fontSize = fontSize.sp,
-                width = 2 * fontSize,
-                height = 1.3f * fontSize,
-                ellipsis = true
-            )
+        val placeholders = listOf(
+            AnnotatedString.Range(placeholder, 0, 1),
+            AnnotatedString.Range(placeholder, 2, 3)
+        )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = placeholders,
+            fontSize = fontSize.sp,
+            width = 2 * fontSize,
+            height = 1.3f * fontSize,
+            ellipsis = true
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(placeholders.size)
         assertThat(placeholderRects[0]).isNotNull()
@@ -546,21 +535,19 @@ class ParagraphPlaceholderIntegrationTest {
         val fontSize = 20f
 
         val placeholder = Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)
-        val placeholders =
-            listOf(
-                AnnotatedString.Range(placeholder, 0, 1),
-                AnnotatedString.Range(placeholder, 2, 3)
-            )
-        val paragraph =
-            simpleParagraph(
-                text = text,
-                placeholders = placeholders,
-                fontSize = fontSize.sp,
-                width = 2 * fontSize,
-                height = fontSize,
-                maxLines = 1,
-                ellipsis = false
-            )
+        val placeholders = listOf(
+            AnnotatedString.Range(placeholder, 0, 1),
+            AnnotatedString.Range(placeholder, 2, 3)
+        )
+        val paragraph = simpleParagraph(
+            text = text,
+            placeholders = placeholders,
+            fontSize = fontSize.sp,
+            width = 2 * fontSize,
+            height = fontSize,
+            maxLines = 1,
+            ellipsis = false
+        )
         val placeholderRects = paragraph.placeholderRects
         assertThat(placeholderRects.size).isEqualTo(placeholders.size)
         assertThat(placeholderRects[0]).isNotNull()
@@ -580,7 +567,10 @@ class ParagraphPlaceholderIntegrationTest {
     ): Paragraph {
         return Paragraph(
             text = text,
-            style = TextStyle(fontSize = fontSize, fontFamily = fontFamilyMeasureFont),
+            style = TextStyle(
+                fontSize = fontSize,
+                fontFamily = fontFamilyMeasureFont
+            ),
             spanStyles = spanStyles,
             placeholders = placeholders,
             maxLines = maxLines,

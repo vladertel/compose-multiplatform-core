@@ -36,7 +36,10 @@ import org.robolectric.shadow.api.Shadow
 
 @OptIn(ExperimentalComposeUiApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(shadows = [ShadowAutofillManager::class], minSdk = 26)
+@Config(
+    shadows = [ShadowAutofillManager::class],
+    minSdk = 26
+)
 class AutofillNodeTest {
     private lateinit var androidAutofill: AndroidAutofill
     private lateinit var autofillManager: ShadowAutofillManager
@@ -49,10 +52,9 @@ class AutofillNodeTest {
         view = View(activity)
         activity.setContentView(view)
 
-        autofillManager =
-            Shadow.extract<ShadowAutofillManager>(
-                activity.getSystemService(AutofillManager::class.java)
-            )
+        autofillManager = Shadow.extract<ShadowAutofillManager>(
+            activity.getSystemService(AutofillManager::class.java)
+        )
 
         androidAutofill = AndroidAutofill(view, autofillTree)
     }
@@ -78,8 +80,9 @@ class AutofillNodeTest {
         androidAutofill.requestAutofillForNode(autofillNode)
 
         // Assert.
-        assertThat(autofillManager.viewEnteredStats)
-            .containsExactly(ShadowAutofillManager.NotifyViewEntered(view, autofillNode.id, bounds))
+        assertThat(autofillManager.viewEnteredStats).containsExactly(
+            ShadowAutofillManager.NotifyViewEntered(view, autofillNode.id, bounds)
+        )
     }
 
     @Test
@@ -88,15 +91,14 @@ class AutofillNodeTest {
         val autofillNode = AutofillNode(onFill = {})
 
         // Act and assert.
-        val exception =
-            Assert.assertThrows(IllegalStateException::class.java) {
-                androidAutofill.requestAutofillForNode(autofillNode)
-            }
+        val exception = Assert.assertThrows(IllegalStateException::class.java) {
+            androidAutofill.requestAutofillForNode(autofillNode)
+        }
 
         // Assert some more.
-        assertThat(exception)
-            .hasMessageThat()
-            .isEqualTo("requestAutofill called before onChildPositioned()")
+        assertThat(exception).hasMessageThat().isEqualTo(
+            "requestAutofill called before onChildPositioned()"
+        )
     }
 
     @Test
@@ -108,15 +110,15 @@ class AutofillNodeTest {
         androidAutofill.cancelAutofillForNode(autofillNode)
 
         // Assert.
-        assertThat(autofillManager.viewExitedStats)
-            .containsExactly(ShadowAutofillManager.NotifyViewExited(view, autofillNode.id))
+        assertThat(autofillManager.viewExitedStats).containsExactly(
+            ShadowAutofillManager.NotifyViewExited(view, autofillNode.id)
+        )
     }
 }
 
 @Implements(value = AutofillManager::class, minSdk = 26)
 internal class ShadowAutofillManager {
     data class NotifyViewEntered(val view: View, val virtualId: Int, val rect: Rect)
-
     data class NotifyViewExited(val view: View, val virtualId: Int)
 
     val viewEnteredStats = mutableListOf<NotifyViewEntered>()

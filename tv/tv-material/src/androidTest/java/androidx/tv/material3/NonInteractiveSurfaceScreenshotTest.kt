@@ -46,17 +46,21 @@ import org.junit.runners.Parameterized
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper) {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
 
     private val containerModifier = Modifier.size(150.dp)
 
     private val surfaceModifier: @Composable BoxScope.() -> Modifier = {
-        Modifier.size(100.dp).align(Alignment.Center)
+        Modifier
+            .size(100.dp)
+            .align(Alignment.Center)
     }
 
-    private val wrapperTestTag = "SurfaceWrapper"
+    private val wrapperTestTag = "NonInteractiveSurfaceWrapper"
 
     @Test
     fun nonInteractiveSurface_noCustomizations() {
@@ -94,7 +98,7 @@ class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper
             Box(containerModifier.testTag(wrapperTestTag)) {
                 Surface(
                     surfaceModifier(),
-                    colors = SurfaceDefaults.colors(containerColor = Color.Green)
+                    colors = NonInteractiveSurfaceDefaults.colors(containerColor = Color.Green)
                 ) {}
             }
         }
@@ -107,7 +111,7 @@ class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper
             Box(containerModifier.testTag(wrapperTestTag)) {
                 Surface(
                     surfaceModifier(),
-                    colors = SurfaceDefaults.colors(contentColor = Color.Red)
+                    colors = NonInteractiveSurfaceDefaults.colors(contentColor = Color.Red)
                 ) {}
             }
         }
@@ -120,11 +124,10 @@ class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper
             Box(containerModifier.testTag(wrapperTestTag)) {
                 Surface(
                     surfaceModifier(),
-                    border =
-                        Border(
-                            border = BorderStroke(2.dp, Color.Red),
-                            inset = 4.dp,
-                        ),
+                    border = Border(
+                        border = BorderStroke(2.dp, Color.Red),
+                        inset = 4.dp,
+                    ),
                 ) {}
             }
         }
@@ -145,8 +148,7 @@ class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper
     }
 
     private fun assertAgainstGolden(goldenName: String) {
-        rule
-            .onNodeWithTag(wrapperTestTag)
+        rule.onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
@@ -158,11 +160,14 @@ class NonInteractiveSurfaceScreenshotTest(private val scheme: ColorSchemeWrapper
         @OptIn(ExperimentalTvMaterial3Api::class)
         @Parameterized.Parameters(name = "{0}")
         @JvmStatic
-        fun parameters() =
-            arrayOf(
-                ColorSchemeWrapper("lightTheme", lightColorScheme(surface = Color(0xFFFF0090))),
-                ColorSchemeWrapper("darkTheme", darkColorScheme()),
-            )
+        fun parameters() = arrayOf(
+            ColorSchemeWrapper(
+                "lightTheme", lightColorScheme(
+                    surface = Color(0xFFFF0090)
+                )
+            ),
+            ColorSchemeWrapper("darkTheme", darkColorScheme()),
+        )
     }
 
     @OptIn(ExperimentalTvMaterial3Api::class)

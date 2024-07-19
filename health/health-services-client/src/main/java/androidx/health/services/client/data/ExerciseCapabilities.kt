@@ -35,12 +35,16 @@ public class ExerciseCapabilities(
 
     constructor(
         typeToCapabilities: Map<ExerciseType, ExerciseTypeCapabilities>
-    ) : this(typeToCapabilities, emptySet())
+    ) : this(
+        typeToCapabilities,
+        emptySet()
+    )
 
     internal constructor(
         proto: DataProto.ExerciseCapabilities
     ) : this(
-        proto.typeToCapabilitiesList
+        proto
+            .typeToCapabilitiesList
             .map { entry ->
                 ExerciseType.fromProto(entry.type) to ExerciseTypeCapabilities(entry.capabilities)
             }
@@ -84,7 +88,8 @@ public class ExerciseCapabilities(
     /** Returns the set of [ExerciseType]s that support auto pause and resume on this device. */
     public val autoPauseAndResumeEnabledExercises: Set<ExerciseType>
         get() {
-            return typeToCapabilities.entries
+            return typeToCapabilities
+                .entries
                 .filter { it.value.supportsAutoPauseAndResume }
                 .map { it.key }
                 .toSet()

@@ -18,6 +18,7 @@ package androidx.camera.core.internal.compat.quirk;
 
 import android.os.Build;
 
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.Quirk;
 
 import java.util.Arrays;
@@ -32,6 +33,7 @@ import java.util.Set;
  *     image cropping and apply effects in parallel.
  *     Device(s): Samsung Galaxy A5, Motorola Moto G (3rd gen)
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class LowMemoryQuirk implements Quirk {
 
     // TODO(b/258618028): Making a public API and giving developers the option to set the devices

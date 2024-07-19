@@ -42,7 +42,6 @@ import org.mockito.stubbing.Answer
 @MediumTest
 class TextLayoutSpanTest {
     lateinit var sampleTypeface: Typeface
-
     @Before
     fun setup() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -67,19 +66,16 @@ class TextLayoutSpanTest {
         text.setSpan(spanOuter, 1, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 2, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        val ascent = 0.8f
-        // The test font has 0.8em ascent
+        val ascent = 0.8f; // The test font has 0.8em ascent
         // first baselineShiftSpan is applied
         var expectShift = (-fontSize * ascent * spanOuterMult).toInt()
         doAnswer(updatePaintAnswer(baselineShift = expectShift))
-            .`when`(spanOuter)
-            .updateMeasureState(any())
+            .`when`(spanOuter).updateMeasureState(any())
 
         // second baselineShiftSpan is applied
         expectShift = (-fontSize * ascent * (spanOuterMult + spanInnerMult)).toInt()
         doAnswer(updatePaintAnswer(baselineShift = expectShift))
-            .`when`(spanInner)
-            .updateMeasureState(any())
+            .`when`(spanInner).updateMeasureState(any())
 
         val paint = simplePaint(fontSize.toFloat())
         TextLayout(
@@ -94,27 +90,24 @@ class TextLayoutSpanTest {
         val text = SpannableString("abc")
         val fontSize = 20
 
-        val spanOuterMulti = 0.5f
-        val spanOuter = spy(BaselineShiftSpan(spanOuterMulti))
-        val spanInnerMulti = 0.3f
-        val spanInner = spy(BaselineShiftSpan(spanInnerMulti))
+        val spanOutterMult = 0.5f
+        val spanOutter = spy(BaselineShiftSpan(spanOutterMult))
+        val spanInnerMult = 0.3f
+        val spanInner = spy(BaselineShiftSpan(spanInnerMult))
 
-        text.setSpan(spanOuter, 1, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(spanOutter, 1, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 2, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        val ascent = 0.8f
-        // The test font has 0.8em ascent
+        val ascent = 0.8f; // The test font has 0.8em ascent
         // first baselineShiftSpan is applied
-        var expectShift = (-fontSize * ascent * spanOuterMulti).toInt()
+        var expectShift = (-fontSize * ascent * spanOutterMult).toInt()
         doAnswer(updatePaintAnswer(baselineShift = expectShift))
-            .`when`(spanOuter)
-            .updateDrawState(any())
+            .`when`(spanOutter).updateDrawState(any())
 
         // second baselineShiftSpan is applied
-        expectShift = (-fontSize * ascent * (spanOuterMulti + spanInnerMulti)).toInt()
+        expectShift = (-fontSize * ascent * (spanOutterMult + spanInnerMult)).toInt()
         doAnswer(updatePaintAnswer(baselineShift = expectShift))
-            .`when`(spanInner)
-            .updateDrawState(any())
+            .`when`(spanInner).updateDrawState(any())
 
         val paint = simplePaint(fontSize.toFloat())
         TextLayout(
@@ -128,18 +121,18 @@ class TextLayoutSpanTest {
     fun skewXSpan_updateDrawStateNestTest() {
         val text = SpannableString("abc")
 
-        val skewXOuter = 0.3f
-        val spanOuter = spy(SkewXSpan(skewXOuter))
+        val skewXOutter = 0.3f
+        val spanOutter = spy(SkewXSpan(skewXOutter))
         val skewXInner = 0.5f
         val spanInner = spy(SkewXSpan(skewXInner))
 
-        text.setSpan(spanOuter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(spanOutter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 0, text.length / 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        doAnswer(updatePaintAnswer(skewX = skewXOuter)).`when`(spanOuter).updateDrawState(any())
-        doAnswer(updatePaintAnswer(skewX = skewXInner + skewXOuter))
-            .`when`(spanInner)
-            .updateDrawState(any())
+        doAnswer(updatePaintAnswer(skewX = skewXOutter))
+            .`when`(spanOutter).updateDrawState(any())
+        doAnswer(updatePaintAnswer(skewX = skewXInner + skewXOutter))
+            .`when`(spanInner).updateDrawState(any())
 
         TextLayout(
             text,
@@ -152,18 +145,18 @@ class TextLayoutSpanTest {
     fun skewXSpan_updateMeasureStateNestTest() {
         val text = SpannableString("abc")
 
-        val skewXOuter = 0.3f
-        val spanOuter = spy(SkewXSpan(skewXOuter))
+        val skewXOutter = 0.3f
+        val spanOutter = spy(SkewXSpan(skewXOutter))
         val skewXInner = 0.5f
         val spanInner = spy(SkewXSpan(skewXInner))
 
-        text.setSpan(spanOuter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(spanOutter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 0, text.length / 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        doAnswer(updatePaintAnswer(skewX = skewXOuter)).`when`(spanOuter).updateMeasureState(any())
-        doAnswer(updatePaintAnswer(skewX = skewXInner + skewXOuter))
-            .`when`(spanInner)
-            .updateMeasureState(any())
+        doAnswer(updatePaintAnswer(skewX = skewXOutter))
+            .`when`(spanOutter).updateMeasureState(any())
+        doAnswer(updatePaintAnswer(skewX = skewXInner + skewXOutter))
+            .`when`(spanInner).updateMeasureState(any())
 
         TextLayout(
             text,
@@ -176,18 +169,18 @@ class TextLayoutSpanTest {
     fun scaleXSpan_updateDrawStateNestTest() {
         val text = SpannableString("abc")
 
-        val scaleXOuter = 0.5f
-        val spanOuter = spy(ScaleXSpan(scaleXOuter))
+        val scaleXOutter = 0.5f
+        val spanOutter = spy(ScaleXSpan(scaleXOutter))
         val scaleXInner = 0.3f
         val spanInner = spy(ScaleXSpan(scaleXInner))
 
-        text.setSpan(spanOuter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(spanOutter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 0, text.length / 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        doAnswer(updatePaintAnswer(scaleX = scaleXOuter)).`when`(spanOuter).updateDrawState(any())
-        doAnswer(updatePaintAnswer(scaleX = scaleXInner * scaleXOuter))
-            .`when`(spanInner)
-            .updateDrawState(any())
+        doAnswer(updatePaintAnswer(scaleX = scaleXOutter))
+            .`when`(spanOutter).updateDrawState(any())
+        doAnswer(updatePaintAnswer(scaleX = scaleXInner * scaleXOutter))
+            .`when`(spanInner).updateDrawState(any())
 
         TextLayout(
             text,
@@ -200,20 +193,18 @@ class TextLayoutSpanTest {
     fun scaleXSpan_updateMeasureStateNestTest() {
         val text = SpannableString("abc")
 
-        val scaleXOuter = 0.5f
-        val spanOuter = spy(ScaleXSpan(scaleXOuter))
+        val scaleXOutter = 0.5f
+        val spanOutter = spy(ScaleXSpan(scaleXOutter))
         val scaleXInner = 0.3f
         val spanInner = spy(ScaleXSpan(scaleXInner))
 
-        text.setSpan(spanOuter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        text.setSpan(spanOutter, 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(spanInner, 0, text.length / 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        doAnswer(updatePaintAnswer(scaleX = scaleXOuter))
-            .`when`(spanOuter)
-            .updateMeasureState(any())
-        doAnswer(updatePaintAnswer(scaleX = scaleXInner * scaleXOuter))
-            .`when`(spanInner)
-            .updateMeasureState(any())
+        doAnswer(updatePaintAnswer(scaleX = scaleXOutter))
+            .`when`(spanOutter).updateMeasureState(any())
+        doAnswer(updatePaintAnswer(scaleX = scaleXInner * scaleXOutter))
+            .`when`(spanInner).updateMeasureState(any())
 
         TextLayout(
             text,
@@ -231,9 +222,15 @@ class TextLayoutSpanTest {
         return Answer { invoc ->
             val ret = invoc.callRealMethod()
             val paint = invoc.getArgument(0) as TextPaint
-            baselineShift?.let { assertThat(paint.baselineShift).isEqualTo(it) }
-            skewX?.let { assertThat(paint.textSkewX).isEqualTo(it) }
-            scaleX?.let { assertThat(paint.textScaleX).isEqualTo(it) }
+            baselineShift?.let {
+                assertThat(paint.baselineShift).isEqualTo(it)
+            }
+            skewX?.let {
+                assertThat(paint.textSkewX).isEqualTo(it)
+            }
+            scaleX?.let {
+                assertThat(paint.textScaleX).isEqualTo(it)
+            }
             ret
         }
     }
@@ -241,7 +238,9 @@ class TextLayoutSpanTest {
     private fun simplePaint(textSize: Float? = null): TextPaint {
         val textPaint = TextPaint()
         textPaint.typeface = sampleTypeface
-        textSize?.let { textPaint.textSize = it }
+        textSize?.let {
+            textPaint.textSize = it
+        }
         return textPaint
     }
 }

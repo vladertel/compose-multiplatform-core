@@ -30,11 +30,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class RxPagedListTest {
-    @JvmField @Rule val instantTaskExecutorRule = InstantTaskExecutorRule()
+    @JvmField
+    @Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @Test
     fun observable_config() {
-        @Suppress("DEPRECATION") val observable = dataSourceFactory.toObservable(config)
+        @Suppress("DEPRECATION")
+        val observable = dataSourceFactory.toObservable(config)
         val first = observable.blockingFirst()
         assertNotNull(first)
         assertEquals(config, first.config)
@@ -42,7 +45,8 @@ class RxPagedListTest {
 
     @Test
     fun observable_pageSize() {
-        @Suppress("DEPRECATION") val observable = dataSourceFactory.toObservable(20)
+        @Suppress("DEPRECATION")
+        val observable = dataSourceFactory.toObservable(20)
         val first = observable.blockingFirst()
         assertNotNull(first)
         assertEquals(20, first.config.pageSize)
@@ -50,7 +54,8 @@ class RxPagedListTest {
 
     @Test
     fun flowable_config() {
-        @Suppress("DEPRECATION") val flowable = dataSourceFactory.toFlowable(config)
+        @Suppress("DEPRECATION")
+        val flowable = dataSourceFactory.toFlowable(config)
         val first = flowable.blockingFirst()
         assertNotNull(first)
         assertEquals(config, first.config)
@@ -58,7 +63,8 @@ class RxPagedListTest {
 
     @Test
     fun flowable_pageSize() {
-        @Suppress("DEPRECATION") val flowable = dataSourceFactory.toFlowable(20)
+        @Suppress("DEPRECATION")
+        val flowable = dataSourceFactory.toFlowable(20)
         val first = flowable.blockingFirst()
         assertNotNull(first)
         assertEquals(20, first.config.pageSize)
@@ -66,27 +72,22 @@ class RxPagedListTest {
 
     companion object {
         @Suppress("DEPRECATION")
-        private val dataSource =
-            object : PositionalDataSource<String>() {
-                override fun loadInitial(
-                    params: LoadInitialParams,
-                    callback: LoadInitialCallback<String>
-                ) {
-                    callback.onResult(listOf(), 0, 0)
-                }
-
-                override fun loadRange(
-                    params: LoadRangeParams,
-                    callback: LoadRangeCallback<String>
-                ) {
-                    // never completes...
-                }
+        private val dataSource = object : PositionalDataSource<String>() {
+            override fun loadInitial(
+                params: LoadInitialParams,
+                callback: LoadInitialCallback<String>
+            ) {
+                callback.onResult(listOf(), 0, 0)
             }
 
-        private val dataSourceFactory =
-            object : DataSource.Factory<Int, String>() {
-                override fun create() = dataSource
+            override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<String>) {
+                // never completes...
             }
+        }
+
+        private val dataSourceFactory = object : DataSource.Factory<Int, String>() {
+            override fun create() = dataSource
+        }
 
         private val config = Config(10)
     }

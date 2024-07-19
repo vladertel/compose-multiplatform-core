@@ -43,15 +43,26 @@ import androidx.compose.ui.Modifier
 fun MenuSample() {
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.TopStart)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .wrapContentSize(Alignment.TopStart)) {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Default.MoreVert, contentDescription = "Localized description")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(onClick = { /* Handle refresh! */ }) { Text("Refresh") }
-            DropdownMenuItem(onClick = { /* Handle settings! */ }) { Text("Settings") }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(onClick = { /* Handle refresh! */ }) {
+                Text("Refresh")
+            }
+            DropdownMenuItem(onClick = { /* Handle settings! */ }) {
+                Text("Settings")
+            }
             Divider()
-            DropdownMenuItem(onClick = { /* Handle send feedback! */ }) { Text("Send Feedback") }
+            DropdownMenuItem(onClick = { /* Handle send feedback! */ }) {
+                Text("Send Feedback")
+            }
         }
     }
 }
@@ -61,7 +72,11 @@ fun MenuSample() {
 fun MenuWithScrollStateSample() {
     var expanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.TopStart)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.TopStart)
+    ) {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Default.MoreVert, contentDescription = "Localized description")
         }
@@ -71,7 +86,9 @@ fun MenuWithScrollStateSample() {
             scrollState = scrollState
         ) {
             repeat(30) {
-                DropdownMenuItem(onClick = { /* Handle item! */ }) { Text("Item ${it + 1}") }
+                DropdownMenuItem(onClick = { /* Handle item! */ }) {
+                    Text("Item ${it + 1}")
+                }
             }
         }
         LaunchedEffect(expanded) {

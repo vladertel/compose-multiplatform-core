@@ -25,7 +25,6 @@ import androidx.annotation.RestrictTo
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("NewApi", "ClassVerificationFailure")
 @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 4)
-class AppSetIdManagerApi33Ext4Impl(context: Context) :
-    AppSetIdManagerImplCommon(
-        context.getSystemService(android.adservices.appsetid.AppSetIdManager::class.java)
-    )
+class AppSetIdManagerApi33Ext4Impl(context: Context) : AppSetIdManagerImplCommon(
+    context.getSystemService(
+        android.adservices.appsetid.AppSetIdManager::class.java))

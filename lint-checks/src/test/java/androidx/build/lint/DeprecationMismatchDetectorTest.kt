@@ -21,17 +21,15 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class DeprecationMismatchDetectorTest :
-    AbstractLintDetectorTest(
-        useDetector = DeprecationMismatchDetector(),
-        useIssues = listOf(DeprecationMismatchDetector.ISSUE),
-    ) {
+class DeprecationMismatchDetectorTest : AbstractLintDetectorTest(
+    useDetector = DeprecationMismatchDetector(),
+    useIssues = listOf(DeprecationMismatchDetector.ISSUE),
+) {
     @Test
     fun `Test correctly matched @deprecated and @Deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     /**
@@ -57,20 +55,18 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         public interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
 
         check(*input).expectClean()
     }
 
     @Test
     fun `Test @deprecated missing @Deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     /**
@@ -92,13 +88,12 @@ class DeprecationMismatchDetectorTest :
                          */
                         public interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
             src/java/androidx/Foo.java:6: Error: Items with a @deprecated doc tag must be annotated with @Deprecated [DeprecationMismatch]
             public class Foo {
                          ~~~
@@ -112,11 +107,9 @@ class DeprecationMismatchDetectorTest :
                 public interface InnerFoo {}
                                  ~~~~~~~~
             4 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
 
-        val expectedFixDiffs =
-            """
+        val expectedFixDiffs = """
             Autofix for src/java/androidx/Foo.java line 6: Annotate with @Deprecated:
             @@ -6 +6
             + @Deprecated
@@ -129,18 +122,17 @@ class DeprecationMismatchDetectorTest :
             Autofix for src/java/androidx/Foo.java line 20: Annotate with @Deprecated:
             @@ -20 +20
             +     @Deprecated
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
-        check(*input).expect(expected).expectFixDiffs(expectedFixDiffs)
+       check(*input).expect(expected).expectFixDiffs(expectedFixDiffs)
     }
 
     @Test
     fun `Test @Deprecated missing @deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     @Deprecated
@@ -154,13 +146,12 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         public interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
             src/java/androidx/Foo.java:4: Error: Items annotated with @Deprecated must have a @deprecated doc tag [DeprecationMismatch]
             public class Foo {
                          ~~~
@@ -174,18 +165,17 @@ class DeprecationMismatchDetectorTest :
                 public interface InnerFoo {}
                                  ~~~~~~~~
             4 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
 
     @Test
     fun `Test @deprecated not required for private APIs`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     @Deprecated
@@ -199,19 +189,17 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         private interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
         check(*input).expectClean()
     }
 
     @Test
     fun `Test @deprecated not required for proto-generated APIs`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     // Generated by the protocol buffer compiler.  DO NOT EDIT!
                     package java.androidx.proto;
 
@@ -226,19 +214,17 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         public interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
         check(*input).expectClean()
     }
 
     @Test
     fun `Test anonymous classes don't need @deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     /**
@@ -252,11 +238,10 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         public void foo();
                     }
+                """.trimIndent()
+            ),
+            java(
                 """
-                        .trimIndent()
-                ),
-                java(
-                    """
                     package java.androidx;
 
                     public class Bar {
@@ -267,20 +252,18 @@ class DeprecationMismatchDetectorTest :
                             }.foo();
                         }
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
             )
+        )
 
         check(*input).expectClean()
     }
 
     @Test
     fun `Test @RestrictTo APIs don't need @deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     import androidx.annotation.RestrictTo;
@@ -297,20 +280,18 @@ class DeprecationMismatchDetectorTest :
                         @Deprecated
                         private interface InnerFoo {}
                     }
-                """
-                        .trimIndent()
-                ),
-                Stubs.RestrictTo
-            )
+                """.trimIndent()
+            ),
+            Stubs.RestrictTo
+        )
         check(*input).expectClean()
     }
 
     @Test
     fun `Test overriding methods don't need @deprecated`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidX;
 
                     public interface MyInterface {
@@ -327,9 +308,9 @@ class DeprecationMismatchDetectorTest :
                         void inheritedWithInheritDoc();
                     }
                 """,
-                ),
-                java(
-                    """
+            ),
+            java(
+                """
                     package test.pkg;
 
                     public class MyClass implements MyInterface {
@@ -348,8 +329,8 @@ class DeprecationMismatchDetectorTest :
                         public void inheritedWithInheritDoc() {}
                     }
                 """
-                )
             )
+        )
         check(*input).expectClean()
     }
 }

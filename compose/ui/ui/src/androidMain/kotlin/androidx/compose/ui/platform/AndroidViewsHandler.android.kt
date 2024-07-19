@@ -29,9 +29,10 @@ import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.viewinterop.AndroidViewHolder
 
 /**
- * Used by [AndroidComposeView] to handle the Android [View]s attached to its hierarchy. The
- * [AndroidComposeView] has one direct [AndroidViewsHandler], which is responsible of intercepting
- * [requestLayout]s, [onMeasure]s, [invalidate]s, etc. sent from or towards children.
+ * Used by [AndroidComposeView] to handle the Android [View]s attached to its hierarchy.
+ * The [AndroidComposeView] has one direct [AndroidViewsHandler], which is responsible
+ * of intercepting [requestLayout]s, [onMeasure]s, [invalidate]s, etc. sent from or towards
+ * children.
  */
 internal class AndroidViewsHandler(context: Context) : ViewGroup(context) {
     init {
@@ -70,7 +71,7 @@ internal class AndroidViewsHandler(context: Context) : ViewGroup(context) {
     // No call to super to avoid invalidating the AndroidComposeView and the handler, and rely on
     // component nodes logic. The layer invalidation will have been already done by the holder.
     @SuppressLint("MissingSuperCall")
-    override fun onDescendantInvalidated(child: View, target: View) {}
+    override fun onDescendantInvalidated(child: View, target: View) { }
 
     override fun invalidateChildInParent(location: IntArray?, dirty: Rect?) = null
 
@@ -103,5 +104,6 @@ internal class AndroidViewsHandler(context: Context) : ViewGroup(context) {
 
     // We don't want the AndroidComposeView drawing the holder and its children. All draw
     // calls should come through AndroidViewHolder or ViewLayer.
-    override fun dispatchDraw(canvas: Canvas) {}
+    override fun dispatchDraw(canvas: Canvas) {
+    }
 }

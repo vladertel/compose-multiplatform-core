@@ -22,7 +22,10 @@ import androidx.health.services.client.data.PassiveListenerConfig
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.RequestsProto
 
-/** Request for background registration. */
+/**
+ * Request for background registration.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 internal class PassiveListenerServiceRegistrationRequest(
     public val packageName: String,

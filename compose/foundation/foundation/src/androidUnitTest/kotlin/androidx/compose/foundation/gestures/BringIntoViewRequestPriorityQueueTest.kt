@@ -42,26 +42,22 @@ class BringIntoViewRequestPriorityQueueTest {
     private val queue = BringIntoViewRequestPriorityQueue()
     private val scope = CoroutineScope(Dispatchers.Unconfined)
 
-    private val largeRequest =
-        Request(
-            currentBounds = { Rect(Offset.Zero, Size(10f, 10f)) },
-            continuation = createContinuation()
-        )
-    private val mediumRequest =
-        Request(
-            currentBounds = { Rect(Offset.Zero, Size(5f, 5f)) },
-            continuation = createContinuation()
-        )
-    private val otherMediumRequest =
-        Request(
-            currentBounds = { Rect(Offset(5f, 5f), Size(5f, 5f)) },
-            continuation = createContinuation()
-        )
-    private val smallRequest =
-        Request(
-            currentBounds = { Rect(Offset.Zero, Size(1f, 1f)) },
-            continuation = createContinuation()
-        )
+    private val largeRequest = Request(
+        currentBounds = { Rect(Offset.Zero, Size(10f, 10f)) },
+        continuation = createContinuation()
+    )
+    private val mediumRequest = Request(
+        currentBounds = { Rect(Offset.Zero, Size(5f, 5f)) },
+        continuation = createContinuation()
+    )
+    private val otherMediumRequest = Request(
+        currentBounds = { Rect(Offset(5f, 5f), Size(5f, 5f)) },
+        continuation = createContinuation()
+    )
+    private val smallRequest = Request(
+        currentBounds = { Rect(Offset.Zero, Size(1f, 1f)) },
+        continuation = createContinuation()
+    )
 
     @After
     fun tearDown() {
@@ -70,18 +66,20 @@ class BringIntoViewRequestPriorityQueueTest {
 
     @Test
     fun request_toString() {
-        val request = Request(currentBounds = { Rect.Zero }, continuation = createContinuation())
+        val request = Request(
+            currentBounds = { Rect.Zero },
+            continuation = createContinuation()
+        )
 
         assertThat(request.toString()).contains("currentBounds()=Rect.fromLTRB(0.0, 0.0, 0.0, 0.0)")
     }
 
     @Test
     fun request_toString_withCoroutineName() {
-        val request =
-            Request(
-                currentBounds = { Rect.Zero },
-                continuation = createContinuation(CoroutineName("sam"))
-            )
+        val request = Request(
+            currentBounds = { Rect.Zero },
+            continuation = createContinuation(CoroutineName("sam"))
+        )
 
         assertThat(request.toString()).contains("[sam]")
     }
@@ -94,7 +92,10 @@ class BringIntoViewRequestPriorityQueueTest {
 
     @Test
     fun enqueueSingleRequest_nullBounds() {
-        val request = Request(currentBounds = { null }, continuation = createContinuation())
+        val request = Request(
+            currentBounds = { null },
+            continuation = createContinuation()
+        )
         queue.enqueue(request)
 
         assertThat(queue.size).isEqualTo(0)
@@ -121,7 +122,9 @@ class BringIntoViewRequestPriorityQueueTest {
 
         val expectedRequests = listOf(largeRequest, mediumRequest, smallRequest)
         assertThat(queue.toList()).isEqualTo(expectedRequests.map { it.currentBounds() })
-        expectedRequests.forEach { assertThat(it.continuation.isActive).isTrue() }
+        expectedRequests.forEach {
+            assertThat(it.continuation.isActive).isTrue()
+        }
     }
 
     @Test
@@ -132,7 +135,9 @@ class BringIntoViewRequestPriorityQueueTest {
 
         val expectedRequests = listOf(largeRequest, mediumRequest, smallRequest)
         assertThat(queue.toList()).isEqualTo(expectedRequests.map { it.currentBounds() })
-        expectedRequests.forEach { assertThat(it.continuation.isActive).isTrue() }
+        expectedRequests.forEach {
+            assertThat(it.continuation.isActive).isTrue()
+        }
     }
 
     @Test
@@ -143,7 +148,9 @@ class BringIntoViewRequestPriorityQueueTest {
 
         val expectedRequests = listOf(largeRequest, mediumRequest, smallRequest)
         assertThat(queue.toList()).isEqualTo(expectedRequests.map { it.currentBounds() })
-        expectedRequests.forEach { assertThat(it.continuation.isActive).isTrue() }
+        expectedRequests.forEach {
+            assertThat(it.continuation.isActive).isTrue()
+        }
     }
 
     @Test
@@ -157,7 +164,9 @@ class BringIntoViewRequestPriorityQueueTest {
         // Containing request should be preserved.
         val expectedRequests = listOf(largeRequest, otherMediumRequest)
         assertThat(queue.toList()).isEqualTo(expectedRequests.map { it.currentBounds() })
-        expectedRequests.forEach { assertThat(it.continuation.isActive).isTrue() }
+        expectedRequests.forEach {
+            assertThat(it.continuation.isActive).isTrue()
+        }
         // Non-overlapping requests should be cancelled.
         listOf(mediumRequest, smallRequest).forEach {
             assertThat(it.continuation.isCancelled).isTrue()
@@ -166,7 +175,10 @@ class BringIntoViewRequestPriorityQueueTest {
 
     @Test
     fun enqueuedRequest_isRemoved_whenCancelled() {
-        val request = Request(currentBounds = { Rect.Zero }, continuation = createContinuation())
+        val request = Request(
+            currentBounds = { Rect.Zero },
+            continuation = createContinuation()
+        )
         queue.enqueue(request)
 
         request.continuation.cancel()
@@ -249,19 +261,29 @@ class BringIntoViewRequestPriorityQueueTest {
         assertThat(queue.toList()).isEqualTo(expectedRequests.map { it.currentBounds() })
         assertThat(smallRequest.continuation.isCompleted).isTrue()
         assertThat(smallRequest.continuation.isCancelled).isFalse()
-        expectedRequests.forEach { assertThat(it.continuation.isActive).isTrue() }
+        expectedRequests.forEach {
+            assertThat(it.continuation.isActive).isTrue()
+        }
     }
 
     private fun createContinuation(
         context: CoroutineContext = EmptyCoroutineContext
     ): CancellableContinuation<Unit> {
         lateinit var continuation: CancellableContinuation<Unit>
-        scope.launch(context = context, start = CoroutineStart.UNDISPATCHED) {
-            suspendCancellableCoroutine { continuation = it }
+        scope.launch(
+            context = context,
+            start = CoroutineStart.UNDISPATCHED
+        ) {
+            suspendCancellableCoroutine {
+                continuation = it
+            }
         }
         return continuation
     }
 
-    private fun BringIntoViewRequestPriorityQueue.toList() =
-        buildList { forEachFromSmallest { add(it) } }.asReversed()
+    private fun BringIntoViewRequestPriorityQueue.toList() = buildList {
+        forEachFromSmallest {
+            add(it)
+        }
+    }.asReversed()
 }

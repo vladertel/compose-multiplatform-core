@@ -27,7 +27,6 @@ class MockViewModelTest {
 
     private class CloseableImpl : Closeable {
         var wasClosed = false
-
         override fun close() {
             wasClosed = true
         }

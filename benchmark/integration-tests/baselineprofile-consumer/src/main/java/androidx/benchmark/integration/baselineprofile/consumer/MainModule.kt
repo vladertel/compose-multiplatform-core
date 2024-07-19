@@ -30,7 +30,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object MainModule {
 
-    @Provides @Singleton fun executor(): ExecutorService = Executors.newSingleThreadExecutor()
+    @Provides
+    @Singleton
+    fun executor(): ExecutorService = Executors.newSingleThreadExecutor()
 
     @Provides
     @Singleton

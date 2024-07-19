@@ -23,7 +23,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 
-/** A simple [Fragment] subclass. */
+/**
+ * A simple [Fragment] subclass.
+ */
 class MessageContent : Fragment() {
 
     override fun onCreateView(

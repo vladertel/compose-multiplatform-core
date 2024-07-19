@@ -28,6 +28,8 @@ import android.window.BackEvent
 import androidx.activity.BackEventCompat
 import androidx.annotation.AnimatorRes
 import androidx.annotation.LayoutRes
+import androidx.annotation.RequiresApi
+import androidx.core.view.ViewCompat
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
 import androidx.lifecycle.Lifecycle
@@ -56,8 +58,8 @@ class FragmentAnimatorTest {
 
     // Detect leaks BEFORE and AFTER activity is destroyed
     @get:Rule
-    val ruleChain: RuleChain =
-        RuleChain.outerRule(DetectLeaksAfterTestSuccess()).around(activityRule)
+    val ruleChain: RuleChain = RuleChain.outerRule(DetectLeaksAfterTestSuccess())
+        .around(activityRule)
 
     @Before
     fun setupContainer() {
@@ -146,6 +148,7 @@ class FragmentAnimatorTest {
 
     // Ensure that showing and popping a Fragment uses the enter and popExit animators
     // This tests reordered transactions
+    @RequiresApi(16)
     @Test
     fun showAnimatorsReordered() {
         val fm = activityRule.activity.supportFragmentManager
@@ -175,7 +178,9 @@ class FragmentAnimatorTest {
         val layoutCountDownLatch = CountDownLatch(1)
 
         activityRule.runOnUiThread {
-            Choreographer.getInstance().postFrameCallback { layoutCountDownLatch.countDown() }
+            Choreographer.getInstance().postFrameCallback {
+                layoutCountDownLatch.countDown()
+            }
         }
 
         assertThat(layoutCountDownLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
@@ -187,6 +192,7 @@ class FragmentAnimatorTest {
 
     // Ensure that showing and popping a Fragment uses the enter and popExit animators
     // This tests ordered transactions
+    @RequiresApi(16)
     @Test
     fun showAnimatorsOrdered() {
         val fm = activityRule.activity.supportFragmentManager
@@ -220,7 +226,9 @@ class FragmentAnimatorTest {
         val postFrameCountDownLatch = CountDownLatch(1)
 
         activityRule.runOnUiThread {
-            Choreographer.getInstance().postFrameCallback { postFrameCountDownLatch.countDown() }
+            Choreographer.getInstance().postFrameCallback {
+                postFrameCountDownLatch.countDown()
+            }
         }
 
         assertThat(postFrameCountDownLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
@@ -403,6 +411,7 @@ class FragmentAnimatorTest {
 
     // Ensure that removing and popping a Fragment uses the exit and popEnter animators,
     // but the animators are delayed when an entering Fragment is postponed.
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @Test
     fun postponedRemoveAnimators() {
         val fm = activityRule.activity.supportFragmentManager
@@ -455,7 +464,7 @@ class FragmentAnimatorTest {
         assertThat(fragment1.requireView()).isNotNull()
         assertThat(fragment1.requireView().visibility).isEqualTo(View.VISIBLE)
         assertThat(fragment1.requireView().alpha).isWithin(0f).of(1f)
-        assertThat(fragment1.requireView().isAttachedToWindow()).isTrue()
+        assertThat(ViewCompat.isAttachedToWindow(fragment1.requireView())).isTrue()
 
         fragment2.startPostponedEnterTransition()
         activityRule.waitForExecution()
@@ -495,7 +504,7 @@ class FragmentAnimatorTest {
 
         assertThat(fragment1.view).isNotNull()
         assertThat(fragment1.requireView().alpha).isWithin(0f).of(1f)
-        assertThat(fragment1.requireView().isAttachedToWindow()).isTrue()
+        assertThat(ViewCompat.isAttachedToWindow(fragment1.requireView())).isTrue()
         assertThat(fragment1.isAdded).isTrue()
 
         assertThat(fragment2.view).isNull()
@@ -699,7 +708,9 @@ class FragmentAnimatorTest {
             assertThat(fragment1.inProgress).isFalse()
         }
 
-        activityRule.runOnUiThread { dispatcher.onBackPressed() }
+        activityRule.runOnUiThread {
+            dispatcher.onBackPressed()
+        }
         activityRule.executePendingTransactions(fm1)
 
         assertThat(fragment2.wasStarted).isTrue()
@@ -770,7 +781,9 @@ class FragmentAnimatorTest {
             assertThat(fragment1.inProgress).isFalse()
         }
 
-        activityRule.runOnUiThread { dispatcher.dispatchOnBackCancelled() }
+        activityRule.runOnUiThread {
+            dispatcher.dispatchOnBackCancelled()
+        }
         activityRule.executePendingTransactions(fm1)
 
         assertThat(fragment2.wasStarted).isTrue()
@@ -861,7 +874,11 @@ class FragmentAnimatorTest {
         var initialized: Boolean = false
         var inProgress = false
 
-        override fun onCreateAnimator(transit: Int, enter: Boolean, nextAnim: Int): Animator? {
+        override fun onCreateAnimator(
+            transit: Int,
+            enter: Boolean,
+            nextAnim: Int
+        ): Animator? {
             if (nextAnim == 0) {
                 return null
             }
@@ -869,28 +886,26 @@ class FragmentAnimatorTest {
             var animator: Animator? = null
             try {
                 animator = AnimatorInflater.loadAnimator(context, nextAnim)
-            } catch (e: Resources.NotFoundException) {}
+            } catch (e: Resources.NotFoundException) { }
 
             if (animator == null) {
                 animator = ValueAnimator.ofFloat(0f, 1f).setDuration(1)
             }
 
             return animator?.apply {
-                addListener(
-                    object : AnimatorListenerAdapter() {
-                        override fun onAnimationStart(animation: Animator) {
-                            wasStarted = true
-                            inProgress = true
-                            numStartedAnimators++
-                            startLatch.countDown()
-                        }
-
-                        override fun onAnimationEnd(animation: Animator) {
-                            endLatch.countDown()
-                            inProgress = false
-                        }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationStart(animation: Animator) {
+                        wasStarted = true
+                        inProgress = true
+                        numStartedAnimators++
+                        startLatch.countDown()
                     }
-                )
+
+                    override fun onAnimationEnd(animation: Animator) {
+                        endLatch.countDown()
+                        inProgress = false
+                    }
+                })
                 wasStarted = false
                 startLatch = CountDownLatch(1)
                 endLatch = CountDownLatch(1)
@@ -910,9 +925,13 @@ class FragmentAnimatorTest {
     companion object {
         // These are pretend resource IDs for animators. We don't need real ones since we
         // load them by overriding onCreateAnimator
-        @AnimatorRes private val ENTER = 1
-        @AnimatorRes private val EXIT = 2
-        @AnimatorRes private val POP_ENTER = 3
-        @AnimatorRes private val POP_EXIT = 4
+        @AnimatorRes
+        private val ENTER = 1
+        @AnimatorRes
+        private val EXIT = 2
+        @AnimatorRes
+        private val POP_ENTER = 3
+        @AnimatorRes
+        private val POP_EXIT = 4
     }
 }

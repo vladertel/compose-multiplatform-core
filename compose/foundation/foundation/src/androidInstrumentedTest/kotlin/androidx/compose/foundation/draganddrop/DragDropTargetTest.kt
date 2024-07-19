@@ -47,7 +47,8 @@ import org.junit.runner.RunWith
 @MediumTest
 class DragDropTargetTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun dragAndDropTarget_changingTarget_updatesModifier() {
@@ -57,18 +58,18 @@ class DragDropTargetTest {
         rule.setContent {
             view = LocalView.current
             Box(
-                Modifier.size(60.dp)
+                Modifier
+                    .size(60.dp)
                     .background(Color.Blue)
                     .testTag("target")
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = { true },
-                        target =
-                            remember(targetKey) {
-                                DragAndDropTarget {
-                                    dropEvents.add(targetKey)
-                                    return@DragAndDropTarget true
-                                }
+                        target = remember(targetKey) {
+                            DragAndDropTarget {
+                                dropEvents.add(targetKey)
+                                return@DragAndDropTarget true
                             }
+                        }
                     )
             )
         }
@@ -117,18 +118,18 @@ class DragDropTargetTest {
         rule.setContent {
             view = LocalView.current
             Box(
-                Modifier.size(60.dp)
+                Modifier
+                    .size(60.dp)
                     .background(Color.Blue)
                     .testTag("target")
                     .dragAndDropTarget(
                         shouldStartDragAndDrop = { true },
-                        target =
-                            remember(targetKey) {
-                                DragAndDropTarget {
-                                    dropEvents.add(targetKey)
-                                    return@DragAndDropTarget true
-                                }
+                        target = remember(targetKey) {
+                            DragAndDropTarget {
+                                dropEvents.add(targetKey)
+                                return@DragAndDropTarget true
                             }
+                        }
                     )
             )
         }
@@ -155,23 +156,18 @@ class DragDropTargetTest {
         rule.setContent {
             view = LocalView.current
             Box(
-                Modifier.size(60.dp)
+                Modifier
+                    .size(60.dp)
                     .background(Color.Blue)
                     .testTag("target")
                     .dragAndDropTarget(
-                        shouldStartDragAndDrop =
-                            remember(shouldStartDragAndDropKey) {
-                                {
-                                    shouldStartDragAndDropInvocations.add(shouldStartDragAndDropKey)
-                                    true
-                                }
-                            },
-                        target =
-                            remember {
-                                DragAndDropTarget {
-                                    return@DragAndDropTarget true
-                                }
+                        shouldStartDragAndDrop = remember(shouldStartDragAndDropKey) {
+                            {
+                                shouldStartDragAndDropInvocations.add(shouldStartDragAndDropKey)
+                                true
                             }
+                        },
+                        target = remember { DragAndDropTarget { return@DragAndDropTarget true } }
                     )
             )
         }
@@ -202,14 +198,10 @@ class DragDropTargetTest {
     private fun DragAndDropTarget(
         onEvent: (Boolean) -> Unit = {},
         onDrop: (DragAndDropEvent) -> Boolean
-    ) =
-        object : DragAndDropTarget {
-            override fun onEntered(event: DragAndDropEvent) = onEvent(true)
-
-            override fun onExited(event: DragAndDropEvent) = onEvent(false)
-
-            override fun onEnded(event: DragAndDropEvent) = onEvent(false)
-
-            override fun onDrop(event: DragAndDropEvent) = onDrop(event)
-        }
+    ) = object : DragAndDropTarget {
+        override fun onEntered(event: DragAndDropEvent) = onEvent(true)
+        override fun onExited(event: DragAndDropEvent) = onEvent(false)
+        override fun onEnded(event: DragAndDropEvent) = onEvent(false)
+        override fun onDrop(event: DragAndDropEvent) = onDrop(event)
+    }
 }

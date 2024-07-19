@@ -120,8 +120,7 @@ public abstract class PassiveListenerService : Service() {
                 PERMISSION_LOST_RESPONSE -> {
                     this@PassiveListenerService.onPermissionLost()
                 }
-                null,
-                EVENT_NOT_SET -> Log.w(TAG, "Received unknown event ${proto.eventCase}")
+                null, EVENT_NOT_SET -> Log.w(TAG, "Received unknown event ${proto.eventCase}")
             }
         }
 

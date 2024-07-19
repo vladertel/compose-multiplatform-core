@@ -21,6 +21,7 @@ import android.util.Log;
 
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 /**
  * Handles logging requests inside CameraX. Log messages are output only if:
@@ -51,6 +52,7 @@ import androidx.annotation.NonNull;
  *     }
  * </pre>
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class Logger {
 
     /** On API levels strictly below 24, the log tag's length must not exceed 23 characters. */

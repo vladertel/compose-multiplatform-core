@@ -38,9 +38,10 @@ internal class MultiSelectionSubject(
     companion object {
         fun withContent(
             texts: List<Pair<String, String>>
-        ): Factory<MultiSelectionSubject, Selection?> = Factory { failureMetadata, subject ->
-            MultiSelectionSubject(failureMetadata, subject, texts)
-        }
+        ): Factory<MultiSelectionSubject, Selection?> =
+            Factory { failureMetadata, subject ->
+                MultiSelectionSubject(failureMetadata, subject, texts)
+            }
     }
 
     fun hasSelection(
@@ -63,14 +64,12 @@ internal class MultiSelectionSubject(
         val startAnchor =
             Selection.AnchorInfo(startTextDirection, startOffset, startSelectableId.toLong())
         val endAnchor = Selection.AnchorInfo(endTextDirection, endOffset, endSelectableId.toLong())
-        val expectedSelection =
-            Selection(
-                start = startAnchor,
-                end = endAnchor,
-                handlesCrossed =
-                    startSelectableId > endSelectableId ||
-                        (startSelectableId == endSelectableId && startOffset > endOffset),
-            )
+        val expectedSelection = Selection(
+            start = startAnchor,
+            end = endAnchor,
+            handlesCrossed = startSelectableId > endSelectableId ||
+                (startSelectableId == endSelectableId && startOffset > endOffset),
+        )
 
         if (subject!! != expectedSelection) {
             failWithActual(
@@ -86,42 +85,36 @@ internal class MultiSelectionSubject(
     private val Selection.AnchorInfo.stringIndex
         get() = textContentIndices[selectableId.toInt() - 1].first + offset
 
-    private val Selection.minStringIndex
-        get() = min(start.stringIndex, end.stringIndex)
-
-    private val Selection.maxStringIndex
-        get() = max(start.stringIndex, end.stringIndex)
+    private val Selection.minStringIndex get() = min(start.stringIndex, end.stringIndex)
+    private val Selection.maxStringIndex get() = max(start.stringIndex, end.stringIndex)
 
     private fun Selection.multiTextToString(texts: List<Pair<String, String>>): String {
         val content = texts.joinToString(separator = "\n") { it.first }
         val collapsedSelection = start.stringIndex == end.stringIndex
-        val selectionString =
-            content
-                .map { if (it == '\n') '\n' else '.' }
-                .joinToString("")
-                .let {
-                    if (collapsedSelection) {
-                        if (start.stringIndex == content.length) {
-                            // edge case of selection being at end of text,
-                            // so append the marker instead of replacing
-                            "$it|"
-                        } else if (content[start.stringIndex] == '\n') {
-                            it.replaceRange(start.stringIndex..start.stringIndex, "|\n")
-                        } else {
-                            it.replaceRange(start.stringIndex..start.stringIndex, "|")
-                        }
+        val selectionString = content
+            .map { if (it == '\n') '\n' else '.' }
+            .joinToString("")
+            .let {
+                if (collapsedSelection) {
+                    if (start.stringIndex == content.length) {
+                        // edge case of selection being at end of text,
+                        // so append the marker instead of replacing
+                        "$it|"
+                    } else if (content[start.stringIndex] == '\n') {
+                        it.replaceRange(start.stringIndex..start.stringIndex, "|\n")
                     } else {
-                        val selectionRange = minStringIndex until maxStringIndex
-                        it.replaceRange(selectionRange, content.substring(selectionRange))
+                        it.replaceRange(start.stringIndex..start.stringIndex, "|")
                     }
+                } else {
+                    val selectionRange = minStringIndex until maxStringIndex
+                    it.replaceRange(selectionRange, content.substring(selectionRange))
                 }
+            }
         return """
                 |Collapsed = $collapsedSelection
                 |Selection = $this
                 |$selectionString
-            """
-            .trimMargin()
-            .trim()
+            """.trimMargin().trim()
     }
 }
 
@@ -131,7 +124,6 @@ internal fun List<Pair<String, String>>.textContentIndices() =
         .map { (prev, next) -> prev until next }
 
 internal fun List<IntRange>.offsetToSelectableId(i: Int) = getIndexRange(i).index
-
 internal fun List<IntRange>.offsetToLocalOffset(i: Int): Int = i - getIndexRange(i).value.first
 
 private fun List<IntRange>.getIndexRange(i: Int): IndexedValue<IntRange> =

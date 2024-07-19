@@ -20,6 +20,7 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.CameraCaptureCallback;
@@ -53,6 +54,7 @@ import java.util.List;
  * {@link CameraInternal#getCameraState()} and the observer should be registered to run on main
  * thread.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class PreviewStreamStateObserver implements Observable.Observer<CameraInternal.State> {
 
     private static final String TAG = "StreamStateObserver";
@@ -177,7 +179,7 @@ final class PreviewStreamStateObserver implements Observable.Observer<CameraInte
                     // The callback will be invoked in camera executor thread.
                     CameraCaptureCallback callback = new CameraCaptureCallback() {
                         @Override
-                        public void onCaptureCompleted(int captureConfigId,
+                        public void onCaptureCompleted(
                                 @NonNull CameraCaptureResult result) {
                             completer.set(null);
                             ((CameraInfoInternal) cameraInfo).removeSessionCaptureCallback(

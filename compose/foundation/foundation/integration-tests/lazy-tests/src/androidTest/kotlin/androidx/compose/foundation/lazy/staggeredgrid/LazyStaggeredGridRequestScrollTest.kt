@@ -49,7 +49,9 @@ import org.junit.runners.Parameterized
 class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
     BaseLazyStaggeredGridWithOrientation(orientation) {
 
-    private val itemSize = with(rule.density) { 100.toDp() }
+    private val itemSize = with(rule.density) {
+        100.toDp()
+    }
 
     @Test
     fun requestScrollToItem_withIndex0_itemsPrepended_scrollsToNewFirstItem() {
@@ -65,20 +67,28 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.Fixed(3),
                 state = state
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
 
-                Snapshot.withoutReadObservation { state.requestScrollToItem(index = 0) }
+                Snapshot.withoutReadObservation {
+                    state.requestScrollToItem(index = 0)
+                }
             }
         }
 
         // When the list is updated by prepending from 0 to 9, such that the new list contains
         // from 0 to 15.
-        rule.runOnIdle { list = (0..15).toList() }
+        rule.runOnIdle {
+            list = (0..15).toList()
+        }
 
         // Then we are scrolled to the start where the visible items are 0, 1, and 2.
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(0)
-            Truth.assertThat(state.visibleKeys).isEqualTo(listOf(0, 1, 2, 3, 4, 5, 6, 7, 8))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(0, 1, 2, 3, 4, 5, 6, 7, 8))
         }
     }
 
@@ -96,26 +106,26 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.Fixed(3),
                 state = state
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
 
-                Snapshot.withoutReadObservation { state.requestScrollToItem(index = 0) }
+                Snapshot.withoutReadObservation {
+                    state.requestScrollToItem(index = 0)
+                }
             }
         }
 
         // When we scroll towards the end very quickly.
         rule.onNode(hasScrollAction()).performTouchInput {
             swipeWithVelocity(
-                start =
-                    when (orientation) {
-                        Orientation.Vertical -> bottomCenter
-                        Orientation.Horizontal -> centerRight
-                    },
-                end =
-                    when (orientation) {
-                        Orientation.Vertical -> topCenter
-                        Orientation.Horizontal -> centerLeft
-                    },
-                endVelocity = 5_000F
+                start = when (orientation) {
+                    Orientation.Vertical -> bottomCenter
+                    Orientation.Horizontal -> centerRight
+                }, end = when (orientation) {
+                    Orientation.Vertical -> topCenter
+                    Orientation.Horizontal -> centerLeft
+                }, endVelocity = 5_000F
             )
         }
 
@@ -123,7 +133,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
         // scrolled back to the start.
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isNotEqualTo(0)
-            Truth.assertThat(state.visibleKeys).isEqualTo(list.takeLast(9))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(list.takeLast(9))
         }
     }
 
@@ -151,21 +163,22 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
             fun TestContent(list: List<Int>) {
                 LazyStaggeredGrid(
                     cells = StaggeredGridCells.FixedSize(itemSize),
-                    modifier = Modifier.width(listSize).height(listSize),
-                    state = state,
-                    reverseLayout = true
+                    modifier = Modifier
+                        .width(listSize)
+                        .height(listSize), state = state, reverseLayout = true
                 ) {
-                    items(list, key = { it }) { Item(remember { "$it" }) }
+                    items(list, key = { it }) {
+                        Item(remember { "$it" })
+                    }
                 }
 
                 SideEffect {
                     val firstMessageChanged = state.firstVisibleItemKey() != list.firstOrNull()
                     if (!state.canScrollBackward && firstMessageChanged) {
                         // This scrolls to the start of the first item.
-                        state.requestScrollToItem(
-                            index = 1,
-                            scrollOffset = with(rule.density) { -listSize.roundToPx() }
-                        )
+                        state.requestScrollToItem(index = 1, scrollOffset = with(rule.density) {
+                            -listSize.roundToPx()
+                        })
                     }
                 }
             }
@@ -175,7 +188,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
         rule.onNode(hasScrollAction()).performScrollToIndex(0)
 
         // When the list is updated, prepending items 0 to 2 so the list contains from 0 to 30.
-        rule.runOnIdle { list = (0..30).toList() }
+        rule.runOnIdle {
+            list = (0..30).toList()
+        }
 
         // Then the first visible item has index 0, its key is 0, and it's scrolled to the start
         // of that item (since we're laying out from bottom-to-top/right-to-left, we want the offset
@@ -186,7 +201,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 Truth.assertThat(state.firstVisibleItemScrollOffset)
                     .isEqualTo(itemSize.roundToPx() - listSize.roundToPx())
             }
-            Truth.assertThat(state.visibleKeys).isEqualTo(listOf(0))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(0))
         }
     }
 
@@ -209,10 +226,14 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                     cells = StaggeredGridCells.Fixed(3),
                     state = state
                 ) {
-                    items(list, key = { it }) { Item(remember { "$it" }) }
+                    items(list, key = { it }) {
+                        Item(remember { "$it" })
+                    }
                 }
 
-                SideEffect { state.requestScrollToItem(index = state.firstVisibleItemIndex) }
+                SideEffect {
+                    state.requestScrollToItem(index = state.firstVisibleItemIndex)
+                }
             }
 
             TestContent(list = list)
@@ -229,7 +250,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
         // (24, 25, 5).
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(6)
-            Truth.assertThat(state.visibleKeys).isEqualTo(listOf(7, 8, 9, 10, 11, 12, 13, 14, 15))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(7, 8, 9, 10, 11, 12, 13, 14, 15))
         }
     }
 
@@ -252,7 +275,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                     modifier = Modifier.size(itemSize * 2.5f),
                     state = state
                 ) {
-                    items(list, key = { it }) { Item(remember { "$it" }) }
+                    items(list, key = { it }) {
+                        Item(remember { "$it" })
+                    }
                 }
 
                 SideEffect {
@@ -267,13 +292,16 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
         rule.onNode(hasScrollAction()).performScrollToIndex(15)
 
         // When the list is updated with the first item removed (now from 1 to 35).
-        rule.runOnIdle { list = (1..35).toList() }
+        rule.runOnIdle {
+            list = (1..35).toList()
+        }
 
         // Then first item is index is still 15, the items have shifted back one to (16, 17, 18).
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(15)
-            Truth.assertThat(state.visibleKeys)
-                .isEqualTo(listOf(16, 17, 18, 19, 20, 21, 22, 23, 24))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(16, 17, 18, 19, 20, 21, 22, 23, 24))
         }
     }
 
@@ -291,7 +319,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.FixedSize(itemSize),
                 state = state
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
@@ -320,7 +350,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.Fixed(3),
                 state = state
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
@@ -338,8 +370,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
         // 22, 23, 24, 25, 26, 27, 28, 29, 30
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(21)
-            Truth.assertThat(state.visibleKeys)
-                .isEqualTo(listOf(21, 22, 23, 24, 25, 26, 27, 28, 29))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(21, 22, 23, 24, 25, 26, 27, 28, 29))
         }
     }
 
@@ -358,7 +391,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.FixedSize(itemSize),
                 state = state
             ) {
-                items(15, key = { it }) { Item(remember { "$it" }) }
+                items(15, key = { it }) {
+                    Item(remember { "$it" })
+                }
             }
         }
 
@@ -375,7 +410,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 }
             }
         }
-        rule.runOnIdle { state.requestScrollToItem(index = 0) }
+        rule.runOnIdle {
+            state.requestScrollToItem(index = 0)
+        }
 
         // Then the scroll was canceled.
         rule.waitUntil { canceled }
@@ -397,7 +434,9 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 cells = StaggeredGridCells.Fixed(3),
                 state = state
             ) {
-                items(list, key = { it }) { Item(remember { "$it" }) }
+                items(list, key = { it }) {
+                    Item(remember { "$it" })
+                }
 
                 Snapshot.withoutReadObservation {
                     if (state.firstVisibleItemIndex == 0) {
@@ -406,26 +445,36 @@ class LazyStaggeredGridRequestScrollTest(private val orientation: Orientation) :
                 }
             }
         }
-        rule.runOnIdle { list = (0..20).toList() }
+        rule.runOnIdle {
+            list = (0..20).toList()
+        }
         rule.onNode(hasScrollAction()).performScrollToIndex(3)
 
         // When item 3 moves to the end of the list.
-        rule.runOnIdle { list = listOf(0, 1, 2) + (4..20).toList() + listOf(3) }
+        rule.runOnIdle {
+            list = listOf(0, 1, 2) + (4..20).toList() + listOf(3)
+        }
 
         // Then we are scrolled to the end where the visible items are
         // 13, 14, 15, 16, 17, 18, 19, 20, 3.
         rule.runOnIdle {
             Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(list.size - 9)
-            Truth.assertThat(state.visibleKeys).isEqualTo(listOf(13, 14, 15, 16, 17, 18, 19, 20, 3))
+            Truth.assertThat(
+                state.visibleKeys
+            ).isEqualTo(listOf(13, 14, 15, 16, 17, 18, 19, 20, 3))
         }
     }
 
-    private fun LazyStaggeredGridState.firstVisibleItemKey() =
-        layoutInfo.visibleItemsInfo.firstOrNull()?.key
+    private fun LazyStaggeredGridState
+        .firstVisibleItemKey() = layoutInfo.visibleItemsInfo.firstOrNull()?.key
 
     @Composable
     private fun Item(tag: String) {
-        Spacer(Modifier.testTag(tag).size(itemSize))
+        Spacer(
+            Modifier
+                .testTag(tag)
+                .size(itemSize)
+        )
     }
 
     companion object {

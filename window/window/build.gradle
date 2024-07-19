@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
-import androidx.build.LibraryType
+import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -34,7 +27,7 @@ android {
     defaultConfig {
         multiDexEnabled = true
     }
-    buildTypes.configureEach {
+    buildTypes.all {
         consumerProguardFiles "proguard-rules.pro"
     }
     sourceSets {
@@ -58,17 +51,7 @@ dependencies {
 
     def extensions_core_version = "androidx.window.extensions.core:core:1.0.0"
     def extensions_version = "androidx.window.extensions:extensions:1.2.0"
-    // A compile only dependency on extnensions.core so that other libraries do not expose it
-    // transitively.
-    compileOnly(extensions_core_version)
-    // A compile only dependency on extnensions.core so that other libraries do not expose it
-    // transitively. The testCompile is added because tests are not getting the dependency
-    // transitively.
-    testCompileOnly(extensions_core_version)
-    // A compile only dependency on extnensions.core so that other libraries do not expose it
-    // transitively. The androidTestCompile is added because tests are not getting the dependency
-    // transitively.
-    androidTestCompileOnly(extensions_core_version)
+    implementation(extensions_core_version)
     compileOnly(project(":window:sidecar:sidecar"))
     compileOnly(extensions_version)
 
@@ -103,7 +86,7 @@ dependencies {
 
 androidx {
     name = "WindowManager"
-    type = LibraryType.PUBLISHED_LIBRARY
+    publish = Publish.SNAPSHOT_AND_RELEASE
     inceptionYear = "2020"
     description = "WindowManager Jetpack library. Currently only provides additional " +
             "functionality on foldable devices."
@@ -111,6 +94,4 @@ androidx {
     // Suppressing deprecation warnings, since there is a need to maintain compatibility with old
     // Sidecar interface.
     failOnDeprecationWarnings = false
-    legacyDisableKotlinStrictApiMode = true
-    samples(project(":window:window-samples"))
 }

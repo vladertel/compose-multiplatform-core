@@ -26,10 +26,9 @@ import org.junit.Test
 class SetActionBarDetectorTest {
     @Test
     fun testExtendCoreActivity() {
-        val customActivityClass =
-            LintDetectorTest.kotlin(
-                    "com/example/CustomActivity.kt",
-                    """
+        val customActivityClass = LintDetectorTest.kotlin(
+            "com/example/CustomActivity.kt",
+            """
             package com.example
 
             import android.app.Activity
@@ -42,25 +41,22 @@ class SetActionBarDetectorTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
         // We expect the class extending the core Activity widget to not be flagged
         // in setActionBar call
-        TestLintTask.lint()
-            .files(customActivityClass)
-            .issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
+        TestLintTask.lint().files(
+            customActivityClass
+        ).issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
             .run()
             .expectClean()
     }
 
     @Test
     fun testExtendAppCompatActivity() {
-        val customActivityClass =
-            LintDetectorTest.kotlin(
-                    "com/example/CustomActivity.kt",
-                    """
+        val customActivityClass = LintDetectorTest.kotlin(
+            "com/example/CustomActivity.kt",
+            """
             package com.example
 
             import android.os.Bundle
@@ -73,16 +69,15 @@ class SetActionBarDetectorTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
         // We expect the class extending the AppCompatActivity widget to be flagged
         // in setActionBar call
-
-        TestLintTask.lint()
-            .files(Stubs.APPCOMPAT_ACTIVITY, customActivityClass)
-            .issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
+        /* ktlint-disable max-line-length */
+        TestLintTask.lint().files(
+            Stubs.APPCOMPAT_ACTIVITY,
+            customActivityClass
+        ).issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
             .run()
             .expect(
                 """
@@ -90,17 +85,16 @@ src/com/example/CustomActivity.kt:9: Warning: Use AppCompatActivity.setSupportAc
        setActionBar(Toolbar(this))
        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 
     @Test
     fun testDeepExtendAppCompatActivity() {
-        val customActivityClass =
-            LintDetectorTest.kotlin(
-                    "com/example/CustomActivity.kt",
-                    """
+        val customActivityClass = LintDetectorTest.kotlin(
+            "com/example/CustomActivity.kt",
+            """
             package com.example
 
             import android.os.Bundle
@@ -115,16 +109,15 @@ src/com/example/CustomActivity.kt:9: Warning: Use AppCompatActivity.setSupportAc
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
         // We expect the class extending the AppCompatActivity widget to be flagged
         // in setActionBar call
-
-        TestLintTask.lint()
-            .files(Stubs.APPCOMPAT_ACTIVITY, customActivityClass)
-            .issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
+        /* ktlint-disable max-line-length */
+        TestLintTask.lint().files(
+            Stubs.APPCOMPAT_ACTIVITY,
+            customActivityClass
+        ).issues(SetActionBarDetector.USING_CORE_ACTION_BAR)
             .run()
             .expect(
                 """
@@ -132,8 +125,8 @@ src/com/example/CustomActivity.kt:11: Warning: Use AppCompatActivity.setSupportA
        setActionBar(Toolbar(this))
        ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 }

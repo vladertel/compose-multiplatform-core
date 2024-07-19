@@ -36,7 +36,10 @@ internal object EdgeEffectCompat {
         }
     }
 
-    fun EdgeEffect.onPullDistanceCompat(deltaDistance: Float, displacement: Float): Float {
+    fun EdgeEffect.onPullDistanceCompat(
+        deltaDistance: Float,
+        displacement: Float
+    ): Float {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             return Api31Impl.onPullDistance(this, deltaDistance, displacement)
         }
@@ -129,7 +132,11 @@ private object Api31Impl {
     }
 
     @DoNotInline
-    fun onPullDistance(edgeEffect: EdgeEffect, deltaDistance: Float, displacement: Float): Float {
+    fun onPullDistance(
+        edgeEffect: EdgeEffect,
+        deltaDistance: Float,
+        displacement: Float
+    ): Float {
         return try {
             edgeEffect.onPullDistance(deltaDistance, displacement)
         } catch (t: Throwable) {

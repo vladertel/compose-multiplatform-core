@@ -46,16 +46,15 @@ import org.junit.runner.RunWith
 class ToolbarMenuHostTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().context
-    private val menuProvider =
-        object : MenuProvider {
-            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.example_menu, menu)
-            }
-
-            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                return true
-            }
+    private val menuProvider = object : MenuProvider {
+        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+            menuInflater.inflate(R.menu.example_menu, menu)
         }
+
+        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+            return true
+        }
+    }
 
     // Ensure original functionality still works
     @Test
@@ -80,8 +79,7 @@ class ToolbarMenuHostTest {
                 toolbar.inflateMenu(R.menu.example_menu)
                 toolbar.setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.item1,
-                        R.id.item2 -> {
+                        R.id.item1, R.id.item2 -> {
                             itemSelectedId = it.itemId
                             true
                         }
@@ -106,21 +104,19 @@ class ToolbarMenuHostTest {
             }
 
             withActivity {
-                toolbar.addMenuProvider(
-                    object : MenuProvider {
-                        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                            menuInflater.inflate(R.menu.example_menu, menu)
-                        }
-
-                        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                            return true
-                        }
-
-                        override fun onPrepareMenu(menu: Menu) {
-                            menuPrepared = true
-                        }
+                toolbar.addMenuProvider(object : MenuProvider {
+                    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                        menuInflater.inflate(R.menu.example_menu, menu)
                     }
-                )
+
+                    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                        return true
+                    }
+
+                    override fun onPrepareMenu(menu: Menu) {
+                        menuPrepared = true
+                    }
+                })
             }
 
             assertThat(menuPrepared).isFalse()
@@ -143,25 +139,22 @@ class ToolbarMenuHostTest {
             }
 
             withActivity {
-                toolbar.addMenuProvider(
-                    object : MenuProvider {
-                        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                            menuInflater.inflate(R.menu.example_menu, menu)
-                        }
+                toolbar.addMenuProvider(object : MenuProvider {
+                    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                        menuInflater.inflate(R.menu.example_menu, menu)
+                    }
 
-                        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                            return when (menuItem.itemId) {
-                                R.id.item1,
-                                R.id.item2 -> {
-                                    itemSelectedId = menuItem.itemId
-                                    itemSelectedCountDownLatch.countDown()
-                                    true
-                                }
-                                else -> false
+                    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                        return when (menuItem.itemId) {
+                            R.id.item1, R.id.item2 -> {
+                                itemSelectedId = menuItem.itemId
+                                itemSelectedCountDownLatch.countDown()
+                                true
                             }
+                            else -> false
                         }
                     }
-                )
+                })
             }
 
             toolbar.showOverflowMenu()
@@ -174,25 +167,22 @@ class ToolbarMenuHostTest {
             assertThat(itemSelectedId).isEqualTo(R.id.item1)
 
             withActivity {
-                toolbar.addMenuProvider(
-                    object : MenuProvider {
-                        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                            menuInflater.inflate(R.menu.example_menu2, menu)
-                        }
+                toolbar.addMenuProvider(object : MenuProvider {
+                    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                        menuInflater.inflate(R.menu.example_menu2, menu)
+                    }
 
-                        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                            return when (menuItem.itemId) {
-                                R.id.item3,
-                                R.id.item4 -> {
-                                    itemSelectedId = menuItem.itemId
-                                    itemSelectedCountDownLatch.countDown()
-                                    true
-                                }
-                                else -> false
+                    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                        return when (menuItem.itemId) {
+                            R.id.item3, R.id.item4 -> {
+                                itemSelectedId = menuItem.itemId
+                                itemSelectedCountDownLatch.countDown()
+                                true
                             }
+                            else -> false
                         }
                     }
-                )
+                })
             }
 
             toolbar.showOverflowMenu()
@@ -261,16 +251,15 @@ class ToolbarMenuHostTest {
     @Test
     fun multipleMenuProviders() {
         val toolbar = Toolbar(context)
-        val menuProvider2 =
-            object : MenuProvider {
-                override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                    menuInflater.inflate(R.menu.example_menu2, menu)
-                }
-
-                override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                    return true
-                }
+        val menuProvider2 = object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.example_menu2, menu)
             }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return true
+            }
+        }
 
         toolbar.addMenuProvider(menuProvider)
         toolbar.addMenuProvider(menuProvider2)

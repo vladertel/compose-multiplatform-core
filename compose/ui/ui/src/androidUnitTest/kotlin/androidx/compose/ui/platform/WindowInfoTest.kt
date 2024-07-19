@@ -68,7 +68,9 @@ class WindowInfoTest {
         val wi = WindowInfoImpl()
 
         var last: PointerKeyboardModifiers? = null
-        launch(Job()) { snapshotFlow { wi.keyboardModifiers }.collect { last = it } }
+        launch(Job()) {
+            snapshotFlow { wi.keyboardModifiers }.collect { last = it }
+        }
         testScheduler.runCurrent()
         assertThat(last).isEqualTo(EmptyPointerKeyboardModifiers())
 

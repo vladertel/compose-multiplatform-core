@@ -30,9 +30,8 @@ import org.robolectric.annotation.Config
 class BatchingTest : InputDispatcherTest() {
 
     companion object {
-        private const val cannotEnqueueError =
-            "Can't enqueue touch event \\(.*\\), " +
-                "AndroidInputDispatcher has already been disposed"
+        private const val cannotEnqueueError = "Can't enqueue touch event \\(.*\\), " +
+            "AndroidInputDispatcher has already been disposed"
         private const val cannotFlushError =
             "Can't flush events, AndroidInputDispatcher has already been disposed"
     }
@@ -199,7 +198,9 @@ class BatchingTest : InputDispatcherTest() {
         assertThat(recorder.events).isEmpty()
 
         // 3. subsequent flush fails
-        expectError<IllegalStateException>(expectedMessage = cannotFlushError) { subject.flush() }
+        expectError<IllegalStateException>(expectedMessage = cannotFlushError) {
+            subject.flush()
+        }
         assertThat(recorder.events).isEmpty()
 
         // 4. subsequent dispose succeeds and doesn't send more

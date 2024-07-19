@@ -36,6 +36,7 @@ import org.junit.runners.Parameterized
  * usage of spans as text formatting).
  *
  * Spans are intentionally limited to
+ *
  * 1) Not MetricsAffectingSpans (usage is very low)
  * 2) Not inlineContent (usage is very low).
  *
@@ -43,8 +44,9 @@ import org.junit.runners.Parameterized
  * frequency of spans that use the full length. This is not verified in the data set that produced
  * this benchmark. This assumption does not, currently, impact the performance of Compose.
  */
-class SetTextWithSpans(private val text: AnnotatedString) :
-    LayeredComposeTestCase(), ToggleableTestCase {
+class SetTextWithSpans(
+    private val text: AnnotatedString
+) : LayeredComposeTestCase(), ToggleableTestCase {
     private var toggleText = mutableStateOf(AnnotatedString(""))
 
     private val style = TextStyle.Default.copy(fontFamily = FontFamily.Monospace)
@@ -65,8 +67,10 @@ class SetTextWithSpans(private val text: AnnotatedString) :
 
 @LargeTest
 @RunWith(Parameterized::class)
-open class SetTextWithSpansParent(private val size: Int, private val spanCount: Int) :
-    EmpiricalBench<SetTextWithSpans>() {
+open class SetTextWithSpansParent(
+    private val size: Int,
+    private val spanCount: Int
+) : EmpiricalBench<SetTextWithSpans>() {
     override val caseFactory = {
         val text = generateCacheableStringOf(size)
         SetTextWithSpans(text.annotateWithSpans(spanCount))

@@ -29,16 +29,15 @@ data class ParcelableInterruptRequest(val id: String, val stopReason: Int) : Par
 
     companion object {
         @JvmField
-        val CREATOR =
-            object : Parcelable.Creator<ParcelableInterruptRequest> {
-                override fun createFromParcel(parcel: Parcel): ParcelableInterruptRequest {
-                    return ParcelableInterruptRequest(parcel)
-                }
-
-                override fun newArray(size: Int): Array<ParcelableInterruptRequest?> {
-                    return arrayOfNulls(size)
-                }
+        val CREATOR = object : Parcelable.Creator<ParcelableInterruptRequest> {
+            override fun createFromParcel(parcel: Parcel): ParcelableInterruptRequest {
+                return ParcelableInterruptRequest(parcel)
             }
+
+            override fun newArray(size: Int): Array<ParcelableInterruptRequest?> {
+                return arrayOfNulls(size)
+            }
+        }
     }
 
     override fun describeContents(): Int = 0

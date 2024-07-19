@@ -50,13 +50,16 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 internal class BasicTextFieldUndoTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun canUndo_imeInsert() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         rule.onNode(hasSetTextAction()).performTextInput(", World")
         state.assertText("Hello, World")
@@ -70,7 +73,9 @@ internal class BasicTextFieldUndoTest {
     fun canRedo_imeInsert() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         rule.onNode(hasSetTextAction()).performTextInput(", World")
 
@@ -85,7 +90,9 @@ internal class BasicTextFieldUndoTest {
     fun undoMerges_imeInserts() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         rule.onNode(hasSetTextAction()).typeText(", World")
         state.assertText("Hello, World")
@@ -99,7 +106,9 @@ internal class BasicTextFieldUndoTest {
     fun undoMerges_imeInserts_onlyInForwardsDirection() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             performTextInput(", World")
@@ -121,11 +130,17 @@ internal class BasicTextFieldUndoTest {
     fun undoMerges_deletes() {
         val state = TextFieldState("Hello, World", TextRange(12))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             requestFocus()
-            performKeyInput { repeat(12) { pressKey(Key.Backspace) } }
+            performKeyInput {
+                repeat(12) {
+                    pressKey(Key.Backspace)
+                }
+            }
         }
         state.assertTextAndSelection("", TextRange.Zero)
 
@@ -138,13 +153,19 @@ internal class BasicTextFieldUndoTest {
     fun undoDoesNotMerge_deletes_inBothDirections() {
         val state = TextFieldState("Hello, World", TextRange(6))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             requestFocus()
             performKeyInput {
-                repeat(6) { pressKey(Key.Backspace) }
-                repeat(6) { pressKey(Key.Delete) }
+                repeat(6) {
+                    pressKey(Key.Backspace)
+                }
+                repeat(6) {
+                    pressKey(Key.Delete)
+                }
             }
         }
         state.assertTextAndSelection("", TextRange.Zero)
@@ -160,7 +181,9 @@ internal class BasicTextFieldUndoTest {
     fun undo_revertsSelection() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             performTextInputSelection(TextRange(0, 5))
@@ -177,7 +200,9 @@ internal class BasicTextFieldUndoTest {
     fun redo_revertsSelection() {
         val state = TextFieldState("Hello", TextRange(5))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             performTextInputSelection(TextRange(2))
@@ -188,19 +213,22 @@ internal class BasicTextFieldUndoTest {
 
         state.undoState.undo()
 
-        rule.runOnIdle { assertThat(state.selection).isNotEqualTo(TextRange(7)) }
+        rule.runOnIdle {
+            assertThat(state.selection).isNotEqualTo(TextRange(7))
+        }
 
         state.undoState.redo()
 
         state.assertTextAndSelection("He abc llo", TextRange(7))
     }
 
-    @FlakyTest(bugId = 336870687)
     @Test
     fun variousEditOperations() {
         val state = TextFieldState()
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             typeText("abc def")
@@ -229,7 +257,9 @@ internal class BasicTextFieldUndoTest {
     fun clearHistory_removesAllUndoAndRedo() {
         val state = TextFieldState()
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             typeText("abc def")
@@ -293,14 +323,24 @@ internal class BasicTextFieldUndoTest {
     fun cut_neverMerges() {
         val state = TextFieldState("abc def ghi", TextRange(11))
 
-        rule.setContent { BasicTextField(state) }
+        rule.setContent {
+            BasicTextField(state)
+        }
 
         with(rule.onNode(hasSetTextAction())) {
             requestFocus()
-            repeat(4) { performKeyInput { pressKey(Key.Backspace) } }
+            repeat(4) {
+                performKeyInput {
+                    pressKey(Key.Backspace)
+                }
+            }
             performTextInputSelection(TextRange(4, 7))
             performSemanticsAction(SemanticsActions.CutText)
-            repeat(4) { performKeyInput { pressKey(Key.Backspace) } }
+            repeat(4) {
+                performKeyInput {
+                    pressKey(Key.Backspace)
+                }
+            }
         }
         state.assertTextAndSelection("", TextRange.Zero)
 
@@ -322,7 +362,9 @@ internal class BasicTextFieldUndoTest {
     }
 
     private fun TextFieldState.assertText(text: String) {
-        rule.runOnIdle { assertThat(this.text.toString()).isEqualTo(text) }
+        rule.runOnIdle {
+            assertThat(this.text.toString()).isEqualTo(text)
+        }
     }
 
     private fun TextFieldState.assertTextAndSelection(text: String, selection: TextRange) {

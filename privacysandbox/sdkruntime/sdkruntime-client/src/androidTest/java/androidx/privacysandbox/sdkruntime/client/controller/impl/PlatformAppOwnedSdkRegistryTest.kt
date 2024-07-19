@@ -68,8 +68,11 @@ class PlatformAppOwnedSdkRegistryTest {
 
     @Test
     fun registerAppOwnedSdkSandboxInterface_registerInPlatform() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
 
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
 
@@ -84,8 +87,11 @@ class PlatformAppOwnedSdkRegistryTest {
 
     @Test
     fun unregisterAppOwnedSdkSandboxInterface_unregisterFromPlatform() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
 
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
         sdkRegistry.unregisterAppOwnedSdkSandboxInterface(appOwnedInterface.getName())
@@ -96,8 +102,11 @@ class PlatformAppOwnedSdkRegistryTest {
 
     @Test
     fun getAppOwnedSdkSandboxInterfaces_returnsRegisteredSdkInterfaces() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
 
         val results = sdkRegistry.getAppOwnedSdkSandboxInterfaces()

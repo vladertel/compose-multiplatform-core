@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FindAllTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun findAllTest_twoComponents_areChecked() {
@@ -48,10 +49,12 @@ class FindAllTest {
             }
         }
 
-        rule.onAllNodes(isOn()).assertCountEquals(2).apply {
-            get(0).assertIsOn()
-            get(1).assertIsOn()
-        }
+        rule.onAllNodes(isOn())
+            .assertCountEquals(2)
+            .apply {
+                get(0).assertIsOn()
+                get(1).assertIsOn()
+            }
     }
 
     @Test
@@ -62,17 +65,29 @@ class FindAllTest {
             MaterialTheme {
                 Surface {
                     Column {
-                        Checkbox(checked = checked1, onCheckedChange = onCheckedChange1)
-                        Checkbox(checked = checked2, onCheckedChange = onCheckedChange2)
+                        Checkbox(
+                            checked = checked1,
+                            onCheckedChange = onCheckedChange1
+                        )
+                        Checkbox(
+                            checked = checked2,
+                            onCheckedChange = onCheckedChange2
+                        )
                     }
                 }
             }
         }
 
-        rule.onAllNodes(isToggleable()).assertCountEquals(2).apply {
-            get(0).performClick().assertIsOn()
-            get(1).performClick().assertIsOn()
-        }
+        rule.onAllNodes(isToggleable())
+            .assertCountEquals(2)
+            .apply {
+                get(0)
+                    .performClick()
+                    .assertIsOn()
+                get(1)
+                    .performClick()
+                    .assertIsOn()
+            }
     }
 
     @Test
@@ -88,7 +103,8 @@ class FindAllTest {
             }
         }
 
-        rule.onAllNodes(isOff()).assertCountEquals(0)
+        rule.onAllNodes(isOff())
+            .assertCountEquals(0)
     }
 
     @Test
@@ -100,20 +116,26 @@ class FindAllTest {
                     val (checked2, onCheckedChange2) = remember { mutableStateOf(false) }
 
                     Column {
-                        Checkbox(checked = checked1, onCheckedChange = onCheckedChange1)
-                        Checkbox(checked = checked2, onCheckedChange = onCheckedChange2)
+                        Checkbox(
+                            checked = checked1,
+                            onCheckedChange = onCheckedChange1
+                        )
+                        Checkbox(
+                            checked = checked2,
+                            onCheckedChange = onCheckedChange2
+                        )
                     }
                 }
             }
         }
 
-        rule
-            .onAllNodes(isToggleable())
-            .apply {
-                get(0).performClick().assertIsOn()
-                get(1).assertIsOff()
-            }
-            .assertCountEquals(2)
+        rule.onAllNodes(isToggleable()).apply {
+            get(0)
+                .performClick()
+                .assertIsOn()
+            get(1)
+                .assertIsOff()
+        }.assertCountEquals(2)
     }
 
     @Test
@@ -124,22 +146,43 @@ class FindAllTest {
                     val (checked, onCheckedChange) = remember { mutableStateOf(false) }
 
                     Column {
-                        Checkbox(checked = checked, onCheckedChange = { onCheckedChange(it) })
-                        Checkbox(checked = false, onCheckedChange = {}, enabled = false)
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = {
+                                onCheckedChange(it)
+                            }
+                        )
+                        Checkbox(
+                            checked = false,
+                            onCheckedChange = {},
+                            enabled = false
+                        )
 
                         if (checked) {
-                            Checkbox(checked = false, onCheckedChange = {}, enabled = false)
+                            Checkbox(
+                                checked = false,
+                                onCheckedChange = {},
+                                enabled = false
+                            )
                         }
                     }
                 }
             }
         }
 
-        rule.onAllNodes(isToggleable()).assertCountEquals(2).apply {
-            get(0).assertIsOff().performClick().assertIsOn()
-        }
+        rule.onAllNodes(isToggleable())
+            .assertCountEquals(2).apply {
+                get(0)
+                    .assertIsOff()
+                    .performClick()
+                    .assertIsOn()
+            }
 
-        rule.onAllNodes(isToggleable()).assertCountEquals(3).apply { get(2).assertIsOff() }
+        rule.onAllNodes(isToggleable())
+            .assertCountEquals(3).apply {
+                get(2)
+                    .assertIsOff()
+            }
     }
 
     @Test
@@ -150,18 +193,33 @@ class FindAllTest {
                     val (checked, onCheckedChange) = remember { mutableStateOf(false) }
 
                     Column {
-                        Checkbox(checked = checked, onCheckedChange = { onCheckedChange(it) })
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = {
+                                onCheckedChange(it)
+                            }
+                        )
                         if (!checked) {
-                            Checkbox(checked = false, onCheckedChange = {}, enabled = false)
+                            Checkbox(
+                                checked = false,
+                                onCheckedChange = {},
+                                enabled = false
+                            )
                         }
                     }
                 }
             }
         }
 
-        rule.onAllNodes(isToggleable()).assertCountEquals(2).apply {
-            get(0).assertIsOff().performClick().assertIsOn()
-            get(1).assertDoesNotExist()
-        }
+        rule.onAllNodes(isToggleable())
+            .assertCountEquals(2)
+            .apply {
+                get(0)
+                    .assertIsOff()
+                    .performClick()
+                    .assertIsOn()
+                get(1)
+                    .assertDoesNotExist()
+            }
     }
 }

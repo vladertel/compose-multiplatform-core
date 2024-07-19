@@ -58,11 +58,10 @@ class ClientBinderCodeConverter(api: ParsedApi) : BinderCodeConverter(api) {
                         "(%interface:L as %clientProxy:T).coreLibInfo, " +
                         "%interface:L.remote)",
                     hashMapOf<String, Any>(
-                        "coreLibInfoConverter" to
-                            ClassName(
-                                annotatedInterface.type.packageName,
-                                annotatedInterface.coreLibInfoConverterName()
-                            ),
+                        "coreLibInfoConverter" to ClassName(
+                            annotatedInterface.type.packageName,
+                            annotatedInterface.coreLibInfoConverterName()
+                        ),
                         "toParcelable" to toParcelableMethodName,
                         "interface" to expression,
                         "context" to contextPropertyName,
@@ -72,9 +71,7 @@ class ClientBinderCodeConverter(api: ParsedApi) : BinderCodeConverter(api) {
             }
         }
         return CodeBlock.of(
-            "(%L as %T).remote",
-            expression,
-            annotatedInterface.clientProxyNameSpec()
+            "(%L as %T).remote", expression, annotatedInterface.clientProxyNameSpec()
         )
     }
 

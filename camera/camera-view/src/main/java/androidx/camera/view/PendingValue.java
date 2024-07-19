@@ -20,9 +20,12 @@ import static androidx.camera.core.impl.utils.Threads.checkMainThread;
 
 import static java.util.Objects.requireNonNull;
 
+import android.os.Build;
+
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.arch.core.util.Function;
 import androidx.camera.core.CameraControl;
 import androidx.camera.core.impl.utils.futures.Futures;
@@ -39,6 +42,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * {@link CameraController#setZoomRatio}, we will cache the value with this class and propagate it
  * when {@link CameraControl} becomes ready.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class PendingValue<T> {
 
     @Nullable

@@ -20,13 +20,19 @@ import androidx.annotation.UiThread
 
 expect class NativeView
 
-/** Test scope accessible from execution controlled tests to test compose. */
+/**
+ * Test scope accessible from execution controlled tests to test compose.
+ */
 @UiThread
 interface ComposeExecutionControl {
-    /** The measured width of the underlying view. */
+    /**
+     * The measured width of the underlying view.
+     */
     val measuredWidth: Int
 
-    /** The measured height of the underlying view. */
+    /**
+     * The measured height of the underlying view.
+     */
     val measuredHeight: Int
 
     /**
@@ -59,7 +65,9 @@ interface ComposeExecutionControl {
      */
     fun capturePreviewPictureToActivity()
 
-    /** Whether the last frame / recompose had changes to recompose. */
+    /**
+     * Whether the last frame / recompose had changes to recompose.
+     */
     val didLastRecomposeHaveChanges: Boolean
 
     /**
@@ -75,13 +83,20 @@ interface ComposeExecutionControl {
      */
     fun doFrame()
 
-    /** Whether there are pending changes in the composition. */
+    /**
+     * Whether there are pending changes in the composition.
+     */
     fun hasPendingChanges(): Boolean
 
-    /** Whether there are pending layout changes. */
+    /**
+     * Whether there are pending layout changes.
+     */
     fun hasPendingMeasureOrLayout(): Boolean
 
-    /** Whether there are pending draw changes. */
+    /**
+     * Whether there are pending draw changes.
+     */
+
     fun hasPendingDraw(): Boolean = false
 
     /**
@@ -93,16 +108,20 @@ interface ComposeExecutionControl {
 
     /**
      * Please avoid using this API; Make your tests more platform agnostic by utilizing platform-
-     * independent test hooks instead of invoking APIs on native views. This API may be removed in
-     * the future.
+     * independent test hooks instead of invoking APIs on native views.
+     * This API may be removed in the future.
      */
     fun getHostView(): NativeView
 
-    /** A count on launched jobs in the composition. */
+    /**
+     * A count on launched jobs in the composition.
+     */
     fun getCoroutineLaunchedCount(): Int
 }
 
-/** Helper interface to run execution-controlled test via [ComposeTestRule]. */
+/**
+ * Helper interface to run execution-controlled test via [ComposeTestRule].
+ */
 interface ComposeTestCaseSetup {
     /**
      * Takes the content provided via [ComposeTestRule#setContent] and runs the given test
@@ -129,12 +148,16 @@ fun ComposeExecutionControl.assertMeasureSizeIsPositive() {
     throw AssertionError("Measured size is not positive!")
 }
 
-/** Asserts that last recomposition had some changes. */
+/**
+ * Asserts that last recomposition had some changes.
+ */
 fun ComposeExecutionControl.assertLastRecomposeHadChanges() {
     assertLastRecomposeResult(expectingChanges = true)
 }
 
-/** Asserts that last recomposition had no changes. */
+/**
+ * Asserts that last recomposition had no changes.
+ */
 fun ComposeExecutionControl.assertLastRecomposeHadNoChanges() {
     assertLastRecomposeResult(expectingChanges = false)
 }
@@ -196,7 +219,7 @@ fun ComposeExecutionControl.assertHasPendingChanges() {
  * Also asserts that all the frames (except the last one) had changes to recompose.
  *
  * @throws AssertionError if any frame before [numberOfFramesToBeStable] frame had no pending
- *   changes or the last frame had pending changes.
+ * changes or the last frame had pending changes.
  */
 fun ComposeExecutionControl.doFramesAssertAllHadChangesExceptLastOne(
     numberOfFramesToBeStable: Int
@@ -231,13 +254,18 @@ fun ComposeExecutionControl.doFramesUntilNoChangesPending(maxAmountOfFrames: Int
     }
 
     // Still not stable
-    throw AssertionError("Changes are still pending after '$maxAmountOfFrames' " + "frames.")
+    throw AssertionError(
+        "Changes are still pending after '$maxAmountOfFrames' " +
+            "frames."
+    )
 }
 
 @UiThread
 fun ComposeExecutionControl.assertCoroutinesCount(expectedCount: Int) {
     val actual = getCoroutineLaunchedCount()
     if (getCoroutineLaunchedCount() != expectedCount) {
-        throw AssertionError("Coroutines launched is $actual when $expectedCount were expected.")
+        throw AssertionError(
+            "Coroutines launched is $actual when $expectedCount were expected."
+        )
     }
 }

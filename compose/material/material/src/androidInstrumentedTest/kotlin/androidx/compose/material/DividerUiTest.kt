@@ -46,14 +46,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DividerUiTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val defaultHeight = 1.dp
 
     @Test
     fun divider_DefaultSizes() {
         rule
-            .setMaterialContentForSizeAssertions { Divider() }
+            .setMaterialContentForSizeAssertions {
+                Divider()
+            }
             .assertHeightIsEqualTo(defaultHeight)
             .assertWidthIsEqualTo(rule.rootWidth())
     }
@@ -62,7 +65,9 @@ class DividerUiTest {
     fun divider_CustomSizes() {
         val height = 20.dp
         rule
-            .setMaterialContentForSizeAssertions { Divider(thickness = height) }
+            .setMaterialContentForSizeAssertions {
+                Divider(thickness = height)
+            }
             .assertWidthIsEqualTo(rule.rootWidth())
             .assertHeightIsEqualTo(height)
     }
@@ -97,6 +102,8 @@ class DividerUiTest {
             }
         }
 
-        rule.onNodeWithTag(testTag).captureToImage().assertPixels(IntSize(sizePx, 1)) { Color.Blue }
+        rule.onNodeWithTag(testTag).captureToImage().assertPixels(IntSize(sizePx, 1)) {
+            Color.Blue
+        }
     }
 }

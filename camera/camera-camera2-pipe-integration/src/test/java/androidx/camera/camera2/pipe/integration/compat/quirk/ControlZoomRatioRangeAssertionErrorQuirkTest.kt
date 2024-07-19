@@ -44,13 +44,12 @@ class ControlZoomRatioRangeAssertionErrorQuirkTest(
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "Brand: {0}, Model: {1}")
-        fun data() =
-            listOf(
-                arrayOf("jio", "LS1542QWN", true),
-                arrayOf("samsung", "SM-A025M/DS", true),
-                arrayOf("Samsung", "SM-S124DL", true),
-                arrayOf("vivo", "vivo 2039", true),
-                arrayOf("motorola", "MotoG100", false),
-            )
+        fun data() = listOf(
+            arrayOf("jio", "LS1542QWN", true),
+            arrayOf("samsung", "SM-A025M/DS", true),
+            arrayOf("Samsung", "SM-S124DL", true),
+            arrayOf("vivo", "vivo 2039", true),
+            arrayOf("motorola", "MotoG100", false),
+        )
     }
 }

@@ -52,7 +52,8 @@ import org.junit.Test
 @LargeTest
 class TextFieldClickToMoveCursorTest : FocusedWindowTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private lateinit var state: TextFieldState
 
@@ -70,7 +71,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
@@ -95,7 +99,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
@@ -113,7 +120,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -132,7 +142,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -150,7 +163,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
@@ -167,7 +183,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
@@ -185,7 +204,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -206,11 +228,16 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 textStyle = defaultTextStyle,
                 lineLimits = TextFieldLineLimits.SingleLine,
                 scrollState = scrollState,
-                modifier = Modifier.testTag(TAG).width(57.dp).height(12.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(57.dp)
+                    .height(12.dp)
             )
         }
 
-        rule.onNodeWithTag(TAG).performTouchInput { click(Offset(right - 1f, height / 2f)) }
+        rule.onNodeWithTag(TAG).performTouchInput {
+            click(Offset(right - 1f, height / 2f))
+        }
 
         rule.runOnIdle {
             assertThat(state.selection).isEqualTo(TextRange(6))
@@ -228,7 +255,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 textStyle = defaultTextStyle,
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
                 scrollState = scrollState,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(17.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(17.dp)
             )
         }
 
@@ -248,7 +278,10 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                 state = state,
                 textStyle = defaultTextStyle,
                 readOnly = true,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
@@ -270,10 +303,14 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
                     BasicTextField(
                         state = state,
                         textStyle = defaultTextStyle,
-                        modifier =
-                            Modifier.fillMaxWidth().testTag(TAG).focusRequester(focusRequester),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TAG)
+                            .focusRequester(focusRequester),
                     )
-                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                    LaunchedEffect(Unit) {
+                        focusRequester.requestFocus()
+                    }
                 }
             )
         }

@@ -27,7 +27,8 @@ private const val METHOD_NAME = "ExpectFailureWithStackTraceTest.expectTwoFailur
 /** Test that stack traces are included in the error message created by Expect. */
 class ExpectFailureWithStackTraceTest {
 
-    @get:Rule internal val failToExpect: FailingExpect = FailingExpect()
+    @get:Rule
+    internal val failToExpect: FailingExpect = FailingExpect()
 
     @Test
     fun expectTwoFailures() {

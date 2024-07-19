@@ -57,7 +57,9 @@ class ComposeInFragmentTest {
         }
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            (view as ComposeView).setContent { Text("Hello Compose") }
+            (view as ComposeView).setContent {
+                Text("Hello Compose")
+            }
         }
     }
 }

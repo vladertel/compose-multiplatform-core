@@ -21,11 +21,10 @@ import androidx.kruth.Fact.Companion.simpleFact
 import androidx.kruth.TruthFailureSubject.Companion.truthFailures
 import kotlin.jvm.JvmStatic
 
-internal val HOW_TO_TEST_KEYS_WITHOUT_VALUES: Fact =
-    simpleFact(
-        "To test that a key is present without a value, use factKeys().contains(...) or a similar " +
-            "method."
-    )
+internal val HOW_TO_TEST_KEYS_WITHOUT_VALUES: Fact = simpleFact(
+    "To test that a key is present without a value, use factKeys().contains(...) or a similar " +
+        "method."
+)
 
 private fun AssertionErrorWithFacts.factKeys(): List<String> {
     return facts.map { it.key }
@@ -49,9 +48,11 @@ private fun AssertionErrorWithFacts.factsWithName(key: String): List<Fact> {
  * This class accepts any [AssertionError] value, but it will throw an exception if a caller tries
  * to access the facts of an error that wasn't produced by Truth.
  */
-class TruthFailureSubject<T : AssertionError>
-internal constructor(actual: T?, metadata: FailureMetadata, typeDescription: String?) :
-    ThrowableSubject<T>(actual, metadata, typeDescription) {
+class TruthFailureSubject<T : AssertionError> internal constructor(
+    actual: T?,
+    metadata: FailureMetadata,
+    typeDescription: String?
+) : ThrowableSubject<T>(actual, metadata, typeDescription) {
 
     companion object {
         /**
@@ -95,9 +96,9 @@ internal constructor(actual: T?, metadata: FailureMetadata, typeDescription: Str
     }
 
     /**
-     * Returns a subject for the value of the [index]-th instance of the fact with the given name.
-     * Most Truth failures do not contain multiple facts with the same key, so most tests should use
-     * [the other overload][factValue] of `factValue`.
+     * Returns a subject for the value of the [index]-th instance of the fact with the given
+     * name. Most Truth failures do not contain multiple facts with the same key, so most tests
+     * should use [the other overload][factValue] of `factValue`.
      */
     fun factValue(key: String, index: Int): StringSubject {
         require(index >= 0) { "index must be nonnegative: $index" }
@@ -159,11 +160,10 @@ internal constructor(actual: T?, metadata: FailureMetadata, typeDescription: Str
             }
             return ignoreCheck().that("")
         }
-        val check: StandardSubjectBuilder =
-            when (index) {
-                null -> check("factValue($key)")
-                else -> check("factValue($key, $index)")
-            }
+        val check: StandardSubjectBuilder = when (index) {
+            null -> check("factValue($key)")
+            else -> check("factValue($key, $index)")
+        }
         return check.that(value)
     }
 }

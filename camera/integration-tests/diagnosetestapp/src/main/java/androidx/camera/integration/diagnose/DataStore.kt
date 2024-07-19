@@ -26,8 +26,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * DataStore object that store {@link DiagnosisTask} results (text and images) to files in a Zip
- * File.
+ * DataStore object that store {@link DiagnosisTask} results (text and images) to files in a Zip File.
  */
 class DataStore(context: Context, zipFileName: String) {
 
@@ -49,7 +48,9 @@ class DataStore(context: Context, zipFileName: String) {
         logger = StringBuffer()
     }
 
-    /** Append text to store in logger */
+    /**
+     * Append text to store in logger
+     */
     fun appendText(text: String) {
         logger.appendLine(text)
     }
@@ -58,7 +59,9 @@ class DataStore(context: Context, zipFileName: String) {
         appendText("Task name: $taskName")
     }
 
-    /** Copy and flush file as an image file to a ZipEntry */
+    /**
+     * Copy and flush file as an image file to a ZipEntry
+     */
     @WorkerThread
     fun flushTempFileToImageFile(file: File, filename: String) {
         val inputStream = FileInputStream(file)
@@ -67,7 +70,9 @@ class DataStore(context: Context, zipFileName: String) {
         zout.closeEntry()
     }
 
-    /** Flush text in logger as a text file to a ZipEntry and clear logger */
+    /**
+     * Flush text in logger as a text file to a ZipEntry and clear logger
+     */
     @WorkerThread
     fun flushTextToTextFile(filename: String) {
         if (logger.isEmpty()) {
@@ -80,7 +85,9 @@ class DataStore(context: Context, zipFileName: String) {
         logger.setLength(0)
     }
 
-    /** Flush bitmap as JPEG to a ZipEntry */
+    /**
+     * Flush bitmap as JPEG to a ZipEntry
+     */
     @WorkerThread
     fun flushBitmapToFile(imageName: String, bitmap: Bitmap) {
         zout.putNextEntry(ZipEntry(("$imageName.jpeg")))
@@ -88,7 +95,9 @@ class DataStore(context: Context, zipFileName: String) {
         zout.closeEntry()
     }
 
-    /** Close output streams and return zip file */
+    /**
+     * Close output streams and return zip file
+     */
     fun flushZip(): File {
         zout.close()
         fout.close()

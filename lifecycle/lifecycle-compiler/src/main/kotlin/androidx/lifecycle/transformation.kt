@@ -35,25 +35,22 @@ private fun mergeAndVerifyMethods(
     // need to update parent methods like that because:
     // 1. visibility can be expanded
     // 2. we want to preserve order
-    val updatedParentMethods =
-        parentMethods.map { parentMethod ->
-            val overrideMethod =
-                classMethods.find { (method) ->
-                    processingEnv.elementUtils.overrides(method, parentMethod.method, type)
-                }
-            if (overrideMethod != null) {
-                if (overrideMethod.onLifecycleEvent != parentMethod.onLifecycleEvent) {
-                    processingEnv.messager.printMessage(
-                        Diagnostic.Kind.ERROR,
-                        ErrorMessages.INVALID_STATE_OVERRIDE_METHOD,
-                        overrideMethod.method
-                    )
-                }
-                overrideMethod
-            } else {
-                parentMethod
-            }
+    val updatedParentMethods = parentMethods.map { parentMethod ->
+        val overrideMethod = classMethods.find { (method) ->
+            processingEnv.elementUtils.overrides(method, parentMethod.method, type)
         }
+        if (overrideMethod != null) {
+            if (overrideMethod.onLifecycleEvent != parentMethod.onLifecycleEvent) {
+                processingEnv.messager.printMessage(
+                    Diagnostic.Kind.ERROR,
+                    ErrorMessages.INVALID_STATE_OVERRIDE_METHOD, overrideMethod.method
+                )
+            }
+            overrideMethod
+        } else {
+            parentMethod
+        }
+    }
     return updatedParentMethods + classMethods.filterNot { updatedParentMethods.contains(it) }
 }
 
@@ -72,18 +69,19 @@ fun flattenObservers(
             return
         }
         observer.parents.forEach(::traverse)
-        val methods =
-            observer.parents.map(flattened::get).fold(emptyList<EventMethod>()) {
-                list,
-                parentObserver ->
-                mergeAndVerifyMethods(processingEnv, observer.type, parentObserver!!.methods, list)
+        val methods = observer.parents
+            .map(flattened::get)
+            .fold(emptyList<EventMethod>()) { list, parentObserver ->
+                mergeAndVerifyMethods(
+                    processingEnv, observer.type,
+                    parentObserver!!.methods, list
+                )
             }
 
-        flattened[observer] =
-            LifecycleObserverInfo(
-                observer.type,
-                mergeAndVerifyMethods(processingEnv, observer.type, observer.methods, methods)
-            )
+        flattened[observer] = LifecycleObserverInfo(
+            observer.type,
+            mergeAndVerifyMethods(processingEnv, observer.type, observer.methods, methods)
+        )
     }
 
     world.values.forEach(::traverse)
@@ -119,46 +117,44 @@ private fun validateMethod(
 
     processingEnv.messager.printMessage(
         Diagnostic.Kind.WARNING,
-        ErrorMessages.failedToGenerateAdapter(type, eventMethod),
-        type
+        ErrorMessages.failedToGenerateAdapter(type, eventMethod), type
     )
     return false
 }
 
-fun transformToOutput(processingEnv: ProcessingEnvironment, world: InputModel): List<AdapterClass> {
+fun transformToOutput(
+    processingEnv: ProcessingEnvironment,
+    world: InputModel
+): List<AdapterClass> {
     val flatObservers = flattenObservers(processingEnv, world.observersInfo)
     val syntheticMethods = HashMultimap.create<TypeElement, EventMethodCall>()
-    val adapterCalls =
-        flatObservers
-            // filter out everything that arrived from jars
-            .filter { (type) -> world.isRootType(type) }
-            // filter out if it needs SYNTHETIC access and we can't generate adapter for it
-            .filter { (type, methods) ->
-                methods.all { eventMethod ->
-                    validateMethod(processingEnv, world, type, eventMethod)
+    val adapterCalls = flatObservers
+        // filter out everything that arrived from jars
+        .filter { (type) -> world.isRootType(type) }
+        // filter out if it needs SYNTHETIC access and we can't generate adapter for it
+        .filter { (type, methods) ->
+            methods.all { eventMethod ->
+                validateMethod(processingEnv, world, type, eventMethod)
+            }
+        }
+        .map { (type, methods) ->
+            val calls = methods.map { eventMethod ->
+                if (needsSyntheticAccess(type, eventMethod)) {
+                    EventMethodCall(eventMethod, eventMethod.type)
+                } else {
+                    EventMethodCall(eventMethod)
                 }
             }
-            .map { (type, methods) ->
-                val calls =
-                    methods.map { eventMethod ->
-                        if (needsSyntheticAccess(type, eventMethod)) {
-                            EventMethodCall(eventMethod, eventMethod.type)
-                        } else {
-                            EventMethodCall(eventMethod)
-                        }
-                    }
-                calls
-                    .filter { it.syntheticAccess != null }
-                    .forEach { eventMethod ->
-                        syntheticMethods.put(eventMethod.method.type, eventMethod)
-                    }
-                type to calls
+            calls.filter { it.syntheticAccess != null }.forEach { eventMethod ->
+                syntheticMethods.put(eventMethod.method.type, eventMethod)
             }
-            .toMap()
+            type to calls
+        }.toMap()
 
-    return adapterCalls.map { (type, calls) ->
-        val methods = syntheticMethods.get(type) ?: emptySet()
-        val synthetic = methods.map { eventMethod -> eventMethod!!.method.method }.toSet()
-        AdapterClass(type, calls, synthetic)
-    }
+    return adapterCalls
+        .map { (type, calls) ->
+            val methods = syntheticMethods.get(type) ?: emptySet()
+            val synthetic = methods.map { eventMethod -> eventMethod!!.method.method }.toSet()
+            AdapterClass(type, calls, synthetic)
+        }
 }

@@ -49,7 +49,9 @@ internal fun throwIllegalStateException(message: String) {
 // Like Kotlin's require() but without the .toString() call
 @OptIn(ExperimentalContracts::class)
 internal inline fun checkPrecondition(value: Boolean, lazyMessage: () -> String) {
-    contract { returns() implies value }
+    contract {
+        returns() implies value
+    }
     if (!value) {
         throwIllegalStateException(lazyMessage())
     }

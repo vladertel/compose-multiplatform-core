@@ -33,10 +33,18 @@ import kotlin.reflect.KClass
 internal val KClass<Database>.schema: SqlDriver.Schema
     get() = DatabaseImpl.Schema
 
-internal fun KClass<Database>.newInstance(driver: SqlDriver): Database = DatabaseImpl(driver)
+internal fun KClass<Database>.newInstance(driver: SqlDriver): Database =
+    DatabaseImpl(driver)
 
-private class DatabaseImpl(driver: SqlDriver) : TransacterImpl(driver), Database {
-    override val testEntityQueries: TestEntityQueriesImpl = TestEntityQueriesImpl(this, driver)
+private class DatabaseImpl(
+    driver: SqlDriver
+) : TransacterImpl(driver),
+    Database {
+    override val testEntityQueries: TestEntityQueriesImpl =
+        TestEntityQueriesImpl(
+            this,
+            driver
+        )
 
     object Schema : SqlDriver.Schema {
         override val version: Int
@@ -50,13 +58,17 @@ private class DatabaseImpl(driver: SqlDriver) : TransacterImpl(driver), Database
           |    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
           |    value TEXT NOT NULL
           |)
-          """
-                    .trimMargin(),
+          """.trimMargin(),
                 0
             )
         }
 
-        override fun migrate(driver: SqlDriver, oldVersion: Int, newVersion: Int) {}
+        override fun migrate(
+            driver: SqlDriver,
+            oldVersion: Int,
+            newVersion: Int
+        ) {
+        }
     }
 }
 
@@ -75,7 +87,10 @@ private class TestEntityQueriesImpl(
             "selectAll",
             "SELECT * FROM TestEntity"
         ) { cursor ->
-            mapper(cursor.getLong(0)!!, cursor.getString(1)!!)
+            mapper(
+                cursor.getLong(0)!!,
+                cursor.getString(1)!!
+            )
         }
 
     override fun selectAll(): Query<TestEntity> = selectAll(TestEntity::Impl)
@@ -88,8 +103,7 @@ private class TestEntityQueriesImpl(
     |  value
     |)
     |VALUES (?1)
-    """
-                .trimMargin(),
+    """.trimMargin(),
             1
         ) {
             bindString(1, value)

@@ -27,9 +27,9 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.DynamicRange;
 import androidx.camera.core.Logger;
-import androidx.camera.core.MirrorMode;
 import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.internal.compat.workaround.SurfaceSorter;
 
@@ -50,12 +50,11 @@ import java.util.Set;
  * required to initialize a {@link android.hardware.camera2.CameraCaptureSession} and issue a {@link
  * CaptureRequest}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class SessionConfig {
     public static final int DEFAULT_SESSION_TYPE = SessionConfiguration.SESSION_REGULAR;
     /** The set of {@link OutputConfig} that data from the camera will be put into. */
     private final List<OutputConfig> mOutputConfigs;
-    /** The {@link OutputConfig} for the postview. */
-    private final OutputConfig mPostviewOutputConfig;
     /** The state callback for a {@link CameraDevice}. */
     private final List<CameraDevice.StateCallback> mDeviceStateCallbacks;
     /** The state callback for a {@link CameraCaptureSession}. */
@@ -108,14 +107,6 @@ public final class SessionConfig {
         public abstract String getPhysicalCameraId();
 
         /**
-         * Returns the mirror mode.
-         *
-         * @return {@link MirrorMode}
-         */
-        @MirrorMode.Mirror
-        public abstract int getMirrorMode();
-
-        /**
          * Returns the surface group ID. Default value is {@link #SURFACE_GROUP_ID_NONE} meaning
          * it doesn't belong to any surface group. A surface group ID is used to identify which
          * surface group this output surface belongs to. Output streams with the same
@@ -144,7 +135,6 @@ public final class SessionConfig {
                     .setSurface(surface)
                     .setSharedSurfaces(Collections.emptyList())
                     .setPhysicalCameraId(null)
-                    .setMirrorMode(MirrorMode.MIRROR_MODE_UNSPECIFIED)
                     .setSurfaceGroupId(SURFACE_GROUP_ID_NONE)
                     .setDynamicRange(DynamicRange.SDR);
         }
@@ -174,14 +164,6 @@ public final class SessionConfig {
              */
             @NonNull
             public abstract Builder setPhysicalCameraId(@Nullable String cameraId);
-
-            /**
-             * Sets the mirror mode. It specifies mirroring mode for
-             * {@link android.hardware.camera2.params.OutputConfiguration}.
-             * @see android.hardware.camera2.params.OutputConfiguration#setMirrorMode(int)
-             */
-            @NonNull
-            public abstract Builder setMirrorMode(@MirrorMode.Mirror int mirrorMode);
 
             /**
              * Sets the surface group ID. A surface group ID is used to identify which surface group
@@ -231,8 +213,7 @@ public final class SessionConfig {
             List<ErrorListener> errorListeners,
             CaptureConfig repeatingCaptureConfig,
             @Nullable InputConfiguration inputConfiguration,
-            int sessionType,
-            @Nullable OutputConfig postviewOutputConfig) {
+            int sessionType) {
         mOutputConfigs = outputConfigs;
         mDeviceStateCallbacks = Collections.unmodifiableList(deviceStateCallbacks);
         mSessionStateCallbacks = Collections.unmodifiableList(sessionStateCallbacks);
@@ -242,7 +223,6 @@ public final class SessionConfig {
         mRepeatingCaptureConfig = repeatingCaptureConfig;
         mInputConfiguration = inputConfiguration;
         mSessionType = sessionType;
-        mPostviewOutputConfig = postviewOutputConfig;
     }
 
     /** Returns an instance of a session configuration with minimal configurations. */
@@ -256,8 +236,7 @@ public final class SessionConfig {
                 new ArrayList<>(0),
                 new CaptureConfig.Builder().build(),
                 /* inputConfiguration */ null,
-                DEFAULT_SESSION_TYPE,
-                /* postviewOutputConfig */ null);
+                DEFAULT_SESSION_TYPE);
     }
 
     @Nullable
@@ -285,11 +264,6 @@ public final class SessionConfig {
     @NonNull
     public List<OutputConfig> getOutputConfigs() {
         return mOutputConfigs;
-    }
-
-    @Nullable
-    public OutputConfig getPostviewOutputConfig() {
-        return mPostviewOutputConfig;
     }
 
     @NonNull
@@ -404,8 +378,6 @@ public final class SessionConfig {
         @Nullable
         InputConfiguration mInputConfiguration;
         int mSessionType = DEFAULT_SESSION_TYPE;
-        @Nullable
-        OutputConfig mPostviewOutputConfig;
     }
 
     /**
@@ -659,13 +631,11 @@ public final class SessionConfig {
          * Add a surface to the set that the session repeatedly writes data to.
          *
          * <p>The dynamic range of this surface will default to {@link DynamicRange#SDR}. To
-         * manually set the dynamic range, use
-         * {@link #addSurface(DeferrableSurface, DynamicRange, String, int)}.
+         * manually set the dynamic range, use {@link #addSurface(DeferrableSurface, DynamicRange)}.
          */
         @NonNull
         public Builder addSurface(@NonNull DeferrableSurface surface) {
-            return addSurface(surface, DynamicRange.SDR, null,
-                    MirrorMode.MIRROR_MODE_UNSPECIFIED);
+            return addSurface(surface, DynamicRange.SDR);
         }
 
         /**
@@ -674,13 +644,9 @@ public final class SessionConfig {
          */
         @NonNull
         public Builder addSurface(@NonNull DeferrableSurface surface,
-                @NonNull DynamicRange dynamicRange,
-                @Nullable String physicalCameraId,
-                @MirrorMode.Mirror int mirrorMode) {
+                @NonNull DynamicRange dynamicRange) {
             OutputConfig outputConfig = OutputConfig.builder(surface)
-                    .setPhysicalCameraId(physicalCameraId)
                     .setDynamicRange(dynamicRange)
-                    .setMirrorMode(mirrorMode)
                     .build();
             mOutputConfigs.add(outputConfig);
             mCaptureConfigBuilder.addSurface(surface);
@@ -724,15 +690,6 @@ public final class SessionConfig {
                     .setDynamicRange(dynamicRange)
                     .build();
             mOutputConfigs.add(outputConfig);
-            return this;
-        }
-
-        /**
-         * Sets the postview surface.
-         */
-        @NonNull
-        public Builder setPostviewSurface(@NonNull DeferrableSurface surface) {
-            mPostviewOutputConfig = OutputConfig.builder(surface).build();
             return this;
         }
 
@@ -790,8 +747,7 @@ public final class SessionConfig {
                     new ArrayList<>(mErrorListeners),
                     mCaptureConfigBuilder.build(),
                     mInputConfiguration,
-                    mSessionType,
-                    mPostviewOutputConfig);
+                    mSessionType);
         }
     }
 
@@ -893,19 +849,6 @@ public final class SessionConfig {
                 }
             }
 
-            if (sessionConfig.mPostviewOutputConfig != null) {
-                if (mPostviewOutputConfig != sessionConfig.mPostviewOutputConfig
-                        && mPostviewOutputConfig != null) {
-                    String errorMessage =
-                            "Invalid configuration due to that two different postview output "
-                                    + "configs are set";
-                    Logger.d(TAG, errorMessage);
-                    mValid = false;
-                } else {
-                    mPostviewOutputConfig = sessionConfig.mPostviewOutputConfig;
-                }
-            }
-
             // The conflicting of options is handled in addImplementationOptions where it could
             // throw an IllegalArgumentException if the conflict cannot be resolved.
             mCaptureConfigBuilder.addImplementationOptions(
@@ -985,8 +928,7 @@ public final class SessionConfig {
                     new ArrayList<>(mErrorListeners),
                     mCaptureConfigBuilder.build(),
                     mInputConfiguration,
-                    mSessionType,
-                    mPostviewOutputConfig);
+                    mSessionType);
         }
 
         private int selectTemplateType(int type1, int type2) {

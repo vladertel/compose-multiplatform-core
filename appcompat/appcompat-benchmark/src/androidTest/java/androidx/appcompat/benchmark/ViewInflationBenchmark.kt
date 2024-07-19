@@ -32,7 +32,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ViewInflationBenchmark {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     @Suppress("DEPRECATION")
     @get:Rule
@@ -43,6 +44,8 @@ class ViewInflationBenchmark {
         val context: Context = activityRule.activity
         val inflater = LayoutInflater.from(context)
         val root = FrameLayout(context)
-        benchmarkRule.measureRepeated { inflater.inflate(R.layout.twelve_key_entry, root, false) }
+        benchmarkRule.measureRepeated {
+            inflater.inflate(R.layout.twelve_key_entry, root, false)
+        }
     }
 }

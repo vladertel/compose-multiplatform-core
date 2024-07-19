@@ -29,11 +29,8 @@ internal interface LazyLayoutMeasuredItem {
     val constraints: Constraints
     val lane: Int
     val span: Int
-
     fun getOffset(index: Int): IntOffset
-
     fun position(mainAxisOffset: Int, crossAxisOffset: Int, layoutWidth: Int, layoutHeight: Int)
-
     fun getParentData(index: Int): Any?
 }
 

@@ -31,7 +31,10 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class WhenMethodsTest(val config: TestConfig) {
 
-    data class TestConfig(val receiver: String, val methodName: String) {
+    data class TestConfig(
+        val receiver: String,
+        val methodName: String
+    ) {
         override fun toString() = "$receiver.$methodName"
     }
 
@@ -53,8 +56,7 @@ class WhenMethodsTest(val config: TestConfig) {
             .run()
     }
 
-    private val TEMPLATE =
-        """
+    private val TEMPLATE = """
         package foo
 
         import androidx.lifecycle.Lifecycle
@@ -71,8 +73,7 @@ class WhenMethodsTest(val config: TestConfig) {
 
         suspend fun suspendingFun() {
         }
-    """
-            .trimIndent()
+    """.trimIndent()
 
     private fun template(body: String) = TEMPLATE.format(body)
 
@@ -83,14 +84,12 @@ class WhenMethodsTest(val config: TestConfig) {
                     view.foo()
                     ~~~~~~~~~~
             1 errors, 0 warnings
-        """
-            .trimIndent()
+        """.trimIndent()
     }
 
     @Test
     fun basicTryCatch() {
-        val input =
-            """
+        val input = """
             ${config.receiver}.${config.methodName} {
                 try {
                     suspendingFun()
@@ -98,8 +97,7 @@ class WhenMethodsTest(val config: TestConfig) {
                     view.foo()
                 }
             }
-        """
-                .trimIndent()
+        """.trimIndent()
         check(input).expect(error(config.methodName))
     }
 }

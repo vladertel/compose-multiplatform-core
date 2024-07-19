@@ -31,6 +31,7 @@ import static androidx.core.util.Preconditions.checkState;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.os.Build;
 import android.util.Size;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -39,6 +40,7 @@ import android.view.TextureView;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.Preview;
@@ -55,13 +57,10 @@ import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.core.streamsharing.StreamSharing;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
-import androidx.core.util.Consumer;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -98,6 +97,7 @@ import java.util.Set;
  * {@link Surface} should no longer be used, and {@link #invalidate()} cleans the current
  * connection so it can be connected again.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class SurfaceEdge {
 
     private final int mFormat;
@@ -117,6 +117,9 @@ public class SurfaceEdge {
     private int mRotationDegrees;
 
     // Guarded by main thread.
+    @Nullable
+    private SurfaceOutputImpl mConsumerToNotify;
+    // Guarded by main thread.
     private boolean mHasConsumer = false;
 
     // Guarded by main thread.
@@ -135,9 +138,6 @@ public class SurfaceEdge {
     // Tombstone flag indicates whether the edge has been closed. Once closed, the edge should
     // never be used again.
     private boolean mIsClosed = false;
-
-    private final List<Consumer<TransformationInfo>> mTransformationUpdatesListeners =
-            new ArrayList<>();
 
     /**
      * Please see the getters to understand the parameters.
@@ -231,8 +231,7 @@ public class SurfaceEdge {
             throws DeferrableSurface.SurfaceClosedException {
         checkMainThread();
         checkNotClosed();
-        SettableSurface settableSurface = mSettableSurface;
-        settableSurface.setProvider(provider, settableSurface::close);
+        mSettableSurface.setProvider(provider, this::disconnectWithoutCheckingClosed);
     }
 
     /**
@@ -264,11 +263,11 @@ public class SurfaceEdge {
                 }));
         try {
             DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
-            SettableSurface settableSurface = mSettableSurface;
-            if (settableSurface.setProvider(deferrableSurface, settableSurface::close)) {
+            if (mSettableSurface.setProvider(deferrableSurface,
+                    this::disconnectWithoutCheckingClosed)) {
                 // TODO(b/286817690): consider close the deferrableSurface directly when the
                 //  SettableSurface is closed. The delay might cause issues on legacy devices.
-                settableSurface.getTerminationFuture().addListener(deferrableSurface::close,
+                mSettableSurface.getTerminationFuture().addListener(deferrableSurface::close,
                         directExecutor());
             }
         } catch (DeferrableSurface.SurfaceClosedException e) {
@@ -316,7 +315,7 @@ public class SurfaceEdge {
         checkNotClosed();
         checkAndSetHasConsumer();
         SettableSurface settableSurface = mSettableSurface;
-        return transformAsync(settableSurface.getSurface(),
+        return transformAsync(mSettableSurface.getSurface(),
                 surface -> {
                     checkNotNull(surface);
                     try {
@@ -330,7 +329,7 @@ public class SurfaceEdge {
                     surfaceOutputImpl.getCloseFuture().addListener(
                             settableSurface::decrementUseCount,
                             directExecutor());
-                    settableSurface.setConsumer(surfaceOutputImpl);
+                    mConsumerToNotify = surfaceOutputImpl;
                     return immediateFuture(surfaceOutputImpl);
                 }, mainThreadExecutor());
     }
@@ -357,10 +356,8 @@ public class SurfaceEdge {
             // If the edge is still connectable, no-ops.
             return;
         }
-
-        // If the edge is already connected by a downstream node, reset the connection and notify.
+        disconnectWithoutCheckingClosed();
         mHasConsumer = false;
-        mSettableSurface.close();
         mSettableSurface = new SettableSurface(mStreamSpec.getResolution(), mFormat);
         for (Runnable onInvalidated : mOnInvalidatedListeners) {
             onInvalidated.run();
@@ -378,7 +375,7 @@ public class SurfaceEdge {
     @MainThread
     public final void close() {
         checkMainThread();
-        mSettableSurface.close();
+        disconnectWithoutCheckingClosed();
         mIsClosed = true;
     }
 
@@ -392,7 +389,6 @@ public class SurfaceEdge {
      * {@link SurfaceOutputImpl}. By calling {@link SettableSurface#close()}, it also decrements the
      * ref-count on downstream Surfaces so they can be released.
      *
-     * @throws IllegalStateException if the edge is already closed.
      * @see DeferrableSurface#close().
      * @see #invalidate()
      */
@@ -400,7 +396,16 @@ public class SurfaceEdge {
     public final void disconnect() {
         checkMainThread();
         checkNotClosed();
+        disconnectWithoutCheckingClosed();
+    }
+
+    private void disconnectWithoutCheckingClosed() {
+        checkMainThread();
         mSettableSurface.close();
+        if (mConsumerToNotify != null) {
+            mConsumerToNotify.requestClose();
+            mConsumerToNotify = null;
+        }
     }
 
     /**
@@ -512,33 +517,13 @@ public class SurfaceEdge {
         });
     }
 
-    /**
-     * Adds a listener to receive transformation info updates.
-     */
-    public void addTransformationUpdateListener(@NonNull Consumer<TransformationInfo> consumer) {
-        checkNotNull(consumer);
-        mTransformationUpdatesListeners.add(consumer);
-    }
-
-    /**
-     * Removes a listener to stop receiving transformation info updates.
-     */
-    public void removeTransformationUpdateListener(@NonNull Consumer<TransformationInfo> consumer) {
-        checkNotNull(consumer);
-        mTransformationUpdatesListeners.remove(consumer);
-    }
-
     @MainThread
     private void notifyTransformationInfoUpdate() {
         checkMainThread();
-        TransformationInfo transformationInfo = TransformationInfo.of(
-                mCropRect, mRotationDegrees, mTargetRotation, hasCameraTransform(),
-                mSensorToBufferTransform, mMirroring);
         if (mProviderSurfaceRequest != null) {
-            mProviderSurfaceRequest.updateTransformationInfo(transformationInfo);
-        }
-        for (Consumer<TransformationInfo> listener : mTransformationUpdatesListeners) {
-            listener.accept(transformationInfo);
+            mProviderSurfaceRequest.updateTransformationInfo(TransformationInfo.of(
+                    mCropRect, mRotationDegrees, mTargetRotation, hasCameraTransform(),
+                    mSensorToBufferTransform, mMirroring));
         }
     }
 
@@ -553,7 +538,7 @@ public class SurfaceEdge {
     /**
      * Gets whether the buffer needs to be horizontally mirrored based on {@link UseCase} config.
      */
-    public boolean isMirroring() {
+    public boolean getMirroring() {
         return mMirroring;
     }
 
@@ -611,9 +596,6 @@ public class SurfaceEdge {
 
         private DeferrableSurface mProvider;
 
-        @Nullable
-        private SurfaceOutputImpl mConsumer;
-
         SettableSurface(@NonNull Size size, @CameraEffect.Formats int format) {
             super(size, format);
         }
@@ -628,12 +610,6 @@ public class SurfaceEdge {
         boolean canSetProvider() {
             checkMainThread();
             return mProvider == null && !isClosed();
-        }
-
-        @MainThread
-        public void setConsumer(@NonNull SurfaceOutputImpl surfaceOutput) {
-            checkState(mConsumer == null, "Consumer can only be linked once.");
-            mConsumer = surfaceOutput;
         }
 
         @VisibleForTesting
@@ -684,22 +660,6 @@ public class SurfaceEdge {
             // When the child is closed, close the parent too to stop rendering.
             provider.getCloseFuture().addListener(onProviderClosed, mainThreadExecutor());
             return true;
-        }
-
-        @Override
-        public void close() {
-            super.close();
-            runOnMain(() -> {
-                if (mConsumer != null) {
-                    mConsumer.requestClose();
-                }
-                if (mProvider == null) {
-                    // This could happen if the edge is connected to VideoCapture and recording is
-                    // not started when the edge is closed. In that case, cancel the completer to
-                    // avoid the "garbage collected" logging.
-                    mCompleter.setCancelled();
-                }
-            });
         }
     }
 }

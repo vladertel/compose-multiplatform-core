@@ -35,63 +35,43 @@ constructor(
     public val supportsAutoPauseAndResume: Boolean,
     /** Map from [ExerciseEventType]s to their [ExerciseEventCapabilities]. */
     internal val exerciseEventCapabilities: Map<ExerciseEventType<*>, ExerciseEventCapabilities> =
-        emptyMap(),
-    /** Map from supported debounced goals to a set of compatible [ComparisonType]s. */
-    val supportedDebouncedGoals: Map<DataType<*, *>, Set<ComparisonType>> = emptyMap(),
+    emptyMap(),
 ) {
 
     internal constructor(
         proto: DataProto.ExerciseTypeCapabilities
     ) : this(
-        proto.supportedDataTypesList
-            .map { DataType.deltaAndAggregateFromProto(it) }
+        proto.supportedDataTypesList.map { DataType.deltaAndAggregateFromProto(it) }
             .flatten()
             .toSet(),
-        proto.supportedGoalsList
+        proto
+            .supportedGoalsList
             .map { entry ->
                 DataType.aggregateFromProto(entry.dataType) to
-                    entry.comparisonTypesList
+                    entry
+                        .comparisonTypesList
                         .map { ComparisonType.fromProto(it) }
                         .filter { it != ComparisonType.UNKNOWN }
                         .toSet()
             }
             .toMap(),
-        proto.supportedMilestonesList
+        proto
+            .supportedMilestonesList
             .map { entry ->
                 DataType.aggregateFromProto(entry.dataType) to
-                    entry.comparisonTypesList
+                    entry
+                        .comparisonTypesList
                         .map { ComparisonType.fromProto(it) }
                         .filter { it != ComparisonType.UNKNOWN }
                         .toSet()
             }
             .toMap(),
         supportsAutoPauseAndResume = proto.isAutoPauseAndResumeSupported,
-        exerciseEventCapabilities =
-            proto.supportedExerciseEventsList
-                .filter { ExerciseEventCapabilities.fromProto(it) != null }
-                .associate { entry ->
-                    ExerciseEventType.fromProto(entry.exerciseEventType) to
-                        ExerciseEventCapabilities.fromProto(entry)!!
-                },
-        supportedDebouncedGoals =
-            proto.supportedDeltaDebouncedGoalsList
-                .map { entry ->
-                    DataType.deltaFromProto(entry.dataType) to
-                        entry.comparisonTypesList
-                            .map { ComparisonType.fromProto(it) }
-                            .filter { it != ComparisonType.UNKNOWN }
-                            .toSet()
-                }
-                .toMap() +
-                proto.supportedAggregateDebouncedGoalsList
-                    .map { entry ->
-                        DataType.aggregateFromProto(entry.dataType) to
-                            entry.comparisonTypesList
-                                .map { ComparisonType.fromProto(it) }
-                                .filter { it != ComparisonType.UNKNOWN }
-                                .toSet()
-                    }
-                    .toMap()
+        exerciseEventCapabilities = proto.supportedExerciseEventsList
+            .filter { ExerciseEventCapabilities.fromProto(it) != null }.associate { entry ->
+                ExerciseEventType.fromProto(entry.exerciseEventType) to
+                    ExerciseEventCapabilities.fromProto(entry)!!
+            },
     )
 
     internal val proto: DataProto.ExerciseTypeCapabilities =
@@ -111,28 +91,6 @@ constructor(
                 supportedMilestones
                     .map { entry ->
                         SupportedMilestoneEntry.newBuilder()
-                            .setDataType(entry.key.proto)
-                            .addAllComparisonTypes(entry.value.map { it.toProto() })
-                            .build()
-                    }
-                    .sortedBy { it.dataType.name } // Sorting to ensure equals() works
-            )
-            .addAllSupportedDeltaDebouncedGoals(
-                supportedDebouncedGoals
-                    .filter { entry -> !entry.key.isAggregate }
-                    .map { entry ->
-                        SupportedGoalEntry.newBuilder()
-                            .setDataType(entry.key.proto)
-                            .addAllComparisonTypes(entry.value.map { it.toProto() })
-                            .build()
-                    }
-                    .sortedBy { it.dataType.name } // Sorting to ensure equals() works
-            )
-            .addAllSupportedAggregateDebouncedGoals(
-                supportedDebouncedGoals
-                    .filter { entry -> entry.key.isAggregate }
-                    .map { entry ->
-                        SupportedGoalEntry.newBuilder()
                             .setDataType(entry.key.proto)
                             .addAllComparisonTypes(entry.value.map { it.toProto() })
                             .build()
@@ -160,7 +118,5 @@ constructor(
             "supportedDataTypes=$supportedDataTypes, " +
             "supportedGoals=$supportedGoals, " +
             "supportedMilestones=$supportedMilestones, " +
-            "supportsAutoPauseAndResume=$supportsAutoPauseAndResume, " +
-            "supportedDebouncedGoals=$supportedDebouncedGoals, " +
-            ")"
+            "supportsAutoPauseAndResume=$supportsAutoPauseAndResume, "
 }

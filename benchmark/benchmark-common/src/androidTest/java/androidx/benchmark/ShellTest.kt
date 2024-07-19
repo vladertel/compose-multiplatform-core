@@ -67,11 +67,10 @@ class ShellTest {
     fun optionalCommand_echo() {
         val output = Shell.optionalCommand("echo foo")
 
-        val expected =
-            when {
-                Build.VERSION.SDK_INT >= 21 -> "foo\n"
-                else -> null
-            }
+        val expected = when {
+            Build.VERSION.SDK_INT >= 21 -> "foo\n"
+            else -> null
+        }
 
         assertEquals(expected, output)
     }
@@ -85,7 +84,8 @@ class ShellTest {
         // skip test on devices that can't read scaling_min_freq, like emulators
         assumeTrue(
             "cpufreq dirs don't have scaling_min_freq, bypassing test",
-            onlineCores.all { File(it.scalingMinFreqPath()).exists() }
+            onlineCores
+                .all { File(it.scalingMinFreqPath()).exists() }
         )
 
         onlineCores.forEach {
@@ -127,8 +127,7 @@ class ShellTest {
                 """
                 echo foo 1>&2 # stderr on 1st line, previously unsupported
                 echo bar
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
         )
     }
@@ -197,8 +196,7 @@ class ShellTest {
                 """
                     echo foo > /data/local/tmp/foofile
                     cat /data/local/tmp/foofile
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
         )
     }
@@ -212,8 +210,7 @@ class ShellTest {
                 """
                     xargs echo $1 > /data/local/tmp/foofile
                     cat /data/local/tmp/foofile
-                """
-                    .trimIndent(),
+                """.trimIndent(),
                 stdin = "foo"
             )
         )
@@ -228,8 +225,7 @@ class ShellTest {
                 """
                     echo $(</dev/stdin) > /data/local/tmp/foofile
                     cat /data/local/tmp/foofile
-                """
-                    .trimIndent(),
+                """.trimIndent(),
                 stdin = "foo"
             )
         )
@@ -238,13 +234,15 @@ class ShellTest {
     @SdkSuppress(minSdkVersion = 21)
     @Test
     fun createRunnableExecutable_simpleScript() {
-        val path =
-            Shell.createRunnableExecutable(
-                name = "myScript.sh",
-                inputStream = "echo foo".byteInputStream()
-            )
+        val path = Shell.createRunnableExecutable(
+            name = "myScript.sh",
+            inputStream = "echo foo".byteInputStream()
+        )
         try {
-            Assert.assertEquals("foo\n", Shell.executeScriptCaptureStdout(path))
+            Assert.assertEquals(
+                "foo\n",
+                Shell.executeScriptCaptureStdout(path)
+            )
         } finally {
             Shell.executeScriptCaptureStdout("rm $path")
         }
@@ -389,7 +387,9 @@ class ShellTest {
 
         repeat(2) {
             // validates that the stdin can be reused across multiple invocations
-            with(script.start()) { assertEquals(listOf("foo"), stdOutLineSequence().toList()) }
+            with(script.start()) {
+                assertEquals(listOf("foo"), stdOutLineSequence().toList())
+            }
         }
         script.cleanUp()
     }
@@ -399,12 +399,11 @@ class ShellTest {
     fun getChecksum() {
         val emptyPaths = listOf("/data/local/tmp/emptyfile1", "/data/local/tmp/emptyfile2")
         try {
-            val checksums =
-                emptyPaths.map {
-                    Shell.executeScriptSilent("rm -f $it")
-                    Shell.executeScriptSilent("touch $it")
-                    Shell.getChecksum(it)
-                }
+            val checksums = emptyPaths.map {
+                Shell.executeScriptSilent("rm -f $it")
+                Shell.executeScriptSilent("touch $it")
+                Shell.getChecksum(it)
+            }
 
             assertEquals(checksums.first(), checksums.last())
             if (Build.VERSION.SDK_INT < 23) {
@@ -415,28 +414,10 @@ class ShellTest {
                 }
             }
         } finally {
-            emptyPaths.forEach { Shell.executeScriptSilent("rm -f $it") }
+            emptyPaths.forEach {
+                Shell.executeScriptSilent("rm -f $it")
+            }
         }
-    }
-
-    @Test
-    fun getCompilationMode() {
-        val status = Shell.getCompilationMode(Packages.TEST)
-        assertTrue(
-            actual =
-                status in
-                    listOf(
-                        // Api 21-23
-                        "speed",
-                        // Api 24-25
-                        "interpret-only",
-                        // Api 26-27
-                        "quicken",
-                        // Api 28 and above
-                        "run-from-apk"
-                    ),
-            message = "Unexpected status value: $status",
-        )
     }
 
     @RequiresApi(21)
@@ -456,16 +437,14 @@ class ShellTest {
          */
         @RequiresApi(23)
         fun getBackgroundSpinningProcess(): Shell.ProcessPid {
-            val pid =
-                Shell.executeScriptCaptureStdout(
-                        """
+            val pid = Shell.executeScriptCaptureStdout(
+                """
                     $BACKGROUND_SPINNING_PROCESS_NAME > /dev/null 2> /dev/null &
                     echo $!
-                """
-                            .trimIndent()
-                    )
-                    .trim()
-                    .toIntOrNull()
+                """.trimIndent()
+            )
+                .trim()
+                .toIntOrNull()
             assertNotNull(pid)
             return Shell.ProcessPid(BACKGROUND_SPINNING_PROCESS_NAME, pid)
         }
@@ -475,9 +454,10 @@ class ShellTest {
          *
          * We use "yes" here, as it's available back to 23.
          *
-         * Also tried "sleep 20", but this resulted in the Shell.executeCommand not completing until
-         * after the sleep terminated, which made it not useful.
+         * Also tried "sleep 20", but this resulted in the Shell.executeCommand not completing
+         * until after the sleep terminated, which made it not useful.
          */
-        @RequiresApi(23) val BACKGROUND_SPINNING_PROCESS_NAME = "yes"
+        @RequiresApi(23)
+        val BACKGROUND_SPINNING_PROCESS_NAME = "yes"
     }
 }

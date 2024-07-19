@@ -39,16 +39,19 @@ import androidx.work.inspection.WorkManagerInspectorProtocol.Event
 import androidx.work.inspection.WorkManagerInspectorProtocol.Response
 import androidx.work.inspection.WorkManagerInspectorProtocol.TrackWorkManagerResponse
 import androidx.work.inspection.WorkManagerInspectorProtocol.WorkAddedEvent
-import androidx.work.inspection.WorkManagerInspectorProtocol.WorkInfo
 import androidx.work.inspection.WorkManagerInspectorProtocol.WorkRemovedEvent
 import androidx.work.inspection.WorkManagerInspectorProtocol.WorkUpdatedEvent
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 
-/** Inspector to work with WorkManager */
-class WorkManagerInspector(connection: Connection, environment: InspectorEnvironment) :
-    Inspector(connection), LifecycleOwner {
+/**
+ * Inspector to work with WorkManager
+ */
+class WorkManagerInspector(
+    connection: Connection,
+    environment: InspectorEnvironment
+) : Inspector(connection), LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val workManager: WorkManagerImpl
@@ -59,13 +62,12 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
-        workManager =
-            environment.artTooling().findInstances(Application::class.java).first().let {
-                application ->
-                WorkManager.getInstance(application) as WorkManagerImpl
-            }
+        workManager = environment.artTooling().findInstances(Application::class.java).first()
+            .let { application -> WorkManager.getInstance(application) as WorkManagerImpl }
 
-        mainHandler.post { lifecycleRegistry.currentState = Lifecycle.State.STARTED }
+        mainHandler.post {
+            lifecycleRegistry.currentState = Lifecycle.State.STARTED
+        }
 
         environment.artTooling().registerEntryHook(
             WorkContinuationImpl::class.java,
@@ -84,38 +86,32 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
         val command = Command.parseFrom(data)
         when (command.oneOfCase) {
             TRACK_WORK_MANAGER -> {
-                val response =
-                    Response.newBuilder()
-                        .setTrackWorkManager(TrackWorkManagerResponse.getDefaultInstance())
-                        .build()
-                val allWorkSpecIdsLiveData =
-                    workManager.workDatabase.workSpecDao().getAllWorkSpecIdsLiveData()
-                // just a little hack to continue using `safeObserveWhileNotNull`
-                @Suppress("UNCHECKED_CAST")
-                (allWorkSpecIdsLiveData as LiveData<List<String>?>).safeObserveWhileNotNull(
-                    this,
-                    executor
-                ) { oldList, newList ->
-                    updateWorkIdList(oldList ?: listOf(), newList)
-                }
+                val response = Response.newBuilder()
+                    .setTrackWorkManager(TrackWorkManagerResponse.getDefaultInstance())
+                    .build()
+                workManager
+                    .workDatabase
+                    .workSpecDao()
+                    .getAllWorkSpecIdsLiveData()
+                    .safeObserveWhileNotNull(this, executor) { oldList, newList ->
+                        updateWorkIdList(oldList ?: listOf(), newList)
+                    }
                 callback.reply(response.toByteArray())
             }
             CANCEL_WORK -> {
-                val response =
-                    Response.newBuilder()
-                        .setTrackWorkManager(TrackWorkManagerResponse.getDefaultInstance())
-                        .build()
-                workManager
-                    .cancelWorkById(UUID.fromString(command.cancelWork.id))
-                    .result
+                val response = Response.newBuilder()
+                    .setTrackWorkManager(TrackWorkManagerResponse.getDefaultInstance())
+                    .build()
+                workManager.cancelWorkById(UUID.fromString(command.cancelWork.id)).result
                     .addListener(Runnable { callback.reply(response.toByteArray()) }, executor)
             }
             else -> {
-                val errorResponse =
-                    ErrorResponse.newBuilder()
-                        .setContent("Unrecognised command type: ONEOF_NOT_SET")
-                        .build()
-                val response = Response.newBuilder().setError(errorResponse).build()
+                val errorResponse = ErrorResponse.newBuilder()
+                    .setContent("Unrecognised command type: ONEOF_NOT_SET")
+                    .build()
+                val response = Response.newBuilder()
+                    .setError(errorResponse)
+                    .build()
                 callback.reply(response.toByteArray())
             }
         }
@@ -123,12 +119,11 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
 
     /**
      * Allows to observe LiveDatas from non-main thread.
-     *
      * <p>
-     * Observation will last until "null" value is dispatched, then observer will be automatically
-     * removed.
+     * Observation will last until "null" value is dispatched, then
+     * observer will be automatically removed.
      */
-    private fun <T : Any> LiveData<T?>.safeObserveWhileNotNull(
+    private fun <T> LiveData<T>.safeObserveWhileNotNull(
         owner: LifecycleOwner,
         executor: Executor,
         listener: (oldValue: T?, newValue: T) -> Unit
@@ -136,10 +131,9 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
         mainHandler.post {
             observe(
                 owner,
-                object : Observer<T?> {
+                object : Observer<T> {
                     private var lastValue: T? = null
-
-                    override fun onChanged(value: T?) {
+                    override fun onChanged(value: T) {
                         if (value == null) {
                             removeObserver(this)
                         } else {
@@ -155,8 +149,8 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
     }
 
     /**
-     * Prune internal [StackTraceElement]s above [WorkContinuationImpl.enqueue] or from work manager
-     * libraries.
+     * Prune internal [StackTraceElement]s above [WorkContinuationImpl.enqueue] or from
+     * work manager libraries.
      */
     private fun List<StackTraceElement>.prune(): List<StackTraceElement> {
         val entryHookIndex = indexOfFirst {
@@ -164,9 +158,8 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
                 it.methodName == "enqueue"
         }
         if (entryHookIndex != -1) {
-            return subList(entryHookIndex + 1, size).dropWhile {
-                it.className.startsWith("androidx.work")
-            }
+            return subList(entryHookIndex + 1, size)
+                .dropWhile { it.className.startsWith("androidx.work") }
         }
         return this
     }
@@ -185,7 +178,7 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
         workInfoBuilder.isPeriodic = workSpec.isPeriodic
         workInfoBuilder.constraints = workSpec.constraints.toProto()
         workManager.getWorkInfoById(UUID.fromString(id)).let {
-            workInfoBuilder.addAllTags(it.get()?.tags ?: emptyList())
+            workInfoBuilder.addAllTags(it.get().tags)
         }
 
         val workStackBuilder = WorkManagerInspectorProtocol.CallStack.newBuilder()
@@ -215,35 +208,31 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
 
         workInfoLiveData.safeObserveWhileNotNull(this, executor) { oldWorkInfo, newWorkInfo ->
             if (oldWorkInfo?.state != newWorkInfo.state) {
-                val updateWorkEvent =
-                    WorkUpdatedEvent.newBuilder()
-                        .setId(id)
-                        .setState(
-                            WorkManagerInspectorProtocol.WorkInfo.State.forNumber(
-                                newWorkInfo.state.ordinal + 1
-                            )
-                        )
-                        .build()
+                val updateWorkEvent = WorkUpdatedEvent.newBuilder()
+                    .setId(id)
+                    .setState(
+                        WorkManagerInspectorProtocol.WorkInfo.State
+                            .forNumber(newWorkInfo.state.ordinal + 1)
+                    )
+                    .build()
                 connection.sendEvent(
                     Event.newBuilder().setWorkUpdated(updateWorkEvent).build().toByteArray()
                 )
             }
             if (oldWorkInfo?.runAttemptCount != newWorkInfo.runAttemptCount) {
-                val updateWorkEvent =
-                    WorkUpdatedEvent.newBuilder()
-                        .setId(id)
-                        .setRunAttemptCount(newWorkInfo.runAttemptCount)
-                        .build()
+                val updateWorkEvent = WorkUpdatedEvent.newBuilder()
+                    .setId(id)
+                    .setRunAttemptCount(newWorkInfo.runAttemptCount)
+                    .build()
                 connection.sendEvent(
                     Event.newBuilder().setWorkUpdated(updateWorkEvent).build().toByteArray()
                 )
             }
             if (oldWorkInfo?.outputData != newWorkInfo.outputData) {
-                val updateWorkEvent =
-                    WorkUpdatedEvent.newBuilder()
-                        .setId(id)
-                        .setData(newWorkInfo.outputData.toProto())
-                        .build()
+                val updateWorkEvent = WorkUpdatedEvent.newBuilder()
+                    .setId(id)
+                    .setData(newWorkInfo.outputData.toProto())
+                    .build()
                 connection.sendEvent(
                     Event.newBuilder().setWorkUpdated(updateWorkEvent).build().toByteArray()
                 )
@@ -254,11 +243,10 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
             .workSpecDao()
             .getScheduleRequestedAtLiveData(id)
             .safeObserveWhileNotNull(this, executor) { _, newScheduledTime ->
-                val updateWorkEvent =
-                    WorkUpdatedEvent.newBuilder()
-                        .setId(id)
-                        .setScheduleRequestedAt(newScheduledTime)
-                        .build()
+                val updateWorkEvent = WorkUpdatedEvent.newBuilder()
+                    .setId(id)
+                    .setScheduleRequestedAt(newScheduledTime)
+                    .build()
                 connection.sendEvent(
                     Event.newBuilder().setWorkUpdated(updateWorkEvent).build().toByteArray()
                 )
@@ -273,7 +261,8 @@ class WorkManagerInspector(connection: Connection, environment: InspectorEnviron
         }
         for (addedId in newWorkIds.minus(oldWorkIds)) {
             val workInfoProto = createWorkInfoProto(addedId) ?: continue
-            val addEvent = WorkAddedEvent.newBuilder().setWork(workInfoProto).build()
+            val addEvent = WorkAddedEvent.newBuilder().setWork(workInfoProto)
+                .build()
             val event = Event.newBuilder().setWorkAdded(addEvent).build()
             connection.sendEvent(event.toByteArray())
             observeWorkUpdates(addedId)

@@ -26,7 +26,6 @@ import androidx.room.compiler.codegen.XTypeSpec
 import androidx.room.compiler.codegen.XTypeSpec.Builder.Companion.apply
 import androidx.room.compiler.processing.XProcessingEnv
 import androidx.room.compiler.processing.writeTo
-import androidx.room.processor.Context
 import androidx.room.solver.CodeGenScope
 import com.squareup.kotlinpoet.javapoet.JAnnotationSpec
 import com.squareup.kotlinpoet.javapoet.JClassName
@@ -34,16 +33,16 @@ import com.squareup.kotlinpoet.javapoet.KAnnotationSpec
 import com.squareup.kotlinpoet.javapoet.KClassName
 import kotlin.reflect.KClass
 
-/** Base class for all writers that can produce a class. */
-abstract class TypeWriter(val context: WriterContext) {
+/**
+ * Base class for all writers that can produce a class.
+ */
+abstract class TypeWriter(val codeLanguage: CodeLanguage) {
     private val sharedFieldSpecs = mutableMapOf<String, XPropertySpec>()
     private val sharedMethodSpecs = mutableMapOf<String, XFunSpec>()
     private val sharedFieldNames = mutableSetOf<String>()
     private val sharedMethodNames = mutableSetOf<String>()
 
     private val metadata = mutableMapOf<KClass<*>, Any>()
-
-    val codeLanguage: CodeLanguage = context.codeLanguage
 
     abstract fun createTypeSpecBuilder(): XTypeSpec.Builder
 
@@ -53,13 +52,14 @@ abstract class TypeWriter(val context: WriterContext) {
      * @see set for more details.
      */
     operator fun <T> get(key: KClass<*>): T? {
-        @Suppress("UNCHECKED_CAST") return metadata[key] as? T
+        @Suppress("UNCHECKED_CAST")
+        return metadata[key] as? T
     }
 
     /**
-     * Add additional metadata to the TypeWriter that can be read back later. This is useful for
-     * additional functionality where a sub code generator needs to bubble up information to the
-     * main TypeWriter without copying it in every intermediate step.
+     * Add additional metadata to the TypeWriter that can be read back later.
+     * This is useful for additional functionality where a sub code generator needs to bubble up
+     * information to the main TypeWriter without copying it in every intermediate step.
      *
      * @see get
      */
@@ -81,13 +81,7 @@ abstract class TypeWriter(val context: WriterContext) {
             javaTypeBuilder = {
                 addAnnotation(
                     com.squareup.javapoet.AnnotationSpec.builder(SuppressWarnings::class.java)
-                        .addMember(
-                            "value",
-                            "{\$S, \$S, \$S}",
-                            "unchecked",
-                            "deprecation",
-                            "removal"
-                        )
+                        .addMember("value", "{\$S, \$S}", "unchecked", "deprecation")
                         .build()
                 )
             },
@@ -95,11 +89,10 @@ abstract class TypeWriter(val context: WriterContext) {
                 addAnnotation(
                     com.squareup.kotlinpoet.AnnotationSpec.builder(Suppress::class)
                         .addMember(
-                            "names = [%S, %S, %S, %S]",
+                            "names = [%S, %S, %S]",
                             "UNCHECKED_CAST",
                             "DEPRECATION",
-                            "REDUNDANT_PROJECTION",
-                            "REMOVAL"
+                            "REDUNDANT_PROJECTION"
                         )
                         .build()
                 )
@@ -170,14 +163,13 @@ abstract class TypeWriter(val context: WriterContext) {
         abstract fun prepare(writer: TypeWriter, builder: XPropertySpec.Builder)
 
         fun build(classWriter: TypeWriter, name: String): XPropertySpec {
-            val builder =
-                XPropertySpec.builder(
-                    language = classWriter.codeLanguage,
-                    name = name,
-                    typeName = type,
-                    visibility = VisibilityModifier.PRIVATE,
-                    isMutable = isMutable
-                )
+            val builder = XPropertySpec.builder(
+                language = classWriter.codeLanguage,
+                name = name,
+                typeName = type,
+                visibility = VisibilityModifier.PRIVATE,
+                isMutable = isMutable
+            )
             prepare(classWriter, builder)
             return builder.build()
         }
@@ -187,27 +179,16 @@ abstract class TypeWriter(val context: WriterContext) {
 
         abstract fun getUniqueKey(): String
 
-        abstract fun prepare(methodName: String, writer: TypeWriter, builder: XFunSpec.Builder)
+        abstract fun prepare(
+            methodName: String,
+            writer: TypeWriter,
+            builder: XFunSpec.Builder
+        )
 
         fun build(writer: TypeWriter, name: String): XFunSpec {
             val builder = XFunSpec.builder(writer.codeLanguage, name, VisibilityModifier.PRIVATE)
             prepare(name, writer, builder)
             return builder.build()
-        }
-    }
-
-    class WriterContext(
-        val codeLanguage: CodeLanguage,
-        val targetPlatforms: Set<XProcessingEnv.Platform>,
-        val javaLambdaSyntaxAvailable: Boolean
-    ) {
-        companion object {
-            fun fromProcessingContext(context: Context) =
-                WriterContext(
-                    codeLanguage = context.codeLanguage,
-                    targetPlatforms = context.processingEnv.targetPlatforms,
-                    javaLambdaSyntaxAvailable = context.javaLambdaSyntaxAvailable
-                )
         }
     }
 }

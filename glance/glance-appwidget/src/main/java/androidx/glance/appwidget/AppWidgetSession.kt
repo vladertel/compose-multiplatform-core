@@ -43,10 +43,8 @@ import androidx.glance.action.LambdaAction
 import androidx.glance.session.Session
 import androidx.glance.state.ConfigManager
 import androidx.glance.state.GlanceState
-import androidx.glance.state.GlanceStateDefinition
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableJob
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -59,16 +57,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * events (e.g. [AppWidgetSession.updateGlance]). If a session is already running, GlanceAppWidget
  * will trigger events on the session instead of starting a new one.
  *
- * @param initialOptions options to be provided to the composition and determine sizing.
- * @param initialGlanceState initial value of Glance state
  * @property widget the GlanceAppWidget that contains the composable for this session.
  * @property id identifies which widget will be updated when the UI is ready.
  * @property configManager used by the session to retrieve configuration state.
  * @property lambdaReceiver the BroadcastReceiver that will receive lambda action broadcasts.
  * @property sizeMode optional override for the widget's specified SizeMode.
  * @property shouldPublish if true, we will publish RemoteViews with
- *   [android.appwidget.AppWidgetManager.updateAppWidget]. The [id] must be valid
- *   ([AppWidgetId.isRealId]) in that case.
+ * [android.appwidget.AppWidgetManager.updateAppWidget]. The [id] must be valid
+ * ([AppWidgetId.isRealId]) in that case.
+ * @param initialOptions options to be provided to the composition and determine sizing.
+ * @param initialGlanceState initial value of Glance state
  */
 internal class AppWidgetSession(
     private val widget: GlanceAppWidget,
@@ -101,7 +99,6 @@ internal class AppWidgetSession(
     private var glanceState by mutableStateOf(initialGlanceState, neverEqualPolicy())
     private var options by mutableStateOf(initialOptions, neverEqualPolicy())
     private var lambdas = mapOf<String, List<LambdaAction>>()
-    private val parentJob = Job()
 
     internal val lastRemoteViews = MutableStateFlow<RemoteViews?>(null)
 
@@ -115,41 +112,36 @@ internal class AppWidgetSession(
             LocalState provides glanceState,
         ) {
             var minSize by remember { mutableStateOf(DpSize.Zero) }
-            val configIsReady by
-                produceState(false) {
-                    // Only get a Glance state value if we did not receive an initial value.
-                    val newGlanceState =
-                        if (glanceState == null) {
-                            widget.stateDefinition?.let { stateDefinition: GlanceStateDefinition<*>
-                                ->
-                                configManager.getValue(context, stateDefinition, key)
-                            }
-                        } else null
-
-                    Snapshot.withMutableSnapshot {
-                        if (id.isRealId) {
-                            // Only get sizing info from app widget manager if we are composing for
-                            // a real bound widget.
-                            val manager = context.appWidgetManager
-                            minSize =
-                                appWidgetMinSize(
-                                    context.resources.displayMetrics,
-                                    manager,
-                                    id.appWidgetId
-                                )
-                            if (options == null) {
-                                options = manager.getAppWidgetOptions(id.appWidgetId)
-                            }
+            val configIsReady by produceState(false) {
+                Snapshot.withMutableSnapshot {
+                    if (id.isRealId) {
+                        // Only get sizing info from app widget manager if we are composing for
+                        // a real bound widget.
+                        val manager = context.appWidgetManager
+                        minSize = appWidgetMinSize(
+                            context.resources.displayMetrics,
+                            manager,
+                            id.appWidgetId
+                        )
+                        if (options == null) {
+                            options = manager.getAppWidgetOptions(id.appWidgetId)
                         }
-                        newGlanceState?.let { glanceState = it }
-                        value = true
                     }
+                    // Only get a Glance state value if we did not receive an initial value.
+                    widget.stateDefinition
+                        ?.takeIf { glanceState == null }
+                        ?.let { stateDefinition ->
+                            glanceState =
+                                configManager.getValue(context, stateDefinition, key)
+                        }
+                    value = true
                 }
+            }
             if (configIsReady) {
                 remember { widget.runGlance(context, id) }
                     .collectAsState(null)
-                    .value
-                    ?.let { ForEachSize(sizeMode, minSize, it) } ?: IgnoreResult()
+                    .value?.let { ForEachSize(sizeMode, minSize, it) }
+                    ?: IgnoreResult()
             } else {
                 IgnoreResult()
             }
@@ -168,24 +160,21 @@ internal class AppWidgetSession(
         val layoutConfig = LayoutConfiguration.load(context, id.appWidgetId)
         val appWidgetManager = context.appWidgetManager
         try {
-            val receiver =
-                lambdaReceiver
-                    ?: requireNotNull(appWidgetManager.getAppWidgetInfo(id.appWidgetId)) {
-                            "No app widget info for ${id.appWidgetId}"
-                        }
-                        .provider
+            val receiver = lambdaReceiver
+                ?: requireNotNull(appWidgetManager.getAppWidgetInfo(id.appWidgetId)) {
+                    "No app widget info for ${id.appWidgetId}"
+                }.provider
             normalizeCompositionTree(root)
             lambdas = root.updateLambdaActionKeys()
-            val rv =
-                translateComposition(
-                    context,
-                    id.appWidgetId,
-                    root,
-                    layoutConfig,
-                    layoutConfig.addLayout(root),
-                    DpSize.Unspecified,
-                    receiver
-                )
+            val rv = translateComposition(
+                context,
+                id.appWidgetId,
+                root,
+                layoutConfig,
+                layoutConfig.addLayout(root),
+                DpSize.Unspecified,
+                receiver
+            )
             if (shouldPublish) {
                 appWidgetManager.updateAppWidget(id.appWidgetId, rv)
             }
@@ -209,9 +198,12 @@ internal class AppWidgetSession(
         when (event) {
             is UpdateGlanceState -> {
                 if (DEBUG) Log.i(TAG, "Received UpdateGlanceState event for session($key)")
-                val newGlanceState =
-                    widget.stateDefinition?.let { configManager.getValue(context, it, key) }
-                Snapshot.withMutableSnapshot { glanceState = newGlanceState }
+                val newGlanceState = widget.stateDefinition?.let {
+                    configManager.getValue(context, it, key)
+                }
+                Snapshot.withMutableSnapshot {
+                    glanceState = newGlanceState
+                }
             }
             is UpdateAppWidgetOptions -> {
                 if (DEBUG) {
@@ -221,32 +213,23 @@ internal class AppWidgetSession(
                             "for session($key)"
                     )
                 }
-                Snapshot.withMutableSnapshot { options = event.newOptions }
+                Snapshot.withMutableSnapshot {
+                    options = event.newOptions
+                }
             }
             is RunLambda -> {
                 if (DEBUG) Log.i(TAG, "Received RunLambda(${event.key}) action for session($key)")
-                Snapshot.withMutableSnapshot { lambdas[event.key]?.forEach { it.block() } }
-                    ?: Log.w(TAG, "Triggering Action(${event.key}) for session($key) failed")
+                Snapshot.withMutableSnapshot {
+                    lambdas[event.key]?.forEach { it.block() }
+                } ?: Log.w(TAG, "Triggering Action(${event.key}) for session($key) failed")
             }
-            is WaitForReady -> {
-                event.job.apply { if (isActive) complete() }
-            }
+            is WaitForReady -> event.resume.send(Unit)
             else -> {
                 throw IllegalArgumentException(
                     "Sent unrecognized event type ${event.javaClass} to AppWidgetSession"
                 )
             }
         }
-    }
-
-    override fun onClosed() {
-        // Normally when we are closed, any pending events are processed before the channel is
-        // shutdown. However, it is possible that the Worker for this session will die before
-        // processing the remaining events. So when this session is closed, we will immediately
-        // resume all waiters without waiting for their events to be processed. If the Worker lives
-        // long enough to process their events, it will have no effect because their Jobs are no
-        // longer active.
-        parentJob.cancel()
     }
 
     suspend fun updateGlance() {
@@ -261,17 +244,11 @@ internal class AppWidgetSession(
         sendEvent(RunLambda(key))
     }
 
-    /**
-     * Returns a Job that can be used to wait until the session is ready (i.e. has finished
-     * processEmittableTree for the first time and is now receiving events). You can wait on the
-     * session to be ready by calling [Job.join] on the returned [Job]. When the session is ready,
-     * join will resume successfully (Job is completed). If the session is closed before it is
-     * ready, we call [Job.cancel] and the call to join resumes with [CancellationException].
-     */
-    suspend fun waitForReady(): Job {
-        val event = WaitForReady(Job(parentJob))
-        sendEvent(event)
-        return event.job
+    suspend fun waitForReady() {
+        WaitForReady().let {
+            sendEvent(it)
+            it.resume.receive()
+        }
     }
 
     private fun notifyWidgetOfError(context: Context, throwable: Throwable) {
@@ -289,11 +266,14 @@ internal class AppWidgetSession(
     }
 
     // Event types that this session supports.
-    @VisibleForTesting internal object UpdateGlanceState
-
-    @VisibleForTesting internal class UpdateAppWidgetOptions(val newOptions: Bundle)
-
-    @VisibleForTesting internal class RunLambda(val key: String)
-
-    @VisibleForTesting internal class WaitForReady(val job: CompletableJob)
+    @VisibleForTesting
+    internal object UpdateGlanceState
+    @VisibleForTesting
+    internal class UpdateAppWidgetOptions(val newOptions: Bundle)
+    @VisibleForTesting
+    internal class RunLambda(val key: String)
+    @VisibleForTesting
+    internal class WaitForReady(
+        val resume: Channel<Unit> = Channel(Channel.CONFLATED)
+    )
 }

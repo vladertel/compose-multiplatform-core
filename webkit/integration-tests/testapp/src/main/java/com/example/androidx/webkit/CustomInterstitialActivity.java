@@ -25,6 +25,7 @@ import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.webkit.SafeBrowsingResponseCompat;
 import androidx.webkit.WebViewClientCompat;
@@ -89,6 +90,7 @@ public class CustomInterstitialActivity extends AppCompatActivity {
         }
 
         @Override
+        @RequiresApi(21) // This won't be called on < L, so we can safely apply @RequiresApi.
         public void onSafeBrowsingHit(@NonNull WebView view, @NonNull WebResourceRequest request,
                 int threatType, @NonNull SafeBrowsingResponseCompat callback) {
             mSafeBrowsingResponseMap.put(mActivityRequestCounter, callback);
@@ -96,11 +98,12 @@ public class CustomInterstitialActivity extends AppCompatActivity {
             mActivityRequestCounter++;
         }
 
+        @RequiresApi(21) // for WebResourceRequest
         private void createInterstitial(int threatType, @NonNull WebResourceRequest request) {
             Intent myIntent = new Intent(mActivity, PopupInterstitialActivity.class);
             myIntent.putExtra(PopupInterstitialActivity.THREAT_TYPE, threatType);
             myIntent.putExtra(PopupInterstitialActivity.THREAT_URL,
-                    request.getUrl().toString());
+                    Api21Impl.getUrl(request).toString());
             mActivity.startActivityForResult(myIntent, mActivityRequestCounter);
         }
 

@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21)
+
 package androidx.camera.camera2.pipe.integration.adapter
 
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraDevice
 import android.os.Build
 import android.view.Surface
+import androidx.annotation.RequiresApi
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.utils.futures.Futures
@@ -30,7 +33,6 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import junit.framework.TestCase
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.junit.Rule
 import org.junit.Test
@@ -63,7 +65,9 @@ class SessionConfigAdapterTest {
         }
 
         // Act
-        val sessionConfigAdapter = SessionConfigAdapter(useCases = listOf(fakeTestUseCase))
+        val sessionConfigAdapter = SessionConfigAdapter(
+            useCases = listOf(fakeTestUseCase)
+        )
 
         // Assert
         assertThat(sessionConfigAdapter.isSessionConfigValid()).isFalse()
@@ -78,17 +82,12 @@ class SessionConfigAdapterTest {
         // Arrange
         val testDeferrableSurface = createTestDeferrableSurface().apply { close() }
 
-        val errorListener =
-            object : SessionConfig.ErrorListener {
-                val results = mutableListOf<Pair<SessionConfig, SessionConfig.SessionError>>()
-
-                override fun onError(
-                    sessionConfig: SessionConfig,
-                    error: SessionConfig.SessionError
-                ) {
-                    results.add(Pair(sessionConfig, error))
-                }
+        val errorListener = object : SessionConfig.ErrorListener {
+            val results = mutableListOf<Pair<SessionConfig, SessionConfig.SessionError>>()
+            override fun onError(sessionConfig: SessionConfig, error: SessionConfig.SessionError) {
+                results.add(Pair(sessionConfig, error))
             }
+        }
 
         val fakeTestUseCase1 = createFakeTestUseCase {
             it.setupSessionConfig(
@@ -110,14 +109,16 @@ class SessionConfigAdapterTest {
         }
 
         // Act
-        SessionConfigAdapter(useCases = listOf(fakeTestUseCase1, fakeTestUseCase2))
-            .reportSurfaceInvalid(testDeferrableSurface)
+        SessionConfigAdapter(
+            useCases = listOf(fakeTestUseCase1, fakeTestUseCase2)
+        ).reportSurfaceInvalid(testDeferrableSurface)
 
         // Assert, verify it only reports the SURFACE_NEEDS_RESET error on one SessionConfig
         // at a time.
         assertThat(errorListener.results.size).isEqualTo(1)
-        assertThat(errorListener.results[0].second)
-            .isEqualTo(SessionConfig.SessionError.SESSION_ERROR_SURFACE_NEEDS_RESET)
+        assertThat(errorListener.results[0].second).isEqualTo(
+            SessionConfig.SessionError.SESSION_ERROR_SURFACE_NEEDS_RESET
+        )
     }
 
     @Test
@@ -134,7 +135,9 @@ class SessionConfigAdapterTest {
 
     private fun createFakeTestUseCase(block: (FakeTestUseCase) -> Unit): FakeTestUseCase = run {
         val configBuilder = FakeUseCaseConfig.Builder().setTargetName("UseCase")
-        FakeTestUseCase(configBuilder.useCaseConfig).also { block(it) }
+        FakeTestUseCase(configBuilder.useCaseConfig).also {
+            block(it)
+        }
     }
 
     private fun createTestDeferrableSurface(): TestDeferrableSurface = run {
@@ -147,20 +150,17 @@ class SessionConfigAdapterTest {
 class FakeTestUseCase(
     config: FakeUseCaseConfig,
 ) : FakeUseCase(config) {
-    var cameraControlReady = false
 
     fun setupSessionConfig(sessionConfigBuilder: SessionConfig.Builder) {
         updateSessionConfig(sessionConfigBuilder.build())
         notifyActive()
     }
-
-    override fun onCameraControlReady() {
-        cameraControlReady = true
-    }
 }
 
-open class TestDeferrableSurface : DeferrableSurface() {
-    private val surfaceTexture = SurfaceTexture(0).also { it.setDefaultBufferSize(0, 0) }
+class TestDeferrableSurface : DeferrableSurface() {
+    private val surfaceTexture = SurfaceTexture(0).also {
+        it.setDefaultBufferSize(0, 0)
+    }
     val testSurface = Surface(surfaceTexture)
 
     override fun provideSurface(): ListenableFuture<Surface> {
@@ -171,14 +171,4 @@ open class TestDeferrableSurface : DeferrableSurface() {
         testSurface.release()
         surfaceTexture.release()
     }
-}
-
-class BlockingTestDeferrableSurface : TestDeferrableSurface() {
-    private val deferred = CompletableDeferred<Surface>()
-
-    override fun provideSurface(): ListenableFuture<Surface> {
-        return deferred.asListenableFuture()
-    }
-
-    fun resume() = deferred.complete(testSurface)
 }

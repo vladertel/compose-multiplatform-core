@@ -38,7 +38,8 @@ import org.junit.runners.Parameterized
 @LargeTest
 @RunWith(Parameterized::class)
 class JetsnackScrollBenchmark(val compilationMode: CompilationMode) {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     @Test
     fun scrollHome() {

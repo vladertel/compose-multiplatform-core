@@ -22,7 +22,6 @@ import java.util.concurrent.TimeoutException
 abstract class TestObserver<T> : Observer<T> {
     private var mLastData: T? = null
     private var mHasValue = false
-
     fun reset() {
         mHasValue = false
         mLastData = null
@@ -46,5 +45,6 @@ abstract class TestObserver<T> : Observer<T> {
         return mLastData
     }
 
-    @Throws(TimeoutException::class, InterruptedException::class) protected abstract fun drain()
+    @Throws(TimeoutException::class, InterruptedException::class)
+    protected abstract fun drain()
 }

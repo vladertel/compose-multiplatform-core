@@ -22,7 +22,9 @@ import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Typeface
 
-/** An interface of Android specific Typeface. */
+/**
+ * An interface of Android specific Typeface.
+ */
 internal interface AndroidTypeface : Typeface {
     /**
      * Returns the Android's native Typeface to be able use for given parameters.
@@ -30,6 +32,7 @@ internal interface AndroidTypeface : Typeface {
      * @param fontWeight A weight to be used for drawing text.
      * @param fontStyle A style to be used for drawing text.
      * @param synthesis An synthesis option for drawing text.
+     *
      * @return the Android native Typeface which has closest style to the given parameter.
      */
     fun getNativeTypeface(

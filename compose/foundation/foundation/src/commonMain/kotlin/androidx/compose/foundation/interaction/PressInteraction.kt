@@ -40,9 +40,10 @@ interface PressInteraction : Interaction {
      * An interaction representing a press event on a component.
      *
      * @property pressPosition the [Offset] describing where this press event occurred within the
-     *   component. The [Offset] can be outside the actual component bounds meaning the [Offset] can
-     *   be negative or larger than the component bounds if the touch target is smaller than the
-     *   [ViewConfiguration.minimumTouchTargetSize].
+     * component. The [Offset] can be outside the actual component bounds meaning the [Offset]
+     * can be negative or larger than the component bounds if the touch target is smaller than
+     * the [ViewConfiguration.minimumTouchTargetSize].
+     *
      * @see androidx.compose.foundation.clickable
      * @see Release
      * @see Cancel
@@ -53,6 +54,7 @@ interface PressInteraction : Interaction {
      * An interaction representing the release of a [Press] event on a component.
      *
      * @property press the source [Press] interaction that is being released
+     *
      * @see androidx.compose.foundation.clickable
      * @see Press
      */
@@ -62,6 +64,7 @@ interface PressInteraction : Interaction {
      * An interaction representing the cancellation of a [Press] event on a component.
      *
      * @property press the source [Press] interaction that is being cancelled
+     *
      * @see androidx.compose.foundation.clickable
      * @see Press
      */

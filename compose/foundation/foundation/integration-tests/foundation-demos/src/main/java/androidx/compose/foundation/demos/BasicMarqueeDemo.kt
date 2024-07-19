@@ -93,7 +93,11 @@ fun BasicMarqueeDemo() {
         listOf(40.dp, 80.dp, 120.dp).forEach {
             MarqueeText("long text in short marquee", Modifier.width(it))
         }
-        MarqueeText("backwards animation", Modifier.width(80.dp), velocity = -Velocity)
+        MarqueeText(
+            "backwards animation",
+            Modifier.width(80.dp),
+            velocity = -Velocity
+        )
         MarqueeWithClickable()
         Row {
             Text("Tap to focus: ")
@@ -115,10 +119,9 @@ fun BasicMarqueeDemo() {
 
 @Composable
 private fun AndroidMarqueeWithClickableLink() {
-    val text =
-        SpannableStringBuilder("text with link").apply {
-            setSpan(URLSpan("https://www.google.com"), 5, 9, 0)
-        }
+    val text = SpannableStringBuilder("text with link").apply {
+        setSpan(URLSpan("https://www.google.com"), 5, 9, 0)
+    }
     AndroidMarqueeTextView(text, Modifier.width(60.dp))
 }
 
@@ -131,10 +134,9 @@ private fun AndroidMarqueeTextView(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     AndroidView(
-        modifier =
-            modifier.border(if (isFocused) 4.dp else 1.dp, Color.Black).onFocusChanged {
-                isFocused = it.hasFocus
-            },
+        modifier = modifier
+            .border(if (isFocused) 4.dp else 1.dp, Color.Black)
+            .onFocusChanged { isFocused = it.hasFocus },
         factory = {
             TextView(it).apply {
                 ellipsize = TextUtils.TruncateAt.MARQUEE
@@ -146,7 +148,9 @@ private fun AndroidMarqueeTextView(
                 isFocusableInTouchMode = focusable
             }
         },
-        update = { it.text = text }
+        update = {
+            it.text = text
+        }
     )
 }
 
@@ -154,11 +158,16 @@ private fun AndroidMarqueeTextView(
 private fun MarqueeWithClickable() {
     val uriHandler = LocalUriHandler.current
     Row(
-        Modifier.width(60.dp).border(1.dp, Color.Black).basicMarquee(iterations = Int.MAX_VALUE),
+        Modifier
+            .width(60.dp)
+            .border(1.dp, Color.Black)
+            .basicMarquee(iterations = Int.MAX_VALUE),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("text ")
-        TextButton(onClick = { uriHandler.openUri("https://www.google.com") }) { Text("with") }
+        TextButton(onClick = { uriHandler.openUri("https://www.google.com") }) {
+            Text("with")
+        }
         Text(" link")
     }
 }

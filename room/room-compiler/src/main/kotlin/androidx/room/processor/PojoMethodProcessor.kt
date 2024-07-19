@@ -20,7 +20,9 @@ import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XType
 import androidx.room.vo.PojoMethod
 
-/** processes an executable element as member of the owning class */
+/**
+ * processes an executable element as member of the owning class
+ */
 class PojoMethodProcessor(
     private val context: Context,
     private val element: XMethodElement,
@@ -28,6 +30,9 @@ class PojoMethodProcessor(
 ) {
     fun process(): PojoMethod {
         val asMember = element.asMemberOf(owner)
-        return PojoMethod(element = element, resolvedType = asMember)
+        return PojoMethod(
+            element = element,
+            resolvedType = asMember
+        )
     }
 }

@@ -20,7 +20,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
-import androidx.compose.ui.autofill.SemanticAutofill
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusOwner
@@ -201,7 +200,6 @@ class DepthSortedSetTest {
         override val autofillTree: AutofillTree get() = throw IllegalStateException()
         @ExperimentalComposeUiApi
         override val autofill: Autofill? get() = throw IllegalStateException()
-        override val semanticAutofill: SemanticAutofill? get() = throw IllegalStateException()
         override val density: Density get() = throw IllegalStateException()
         override val textInputService: TextInputService get() = throw IllegalStateException()
         override val softwareKeyboardController get() = throw IllegalStateException()

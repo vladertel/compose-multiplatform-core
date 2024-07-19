@@ -16,7 +16,6 @@
 
 @file:JvmName("SnapshotIntStateKt")
 @file:JvmMultifileClass
-
 package androidx.compose.runtime
 
 import androidx.compose.runtime.internal.JvmDefaultWithCompatibility
@@ -42,6 +41,7 @@ import kotlin.reflect.KProperty
  * using `MutableState<Int>`.
  *
  * @param value the initial value for the [MutableIntState]
+ *
  * @see IntState
  * @see MutableIntState
  * @see mutableStateOf
@@ -50,7 +50,9 @@ import kotlin.reflect.KProperty
  * @see mutableDoubleStateOf
  */
 @StateFactoryMarker
-fun mutableIntStateOf(value: Int): MutableIntState = createSnapshotMutableIntState(value)
+fun mutableIntStateOf(
+    value: Int
+): MutableIntState = createSnapshotMutableIntState(value)
 
 /**
  * A value holder where reads to the [intValue] property during the execution of a [Composable]
@@ -69,16 +71,18 @@ interface IntState : State<Int> {
     val intValue: Int
 }
 
-/** Permits property delegation of `val`s using `by` for [IntState]. */
+/**
+ * Permits property delegation of `val`s using `by` for [IntState].
+ */
 @Suppress("NOTHING_TO_INLINE")
 inline operator fun IntState.getValue(thisObj: Any?, property: KProperty<*>): Int = intValue
 
 /**
  * A value holder where reads to the [intValue] property during the execution of a [Composable]
  * function cause the current [RecomposeScope] to subscribe to changes of that value. When the
- * [intValue] property is written to and changed, a recomposition of any subscribed
- * [RecomposeScope]s will be scheduled. If [intValue] is written to with the same value, no
- * recompositions will be scheduled.
+ * [intValue] property is written to and changed, a recomposition of any subscribed [RecomposeScope]s
+ * will be scheduled. If [intValue] is written to with the same value, no recompositions will be
+ * scheduled.
  *
  * @see [IntState]
  * @see [mutableDoubleStateOf]
@@ -90,16 +94,20 @@ interface MutableIntState : IntState, MutableState<Int> {
     @set:AutoboxingStateValueProperty("intValue")
     override var value: Int
         @Suppress("AutoBoxing") get() = intValue
-        set(value) {
-            intValue = value
-        }
+        set(value) { intValue = value }
 
     override var intValue: Int
 }
 
-/** Permits property delegation of `var`s using `by` for [MutableIntState]. */
+/**
+ * Permits property delegation of `var`s using `by` for [MutableIntState].
+ */
 @Suppress("NOTHING_TO_INLINE")
-inline operator fun MutableIntState.setValue(thisObj: Any?, property: KProperty<*>, value: Int) {
+inline operator fun MutableIntState.setValue(
+    thisObj: Any?,
+    property: KProperty<*>,
+    value: Int
+) {
     intValue = value
 }
 
@@ -107,7 +115,9 @@ inline operator fun MutableIntState.setValue(thisObj: Any?, property: KProperty<
  * Returns a platform-specific implementation of [MutableIntState] based on
  * [SnapshotMutableStateImpl].
  */
-internal expect fun createSnapshotMutableIntState(value: Int): MutableIntState
+internal expect fun createSnapshotMutableIntState(
+    value: Int
+): MutableIntState
 
 /**
  * A single value holder whose reads and writes are observed by Compose.
@@ -115,32 +125,31 @@ internal expect fun createSnapshotMutableIntState(value: Int): MutableIntState
  * Additionally, writes to it are transacted as part of the [Snapshot] system.
  *
  * @param value the wrapped value
+ *
  * @see [mutableDoubleStateOf]
  */
-internal open class SnapshotMutableIntStateImpl(value: Int) :
-    StateObjectImpl(), MutableIntState, SnapshotMutableState<Int> {
+internal open class SnapshotMutableIntStateImpl(
+    value: Int
+) : StateObjectImpl(), MutableIntState, SnapshotMutableState<Int> {
 
-    private var next =
-        IntStateStateRecord(value).also {
-            if (Snapshot.isInSnapshot) {
-                it.next =
-                    IntStateStateRecord(value).also { next ->
-                        next.snapshotId = Snapshot.PreexistingSnapshotId
-                    }
+    private var next = IntStateStateRecord(value).also {
+        if (Snapshot.isInSnapshot) {
+            it.next = IntStateStateRecord(value).also { next ->
+                next.snapshotId = Snapshot.PreexistingSnapshotId
             }
         }
+    }
 
     override val firstStateRecord: StateRecord
         get() = next
 
     override var intValue: Int
         get() = next.readable(this).value
-        set(value) =
-            next.withCurrent {
-                if (it.value != value) {
-                    next.overwritable(this, it) { this.value = value }
-                }
+        set(value) = next.withCurrent {
+            if (it.value != value) {
+                next.overwritable(this, it) { this.value = value }
             }
+        }
 
     // Arbitrary policies are not allowed. The underlying `==` implementation
     // for primitive types corresponds to structural equality
@@ -169,14 +178,18 @@ internal open class SnapshotMutableIntStateImpl(value: Int) :
         }
     }
 
-    override fun toString(): String =
-        next.withCurrent { "MutableIntState(value=${it.value})@${hashCode()}" }
+    override fun toString(): String = next.withCurrent {
+        "MutableIntState(value=${it.value})@${hashCode()}"
+    }
 
     @InternalComposeApi
     val debuggerDisplayValue: Int
-        @JvmName("getDebuggerDisplayValue") get() = next.withCurrent { it.value }
+        @JvmName("getDebuggerDisplayValue")
+        get() = next.withCurrent { it.value }
 
-    private class IntStateStateRecord(var value: Int) : StateRecord() {
+    private class IntStateStateRecord(
+        var value: Int
+    ) : StateRecord() {
         override fun assign(value: StateRecord) {
             this.value = (value as IntStateStateRecord).value
         }

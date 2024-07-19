@@ -35,7 +35,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ComponentActivityOverrideLifecycleTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @UiThreadTest
     @Test
@@ -50,8 +51,9 @@ class ComponentActivityOverrideLifecycleTest {
 
     @Test
     fun testOverrideLifecycle() {
-        withUse(ActivityScenario.launch(LazyOverrideLifecycleComponentActivity::class.java)) {
-            assertThat(withActivity { lifecycle.currentState }).isEqualTo(Lifecycle.State.RESUMED)
+       withUse(ActivityScenario.launch(LazyOverrideLifecycleComponentActivity::class.java)) {
+            assertThat(withActivity { lifecycle.currentState })
+                .isEqualTo(Lifecycle.State.RESUMED)
         }
     }
 }
@@ -68,5 +70,7 @@ class LazyOverrideLifecycleComponentActivity : ComponentActivity() {
     private var overrideLifecycle: LifecycleRegistry? = null
 
     override val lifecycle: Lifecycle
-        get() = overrideLifecycle ?: LifecycleRegistry(this).also { overrideLifecycle = it }
+        get() = overrideLifecycle ?: LifecycleRegistry(this).also {
+            overrideLifecycle = it
+        }
 }

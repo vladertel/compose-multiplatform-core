@@ -35,14 +35,17 @@ import org.junit.Test
 
 class ComposeViewSavedStateSizeTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun composeViewIsProducingEmptySavedState() {
         lateinit var view: View
         rule.setContent {
             view = LocalView.current
-            Box { BasicText("hello world") }
+            Box {
+                BasicText("hello world")
+            }
         }
 
         rule.runOnIdle {
@@ -58,15 +61,18 @@ class ComposeViewSavedStateSizeTest {
         lateinit var view: View
         rule.setContent {
             view = LocalView.current
-            Box { repeat(childCount) { Box(Modifier.graphicsLayer()) } }
+            Box {
+                repeat(childCount) {
+                    Box(Modifier.graphicsLayer())
+                }
+            }
         }
 
-        val initialArray =
-            rule.runOnIdle {
-                val array = SparseArray<Parcelable>()
-                view.saveHierarchyState(array)
-                array
-            }
+        val initialArray = rule.runOnIdle {
+            val array = SparseArray<Parcelable>()
+            view.saveHierarchyState(array)
+            array
+        }
 
         childCount = 10
 

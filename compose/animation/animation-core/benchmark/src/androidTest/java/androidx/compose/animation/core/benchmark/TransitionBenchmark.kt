@@ -31,7 +31,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TransitionBenchmark {
 
-    @get:Rule val rule = ComposeBenchmarkRule()
+    @get:Rule
+    val rule = ComposeBenchmarkRule()
 
     @Test
     fun createTransitionThroughUpdateTransition() {

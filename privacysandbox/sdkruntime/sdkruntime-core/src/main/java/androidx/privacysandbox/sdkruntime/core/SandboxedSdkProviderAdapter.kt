@@ -15,42 +15,43 @@
  */
 package androidx.privacysandbox.sdkruntime.core
 
+import android.annotation.SuppressLint
 import android.app.sdksandbox.LoadSdkException
 import android.app.sdksandbox.SandboxedSdk
 import android.app.sdksandbox.SandboxedSdkProvider
 import android.content.Context
 import android.os.Bundle
+import android.os.ext.SdkExtensions.AD_SERVICES
 import android.view.View
-import androidx.annotation.RequiresApi
-import androidx.annotation.RestrictTo
+import androidx.annotation.RequiresExtension
 
 /**
  * Implementation of platform [SandboxedSdkProvider] that delegate to [SandboxedSdkProviderCompat]
  * Gets compat class name from asset "SandboxedSdkProviderCompatClassName.txt"
+ *
  */
-@RequiresApi(34)
+@SuppressLint("Override") // b/273473397
+@RequiresExtension(extension = AD_SERVICES, version = 4)
 // TODO(b/301437557) Remove after documentation migration to sdkruntime-provider
 @Deprecated(
     message = "Use SandboxedSdkProviderAdapter from sdkruntime-provider library",
-    replaceWith =
-        ReplaceWith(
-            expression = "SandboxedSdkProviderAdapter",
-            imports =
-                arrayOf("androidx.privacysandbox.sdkruntime.provider.SandboxedSdkProviderAdapter")
-        ),
-    level = DeprecationLevel.HIDDEN
+    replaceWith = ReplaceWith(
+        expression = "SandboxedSdkProviderAdapter",
+        imports = arrayOf("androidx.privacysandbox.sdkruntime.provider.SandboxedSdkProviderAdapter")
+    )
 )
-@RestrictTo(RestrictTo.Scope.LIBRARY) // removing from public API surface
-class SandboxedSdkProviderAdapter
-internal constructor(private val classNameProvider: CompatClassNameProvider) :
-    SandboxedSdkProvider() {
+class SandboxedSdkProviderAdapter internal constructor(
+    private val classNameProvider: CompatClassNameProvider
+) : SandboxedSdkProvider() {
 
-    /** Provides classname of [SandboxedSdkProviderCompat] implementation. */
+    /**
+     * Provides classname of [SandboxedSdkProviderCompat] implementation.
+     */
     internal interface CompatClassNameProvider {
         fun getCompatProviderClassName(context: Context): String
     }
 
-    constructor() : this(DefaultClassNameProvider())
+    constructor () : this(DefaultClassNameProvider())
 
     internal val delegate: SandboxedSdkProviderCompat by lazy {
         val currentContext = context!!
@@ -75,16 +76,22 @@ internal constructor(private val classNameProvider: CompatClassNameProvider) :
         delegate.beforeUnloadSdk()
     }
 
-    override fun getView(windowContext: Context, params: Bundle, width: Int, height: Int): View {
+    override fun getView(
+        windowContext: Context,
+        params: Bundle,
+        width: Int,
+        height: Int
+    ): View {
         return delegate.getView(windowContext, params, width, height)
     }
 
     private class DefaultClassNameProvider : CompatClassNameProvider {
         override fun getCompatProviderClassName(context: Context): String {
             // TODO(b/257966930) Read classname from SDK manifest property
-            return context.assets.open(COMPAT_SDK_PROVIDER_CLASS_ASSET_NAME).use { inputStream ->
-                inputStream.bufferedReader().readLine()
-            }
+            return context.assets.open(COMPAT_SDK_PROVIDER_CLASS_ASSET_NAME)
+                .use { inputStream ->
+                    inputStream.bufferedReader().readLine()
+                }
         }
     }
 

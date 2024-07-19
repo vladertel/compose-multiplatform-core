@@ -19,6 +19,7 @@ package androidx.camera.video.internal.encoder;
 import android.media.MediaFormat;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.EncoderProfilesProxy;
 import androidx.camera.core.impl.Timebase;
 
@@ -27,6 +28,7 @@ import androidx.camera.core.impl.Timebase;
  *
  * <p>An {@code EncoderConfig} is used to configure an {@link Encoder}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface EncoderConfig {
 
     /** Constant corresponding to no profile for the encoder */

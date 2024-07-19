@@ -27,6 +27,7 @@ class PagedListConfigTest {
         assertEquals(30, config.initialLoadSizeHint)
         assertEquals(true, config.enablePlaceholders)
         assertEquals(10, config.prefetchDistance)
-        @Suppress("DEPRECATION") assertEquals(PagedList.Config.MAX_SIZE_UNBOUNDED, config.maxSize)
+        @Suppress("DEPRECATION")
+        assertEquals(PagedList.Config.MAX_SIZE_UNBOUNDED, config.maxSize)
     }
 }

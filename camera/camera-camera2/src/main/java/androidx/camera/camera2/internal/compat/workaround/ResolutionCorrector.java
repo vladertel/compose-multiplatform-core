@@ -20,6 +20,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks;
 import androidx.camera.camera2.internal.compat.quirk.ExtraCroppingQuirk;
@@ -32,6 +33,7 @@ import java.util.List;
  * Helper class that overrides user configured resolution with resolution selected based on device
  * quirks.
  */
+@RequiresApi(21)
 public class ResolutionCorrector {
 
     @Nullable

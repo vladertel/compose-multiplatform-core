@@ -22,19 +22,21 @@ import androidx.compose.ui.node.checkMeasuredSize
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 
-@DslMarker annotation class MeasureScopeMarker
+@DslMarker
+annotation class MeasureScopeMarker
 
 /**
- * The receiver scope of a layout's measure lambda. The return value of the measure lambda is
- * [MeasureResult], which should be returned by [layout]
+ * The receiver scope of a layout's measure lambda. The return value of the
+ * measure lambda is [MeasureResult], which should be returned by [layout]
  */
 @MeasureScopeMarker
 @JvmDefaultWithCompatibility
 interface MeasureScope : IntrinsicMeasureScope {
     /**
-     * Sets the size and alignment lines of the measured layout, as well as the positioning block
-     * that defines the children positioning logic. The [placementBlock] is a lambda used for
-     * positioning children. [Placeable.placeAt] should be called on children inside placementBlock.
+     * Sets the size and alignment lines of the measured layout, as well as
+     * the positioning block that defines the children positioning logic.
+     * The [placementBlock] is a lambda used for positioning children. [Placeable.placeAt] should
+     * be called on children inside placementBlock.
      * The [alignmentLines] can be used by the parent layouts to decide layout, and can be queried
      * using the [Placeable.get] operator. Note that alignment lines will be inherited by parent
      * layouts, such that indirect parents will be able to query them as well.
@@ -52,9 +54,10 @@ interface MeasureScope : IntrinsicMeasureScope {
     ) = layout(width, height, alignmentLines, null, placementBlock)
 
     /**
-     * Sets the size and alignment lines of the measured layout, as well as the positioning block
-     * that defines the children positioning logic. The [placementBlock] is a lambda used for
-     * positioning children. [Placeable.placeAt] should be called on children inside placementBlock.
+     * Sets the size and alignment lines of the measured layout, as well as
+     * the positioning block that defines the children positioning logic.
+     * The [placementBlock] is a lambda used for positioning children. [Placeable.placeAt] should
+     * be called on children inside placementBlock.
      * The [alignmentLines] can be used by the parent layouts to decide layout, and can be queried
      * using the [Placeable.get] operator. Note that alignment lines will be inherited by parent
      * layouts, such that indirect parents will be able to query them as well.
@@ -79,14 +82,16 @@ interface MeasureScope : IntrinsicMeasureScope {
             override val height = height
             override val alignmentLines = alignmentLines
             override val rulers = rulers
-
             override fun placeChildren() {
                 // This isn't called from anywhere inside the compose framework. This might
                 // be called by tests or external frameworks.
                 if (this@MeasureScope is LookaheadCapablePlaceable) {
                     placementScope.placementBlock()
                 } else {
-                    SimplePlacementScope(width, layoutDirection).placementBlock()
+                    SimplePlacementScope(
+                        width,
+                        layoutDirection
+                    ).placementBlock()
                 }
             }
         }
@@ -94,8 +99,8 @@ interface MeasureScope : IntrinsicMeasureScope {
 }
 
 /**
- * This is used by the default implementation of [MeasureScope.layout] and will never be called by
- * any implementation of [MeasureScope] in the compose framework.
+ * This is used by the default implementation of [MeasureScope.layout] and will never be called
+ * by any implementation of [MeasureScope] in the compose framework.
  */
 private class SimplePlacementScope(
     override val parentWidth: Int,
@@ -103,9 +108,8 @@ private class SimplePlacementScope(
 ) : Placeable.PlacementScope()
 
 /**
- * A scope used in [MeasureScope.layout] for the `rulers` parameter to allow a layout to define
- * [Ruler] values for children.
- *
+ * A scope used in [MeasureScope.layout] for the `rulers` parameter to allow a layout to
+ * define [Ruler] values for children.
  * @sample androidx.compose.ui.samples.RulerProducerUsage
  */
 @MeasureScopeMarker
@@ -116,12 +120,14 @@ interface RulerScope : Density {
      */
     val coordinates: LayoutCoordinates
 
-    /** Provides a constant value for a [Ruler]. */
+    /**
+     * Provides a constant value for a [Ruler].
+     */
     infix fun Ruler.provides(value: Float)
 
     /**
-     * Provides a [VerticalRuler] value that is relative to the left side in an LTR layout or right
-     * side on an RTL layout.
+     * Provides a [VerticalRuler] value that is relative to the left side in an LTR layout
+     * or right side on an RTL layout.
      */
     infix fun VerticalRuler.providesRelative(value: Float)
 }

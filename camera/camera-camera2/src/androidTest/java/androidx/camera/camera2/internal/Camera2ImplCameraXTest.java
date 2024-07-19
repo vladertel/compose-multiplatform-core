@@ -19,7 +19,6 @@ package androidx.camera.camera2.internal;
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -34,7 +33,6 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
-import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
@@ -53,7 +51,6 @@ import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.impl.CameraUtil;
 import androidx.camera.testing.impl.CameraXUtil;
-import androidx.camera.testing.impl.WakelockEmptyActivityRule;
 import androidx.camera.testing.impl.fakes.FakeLifecycleOwner;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -94,12 +91,9 @@ public final class Camera2ImplCameraXTest {
             new CameraSelector.Builder().requireLensFacing(DEFAULT_LENS_FACING).build();
 
     @Rule
-    public TestRule mCameraRule = CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+    public TestRule mCameraRule = CameraUtil.grantCameraPermissionAndPreTest(
             new CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
     );
-
-    @Rule
-    public TestRule wakelockEmptyActivityRule = new WakelockEmptyActivityRule();
 
     private CameraDevice.StateCallback mDeviceStateCallback;
     private FakeLifecycleOwner mLifecycle;
@@ -146,7 +140,14 @@ public final class Camera2ImplCameraXTest {
     public void removedUseCase_doesNotStreamWhenLifecycleResumes() throws NullPointerException,
             CameraAccessException, CameraInfoUnavailableException {
         // Legacy device would not support two ImageAnalysis use cases combination.
-        assumeFalse(isLegacyDevice(DEFAULT_LENS_FACING));
+        int hardwareLevelValue;
+        CameraCharacteristics cameraCharacteristics =
+                CameraUtil.getCameraCharacteristics(DEFAULT_LENS_FACING);
+        hardwareLevelValue = cameraCharacteristics.get(
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
+        assumeTrue(
+                hardwareLevelValue != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY);
+
 
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
@@ -389,13 +390,6 @@ public final class Camera2ImplCameraXTest {
 
     @Test
     public void removePartialAssociatedUseCase_doesNotCloseCamera() throws InterruptedException {
-        // This test is skipped on legacy devices (API levels greater than M) with the
-        // 'LegacyCameraOutputConfigNullPointerQuirk'.
-        // These devices automatically close and reopen the camera, which is tested
-        // separately in 'removePartialAssociatedUseCase_cameraReopen_forQuirkDevice'.
-        assumeFalse(isLegacyDevice(DEFAULT_LENS_FACING)
-                && Build.VERSION.SDK_INT > Build.VERSION_CODES.M);
-
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
         ImageAnalysis useCase0 = builder.build();
@@ -417,36 +411,6 @@ public final class Camera2ImplCameraXTest {
         Thread.sleep(3000);
 
         verify(mDeviceStateCallback, never()).onClosed(any(CameraDevice.class));
-    }
-
-    @Test
-    public void removePartialAssociatedUseCase_cameraReopen_forQuirkDevice() {
-        // Test behavior for {@link LegacyCameraOutputConfigNullPointerQuirk}
-        assumeTrue(isLegacyDevice(DEFAULT_LENS_FACING)
-                && Build.VERSION.SDK_INT > Build.VERSION_CODES.M);
-
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        new Camera2Interop.Extender<>(builder).setDeviceStateCallback(mDeviceStateCallback);
-        ImageAnalysis useCase0 = builder.build();
-
-        ImageCapture useCase1 = new ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                .build();
-
-        mCamera = CameraUtil.createCameraAndAttachUseCase(mContext, DEFAULT_SELECTOR, useCase0,
-                useCase1);
-
-        verify(mDeviceStateCallback, timeout(3000)).onOpened(any(CameraDevice.class));
-
-        // TODO(b/160249108) move off of main thread once UseCases can be attached on any
-        //  thread
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() ->
-                mCamera.removeUseCases(Collections.singletonList(useCase1))
-        );
-
-        // Verify that the camera turns off and then immediately turns back on.
-        verify(mDeviceStateCallback, timeout(3000).times(1)).onClosed(any(CameraDevice.class));
-        verify(mDeviceStateCallback, timeout(3000).times(1)).onOpened(any(CameraDevice.class));
     }
 
     @Test
@@ -546,12 +510,5 @@ public final class Camera2ImplCameraXTest {
                 return false;
             }
         }
-    }
-
-    private static boolean isLegacyDevice(int lensFacing) {
-        CameraCharacteristics characteristics = CameraUtil.getCameraCharacteristics(lensFacing);
-        return characteristics != null && characteristics.get(
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-                == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
     }
 }

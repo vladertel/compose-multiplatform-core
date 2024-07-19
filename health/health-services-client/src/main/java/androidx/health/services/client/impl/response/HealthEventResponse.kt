@@ -21,7 +21,10 @@ import androidx.health.services.client.data.HealthEvent
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.ResponsesProto
 
-/** Response containing a [HealthEvent]. */
+/**
+ * Response containing a [HealthEvent].
+ *
+ */
 internal class HealthEventResponse(public val healthEvent: HealthEvent) :
     ProtoParcelable<ResponsesProto.HealthEventResponse>() {
 

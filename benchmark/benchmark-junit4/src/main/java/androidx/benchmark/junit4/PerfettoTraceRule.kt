@@ -40,7 +40,6 @@ import org.junit.runners.model.Statement
  *     fun test() {}
  * }
  * ```
- *
  * Captured traces can be observed through any of:
  * * Android Studio trace linking under `Benchmark` in test output tab
  * * The optional `traceCallback` parameter
@@ -53,7 +52,6 @@ import org.junit.runners.model.Statement
  *
  * You can additionally check logcat for messages tagged "PerfettoCapture:" for the path of each
  * perfetto trace.
- *
  * ```
  * > adb pull /storage/emulated/0/Android/data/mypackage.test/files/PerfettoCaptureTest.trace
  * ```
@@ -76,7 +74,9 @@ class PerfettoTraceRule(
      */
     val enableUserspaceTracing: Boolean = false,
 
-    /** Callback for each captured trace. */
+    /**
+     * Callback for each captured trace.
+     */
     val traceCallback: ((PerfettoTrace) -> Unit)? = null
 ) : TestRule {
     override fun apply(
@@ -84,35 +84,30 @@ class PerfettoTraceRule(
         base: Statement,
         @Suppress("InvalidNullabilityOverride") // JUnit missing annotations
         description: Description
-    ): Statement =
-        object : Statement() {
-            override fun evaluate() {
-                val thisPackage = InstrumentationRegistry.getInstrumentation().context.packageName
-                if (Build.VERSION.SDK_INT >= 23) {
-                    val label = "${description.className}_${description.methodName}"
-                    PerfettoTrace.record(
-                        fileLabel = label,
-                        appTagPackages =
-                            if (enableAppTagTracing) listOf(thisPackage) else emptyList(),
-                        userspaceTracingPackage = if (enableUserspaceTracing) thisPackage else null,
-                        traceCallback = {
-                            InstrumentationResults.instrumentationReport {
-                                reportSummaryToIde(
-                                    testName = label,
-                                    profilerResults =
-                                        listOf(
-                                            Profiler.ResultFile.ofPerfettoTrace("Trace", it.path)
-                                        )
-                                )
-                            }
-                            traceCallback?.invoke(it)
+    ): Statement = object : Statement() {
+        override fun evaluate() {
+            val thisPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+            if (Build.VERSION.SDK_INT >= 23) {
+                val label = "${description.className}_${description.methodName}"
+                PerfettoTrace.record(
+                    fileLabel = label,
+                    appTagPackages = if (enableAppTagTracing) listOf(thisPackage) else emptyList(),
+                    userspaceTracingPackage = if (enableUserspaceTracing) thisPackage else null,
+                    traceCallback = {
+                        InstrumentationResults.instrumentationReport {
+                            reportSummaryToIde(
+                                testName = label,
+                                profilerResults = listOf(Profiler.ResultFile("Trace", it.path))
+                            )
                         }
-                    ) {
-                        base.evaluate()
+                        traceCallback?.invoke(it)
                     }
-                } else {
+                ) {
                     base.evaluate()
                 }
+            } else {
+                base.evaluate()
             }
         }
+    }
 }

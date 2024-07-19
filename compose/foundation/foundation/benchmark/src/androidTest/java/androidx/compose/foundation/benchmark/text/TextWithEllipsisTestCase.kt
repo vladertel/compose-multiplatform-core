@@ -31,7 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 
-/** The benchmark test case for [Text] with ellipsis. */
+/**
+ * The benchmark test case for [Text] with ellipsis.
+ */
 class TextWithEllipsisTestCase(
     private val texts: List<String>,
     private val width: Dp,
@@ -57,7 +59,9 @@ class TextWithEllipsisTestCase(
 
     @Composable
     override fun ContentWrappers(content: @Composable () -> Unit) {
-        Column(modifier = Modifier.width(width)) { content() }
+        Column(modifier = Modifier.width(width)) {
+            content()
+        }
     }
 
     override fun toggleState() {

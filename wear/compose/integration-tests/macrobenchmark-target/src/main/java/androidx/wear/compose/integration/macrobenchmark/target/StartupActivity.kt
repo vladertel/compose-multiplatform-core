@@ -26,6 +26,8 @@ class StartupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent { Text("Wear Compose Macrobenchmark Target") }
+        setContent {
+            Text("Wear Compose Macrobenchmark Target")
+        }
     }
 }

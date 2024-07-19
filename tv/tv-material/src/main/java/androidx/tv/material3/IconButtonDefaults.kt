@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
+@ExperimentalTvMaterial3Api
 object IconButtonDefaults {
     private val ContainerShape = CircleShape
 
@@ -48,7 +49,8 @@ object IconButtonDefaults {
     val LargeButtonSize = 56.dp
 
     /**
-     * Creates a [ButtonShape] that represents the default container shapes used in a IconButton.
+     * Creates a [ButtonShape] that represents the default container shapes used in a
+     * IconButton.
      *
      * @param shape the shape used when the Button is enabled, and has no other [Interaction]s.
      * @param focusedShape the shape used when the Button is enabled and focused.
@@ -62,14 +64,13 @@ object IconButtonDefaults {
         pressedShape: Shape = shape,
         disabledShape: Shape = shape,
         focusedDisabledShape: Shape = disabledShape
-    ) =
-        ButtonShape(
-            shape = shape,
-            focusedShape = focusedShape,
-            pressedShape = pressedShape,
-            disabledShape = disabledShape,
-            focusedDisabledShape = focusedDisabledShape
-        )
+    ) = ButtonShape(
+        shape = shape,
+        focusedShape = focusedShape,
+        pressedShape = pressedShape,
+        disabledShape = disabledShape,
+        focusedDisabledShape = focusedDisabledShape
+    )
 
     /**
      * Creates a [ButtonColors] that represents the default colors used in a IconButton.
@@ -94,29 +95,29 @@ object IconButtonDefaults {
         pressedContentColor: Color = focusedContentColor,
         disabledContainerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         disabledContentColor: Color = contentColor,
-    ) =
-        ButtonColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            focusedContainerColor = focusedContainerColor,
-            focusedContentColor = focusedContentColor,
-            pressedContainerColor = pressedContainerColor,
-            pressedContentColor = pressedContentColor,
-            disabledContainerColor = disabledContainerColor,
-            disabledContentColor = disabledContentColor,
-        )
+    ) = ButtonColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        focusedContainerColor = focusedContainerColor,
+        focusedContentColor = focusedContentColor,
+        pressedContainerColor = pressedContainerColor,
+        pressedContentColor = pressedContentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor,
+    )
 
     /**
-     * Creates a [ButtonScale] that represents the default scales used in a IconButton. scales are
-     * used to modify the size of a composable in different [Interaction] states e.g. 1f (original)
-     * in default state, 1.2f (scaled up) in focused state, 0.8f (scaled down) in pressed state,
-     * etc.
+     * Creates a [ButtonScale] that represents the default scales used in a IconButton.
+     * scales are used to modify the size of a composable in different [Interaction]
+     * states e.g. 1f (original) in default state, 1.2f (scaled up) in focused state,
+     * 0.8f (scaled down) in pressed state, etc.
      *
      * @param scale the scale to be used for this Button when enabled
      * @param focusedScale the scale to be used for this Button when focused
      * @param pressedScale the scale to be used for this Button when pressed
      * @param disabledScale the scale to be used for this Button when disabled
-     * @param focusedDisabledScale the scale to be used for this Button when disabled and focused
+     * @param focusedDisabledScale the scale to be used for this Button when disabled and
+     * focused
      */
     fun scale(
         @FloatRange(from = 0.0) scale: Float = 1f,
@@ -124,25 +125,24 @@ object IconButtonDefaults {
         @FloatRange(from = 0.0) pressedScale: Float = scale,
         @FloatRange(from = 0.0) disabledScale: Float = scale,
         @FloatRange(from = 0.0) focusedDisabledScale: Float = disabledScale
-    ) =
-        ButtonScale(
-            scale = scale,
-            focusedScale = focusedScale,
-            pressedScale = pressedScale,
-            disabledScale = disabledScale,
-            focusedDisabledScale = focusedDisabledScale
-        )
+    ) = ButtonScale(
+        scale = scale,
+        focusedScale = focusedScale,
+        pressedScale = pressedScale,
+        disabledScale = disabledScale,
+        focusedDisabledScale = focusedDisabledScale
+    )
 
     /**
-     * Creates a [ButtonBorder] that represents the default [Border]s applied on a IconButton in
-     * different [Interaction] states.
+     * Creates a [ButtonBorder] that represents the default [Border]s applied on a
+     * IconButton in different [Interaction] states.
      *
      * @param border the [Border] to be used for this Button when enabled
      * @param focusedBorder the [Border] to be used for this Button when focused
      * @param pressedBorder the [Border] to be used for this Button when pressed
      * @param disabledBorder the [Border] to be used for this Button when disabled
      * @param focusedDisabledBorder the [Border] to be used for this Button when disabled and
-     *   focused
+     * focused
      */
     @ReadOnlyComposable
     @Composable
@@ -151,23 +151,20 @@ object IconButtonDefaults {
         focusedBorder: Border = border,
         pressedBorder: Border = focusedBorder,
         disabledBorder: Border = border,
-        focusedDisabledBorder: Border =
-            Border(
-                border =
-                    BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.border.copy(alpha = 0.2f)
-                    ),
-                shape = ContainerShape
-            )
-    ) =
-        ButtonBorder(
-            border = border,
-            focusedBorder = focusedBorder,
-            pressedBorder = pressedBorder,
-            disabledBorder = disabledBorder,
-            focusedDisabledBorder = focusedDisabledBorder
+        focusedDisabledBorder: Border = Border(
+            border = BorderStroke(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.border.copy(alpha = 0.2f)
+            ),
+            shape = ContainerShape
         )
+    ) = ButtonBorder(
+        border = border,
+        focusedBorder = focusedBorder,
+        pressedBorder = pressedBorder,
+        disabledBorder = disabledBorder,
+        focusedDisabledBorder = focusedDisabledBorder
+    )
 
     /**
      * Creates a [ButtonGlow] that represents the default [Glow]s used in a IconButton.
@@ -176,10 +173,18 @@ object IconButtonDefaults {
      * @param focusedGlow the Glow behind this Button when focused
      * @param pressedGlow the Glow behind this Button when pressed
      */
-    fun glow(glow: Glow = Glow.None, focusedGlow: Glow = glow, pressedGlow: Glow = glow) =
-        ButtonGlow(glow = glow, focusedGlow = focusedGlow, pressedGlow = pressedGlow)
+    fun glow(
+        glow: Glow = Glow.None,
+        focusedGlow: Glow = glow,
+        pressedGlow: Glow = glow
+    ) = ButtonGlow(
+        glow = glow,
+        focusedGlow = focusedGlow,
+        pressedGlow = pressedGlow
+    )
 }
 
+@ExperimentalTvMaterial3Api
 object OutlinedIconButtonDefaults {
     private val ContainerShape = CircleShape
 
@@ -212,14 +217,13 @@ object OutlinedIconButtonDefaults {
         pressedShape: Shape = shape,
         disabledShape: Shape = shape,
         focusedDisabledShape: Shape = disabledShape
-    ) =
-        ButtonShape(
-            shape = shape,
-            focusedShape = focusedShape,
-            pressedShape = pressedShape,
-            disabledShape = disabledShape,
-            focusedDisabledShape = focusedDisabledShape
-        )
+    ) = ButtonShape(
+        shape = shape,
+        focusedShape = focusedShape,
+        pressedShape = pressedShape,
+        disabledShape = disabledShape,
+        focusedDisabledShape = focusedDisabledShape
+    )
 
     /**
      * Creates a [ButtonColors] that represents the default colors used in a OutlinedIconButton.
@@ -244,29 +248,30 @@ object OutlinedIconButtonDefaults {
         pressedContentColor: Color = focusedContentColor,
         disabledContainerColor: Color = containerColor,
         disabledContentColor: Color = contentColor,
-    ) =
-        ButtonColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            focusedContainerColor = focusedContainerColor,
-            focusedContentColor = focusedContentColor,
-            pressedContainerColor = pressedContainerColor,
-            pressedContentColor = pressedContentColor,
-            disabledContainerColor = disabledContainerColor,
-            disabledContentColor = disabledContentColor,
-        )
+    ) = ButtonColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        focusedContainerColor = focusedContainerColor,
+        focusedContentColor = focusedContentColor,
+        pressedContainerColor = pressedContainerColor,
+        pressedContentColor = pressedContentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor,
+    )
 
     /**
-     * Creates a [ButtonScale] that represents the default scales used in an OutlinedIconButton.
-     * scales are used to modify the size of a composable in different [Interaction] states e.g. 1f
-     * (original) in default state, 1.2f (scaled up) in focused state, 0.8f (scaled down) in pressed
-     * state, etc.
+     * Creates a [ButtonScale] that represents the default scales used in an
+     * OutlinedIconButton.
+     * scales are used to modify the size of a composable in different [Interaction]
+     * states e.g. 1f (original) in default state, 1.2f (scaled up) in focused state,
+     * 0.8f (scaled down) in pressed state, etc.
      *
      * @param scale the scale to be used for this Button when enabled
      * @param focusedScale the scale to be used for this Button when focused
      * @param pressedScale the scale to be used for this Button when pressed
      * @param disabledScale the scale to be used for this Button when disabled
-     * @param focusedDisabledScale the scale to be used for this Button when disabled and focused
+     * @param focusedDisabledScale the scale to be used for this Button when disabled and
+     * focused
      */
     fun scale(
         @FloatRange(from = 0.0) scale: Float = 1f,
@@ -274,14 +279,13 @@ object OutlinedIconButtonDefaults {
         @FloatRange(from = 0.0) pressedScale: Float = scale,
         @FloatRange(from = 0.0) disabledScale: Float = scale,
         @FloatRange(from = 0.0) focusedDisabledScale: Float = disabledScale
-    ) =
-        ButtonScale(
-            scale = scale,
-            focusedScale = focusedScale,
-            pressedScale = pressedScale,
-            disabledScale = disabledScale,
-            focusedDisabledScale = focusedDisabledScale
-        )
+    ) = ButtonScale(
+        scale = scale,
+        focusedScale = focusedScale,
+        pressedScale = pressedScale,
+        disabledScale = disabledScale,
+        focusedDisabledScale = focusedDisabledScale
+    )
 
     /**
      * Creates a [ButtonBorder] that represents the default [Border]s applied on an
@@ -292,48 +296,41 @@ object OutlinedIconButtonDefaults {
      * @param pressedBorder the [Border] to be used for this Button when pressed
      * @param disabledBorder the [Border] to be used for this Button when disabled
      * @param focusedDisabledBorder the [Border] to be used for this Button when disabled and
-     *   focused
+     * focused
      */
     @ReadOnlyComposable
     @Composable
     fun border(
-        border: Border =
-            Border(
-                border =
-                    BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    ),
-                shape = ContainerShape
+        border: Border = Border(
+            border = BorderStroke(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             ),
-        focusedBorder: Border =
-            Border(
-                border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.onSurface),
-                shape = ContainerShape
+            shape = ContainerShape
+        ),
+        focusedBorder: Border = Border(
+            border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.onSurface),
+            shape = ContainerShape
+        ),
+        pressedBorder: Border = Border(
+            border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.onSurface),
+            shape = ContainerShape
+        ),
+        disabledBorder: Border = Border(
+            border = BorderStroke(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
             ),
-        pressedBorder: Border =
-            Border(
-                border = BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.onSurface),
-                shape = ContainerShape
-            ),
-        disabledBorder: Border =
-            Border(
-                border =
-                    BorderStroke(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                    ),
-                shape = ContainerShape
-            ),
+            shape = ContainerShape
+        ),
         focusedDisabledBorder: Border = disabledBorder
-    ) =
-        ButtonBorder(
-            border = border,
-            focusedBorder = focusedBorder,
-            pressedBorder = pressedBorder,
-            disabledBorder = disabledBorder,
-            focusedDisabledBorder = focusedDisabledBorder
-        )
+    ) = ButtonBorder(
+        border = border,
+        focusedBorder = focusedBorder,
+        pressedBorder = pressedBorder,
+        disabledBorder = disabledBorder,
+        focusedDisabledBorder = focusedDisabledBorder
+    )
 
     /**
      * Creates a [ButtonGlow] that represents the default [Glow]s used in an OutlinedIconButton.
@@ -342,6 +339,13 @@ object OutlinedIconButtonDefaults {
      * @param focusedGlow the Glow behind this Button when focused
      * @param pressedGlow the Glow behind this Button when pressed
      */
-    fun glow(glow: Glow = Glow.None, focusedGlow: Glow = glow, pressedGlow: Glow = glow) =
-        ButtonGlow(glow = glow, focusedGlow = focusedGlow, pressedGlow = pressedGlow)
+    fun glow(
+        glow: Glow = Glow.None,
+        focusedGlow: Glow = glow,
+        pressedGlow: Glow = glow
+    ) = ButtonGlow(
+        glow = glow,
+        focusedGlow = focusedGlow,
+        pressedGlow = pressedGlow
+    )
 }

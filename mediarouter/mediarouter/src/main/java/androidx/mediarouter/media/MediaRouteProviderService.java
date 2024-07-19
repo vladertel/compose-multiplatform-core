@@ -352,7 +352,8 @@ public abstract class MediaRouteProviderService extends Service {
                 final Bundle data = msg.peekData();
 
                 String packageName = null;
-                if (what == CLIENT_MSG_REGISTER) {
+                if (what == CLIENT_MSG_REGISTER && Build.VERSION.SDK_INT
+                        >= Build.VERSION_CODES.LOLLIPOP) {
                     String[] packages = mServiceRef.get().getPackageManager()
                             .getPackagesForUid(msg.sendingUid);
                     if (packages != null && packages.length > 0) {

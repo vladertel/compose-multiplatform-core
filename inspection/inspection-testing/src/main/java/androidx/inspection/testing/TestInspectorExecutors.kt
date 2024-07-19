@@ -29,7 +29,10 @@ import kotlinx.coroutines.Job
  *
  * HandlerThread created for inspector will quit once parent job completes.
  */
-class TestInspectorExecutors(parentJob: Job, ioExecutor: Executor? = null) : InspectorExecutors {
+class TestInspectorExecutors(
+    parentJob: Job,
+    ioExecutor: Executor? = null
+) : InspectorExecutors {
     private val handlerThread = HandlerThread("Test Inspector Handler Thread")
     private val handler: Handler
     private val ioExecutor: Executor
@@ -37,12 +40,14 @@ class TestInspectorExecutors(parentJob: Job, ioExecutor: Executor? = null) : Ins
     init {
         handlerThread.start()
         handler = Handler(handlerThread.looper)
-        parentJob.invokeOnCompletion { handlerThread.looper.quitSafely() }
-        this.ioExecutor =
-            ioExecutor
-                ?: Executors.newFixedThreadPool(4).also { executor ->
-                    parentJob.invokeOnCompletion { executor.shutdown() }
-                }
+        parentJob.invokeOnCompletion {
+            handlerThread.looper.quitSafely()
+        }
+        this.ioExecutor = ioExecutor ?: Executors.newFixedThreadPool(4).also { executor ->
+            parentJob.invokeOnCompletion {
+                executor.shutdown()
+            }
+        }
     }
 
     override fun handler() = handler

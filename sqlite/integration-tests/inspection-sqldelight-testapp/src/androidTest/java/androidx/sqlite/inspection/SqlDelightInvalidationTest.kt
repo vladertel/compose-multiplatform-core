@@ -57,18 +57,16 @@ class SqlDelightInvalidationTest {
 
     @Before
     fun setup() {
-        driver =
-            AndroidSqliteDriver(
-                schema = Database.Schema,
-                context = ApplicationProvider.getApplicationContext(),
-                callback =
-                    object : AndroidSqliteDriver.Callback(Database.Schema) {
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            openedDb = db
-                            super.onCreate(db)
-                        }
-                    }
-            )
+        driver = AndroidSqliteDriver(
+            schema = Database.Schema,
+            context = ApplicationProvider.getApplicationContext(),
+            callback = object : AndroidSqliteDriver.Callback(Database.Schema) {
+                override fun onCreate(db: SupportSQLiteDatabase) {
+                    openedDb = db
+                    super.onCreate(db)
+                }
+            }
+        )
     }
 
     @Test
@@ -79,42 +77,45 @@ class SqlDelightInvalidationTest {
             val sqliteDb = openedDb.getSqliteDb()
             val query = dao.selectAll()
             val job = this.coroutineContext[Job]!!
-            val tester =
-                InspectorTester(
-                    inspectorId = "androidx.sqlite.inspection",
-                    environment =
-                        DefaultTestInspectorEnvironment(
-                            TestInspectorExecutors(job),
-                            TestArtTooling(sqliteDb, listOf(query))
-                        )
-                )
+            val tester = InspectorTester(
+                inspectorId = "androidx.sqlite.inspection",
+                environment =
+                    DefaultTestInspectorEnvironment(
+                        TestInspectorExecutors(job),
+                        TestArtTooling(sqliteDb, listOf(query))
+                    )
+            )
             val updates = query.asFlow().mapToList().take(2).produceIn(this)
 
             val firstExpected = TestEntity.Impl(1, "one")
             val secondExpected = TestEntity.Impl(2, "foo")
             assertThat(updates.receive()).isEqualTo(listOf(firstExpected))
 
-            val startTrackingCommand =
-                Command.newBuilder()
-                    .setTrackDatabases(TrackDatabasesCommand.getDefaultInstance())
-                    .build()
+            val startTrackingCommand = Command.newBuilder().setTrackDatabases(
+                TrackDatabasesCommand.getDefaultInstance()
+            ).build()
 
             tester.sendCommand(startTrackingCommand.toByteArray())
 
             val insertQuery = """INSERT INTO TestEntity VALUES(2, "foo")"""
-            val insertCommand =
-                Command.newBuilder()
-                    .setQuery(
-                        QueryCommand.newBuilder().setDatabaseId(1).setQuery(insertQuery).build()
-                    )
+            val insertCommand = Command.newBuilder().setQuery(
+                QueryCommand.newBuilder()
+                    .setDatabaseId(1)
+                    .setQuery(insertQuery)
                     .build()
+            ).build()
             val responseBytes = tester.sendCommand(insertCommand.toByteArray())
             val response = SqliteInspectorProtocol.Response.parseFrom(responseBytes)
             assertWithMessage("test sanity, insert query should succeed")
                 .that(response.hasErrorOccurred())
                 .isFalse()
 
-            assertThat(updates.receive()).isEqualTo(listOf(firstExpected, secondExpected))
+            assertThat(updates.receive()).isEqualTo(
+                listOf(
+                    firstExpected,
+                    secondExpected
+                )
+            )
         }
     }
 
@@ -124,7 +125,9 @@ class SqlDelightInvalidationTest {
     }
 }
 
-/** extract the framework sqlite database instance from a room database via reflection. */
+/**
+ * extract the framework sqlite database instance from a room database via reflection.
+ */
 private fun SupportSQLiteDatabase.getSqliteDb(): SQLiteDatabase {
     // this runs with defaults so we can extract db from it until inspection supports support
     // instances directly
@@ -135,8 +138,10 @@ private fun SupportSQLiteDatabase.getSqliteDb(): SQLiteDatabase {
 }
 
 @Suppress("UNCHECKED_CAST")
-class TestArtTooling(private val sqliteDb: SQLiteDatabase, private val queries: List<Query<*>>) :
-    ArtTooling {
+class TestArtTooling(
+    private val sqliteDb: SQLiteDatabase,
+    private val queries: List<Query<*>>
+) : ArtTooling {
     override fun registerEntryHook(
         originClass: Class<*>,
         originMethod: String,

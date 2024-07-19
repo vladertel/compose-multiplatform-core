@@ -34,13 +34,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("round_rect_gray")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isEqualTo(1)
     }
@@ -51,13 +48,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("round_rect_gray")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.516)
     }
@@ -68,13 +62,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("round_rect_green")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.951)
     }
@@ -85,13 +76,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("fullscreen_rect_gray_dark")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.990)
     }
@@ -102,13 +90,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("round_rect_gray_dark")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.960)
     }
@@ -119,13 +104,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("fullscreen_rect_gray_moved_1px")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.695)
     }
@@ -136,13 +118,10 @@ class MSSIMMatcherTest {
         val second = loadBitmap("fullscreen_checked_checkbox_round")
 
         val matcher = MSSIMMatcher()
-        val result =
-            matcher.calculateSSIM(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.calculateSSIM(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result).isWithin(0.001).of(0.921)
     }

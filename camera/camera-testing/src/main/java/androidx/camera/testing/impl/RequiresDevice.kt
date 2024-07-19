@@ -16,6 +16,7 @@
 
 package androidx.camera.testing.impl
 
+import androidx.annotation.RequiresApi
 import androidx.test.filters.CustomFilter
 
 /**
@@ -30,6 +31,7 @@ import androidx.test.filters.CustomFilter
  * annotation depends on [androidx.test.filters.CustomFilter] which can only be used on test
  * "method".
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @CustomFilter(filterClass = RequiresDeviceFilter::class)
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION)

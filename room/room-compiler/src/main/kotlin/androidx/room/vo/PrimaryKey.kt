@@ -18,7 +18,9 @@ package androidx.room.vo
 import androidx.room.compiler.processing.XElement
 import androidx.room.migration.bundle.PrimaryKeyBundle
 
-/** Represents a PrimaryKey for an Entity. */
+/**
+ * Represents a PrimaryKey for an Entity.
+ */
 data class PrimaryKey(
     val declaredIn: XElement?,
     override val fields: Fields,

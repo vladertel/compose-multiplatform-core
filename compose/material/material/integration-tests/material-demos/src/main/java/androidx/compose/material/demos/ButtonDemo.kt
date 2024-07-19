@@ -65,10 +65,18 @@ fun ButtonDemo() {
         contentPadding = PaddingValues(10.dp),
         verticalArrangement = Arrangement.spacedBy(DefaultSpace)
     ) {
-        item { Buttons() }
-        item { Fabs() }
-        item { IconButtons() }
-        item { CustomShapeButton() }
+        item {
+            Buttons()
+        }
+        item {
+            Fabs()
+        }
+        item {
+            IconButtons()
+        }
+        item {
+            CustomShapeButton()
+        }
     }
 }
 
@@ -87,7 +95,9 @@ private fun Buttons() {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         Button(
             onClick = {},
-            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary)
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = MaterialTheme.colors.secondary
+            )
         ) {
             Text("Secondary Color")
         }
@@ -97,9 +107,15 @@ private fun Buttons() {
     Spacer(Modifier.height(DefaultSpace))
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        Button(onClick = {}, enabled = false) { Text("Disabled") }
-        OutlinedButton(onClick = {}, enabled = false) { Text("Disabled") }
-        TextButton(onClick = {}, enabled = false) { Text("Disabled") }
+        Button(onClick = {}, enabled = false) {
+            Text("Disabled")
+        }
+        OutlinedButton(onClick = {}, enabled = false) {
+            Text("Disabled")
+        }
+        TextButton(onClick = {}, enabled = false) {
+            Text("Disabled")
+        }
     }
 }
 
@@ -137,7 +153,9 @@ private fun CustomShapeButton() {
         onClick = {},
         modifier = Modifier.size(110.dp),
         shape = TriangleShape,
-        colors = ButtonDefaults.outlinedButtonColors(backgroundColor = Color.Yellow),
+        colors = ButtonDefaults.outlinedButtonColors(
+            backgroundColor = Color.Yellow
+        ),
         border = BorderStroke(width = 2.dp, color = Color.Black)
     ) {
         Column {

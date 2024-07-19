@@ -60,6 +60,7 @@ internal constructor(
      * provided.
      *
      * @return the value of the metric, or null if not set.
+     *
      * @see contains
      */
     operator fun <T : Any> get(metric: AggregateMetric<T>): T? =

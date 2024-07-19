@@ -46,7 +46,9 @@ class PrimitiveLongArraySubjectTest {
 
     @Test
     fun isEqualTo_Fail_NotAnlongArrayOf() {
-        assertFailsWith<AssertionError> { assertThat(longArrayOf(2, 3, 4)).isEqualTo(intArrayOf()) }
+        assertFailsWith<AssertionError> {
+            assertThat(longArrayOf(2, 3, 4)).isEqualTo(intArrayOf())
+        }
     }
 
     @Test
@@ -74,6 +76,8 @@ class PrimitiveLongArraySubjectTest {
     @Test
     fun isNotEqualTo_FailSame() {
         val same = longArrayOf(2, 3)
-        assertFailsWith<AssertionError> { assertThat(same).isNotEqualTo(same) }
+        assertFailsWith<AssertionError> {
+            assertThat(same).isNotEqualTo(same)
+        }
     }
 }

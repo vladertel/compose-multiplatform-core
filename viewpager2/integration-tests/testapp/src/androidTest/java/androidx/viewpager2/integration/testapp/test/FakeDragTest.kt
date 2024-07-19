@@ -55,7 +55,9 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class FakeDragTest(private val config: TestConfig) :
     BaseTest<FakeDragActivity>(FakeDragActivity::class.java) {
-    data class TestConfig(val orientation: Int)
+    data class TestConfig(
+        val orientation: Int
+    )
 
     companion object {
         @JvmStatic
@@ -82,8 +84,7 @@ class FakeDragTest(private val config: TestConfig) :
     private val twoOfSpadesPage = "2\n♣"
     private val threeOfSpadesPage = "3\n♣"
 
-    override val layoutId
-        get() = R.id.viewPager
+    override val layoutId get() = R.id.viewPager
 
     private val phoneOrientation
         get() = getInstrumentation().targetContext.resources.configuration.orientation
@@ -182,14 +183,12 @@ class FakeDragTest(private val config: TestConfig) :
     private val EventRecorder.swipeDirection: Float
         get() {
             val startDraggingEvent = OnPageScrollStateChangedEvent(SCROLL_STATE_DRAGGING)
-            val swipeDeltaSigns =
-                allEvents
-                    .dropWhile { it != startDraggingEvent }
-                    .drop(1)
-                    .takeWhile { it is OnPageScrolledEvent }
-                    .map { it as OnPageScrolledEvent }
-                    .deltaSigns
-                    .distinct()
+            val swipeDeltaSigns = allEvents
+                .dropWhile { it != startDraggingEvent }.drop(1)
+                .takeWhile { it is OnPageScrolledEvent }
+                .map { it as OnPageScrolledEvent }
+                .deltaSigns
+                .distinct()
             assertThat(swipeDeltaSigns.size, equalTo(1))
             return swipeDeltaSigns.first()
         }

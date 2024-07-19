@@ -30,10 +30,9 @@ import androidx.credentials.internal.FrameworkClassParsingException
  * @throws NullPointerException if [type] is null
  * @throws IllegalArgumentException if [type] is empty
  */
-open class GetPublicKeyCredentialException
-@JvmOverloads
-internal constructor(
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) override val type: String,
+open class GetPublicKeyCredentialException @JvmOverloads internal constructor(
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    override val type: String,
     errorMessage: CharSequence? = null
 ) : GetCredentialException(type, errorMessage) {
     init {
@@ -45,17 +44,14 @@ internal constructor(
         @RestrictTo(RestrictTo.Scope.LIBRARY) // used from java tests
         fun createFrom(type: String, msg: String?): GetCredentialException {
             return try {
-                with(type) {
-                    when {
-                        startsWith(
-                            GetPublicKeyCredentialDomException
-                                .TYPE_GET_PUBLIC_KEY_CREDENTIAL_DOM_EXCEPTION
-                        ) -> GetPublicKeyCredentialDomException.createFrom(type, msg)
-                        else -> {
-                            throw FrameworkClassParsingException()
-                        }
-                    }
-                }
+               with(type) {
+                   when {
+                       startsWith(GetPublicKeyCredentialDomException
+                           .TYPE_GET_PUBLIC_KEY_CREDENTIAL_DOM_EXCEPTION) ->
+                           GetPublicKeyCredentialDomException.createFrom(type, msg)
+                       else -> { throw FrameworkClassParsingException() }
+                   }
+               }
             } catch (t: FrameworkClassParsingException) {
                 // Parsing failed but don't crash the process. Instead just output a response
                 // with the raw framework values.

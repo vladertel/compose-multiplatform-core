@@ -37,7 +37,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BeyondBoundsLayoutTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     // The result of an imaginary operation that is run after we add the beyondBounds items we need.
     private val OperationResult = 10
@@ -49,20 +50,21 @@ class BeyondBoundsLayoutTest {
         var blockInvoked = false
         rule.setContent {
             Box(
-                Modifier.parentWithoutNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithoutNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
-        val returnValue =
-            rule.runOnIdle {
-                parent!!.layout(After) {
-                    blockInvoked = true
-                    OperationResult
-                }
+        val returnValue = rule.runOnIdle {
+            parent!!.layout(After) {
+                blockInvoked = true
+                OperationResult
             }
+        }
 
         // Assert.
         assertThat(blockInvoked).isFalse()
@@ -76,23 +78,24 @@ class BeyondBoundsLayoutTest {
         var blockInvokeCount = 0
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
-        val returnValue =
-            rule.runOnIdle {
-                assertThat(parent).isNotNull()
-                parent?.layout<Int>(After) {
-                    blockInvokeCount++
-                    // Always return null, to continue searching and indicate that
-                    // we didn't find the item we were looking for.
-                    null
-                }
+        val returnValue = rule.runOnIdle {
+            assertThat(parent).isNotNull()
+            parent?.layout<Int>(After) {
+                blockInvokeCount++
+                // Always return null, to continue searching and indicate that
+                // we didn't find the item we were looking for.
+                null
             }
+        }
 
         // Assert.
         assertThat(blockInvokeCount).isEqualTo(5)
@@ -107,34 +110,34 @@ class BeyondBoundsLayoutTest {
         var iterationCount = 0
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
-        val returnValue =
-            rule.runOnIdle {
-                assertThat(parent).isNotNull()
-                parent?.layout(After) {
-                    val returnValue = if (hasMoreContent) null else OperationResult
-                    callMap[++iterationCount] = returnValue
-                    returnValue
-                }
+        val returnValue = rule.runOnIdle {
+            assertThat(parent).isNotNull()
+            parent?.layout(After) {
+                val returnValue = if (hasMoreContent) null else OperationResult
+                callMap[++iterationCount] = returnValue
+                returnValue
             }
+        }
 
         // Assert.
-        assertThat(callMap)
-            .containsExactlyEntriesIn(
-                mapOf(
-                    1 to null,
-                    2 to null,
-                    3 to null,
-                    4 to null,
-                    5 to OperationResult,
-                )
+        assertThat(callMap).containsExactlyEntriesIn(
+            mapOf(
+                1 to null,
+                2 to null,
+                3 to null,
+                4 to null,
+                5 to OperationResult,
             )
+        )
         assertThat(returnValue).isEqualTo(OperationResult)
     }
 
@@ -144,21 +147,22 @@ class BeyondBoundsLayoutTest {
         var parent: BeyondBoundsLayout? = null
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
-        val returnValue =
-            rule.runOnIdle {
-                assertThat(parent).isNotNull()
-                parent?.layout(After) {
-                    // After the first item was added, we were able to perform our operation.
-                    OperationResult
-                }
+        val returnValue = rule.runOnIdle {
+            assertThat(parent).isNotNull()
+            parent?.layout(After) {
+                // After the first item was added, we were able to perform our operation.
+                OperationResult
             }
+        }
 
         // Assert.
         assertThat(returnValue).isEqualTo(OperationResult)
@@ -170,19 +174,22 @@ class BeyondBoundsLayoutTest {
         var parent: BeyondBoundsLayout? = null
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
-        val returnValue =
-            rule.runOnIdle {
-                assertThat(parent).isNotNull()
-                var iterationCount = 0
-                parent?.layout(After) { if (iterationCount++ < 3) null else OperationResult }
+        val returnValue = rule.runOnIdle {
+            assertThat(parent).isNotNull()
+            var iterationCount = 0
+            parent?.layout(After) {
+                if (iterationCount++ < 3) null else OperationResult
             }
+        }
 
         // Assert.
         assertThat(returnValue).isEqualTo(OperationResult)
@@ -198,29 +205,27 @@ class BeyondBoundsLayoutTest {
         var returnValue2: Int? = null
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
         rule.runOnIdle {
             assertThat(parent).isNotNull()
-            returnValue1 =
-                parent?.layout<Int>(After) {
-                    block1InvokeCount++
-                    // Always return null, to indicate that we didn't find the item we were looking
-                    // for.
-                    null
-                }
-            returnValue2 =
-                parent?.layout<Int>(After) {
-                    block2InvokeCount++
-                    // Always return null, to indicate that we didn't find the item we were looking
-                    // for.
-                    null
-                }
+            returnValue1 = parent?.layout<Int>(After) {
+                block1InvokeCount++
+                // Always return null, to indicate that we didn't find the item we were looking for.
+                null
+            }
+            returnValue2 = parent?.layout<Int>(After) {
+                block2InvokeCount++
+                // Always return null, to indicate that we didn't find the item we were looking for.
+                null
+            }
         }
 
         // Assert.
@@ -241,34 +246,33 @@ class BeyondBoundsLayoutTest {
         var returnValue2: Int? = null
         rule.setContent {
             Box(
-                Modifier.parentWithFiveNonVisibleItems().modifierLocalConsumer {
-                    parent = ModifierLocalBeyondBoundsLayout.current
-                }
+                Modifier
+                    .parentWithFiveNonVisibleItems()
+                    .modifierLocalConsumer {
+                        parent = ModifierLocalBeyondBoundsLayout.current
+                    }
             )
         }
 
         // Act.
         rule.runOnIdle {
             assertThat(parent).isNotNull()
-            returnValue1 =
-                parent?.layout<Int>(direction) {
-                    block1InvokeCount++
+            returnValue1 = parent?.layout<Int>(direction) {
+                block1InvokeCount++
 
-                    if (!hasMoreContent) {
-                        // Re-entrant call.
-                        returnValue2 =
-                            parent?.layout<Int>(direction) {
-                                block2InvokeCount++
-                                // Always return null, to indicate that we didn't find the item we
-                                // were looking for.
-                                null
-                            }
-                    }
-
-                    // Always return null, to indicate that we didn't find the item we were looking
-                    // for.
-                    null
+                if (!hasMoreContent) {
+                    // Re-entrant call.
+                    returnValue2 =
+                        parent?.layout<Int>(direction) {
+                            block2InvokeCount++
+                            // Always return null, to indicate that we didn't find the item we were looking for.
+                            null
+                        }
                 }
+
+                // Always return null, to indicate that we didn't find the item we were looking for.
+                null
+            }
         }
 
         // Assert.
@@ -299,13 +303,12 @@ class BeyondBoundsLayoutTest {
                     var count = 5
                     var result: T? = null
                     while (count-- > 0 && result == null) {
-                        result =
-                            block.invoke(
-                                object : BeyondBoundsScope {
-                                    override val hasMoreContent: Boolean
-                                        get() = count > 0
-                                }
-                            )
+                        result = block.invoke(
+                            object : BeyondBoundsScope {
+                                override val hasMoreContent: Boolean
+                                    get() = count > 0
+                            }
+                        )
                     }
                     return result
                 }

@@ -19,6 +19,7 @@ package androidx.camera.camera2.internal.compat.quirk;
 import android.media.EncoderProfiles;
 import android.os.Build;
 
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.Quirk;
 
 import java.util.Arrays;
@@ -29,15 +30,16 @@ import java.util.Locale;
  * Quirk denoting the video profile list returns by {@link EncoderProfiles} is invalid.
  *
  * <p>QuirkSummary
- *     Bug Id: 267727595, 278860860, 298951126, 298952500, 320747756
+ *     Bug Id: 267727595, 278860860, 298951126, 298952500
  *     Description: When using {@link EncoderProfiles} on some builds of Android API 33,
  *                  {@link EncoderProfiles#getVideoProfiles()} returns a list with size one, but
  *                  the single value in the list is null. This is not the expected behavior, and
  *                  makes {@link EncoderProfiles} lack of video information.
  *     Device(s): Pixel 4 and above pixel devices with TP1A or TD1A builds (API 33), Samsung devices
- *                 with TP1A build (API 33), Xiaomi devices with TKQ1/TP1A build (API 33), OnePlus
- *                 and Oppo devices with API 33 build.
+ *                 with TP1A build (API 33), Xiaomi devices with TKQ1 build (API 33), OnePlus and
+ *                 Oppo devices with API 33 build.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class InvalidVideoProfilesQuirk implements Quirk {
 
     private static final List<String> AFFECTED_PIXEL_MODELS = Arrays.asList(
@@ -61,8 +63,7 @@ public class InvalidVideoProfilesQuirk implements Quirk {
 
     private static final List<String> AFFECTED_OPPO_MODELS = Arrays.asList(
             "cph2437",
-            "cph2525",
-            "pht110"
+            "cph2525"
     );
 
     static boolean load() {
@@ -88,7 +89,7 @@ public class InvalidVideoProfilesQuirk implements Quirk {
 
     private static boolean isAffectedXiaomiDevices() {
         return ("redmi".equalsIgnoreCase(Build.BRAND) || "xiaomi".equalsIgnoreCase(Build.BRAND))
-                && (isTkq1Build() || isTp1aBuild());
+                && isTkq1Build();
     }
 
     private static boolean isAffectedPixelModel() {

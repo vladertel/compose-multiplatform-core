@@ -34,12 +34,13 @@ import kotlinx.coroutines.withContext
 
 /**
  * Diagnosis task that utilizes ImageCapture use case
- *
  * TODO: unit tests for this task (have only tested in end-to-end)
  */
 class ImageCaptureTask : DiagnosisTask("ImageCaptureTask") {
 
-    /** Collects image captured as JPEG in diagnosis report zip */
+    /**
+     * Collects image captured as JPEG in diagnosis report zip
+     */
     @Override
     override suspend fun runDiagnosisTask(
         cameraController: LifecycleCameraController,
@@ -51,15 +52,18 @@ class ImageCaptureTask : DiagnosisTask("ImageCaptureTask") {
 
         try {
             withContext(ContextCompat.getMainExecutor(context).asCoroutineDispatcher()) {
-                    captureImage(cameraController, dataStore, context)
-                }
-                ?.let { dataStore.flushTempFileToImageFile(it, "ImageCaptureTask") }
+                captureImage(cameraController, dataStore, context)
+            }?.let {
+                dataStore.flushTempFileToImageFile(it, "ImageCaptureTask")
+            }
         } catch (exception: ImageCaptureException) {
             Log.d("ImageCaptureTask", "Failed to run ImageCaptureTask: ${exception.message}")
         }
     }
 
-    /** Runs ImageCapture use case and return image captured */
+    /**
+     * Runs ImageCapture use case and return image captured
+     */
     @MainThread
     suspend fun captureImage(
         cameraController: LifecycleCameraController,
@@ -70,17 +74,14 @@ class ImageCaptureTask : DiagnosisTask("ImageCaptureTask") {
 
         // enable ImageCapture use case
         cameraController.setEnabledUseCases(IMAGE_CAPTURE)
-        dataStore.appendText(
-            "image capture enabled: " + "${cameraController.isImageCaptureEnabled}"
-        )
+        dataStore.appendText("image capture enabled: " +
+            "${cameraController.isImageCaptureEnabled}")
 
         val file = File(context.cacheDir, "temp.jpeg")
         val outputOption = ImageCapture.OutputFileOptions.Builder(file).build()
         val mainExecutor = ContextCompat.getMainExecutor(context)
 
-        cameraController.takePicture(
-            outputOption,
-            mainExecutor,
+        cameraController.takePicture(outputOption, mainExecutor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     Log.d("ImageCaptureTask", "${outputFileResults.savedUri}")
@@ -90,7 +91,6 @@ class ImageCaptureTask : DiagnosisTask("ImageCaptureTask") {
                 override fun onError(exception: ImageCaptureException) {
                     continuation.resumeWithException(exception)
                 }
-            }
-        )
+            })
     }
 }

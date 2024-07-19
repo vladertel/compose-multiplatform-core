@@ -31,7 +31,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CompositeHashTests : BaseComposeTest() {
 
-    @get:Rule override val activityRule = makeTestActivityRule()
+    @get:Rule
+    override val activityRule = makeTestActivityRule()
 
     @Test // b/338478720
     @MediumTest
@@ -42,12 +43,11 @@ class CompositeHashTests : BaseComposeTest() {
         activity.show {
             AnimatedVisibility(
                 true,
-                modifier =
-                    if (useFirstModifier) {
-                        Modifier.consumeWindowInsets(PaddingValues(0.dp))
-                    } else {
-                        Modifier
-                    },
+                modifier = if (useFirstModifier) {
+                    Modifier.consumeWindowInsets(PaddingValues(0.dp))
+                } else {
+                    Modifier
+                },
             ) {
                 val hash = currentCompositeKeyHash
                 val original = remember { hash }

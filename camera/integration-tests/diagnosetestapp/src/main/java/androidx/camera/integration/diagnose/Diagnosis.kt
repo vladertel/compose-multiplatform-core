@@ -21,7 +21,9 @@ import androidx.annotation.WorkerThread
 import androidx.camera.view.LifecycleCameraController
 import java.io.File
 
-/** Diagnosis object that runs diagnosis test on device and save result to a file. */
+/**
+ * Diagnosis object that runs diagnosis test on device and save result to a file.
+ */
 class Diagnosis {
 
     @WorkerThread
@@ -51,7 +53,6 @@ class Diagnosis {
 
         return dataStore.flushZip()
     }
-
     companion object {
         private const val TAG = "Diagnosis"
     }

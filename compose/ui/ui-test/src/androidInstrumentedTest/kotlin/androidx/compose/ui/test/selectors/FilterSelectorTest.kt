@@ -34,7 +34,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FilterSelectorTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun twoNodes_filterOne() {
@@ -45,12 +46,13 @@ class FilterSelectorTest {
             }
         }
 
-        rule
-            .onNodeWithTag("Parent")
+        rule.onNodeWithTag("Parent")
             .onChildren()
             .filter(hasTestTag("Child1"))
             .assertCountEquals(1)
-            .apply { get(0).assert(hasTestTag("Child1")) }
+            .apply {
+                get(0).assert(hasTestTag("Child1"))
+            }
     }
 
     @Test
@@ -62,8 +64,7 @@ class FilterSelectorTest {
             }
         }
 
-        rule
-            .onNodeWithTag("Parent")
+        rule.onNodeWithTag("Parent")
             .onChildren()
             .filter(hasTestTag("Child1") or hasTestTag("Child2"))
             .assertCountEquals(2)
@@ -82,6 +83,9 @@ class FilterSelectorTest {
             }
         }
 
-        rule.onNodeWithTag("Parent").onChildren().filter(hasTestTag("Child")).assertCountEquals(0)
+        rule.onNodeWithTag("Parent")
+            .onChildren()
+            .filter(hasTestTag("Child"))
+            .assertCountEquals(0)
     }
 }

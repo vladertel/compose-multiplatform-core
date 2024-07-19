@@ -33,7 +33,8 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class InspectionPluginTest {
-    @get:Rule val projectSetup = ProjectSetupRule()
+    @get:Rule
+    val projectSetup = ProjectSetupRule()
 
     lateinit var gradleRunner: GradleRunner
     lateinit var dxExecutable: String
@@ -41,12 +42,13 @@ class InspectionPluginTest {
     @Before
     fun setUp() {
         val sdkDir = projectSetup.getSdkDirectory()
-        dxExecutable =
-            File(sdkDir, "build-tools/${projectSetup.props.buildToolsVersion}/dx").absolutePath
+        dxExecutable = File(sdkDir, "build-tools/${projectSetup.props.buildToolsVersion}/dx")
+            .absolutePath
         File("src/test/test-data", "app-project").copyRecursively(projectSetup.rootDir)
 
-        gradleRunner =
-            GradleRunner.create().withProjectDir(projectSetup.rootDir).withPluginClasspath()
+        gradleRunner = GradleRunner.create()
+            .withProjectDir(projectSetup.rootDir)
+            .withPluginClasspath()
     }
 
     @Ignore // b/193918205
@@ -55,16 +57,13 @@ class InspectionPluginTest {
         File(projectSetup.rootDir, "settings.gradle")
             .writeText("rootProject.name = \"test-inspector\"")
         projectSetup.writeDefaultBuildGradle(
-            prefix =
-                """
+            prefix = """
                 plugins {
                     id("com.android.library")
                     id("androidx.inspection")
                 }
-            """
-                    .trimIndent(),
-            suffix =
-                """
+            """.trimIndent(),
+            suffix = """
                 dependencies {
                     implementation("androidx.inspection:inspection:1.0.0")
                 }
@@ -77,11 +76,10 @@ class InspectionPluginTest {
         )
         val output = gradleRunner.withArguments("dexInspectorRelease", "--stacktrace").build()
         assertEquals(output.task(":dexInspectorRelease")!!.outcome, TaskOutcome.SUCCESS)
-        val artifact =
-            File(
-                projectSetup.rootDir,
-                "build/androidx_inspection/dexedInspector/release/test-inspector.jar"
-            )
+        val artifact = File(
+            projectSetup.rootDir,
+            "build/androidx_inspection/dexedInspector/release/test-inspector.jar"
+        )
         assertTrue { artifact.exists() }
         assertDeclaredInDex(artifact, "Ltest/inspector/TestInspector;")
         assertDeclaredInDex(artifact, "Ltest/inspector/TestInspectorProtocol;")
@@ -90,17 +88,9 @@ class InspectionPluginTest {
 
     // rely that classes should have a constructor and it is declared in class itself
     private fun assertDeclaredInDex(artifact: File, className: String) {
-        val exec =
-            Runtime.getRuntime()
-                .exec(
-                    arrayOf(
-                        dxExecutable,
-                        "--find-usages",
-                        artifact.absolutePath,
-                        className,
-                        "<init>"
-                    )
-                )
+        val exec = Runtime.getRuntime().exec(
+            arrayOf(dxExecutable, "--find-usages", artifact.absolutePath, className, "<init>")
+        )
         exec.waitFor()
         assertEquals(exec.exitValue(), 0)
 

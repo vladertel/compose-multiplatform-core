@@ -33,7 +33,12 @@ internal class JavacTypeVariableType(
     constructor(
         env: JavacProcessingEnv,
         typeMirror: TypeVariable
-    ) : this(env = env, typeMirror = typeMirror, nullability = null, kotlinType = null)
+    ) : this(
+        env = env,
+        typeMirror = typeMirror,
+        nullability = null,
+        kotlinType = null
+    )
 
     constructor(
         env: JavacProcessingEnv,
@@ -50,9 +55,16 @@ internal class JavacTypeVariableType(
         env: JavacProcessingEnv,
         typeMirror: TypeVariable,
         nullability: XNullability
-    ) : this(env = env, typeMirror = typeMirror, nullability = nullability, kotlinType = null)
+    ) : this(
+        env = env,
+        typeMirror = typeMirror,
+        nullability = nullability,
+        kotlinType = null
+    )
 
-    override val equalityItems by lazy { arrayOf(typeMirror) }
+    override val equalityItems by lazy {
+        arrayOf(typeMirror)
+    }
 
     override val typeArguments: List<XType>
         get() = emptyList()

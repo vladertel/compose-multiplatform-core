@@ -18,7 +18,9 @@ package androidx.kruth
 
 import androidx.kruth.Fact.Companion.simpleFact
 
-/** Always fails with the provided error message. */
+/**
+ * Always fails with the provided error message.
+ */
 internal class FailingOrdered(
     private val metadata: FailureMetadata,
     private val message: () -> String,

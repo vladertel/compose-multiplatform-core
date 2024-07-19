@@ -29,11 +29,10 @@ private val rtlWord = RtlChar.repeat(5)
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-internal class TextFieldSelectionGesturesRtlTest :
-    TextField1SelectionGesturesTest(
-        initialText = "$rtlWord\n$rtlWord $rtlWord $rtlWord\n$rtlWord",
-        layoutDirection = LayoutDirection.Rtl,
-    ) {
+internal class TextFieldSelectionGesturesRtlTest : TextField1SelectionGesturesTest(
+    initialText = "$rtlWord\n$rtlWord $rtlWord $rtlWord\n$rtlWord",
+    layoutDirection = LayoutDirection.Rtl,
+) {
     override val word = rtlWord
     override var textDirection: ResolvedTextDirection = ResolvedTextDirection.Rtl
 

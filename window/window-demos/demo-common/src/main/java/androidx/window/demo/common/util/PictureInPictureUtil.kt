@@ -40,23 +40,22 @@ private object PictureInPictureLauncherO {
 @RequiresApi(Build.VERSION_CODES.S)
 private object PictureInPictureLauncherS {
     fun startPictureInPicture(activity: Activity, autoEnterPip: Boolean = false) {
-        activity.enterPictureInPictureMode(
-            PictureInPictureParams.Builder().setAutoEnterEnabled(autoEnterPip).build()
-        )
+        activity.enterPictureInPictureMode(PictureInPictureParams.Builder()
+            .setAutoEnterEnabled(autoEnterPip)
+            .build())
     }
 
     fun setPictureInPictureParams(activity: Activity, autoEnterPip: Boolean = false) {
-        activity.setPictureInPictureParams(
-            PictureInPictureParams.Builder().setAutoEnterEnabled(autoEnterPip).build()
-        )
+        activity.setPictureInPictureParams(PictureInPictureParams.Builder()
+            .setAutoEnterEnabled(autoEnterPip)
+            .build())
     }
 }
 
 object PictureInPictureUtil {
     /**
-     * Appends the start picture in picture [MenuItem] to the given [Menu] if picture in picture is
-     * supported.
-     *
+     * Appends the start picture in picture [MenuItem] to the given [Menu] if picture in picture
+     * is supported.
      * @param inflater a [MenuInflater] to load the [Menu] from a resource.
      * @param menu the menu to contain the inflated resource.
      */
@@ -70,7 +69,6 @@ object PictureInPictureUtil {
      * Requests that the [Activity] enters picture in picture mode if the [MenuItem] matches the
      * resource loaded in [appendPictureInPictureMenu]. If the [Activity] does not support picture
      * in picture then nothing happens.
-     *
      * @return true if the [MenuItem] has the same id as the start pip [MenuItem], false otherwise
      */
     fun handlePictureInPictureMenuItem(activity: Activity, item: MenuItem): Boolean {
@@ -99,7 +97,8 @@ object PictureInPictureUtil {
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             PictureInPictureLauncherO.setPictureInPictureParams(activity)
             if (autoEnterPip) {
-                Toast.makeText(activity, "Auto enter PIP not supported", Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, "Auto enter PIP not supported", Toast.LENGTH_LONG)
+                    .show()
             }
         } else {
             Toast.makeText(activity, "PiP not supported", Toast.LENGTH_LONG).show()

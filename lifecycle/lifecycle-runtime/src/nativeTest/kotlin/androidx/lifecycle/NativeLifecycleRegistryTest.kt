@@ -27,11 +27,9 @@ class NativeLifecycleRegistryTest {
 
     @BeforeTest
     fun init() {
-        mLifecycleOwner =
-            object : LifecycleOwner {
-                override val lifecycle
-                    get() = mRegistry
-            }
+        mLifecycleOwner = object : LifecycleOwner {
+            override val lifecycle get() = mRegistry
+        }
         mRegistry = LifecycleRegistry.createUnsafe(mLifecycleOwner!!)
     }
 

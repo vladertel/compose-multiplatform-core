@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.effects.opengl.GlRenderer;
 
@@ -28,6 +29,7 @@ import androidx.camera.effects.opengl.GlRenderer;
  *
  * <p>This class is not thread safe. It is expected to be called from a single GL thread.
  */
+@RequiresApi(21)
 class TextureFrameBuffer {
 
     @NonNull
@@ -71,9 +73,9 @@ class TextureFrameBuffer {
             if (frame.isEmpty()) {
                 continue;
             }
-            if (frame.getTimestampNanos() == timestampNs) {
+            if (frame.getTimestampNs() == timestampNs) {
                 frameToReturn = frame;
-            } else if (frame.getTimestampNanos() < timestampNs) {
+            } else if (frame.getTimestampNs() < timestampNs) {
                 frame.markEmpty();
             }
         }
@@ -93,8 +95,8 @@ class TextureFrameBuffer {
         for (TextureFrame frame : mFrames) {
             if (frame.isEmpty()) {
                 return frame;
-            } else if (frame.getTimestampNanos() < minTimestampNs) {
-                minTimestampNs = frame.getTimestampNanos();
+            } else if (frame.getTimestampNs() < minTimestampNs) {
+                minTimestampNs = frame.getTimestampNs();
                 oldestFrame = frame;
             }
         }

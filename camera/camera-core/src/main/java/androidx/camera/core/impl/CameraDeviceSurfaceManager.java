@@ -22,6 +22,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.InitializationException;
 
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Set;
  * Camera device manager to provide the guaranteed supported stream capabilities related info for
  * all camera devices
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraDeviceSurfaceManager {
 
     /**

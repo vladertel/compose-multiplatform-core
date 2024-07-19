@@ -21,8 +21,6 @@ import android.hardware.camera2.CameraManager
 import android.util.Size
 import android.view.View
 import android.widget.FrameLayout
-import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest
-import androidx.camera.viewfinder.surface.populateFromCharacteristics
 import androidx.camera.viewfinder.utils.CoreAppTestUtil
 import androidx.camera.viewfinder.utils.FakeActivity
 import androidx.test.core.app.ActivityScenario
@@ -67,24 +65,23 @@ class SurfaceViewImplementationTest {
         mParent = FrameLayout(mContext)
         setContentView(mParent)
 
-        val cameraManager =
-            ApplicationProvider.getApplicationContext<Context>()
-                .getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val cameraManager = ApplicationProvider.getApplicationContext<Context>().getSystemService(
+            Context.CAMERA_SERVICE
+        ) as CameraManager
         val cameraIds = cameraManager.cameraIdList
         Assume.assumeTrue("No cameras found on device.", cameraIds.isNotEmpty())
         val cameraId = cameraIds[0]
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-        mSurfaceRequest =
-            ViewfinderSurfaceRequest.Builder(ANY_SIZE)
-                .populateFromCharacteristics(characteristics)
-                .build()
+        mSurfaceRequest = ViewfinderSurfaceRequest.Builder(ANY_SIZE)
+            .populateFromCharacteristics(characteristics)
+            .build()
         mImplementation = SurfaceViewImplementation(mParent, ViewfinderTransformation())
     }
 
     @After
     fun tearDown() {
         if (::mSurfaceRequest.isInitialized) {
-            mSurfaceRequest.markSurfaceSafeToRelease()
+            mSurfaceRequest.viewfinderSurface.close()
         }
     }
 
@@ -92,10 +89,12 @@ class SurfaceViewImplementationTest {
     fun surfaceProvidedSuccessfully() {
         CoreAppTestUtil.checkKeyguard(mContext)
 
-        mInstrumentation.runOnMainSync { mImplementation.onSurfaceRequested(mSurfaceRequest) }
+        mInstrumentation.runOnMainSync {
+            mImplementation.onSurfaceRequested(mSurfaceRequest)
+        }
 
-        mSurfaceRequest.getSurfaceAsync().get(1000, TimeUnit.MILLISECONDS)
-        mSurfaceRequest.markSurfaceSafeToRelease()
+        mSurfaceRequest.viewfinderSurface.surface.get(1000, TimeUnit.MILLISECONDS)
+        mSurfaceRequest.viewfinderSurface.close()
     }
 
     @Throws(Throwable::class)

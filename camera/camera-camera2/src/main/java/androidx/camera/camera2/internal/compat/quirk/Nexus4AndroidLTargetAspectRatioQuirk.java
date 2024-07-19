@@ -18,6 +18,7 @@ package androidx.camera.camera2.internal.compat.quirk;
 
 import android.os.Build;
 
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.workaround.TargetAspectRatio;
 import androidx.camera.core.impl.Quirk;
 
@@ -35,6 +36,7 @@ import java.util.Locale;
  *     Device(s): Google Nexus 4
  *     @see androidx.camera.camera2.internal.compat.workaround.TargetAspectRatio
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class Nexus4AndroidLTargetAspectRatioQuirk implements Quirk {
     // List of devices with the issue.
     private static final List<String> DEVICE_MODELS = Arrays.asList(

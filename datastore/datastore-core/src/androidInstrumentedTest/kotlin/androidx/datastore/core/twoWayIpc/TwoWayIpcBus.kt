@@ -32,20 +32,29 @@ import kotlinx.coroutines.withTimeout
 /**
  * A bus that can be used across processes to make IPC calls.
  *
- * You wouldn't use this directly, instead, use [TwoWayIpcSubject] combined with [IpcAction].
+ * You wouldn't use this directly, instead, use [TwoWayIpcSubject] combined with
+ * [IpcAction].
  */
-class TwoWayIpcBus(val executionScope: CoroutineScope, val handler: suspend (Bundle?) -> Bundle?) {
+class TwoWayIpcBus(
+    val executionScope: CoroutineScope,
+    val handler: suspend (Bundle?) -> Bundle?
+) {
     private val pendingMessages = mutableMapOf<String, CompletableDeferred<Bundle?>>()
-    val incomingMessenger =
-        Messenger(
-            object : Handler(Looper.getMainLooper()) {
-                override fun handleMessage(msg: Message) {
-                    val copy = Message.obtain().also { it.copyFrom(msg) }
-                    copy.data?.classLoader = TwoWayIpcBus::class.java.classLoader
-                    executionScope.launch { handleIncomingMessage(copy) }
+    val incomingMessenger = Messenger(
+        object : Handler(
+            Looper.getMainLooper()
+        ) {
+            override fun handleMessage(msg: Message) {
+                val copy = Message.obtain().also {
+                    it.copyFrom(msg)
+                }
+                copy.data?.classLoader = TwoWayIpcBus::class.java.classLoader
+                executionScope.launch {
+                    handleIncomingMessage(copy)
                 }
             }
-        )
+        }
+    )
 
     private lateinit var outgoingMessenger: Messenger
 
@@ -69,21 +78,26 @@ class TwoWayIpcBus(val executionScope: CoroutineScope, val handler: suspend (Bun
                 }
                 msg.replyTo.send(responseMessage)
             }
+
             MSG_ACTION_RESPONSE -> {
-                val responseHandle =
-                    synchronized(pendingMessages) { pendingMessages.remove(uuid) }
-                        ?: error("no response handle for $uuid")
-                responseHandle.complete(msg.data.getBundle(KEY_PAYLOAD))
+                val responseHandle = synchronized(pendingMessages) {
+                    pendingMessages.remove(uuid)
+                } ?: error("no response handle for $uuid")
+                responseHandle.complete(
+                    msg.data.getBundle(KEY_PAYLOAD)
+                )
             }
+
             MSG_EXCEPTION -> {
-                val responseHandle =
-                    synchronized(pendingMessages) { pendingMessages.remove(uuid) }
-                        ?: error("no response handle for $uuid")
+                val responseHandle = synchronized(pendingMessages) {
+                    pendingMessages.remove(uuid)
+                } ?: error("no response handle for $uuid")
                 val exceptionMessage = msg.data.getString(KEY_STACKTRACE)
                 responseHandle.completeExceptionally(
                     RuntimeException("exception in remote process: $exceptionMessage")
                 )
             }
+
             else -> {
                 // respond with error
                 msg.replyTo.send(
@@ -100,11 +114,15 @@ class TwoWayIpcBus(val executionScope: CoroutineScope, val handler: suspend (Bun
         outgoingMessenger = messenger
     }
 
-    suspend fun sendMessage(payload: Bundle?): Bundle? {
+    suspend fun sendMessage(
+        payload: Bundle?
+    ): Bundle? {
         val uuid = UUID.randomUUID().toString()
         log("sending message $uuid")
         val response = CompletableDeferred<Bundle?>()
-        synchronized(pendingMessages) { pendingMessages[uuid] = response }
+        synchronized(pendingMessages) {
+            pendingMessages[uuid] = response
+        }
 
         val message = Message.obtain()
         message.what = MSG_EXECUTE_ACTION
@@ -114,7 +132,11 @@ class TwoWayIpcBus(val executionScope: CoroutineScope, val handler: suspend (Bun
         message.data?.classLoader = TwoWayIpcBus::class.java.classLoader
         outgoingMessenger.send(message)
         log("sent message $uuid")
-        return withTimeout(TIMEOUT) { response.await() }.also { log("received response for $uuid") }
+        return withTimeout(TIMEOUT) {
+            response.await()
+        }.also {
+            log("received response for $uuid")
+        }
     }
 
     companion object {

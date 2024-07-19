@@ -26,6 +26,7 @@ import android.annotation.SuppressLint;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.annotation.ExecutedBy;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
@@ -50,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>This class is not thread safe, it should be used on the same thread.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class BufferedAudioStream implements AudioStream {
 
     private static final String TAG = "BufferedAudioStream";
@@ -274,6 +276,7 @@ public class BufferedAudioStream implements AudioStream {
         }
     }
 
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     private static class AudioData {
 
         private final int mBytesPerFrame;

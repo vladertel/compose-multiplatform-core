@@ -222,19 +222,17 @@ class DeleteSurroundingTextCommandTest {
 
     @Test
     fun throws_whenLengthBeforeInvalid() {
-        val error =
-            assertFailsWith<IllegalArgumentException> {
-                DeleteSurroundingTextCommand(lengthBeforeCursor = -42, lengthAfterCursor = 0)
-            }
+        val error = assertFailsWith<IllegalArgumentException> {
+            DeleteSurroundingTextCommand(lengthBeforeCursor = -42, lengthAfterCursor = 0)
+        }
         assertThat(error).hasMessageThat().contains("-42")
     }
 
     @Test
     fun throws_whenLengthAfterInvalid() {
-        val error =
-            assertFailsWith<IllegalArgumentException> {
-                DeleteSurroundingTextCommand(lengthBeforeCursor = 0, lengthAfterCursor = -42)
-            }
+        val error = assertFailsWith<IllegalArgumentException> {
+            DeleteSurroundingTextCommand(lengthBeforeCursor = 0, lengthAfterCursor = -42)
+        }
         assertThat(error).hasMessageThat().contains("-42")
     }
 
@@ -245,8 +243,10 @@ class DeleteSurroundingTextCommandTest {
         val selection = TextRange(textAfterDelete.length)
         val eb = EditingBuffer(text, selection)
 
-        DeleteSurroundingTextCommand(lengthBeforeCursor = 0, lengthAfterCursor = Int.MAX_VALUE)
-            .applyTo(eb)
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = 0,
+            lengthAfterCursor = Int.MAX_VALUE
+        ).applyTo(eb)
 
         assertThat(eb.toString()).isEqualTo(textAfterDelete)
         assertThat(eb.cursor).isEqualTo(textAfterDelete.length)
@@ -258,8 +258,10 @@ class DeleteSurroundingTextCommandTest {
         val selection = TextRange(1)
         val eb = EditingBuffer(text, selection)
 
-        DeleteSurroundingTextCommand(lengthBeforeCursor = Int.MAX_VALUE, lengthAfterCursor = 0)
-            .applyTo(eb)
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = Int.MAX_VALUE,
+            lengthAfterCursor = 0
+        ).applyTo(eb)
 
         assertThat(eb.toString()).isEqualTo("bcde")
         assertThat(eb.cursor).isEqualTo(0)
@@ -272,8 +274,10 @@ class DeleteSurroundingTextCommandTest {
         val selection = TextRange(textAfterDelete.length)
         val eb = EditingBuffer(text, selection)
 
-        DeleteSurroundingTextCommand(lengthBeforeCursor = 0, lengthAfterCursor = Int.MAX_VALUE - 1)
-            .applyTo(eb)
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = 0,
+            lengthAfterCursor = Int.MAX_VALUE - 1
+        ).applyTo(eb)
 
         assertThat(eb.toString()).isEqualTo(textAfterDelete)
         assertThat(eb.cursor).isEqualTo(textAfterDelete.length)
@@ -285,8 +289,10 @@ class DeleteSurroundingTextCommandTest {
         val selection = TextRange(1)
         val eb = EditingBuffer(text, selection)
 
-        DeleteSurroundingTextCommand(lengthBeforeCursor = Int.MAX_VALUE - 1, lengthAfterCursor = 0)
-            .applyTo(eb)
+        DeleteSurroundingTextCommand(
+            lengthBeforeCursor = Int.MAX_VALUE - 1,
+            lengthAfterCursor = 0
+        ).applyTo(eb)
 
         assertThat(eb.toString()).isEqualTo("bcde")
         assertThat(eb.cursor).isEqualTo(0)

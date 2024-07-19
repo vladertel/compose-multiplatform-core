@@ -40,7 +40,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 29)
 @OptIn(ExperimentalMetricApi::class)
 class TrivialPowerBenchmark {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     @Test
     fun measureEnergyPower() {
@@ -48,24 +49,23 @@ class TrivialPowerBenchmark {
         assumeTrue(BatteryCharge.hasMinimumCharge())
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics =
-                listOf(
-                    PowerMetric(PowerMetric.Battery()),
-                    PowerMetric(
-                        PowerMetric.Power(
-                            PowerCategory.values().associateWith {
-                                PowerCategoryDisplayLevel.BREAKDOWN
-                            }
-                        )
-                    ),
-                    PowerMetric(
-                        PowerMetric.Energy(
-                            PowerCategory.values().associateWith {
-                                PowerCategoryDisplayLevel.BREAKDOWN
-                            }
-                        )
-                    ),
+            metrics = listOf(
+                PowerMetric(
+                    PowerMetric.Battery()
                 ),
+                PowerMetric(
+                    PowerMetric.Power(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.BREAKDOWN }
+                    )
+                ),
+                PowerMetric(
+                    PowerMetric.Energy(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.BREAKDOWN }
+                    )
+                ),
+            ),
             compilationMode = CompilationMode.None(),
             startupMode = StartupMode.COLD,
             iterations = 3,
@@ -85,24 +85,23 @@ class TrivialPowerBenchmark {
         assumeTrue(BatteryCharge.hasMinimumCharge())
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics =
-                listOf(
-                    PowerMetric(PowerMetric.Battery()),
-                    PowerMetric(
-                        PowerMetric.Power(
-                            PowerCategory.values().associateWith {
-                                PowerCategoryDisplayLevel.BREAKDOWN
-                            }
-                        )
-                    ),
-                    PowerMetric(
-                        PowerMetric.Energy(
-                            PowerCategory.values().associateWith {
-                                PowerCategoryDisplayLevel.BREAKDOWN
-                            }
-                        )
-                    ),
+            metrics = listOf(
+                PowerMetric(
+                    PowerMetric.Battery()
                 ),
+                PowerMetric(
+                    PowerMetric.Power(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.BREAKDOWN }
+                    )
+                ),
+                PowerMetric(
+                    PowerMetric.Energy(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.BREAKDOWN }
+                    )
+                ),
+            ),
             compilationMode = CompilationMode.None(),
             startupMode = StartupMode.COLD,
             iterations = 3,
@@ -115,11 +114,18 @@ class TrivialPowerBenchmark {
             var done = false
             val threads = emptyList<Thread>()
             try {
-                repeat(8) { threads.toMutableList().add(thread(start = true) { while (!done) {} }) }
+                repeat(8) {
+                    threads.toMutableList().add(
+                        thread(start = true) {
+                        while (!done) { }
+                    })
+                }
                 Thread.sleep(DURATION_MS.toLong())
             } finally {
                 done = true
-                threads.forEach { it.join() }
+                threads.forEach {
+                    it.join()
+                }
             }
         }
     }
@@ -130,20 +136,23 @@ class TrivialPowerBenchmark {
         assumeTrue(BatteryCharge.hasMinimumCharge())
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics =
-                listOf(
-                    PowerMetric(PowerMetric.Battery()),
-                    PowerMetric(
-                        PowerMetric.Power(
-                            PowerCategory.values().associateWith { PowerCategoryDisplayLevel.TOTAL }
-                        )
-                    ),
-                    PowerMetric(
-                        PowerMetric.Energy(
-                            PowerCategory.values().associateWith { PowerCategoryDisplayLevel.TOTAL }
-                        )
-                    ),
+            metrics = listOf(
+                PowerMetric(
+                    PowerMetric.Battery()
                 ),
+                PowerMetric(
+                    PowerMetric.Power(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.TOTAL }
+                    )
+                ),
+                PowerMetric(
+                    PowerMetric.Energy(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.TOTAL }
+                    )
+                ),
+            ),
             compilationMode = CompilationMode.None(),
             startupMode = StartupMode.COLD,
             iterations = 3,
@@ -163,20 +172,23 @@ class TrivialPowerBenchmark {
         assumeTrue(BatteryCharge.hasMinimumCharge())
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics =
-                listOf(
-                    PowerMetric(PowerMetric.Battery()),
-                    PowerMetric(
-                        PowerMetric.Power(
-                            PowerCategory.values().associateWith { PowerCategoryDisplayLevel.TOTAL }
-                        )
-                    ),
-                    PowerMetric(
-                        PowerMetric.Energy(
-                            PowerCategory.values().associateWith { PowerCategoryDisplayLevel.TOTAL }
-                        )
-                    ),
+            metrics = listOf(
+                PowerMetric(
+                    PowerMetric.Battery()
                 ),
+                PowerMetric(
+                    PowerMetric.Power(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.TOTAL }
+                    )
+                ),
+                PowerMetric(
+                    PowerMetric.Energy(
+                        PowerCategory.values()
+                            .associateWith { PowerCategoryDisplayLevel.TOTAL }
+                    )
+                ),
+            ),
             compilationMode = CompilationMode.None(),
             startupMode = StartupMode.COLD,
             iterations = 3,
@@ -189,11 +201,18 @@ class TrivialPowerBenchmark {
             var done = false
             val threads = emptyList<Thread>()
             try {
-                repeat(8) { threads.toMutableList().add(thread(start = true) { while (!done) {} }) }
+                repeat(8) {
+                    threads.toMutableList().add(
+                        thread(start = true) {
+                            while (!done) { }
+                        })
+                }
                 Thread.sleep(DURATION_MS.toLong())
             } finally {
                 done = true
-                threads.forEach { it.join() }
+                threads.forEach {
+                    it.join()
+                }
             }
         }
     }

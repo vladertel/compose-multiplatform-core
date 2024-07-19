@@ -64,10 +64,8 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 public void setRowId(int id) { this.rowId = rowId; }
             """
         ) { entity, invocation ->
-            assertThat(
-                entity.type.asTypeName().toString(CodeLanguage.JAVA),
-                `is`("foo.bar.MyEntity")
-            )
+            assertThat(entity.type.asTypeName().toString(CodeLanguage.JAVA),
+                `is`("foo.bar.MyEntity"))
             assertThat(entity.fields.size, `is`(1))
             val field = entity.fields.first()
             val intType = invocation.processingEnv.requireType(XTypeName.PRIMITIVE_INT)
@@ -83,14 +81,10 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                     )
                 )
             )
-            assertThat(
-                field.setter,
-                `is`(FieldSetter("rowId", "setRowId", intType, CallType.METHOD))
-            )
-            assertThat(
-                field.getter,
-                `is`(FieldGetter("rowId", "getRowId", intType, CallType.METHOD))
-            )
+            assertThat(field.setter,
+                `is`(FieldSetter("rowId", "setRowId", intType, CallType.METHOD)))
+            assertThat(field.getter,
+                `is`(FieldGetter("rowId", "getRowId", intType, CallType.METHOD)))
             assertThat(entity.primaryKey.fields, `is`(Fields(field)))
             assertThat(entity.shadowTableName, `is`("MyEntity_content"))
             assertThat(entity.ftsVersion, `is`(FtsVersion.FTS3))
@@ -105,8 +99,7 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 public String getContent() { return content; }
                 public void setContent(String content) { this.content = content; }
             """
-        ) { _, _ ->
-        }
+        ) { _, _ -> }
     }
 
     @Test
@@ -120,7 +113,9 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 """
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorContaining(ProcessorErrors.MISSING_PRIMARY_KEYS_ANNOTATION_IN_ROW_ID)
+                hasErrorContaining(
+                    ProcessorErrors.MISSING_PRIMARY_KEYS_ANNOTATION_IN_ROW_ID
+                )
             }
         }
     }
@@ -136,7 +131,9 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 """
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorContaining(ProcessorErrors.INVALID_FTS_ENTITY_PRIMARY_KEY_NAME)
+                hasErrorContaining(
+                    ProcessorErrors.INVALID_FTS_ENTITY_PRIMARY_KEY_NAME
+                )
             }
         }
     }
@@ -153,7 +150,9 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 """
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorContaining(ProcessorErrors.INVALID_FTS_ENTITY_PRIMARY_KEY_AFFINITY)
+                hasErrorContaining(
+                    ProcessorErrors.INVALID_FTS_ENTITY_PRIMARY_KEY_AFFINITY
+                )
             }
         }
     }
@@ -169,7 +168,9 @@ class Fts3TableEntityProcessorTest : BaseFtsEntityParserTest() {
                 """
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorContaining(ProcessorErrors.TOO_MANY_PRIMARY_KEYS_IN_FTS_ENTITY)
+                hasErrorContaining(
+                    ProcessorErrors.TOO_MANY_PRIMARY_KEYS_IN_FTS_ENTITY
+                )
             }
         }
     }

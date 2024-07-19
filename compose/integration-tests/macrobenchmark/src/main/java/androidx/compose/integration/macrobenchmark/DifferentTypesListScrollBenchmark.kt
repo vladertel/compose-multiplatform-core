@@ -34,7 +34,8 @@ import org.junit.Test
 
 @LargeTest
 class DifferentTypesListScrollBenchmark {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     private lateinit var device: UiDevice
 

@@ -45,9 +45,13 @@ fun SelectableSample() {
             listOf(option1, option2).forEach { color ->
                 val selected = selectedOption == color
                 Box(
-                    Modifier.size(100.dp)
+                    Modifier
+                        .size(100.dp)
                         .background(color = color)
-                        .selectable(selected = selected, onClick = { selectedOption = color })
+                        .selectable(
+                            selected = selected,
+                            onClick = { selectedOption = color }
+                        )
                 )
             }
         }

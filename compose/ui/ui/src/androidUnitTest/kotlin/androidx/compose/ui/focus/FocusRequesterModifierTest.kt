@@ -42,7 +42,8 @@ class FocusRequesterModifierTest {
         val modifier = Modifier.focusRequester(focusRequester) as InspectableValue
         assertThat(modifier.nameFallback).isEqualTo("focusRequester")
         assertThat(modifier.valueOverride).isNull()
-        assertThat(modifier.inspectableElements.asIterable())
-            .containsExactly(ValueElement("focusRequester", focusRequester))
+        assertThat(modifier.inspectableElements.asIterable()).containsExactly(
+            ValueElement("focusRequester", focusRequester)
+        )
     }
 }

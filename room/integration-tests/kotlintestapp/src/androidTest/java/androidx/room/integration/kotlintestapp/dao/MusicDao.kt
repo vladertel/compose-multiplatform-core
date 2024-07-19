@@ -53,19 +53,26 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MusicDao {
-    @Insert fun addSongs(vararg songs: Song)
+    @Insert
+    fun addSongs(vararg songs: Song)
 
-    @Insert fun addArtists(vararg artists: Artist)
+    @Insert
+    fun addArtists(vararg artists: Artist)
 
-    @Insert fun addAlbums(vararg albums: Album)
+    @Insert
+    fun addAlbums(vararg albums: Album)
 
-    @Insert fun addPlaylists(vararg playlists: Playlist)
+    @Insert
+    fun addPlaylists(vararg playlists: Playlist)
 
-    @Insert fun addPlaylistSongRelations(vararg relations: PlaylistSongXRef)
+    @Insert
+    fun addPlaylistSongRelations(vararg relations: PlaylistSongXRef)
 
-    @Delete fun removePlaylistSongRelations(vararg relations: PlaylistSongXRef)
+    @Delete
+    fun removePlaylistSongRelations(vararg relations: PlaylistSongXRef)
 
-    @Insert fun addImages(vararg images: Image)
+    @Insert
+    fun addImages(vararg images: Image)
 
     /* Map of Object to Object */
     @Query("SELECT * FROM Artist JOIN Song ON Artist.mArtistName = Song.mArtist")
@@ -78,7 +85,8 @@ interface MusicDao {
     @Transaction
     fun getAllArtistAndTheirAlbumsWithSongs(): Map<Artist, AlbumWithSongs>
 
-    @RawQuery fun getAllArtistAndTheirSongsRawQuery(query: SupportSQLiteQuery): Map<Artist, Song>
+    @RawQuery
+    fun getAllArtistAndTheirSongsRawQuery(query: SupportSQLiteQuery): Map<Artist, Song>
 
     @Query("SELECT * FROM Artist JOIN Song ON Artist.mArtistName = Song.mArtist")
     fun getAllArtistAndTheirSongsAsLiveData(): LiveData<Map<Artist, Song>>
@@ -226,9 +234,8 @@ interface MusicDao {
 
     @MapInfo(valueColumn = "mAlbumCover")
     @RawQuery
-    fun getAllArtistsWithAlbumCoversRawQuery(
-        query: SupportSQLiteQuery
-    ): ImmutableMap<Artist, ByteBuffer>
+    fun getAllArtistsWithAlbumCoversRawQuery(query: SupportSQLiteQuery):
+        ImmutableMap<Artist, ByteBuffer>
 
     @Query("SELECT * FROM Artist JOIN Image ON Artist.mArtistName = Image.mArtistInImage")
     @MapInfo(valueColumn = "mImageYear")
@@ -237,9 +244,8 @@ interface MusicDao {
 
     @MapInfo(keyColumn = "mImageYear")
     @RawQuery
-    fun getAllAlbumCoverYearToArtistsWithRawQuery(
-        query: SupportSQLiteQuery
-    ): ImmutableMap<Long, Artist>
+    fun getAllAlbumCoverYearToArtistsWithRawQuery(query: SupportSQLiteQuery):
+        ImmutableMap<Long, Artist>
 
     @Query("SELECT * FROM Image JOIN Artist ON Artist.mArtistName = Image.mArtistInImage")
     @MapInfo(keyColumn = "mAlbumCover", valueColumn = "mIsActive")
@@ -330,7 +336,8 @@ interface MusicDao {
         """
     )
     @RewriteQueriesToDropUnusedColumns
-    fun getImageToArtistToAlbumsMappedToSongs(): Map<Image, Map<Artist, Map<Album, List<Song>>>>
+    fun getImageToArtistToAlbumsMappedToSongs():
+        Map<Image, Map<Artist, Map<Album, List<Song>>>>
 
     @Query(
         """
@@ -374,11 +381,8 @@ interface MusicDao {
     @Query("SELECT * FROM Artist JOIN Song ON Artist.mArtistName = Song.mArtist")
     @RewriteQueriesToDropUnusedColumns
     fun artistNameToSongsMapColumn():
-        Map<
-            @MapColumn(columnName = "mArtistName")
-            String,
-            List<@MapColumn(columnName = "mReleasedYear") Int>
-        >
+        Map<@MapColumn(columnName = "mArtistName") String,
+            List<@MapColumn(columnName = "mReleasedYear") Int>>
 
     @Query(
         """
@@ -390,11 +394,8 @@ interface MusicDao {
     )
     @RewriteQueriesToDropUnusedColumns
     fun getImageYearToArtistToAlbumsToSongsMapColumn():
-        Map<
-            @MapColumn(columnName = "mImageYear")
-            Long,
-            Map<Artist, Map<@MapColumn(columnName = "mAlbumName") String, List<Song>>>
-        >
+        Map<@MapColumn(columnName = "mImageYear") Long, Map<Artist,
+            Map<@MapColumn(columnName = "mAlbumName") String, List<Song>>>>
 
     @Query(
         """
@@ -406,31 +407,12 @@ interface MusicDao {
     )
     @RewriteQueriesToDropUnusedColumns
     fun getImageYearToArtistToAlbumsToSongsMultiMapColumn():
-        Map<
-            Image,
-            Map<
-                Artist,
-                Map<
-                    @MapColumn(columnName = "mAlbumName")
-                    String,
-                    List<@MapColumn(columnName = "mReleasedYear") Int>
-                >
-            >
-        >
+        Map<Image, Map<Artist, Map<@MapColumn(columnName = "mAlbumName") String,
+            List<@MapColumn(columnName = "mReleasedYear") Int>>>>
 
     @RawQuery
     @RewriteQueriesToDropUnusedColumns
-    fun getImageYearToArtistToAlbumsToSongsMultiMapColumn(
-        query: SupportSQLiteQuery
-    ): Map<
-        Image,
-        Map<
-            Artist,
-            Map<
-                @MapColumn(columnName = "mAlbumName")
-                String,
-                List<@MapColumn(columnName = "mReleasedYear") Int>
-            >
-        >
-    >
+    fun getImageYearToArtistToAlbumsToSongsMultiMapColumn(query: SupportSQLiteQuery):
+        Map<Image, Map<Artist, Map<@MapColumn(columnName = "mAlbumName") String,
+            List<@MapColumn(columnName = "mReleasedYear") Int>>>>
 }

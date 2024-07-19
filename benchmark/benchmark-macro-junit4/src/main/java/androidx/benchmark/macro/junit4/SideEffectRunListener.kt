@@ -16,7 +16,6 @@
 
 package androidx.benchmark.macro.junit4
 
-import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.DisableDexOpt
 import androidx.benchmark.DisablePackages
@@ -25,28 +24,25 @@ import org.junit.runner.Description
 import org.junit.runner.Result
 import org.junit.runner.notification.RunListener
 
-/** Enables the use of side-effects that reduce the noise during a macro benchmark run. */
-@Suppress("unused") // referenced by inst arg at runtime
+/**
+ * Enables the use of side-effects that reduce the noise during a macro benchmark run.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 class SideEffectRunListener : RunListener() {
-    private val delegate: RunListenerDelegate =
-        RunListenerDelegate(
-            sideEffects =
-                listOf(
-                    DisablePackages(),
-                    DisableDexOpt(),
-                )
+    private val delegate: RunListenerDelegate = RunListenerDelegate(
+        sideEffects = listOf(
+            DisablePackages(),
+            DisableDexOpt(),
         )
+    )
 
     override fun testRunStarted(description: Description) {
         super.testRunStarted(description)
-        Log.d("Benchmark", "SideEffectRunListener#onTestRunStarted")
         delegate.onTestRunStarted()
     }
 
     override fun testRunFinished(result: Result) {
         super.testRunFinished(result)
-        Log.d("Benchmark", "SideEffectRunListener#onTestRunFinished")
         delegate.onTestRunFinished()
     }
 }

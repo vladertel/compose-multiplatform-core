@@ -22,8 +22,7 @@ import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
-class FakeZoomCompat
-constructor(
+class FakeZoomCompat constructor(
     override val minZoomRatio: Float = 0f,
     override val maxZoomRatio: Float = 0f,
     var croppedSensorArea: Rect = Rect(0, 0, 640, 480),
@@ -33,7 +32,9 @@ constructor(
 
     override fun applyAsync(zoomRatio: Float, camera: UseCaseCamera): Deferred<Unit> {
         return applyAsyncResult.also { result ->
-            result.invokeOnCompletion { this.zoomRatio = zoomRatio }
+            result.invokeOnCompletion {
+                this.zoomRatio = zoomRatio
+            }
         }
     }
 

@@ -19,7 +19,6 @@ package androidx.paging
 @Suppress("DEPRECATION")
 internal class RecordingCallback : PagedList.Callback() {
     private val list = mutableListOf<Int>()
-
     override fun onChanged(position: Int, count: Int) {
         list.add(Changed)
         list.add(position)

@@ -56,7 +56,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class ContextMenuGestureTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val tag = "testTag"
 
@@ -66,7 +67,12 @@ class ContextMenuGestureTest {
         val state = ContextMenuState()
         val touchPosition = Offset(10f, 10f)
         rule.setContent {
-            Box(modifier = Modifier.testTag(tag).size(100.dp).contextMenuGestures(state))
+            Box(
+                modifier = Modifier
+                    .testTag(tag)
+                    .size(100.dp)
+                    .contextMenuGestures(state)
+            )
         }
 
         assertThatContextMenuState(state).statusIsClosed()
@@ -88,22 +94,22 @@ class ContextMenuGestureTest {
         var enableContextMenuGesture by mutableStateOf(false)
         var pressCount = 0
         rule.setContent {
-            val maybeAdditionalPointerInput =
-                if (enableContextMenuGesture) Modifier.contextMenuGestures(state) else Modifier
+            val maybeAdditionalPointerInput = if (enableContextMenuGesture)
+                Modifier.contextMenuGestures(state) else Modifier
             Box(
-                modifier =
-                    Modifier.testTag(tag)
-                        .size(100.dp)
-                        .then(maybeAdditionalPointerInput)
-                        .pointerInput(Unit) {
-                            // increment counter on a down, don't consume event.
-                            awaitEachGesture {
-                                val event = awaitPointerEvent()
-                                if (event.changes.fastAll { it.changedToDown() }) {
-                                    pressCount++
-                                }
+                modifier = Modifier
+                    .testTag(tag)
+                    .size(100.dp)
+                    .then(maybeAdditionalPointerInput)
+                    .pointerInput(Unit) {
+                        // increment counter on a down, don't consume event.
+                        awaitEachGesture {
+                            val event = awaitPointerEvent()
+                            if (event.changes.fastAll { it.changedToDown() }) {
+                                pressCount++
                             }
                         }
+                    }
             )
         }
 
@@ -121,7 +127,6 @@ class ContextMenuGestureTest {
         assertThatContextMenuState(state).statusIsOpen()
         assertThat(pressCount).isEqualTo(2)
     }
-
     // endregion Modifier.contextMenuGestures Tests
 
     // region PointerInputScope.onRightClickDown Tests
@@ -130,10 +135,11 @@ class ContextMenuGestureTest {
         onClick: (Offset) -> Unit,
     ) {
         Box(
-            modifier =
-                Modifier.background(Color.LightGray).size(100.dp).testTag(tag).pointerInput(Unit) {
-                    onRightClickDown(onClick)
-                }
+            modifier = Modifier
+                .background(Color.LightGray)
+                .size(100.dp)
+                .testTag(tag)
+                .pointerInput(Unit) { onRightClickDown(onClick) }
         )
     }
 
@@ -179,12 +185,16 @@ class ContextMenuGestureTest {
     fun whenOnRightClickDown_alreadyConsumed_doesNotTrigger() {
         var clickCount = 0
         rule.setContent {
-            Box(modifier = Modifier.pointerInput(Unit) { onRightClickDown { clickCount++ } }) {
+            Box(
+                modifier = Modifier
+                    .pointerInput(Unit) { onRightClickDown { clickCount++ } }
+            ) {
                 Box(
-                    modifier =
-                        Modifier.background(Color.LightGray).size(100.dp).testTag(tag).pointerInput(
-                            Unit
-                        ) {
+                    modifier = Modifier
+                        .background(Color.LightGray)
+                        .size(100.dp)
+                        .testTag(tag)
+                        .pointerInput(Unit) {
                             awaitPointerEventScope {
                                 while (true) {
                                     awaitPointerEvent().changes.fastForEach { it.consume() }
@@ -205,26 +215,29 @@ class ContextMenuGestureTest {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent()
-                    assertThat(event.changes.fastMap { it.isConsumed }.toSet()).run {
-                        when (event.type) {
-                            PointerEventType.Press,
-                            PointerEventType.Release -> containsExactly(true)
-                            else -> containsExactly(false)
+                    assertThat(event.changes.fastMap { it.isConsumed }.toSet())
+                        .run {
+                            when (event.type) {
+                                PointerEventType.Press,
+                                PointerEventType.Release -> containsExactly(true)
+
+                                else -> containsExactly(false)
+                            }
                         }
-                    }
                 }
             }
         }
 
         rule.setContent {
-            Box(modifier = Modifier.pointerInput(Unit) { assertCorrectlyConsumed() }) {
+            Box(
+                modifier = Modifier.pointerInput(Unit) { assertCorrectlyConsumed() }
+            ) {
                 Box(
-                    modifier =
-                        Modifier.background(Color.LightGray).size(100.dp).testTag(tag).pointerInput(
-                            Unit
-                        ) {
-                            onRightClickDown { /* Nothing */ }
-                        }
+                    modifier = Modifier
+                        .background(Color.LightGray)
+                        .size(100.dp)
+                        .testTag(tag)
+                        .pointerInput(Unit) { onRightClickDown { /* Nothing */ } }
                 )
             }
         }

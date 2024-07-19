@@ -21,7 +21,7 @@ package androidx.wear.compose.material3.tokens
 
 internal object OutlinedTextButtonTokens {
     val ContainerShape = ShapeKeyTokens.CornerFull
-    val ContentColor = ColorSchemeKeyTokens.OnSurface
+    val ContentColor = ColorSchemeKeyTokens.OnBackground
     val ContentFont = TypographyKeyTokens.LabelMedium
     val DisabledContentColor = ColorSchemeKeyTokens.OnSurface
     val DisabledContentOpacity = 0.38f

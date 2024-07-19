@@ -50,7 +50,6 @@ class DrawableContainerCompatTest {
 
     internal class MyDrawableContainerState : DrawableContainerCompat.DrawableContainerState {
         constructor() : super(null, null, null)
-
         constructor(orig: DrawableContainerCompat.DrawableContainerState?) : super(orig, null, null)
 
         init {

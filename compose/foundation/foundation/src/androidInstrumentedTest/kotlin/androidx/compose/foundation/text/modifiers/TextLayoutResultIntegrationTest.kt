@@ -55,18 +55,20 @@ class TextLayoutResultIntegrationTest {
             val text = "Hello"
             val spanStyle = SpanStyle(fontSize = fontSize, fontFamily = fontFamily)
             val annotatedString = AnnotatedString(text, spanStyle)
-            val textDelegate =
-                MultiParagraphLayoutCache(
-                        text = annotatedString,
-                        style = TextStyle.Default,
-                        fontFamilyResolver = fontFamilyResolver
-                    )
-                    .also { it.density = this }
+            val textDelegate = MultiParagraphLayoutCache(
+                text = annotatedString,
+                style = TextStyle.Default,
+                fontFamilyResolver = fontFamilyResolver
+            ).also {
+                it.density = this
+            }
 
             textDelegate.layoutWithConstraints(Constraints(0, 200), layoutDirection)
             val layoutResult = textDelegate.textLayoutResult
 
-            assertThat(layoutResult.size.width).isEqualTo((fontSize.toPx() * text.length).toIntPx())
+            assertThat(layoutResult.size.width).isEqualTo(
+                (fontSize.toPx() * text.length).toIntPx()
+            )
         }
     }
 
@@ -76,13 +78,13 @@ class TextLayoutResultIntegrationTest {
         val width = 80
         val spanStyle = SpanStyle(fontSize = 20.sp, fontFamily = fontFamily)
         val annotatedString = AnnotatedString(text, spanStyle)
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver
+        ).also {
+            it.density = density
+        }
 
         textDelegate.layoutWithConstraints(Constraints(maxWidth = width), layoutDirection)
         val layoutResult = textDelegate.textLayoutResult
@@ -97,13 +99,13 @@ class TextLayoutResultIntegrationTest {
             val spanStyle = SpanStyle(fontSize = fontSize, fontFamily = fontFamily)
             val text = "hello"
             val annotatedString = AnnotatedString(text, spanStyle)
-            val textDelegate =
-                MultiParagraphLayoutCache(
-                        text = annotatedString,
-                        style = TextStyle.Default,
-                        fontFamilyResolver = fontFamilyResolver
-                    )
-                    .also { it.density = this }
+            val textDelegate = MultiParagraphLayoutCache(
+                text = annotatedString,
+                style = TextStyle.Default,
+                fontFamilyResolver = fontFamilyResolver
+            ).also {
+                it.density = this
+            }
 
             textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
             val layoutResult = textDelegate.textLayoutResult
@@ -114,13 +116,13 @@ class TextLayoutResultIntegrationTest {
 
     @Test
     fun layout_build_layoutResult() {
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = AnnotatedString("hello"),
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = AnnotatedString("hello"),
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver
+        ).also {
+            it.density = density
+        }
 
         textDelegate.layoutWithConstraints(Constraints(0, 20), layoutDirection)
         val layoutResult = textDelegate.textLayoutResult
@@ -135,16 +137,18 @@ class TextLayoutResultIntegrationTest {
     @Test
     fun getPositionForOffset_First_Character() {
         val text = "Hello"
-        val annotatedString =
-            AnnotatedString(text, SpanStyle(fontSize = 20.sp, fontFamily = fontFamily))
+        val annotatedString = AnnotatedString(
+            text,
+            SpanStyle(fontSize = 20.sp, fontFamily = fontFamily)
+        )
 
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver
+        ).also {
+            it.density = density
+        }
         textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
         val layoutResult = textDelegate.textLayoutResult
 
@@ -160,23 +164,24 @@ class TextLayoutResultIntegrationTest {
             val characterIndex = 2 // Start from 0.
             val text = "Hello"
 
-            val annotatedString =
-                AnnotatedString(text, SpanStyle(fontSize = fontSize, fontFamily = fontFamily))
+            val annotatedString = AnnotatedString(
+                text,
+                SpanStyle(fontSize = fontSize, fontFamily = fontFamily)
+            )
 
-            val textDelegate =
-                MultiParagraphLayoutCache(
-                        text = annotatedString,
-                        style = TextStyle.Default,
-                        fontFamilyResolver = fontFamilyResolver
-                    )
-                    .also { it.density = this }
+            val textDelegate = MultiParagraphLayoutCache(
+                text = annotatedString,
+                style = TextStyle.Default,
+                fontFamilyResolver = fontFamilyResolver
+            ).also {
+                it.density = this
+            }
             textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
             val layoutResult = textDelegate.textLayoutResult
 
-            val selection =
-                layoutResult.getOffsetForPosition(
-                    position = Offset((fontSize.toPx() * characterIndex + 1), 0f)
-                )
+            val selection = layoutResult.getOffsetForPosition(
+                position = Offset((fontSize.toPx() * characterIndex + 1), 0f)
+            )
 
             assertThat(selection).isEqualTo(characterIndex)
         }
@@ -187,13 +192,13 @@ class TextLayoutResultIntegrationTest {
         val text = "Hello"
         val spanStyle = SpanStyle(fontSize = 20.sp, fontFamily = fontFamily)
         val annotatedString = AnnotatedString(text, spanStyle)
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver
+        ).also {
+            it.density = density
+        }
 
         textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
         val layoutResult = textDelegate.textLayoutResult
@@ -211,19 +216,22 @@ class TextLayoutResultIntegrationTest {
         val annotatedString = AnnotatedString(text, spanStyle)
         val maxLines = 3
 
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver,
-                    maxLines = maxLines
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver,
+            maxLines = maxLines
+        ).also {
+            it.density = density
+        }
 
         textDelegate.layoutWithConstraints(Constraints.fixed(0, 0), LayoutDirection.Ltr)
         // Tries to make 5 lines of text, which exceeds the given maxLines(3).
         val maxWidth = textDelegate.maxIntrinsicWidth(LayoutDirection.Ltr) / 5
-        textDelegate.layoutWithConstraints(Constraints(maxWidth = maxWidth), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(maxWidth = maxWidth),
+            layoutDirection
+        )
         val layoutResult = textDelegate.textLayoutResult
 
         assertThat(layoutResult.didOverflowHeight).isTrue()
@@ -236,19 +244,22 @@ class TextLayoutResultIntegrationTest {
         val annotatedString = AnnotatedString(text, spanStyle)
         val maxLines = 10
 
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver,
-                    maxLines = maxLines
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver,
+            maxLines = maxLines
+        ).also {
+            it.density = density
+        }
 
         textDelegate.layoutWithConstraints(Constraints.fixed(0, 0), LayoutDirection.Ltr)
         // Tries to make 5 lines of text, which doesn't exceed the given maxLines(10).
         val maxWidth = textDelegate.maxIntrinsicWidth(LayoutDirection.Ltr) / 5
-        textDelegate.layoutWithConstraints(Constraints(maxWidth = maxWidth), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(maxWidth = maxWidth),
+            layoutDirection
+        )
         val layoutResult = textDelegate.textLayoutResult
 
         assertThat(layoutResult.didOverflowHeight).isFalse()
@@ -260,21 +271,27 @@ class TextLayoutResultIntegrationTest {
         val spanStyle = SpanStyle(fontSize = 20.sp, fontFamily = fontFamily)
         val annotatedString = AnnotatedString(text, spanStyle)
 
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver,
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver,
+        ).also {
+            it.density = density
+        }
 
-        textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(),
+            layoutDirection
+        )
 
         val maxIntrinsicsHeight = textDelegate.textLayoutResult.multiParagraph.height
 
         // Make maxHeight smaller than needed.
         val maxHeight = floor(maxIntrinsicsHeight / 2).toInt()
-        textDelegate.layoutWithConstraints(Constraints(maxHeight = maxHeight), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(maxHeight = maxHeight),
+            layoutDirection
+        )
         val layoutResult = textDelegate.textLayoutResult
 
         assertThat(layoutResult.didOverflowHeight).isTrue()
@@ -286,20 +303,26 @@ class TextLayoutResultIntegrationTest {
         val spanStyle = SpanStyle(fontSize = 20.sp, fontFamily = fontFamily)
         val annotatedString = AnnotatedString(text, spanStyle)
 
-        val textDelegate =
-            MultiParagraphLayoutCache(
-                    text = annotatedString,
-                    style = TextStyle.Default,
-                    fontFamilyResolver = fontFamilyResolver,
-                )
-                .also { it.density = density }
+        val textDelegate = MultiParagraphLayoutCache(
+            text = annotatedString,
+            style = TextStyle.Default,
+            fontFamilyResolver = fontFamilyResolver,
+        ).also {
+            it.density = density
+        }
 
-        textDelegate.layoutWithConstraints(Constraints(), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(),
+            layoutDirection
+        )
         val maxIntrinsicsHeight = textDelegate.textLayoutResult.multiParagraph.height
 
         // Make max height larger than the needed.
         val maxHeight = floor(maxIntrinsicsHeight * 2).toInt()
-        textDelegate.layoutWithConstraints(Constraints(maxHeight = maxHeight), layoutDirection)
+        textDelegate.layoutWithConstraints(
+            Constraints(maxHeight = maxHeight),
+            layoutDirection
+        )
         val layoutResult = textDelegate.textLayoutResult
 
         assertThat(layoutResult.didOverflowHeight).isFalse()

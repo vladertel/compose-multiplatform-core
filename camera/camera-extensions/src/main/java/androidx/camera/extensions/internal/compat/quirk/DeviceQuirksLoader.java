@@ -17,6 +17,7 @@
 package androidx.camera.extensions.internal.compat.quirk;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.Quirk;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.List;
 /**
  * Loads all device specific quirks required for the current device
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class DeviceQuirksLoader {
 
     private DeviceQuirksLoader() {
@@ -48,6 +50,14 @@ public class DeviceQuirksLoader {
 
         if (GetAvailableKeysNeedsOnInit.load()) {
             quirks.add(new GetAvailableKeysNeedsOnInit());
+        }
+
+        if (ImageAnalysisUnavailableQuirk.load()) {
+            quirks.add(new ImageAnalysisUnavailableQuirk());
+        }
+
+        if (ExtraSupportedSurfaceCombinationsQuirk.load()) {
+            quirks.add(new ExtraSupportedSurfaceCombinationsQuirk());
         }
 
         return quirks;

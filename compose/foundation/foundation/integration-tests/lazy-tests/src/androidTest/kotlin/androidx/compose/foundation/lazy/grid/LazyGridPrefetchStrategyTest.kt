@@ -44,17 +44,17 @@ import org.junit.runners.Parameterized
 @LargeTest
 @RunWith(Parameterized::class)
 @OptIn(ExperimentalFoundationApi::class)
-class LazyGridPrefetchStrategyTest(val config: Config) :
-    BaseLazyGridTestWithOrientation(config.orientation) {
+class LazyGridPrefetchStrategyTest(
+    val config: Config
+) : BaseLazyGridTestWithOrientation(config.orientation) {
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun initParameters(): Array<Any> =
-            arrayOf(
-                Config(Orientation.Vertical),
-                Config(Orientation.Horizontal),
-            )
+        fun initParameters(): Array<Any> = arrayOf(
+            Config(Orientation.Vertical),
+            Config(Orientation.Horizontal),
+        )
 
         class Config(
             val orientation: Orientation,
@@ -66,10 +66,9 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
             get() = visibleItemsInfo.map { it.index }.sorted()
 
         private val LazyGridLayoutInfo.lastLineIndex: Int
-            get() =
-                visibleItemsInfo.last().let {
-                    if (this.orientation == Orientation.Vertical) it.row else it.column
-                }
+            get() = visibleItemsInfo.last().let {
+                if (this.orientation == Orientation.Vertical) it.row else it.column
+            }
     }
 
     private val itemsSizePx = 30
@@ -84,20 +83,25 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
 
         composeGrid(prefetchStrategy = strategy)
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                Callback.OnVisibleItemsUpdated(visibleIndices = listOf(0, 1, 2, 3)),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(0, 1, 2, 3)
+            ),
+        ).inOrder()
         strategy.reset()
 
-        rule.runOnIdle { runBlocking { state.scrollBy(5f) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollBy(5f)
+            }
+        }
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                Callback.OnScroll(delta = -5f, visibleIndices = listOf(0, 1, 2, 3)),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            Callback.OnScroll(
+                delta = -5f,
+                visibleIndices = listOf(0, 1, 2, 3)
+            ),
+        ).inOrder()
     }
 
     @Test
@@ -106,20 +110,25 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
 
         composeGrid(firstItem = 10, itemOffset = 10, prefetchStrategy = strategy)
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                Callback.OnVisibleItemsUpdated(visibleIndices = listOf(10, 11, 12, 13)),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(10, 11, 12, 13)
+            ),
+        ).inOrder()
         strategy.reset()
 
-        rule.runOnIdle { runBlocking { state.scrollBy(-5f) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollBy(-5f)
+            }
+        }
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                Callback.OnScroll(delta = 5f, visibleIndices = listOf(10, 11, 12, 13)),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            Callback.OnScroll(
+                delta = 5f,
+                visibleIndices = listOf(10, 11, 12, 13)
+            ),
+        ).inOrder()
     }
 
     @Test
@@ -128,28 +137,28 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
 
         composeGrid(prefetchStrategy = strategy)
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
-                    visibleIndices = listOf(0, 1, 2, 3)
-                ),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(0, 1, 2, 3)
+            ),
+        ).inOrder()
         strategy.reset()
 
-        rule.runOnIdle { runBlocking { state.scrollBy(itemsSizePx + 5f) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollBy(itemsSizePx + 5f)
+            }
+        }
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
-                    visibleIndices = listOf(2, 3, 4, 5)
-                ),
-                RecordingLazyGridPrefetchStrategy.Callback.OnScroll(
-                    delta = -(itemsSizePx + 5f),
-                    visibleIndices = listOf(2, 3, 4, 5)
-                ),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(2, 3, 4, 5)
+            ),
+            RecordingLazyGridPrefetchStrategy.Callback.OnScroll(
+                delta = -(itemsSizePx + 5f),
+                visibleIndices = listOf(2, 3, 4, 5)
+            ),
+        ).inOrder()
     }
 
     @Test
@@ -159,26 +168,22 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
 
         composeGrid(prefetchStrategy = strategy, numItems = numItems)
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
-                    visibleIndices = listOf(0, 1, 2, 3)
-                ),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(0, 1, 2, 3)
+            ),
+        ).inOrder()
         strategy.reset()
 
         numItems.value = 1
 
         rule.waitForIdle()
 
-        assertThat(strategy.callbacks)
-            .containsExactly(
-                RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
-                    visibleIndices = listOf(0)
-                ),
-            )
-            .inOrder()
+        assertThat(strategy.callbacks).containsExactly(
+            RecordingLazyGridPrefetchStrategy.Callback.OnVisibleItemsUpdated(
+                visibleIndices = listOf(0)
+            ),
+        ).inOrder()
     }
 
     @Test
@@ -187,15 +192,23 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
 
         composeGrid(prefetchStrategy = strategy)
 
-        rule.runOnIdle { runBlocking { state.scrollBy(5f) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollBy(5f)
+            }
+        }
 
         waitForPrefetch()
-        rule.onNodeWithTag("4").assertExists()
-        rule.onNodeWithTag("5").assertExists()
+        rule.onNodeWithTag("4")
+            .assertExists()
+        rule.onNodeWithTag("5")
+            .assertExists()
     }
 
     private fun waitForPrefetch() {
-        rule.runOnIdle { scheduler.executeActiveRequests() }
+        rule.runOnIdle {
+            scheduler.executeActiveRequests()
+        }
     }
 
     /**
@@ -204,9 +217,10 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
      *
      * Example in vertical orientation:
      * -------
-     * | | | index 0, 1
+     * |  |  |  index 0, 1
      * -------
-     * | | | index 2, 3
+     * |  |  |  index 2, 3
+     *
      */
     @OptIn(ExperimentalFoundationApi::class)
     private fun composeGrid(
@@ -216,30 +230,38 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
         prefetchStrategy: LazyGridPrefetchStrategy = DefaultLazyGridPrefetchStrategy()
     ) {
         rule.setContent {
-            state =
-                rememberLazyGridState(
-                    initialFirstVisibleItemIndex = firstItem,
-                    initialFirstVisibleItemScrollOffset = itemOffset,
-                    prefetchStrategy = prefetchStrategy
-                )
+            state = rememberLazyGridState(
+                initialFirstVisibleItemIndex = firstItem,
+                initialFirstVisibleItemScrollOffset = itemOffset,
+                prefetchStrategy = prefetchStrategy
+            )
             LazyGrid(
                 cells = 2,
-                Modifier.mainAxisSize(itemsSizeDp * 1.5f).crossAxisSize(itemsSizeDp * 2),
+                Modifier
+                    .mainAxisSize(itemsSizeDp * 1.5f)
+                    .crossAxisSize(itemsSizeDp * 2),
                 state,
             ) {
-                items(numItems.value) { Spacer(Modifier.size(itemsSizeDp).testTag("$it")) }
+                items(numItems.value) {
+                    Spacer(
+                        Modifier
+                            .size(itemsSizeDp)
+                            .testTag("$it")
+                    )
+                }
             }
         }
     }
 
-    /** LazyGridPrefetchStrategy that just records callbacks without scheduling prefetches. */
+    /**
+     * LazyGridPrefetchStrategy that just records callbacks without scheduling prefetches.
+     */
     private class RecordingLazyGridPrefetchStrategy(
         override val prefetchScheduler: PrefetchScheduler?
     ) : LazyGridPrefetchStrategy {
 
         sealed interface Callback {
             data class OnScroll(val delta: Float, val visibleIndices: List<Int>) : Callback
-
             data class OnVisibleItemsUpdated(val visibleIndices: List<Int>) : Callback
         }
 
@@ -267,7 +289,8 @@ class LazyGridPrefetchStrategyTest(val config: Config) :
      */
     private class PrefetchNextLargestLineIndexStrategy : LazyGridPrefetchStrategy {
 
-        private val handles = mutableVectorOf<LazyLayoutPrefetchState.PrefetchHandle>()
+        private val handles =
+            mutableVectorOf<LazyLayoutPrefetchState.PrefetchHandle>()
         private var prefetchIndex: Int = -1
 
         override fun LazyGridPrefetchScope.onScroll(delta: Float, layoutInfo: LazyGridLayoutInfo) {

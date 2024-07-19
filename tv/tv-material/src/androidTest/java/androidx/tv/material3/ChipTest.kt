@@ -51,24 +51,28 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalTestApi::class, ExperimentalTvMaterial3Api::class)
+@OptIn(
+    ExperimentalTestApi::class,
+    ExperimentalTvMaterial3Api::class
+)
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ChipTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun assistChip_defaultSemantics() {
         rule.setContent {
             Box {
-                AssistChip(modifier = Modifier.testTag(AssistChipTag), onClick = {}) {
-                    Text("Test Text")
-                }
+                AssistChip(
+                    modifier = Modifier.testTag(AssistChipTag),
+                    onClick = {}
+                ) { Text("Test Text") }
             }
         }
 
-        rule
-            .onNodeWithTag(AssistChipTag)
+        rule.onNodeWithTag(AssistChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertIsEnabled()
     }
@@ -82,9 +86,7 @@ class ChipTest {
                     modifier = Modifier.testTag(AssistChipTag),
                     onClick = {},
                     onLongClick = { count++ }
-                ) {
-                    Text("Test Text")
-                }
+                ) { Text("Test Text") }
             }
         }
 
@@ -110,14 +112,11 @@ class ChipTest {
                     modifier = Modifier.testTag(AssistChipTag),
                     onClick = {},
                     enabled = false
-                ) {
-                    Text("Test Text")
-                }
+                ) { Text("Test Text") }
             }
         }
 
-        rule
-            .onNodeWithTag(AssistChipTag)
+        rule.onNodeWithTag(AssistChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertIsNotEnabled()
     }
@@ -129,16 +128,21 @@ class ChipTest {
 
         rule.setContent {
             Box {
-                AssistChip(modifier = Modifier.testTag(AssistChipTag), onClick = onClick) {
-                    Text("Test Text")
-                }
+                AssistChip(
+                    modifier = Modifier.testTag(AssistChipTag),
+                    onClick = onClick
+                ) { Text("Test Text") }
             }
         }
-        rule.onNodeWithTag(AssistChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(AssistChipTag)
+            .requestFocus()
+            .performKeyInput {
+                pressKey(Key.DirectionCenter)
+            }
 
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(1)
+        }
     }
 
     @Test
@@ -150,13 +154,10 @@ class ChipTest {
                     modifier = Modifier.testTag(AssistChipTag),
                     onClick = { enabled = false },
                     enabled = enabled
-                ) {
-                    Text("Test Text")
-                }
+                ) { Text("Test Text") }
             }
         }
-        rule
-            .onNodeWithTag(AssistChipTag)
+        rule.onNodeWithTag(AssistChipTag)
             .requestFocus()
             // Confirm the filterChip starts off enabled, with a click action
             .assertHasClickAction()
@@ -179,30 +180,29 @@ class ChipTest {
 
         rule.setContent {
             Column {
-                AssistChip(modifier = Modifier.testTag(loginChipTag), onClick = loginChipOnClick) {
-                    Text("Login")
-                }
+                AssistChip(
+                    modifier = Modifier.testTag(loginChipTag),
+                    onClick = loginChipOnClick
+                ) { Text("Login") }
                 AssistChip(
                     modifier = Modifier.testTag(registerChipTag),
                     onClick = registerChipOnClick
-                ) {
-                    Text("Register")
-                }
+                ) { Text("Register") }
             }
         }
 
-        rule.onNodeWithTag(loginChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(loginChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
             Truth.assertThat(registerCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag(registerChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(registerChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
@@ -224,8 +224,7 @@ class ChipTest {
             }
         }
 
-        rule
-            .onNodeWithTag(FilterChipTag)
+        rule.onNodeWithTag(FilterChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsEnabled()
     }
@@ -269,14 +268,11 @@ class ChipTest {
                     onClick = {},
                     enabled = false,
                     selected = false
-                ) {
-                    Text("Test Text")
-                }
+                ) { Text("Test Text") }
             }
         }
 
-        rule
-            .onNodeWithTag(FilterChipTag)
+        rule.onNodeWithTag(FilterChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsNotEnabled()
     }
@@ -292,14 +288,12 @@ class ChipTest {
                     modifier = Modifier.testTag(FilterChipTag),
                     onClick = onClick,
                     selected = false
-                ) {
-                    Text("Test Text")
-                }
+                ) { Text("Test Text") }
             }
         }
-        rule.onNodeWithTag(FilterChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(FilterChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
         rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
     }
 
@@ -314,9 +308,9 @@ class ChipTest {
                     onClick = { isSelected = true },
                     leadingIcon = {
                         Box(
-                            modifier =
-                                Modifier.testTag(FilterChipLeadingContentTag)
-                                    .size(FilterChipDefaults.IconSize),
+                            modifier = Modifier
+                                .testTag(FilterChipLeadingContentTag)
+                                .size(FilterChipDefaults.IconSize),
                         )
                     }
                 ) {
@@ -324,9 +318,9 @@ class ChipTest {
                 }
             }
         }
-        rule.onNodeWithTag(FilterChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(FilterChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
         rule.waitUntil { isSelected }
         rule.onNodeWithTag(FilterChipLeadingContentTag, useUnmergedTree = true).assertIsDisplayed()
     }
@@ -341,10 +335,9 @@ class ChipTest {
                     selected = isSelected,
                     leadingIcon = {
                         Box(
-                            modifier =
-                                Modifier.size(DefaultIconSize).semantics {
-                                    contentDescription = "Add Icon"
-                                }
+                            modifier = Modifier
+                                .size(DefaultIconSize)
+                                .semantics { contentDescription = "Add Icon" }
                         )
                     },
                     onClick = { isSelected = true }
@@ -353,9 +346,9 @@ class ChipTest {
                 }
             }
         }
-        rule.onNodeWithTag(FilterChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(FilterChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
         rule.onNodeWithContentDescription("Filter Selected").assertDoesNotExist()
         rule.onNodeWithContentDescription("Add Icon").assertIsDisplayed()
     }
@@ -375,8 +368,7 @@ class ChipTest {
                 }
             }
         }
-        rule
-            .onNodeWithTag(FilterChipTag)
+        rule.onNodeWithTag(FilterChipTag)
             .requestFocus()
             // Confirm the filterChip starts off enabled, with a click action
             .assertHasClickAction()
@@ -403,31 +395,27 @@ class ChipTest {
                     modifier = Modifier.testTag(loginChipTag),
                     onClick = loginChipOnClick,
                     selected = true
-                ) {
-                    Text("Login")
-                }
+                ) { Text("Login") }
                 FilterChip(
                     modifier = Modifier.testTag(registerChipTag),
                     onClick = registerChpOnClick,
                     selected = true
-                ) {
-                    Text("Register")
-                }
+                ) { Text("Register") }
             }
         }
 
-        rule.onNodeWithTag(loginChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(loginChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
             Truth.assertThat(registerCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag(registerChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(registerChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
@@ -449,8 +437,7 @@ class ChipTest {
             }
         }
 
-        rule
-            .onNodeWithTag(InputChipTag)
+        rule.onNodeWithTag(InputChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsEnabled()
     }
@@ -500,8 +487,7 @@ class ChipTest {
             }
         }
 
-        rule
-            .onNodeWithTag(InputChipTag)
+        rule.onNodeWithTag(InputChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertIsNotEnabled()
     }
@@ -523,10 +509,12 @@ class ChipTest {
                 }
             }
         }
-        rule.onNodeWithTag(InputChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
+        rule.onNodeWithTag(InputChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(1)
         }
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
     }
 
     @Test
@@ -544,8 +532,7 @@ class ChipTest {
                 }
             }
         }
-        rule
-            .onNodeWithTag(InputChipTag)
+        rule.onNodeWithTag(InputChipTag)
             .requestFocus()
             // Confirm the filterChip starts off enabled, with a click action
             .assertHasClickAction()
@@ -587,18 +574,18 @@ class ChipTest {
             }
         }
 
-        rule.onNodeWithTag(loginChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(loginChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
             Truth.assertThat(registerCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag(registerChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(registerChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
@@ -610,14 +597,16 @@ class ChipTest {
     fun suggestionChip_defaultSemantics() {
         rule.setContent {
             Box {
-                SuggestionChip(modifier = Modifier.testTag(SuggestionChipTag), onClick = {}) {
+                SuggestionChip(
+                    modifier = Modifier.testTag(SuggestionChipTag),
+                    onClick = {}
+                ) {
                     Text("mvTvSelectableChip")
                 }
             }
         }
 
-        rule
-            .onNodeWithTag(SuggestionChipTag)
+        rule.onNodeWithTag(SuggestionChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertIsEnabled()
     }
@@ -665,8 +654,7 @@ class ChipTest {
             }
         }
 
-        rule
-            .onNodeWithTag(SuggestionChipTag)
+        rule.onNodeWithTag(SuggestionChipTag)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertIsNotEnabled()
     }
@@ -679,15 +667,20 @@ class ChipTest {
 
         rule.setContent {
             Box {
-                SuggestionChip(modifier = Modifier.testTag(SuggestionChipTag), onClick = onClick) {
+                SuggestionChip(
+                    modifier = Modifier.testTag(SuggestionChipTag),
+                    onClick = onClick
+                ) {
                     Text(text = text)
                 }
             }
         }
-        rule.onNodeWithTag(SuggestionChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
+        rule.onNodeWithTag(SuggestionChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(1)
         }
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
     }
 
     @Test
@@ -704,8 +697,7 @@ class ChipTest {
                 }
             }
         }
-        rule
-            .onNodeWithTag(SuggestionChipTag)
+        rule.onNodeWithTag(SuggestionChipTag)
             .requestFocus()
             // Confirm the chip starts off enabled, with a click action
             .assertHasClickAction()
@@ -746,18 +738,18 @@ class ChipTest {
             }
         }
 
-        rule.onNodeWithTag(loginChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(loginChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)
             Truth.assertThat(registerCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag(registerChipTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(registerChipTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(loginCounter).isEqualTo(1)

@@ -29,7 +29,8 @@ import androidx.room.integration.kotlintestapp.vo.RelationFromDependency
 
 @Dao
 interface DependencyDao {
-    @Query("select * from DataClassFromDependency") fun selectAll(): List<DataClassFromDependency>
+    @Query("select * from DataClassFromDependency")
+    fun selectAll(): List<DataClassFromDependency>
 
     @Query("select * from DataClassFromDependency where id = :id LIMIT 1")
     fun findEmbedded(id: Int): EmbeddedFromDependency?

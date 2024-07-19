@@ -16,9 +16,6 @@
 
 package androidx.camera.camera2.internal.compat.params;
 
-import static android.hardware.camera2.params.OutputConfiguration.MIRROR_MODE_H;
-import static android.hardware.camera2.params.OutputConfiguration.MIRROR_MODE_NONE;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.Mockito.mock;
@@ -240,22 +237,6 @@ public final class OutputConfigurationCompatTest {
         outputConfigCompat.setPhysicalCameraId(PHYSICAL_CAMERA_ID);
 
         verify(outputConfig, times(1)).setPhysicalCameraId(PHYSICAL_CAMERA_ID);
-    }
-
-    @Test
-    @Config(minSdk = 33)
-    public void canSetMirrorMode() {
-        OutputConfiguration outputConfig = mock(OutputConfiguration.class);
-
-        OutputConfigurationCompat outputConfigCompat = OutputConfigurationCompat.wrap(outputConfig);
-
-        outputConfigCompat.setMirrorMode(MIRROR_MODE_NONE);
-
-        verify(outputConfig, times(1)).setMirrorMode(MIRROR_MODE_NONE);
-
-        outputConfigCompat.setMirrorMode(MIRROR_MODE_H);
-
-        verify(outputConfig, times(1)).setMirrorMode(MIRROR_MODE_H);
     }
 
     @Test

@@ -44,7 +44,9 @@ import kotlinx.coroutines.flow.collectLatest
  */
 interface PlatformTextInputModifierNode : DelegatableNode
 
-/** Receiver type for [establishTextInputSession]. */
+/**
+ * Receiver type for [establishTextInputSession].
+ */
 expect interface PlatformTextInputSession {
     /**
      * Starts the text input session and suspends until it is closed.
@@ -56,7 +58,7 @@ expect interface PlatformTextInputSession {
      * different [establishTextInputSession]s, will restart the session each time.
      *
      * @param request The platform-specific [PlatformTextInputMethodRequest] that will be used to
-     *   initiate the session.
+     * initiate the session.
      */
     suspend fun startInputMethod(request: PlatformTextInputMethodRequest): Nothing
 }
@@ -70,7 +72,9 @@ expect interface PlatformTextInputSession {
  */
 interface PlatformTextInputSessionScope : PlatformTextInputSession, CoroutineScope
 
-/** Single-function interface passed to [InterceptPlatformTextInput]. */
+/**
+ * Single-function interface passed to [InterceptPlatformTextInput].
+ */
 @ExperimentalComposeUiApi
 fun interface PlatformTextInputInterceptor {
 
@@ -112,8 +116,12 @@ fun interface PlatformTextInputInterceptor {
  * - The session function throws an exception.
  * - The requesting coroutine is cancelled.
  * - Another session is started via this method, either from the same modifier or a different one.
- * - The system closes the connection (currently only supported on Android, and there only depending
- *   on OS version).
+ *
+ * The session may remain open when:
+ * - The system closes the connection. This behavior currently only exists on Android depending on
+ *   OS version. Android platform may intermittently close the active connection to immediately
+ *   start it back again. In these cases the session will not be prematurely closed, so that it can
+ *   serve the follow-up requests.
  *
  * This function should only be called from the modifier node's
  * [coroutineScope][Modifier.Node.coroutineScope]. If it is not, the session will _not_
@@ -122,15 +130,16 @@ fun interface PlatformTextInputInterceptor {
  * @sample androidx.compose.ui.samples.platformTextInputModifierNodeSample
  *
  * @param block A suspend function that will be called when the session is started and that must
- *   call [PlatformTextInputSession.startInputMethod] to actually show and initiate the connection
- *   with the input method.
+ * call [PlatformTextInputSession.startInputMethod] to actually show and initiate the connection
+ * with the input method.
  */
 suspend fun PlatformTextInputModifierNode.establishTextInputSession(
     block: suspend PlatformTextInputSessionScope.() -> Nothing
 ): Nothing {
     require(node.isAttached) { "establishTextInputSession called from an unattached node" }
     val owner = requireOwner()
-    val handler = requireLayoutNode().compositionLocalMap[LocalChainedPlatformTextInputInterceptor]
+    val handler =
+        requireLayoutNode().compositionLocalMap[LocalChainedPlatformTextInputInterceptor]
     owner.interceptedTextInputSession(handler, block)
 }
 
@@ -138,13 +147,12 @@ suspend fun PlatformTextInputModifierNode.establishTextInputSession(
  * Intercept all calls to [PlatformTextInputSession.startInputMethod] from below where this
  * composition local is provided with the given [PlatformTextInputInterceptor].
  *
- * If a different interceptor instance is passed between compositions while a text input session is
- * active, the upstream session will be torn down and restarted with the new interceptor. The
+ * If a different interceptor instance is passed between compositions while a text input session
+ * is active, the upstream session will be torn down and restarted with the new interceptor. The
  * downstream session (i.e. the call to [PlatformTextInputSession.startInputMethod]) will _not_ be
  * cancelled and the request will be re-used to pass to the new interceptor.
  *
  * @sample androidx.compose.ui.samples.InterceptPlatformTextInputSample
- *
  * @sample androidx.compose.ui.samples.disableSoftKeyboardSample
  */
 @ExperimentalComposeUiApi
@@ -158,8 +166,9 @@ fun InterceptPlatformTextInput(
     // The only way the parent can change is if the entire subtree of the composition is moved,
     // which means the PlatformTextInputModifierNode would be detached/reattached, and the node
     // should cancel its input session when it's detached.
-    val chainedInterceptor =
-        remember(parent) { ChainedPlatformTextInputInterceptor(interceptor, parent) }
+    val chainedInterceptor = remember(parent) {
+        ChainedPlatformTextInputInterceptor(interceptor, parent)
+    }
 
     // If the interceptor changes while an input session is active, the upstream session will be
     // restarted and the downstream one will not be cancelled.
@@ -174,7 +183,9 @@ fun InterceptPlatformTextInput(
 private val LocalChainedPlatformTextInputInterceptor =
     staticCompositionLocalOf<ChainedPlatformTextInputInterceptor?> { null }
 
-/** Establishes a new text input session, optionally intercepted by [chainedInterceptor]. */
+/**
+ * Establishes a new text input session, optionally intercepted by [chainedInterceptor].
+ */
 private suspend fun Owner.interceptedTextInputSession(
     chainedInterceptor: ChainedPlatformTextInputInterceptor?,
     session: suspend PlatformTextInputSessionScope.() -> Nothing
@@ -220,30 +231,24 @@ private class ChainedPlatformTextInputInterceptor(
             val inputMethodMutex = SessionMutex<Unit>()
 
             // Impl by delegation for platform-specific stuff.
-            val scope =
-                object : PlatformTextInputSessionScope by parentSession {
-                    override suspend fun startInputMethod(
-                        request: PlatformTextInputMethodRequest
-                    ): Nothing {
-                        // Explicitly synchronize between calls to our startInputMethod.
-                        inputMethodMutex.withSessionCancellingPrevious<Nothing>(
-                            sessionInitializer = {},
-                            session = {
-                                // Restart the upstream session if the interceptor is changed while
-                                // the
-                                // session is active.
-                                snapshotFlow { interceptor }
-                                    .collectLatest { interceptor ->
-                                        interceptor.interceptStartInputMethod(
-                                            request,
-                                            parentSession
-                                        )
-                                    }
-                                error("Interceptors flow should never terminate.")
+            val scope = object : PlatformTextInputSessionScope by parentSession {
+                override suspend fun startInputMethod(
+                    request: PlatformTextInputMethodRequest
+                ): Nothing {
+                    // Explicitly synchronize between calls to our startInputMethod.
+                    inputMethodMutex.withSessionCancellingPrevious<Nothing>(
+                        sessionInitializer = {},
+                        session = {
+                            // Restart the upstream session if the interceptor is changed while the
+                            // session is active.
+                            snapshotFlow { interceptor }.collectLatest { interceptor ->
+                                interceptor.interceptStartInputMethod(request, parentSession)
                             }
-                        )
-                    }
+                            error("Interceptors flow should never terminate.")
+                        }
+                    )
                 }
+            }
             session.invoke(scope)
         }
     }

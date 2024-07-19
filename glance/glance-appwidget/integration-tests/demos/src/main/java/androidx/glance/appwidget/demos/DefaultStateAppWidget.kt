@@ -40,18 +40,19 @@ class DefaultStateAppWidget : GlanceAppWidget() {
         val count = currentState(CountClicksKey) ?: 0
 
         Row(
-            modifier =
-                GlanceModifier.fillMaxSize()
-                    .appWidgetBackground()
-                    .padding(16.dp)
-                    .background(R.color.default_widget_background),
+            modifier = GlanceModifier.fillMaxSize()
+                .appWidgetBackground()
+                .padding(16.dp)
+                .background(R.color.default_widget_background),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 modifier = GlanceModifier.defaultWeight(),
                 text = "-",
                 style = TextStyle(textAlign = TextAlign.Center),
-                onClick = actionRunCallback<ClickAction>(actionParametersOf(ClickValueKey to -1))
+                onClick = actionRunCallback<ClickAction>(
+                    actionParametersOf(ClickValueKey to -1)
+                )
             )
             Text(
                 modifier = GlanceModifier.defaultWeight(),
@@ -62,7 +63,9 @@ class DefaultStateAppWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.defaultWeight(),
                 text = "+",
                 style = TextStyle(textAlign = TextAlign.Center),
-                onClick = actionRunCallback<ClickAction>(actionParametersOf(ClickValueKey to 1))
+                onClick = actionRunCallback<ClickAction>(
+                    actionParametersOf(ClickValueKey to 1)
+                )
             )
         }
     }

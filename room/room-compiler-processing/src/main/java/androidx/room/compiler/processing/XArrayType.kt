@@ -22,6 +22,8 @@ package androidx.room.compiler.processing
  * @see [javax.lang.model.type.ArrayType]
  */
 interface XArrayType : XType {
-    /** The type of elements in the Array */
+    /**
+     * The type of elements in the Array
+     */
     val componentType: XType
 }

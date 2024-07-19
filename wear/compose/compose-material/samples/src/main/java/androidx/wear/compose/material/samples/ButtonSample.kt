@@ -41,9 +41,8 @@ fun ButtonWithIcon() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.DefaultIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.DefaultIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }
@@ -58,9 +57,8 @@ fun OutlinedButtonWithIcon() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.DefaultIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.DefaultIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }
@@ -76,9 +74,8 @@ fun LargeButtonWithIcon() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.LargeIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.LargeIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }
@@ -105,9 +102,8 @@ fun CompactButtonWithIcon() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.SmallIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.SmallIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }
@@ -122,9 +118,8 @@ fun OutlinedCompactButtonWithIcon() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.SmallIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.SmallIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }

@@ -30,24 +30,19 @@ import org.robolectric.RobolectricTestRunner
 internal class HealthEventTest {
 
     fun Int.instant() = Instant.ofEpochMilli(toLong())
-
     fun Int.duration() = Duration.ofSeconds(toLong())
 
     @Test
     fun protoRoundTripWithDataPoint() {
-        val proto =
-            HealthEvent(
-                    FALL_DETECTED,
-                    30.instant(),
-                    DataPointContainer(
-                        listOf(
-                            DataPoints.heartRate(42.0, 20.duration()),
-                            DataPoints.heartRate(43.0, 10.duration()),
-                            DataPoints.distance(180.0, 20.duration(), 40.duration()),
-                        )
-                    )
-                )
-                .proto
+        val proto = HealthEvent(
+            FALL_DETECTED,
+            30.instant(),
+            DataPointContainer(listOf(
+                DataPoints.heartRate(42.0, 20.duration()),
+                DataPoints.heartRate(43.0, 10.duration()),
+                DataPoints.distance(180.0, 20.duration(), 40.duration()),
+            ))
+        ).proto
 
         val event = HealthEvent(proto)
 

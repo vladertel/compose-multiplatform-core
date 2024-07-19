@@ -34,7 +34,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 open class VectorBenchmark {
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     @Test
     fun xml_compose() {

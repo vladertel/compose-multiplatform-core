@@ -53,11 +53,14 @@ private const val TargetTag = "TargetLayout"
 @RunWith(JUnit4::class)
 class PointerMoveDetectorTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val actualMoves = mutableListOf<Offset>()
 
-    private val util = layoutWithGestureDetector { detectMoves { actualMoves.add(it) } }
+    private val util = layoutWithGestureDetector {
+        detectMoves { actualMoves.add(it) }
+    }
 
     private val nothingHandler: PointerInputChange.() -> Unit = {}
 
@@ -74,12 +77,14 @@ class PointerMoveDetectorTest {
     ): @Composable () -> Unit = {
         CompositionLocalProvider(
             LocalDensity provides Density(1f),
-            LocalViewConfiguration provides
-                TestViewConfiguration(minimumTouchTargetSize = DpSize.Zero)
+            LocalViewConfiguration provides TestViewConfiguration(
+                minimumTouchTargetSize = DpSize.Zero
+            )
         ) {
             with(LocalDensity.current) {
                 Box(
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         // Some tests execute a lambda before the initial and final passes
                         // so they are called here, higher up the chain, so that the
                         // calls happen prior to the gestureDetector below. The lambdas
@@ -89,9 +94,13 @@ class PointerMoveDetectorTest {
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    event.changes.forEach { initialPass(it) }
+                                    event.changes.forEach {
+                                        initialPass(it)
+                                    }
                                     awaitPointerEvent(PointerEventPass.Final)
-                                    event.changes.forEach { finalPass(it) }
+                                    event.changes.forEach {
+                                        finalPass(it)
+                                    }
                                 }
                             }
                         }
@@ -132,15 +141,14 @@ class PointerMoveDetectorTest {
             up(0)
         }
 
-        assertThat(actualMoves)
-            .hasEqualOffsets(
-                listOf(
-                    Offset(4f, 4f),
-                    Offset(3f, 3f),
-                    Offset(2f, 2f),
-                    Offset(1f, 1f),
-                )
+        assertThat(actualMoves).hasEqualOffsets(
+            listOf(
+                Offset(4f, 4f),
+                Offset(3f, 3f),
+                Offset(2f, 2f),
+                Offset(1f, 1f),
             )
+        )
     }
 
     @Test
@@ -167,15 +175,14 @@ class PointerMoveDetectorTest {
             up(1)
         }
 
-        assertThat(actualMoves)
-            .hasEqualOffsets(
-                listOf(
-                    Offset(4f, 4f),
-                    Offset(3f, 3f),
-                    Offset(2f, 2f),
-                    Offset(1f, 1f),
-                )
+        assertThat(actualMoves).hasEqualOffsets(
+            listOf(
+                Offset(4f, 4f),
+                Offset(3f, 3f),
+                Offset(2f, 2f),
+                Offset(1f, 1f),
             )
+        )
     }
 
     @Test
@@ -201,15 +208,14 @@ class PointerMoveDetectorTest {
             up(1) // ignored because not a move
         }
 
-        assertThat(actualMoves)
-            .hasEqualOffsets(
-                listOf(
-                    Offset(4f, 4f),
-                    Offset(3f, 3f),
-                    Offset(2f, 2f),
-                    Offset(1f, 1f),
-                )
+        assertThat(actualMoves).hasEqualOffsets(
+            listOf(
+                Offset(4f, 4f),
+                Offset(3f, 3f),
+                Offset(2f, 2f),
+                Offset(1f, 1f),
             )
+        )
     }
 
     private fun IterableSubject.hasEqualOffsets(expectedMoves: List<Offset>) {
@@ -218,9 +224,8 @@ class PointerMoveDetectorTest {
             .inOrder()
     }
 
-    private val offsetCorrespondence: Correspondence<Offset, Offset> =
-        Correspondence.from(
-            { o1, o2 -> o1!!.x == o2!!.x && o1.y == o2.y },
-            "has the offset of",
-        )
+    private val offsetCorrespondence: Correspondence<Offset, Offset> = Correspondence.from(
+        { o1, o2 -> o1!!.x == o2!!.x && o1.y == o2.y },
+        "has the offset of",
+    )
 }

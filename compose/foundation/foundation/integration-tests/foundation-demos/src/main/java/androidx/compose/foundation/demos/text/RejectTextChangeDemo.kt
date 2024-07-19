@@ -66,6 +66,8 @@ private fun RejectComposition() {
         modifier = demoTextFieldModifiers,
         value = state.value,
         textStyle = TextStyle(fontSize = 32.sp),
-        onValueChange = { state.value = it }
+        onValueChange = {
+            state.value = it
+        }
     )
 }

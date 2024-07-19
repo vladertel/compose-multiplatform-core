@@ -61,11 +61,10 @@ fun StepsSliderSample() {
             // Only allow multiples of 10. Excluding the endpoints of `valueRange`,
             // there are 9 steps (10, 20, ..., 90).
             steps = 9,
-            colors =
-                SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colors.secondary,
-                    activeTrackColor = MaterialTheme.colors.secondary
-                )
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.secondary,
+                activeTrackColor = MaterialTheme.colors.secondary
+            )
         )
     }
 }
@@ -111,11 +110,10 @@ fun StepRangeSliderSample() {
             // Only allow multiples of 10. Excluding the endpoints of `valueRange`,
             // there are 9 steps (10, 20, ..., 90).
             steps = 9,
-            colors =
-                SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colors.secondary,
-                    activeTrackColor = MaterialTheme.colors.secondary
-                )
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colors.secondary,
+                activeTrackColor = MaterialTheme.colors.secondary
+            )
         )
     }
 }

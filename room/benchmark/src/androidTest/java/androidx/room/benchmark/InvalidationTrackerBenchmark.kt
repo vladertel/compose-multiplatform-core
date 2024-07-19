@@ -16,6 +16,7 @@
 
 package androidx.room.benchmark
 
+import android.os.Build
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.room.Dao
@@ -29,6 +30,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
 import androidx.testutils.generateAllEnumerations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -40,9 +42,11 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN) // TODO Fix me for API 15 - b/120098504
 class InvalidationTrackerBenchmark(private val sampleSize: Int, private val mode: Mode) {
 
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     val context = ApplicationProvider.getApplicationContext() as android.content.Context
 
@@ -58,15 +62,13 @@ class InvalidationTrackerBenchmark(private val sampleSize: Int, private val mode
 
     @Test
     fun largeTransaction() {
-        val db =
-            Room.databaseBuilder(context, TestDatabase::class.java, DB_NAME)
-                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .build()
+        val db = Room.databaseBuilder(context, TestDatabase::class.java, DB_NAME)
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+            .build()
 
-        val observer =
-            object : InvalidationTracker.Observer("user") {
-                override fun onInvalidated(tables: Set<String>) {}
-            }
+        val observer = object : InvalidationTracker.Observer("user") {
+            override fun onInvalidated(tables: Set<String>) {}
+        }
         db.invalidationTracker.addObserver(observer)
 
         val users = List(sampleSize) { User(it, "name$it") }
@@ -90,7 +92,10 @@ class InvalidationTrackerBenchmark(private val sampleSize: Int, private val mode
         db.close()
     }
 
-    private inline fun runWithTimingConditional(pauseTiming: Boolean = false, block: () -> Unit) {
+    private inline fun runWithTimingConditional(
+        pauseTiming: Boolean = false,
+        block: () -> Unit
+    ) {
         if (pauseTiming) benchmarkRule.getState().pauseTiming()
         block()
         if (pauseTiming) benchmarkRule.getState().resumeTiming()
@@ -101,14 +106,12 @@ class InvalidationTrackerBenchmark(private val sampleSize: Int, private val mode
         @Parameterized.Parameters(name = "sampleSize={0}, mode={1}")
         fun data(): List<Array<Any>> =
             generateAllEnumerations(
+                listOf(100, 1000, 5000, 10000),
                 listOf(
-                    100,
-                    1000,
-                    5000,
-                    // Removed due to due to slow run times, see b/267544445 for details.
-                    // 10000
-                ),
-                listOf(Mode.MEASURE_INSERT, Mode.MEASURE_DELETE, Mode.MEASURE_INSERT_AND_DELETE)
+                    Mode.MEASURE_INSERT,
+                    Mode.MEASURE_DELETE,
+                    Mode.MEASURE_INSERT_AND_DELETE
+                )
             )
 
         private const val DB_NAME = "invalidation-benchmark-test"
@@ -119,13 +122,16 @@ class InvalidationTrackerBenchmark(private val sampleSize: Int, private val mode
         abstract fun getUserDao(): UserDao
     }
 
-    @Entity data class User(@PrimaryKey val id: Int, val name: String)
+    @Entity
+    data class User(@PrimaryKey val id: Int, val name: String)
 
     @Dao
     interface UserDao {
-        @Insert fun insert(user: User)
+        @Insert
+        fun insert(user: User)
 
-        @Query("DELETE FROM User") fun deleteAll(): Int
+        @Query("DELETE FROM User")
+        fun deleteAll(): Int
     }
 
     enum class Mode {

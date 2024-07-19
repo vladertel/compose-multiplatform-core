@@ -26,7 +26,6 @@ import androidx.camera.core.imagecapture.Utils.HEIGHT
 import androidx.camera.core.imagecapture.Utils.ROTATION_DEGREES
 import androidx.camera.core.imagecapture.Utils.WIDTH
 import androidx.camera.core.impl.utils.Exif.createFromInputStream
-import androidx.camera.core.internal.compat.quirk.DeviceQuirks
 import androidx.camera.core.processing.Packet
 import androidx.camera.testing.impl.TestImageUtil.createYuvFakeImageProxy
 import androidx.camera.testing.impl.fakes.FakeImageInfo
@@ -38,32 +37,32 @@ import java.io.ByteArrayInputStream
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Instrument test for [Image2JpegBytes]. */
+/**
+ * Instrument test for [Image2JpegBytes].
+ */
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 21)
 class Image2JpegBytesDeviceTest {
 
-    private val operation = Image2JpegBytes(DeviceQuirks.getAll())
+    private val operation = Image2JpegBytes()
 
     @Test
     fun processYuvImage_assertOutput() {
         // Arrange.
-        val imageInfo =
-            FakeImageInfo().also {
-                it.rotationDegrees = 180
-                it.setFocalLength(FOCAL_LENGTH)
-            }
+        val imageInfo = FakeImageInfo().also {
+            it.rotationDegrees = 180
+            it.setFocalLength(FOCAL_LENGTH)
+        }
         val yuvImage = createYuvFakeImageProxy(imageInfo, WIDTH, HEIGHT)
-        val input =
-            Packet.of(
-                yuvImage,
-                null, // YuvImage doesn't have exif info.
-                CROP_RECT,
-                ROTATION_DEGREES,
-                Matrix().also { it.setScale(-1F, 1F, 320F, 240F) },
-                CAMERA_CAPTURE_RESULT
-            )
+        val input = Packet.of(
+            yuvImage,
+            null, // YuvImage doesn't have exif info.
+            CROP_RECT,
+            ROTATION_DEGREES,
+            Matrix().also { it.setScale(-1F, 1F, 320F, 240F) },
+            CAMERA_CAPTURE_RESULT
+        )
 
         // Act.
         val output = operation.apply(Image2JpegBytes.In.of(input, 100))
@@ -82,8 +81,7 @@ class Image2JpegBytesDeviceTest {
         assertThat(exif.rotation).isEqualTo(ROTATION_DEGREES)
         // Assert: focal length from ImageInfo is saved to Exif.
         assertThat(exif.exifInterface.getAttributeDouble(TAG_FOCAL_LENGTH, 0.0))
-            .isWithin(1E-4)
-            .of(FOCAL_LENGTH.toDouble())
+            .isWithin(1E-4).of(FOCAL_LENGTH.toDouble())
         // Assert: transformation is updated.
         val points = floatArrayOf(WIDTH.toFloat(), HEIGHT.toFloat())
         output.sensorToBufferTransform.mapPoints(points)

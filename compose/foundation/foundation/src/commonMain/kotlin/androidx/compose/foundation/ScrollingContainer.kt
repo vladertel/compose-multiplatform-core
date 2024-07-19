@@ -19,29 +19,37 @@ package androidx.compose.foundation
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 // TODO b/316559454 to remove @Composable from it and make it public
-/** Scrolling related information to transform a layout into a "Scrollable Container" */
 @ExperimentalFoundationApi
+@Composable
 internal fun Modifier.scrollingContainer(
     state: ScrollableState,
     orientation: Orientation,
     enabled: Boolean,
-    reverseDirection: Boolean,
+    reverseScrolling: Boolean,
     flingBehavior: FlingBehavior?,
     interactionSource: MutableInteractionSource?,
-    bringIntoViewSpec: BringIntoViewSpec? = null,
-    overscrollEffect: OverscrollEffect? = null
+    bringIntoViewSpec: BringIntoViewSpec? = null
 ): Modifier {
+    val overscrollEffect = ScrollableDefaults.overscrollEffect()
+
     return clipScrollableContainer(orientation)
-        .then(if (overscrollEffect == null) Modifier else Modifier.overscroll(overscrollEffect))
+        .overscroll(overscrollEffect)
         .scrollable(
             orientation = orientation,
-            reverseDirection = reverseDirection,
+            reverseDirection = ScrollableDefaults.reverseDirection(
+                LocalLayoutDirection.current,
+                orientation,
+                reverseScrolling
+            ),
             enabled = enabled,
             interactionSource = interactionSource,
             flingBehavior = flingBehavior,

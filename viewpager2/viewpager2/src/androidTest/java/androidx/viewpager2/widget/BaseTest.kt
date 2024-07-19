@@ -20,8 +20,10 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.view.View
+import android.view.View.OVER_SCROLL_NEVER
 import android.view.ViewConfiguration
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD
@@ -71,6 +73,7 @@ import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.hamcrest.Matchers.lessThan
 import org.hamcrest.Matchers.lessThanOrEqualTo
 import org.junit.After
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 
@@ -87,13 +90,17 @@ open class BaseTest {
 
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule =
-        androidx.test.rule.ActivityTestRule<TestActivity>(TestActivity::class.java, false, false)
+    val activityTestRule = androidx.test.rule.ActivityTestRule<TestActivity>(
+        TestActivity::class.java,
+        false,
+        false
+    )
 
     @Before
     open fun setUp() {
-        localeUtil =
-            LocaleTestUtils(ApplicationProvider.getApplicationContext() as android.content.Context)
+        localeUtil = LocaleTestUtils(
+            ApplicationProvider.getApplicationContext() as android.content.Context
+        )
         // Ensure a predictable test environment by explicitly setting a locale
         localeUtil.setLocale(LocaleTestUtils.DEFAULT_TEST_LANGUAGE)
     }
@@ -118,6 +125,11 @@ open class BaseTest {
         }
         onView(withId(R.id.view_pager)).check(matches(isDisplayed()))
 
+        // animations getting in the way on API < 16
+        if (Build.VERSION.SDK_INT < 16) {
+            viewPager.recyclerView.overScrollMode = OVER_SCROLL_NEVER
+        }
+
         return Context(activityTestRule)
     }
 
@@ -127,7 +139,7 @@ open class BaseTest {
     ) {
         fun recreateActivity(
             adapterProvider: AdapterProvider,
-            onCreateCallback: ((ViewPager2) -> Unit) = {}
+            onCreateCallback: ((ViewPager2) -> Unit) = { }
         ) {
             val orientation = viewPager.orientation
             val isUserInputEnabled = viewPager.isUserInputEnabled
@@ -140,7 +152,7 @@ open class BaseTest {
                 onCreateCallback(viewPager)
             }
             activity = activityTestRule.recreate()
-            TestActivity.onCreateCallback = {}
+            TestActivity.onCreateCallback = { }
             onView(withId(R.id.view_pager)).perform(waitForInjectMotionEvents())
         }
 
@@ -163,8 +175,7 @@ open class BaseTest {
             return result!!
         }
 
-        val viewPager: ViewPager2
-            get() = activity.findViewById(R.id.view_pager)
+        val viewPager: ViewPager2 get() = activity.findViewById(R.id.view_pager)
 
         fun peekForward() {
             peek(adjustForRtl(adjustForTouchSlop(-50f)))
@@ -248,8 +259,7 @@ open class BaseTest {
                 .perform(
                     actionWithAssertions(
                         GeneralSwipeAction(
-                            Swipe.SLOW,
-                            GeneralLocation.CENTER,
+                            Swipe.SLOW, GeneralLocation.CENTER,
                             CoordinatesProvider { view ->
                                 val coordinates = GeneralLocation.CENTER.calculateCoordinates(view)
                                 if (viewPager.orientation == ORIENTATION_HORIZONTAL) {
@@ -277,33 +287,29 @@ open class BaseTest {
             var isHorizontalOrientation = viewPager.orientation == ViewPager2.ORIENTATION_HORIZONTAL
             var isVerticalOrientation = viewPager.orientation == ViewPager2.ORIENTATION_VERTICAL
 
-            val expectPageLeftAction =
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
-                    isUserInputEnabled &&
-                    isHorizontalOrientation &&
-                    (if (viewPager.isRtl) currentPage < numPages - 1 else currentPage > 0)
+            val expectPageLeftAction = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                isUserInputEnabled && isHorizontalOrientation &&
+                (if (viewPager.isRtl) currentPage < numPages - 1 else currentPage > 0)
 
-            val expectPageRightAction =
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
-                    isUserInputEnabled &&
-                    isHorizontalOrientation &&
-                    (if (viewPager.isRtl) currentPage > 0 else currentPage < numPages - 1)
+            val expectPageRightAction = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                isUserInputEnabled && isHorizontalOrientation &&
+                (if (viewPager.isRtl) currentPage > 0 else currentPage < numPages - 1)
 
-            val expectPageUpAction =
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
-                    isUserInputEnabled &&
-                    isVerticalOrientation &&
+            val expectPageUpAction = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                isUserInputEnabled && isVerticalOrientation &&
+                currentPage > 0
+
+            val expectPageDownAction = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                isUserInputEnabled && isVerticalOrientation &&
+                currentPage < numPages - 1
+
+            val expectScrollBackwardAction =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN && isUserInputEnabled &&
                     currentPage > 0
 
-            val expectPageDownAction =
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
-                    isUserInputEnabled &&
-                    isVerticalOrientation &&
+            val expectScrollForwardAction =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN && isUserInputEnabled &&
                     currentPage < numPages - 1
-
-            val expectScrollBackwardAction = isUserInputEnabled && currentPage > 0
-
-            val expectScrollForwardAction = isUserInputEnabled && currentPage < numPages - 1
 
             assertThat(
                 "Left action expected: $expectPageLeftAction",
@@ -344,7 +350,10 @@ open class BaseTest {
             )
         }
 
-        private fun hasScrollAction(actions: Int, accessibilityActionId: Int): Boolean {
+        private fun hasScrollAction(
+            actions: Int,
+            accessibilityActionId: Int
+        ): Boolean {
             return actions and accessibilityActionId != 0
         }
 
@@ -356,12 +365,11 @@ open class BaseTest {
         }
 
         @Suppress("UNCHECKED_CAST")
-        private fun getActionList(
-            view: View
-        ): List<AccessibilityNodeInfoCompat.AccessibilityActionCompat> {
-            return view.getTag(R.id.tag_accessibility_actions)
-                as? ArrayList<AccessibilityNodeInfoCompat.AccessibilityActionCompat> ?: ArrayList()
-        }
+        private fun getActionList(view: View):
+            List<AccessibilityNodeInfoCompat.AccessibilityActionCompat> {
+                return view.getTag(R.id.tag_accessibility_actions) as?
+                    ArrayList<AccessibilityNodeInfoCompat.AccessibilityActionCompat> ?: ArrayList()
+            }
     }
 
     /**
@@ -375,26 +383,24 @@ open class BaseTest {
         val latch = CountDownLatch(if (waitForIdle) 2 else 1)
         var lastScrollFired = false
 
-        registerOnPageChangeCallback(
-            object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageScrollStateChanged(state: Int) {
-                    if (lastScrollFired && state == SCROLL_STATE_IDLE) {
-                        latch.countDown()
-                    }
-                }
-
-                override fun onPageScrolled(
-                    position: Int,
-                    positionOffset: Float,
-                    positionOffsetPixels: Int
-                ) {
-                    if (position == targetPage && positionOffsetPixels == 0) {
-                        latch.countDown()
-                        lastScrollFired = true
-                    }
+        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageScrollStateChanged(state: Int) {
+                if (lastScrollFired && state == SCROLL_STATE_IDLE) {
+                    latch.countDown()
                 }
             }
-        )
+
+            override fun onPageScrolled(
+                position: Int,
+                positionOffset: Float,
+                positionOffsetPixels: Int
+            ) {
+                if (position == targetPage && positionOffsetPixels == 0) {
+                    latch.countDown()
+                    lastScrollFired = true
+                }
+            }
+        })
 
         return latch
     }
@@ -408,6 +414,12 @@ open class BaseTest {
         }
 
         waitForRenderLatch.await(5, TimeUnit.SECONDS)
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+            // Give slow devices some time to warm up,
+            // to prevent severe frame drops in the smooth scroll
+            Thread.sleep(1000)
+        }
     }
 
     fun ViewPager2.addWaitForLayoutChangeLatch(): CountDownLatch {
@@ -423,16 +435,14 @@ open class BaseTest {
     fun ViewPager2.addWaitForStateLatch(targetState: Int): CountDownLatch {
         val latch = CountDownLatch(1)
 
-        registerOnPageChangeCallback(
-            object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageScrollStateChanged(state: Int) {
-                    if (state == targetState) {
-                        latch.countDown()
-                        post { unregisterOnPageChangeCallback(this) }
-                    }
+        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageScrollStateChanged(state: Int) {
+                if (state == targetState) {
+                    latch.countDown()
+                    post { unregisterOnPageChangeCallback(this) }
                 }
             }
-        )
+        })
 
         return latch
     }
@@ -440,34 +450,30 @@ open class BaseTest {
     fun ViewPager2.addWaitForDistanceToTarget(target: Int, distance: Float): CountDownLatch {
         val latch = CountDownLatch(1)
 
-        registerOnPageChangeCallback(
-            object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageScrolled(
-                    position: Int,
-                    positionOffset: Float,
-                    positionOffsetPixels: Int
-                ) {
-                    if (abs(target - position - positionOffset) <= distance) {
-                        latch.countDown()
-                        post { unregisterOnPageChangeCallback(this) }
-                    }
+        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageScrolled(
+                position: Int,
+                positionOffset: Float,
+                positionOffsetPixels: Int
+            ) {
+                if (abs(target - position - positionOffset) <= distance) {
+                    latch.countDown()
+                    post { unregisterOnPageChangeCallback(this) }
                 }
             }
-        )
+        })
 
         return latch
     }
 
     fun ViewPager2.addWaitForFirstScrollEventLatch(): CountDownLatch {
         val latch = CountDownLatch(1)
-        registerOnPageChangeCallback(
-            object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageScrolled(position: Int, offset: Float, offsetPx: Int) {
-                    latch.countDown()
-                    post { unregisterOnPageChangeCallback(this) }
-                }
+        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageScrolled(position: Int, offset: Float, offsetPx: Int) {
+                latch.countDown()
+                post { unregisterOnPageChangeCallback(this) }
             }
-        )
+        })
         return latch
     }
 
@@ -502,13 +508,13 @@ open class BaseTest {
     ) {
         assertThat<Int>(
             "viewPager.getCurrentItem() should return $pageIx",
-            viewPager.currentItem,
-            equalTo(pageIx)
+            viewPager.currentItem, equalTo(pageIx)
         )
         assertThat("viewPager should be IDLE", viewPager.scrollState, equalTo(SCROLL_STATE_IDLE))
         if (value != null) {
-            onView(allOf<View>(withId(R.id.text_view), isCompletelyDisplayed()))
-                .check(matches(withText(value)))
+            onView(allOf<View>(withId(R.id.text_view), isCompletelyDisplayed())).check(
+                matches(withText(value))
+            )
         }
 
         // TODO(b/130153109): Wire offscreenPageLimit into FragmentAdapter, remove performSelfCheck
@@ -527,12 +533,16 @@ open class BaseTest {
 
     fun Context.modifyDataSetSync(block: () -> Unit) {
         val layoutChangedLatch = viewPager.addWaitForLayoutChangeLatch()
-        runOnUiThreadSync { block() }
+        runOnUiThreadSync {
+            block()
+        }
         layoutChangedLatch.await(1, TimeUnit.SECONDS)
 
         // Let animations run
         val animationLatch = CountDownLatch(1)
-        viewPager.recyclerView.itemAnimator!!.isRunning { animationLatch.countDown() }
+        viewPager.recyclerView.itemAnimator!!.isRunning {
+            animationLatch.countDown()
+        }
         animationLatch.await(1, TimeUnit.SECONDS)
     }
 
@@ -544,8 +554,10 @@ open class BaseTest {
         expectEvents: Boolean = (targetPage != currentItem)
     ) {
         val latch =
-            if (expectEvents) addWaitForScrolledLatch(targetPage, smoothScroll)
-            else CountDownLatch(1)
+            if (expectEvents)
+                addWaitForScrolledLatch(targetPage, smoothScroll)
+            else
+                CountDownLatch(1)
         post {
             setCurrentItem(targetPage, smoothScroll)
             if (!expectEvents) {
@@ -578,7 +590,6 @@ open class BaseTest {
 
     /**
      * Is between [min, max)
-     *
      * @param min - inclusive
      * @param max - exclusive
      */
@@ -588,7 +599,6 @@ open class BaseTest {
 
     /**
      * Is between [min, max]
-     *
      * @param min - inclusive
      * @param max - inclusive
      */
@@ -598,7 +608,6 @@ open class BaseTest {
 
     /**
      * Is between [min(a, b), max(a, b)]
-     *
      * @param a - inclusive
      * @param b - inclusive
      */
@@ -616,17 +625,20 @@ data class AdapterProviderForItems(
     override fun toString(): String = name
 }
 
-val fragmentAdapterProvider =
-    AdapterProviderForItems("fragmentAdapterProvider") { items ->
-        { activity: TestActivity ->
-            FragmentAdapter(activity.supportFragmentManager, activity.lifecycle, items)
-        }
+val fragmentAdapterProvider = AdapterProviderForItems("fragmentAdapterProvider") { items ->
+    { activity: TestActivity ->
+        FragmentAdapter(
+            activity.supportFragmentManager,
+            activity.lifecycle,
+            items
+        )
     }
+}
 
 /**
  * Same as [fragmentAdapterProvider] but with a custom implementation of
- * [FragmentStateAdapter.getItemId] and [FragmentStateAdapter.containsItem]. Not suitable for
- * testing [RecyclerView.Adapter.notifyDataSetChanged].
+ * [FragmentStateAdapter.getItemId] and [FragmentStateAdapter.containsItem].
+ * Not suitable for testing [RecyclerView.Adapter.notifyDataSetChanged].
  */
 val fragmentAdapterProviderCustomIds =
     AdapterProviderForItems("fragmentAdapterProviderCustomIds") { items ->
@@ -646,8 +658,8 @@ val fragmentAdapterProviderCustomIds =
 
 /**
  * Same as [fragmentAdapterProvider] but with a custom implementation of
- * [FragmentStateAdapter.getItemId] and [FragmentStateAdapter.containsItem]. Suitable for testing
- * [RecyclerView.Adapter.notifyDataSetChanged].
+ * [FragmentStateAdapter.getItemId] and [FragmentStateAdapter.containsItem].
+ * Suitable for testing [RecyclerView.Adapter.notifyDataSetChanged].
  */
 val fragmentAdapterProviderValueId =
     AdapterProviderForItems("fragmentAdapterProviderValueId") { items ->
@@ -655,9 +667,8 @@ val fragmentAdapterProviderValueId =
             fragmentAdapterProvider.provider(items)(activity).also {
                 val adapter = it as FragmentAdapter
                 adapter.positionToItemId = { position -> items[position].getId() }
-                adapter.itemIdToContains = { itemId ->
-                    items.any { item -> item.getId() == itemId }
-                }
+                adapter.itemIdToContains =
+                    { itemId -> items.any { item -> item.getId() == itemId } }
             }
         }
     }
@@ -673,19 +684,18 @@ private fun (String).getId(): Long {
 
 /**
  * Same as [viewAdapterProvider] but with a custom implementation of
- * [RecyclerView.Adapter.getItemId]. Suitable for testing
- * [RecyclerView.Adapter.notifyDataSetChanged].mu
+ * [RecyclerView.Adapter.getItemId].
+ * Suitable for testing [RecyclerView.Adapter.notifyDataSetChanged].mu
  */
-val viewAdapterProviderValueId =
-    AdapterProviderForItems("viewAdapterProviderValueId") { items ->
-        { activity ->
-            viewAdapterProvider.provider(items)(activity).also {
-                val adapter = it as ViewAdapter
-                adapter.positionToItemId = { position -> items[position].getId() }
-                adapter.setHasStableIds(true)
-            }
+val viewAdapterProviderValueId = AdapterProviderForItems("viewAdapterProviderValueId") { items ->
+    { activity ->
+        viewAdapterProvider.provider(items)(activity).also {
+            val adapter = it as ViewAdapter
+            adapter.positionToItemId = { position -> items[position].getId() }
+            adapter.setHasStableIds(true)
         }
     }
+}
 
 val viewAdapterProvider =
     AdapterProviderForItems("viewAdapterProvider") { items -> { ViewAdapter(items) } }
@@ -724,7 +734,11 @@ fun tryNTimes(n: Int, resetBlock: () -> Unit, tryBlock: () -> Unit) {
             if (i < n - 1) {
                 Log.w(BaseTest.TAG, "Bad state, retrying block", e)
             } else {
-                throw AssertionError("Block hit bad state $n times", e)
+                val errorMessage = "Block hit bad state $n times"
+                when {
+                    Build.VERSION.SDK_INT >= 19 -> throw AssertionError(errorMessage, e)
+                    else -> fail(errorMessage)
+                }
             }
             resetBlock()
         }
@@ -732,7 +746,6 @@ fun tryNTimes(n: Int, resetBlock: () -> Unit, tryBlock: () -> Unit) {
 }
 
 val View.isRtl: Boolean
-    get() = getLayoutDirection() == View.LAYOUT_DIRECTION_RTL
+    get() = ViewCompat.getLayoutDirection(this) == ViewCompat.LAYOUT_DIRECTION_RTL
 
-val ViewPager2.isHorizontal: Boolean
-    get() = orientation == ORIENTATION_HORIZONTAL
+val ViewPager2.isHorizontal: Boolean get() = orientation == ORIENTATION_HORIZONTAL

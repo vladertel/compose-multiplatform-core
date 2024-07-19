@@ -38,8 +38,9 @@ internal class InterfaceFileGenerator {
             }
 
         return FileSpec.get(annotatedInterface.type.packageName, annotatedInterfaceType)
-            .toBuilder()
-            .build { addCommonSettings() }
+            .toBuilder().build {
+                addCommonSettings()
+        }
     }
 
     private fun generateInterfaceMethod(method: Method) =

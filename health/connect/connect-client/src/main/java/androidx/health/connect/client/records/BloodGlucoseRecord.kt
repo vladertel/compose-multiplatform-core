@@ -137,6 +137,7 @@ public class BloodGlucoseRecord(
     /**
      * List of supported blood glucose specimen sources (type of body fluid used to measure the
      * blood glucose).
+     *
      */
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
@@ -153,7 +154,9 @@ public class BloodGlucoseRecord(
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     annotation class SpecimenSources
 
-    /** Temporal relationship of measurement time to a meal. */
+    /**
+     * Temporal relationship of measurement time to a meal.
+     */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(

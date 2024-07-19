@@ -98,8 +98,9 @@ class WindowInsetsTest {
     fun fixedDpInsets_toString() {
         val insets = WindowInsets(10.dp, 11.dp, 12.dp, 13.dp)
 
-        assertThat(insets.toString())
-            .isEqualTo("Insets(left=10.0.dp, top=11.0.dp, right=12.0.dp, bottom=13.0.dp)")
+        assertThat(insets.toString()).isEqualTo(
+            "Insets(left=10.0.dp, top=11.0.dp, right=12.0.dp, bottom=13.0.dp)"
+        )
     }
 
     @Test
@@ -118,11 +119,10 @@ class WindowInsetsTest {
         val first = WindowInsets(10, 11, 12, 13)
         val second = WindowInsets(5, 20, 14, 2)
         val union = first.union(second)
-        assertThat(union.toString())
-            .isEqualTo(
-                "(Insets(left=10, top=11, right=12, bottom=13) ∪ " +
-                    "Insets(left=5, top=20, right=14, bottom=2))"
-            )
+        assertThat(union.toString()).isEqualTo(
+            "(Insets(left=10, top=11, right=12, bottom=13) ∪ " +
+                "Insets(left=5, top=20, right=14, bottom=2))"
+        )
     }
 
     @Test
@@ -141,11 +141,10 @@ class WindowInsetsTest {
         val first = WindowInsets(10, 11, 12, 13)
         val second = WindowInsets(5, 20, 14, 2)
         val exclude = first.exclude(second)
-        assertThat(exclude.toString())
-            .isEqualTo(
-                "(Insets(left=10, top=11, right=12, bottom=13) - " +
-                    "Insets(left=5, top=20, right=14, bottom=2))"
-            )
+        assertThat(exclude.toString()).isEqualTo(
+            "(Insets(left=10, top=11, right=12, bottom=13) - " +
+                "Insets(left=5, top=20, right=14, bottom=2))"
+        )
     }
 
     @Test
@@ -164,11 +163,10 @@ class WindowInsetsTest {
         val first = WindowInsets(10, 11, 12, 13)
         val second = WindowInsets(5, 20, 14, 2)
         val add = first.add(second)
-        assertThat(add.toString())
-            .isEqualTo(
-                "(Insets(left=10, top=11, right=12, bottom=13) + " +
-                    "Insets(left=5, top=20, right=14, bottom=2))"
-            )
+        assertThat(add.toString()).isEqualTo(
+            "(Insets(left=10, top=11, right=12, bottom=13) + " +
+                "Insets(left=5, top=20, right=14, bottom=2))"
+        )
     }
 
     @Test
@@ -184,13 +182,12 @@ class WindowInsetsTest {
 
     @Test
     fun limitInsets_toString() {
-        val insets =
-            WindowInsets(10, 11, 12, 13).only(WindowInsetsSides.Start + WindowInsetsSides.Vertical)
-        assertThat(insets.toString())
-            .isEqualTo(
-                "(Insets(left=10, top=11, right=12, bottom=13) only " +
-                    "WindowInsetsSides(Start+Top+Bottom))"
-            )
+        val insets = WindowInsets(10, 11, 12, 13)
+            .only(WindowInsetsSides.Start + WindowInsetsSides.Vertical)
+        assertThat(insets.toString()).isEqualTo(
+            "(Insets(left=10, top=11, right=12, bottom=13) only " +
+                "WindowInsetsSides(Start+Top+Bottom))"
+        )
     }
 
     @Test
@@ -266,9 +263,8 @@ class WindowInsetsTest {
 
     @Test
     fun plus() {
-        val insets =
-            WindowInsets(10, 11, 12, 13)
-                .only(WindowInsetsSides.Vertical + WindowInsetsSides.Horizontal)
+        val insets = WindowInsets(10, 11, 12, 13)
+            .only(WindowInsetsSides.Vertical + WindowInsetsSides.Horizontal)
         assertThat(insets.getLeft(density, LayoutDirection.Ltr)).isEqualTo(10)
         assertThat(insets.getTop(density)).isEqualTo(11)
         assertThat(insets.getRight(density, LayoutDirection.Ltr)).isEqualTo(12)
@@ -277,8 +273,9 @@ class WindowInsetsTest {
 
     @Test
     fun insetsValues_toString() {
-        assertThat(InsetsValues(1, 2, 3, 4).toString())
-            .isEqualTo("InsetsValues(left=1, top=2, right=3, bottom=4)")
+        assertThat(InsetsValues(1, 2, 3, 4).toString()).isEqualTo(
+            "InsetsValues(left=1, top=2, right=3, bottom=4)"
+        )
     }
 
     @Test
@@ -323,13 +320,17 @@ class WindowInsetsTest {
         val density = Density(2f)
         val layoutDirection = LayoutDirection.Ltr
         val readValues = mutableListOf<Any>()
-        Snapshot.observe(readObserver = { readValues += it }) {
+        Snapshot.observe(readObserver = {
+            readValues += it
+        }) {
             insets.getLeft(density, layoutDirection)
         }
         assertThat(readValues).hasSize(1)
 
         val writeValues = mutableListOf<Any>()
-        Snapshot.observe(writeObserver = { writeValues += it }) {
+        Snapshot.observe(writeObserver = {
+            writeValues += it
+        }) {
             insets.insets = WindowInsets(1, 2, 3, 4)
         }
         Snapshot.sendApplyNotifications()

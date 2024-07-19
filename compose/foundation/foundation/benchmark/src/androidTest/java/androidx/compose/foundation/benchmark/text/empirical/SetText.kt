@@ -40,7 +40,10 @@ class SetText(private val text: String) : LayeredComposeTestCase(), ToggleableTe
 
     @Composable
     override fun MeasuredContent() {
-        Subject(toggleText.value, style = style)
+        Subject(
+            toggleText.value,
+            style = style
+        )
     }
 
     override fun toggleState() {
@@ -54,7 +57,9 @@ class SetText(private val text: String) : LayeredComposeTestCase(), ToggleableTe
 
 @LargeTest
 @RunWith(Parameterized::class)
-open class SetTextParent(private val size: Int) : EmpiricalBench<SetText>() {
+open class SetTextParent(
+    private val size: Int
+) : EmpiricalBench<SetText>() {
     override val caseFactory = {
         val text = generateCacheableStringOf(size)
         SetText(text)
@@ -67,7 +72,9 @@ open class SetTextParent(private val size: Int) : EmpiricalBench<SetText>() {
     }
 }
 
-/** Metrics determined from all apps */
+/**
+ * Metrics determined from all apps
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 class AllAppsSetText(size: Int) : SetTextParent(size) {

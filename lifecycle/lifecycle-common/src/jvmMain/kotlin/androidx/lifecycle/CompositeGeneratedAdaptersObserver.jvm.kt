@@ -17,7 +17,8 @@ package androidx.lifecycle
 
 internal class CompositeGeneratedAdaptersObserver(
     private val generatedAdapters: Array<GeneratedAdapter>
-) : LifecycleEventObserver {
+) :
+    LifecycleEventObserver {
     override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
         val logger = MethodCallsLogger()
         for (adapter in generatedAdapters) {

@@ -49,12 +49,11 @@ internal fun Modifier.legacyTextInputAdapter(
     legacyTextFieldState: LegacyTextFieldState,
     textFieldSelectionManager: TextFieldSelectionManager
 ): Modifier =
-    this then
-        LegacyAdaptingPlatformTextInputModifier(
-            serviceAdapter,
-            legacyTextFieldState,
-            textFieldSelectionManager
-        )
+    this then LegacyAdaptingPlatformTextInputModifier(
+        serviceAdapter,
+        legacyTextFieldState,
+        textFieldSelectionManager
+    )
 
 private data class LegacyAdaptingPlatformTextInputModifier(
     val serviceAdapter: LegacyPlatformTextInputServiceAdapter,
@@ -90,8 +89,7 @@ internal class LegacyAdaptingPlatformTextInputModifierNode(
     private var serviceAdapter: LegacyPlatformTextInputServiceAdapter,
     override var legacyTextFieldState: LegacyTextFieldState,
     override var textFieldSelectionManager: TextFieldSelectionManager
-) :
-    Modifier.Node(),
+) : Modifier.Node(),
     PlatformTextInputModifierNode,
     CompositionLocalConsumerModifierNode,
     GlobalPositionAwareModifierNode,

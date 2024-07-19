@@ -54,12 +54,11 @@ fun ClickableListItems() {
                     onCheckedChange = null // null recommended for accessibility with screenreaders
                 )
             },
-            modifier =
-                Modifier.toggleable(
-                    role = Role.Switch,
-                    value = switched,
-                    onValueChange = onSwitchedChange
-                )
+            modifier = Modifier.toggleable(
+                role = Role.Switch,
+                value = switched,
+                onValueChange = onSwitchedChange
+            )
         )
         Divider()
         var checked by remember { mutableStateOf(true) }
@@ -72,12 +71,11 @@ fun ClickableListItems() {
                     onCheckedChange = null // null recommended for accessibility with screenreaders
                 )
             },
-            modifier =
-                Modifier.toggleable(
-                    role = Role.Checkbox,
-                    value = checked,
-                    onValueChange = onCheckedChange
-                )
+            modifier = Modifier.toggleable(
+                role = Role.Checkbox,
+                value = checked,
+                onValueChange = onCheckedChange
+            )
         )
         Divider()
     }
@@ -92,7 +90,12 @@ fun OneLineListItems() {
         Divider()
         ListItem(
             text = { Text("One line list item with 24x24 icon") },
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = null) }
+            icon = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = null
+                )
+            }
         )
         Divider()
         ListItem(
@@ -126,12 +129,17 @@ fun OneLineListItems() {
                     modifier = Modifier.size(56.dp)
                 )
             },
-            modifier = Modifier.clickable {}
+            modifier = Modifier.clickable { }
         )
         Divider()
         ListItem(
             text = { Text("One line list item with trailing icon") },
-            trailing = { Icon(Icons.Filled.Favorite, contentDescription = "Localized Description") }
+            trailing = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = "Localized Description"
+                )
+            }
         )
         Divider()
         ListItem(
@@ -143,7 +151,12 @@ fun OneLineListItems() {
                     modifier = Modifier.size(40.dp)
                 )
             },
-            trailing = { Icon(Icons.Filled.Favorite, contentDescription = "Localized description") }
+            trailing = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = "Localized description"
+                )
+            }
         )
         Divider()
     }
@@ -154,14 +167,25 @@ fun OneLineListItems() {
 @OptIn(ExperimentalMaterialApi::class)
 fun TwoLineListItems() {
     Column {
-        ListItem(text = { Text("Two line list item") }, secondaryText = { Text("Secondary text") })
+        ListItem(
+            text = { Text("Two line list item") },
+            secondaryText = { Text("Secondary text") }
+        )
         Divider()
-        ListItem(text = { Text("Two line list item") }, overlineText = { Text("OVERLINE") })
+        ListItem(
+            text = { Text("Two line list item") },
+            overlineText = { Text("OVERLINE") }
+        )
         Divider()
         ListItem(
             text = { Text("Two line list item with 24x24 icon") },
             secondaryText = { Text("Secondary text") },
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = null) }
+            icon = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = null
+                )
+            }
         )
         Divider()
         ListItem(
@@ -224,7 +248,12 @@ fun ThreeLineListItems() {
                 )
             },
             singleLineSecondaryText = false,
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = null) }
+            icon = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = null
+                )
+            }
         )
         Divider()
         ListItem(
@@ -236,7 +265,12 @@ fun ThreeLineListItems() {
                 )
             },
             singleLineSecondaryText = false,
-            trailing = { Icon(Icons.Filled.Favorite, contentDescription = "Localized description") }
+            trailing = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = "Localized description"
+                )
+            }
         )
         Divider()
         ListItem(
@@ -270,12 +304,22 @@ fun OneLineRtlLtrListItems() {
         Divider()
         ListItem(
             text = { Text("One line list item with 24x24 icon") },
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = null) }
+            icon = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = null
+                )
+            }
         )
         Divider()
         ListItem(
             text = { Text("عنصر قائمة واحد مع رمز زائدة") },
-            trailing = { Icon(Icons.Filled.Favorite, contentDescription = null) }
+            trailing = {
+                Icon(
+                    Icons.Filled.Favorite,
+                    contentDescription = null
+                )
+            }
         )
         Divider()
     }
@@ -285,12 +329,18 @@ fun OneLineRtlLtrListItems() {
 @OptIn(ExperimentalMaterialApi::class)
 fun TwoLineRtlLtrListItems() {
     Column {
-        ListItem(text = { Text("Two line list item") }, secondaryText = { Text("Secondary text") })
-        Divider()
-        ListItem(text = { Text("بند قائمة من سطرين") }, secondaryText = { Text("نص ثانوي") })
+        ListItem(
+            text = { Text("Two line list item") },
+            secondaryText = { Text("Secondary text") }
+        )
         Divider()
         ListItem(
-            modifier = Modifier.clickable {},
+            text = { Text("بند قائمة من سطرين") },
+            secondaryText = { Text("نص ثانوي") }
+        )
+        Divider()
+        ListItem(
+            modifier = Modifier.clickable { },
             text = { Text("Clickable") },
             secondaryText = { Text("Short item") }
         )
@@ -317,7 +367,7 @@ fun TwoLineRtlLtrListItems() {
                     modifier = Modifier.size(40.dp)
                 )
             },
-            modifier = Modifier.clickable {}
+            modifier = Modifier.clickable { }
         )
         Divider()
     }

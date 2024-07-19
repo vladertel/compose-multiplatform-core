@@ -35,7 +35,8 @@ import org.junit.Test
 
 class StepperBenchmark {
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val stepperCaseFactory = { StepperTestCase() }
 
@@ -90,6 +91,8 @@ internal class StepperTestCase : LayeredComposeTestCase() {
 
     @Composable
     override fun ContentWrappers(content: @Composable () -> Unit) {
-        MaterialTheme { content() }
+        MaterialTheme {
+            content()
+        }
     }
 }

@@ -28,7 +28,9 @@ internal interface EmojiCompatStatusDelegate {
     val fontLoaded: State<Boolean>
 }
 
-/** Used for observing emojicompat font loading status from compose. */
+/**
+ * Used for observing emojicompat font loading status from compose.
+ */
 internal object EmojiCompatStatus : EmojiCompatStatusDelegate {
     private var delegate: EmojiCompatStatusDelegate = DefaultImpl()
 
@@ -51,9 +53,10 @@ internal object EmojiCompatStatus : EmojiCompatStatusDelegate {
     }
 }
 
-/** is-a state, but doesn't cause an observation when read */
+/**
+ * is-a state, but doesn't cause an observation when read
+ */
 private class ImmutableBool(override val value: Boolean) : State<Boolean>
-
 private val Falsey = ImmutableBool(false)
 
 private class DefaultImpl : EmojiCompatStatusDelegate {
@@ -61,30 +64,28 @@ private class DefaultImpl : EmojiCompatStatusDelegate {
     private var loadState: State<Boolean>?
 
     init {
-        loadState =
-            if (EmojiCompat.isConfigured()) {
-                getFontLoadState()
-            } else {
-                // EC isn't configured yet, will check again in getter
-                null
-            }
+        loadState = if (EmojiCompat.isConfigured()) {
+            getFontLoadState()
+        } else {
+            // EC isn't configured yet, will check again in getter
+            null
+        }
     }
 
     override val fontLoaded: State<Boolean>
-        get() =
-            if (loadState != null) {
+        get() = if (loadState != null) {
+            loadState!!
+        } else {
+            // EC wasn't configured last time, check again and update loadState if it's ready
+            if (EmojiCompat.isConfigured()) {
+                loadState = getFontLoadState()
                 loadState!!
             } else {
-                // EC wasn't configured last time, check again and update loadState if it's ready
-                if (EmojiCompat.isConfigured()) {
-                    loadState = getFontLoadState()
-                    loadState!!
-                } else {
-                    // ec disabled path
-                    // no observations allowed, this is pre init
-                    Falsey
-                }
+                // ec disabled path
+                // no observations allowed, this is pre init
+                Falsey
             }
+        }
 
     private fun getFontLoadState(): State<Boolean> {
         val ec = EmojiCompat.get()
@@ -92,17 +93,16 @@ private class DefaultImpl : EmojiCompatStatusDelegate {
             ImmutableBool(true)
         } else {
             val mutableLoaded = mutableStateOf(false)
-            val initCallback =
-                object : EmojiCompat.InitCallback() {
-                    override fun onInitialized() {
-                        mutableLoaded.value = true // update previous observers
-                        loadState = ImmutableBool(true) // never observe again
-                    }
-
-                    override fun onFailed(throwable: Throwable?) {
-                        loadState = Falsey // never observe again
-                    }
+            val initCallback = object : EmojiCompat.InitCallback() {
+                override fun onInitialized() {
+                    mutableLoaded.value = true // update previous observers
+                    loadState = ImmutableBool(true) // never observe again
                 }
+
+                override fun onFailed(throwable: Throwable?) {
+                    loadState = Falsey // never observe again
+                }
+            }
             ec.registerInitCallback(initCallback)
             mutableLoaded
         }

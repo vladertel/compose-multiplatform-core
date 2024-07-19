@@ -79,23 +79,25 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class TextStringSimpleNodeTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
     val context: Context = InstrumentationRegistry.getInstrumentation().context
 
     @Test
     fun draw_whenNotAttached_doesNotCrash() {
-        val subject =
-            TextStringSimpleNode("text", TextStyle.Default, createFontFamilyResolver(context))
+        val subject = TextStringSimpleNode(
+            "text", TextStyle.Default, createFontFamilyResolver(context)
+        )
         rule.setContent {
             Canvas(Modifier.fillMaxSize()) {
-                val contentDrawScope =
-                    object : ContentDrawScope, DrawScope by this {
-                        override fun drawContent() {
-                            fail("Not used")
-                        }
+                val contentDrawScope = object : ContentDrawScope, DrawScope by this {
+                    override fun drawContent() {
+                        fail("Not used")
                     }
-                        as ContentDrawScope
-                with(subject) { contentDrawScope.draw() }
+                } as ContentDrawScope
+                with(subject) {
+                    contentDrawScope.draw()
+                }
             }
         }
         rule.waitForIdle()
@@ -119,18 +121,21 @@ class TextStringSimpleNodeTest {
         var flag by mutableStateOf(false)
 
         rule.setContent {
-            val content = remember {
-                movableContentOf {
-                    BoxWithConstraints {
-                        BasicText(
-                            text = if (!flag) "" else "LOADED",
-                            modifier = Modifier.testTag("target")
-                        )
+            val content =
+                remember {
+                    movableContentOf {
+                        BoxWithConstraints {
+                            BasicText(
+                                text = if (!flag) "" else "LOADED",
+                                modifier = Modifier.testTag("target")
+                            )
+                        }
                     }
                 }
-            }
 
-            key(flag) { content() }
+            key(flag) {
+                content()
+            }
         }
 
         val textLayout1 = rule.onNodeWithTag("target").fetchTextLayoutResult()
@@ -150,21 +155,17 @@ class TextStringSimpleNodeTest {
         val drawChannel = Channel<Unit>(capacity = Channel.UNLIMITED)
         val drawCount = AtomicInteger(0)
         val asyncFont = makeAsyncFont(loadDeferred)
-        val subject =
-            TextStringSimpleElement(
-                "til",
-                TextStyle.Default.copy(fontFamily = asyncFont.toFontFamily()),
-                createFontFamilyResolver(context)
-            )
+        val subject = TextStringSimpleElement(
+            "til",
+            TextStyle.Default.copy(fontFamily = asyncFont.toFontFamily()),
+            createFontFamilyResolver(context)
+        )
 
-        val modifier =
-            Modifier.fillMaxSize() then
-                subject then
-                Modifier.drawBehind {
-                    drawRect(Color.Magenta, size = Size(100f, 100f))
-                    drawCount.incrementAndGet()
-                    drawChannel.trySend(Unit)
-                }
+        val modifier = Modifier.fillMaxSize() then subject then Modifier.drawBehind {
+            drawRect(Color.Magenta, size = Size(100f, 100f))
+            drawCount.incrementAndGet()
+            drawChannel.trySend(Unit)
+        }
 
         rule.setContent {
             Layout(modifier) { _, constraints ->
@@ -185,7 +186,10 @@ class TextStringSimpleNodeTest {
 
         // this may take a while to make compose non-idle, so wait for drawChannel explicit sync
         loadDeferred.complete(Unit)
-        runBlocking { withTimeout(1_000L) { drawChannel.receive() } }
+        runBlocking { withTimeout(1_000L) {
+            drawChannel.receive()
+        }
+        }
         rule.waitForIdle()
 
         Truth.assertThat(drawCount.get()).isGreaterThan(initialCount)
@@ -195,18 +199,24 @@ class TextStringSimpleNodeTest {
     fun setTextSubstitution_invalidatesDraw() {
         val drawCount = AtomicInteger(0)
 
-        val subject =
-            TextStringSimpleElement("til", TextStyle.Default, createFontFamilyResolver(context))
+        val subject = TextStringSimpleElement(
+            "til",
+            TextStyle.Default,
+            createFontFamilyResolver(context)
+        )
 
-        val modifier =
-            Modifier.fillMaxSize().drawBehind {
+        val modifier = Modifier.fillMaxSize().drawBehind {
                 drawRect(Color.Magenta, size = Size(100f, 100f))
                 drawCount.incrementAndGet()
             } then subject
 
-        rule.setContent { Box(modifier) }
+        rule.setContent {
+            Box(modifier)
+        }
         val initialCount = drawCount.get()
-        rule.runOnIdle { Truth.assertThat(initialCount).isGreaterThan(0) }
+        rule.runOnIdle {
+            Truth.assertThat(initialCount).isGreaterThan(0)
+        }
 
         val node = rule.onNodeWithText("til").fetchSemanticsNode()
 
@@ -220,10 +230,15 @@ class TextStringSimpleNodeTest {
 
     @Test
     fun setTextSubstitution_setsSemantics() {
-        val subject =
-            TextStringSimpleElement("til", TextStyle.Default, createFontFamilyResolver(context))
+        val subject = TextStringSimpleElement(
+            "til",
+            TextStyle.Default,
+            createFontFamilyResolver(context)
+        )
 
-        rule.setContent { Box(Modifier.fillMaxSize() then subject) }
+        rule.setContent {
+            Box(Modifier.fillMaxSize() then subject)
+        }
 
         val node = rule.onNodeWithText("til").fetchSemanticsNode()
 
@@ -240,22 +255,23 @@ class TextStringSimpleNodeTest {
 
     private fun makeAsyncFont(loadDeferred: Deferred<Unit>): Font {
 
-        val typefaceLoader =
-            object : AndroidFont.TypefaceLoader {
-                override fun loadBlocking(context: Context, font: AndroidFont): Typeface? {
-                    TODO("Not yet implemented")
-                }
-
-                override suspend fun awaitLoad(context: Context, font: AndroidFont): Typeface? {
-                    loadDeferred.await()
-                    return Typeface.create("cursive", 0)
-                }
+        val typefaceLoader = object : AndroidFont.TypefaceLoader {
+            override fun loadBlocking(context: Context, font: AndroidFont): Typeface? {
+                TODO("Not yet implemented")
             }
-        return object :
-            AndroidFont(FontLoadingStrategy.Async, typefaceLoader, FontVariation.Settings()) {
+
+            override suspend fun awaitLoad(context: Context, font: AndroidFont): Typeface? {
+                loadDeferred.await()
+                return Typeface.create("cursive", 0)
+            }
+        }
+        return object : AndroidFont(
+            FontLoadingStrategy.Async,
+            typefaceLoader,
+            FontVariation.Settings()
+        ) {
             override val weight: FontWeight
                 get() = FontWeight.Normal
-
             override val style: FontStyle
                 get() = FontStyle.Normal
         }

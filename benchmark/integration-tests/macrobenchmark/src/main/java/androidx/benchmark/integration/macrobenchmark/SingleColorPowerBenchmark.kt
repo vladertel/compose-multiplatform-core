@@ -42,7 +42,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 29)
 @OptIn(ExperimentalMetricApi::class)
 class SingleColorPowerBenchmark {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     @Before
     fun validateDeviceState() {
@@ -53,14 +54,13 @@ class SingleColorPowerBenchmark {
     fun measureScreenColorPower(color: Int) {
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics =
-                listOf(
-                    PowerMetric(
-                        PowerMetric.Power(
-                            mapOf(PowerCategory.DISPLAY to PowerCategoryDisplayLevel.BREAKDOWN)
-                        )
-                    ),
+            metrics = listOf(
+                PowerMetric(
+                    PowerMetric.Power(
+                        mapOf(PowerCategory.DISPLAY to PowerCategoryDisplayLevel.BREAKDOWN)
+                    )
                 ),
+            ),
             compilationMode = CompilationMode.None(),
             startupMode = StartupMode.COLD,
             iterations = 5,

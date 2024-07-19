@@ -65,6 +65,7 @@ interface HealthConnectClient {
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * For example, to insert basic data like step counts:
      *
@@ -97,6 +98,7 @@ interface HealthConnectClient {
      *   identifiers will result in IPC failure.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      */
     suspend fun updateRecords(records: List<Record>)
 
@@ -113,6 +115,7 @@ interface HealthConnectClient {
      *   will result in IPC failure.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example usage to delete written steps data by its unique identifier:
      *
@@ -129,11 +132,12 @@ interface HealthConnectClient {
      * filtered to [Record] belonging to the calling application). Deletion of multiple [Record] is
      * executed in a transaction - if one fails, none is deleted.
      *
-     * @param recordType Which type of [Record] to delete, such as `StepsRecord::class`
+     * @param recordType Which type of [Record] to delete, such as `Steps::class`
      * @param timeRangeFilter The [TimeRangeFilter] to delete from
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example usage to delete written steps data in a time range:
      *
@@ -152,6 +156,7 @@ interface HealthConnectClient {
      *   identifiers will result in IPC failure.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      */
     suspend fun <T : Record> readRecord(
         recordType: KClass<T>,
@@ -167,6 +172,7 @@ interface HealthConnectClient {
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example code to read basic data like step counts:
      *
@@ -184,6 +190,7 @@ interface HealthConnectClient {
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example code to aggregate cumulative data like distance:
      *
@@ -213,6 +220,7 @@ interface HealthConnectClient {
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example code to retrieve cumulative step count for each minute within provided time range:
      *
@@ -240,6 +248,7 @@ interface HealthConnectClient {
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
      * @throws java.io.IOException For any disk I/O issues.
+     * @throws IllegalStateException If service is not available.
      *
      * Example code to retrieve cumulative step count for each month within provided time range:
      *
@@ -264,6 +273,7 @@ interface HealthConnectClient {
      * @return a changes-token
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
+     * @throws IllegalStateException If service is not available.
      * @see getChanges
      */
     suspend fun getChangesToken(request: ChangesTokenRequest): String
@@ -294,6 +304,7 @@ interface HealthConnectClient {
      * @return a [ChangesResponse] with changes since provided [changesToken].
      * @throws android.os.RemoteException For any IPC transportation failures.
      * @throws SecurityException For requests with unpermitted access.
+     * @throws IllegalStateException If service is not available.
      * @see getChangesToken
      */
     suspend fun getChanges(changesToken: String): ChangesResponse
@@ -364,7 +375,6 @@ interface HealthConnectClient {
          * @param providerPackageName optional package provider to choose for backend implementation
          * @return One of [SDK_UNAVAILABLE], [SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED], or
          *   [SDK_AVAILABLE]
-         *
          * @sample androidx.health.connect.client.samples.AvailabilityCheckSamples
          */
         @JvmOverloads
@@ -393,8 +403,8 @@ interface HealthConnectClient {
          * @return instance of [HealthConnectClient] ready for issuing requests
          * @throws UnsupportedOperationException if service not available due to SDK version too low
          *   or running in a profile
-         * @throws IllegalStateException if the SDK is not available
-         * @see getSdkStatus
+         * @throws IllegalStateException if service not available due to not installed
+         * @see isProviderAvailable
          */
         @JvmOverloads
         @JvmStatic
@@ -480,7 +490,7 @@ interface HealthConnectClient {
                 } catch (e: PackageManager.NameNotFoundException) {
                     return false
                 }
-            return (packageInfo.applicationInfo?.enabled == true) &&
+            return packageInfo.applicationInfo.enabled &&
                 (packageName != DEFAULT_PROVIDER_PACKAGE_NAME ||
                     PackageInfoCompat.getLongVersionCode(packageInfo) >= versionCode) &&
                 hasBindableService(packageManager, packageName)

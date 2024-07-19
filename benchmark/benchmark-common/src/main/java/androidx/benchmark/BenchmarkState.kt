@@ -18,7 +18,6 @@ package androidx.benchmark
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
 import androidx.annotation.IntRange
 import androidx.annotation.RestrictTo
@@ -26,7 +25,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.benchmark.Errors.PREFIX
 import androidx.benchmark.InstrumentationResults.instrumentationReport
 import androidx.benchmark.InstrumentationResults.reportBundle
-import androidx.benchmark.json.BenchmarkData
 import java.util.concurrent.TimeUnit
 
 /**
@@ -52,13 +50,15 @@ import java.util.concurrent.TimeUnit
  *
  * @see androidx.benchmark.junit4.BenchmarkRule#getState()
  */
-class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Config) {
+class BenchmarkState internal constructor(
+    phaseConfig: MicrobenchmarkPhase.Config
+) {
 
     /**
      * Create a BenchmarkState for custom measurement behavior.
      *
-     * @param warmupCount Number of non-measured warmup iterations to perform, leave null to
-     *   determine automatically
+     * @param warmupCount Number of non-measured warmup iterations to perform, leave null
+     * to determine automatically
      * @param repeatCount Number of measurements to perform, leave null for default behavior
      */
     @ExperimentalBenchmarkStateApi
@@ -73,11 +73,17 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         simplifiedTimingOnlyMode = false
     )
 
-    /** Constructor used for standard uses of BenchmarkState, e.g. in BenchmarkRule */
+    /**
+     * Constructor used for standard uses of BenchmarkState, e.g. in BenchmarkRule
+     */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     constructor(
         config: MicrobenchmarkConfig? = null
-    ) : this(warmupCount = null, simplifiedTimingOnlyMode = false, config = config)
+    ) : this(
+        warmupCount = null,
+        simplifiedTimingOnlyMode = false,
+        config = config
+    )
 
     internal constructor(
         warmupCount: Int? = null,
@@ -89,7 +95,6 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
             dryRunMode = Arguments.dryRunMode,
             startupMode = Arguments.startupMode,
             profiler = config?.profiler?.profiler ?: Arguments.profiler,
-            profilerPerfCompareMode = Arguments.profilerPerfCompareEnable,
             warmupCount = warmupCount,
             measurementCount = Arguments.iterations ?: measurementCount,
             simplifiedTimingOnlyMode = simplifiedTimingOnlyMode,
@@ -119,16 +124,12 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
     internal var warmupRepeats = 0 // number of warmup repeats that occurred
 
     /**
-     * Decreasing iteration count used when running a multi-iteration measurement phase Used to
-     * determine when a main measurement stage finishes.
+     * Decreasing iteration count used when running a multi-iteration measurement phase
+     * Used to determine when a main measurement stage finishes.
      */
     @JvmField // Used by [BenchmarkState.keepRunningInline()]
     @PublishedApi
     internal var iterationsRemaining: Int = -1
-
-    @Suppress("NOTHING_TO_INLINE")
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    inline fun getIterationsRemaining() = iterationsRemaining
 
     /**
      * Number of iterations in a repeat.
@@ -140,13 +141,14 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
      * value, but we should consider tracking and reporting this differently in the json if this
      * changes.
      */
-    @VisibleForTesting internal var iterationsPerRepeat = 1
+    @VisibleForTesting
+    internal var iterationsPerRepeat = 1
 
     private val warmupManager = phaseConfig.warmupManager
 
     private var paused = false
 
-    /** The total duration of sleep due to thermal throttling. */
+    /**  The total duration of sleep due to thermal throttling. */
     private var thermalThrottleSleepSeconds: Long = 0
     private var totalRunTimeStartNs: Long = 0 // System.nanoTime() at start of benchmark.
     private var totalRunTimeNs: Long = 0 // Total run time of a benchmark.
@@ -172,7 +174,9 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
     }
 
     private fun checkFinished() {
-        check(phaseIndex >= 0) { "Attempting to interact with a benchmark that wasn't started!" }
+        check(phaseIndex >= 0) {
+            "Attempting to interact with a benchmark that wasn't started!"
+        }
         check(phaseIndex >= phases.size) {
             "The benchmark hasn't finished! In Java, use " +
                 "while(BenchmarkState.keepRunning()) to ensure keepRunning() returns " +
@@ -202,6 +206,7 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
      * ```
      *
      * @throws [IllegalStateException] if the benchmark is already paused.
+     *
      * @see resumeTiming
      */
     fun pauseTiming() {
@@ -231,6 +236,7 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
      * ```
      *
      * @throws [IllegalStateException] if the benchmark is already running.
+     *
      * @see pauseTiming
      */
     fun resumeTiming() {
@@ -243,11 +249,13 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         check(phaseIndex < phases.size)
 
         if (phaseIndex >= 0) {
-            currentPhase.profiler?.run { inMemoryTrace("profiler.stop()") { stop() } }
-            InMemoryTracing.endSection() // end phase
+            currentPhase.profiler?.stop()
+            InMemoryTracing.endSection()
             thermalThrottleSleepSeconds += currentPhase.thermalThrottleSleepSeconds
-            if (currentPhase.loopMode.warmupManager == null) {
-                // Save captured metrics except during warmup, where we intentionally discard
+            if (currentPhase.loopMode.warmupManager == null && currentPhase.profiler == null) {
+                // Always save metrics, except during warmup / profiling
+                // Note that dryRunMode avoids reporting these to JSON by other means, they
+                // still should be accessible to tests
                 metricResults.addAll(
                     currentMetrics.captureFinished(maxIterations = currentLoopsPerMeasurement)
                 )
@@ -275,31 +283,7 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         iterationsPerRepeat = iterationsPerRepeat.coerceAtLeast(currentLoopsPerMeasurement)
 
         InMemoryTracing.beginSection(currentPhase.label)
-        val phaseProfilerResult =
-            currentPhase.profiler?.run {
-                val estimatedMethodTraceDurNs =
-                    warmupEstimatedIterationTimeNs * METHOD_TRACING_ESTIMATED_SLOWDOWN_FACTOR
-                if (
-                    this == MethodTracing &&
-                        Looper.myLooper() == Looper.getMainLooper() &&
-                        estimatedMethodTraceDurNs > METHOD_TRACING_MAX_DURATION_NS &&
-                        Arguments.profilerSkipWhenDurationRisksAnr
-                ) {
-                    val expectedDurSec = estimatedMethodTraceDurNs / 1_000_000_000.0
-                    InstrumentationResults.scheduleIdeWarningOnNextReport(
-                        """
-                        Skipping method trace of estimated duration $expectedDurSec sec to avoid ANR
-
-                        To disable this behavior, set instrumentation arg:
-                            androidx.benchmark.profiling.skipWhenDurationRisksAnr = false
-                    """
-                            .trimIndent()
-                    )
-                    null
-                } else {
-                    inMemoryTrace("start profiling") { start(traceUniqueName) }
-                }
-            }
+        val phaseProfilerResult = currentPhase.profiler?.start(traceUniqueName)
         if (phaseProfilerResult != null) {
             require(profilerResult == null) {
                 "ProfileResult already set, only support one profiling phase"
@@ -311,32 +295,32 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         return true
     }
 
-    /** @return true if the benchmark should still keep running */
-    private fun onMeasurementComplete(): Boolean {
+    /**
+     * @return true if the benchmark should still keep running
+     */
+     private fun onMeasurementComplete(): Boolean {
         currentMetrics.captureStop()
         throwIfPaused()
         currentMeasurement++
 
-        val tryStartNextPhase =
-            currentPhase.loopMode.let {
-                if (it.warmupManager != null) {
-                    // warmup phase
-                    currentMetrics.captureInit()
-                    // Note that warmup is based on repeat time, *not* the timeNs metric, since we
-                    // want
-                    // to account for paused time during warmup (paused work should stabilize too)
-                    val lastMeasuredWarmupValue = currentMetrics.peekSingleRepeatTime()
-                    if (it.warmupManager.onNextIteration(lastMeasuredWarmupValue)) {
-                        warmupEstimatedIterationTimeNs = lastMeasuredWarmupValue
-                        warmupRepeats = currentMeasurement
-                        true
-                    } else {
-                        false
-                    }
+        val tryStartNextPhase = currentPhase.loopMode.let {
+            if (it.warmupManager != null) {
+                // warmup phase
+                currentMetrics.captureInit()
+                // Note that warmup is based on repeat time, *not* the timeNs metric, since we want
+                // to account for paused time during warmup (paused work should stabilize too)
+                val lastMeasuredWarmupValue = currentMetrics.peekSingleRepeatTime()
+                if (it.warmupManager.onNextIteration(lastMeasuredWarmupValue)) {
+                    warmupEstimatedIterationTimeNs = lastMeasuredWarmupValue
+                    warmupRepeats = currentMeasurement
+                    true
                 } else {
-                    currentMeasurement == currentPhase.measurementCount
+                    false
                 }
+            } else {
+                currentMeasurement == currentPhase.measurementCount
             }
+        }
         return if (tryStartNextPhase) {
             if (currentPhase.tryEnd()) {
                 startNextPhase()
@@ -344,7 +328,7 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
                 // failed capture (due to thermal throttling), restart profiler and metrics
                 currentPhase.profiler?.apply {
                     stop()
-                    profilerResult = inMemoryTrace("start profiling") { start(traceUniqueName) }
+                    profilerResult = start(traceUniqueName)
                 }
                 currentMetrics.captureInit()
                 currentMeasurement = 0
@@ -394,31 +378,16 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
     }
 
     /**
-     * Reimplementation of Kotlin check, which also resets thread priority, since we don't want to
-     * leave a thread with bumped thread priority
+     * Reimplementation of Kotlin check, which also resets thread priority, since we don't want
+     * to leave a thread with bumped thread priority
      */
     private inline fun check(value: Boolean, lazyMessage: () -> String) {
         if (!value) {
-            cleanupBeforeThrow()
+            ThreadPriority.resetBumpedThread()
+            if (phaseIndex >= 0 && phaseIndex <= phases.size) {
+                InMemoryTracing.endSection() // current phase cancelled, complete trace event
+            }
             throw IllegalStateException(lazyMessage())
-        }
-    }
-
-    /**
-     * Ideally this would only be called when an exception is observed in measureRepeated, but to
-     * account for java callers, we explicitly trigger before throwing as well.
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    fun cleanupBeforeThrow() {
-        if (phaseIndex >= 0 && phaseIndex <= phases.size) {
-            Log.d(TAG, "aborting and cancelling benchmark")
-            // current phase cancelled, complete current phase cleanup (trace event and profiling)
-            InMemoryTracing.endSection()
-            currentPhase.profiler?.run { inMemoryTrace("profiling stop") { stop() } }
-
-            // for safety, set other state to done and do broader cleanup
-            phaseIndex = phases.size
-            afterBenchmark()
         }
     }
 
@@ -426,30 +395,29 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
      * Internal loop control for benchmarks - will return true as long as there are more
      * measurements to perform.
      *
-     * Actual benchmarks should always go through [keepRunning] or [keepRunningInline], since they
-     * optimize the *Iteration* step to have extremely minimal logic performed.
+     * Actual benchmarks should always go through [keepRunning] or [keepRunningInline], since
+     * they optimize the *Iteration* step to have extremely minimal logic performed.
      *
      * The looping behavior is functionally multiple nested loops, e.g.:
      * - Stage - RUNNING_WARMUP vs RUNNING_TIME
      * - Measurement - how many times iterations are measured
      * - Iteration - how many iterations/loops are run between each measurement
      *
-     * This has the effect of a 3 layer nesting loop structure, but all condensed to a single method
-     * returning true/false to simplify the entry point.
+     * This has the effect of a 3 layer nesting loop structure, but all condensed to a single
+     * method returning true/false to simplify the entry point.
      *
      * @return whether the benchmarking system has anything left to do
      */
     @PublishedApi
     internal fun keepRunningInternal(): Boolean {
-        val shouldKeepRunning =
-            if (phaseIndex == -1) {
-                // Initialize
-                beforeBenchmark()
-                startNextPhase()
-            } else {
-                // Trigger another repeat within current phase
-                onMeasurementComplete()
-            }
+        val shouldKeepRunning = if (phaseIndex == -1) {
+            // Initialize
+            beforeBenchmark()
+            startNextPhase()
+        } else {
+            // Trigger another repeat within current phase
+            onMeasurementComplete()
+        }
 
         iterationsRemaining = currentLoopsPerMeasurement
         return shouldKeepRunning
@@ -464,21 +432,7 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
                     "isolation."
             )
         }
-        check(DeviceInfo.artMainlineVersion != DeviceInfo.ART_MAINLINE_VERSION_UNDETECTED_ERROR) {
-            "Unable to detect ART mainline module version to check for interference from method" +
-                " tracing, please see logcat for details, and/or file a bug with logcat."
-        }
-        check(
-            !enableMethodTracingAffectsMeasurementError ||
-                !DeviceInfo.methodTracingAffectsMeasurements ||
-                !MethodTracing.hasBeenUsed
-        ) {
-            "Measurement prevented by method trace - Running on a device/configuration where " +
-                "method tracing affects measurements, and a method trace has been captured " +
-                "- no additional benchmarks can be run without restarting the test suite. Use " +
-                "ProfilerConfig.MethodTracing.affectsMeasurementOnThisDevice to detect affected " +
-                "devices, see its documentation for more info."
-        }
+        firstBenchmark = false
 
         thermalThrottleSleepSeconds = 0
 
@@ -501,42 +455,26 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         warmupManager.logInfo()
     }
 
-    private fun throwIfPaused() =
-        check(!paused) {
-            "Benchmark loop finished in paused state." +
-                " Call BenchmarkState.resumeTiming() before BenchmarkState.keepRunning()."
-        }
+    private fun throwIfPaused() = check(!paused) {
+        "Benchmark loop finished in paused state." +
+            " Call BenchmarkState.resumeTiming() before BenchmarkState.keepRunning()."
+    }
 
-    private fun getTestResult(testName: String, className: String, perfettoTracePath: String?) =
-        BenchmarkData.TestResult(
-            name = testName,
-            className = className,
-            totalRunTimeNs = totalRunTimeNs,
-            metrics = metricResults,
-            warmupIterations = warmupRepeats,
-            repeatIterations = iterationsPerRepeat,
-            thermalThrottleSleepSeconds = thermalThrottleSleepSeconds,
-            profilerOutputs =
-                listOfNotNull(
-                    perfettoTracePath?.let {
-                        BenchmarkData.TestResult.ProfilerOutput(
-                            Profiler.ResultFile.ofPerfettoTrace(
-                                label = "Trace",
-                                absolutePath = perfettoTracePath
-                            )
-                        )
-                    },
-                    profilerResult?.let { BenchmarkData.TestResult.ProfilerOutput(it) }
-                )
-        )
+    private fun getReport(testName: String, className: String) = BenchmarkResult(
+        className = className,
+        testName = testName,
+        totalRunTimeNs = totalRunTimeNs,
+        metrics = metricResults,
+        repeatIterations = iterationsPerRepeat,
+        thermalThrottleSleepSeconds = thermalThrottleSleepSeconds,
+        warmupIterations = warmupRepeats
+    )
 
     @ExperimentalBenchmarkStateApi
-    fun getMeasurementTimeNs(): List<Double> = metricResults.first { it.name == "timeNs" }.data
+    fun getMeasurementTimeNs(): List<Double> =
+        metricResults.first { it.name == "timeNs" }.data
 
-    internal fun peekTestResult() =
-        checkFinished().run {
-            getTestResult(testName = "", className = "", perfettoTracePath = null)
-        }
+    internal fun getReport() = checkFinished().run { getReport("", "") }
 
     /**
      * Acquires a status report bundle
@@ -549,28 +487,25 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         reportMetrics: Boolean,
         tracePath: String?
     ): Bundle {
-        Log.i(TAG, key + metricResults.map { it.getSummary() } + "count=$iterationsPerRepeat")
+        Log.i(TAG, key +
+            metricResults.map { it.getSummary() } + "count=$iterationsPerRepeat")
         val status = Bundle()
         if (reportMetrics) {
             // these 'legacy' CI output metrics are considered output
             metricResults.forEach { it.putInBundle(status, PREFIX) }
         }
-        InstrumentationResultScope(status)
-            .reportSummaryToIde(
-                testName = key,
-                measurements =
-                    Measurements(singleMetrics = metricResults, sampledMetrics = emptyList()),
-                profilerResults =
-                    listOfNotNull(
-                        tracePath?.let {
-                            Profiler.ResultFile.ofPerfettoTrace(
-                                label = "Trace",
-                                absolutePath = tracePath
-                            )
-                        },
-                        profilerResult
-                    )
+        InstrumentationResultScope(status).reportSummaryToIde(
+            warningMessage = Errors.acquireWarningStringForLogging() ?: "",
+            testName = key,
+            measurements = BenchmarkResult.Measurements(
+                singleMetrics = metricResults,
+                sampledMetrics = emptyList()
+            ),
+            profilerResults = listOfNotNull(
+                tracePath?.let { Profiler.ResultFile(label = "Trace", absolutePath = tracePath) },
+                profilerResult
             )
+        )
         return status
     }
 
@@ -579,30 +514,28 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
         fullClassName: String,
         simpleClassName: String,
         methodName: String,
-        perfettoTracePath: String?
+        tracePath: String?
     ) {
         if (phaseIndex == -1) {
             return // nothing to report, BenchmarkState wasn't used
         }
 
-        if (perfettoTracePath != null) {
-            profilerResult?.embedInPerfettoTrace(perfettoTracePath)
+        if (tracePath != null) {
+            profilerResult?.embedInPerfettoTrace(tracePath)
         }
 
         checkFinished() // this method is triggered externally
         val fullTestName = "$PREFIX$simpleClassName.$methodName"
-        val bundle =
-            getFullStatusReport(
-                key = fullTestName,
-                reportMetrics = !Arguments.dryRunMode,
-                tracePath = perfettoTracePath
-            )
+        val bundle = getFullStatusReport(
+            key = fullTestName,
+            reportMetrics = !Arguments.dryRunMode,
+            tracePath = tracePath
+        )
         reportBundle(bundle)
-        ResultWriter.appendTestResult(
-            getTestResult(
+        ResultWriter.appendReport(
+            getReport(
                 testName = PREFIX + methodName,
-                className = fullClassName,
-                perfettoTracePath = perfettoTracePath
+                className = fullClassName
             )
         )
     }
@@ -612,38 +545,11 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
 
         internal const val REPEAT_COUNT_ALLOCATION = 5
 
-        /**
-         * Conservative estimate for how much method tracing slows down runtime how much longer will
-         * `methodTrace {x()}` be than `x()`
-         *
-         * This is a conservative estimate, better version of this would account for OS/Art version
-         *
-         * Value derived from observed numbers on bramble API 31 (600-800x slowdown)
-         */
-        internal const val METHOD_TRACING_ESTIMATED_SLOWDOWN_FACTOR = 1000
-
-        /**
-         * Maximum duration to trace on main thread to avoid ANRs
-         *
-         * In practice, other types of tracing can be equally dangerous for ANRs, but method tracing
-         * is the default tracing mode.
-         */
-        internal const val METHOD_TRACING_MAX_DURATION_NS = 4_000_000_000
-
         internal val DEFAULT_MEASUREMENT_DURATION_NS = TimeUnit.MILLISECONDS.toNanos(100)
         internal val SAMPLED_PROFILER_DURATION_NS =
             TimeUnit.SECONDS.toNanos(Arguments.profilerSampleDurationSeconds)
 
         private var firstBenchmark = true
-
-        /**
-         * Used to disable error to enable internal correctness tests, which need to use method
-         * tracing and can safely ignore measurement accuracy
-         *
-         * Ideally this would function as a true suppressible error like in Errors.kt, but existing
-         * error functionality doesn't handle changing error states dynamically
-         */
-        internal var enableMethodTracingAffectsMeasurementError = true
 
         private val DEFAULT_METRICS: Array<MetricCapture> =
             if (Arguments.cpuEventCounterMask != 0) {
@@ -674,11 +580,11 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
          * @param totalRunTimeNs The total run time of the benchmark
          * @param dataNs List of all measured timing results, in nanoseconds
          * @param warmupIterations Number of iterations of warmup before measurements started.
-         *   Should be no less than 0.
+         * Should be no less than 0.
          * @param thermalThrottleSleepSeconds Number of seconds benchmark was paused during thermal
-         *   throttling.
+         * throttling.
          * @param repeatIterations Number of iterations in between each measurement. Should be no
-         *   less than 1.
+         * less than 1.
          */
         @JvmStatic
         @ExperimentalExternalReport
@@ -692,32 +598,31 @@ class BenchmarkState internal constructor(phaseConfig: MicrobenchmarkPhase.Confi
             @IntRange(from = 1) repeatIterations: Int
         ) {
             val metricsContainer = MetricsContainer(repeatCount = dataNs.size)
-            dataNs.forEachIndexed { index, value -> metricsContainer.data[index][0] = value }
-            val metrics = metricsContainer.captureFinished(maxIterations = 1)
-            val report =
-                BenchmarkData.TestResult(
-                    className = className,
-                    name = testName,
-                    totalRunTimeNs = totalRunTimeNs,
-                    metrics = metrics,
-                    repeatIterations = repeatIterations,
-                    thermalThrottleSleepSeconds = thermalThrottleSleepSeconds,
-                    warmupIterations = warmupIterations,
-                    profilerOutputs = null,
-                )
+            dataNs.forEachIndexed { index, value ->
+                metricsContainer.data[index][0] = value
+            }
+            val report = BenchmarkResult(
+                className = className,
+                testName = testName,
+                totalRunTimeNs = totalRunTimeNs,
+                metrics = metricsContainer.captureFinished(maxIterations = 1),
+                repeatIterations = repeatIterations,
+                thermalThrottleSleepSeconds = thermalThrottleSleepSeconds,
+                warmupIterations = warmupIterations
+            )
             // Report value to Studio console
-            val fullTestName =
-                PREFIX + if (className.isNotEmpty()) "$className.$testName" else testName
+            val fullTestName = PREFIX +
+                if (className.isNotEmpty()) "$className.$testName" else testName
 
             instrumentationReport {
                 reportSummaryToIde(
                     testName = fullTestName,
-                    measurements = Measurements(metrics, emptyList()),
+                    measurements = report.metrics,
                 )
             }
 
             // Report values to file output
-            ResultWriter.appendTestResult(report)
+            ResultWriter.appendReport(report)
         }
     }
 }

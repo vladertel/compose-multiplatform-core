@@ -43,7 +43,8 @@ class TextInColumnBenchmark(private val numberOfTexts: Int) {
         fun initParameters(): Array<Any> = arrayOf(10, 100)
     }
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val textInColumnCaseFactory = { TextInColumnSizeToggleTestCase(numberOfTexts) }
 

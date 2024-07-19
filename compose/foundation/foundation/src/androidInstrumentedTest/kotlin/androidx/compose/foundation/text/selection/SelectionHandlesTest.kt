@@ -54,7 +54,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class SelectionHandlesTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val handleColor = Color.Black
     private val backgroundColor = Color.White
@@ -62,9 +63,9 @@ class SelectionHandlesTest {
     private val contentTag = "contentTag"
 
     /**
-     * How many pixels into the handle to check the color of. This should be far enough in to avoid
-     * anti-aliasing blending the edge colors together, but not so far in that it reaches the center
-     * circle of the handle
+     * How many pixels into the handle to check the color of.
+     * This should be far enough in to avoid anti-aliasing blending the edge colors together,
+     * but not so far in that it reaches the center circle of the handle
      */
     private val inwardBias = 3
 
@@ -135,9 +136,9 @@ class SelectionHandlesTest {
     }
 
     /**
-     * When the offset changes to and from [Offset.Unspecified], we want to ensure that the
-     * semantics and visibility change as expected. If the semantics here aren't correct, many other
-     * tests will likely fail as well.
+     * When the offset changes to and from [Offset.Unspecified],
+     * we want to ensure that the semantics and visibility change as expected. If the
+     * semantics here aren't correct, many other tests will likely fail as well.
      *
      * If [Offset.Unspecified]: no SelectionHandleInfo semantics, not visible.
      *
@@ -151,7 +152,9 @@ class SelectionHandlesTest {
         val tag = "testTag"
         var specifiedOffset = Offset.Zero
         var offsetState by mutableStateOf(specifiedOffset)
-        setContent(Modifier.onGloballyPositioned { specifiedOffset = it.boundsInRoot().center }) {
+        setContent(
+            Modifier.onGloballyPositioned { specifiedOffset = it.boundsInRoot().center }
+        ) {
             SelectionHandle(
                 modifier = Modifier.testTag(tag),
                 offsetProvider = { offsetState },
@@ -197,54 +200,43 @@ class SelectionHandlesTest {
     @SmallTest
     fun isHandleLtrDirection_ltr_handles_not_cross_return_true() {
         assertThat(
-                isHandleLtrDirection(
-                    direction = ResolvedTextDirection.Ltr,
-                    areHandlesCrossed = false
-                )
-            )
-            .isTrue()
+            isHandleLtrDirection(direction = ResolvedTextDirection.Ltr, areHandlesCrossed = false)
+        ).isTrue()
     }
 
     @Test
     @SmallTest
     fun isHandleLtrDirection_ltr_handles_cross_return_false() {
         assertThat(
-                isHandleLtrDirection(
-                    direction = ResolvedTextDirection.Ltr,
-                    areHandlesCrossed = true
-                )
-            )
-            .isFalse()
+            isHandleLtrDirection(direction = ResolvedTextDirection.Ltr, areHandlesCrossed = true)
+        ).isFalse()
     }
 
     @Test
     @SmallTest
     fun isHandleLtrDirection_rtl_handles_not_cross_return_false() {
         assertThat(
-                isHandleLtrDirection(
-                    direction = ResolvedTextDirection.Rtl,
-                    areHandlesCrossed = false
-                )
-            )
-            .isFalse()
+            isHandleLtrDirection(direction = ResolvedTextDirection.Rtl, areHandlesCrossed = false)
+        ).isFalse()
     }
 
     @Test
     @SmallTest
     fun isHandleLtrDirection_rtl_handles_cross_return_true() {
         assertThat(
-                isHandleLtrDirection(
-                    direction = ResolvedTextDirection.Rtl,
-                    areHandlesCrossed = true
-                )
-            )
-            .isTrue()
+            isHandleLtrDirection(direction = ResolvedTextDirection.Rtl, areHandlesCrossed = true)
+        ).isTrue()
     }
 
-    private fun setContent(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    private fun setContent(
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
         rule.setContent {
             Box(
-                modifier = modifier.fillMaxSize().background(backgroundColor),
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(backgroundColor),
                 contentAlignment = Alignment.Center,
             ) {
                 val colors = TextSelectionColors(handleColor, backgroundColor)

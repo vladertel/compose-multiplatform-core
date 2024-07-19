@@ -19,6 +19,7 @@ package androidx.camera.core;
 import android.graphics.Matrix;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.ExifData;
@@ -27,6 +28,7 @@ import com.google.auto.value.AutoValue;
 
 /**
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @AutoValue
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 public abstract class ImmutableImageInfo implements ImageInfo {

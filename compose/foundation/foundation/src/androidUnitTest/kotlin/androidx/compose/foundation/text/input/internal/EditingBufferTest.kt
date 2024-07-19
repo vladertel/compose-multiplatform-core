@@ -137,8 +137,7 @@ class EditingBufferTest {
         assertThat(eb.compositionEnd).isEqualTo(-1)
     }
 
-    @Test
-    fun setSelection_coerces_whenNegativeStart() {
+    @Test fun setSelection_coerces_whenNegativeStart() {
         val eb = EditingBuffer("ABCDE", TextRange.Zero)
 
         eb.setSelection(-1, 1)
@@ -147,8 +146,7 @@ class EditingBufferTest {
         assertThat(eb.selectionEnd).isEqualTo(1)
     }
 
-    @Test
-    fun setSelection_coerces_whenNegativeEnd() {
+    @Test fun setSelection_coerces_whenNegativeEnd() {
         val eb = EditingBuffer("ABCDE", TextRange.Zero)
 
         eb.setSelection(1, -1)

@@ -22,11 +22,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 
-/** Defines [Shape] for all TV [Indication] states of [ClickableChip]. */
+/**
+ * Defines [Shape] for all TV [Indication] states of [ClickableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class ClickableChipShape
-internal constructor(
+class ClickableChipShape internal constructor(
     internal val shape: Shape,
     internal val focusedShape: Shape,
     internal val pressedShape: Shape,
@@ -64,21 +65,21 @@ internal constructor(
             "focusedDisabledShape=$focusedDisabledShape)"
     }
 
-    internal fun toClickableSurfaceShape() =
-        ClickableSurfaceShape(
-            shape = shape,
-            focusedShape = focusedShape,
-            pressedShape = pressedShape,
-            disabledShape = disabledShape,
-            focusedDisabledShape = focusedDisabledShape
-        )
+    internal fun toClickableSurfaceShape() = ClickableSurfaceShape(
+        shape = shape,
+        focusedShape = focusedShape,
+        pressedShape = pressedShape,
+        disabledShape = disabledShape,
+        focusedDisabledShape = focusedDisabledShape
+    )
 }
 
-/** Defines [Shape] for all TV [Indication] states of [SelectableChip]. */
+/**
+ * Defines [Shape] for all TV [Indication] states of [SelectableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class SelectableChipShape
-internal constructor(
+class SelectableChipShape internal constructor(
     internal val shape: Shape,
     internal val focusedShape: Shape,
     internal val pressedShape: Shape,
@@ -135,26 +136,26 @@ internal constructor(
             "focusedSelectedDisabledShape=$focusedSelectedDisabledShape)"
     }
 
-    internal fun toSelectableSurfaceShape() =
-        SelectableSurfaceShape(
-            shape = shape,
-            focusedShape = focusedShape,
-            pressedShape = pressedShape,
-            selectedShape = selectedShape,
-            disabledShape = disabledShape,
-            focusedSelectedShape = focusedSelectedShape,
-            focusedDisabledShape = focusedDisabledShape,
-            pressedSelectedShape = pressedSelectedShape,
-            selectedDisabledShape = selectedDisabledShape,
-            focusedSelectedDisabledShape = focusedSelectedDisabledShape
-        )
+    internal fun toToggleableSurfaceShape() = ToggleableSurfaceShape(
+        shape = shape,
+        focusedShape = focusedShape,
+        pressedShape = pressedShape,
+        selectedShape = selectedShape,
+        disabledShape = disabledShape,
+        focusedSelectedShape = focusedSelectedShape,
+        focusedDisabledShape = focusedDisabledShape,
+        pressedSelectedShape = pressedSelectedShape,
+        selectedDisabledShape = selectedDisabledShape,
+        focusedSelectedDisabledShape = focusedSelectedDisabledShape
+    )
 }
 
-/** Defines [Color] for all TV [Indication] states of [ClickableChip]. */
+/**
+ * Defines [Color] for all TV [Indication] states of [ClickableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class ClickableChipColors
-internal constructor(
+class ClickableChipColors internal constructor(
     internal val containerColor: Color,
     internal val contentColor: Color,
     internal val focusedContainerColor: Color,
@@ -194,17 +195,16 @@ internal constructor(
         return result
     }
 
-    internal fun toClickableSurfaceColors() =
-        ClickableSurfaceColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            focusedContainerColor = focusedContainerColor,
-            focusedContentColor = focusedContentColor,
-            pressedContainerColor = pressedContainerColor,
-            pressedContentColor = pressedContentColor,
-            disabledContainerColor = disabledContainerColor,
-            disabledContentColor = disabledContentColor,
-        )
+    internal fun toClickableSurfaceColors() = ClickableSurfaceColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        focusedContainerColor = focusedContainerColor,
+        focusedContentColor = focusedContentColor,
+        pressedContainerColor = pressedContainerColor,
+        pressedContentColor = pressedContentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor,
+    )
 
     override fun toString(): String {
         return "ClickableChipColors(containerColor=$containerColor, contentColor=$contentColor, " +
@@ -215,11 +215,12 @@ internal constructor(
     }
 }
 
-/** Defines [Color] for all TV [Indication] states of [SelectableChip]. */
+/**
+ * Defines [Color] for all TV [Indication] states of [SelectableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class SelectableChipColors
-internal constructor(
+class SelectableChipColors internal constructor(
     internal val containerColor: Color,
     internal val contentColor: Color,
     internal val focusedContainerColor: Color,
@@ -277,23 +278,22 @@ internal constructor(
         return result
     }
 
-    internal fun toSelectableSurfaceColors() =
-        SelectableSurfaceColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            focusedContainerColor = focusedContainerColor,
-            focusedContentColor = focusedContentColor,
-            pressedContainerColor = pressedContainerColor,
-            pressedContentColor = pressedContentColor,
-            selectedContainerColor = selectedContainerColor,
-            selectedContentColor = selectedContentColor,
-            disabledContainerColor = disabledContainerColor,
-            disabledContentColor = disabledContentColor,
-            focusedSelectedContainerColor = focusedSelectedContainerColor,
-            focusedSelectedContentColor = focusedSelectedContentColor,
-            pressedSelectedContainerColor = pressedSelectedContainerColor,
-            pressedSelectedContentColor = pressedSelectedContentColor,
-        )
+    internal fun toToggleableSurfaceColors() = ToggleableSurfaceColors(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        focusedContainerColor = focusedContainerColor,
+        focusedContentColor = focusedContentColor,
+        pressedContainerColor = pressedContainerColor,
+        pressedContentColor = pressedContentColor,
+        selectedContainerColor = selectedContainerColor,
+        selectedContentColor = selectedContentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor,
+        focusedSelectedContainerColor = focusedSelectedContainerColor,
+        focusedSelectedContentColor = focusedSelectedContentColor,
+        pressedSelectedContainerColor = pressedSelectedContainerColor,
+        pressedSelectedContentColor = pressedSelectedContentColor,
+    )
 
     override fun toString(): String {
         return "SelectableChipColors(containerColor=$containerColor, " +
@@ -318,8 +318,7 @@ internal constructor(
  */
 @ExperimentalTvMaterial3Api
 @Immutable
-class ClickableChipScale
-internal constructor(
+class ClickableChipScale internal constructor(
     @FloatRange(from = 0.0) internal val scale: Float,
     @FloatRange(from = 0.0) internal val focusedScale: Float,
     @FloatRange(from = 0.0) internal val pressedScale: Float,
@@ -358,25 +357,25 @@ internal constructor(
     }
 
     companion object {
-        /** Signifies the absence of a [ScaleIndication] in ClickableChip component. */
-        val None =
-            ClickableChipScale(
-                scale = 1f,
-                focusedScale = 1f,
-                pressedScale = 1f,
-                disabledScale = 1f,
-                focusedDisabledScale = 1f,
-            )
+        /**
+         * Signifies the absence of a [ScaleIndication] in ClickableChip component.
+         */
+        val None = ClickableChipScale(
+            scale = 1f,
+            focusedScale = 1f,
+            pressedScale = 1f,
+            disabledScale = 1f,
+            focusedDisabledScale = 1f,
+        )
     }
 
-    internal fun toClickableSurfaceScale() =
-        ClickableSurfaceScale(
-            scale = scale,
-            focusedScale = focusedScale,
-            pressedScale = pressedScale,
-            disabledScale = disabledScale,
-            focusedDisabledScale = focusedDisabledScale
-        )
+    internal fun toClickableSurfaceScale() = ClickableSurfaceScale(
+        scale = scale,
+        focusedScale = focusedScale,
+        pressedScale = pressedScale,
+        disabledScale = disabledScale,
+        focusedDisabledScale = focusedDisabledScale
+    )
 }
 
 /**
@@ -385,8 +384,7 @@ internal constructor(
  */
 @ExperimentalTvMaterial3Api
 @Immutable
-class SelectableChipScale
-internal constructor(
+class SelectableChipScale internal constructor(
     @FloatRange(from = 0.0) internal val scale: Float,
     @FloatRange(from = 0.0) internal val focusedScale: Float,
     @FloatRange(from = 0.0) internal val pressedScale: Float,
@@ -444,42 +442,43 @@ internal constructor(
     }
 
     companion object {
-        /** Signifies the absence of a [ScaleIndication] in SelectableChip component. */
-        val None =
-            SelectableChipScale(
-                scale = 1f,
-                focusedScale = 1f,
-                pressedScale = 1f,
-                selectedScale = 1f,
-                disabledScale = 1f,
-                focusedSelectedScale = 1f,
-                focusedDisabledScale = 1f,
-                pressedSelectedScale = 1f,
-                selectedDisabledScale = 1f,
-                focusedSelectedDisabledScale = 1f,
-            )
+        /**
+         * Signifies the absence of a [ScaleIndication] in SelectableChip component.
+         */
+        val None = SelectableChipScale(
+            scale = 1f,
+            focusedScale = 1f,
+            pressedScale = 1f,
+            selectedScale = 1f,
+            disabledScale = 1f,
+            focusedSelectedScale = 1f,
+            focusedDisabledScale = 1f,
+            pressedSelectedScale = 1f,
+            selectedDisabledScale = 1f,
+            focusedSelectedDisabledScale = 1f,
+        )
     }
 
-    internal fun toSelectableSurfaceScale() =
-        SelectableSurfaceScale(
-            scale = scale,
-            focusedScale = focusedScale,
-            pressedScale = pressedScale,
-            selectedScale = selectedScale,
-            disabledScale = disabledScale,
-            focusedSelectedScale = focusedSelectedScale,
-            focusedDisabledScale = focusedDisabledScale,
-            pressedSelectedScale = pressedSelectedScale,
-            selectedDisabledScale = selectedDisabledScale,
-            focusedSelectedDisabledScale = focusedSelectedDisabledScale
-        )
+    internal fun toToggleableSurfaceScale() = ToggleableSurfaceScale(
+        scale = scale,
+        focusedScale = focusedScale,
+        pressedScale = pressedScale,
+        selectedScale = selectedScale,
+        disabledScale = disabledScale,
+        focusedSelectedScale = focusedSelectedScale,
+        focusedDisabledScale = focusedDisabledScale,
+        pressedSelectedScale = pressedSelectedScale,
+        selectedDisabledScale = selectedDisabledScale,
+        focusedSelectedDisabledScale = focusedSelectedDisabledScale
+    )
 }
 
-/** Defines [Border] for all TV [Indication] states of [ClickableChip]. */
+/**
+ * Defines [Border] for all TV [Indication] states of [ClickableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class ClickableChipBorder
-internal constructor(
+class ClickableChipBorder internal constructor(
     internal val border: Border,
     internal val focusedBorder: Border,
     internal val pressedBorder: Border,
@@ -517,21 +516,21 @@ internal constructor(
             "focusedDisabledBorder=$focusedDisabledBorder)"
     }
 
-    internal fun toClickableSurfaceBorder() =
-        ClickableSurfaceBorder(
-            border = border,
-            focusedBorder = focusedBorder,
-            pressedBorder = pressedBorder,
-            disabledBorder = disabledBorder,
-            focusedDisabledBorder = focusedDisabledBorder
-        )
+    internal fun toClickableSurfaceBorder() = ClickableSurfaceBorder(
+        border = border,
+        focusedBorder = focusedBorder,
+        pressedBorder = pressedBorder,
+        disabledBorder = disabledBorder,
+        focusedDisabledBorder = focusedDisabledBorder
+    )
 }
 
-/** Defines [Border] for all TV [Indication] states of [SelectableChip]. */
+/**
+ * Defines [Border] for all TV [Indication] states of [SelectableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class SelectableChipBorder
-internal constructor(
+class SelectableChipBorder internal constructor(
     internal val border: Border,
     internal val focusedBorder: Border,
     internal val pressedBorder: Border,
@@ -588,26 +587,26 @@ internal constructor(
             "focusedSelectedDisabledBorder=$focusedSelectedDisabledBorder)"
     }
 
-    internal fun toSelectableSurfaceBorder() =
-        SelectableSurfaceBorder(
-            border = border,
-            focusedBorder = focusedBorder,
-            pressedBorder = pressedBorder,
-            selectedBorder = selectedBorder,
-            disabledBorder = disabledBorder,
-            focusedSelectedBorder = focusedSelectedBorder,
-            focusedDisabledBorder = focusedDisabledBorder,
-            pressedSelectedBorder = pressedSelectedBorder,
-            selectedDisabledBorder = selectedDisabledBorder,
-            focusedSelectedDisabledBorder = focusedSelectedDisabledBorder
-        )
+    internal fun toToggleableSurfaceBorder() = ToggleableSurfaceBorder(
+        border = border,
+        focusedBorder = focusedBorder,
+        pressedBorder = pressedBorder,
+        selectedBorder = selectedBorder,
+        disabledBorder = disabledBorder,
+        focusedSelectedBorder = focusedSelectedBorder,
+        focusedDisabledBorder = focusedDisabledBorder,
+        pressedSelectedBorder = pressedSelectedBorder,
+        selectedDisabledBorder = selectedDisabledBorder,
+        focusedSelectedDisabledBorder = focusedSelectedDisabledBorder
+    )
 }
 
-/** Defines [Glow] for all TV [Indication] states of [ClickableChip]. */
+/**
+ * Defines [Glow] for all TV [Indication] states of [ClickableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class ClickableChipGlow
-internal constructor(
+class ClickableChipGlow internal constructor(
     internal val glow: Glow,
     internal val focusedGlow: Glow,
     internal val pressedGlow: Glow
@@ -637,15 +636,19 @@ internal constructor(
         return "ClickableChipGlow(glow=$glow, focusedGlow=$focusedGlow, pressedGlow=$pressedGlow)"
     }
 
-    internal fun toClickableSurfaceGlow() =
-        ClickableSurfaceGlow(glow = glow, focusedGlow = focusedGlow, pressedGlow = pressedGlow)
+    internal fun toClickableSurfaceGlow() = ClickableSurfaceGlow(
+        glow = glow,
+        focusedGlow = focusedGlow,
+        pressedGlow = pressedGlow
+    )
 }
 
-/** Defines [Glow] for all TV [Indication] states of [SelectableChip]. */
+/**
+ * Defines [Glow] for all TV [Indication] states of [SelectableChip].
+ */
 @ExperimentalTvMaterial3Api
 @Immutable
-class SelectableChipGlow
-internal constructor(
+class SelectableChipGlow internal constructor(
     internal val glow: Glow,
     internal val focusedGlow: Glow,
     internal val pressedGlow: Glow,
@@ -687,13 +690,12 @@ internal constructor(
             "pressedSelectedGlow=$pressedSelectedGlow)"
     }
 
-    internal fun toSelectableSurfaceGlow() =
-        SelectableSurfaceGlow(
-            glow = glow,
-            focusedGlow = focusedGlow,
-            pressedGlow = pressedGlow,
-            selectedGlow = selectedGlow,
-            focusedSelectedGlow = focusedSelectedGlow,
-            pressedSelectedGlow = pressedSelectedGlow
-        )
+    internal fun toToggleableSurfaceGlow() = ToggleableSurfaceGlow(
+        glow = glow,
+        focusedGlow = focusedGlow,
+        pressedGlow = pressedGlow,
+        selectedGlow = selectedGlow,
+        focusedSelectedGlow = focusedSelectedGlow,
+        pressedSelectedGlow = pressedSelectedGlow
+    )
 }

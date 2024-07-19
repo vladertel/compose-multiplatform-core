@@ -34,11 +34,10 @@ import org.junit.runner.RunWith
 class PeriodicWorkRequestTest {
     @Test
     fun testPeriodicWorkRequestBuilder() {
-        val builder =
-            PeriodicWorkRequestBuilder<TestWorker>(
-                repeatInterval = 15L,
-                repeatIntervalTimeUnit = TimeUnit.MINUTES
-            )
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            repeatInterval = 15L,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES
+        )
         val workRequest = builder.build()
         assertEquals(workRequest.workSpec.workerClassName, TestWorker::class.java.name)
         assertEquals(workRequest.workSpec.isPeriodic, true)
@@ -60,13 +59,12 @@ class PeriodicWorkRequestTest {
 
     @Test
     fun testPeriodicWorkRequestBuilder_withFlexTime() {
-        val builder =
-            PeriodicWorkRequestBuilder<TestWorker>(
-                repeatInterval = 15L,
-                repeatIntervalTimeUnit = TimeUnit.MINUTES,
-                flexTimeInterval = 10L,
-                flexTimeIntervalUnit = TimeUnit.MINUTES
-            )
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            repeatInterval = 15L,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES,
+            flexTimeInterval = 10L,
+            flexTimeIntervalUnit = TimeUnit.MINUTES
+        )
         val workRequest = builder.build()
         assertEquals(workRequest.workSpec.workerClassName, TestWorker::class.java.name)
         assertEquals(workRequest.workSpec.isPeriodic, true)
@@ -78,11 +76,10 @@ class PeriodicWorkRequestTest {
     fun testPeriodicWorkRequestBuilder_withFlexTimeandDuration() {
         val repeatInterval = Duration.ofHours(3).plusMinutes(25)
         val flexInterval = repeatInterval.minusMinutes(15)
-        val builder =
-            PeriodicWorkRequestBuilder<TestWorker>(
-                repeatInterval = repeatInterval,
-                flexTimeInterval = flexInterval
-            )
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            repeatInterval = repeatInterval,
+            flexTimeInterval = flexInterval
+        )
         val workRequest = builder.build()
         assertEquals(workRequest.workSpec.workerClassName, TestWorker::class.java.name)
         assertEquals(workRequest.workSpec.isPeriodic, true)
@@ -92,14 +89,18 @@ class PeriodicWorkRequestTest {
 
     @Test
     fun testPeriodicWorkRequestBuilder_noNextScheduleTimeOverride_noGeneration() {
-        val builder = PeriodicWorkRequestBuilder<TestWorker>(HOURS.toMillis(15L), HOURS)
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            HOURS.toMillis(15L), HOURS
+        )
         assertEquals(builder.build().workSpec.nextScheduleTimeOverride, Long.MAX_VALUE)
         assertEquals(builder.build().workSpec.nextScheduleTimeOverrideGeneration, 0)
     }
 
     @Test
     fun testPeriodicWorkRequestBuilder_nextScheduleTimeOverride_setsGeneration() {
-        val builder = PeriodicWorkRequestBuilder<TestWorker>(HOURS.toMillis(15L), HOURS)
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            HOURS.toMillis(15L), HOURS
+        )
         builder.setNextScheduleTimeOverride(123456)
         assertEquals(builder.build().workSpec.nextScheduleTimeOverride, 123456L)
         assertEquals(builder.build().workSpec.nextScheduleTimeOverrideGeneration, 1)
@@ -107,7 +108,9 @@ class PeriodicWorkRequestTest {
 
     @Test
     fun testPeriodicWorkRequestBuilder_nextScheduleTimeOverride_maxLongNotAllowed() {
-        val builder = PeriodicWorkRequestBuilder<TestWorker>(HOURS.toMillis(15L), HOURS)
+        val builder = PeriodicWorkRequestBuilder<TestWorker>(
+            HOURS.toMillis(15L), HOURS
+        )
         assertThrows(IllegalArgumentException::class.java) {
             builder.setNextScheduleTimeOverride(Long.MAX_VALUE)
         }
@@ -115,14 +118,15 @@ class PeriodicWorkRequestTest {
 
     @Test
     fun testPeriodicWorkRequest_clearNextScheduleTimeOverride_setsGeneration() {
-        val plainRequest =
-            PeriodicWorkRequestBuilder<TestWorker>(HOURS.toMillis(15L), HOURS).build()
+        val plainRequest = PeriodicWorkRequestBuilder<TestWorker>(
+            HOURS.toMillis(15L), HOURS
+        ).build()
 
-        val clearedRequest =
-            PeriodicWorkRequestBuilder<TestWorker>(HOURS.toMillis(15L), HOURS)
-                .setNextScheduleTimeOverride(123456)
-                .clearNextScheduleTimeOverride()
-                .build()
+        val clearedRequest = PeriodicWorkRequestBuilder<TestWorker>(
+            HOURS.toMillis(15L), HOURS
+        )
+            .setNextScheduleTimeOverride(123456)
+            .clearNextScheduleTimeOverride().build()
 
         // The generation should stay incremented, since the request still has to clear any override
         // that has been already set in the database.

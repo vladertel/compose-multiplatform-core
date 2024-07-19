@@ -21,7 +21,9 @@ import org.json.JSONObject
 
 internal class RequestValidationHelper {
     companion object {
-        /** Determines whether the given string is a valid JSON. */
+        /**
+         * Determines whether the given string is a valid JSON.
+         */
         @RestrictTo(RestrictTo.Scope.LIBRARY)
         @JvmStatic
         fun isValidJSON(jsonString: String): Boolean {

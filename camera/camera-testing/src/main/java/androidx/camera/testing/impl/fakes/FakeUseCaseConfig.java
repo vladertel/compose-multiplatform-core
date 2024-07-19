@@ -22,8 +22,11 @@ import android.util.Pair;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.DynamicRange;
 import androidx.camera.core.MirrorMode;
+import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CaptureConfig;
 import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.ImageInputConfig;
@@ -40,6 +43,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** A fake configuration for {@link FakeUseCase}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutputConfig {
 
     private final Config mConfig;
@@ -67,6 +71,7 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
     }
 
     /** Builder for an empty Config */
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     public static final class Builder implements
             UseCaseConfig.Builder<FakeUseCase, FakeUseCaseConfig, FakeUseCaseConfig.Builder>,
             ImageOutputConfig.Builder<FakeUseCaseConfig.Builder>,
@@ -182,6 +187,20 @@ public class FakeUseCaseConfig implements UseCaseConfig<FakeUseCase>, ImageOutpu
         @NonNull
         public Builder setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
+            return this;
+        }
+
+        @Override
+        @NonNull
+        public Builder setCameraSelector(@NonNull CameraSelector cameraSelector) {
+            getMutableConfig().insertOption(OPTION_CAMERA_SELECTOR, cameraSelector);
+            return this;
+        }
+
+        @Override
+        @NonNull
+        public Builder setUseCaseEventCallback(@NonNull UseCase.EventCallback eventCallback) {
+            getMutableConfig().insertOption(OPTION_USE_CASE_EVENT_CALLBACK, eventCallback);
             return this;
         }
 

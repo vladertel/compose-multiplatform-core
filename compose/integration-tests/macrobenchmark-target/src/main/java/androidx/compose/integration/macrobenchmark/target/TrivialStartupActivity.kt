@@ -25,6 +25,8 @@ class TrivialStartupActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent { Text("Compose Macrobenchmark Target") }
+        setContent {
+            Text("Compose Macrobenchmark Target")
+        }
     }
 }

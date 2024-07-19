@@ -24,10 +24,9 @@ import org.junit.Test
 class RxWorkerSetProgressDetectorTest {
     @Test
     fun setProgressDetectorTest() {
-        val application =
-            kotlin(
-                    "com/example/App.kt",
-                    """
+        val application = kotlin(
+            "com/example/App.kt",
+            """
             package com.example
 
             import androidx.work.RxWorker
@@ -39,26 +38,22 @@ class RxWorkerSetProgressDetectorTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
-        lint()
-            .files(
-                // Source files
-                RX_WORKER,
-                application
-            )
-            .issues(RxWorkerSetProgressDetector.ISSUE)
+        lint().files(
+            // Source files
+            RX_WORKER,
+            application
+        ).issues(RxWorkerSetProgressDetector.ISSUE)
             .run()
+            /* ktlint-disable max-line-length */
             .expect(
                 """
                 src/com/example/App.kt:8: Error: setProgress is deprecated. Use setCompletableProgress instead. [UseRxSetProgress2]
                         worker.setProgress()
                         ~~~~~~~~~~~~~~~~~~~~
                 1 errors, 0 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
             .expectFixDiffs(
                 """
@@ -66,8 +61,8 @@ class RxWorkerSetProgressDetectorTest {
                 @@ -8 +8
                 -         worker.setProgress()
                 +         worker.setCompletableProgress()
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 }

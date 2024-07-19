@@ -34,8 +34,9 @@ class LateActivityLaunchTest {
     @Test
     fun test() = runEmptyComposeUiTest {
         ActivityScenario.launch<CustomActivity>(
-                Intent(ApplicationProvider.getApplicationContext(), CustomActivity::class.java)
-            )
-            .use { onNode(hasText("Hello")).assertExists() }
+            Intent(ApplicationProvider.getApplicationContext(), CustomActivity::class.java)
+        ).use {
+            onNode(hasText("Hello")).assertExists()
+        }
     }
 }

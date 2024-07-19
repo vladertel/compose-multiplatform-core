@@ -39,7 +39,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class InvalidateSubtreeTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun invalidateSubtreeNoLayers() {
@@ -51,7 +52,11 @@ class InvalidateSubtreeTest {
             invalidate = { node.invalidateSubtree() }
         }
         rule.setContent {
-            Box(counter1) { Box(counter2 then captureInvalidate) { Box(counter3.size(10.dp)) } }
+            Box(counter1) {
+                Box(counter2 then captureInvalidate) {
+                    Box(counter3.size(10.dp))
+                }
+            }
         }
         rule.waitForIdle()
         assertThat(counter1.drawCount).isEqualTo(1)
@@ -64,7 +69,9 @@ class InvalidateSubtreeTest {
         assertThat(counter3.measureCount).isEqualTo(1)
         assertThat(counter3.placeCount).isEqualTo(1)
 
-        rule.runOnUiThread { invalidate() }
+        rule.runOnUiThread {
+            invalidate()
+        }
         rule.waitForIdle()
 
         // There isn't a layer that can be invalidated, so we draw this twice also
@@ -90,12 +97,9 @@ class InvalidateSubtreeTest {
             invalidate = { node.invalidateSubtree() }
         }
         rule.setContent {
-            Box(Modifier.graphicsLayer {} then counter1.graphicsLayer {}) {
-                Box(
-                    Modifier.graphicsLayer {} then
-                        counter2 then
-                        captureInvalidate.graphicsLayer {} then
-                        counter3
+            Box(Modifier.graphicsLayer {} then counter1.graphicsLayer { }) {
+                Box(Modifier.graphicsLayer { } then
+                    counter2 then captureInvalidate.graphicsLayer { } then counter3
                 ) {
                     Box(counter4.size(10.dp))
                 }
@@ -107,7 +111,9 @@ class InvalidateSubtreeTest {
         assertThat(counter3.drawCount).isEqualTo(1)
         assertThat(counter4.drawCount).isEqualTo(1)
 
-        rule.runOnUiThread { invalidate() }
+        rule.runOnUiThread {
+            invalidate()
+        }
         rule.waitForIdle()
 
         assertThat(counter1.drawCount).isEqualTo(1)
@@ -120,7 +126,6 @@ class InvalidateSubtreeTest {
         var measureCount = 0
         var placeCount = 0
         var drawCount = 0
-
         override fun MeasureScope.measure(
             measurable: Measurable,
             constraints: Constraints
@@ -142,7 +147,8 @@ class InvalidateSubtreeTest {
     private class CaptureInvalidateCounterElement(
         private val onCreate: (node: Modifier.Node) -> Unit
     ) : ModifierNodeElement<Modifier.Node>() {
-        override fun create() = object : Modifier.Node() {}.apply<Modifier.Node>(onCreate)
+        override fun create() = object : Modifier.Node() {}
+            .apply<Modifier.Node>(onCreate)
 
         override fun update(node: Modifier.Node) {}
 
@@ -151,7 +157,6 @@ class InvalidateSubtreeTest {
         }
 
         override fun hashCode() = 0
-
         override fun equals(other: Any?) = (other === this)
     }
 }

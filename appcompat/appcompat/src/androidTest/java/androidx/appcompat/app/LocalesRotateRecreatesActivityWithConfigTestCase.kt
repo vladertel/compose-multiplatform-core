@@ -57,7 +57,7 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
     @After
     public fun teardown() {
         device.setOrientationNatural()
-        device.waitForIdle(/* timeout= */ 5000)
+        device.waitForIdle(/* timeout= */5000)
 
         // Clean up after the default mode test.
 
@@ -71,8 +71,8 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
         // Set locales to CUSTOM_LOCALE_LIST and wait for state RESUMED.
         val initialActivity = activityRule.launchActivity(null)
         LifecycleOwnerUtils.waitUntilState(initialActivity, Lifecycle.State.RESUMED)
-        systemLocales =
-            LocalesUpdateActivity.getConfigLocales(activityRule.activity.resources.configuration)
+        systemLocales = LocalesUpdateActivity.getConfigLocales(activityRule.activity.resources
+            .configuration)
 
         setLocalesAndWaitForRecreate(initialActivity, CUSTOM_LOCALE_LIST)
 
@@ -84,10 +84,8 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
         val orientation = config.orientation
 
         // Assert that the current Activity has the expected locales.
-        assertConfigurationLocalesEquals(
-            LocalesUpdateActivity.overlayCustomAndSystemLocales(CUSTOM_LOCALE_LIST, systemLocales),
-            config
-        )
+        assertConfigurationLocalesEquals(LocalesUpdateActivity.overlayCustomAndSystemLocales(
+            CUSTOM_LOCALE_LIST, systemLocales), config)
 
         // Now rotate the device. This should result in an onDestroy lifecycle event.
         localesActivity.resetOnDestroy()
@@ -99,10 +97,8 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
             val rotatedConfig = rotatedLocalesActivity.resources.configuration
             assertNotSame(localesActivity, rotatedLocalesActivity)
             assertConfigurationLocalesEquals(
-                LocalesUpdateActivity.overlayCustomAndSystemLocales(
-                    CUSTOM_LOCALE_LIST,
-                    systemLocales
-                ),
+                LocalesUpdateActivity.overlayCustomAndSystemLocales(CUSTOM_LOCALE_LIST,
+                    systemLocales),
                 rotatedConfig
             )
 
@@ -113,12 +109,8 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
     }
 
     private fun rotateDeviceAndWaitForRecreate(activity: Activity, doThis: () -> Unit) {
-        val monitor =
-            Instrumentation.ActivityMonitor(
-                activity::class.java.name,
-                /* result= */ null,
-                /* block= */ false
-            )
+        val monitor = Instrumentation.ActivityMonitor(activity::class.java.name, /* result= */
+            null, /* block= */false)
         instrumentation.addMonitor(monitor)
 
         device.withOrientation(Orientation.LEFT) {
@@ -134,7 +126,9 @@ class LocalesRotateRecreatesActivityWithConfigTestCase() {
 
             // Ensure that we didn't time out
             assertNotNull("Activity was not recreated within 5000ms", lastActivity)
-            assertNotEquals("Activity was not recreated within 5000ms", activity, lastActivity)
+            assertNotEquals(
+                "Activity was not recreated within 5000ms", activity, lastActivity
+            )
             doThis()
         }
     }

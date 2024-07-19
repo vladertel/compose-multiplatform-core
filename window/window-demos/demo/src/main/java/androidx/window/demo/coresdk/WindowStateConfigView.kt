@@ -26,9 +26,7 @@ import androidx.window.demo.R
 import androidx.window.demo.databinding.WindowStateConfigViewBinding
 
 /** View to show a display configuration value. */
-class WindowStateConfigView
-@JvmOverloads
-constructor(
+class WindowStateConfigView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -42,10 +40,13 @@ constructor(
     var shouldHighlightChange = false
 
     init {
-        val viewBinding =
-            WindowStateConfigViewBinding.inflate(LayoutInflater.from(context), this, true)
+        val viewBinding = WindowStateConfigViewBinding.inflate(LayoutInflater.from(context),
+            this, true)
         configView = viewBinding.configValue
-        context.theme.obtainStyledAttributes(attrs, R.styleable.WindowStateConfigView, 0, 0).apply {
+        context.theme.obtainStyledAttributes(
+            attrs,
+            R.styleable.WindowStateConfigView,
+            0, 0).apply {
             try {
                 getString(R.styleable.WindowStateConfigView_configName)?.let {
                     viewBinding.configName.text = it

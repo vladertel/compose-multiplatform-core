@@ -67,18 +67,19 @@ import org.junit.runner.RunWith
 class OutlinedTextFieldScreenshotTest {
     private val TextFieldTag = "OutlinedTextField"
 
-    private val longText =
-        TextFieldValue(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
-                "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," +
-                " quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. " +
-                "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu " +
-                "fugiat nulla pariatur."
-        )
+    private val longText = TextFieldValue(
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
+            "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," +
+            " quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. " +
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu " +
+            "fugiat nulla pariatur."
+    )
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     @Test
     fun outlinedTextField_withInput() {
@@ -203,8 +204,9 @@ class OutlinedTextFieldScreenshotTest {
                 value = TextFieldValue(text = text, selection = TextRange(text.length)),
                 onValueChange = {},
                 label = { Text("Label") },
-                modifier =
-                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
+                modifier = Modifier.requiredHeight(300.dp)
+                    .requiredWidth(280.dp)
+                    .testTag(TextFieldTag)
             )
         }
 
@@ -218,8 +220,9 @@ class OutlinedTextFieldScreenshotTest {
             OutlinedTextField(
                 value = TextFieldValue(text = text, selection = TextRange(text.length)),
                 onValueChange = {},
-                modifier =
-                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
+                modifier = Modifier.requiredHeight(300.dp)
+                    .requiredWidth(280.dp)
+                    .testTag(TextFieldTag)
             )
         }
 
@@ -234,8 +237,9 @@ class OutlinedTextFieldScreenshotTest {
                 onValueChange = {},
                 label = { Text("Label") },
                 placeholder = { Text("placeholder") },
-                modifier =
-                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
+                modifier = Modifier.requiredHeight(300.dp)
+                    .requiredWidth(280.dp)
+                    .testTag(TextFieldTag)
             )
         }
 
@@ -251,8 +255,9 @@ class OutlinedTextFieldScreenshotTest {
                 value = "",
                 onValueChange = {},
                 placeholder = { Text("placeholder") },
-                modifier =
-                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
+                modifier = Modifier.requiredHeight(300.dp)
+                    .requiredWidth(280.dp)
+                    .testTag(TextFieldTag)
             )
         }
 
@@ -268,8 +273,9 @@ class OutlinedTextFieldScreenshotTest {
                 value = "",
                 onValueChange = {},
                 label = { Text("Label") },
-                modifier =
-                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
+                modifier = Modifier.requiredHeight(300.dp)
+                    .requiredWidth(280.dp)
+                    .testTag(TextFieldTag)
             )
         }
 
@@ -395,7 +401,7 @@ class OutlinedTextFieldScreenshotTest {
         rule.setMaterialContent {
             OutlinedTextField(
                 value = longText,
-                onValueChange = {},
+                onValueChange = { },
                 singleLine = true,
                 modifier = Modifier.testTag(TextFieldTag).requiredWidth(300.dp),
                 enabled = false
@@ -450,7 +456,7 @@ class OutlinedTextFieldScreenshotTest {
         rule.setMaterialContent {
             OutlinedTextField(
                 value = longText,
-                onValueChange = {},
+                onValueChange = { },
                 modifier = Modifier.testTag(TextFieldTag).requiredWidth(300.dp),
                 singleLine = true,
                 enabled = true,
@@ -503,11 +509,7 @@ class OutlinedTextFieldScreenshotTest {
 
     private fun SemanticsNodeInteraction.focus() {
         // split click into (down) and (move, up) to enforce a composition in between
-        this.performTouchInput { down(center) }
-            .performTouchInput {
-                move()
-                up()
-            }
+        this.performTouchInput { down(center) }.performTouchInput { move(); up() }
     }
 
     @Test
@@ -535,12 +537,11 @@ class OutlinedTextFieldScreenshotTest {
                 value = "Text",
                 onValueChange = {},
                 modifier = Modifier.width(300.dp).testTag(TextFieldTag),
-                label =
-                    if (makeLabelNull.value) {
-                        null
-                    } else {
-                        { Text("Label") }
-                    },
+                label = if (makeLabelNull.value) {
+                    null
+                } else {
+                    { Text("Label") }
+                },
             )
         }
 
@@ -584,8 +585,7 @@ class OutlinedTextFieldScreenshotTest {
     }
 
     private fun assertAgainstGolden(goldenIdentifier: String) {
-        rule
-            .onNodeWithTag(TextFieldTag)
+        rule.onNodeWithTag(TextFieldTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenIdentifier)
     }

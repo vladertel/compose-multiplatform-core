@@ -39,7 +39,9 @@ private class FakeSource<Value : Any>(
             )
         }
         // TODO: prevent null-key load start/end
-        return Error(IllegalArgumentException("This test source only supports initial load"))
+        return Error(
+            IllegalArgumentException("This test source only supports initial load")
+        )
     }
 
     override fun getRefreshKey(state: PagingState<Any, Value>): Any? = null
@@ -53,14 +55,13 @@ fun StringPagedList(
     vararg items: String
 ): PagedList<String> = runBlocking {
     PagedList.create(
-        initialPage =
-            Page<Any, String>(
-                data = items.toList(),
-                prevKey = null,
-                nextKey = null,
-                itemsBefore = leadingNulls,
-                itemsAfter = trailingNulls
-            ),
+        initialPage = Page<Any, String>(
+            data = items.toList(),
+            prevKey = null,
+            nextKey = null,
+            itemsBefore = leadingNulls,
+            itemsAfter = trailingNulls
+        ),
         pagingSource = FakeSource(leadingNulls, trailingNulls, items.toList()),
         coroutineScope = GlobalScope,
         notifyDispatcher = DirectDispatcher,

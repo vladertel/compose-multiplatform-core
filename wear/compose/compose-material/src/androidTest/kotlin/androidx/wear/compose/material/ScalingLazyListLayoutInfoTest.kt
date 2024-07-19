@@ -54,7 +54,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 public class ScalingLazyListLayoutInfoTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private var itemSizePx: Int = 50
     private var itemSizeDp: Dp = Dp.Infinity
@@ -76,10 +77,14 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = AutoCenteringParams()
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -103,11 +108,15 @@ public class ScalingLazyListLayoutInfoTest {
             itemSpacingPx = with(LocalDensity.current) { itemSpacingDp.roundToPx() }
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + itemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + itemSpacingDp * 2.5f
+                ),
                 verticalArrangement = Arrangement.spacedBy(itemSpacingDp),
                 autoCentering = AutoCenteringParams()
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -122,7 +131,9 @@ public class ScalingLazyListLayoutInfoTest {
         // Scroll so that the center item is just above the center line and check that it is still
         // the correct center item
         val scrollDistance = (itemSizePx / 2) + 1
-        scope!!.launch { state.animateScrollBy(scrollDistance.toFloat()) }
+        scope!!.launch {
+            state.animateScrollBy(scrollDistance.toFloat())
+        }
 
         rule.runOnIdle {
             assertThat(state.centerItemIndex).isEqualTo(1)
@@ -136,18 +147,24 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = AutoCenteringParams(),
                 contentPadding = PaddingValues(all = 0.dp)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.orientation).isEqualTo(Orientation.Vertical) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.orientation).isEqualTo(Orientation.Vertical)
+        }
     }
 
     @Test
@@ -156,18 +173,24 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = AutoCenteringParams(),
                 contentPadding = PaddingValues(all = 0.dp)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.reverseLayout).isEqualTo(false) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.reverseLayout).isEqualTo(false)
+        }
     }
 
     @Test
@@ -176,19 +199,25 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = AutoCenteringParams(),
                 contentPadding = PaddingValues(all = 0.dp),
                 reverseLayout = true
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.reverseLayout).isEqualTo(true) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.reverseLayout).isEqualTo(true)
+        }
     }
 
     @Test
@@ -196,12 +225,16 @@ public class ScalingLazyListLayoutInfoTest {
         lateinit var state: ScalingLazyListState
         rule.setContent {
             ScalingLazyColumn(
-                state =
-                    rememberScalingLazyListState(initialCenterItemIndex = 0).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                state = rememberScalingLazyListState(initialCenterItemIndex = 0)
+                    .also { state = it },
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = AutoCenteringParams(itemIndex = 0)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -220,16 +253,22 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
-        rule.runOnIdle { state.layoutInfo.assertVisibleItems(count = 4) }
+        rule.runOnIdle {
+            state.layoutInfo.assertVisibleItems(count = 4)
+        }
     }
 
     @Test
@@ -238,11 +277,15 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 reverseLayout = true,
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -259,13 +302,17 @@ public class ScalingLazyListLayoutInfoTest {
         lateinit var state: ScalingLazyListState
         rule.setContent {
             ScalingLazyColumn(
-                state =
-                    rememberScalingLazyListState(initialCenterItemIndex = 0).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                state = rememberScalingLazyListState(initialCenterItemIndex = 0)
+                    .also { state = it },
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 reverseLayout = true,
                 autoCentering = AutoCenteringParams(itemIndex = 0)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -284,17 +331,23 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
         rule.runOnIdle {
-            runBlocking { state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()) }
+            runBlocking {
+                state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 4, startIndex = 1)
         }
     }
@@ -353,14 +406,17 @@ public class ScalingLazyListLayoutInfoTest {
                         if (viewPortSizeEven) 0 else 1
                 scope = rememberCoroutineScope()
                 ScalingLazyColumn(
-                    state =
-                        rememberScalingLazyListState(initialCenterItemIndex = autoCenterItem).also {
-                            state = it
-                        },
-                    modifier = Modifier.requiredSize(viewportSizePx.toDp()),
+                    state = rememberScalingLazyListState(
+                        initialCenterItemIndex = autoCenterItem
+                    ).also { state = it },
+                    modifier = Modifier.requiredSize(
+                        viewportSizePx.toDp()
+                    ),
                     autoCentering = AutoCenteringParams(itemIndex = autoCenterItem)
                 ) {
-                    items(5) { Box(Modifier.requiredSize(localItemSizePx.toDp())) }
+                    items(5) {
+                        Box(Modifier.requiredSize(localItemSizePx.toDp()))
+                    }
                 }
             }
         }
@@ -368,14 +424,18 @@ public class ScalingLazyListLayoutInfoTest {
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
-        scope.launch { state.animateScrollBy(localItemSizePx.toFloat() * 10) }
+        scope.launch {
+            state.animateScrollBy(localItemSizePx.toFloat() * 10)
+        }
 
         rule.mainClock.advanceTimeBy(milliseconds = 1000)
         assert(!state.isScrollInProgress)
         assertThat(state.centerItemIndex).isEqualTo(4)
         assertThat(state.centerItemScrollOffset).isEqualTo(0)
 
-        scope.launch { state.animateScrollBy(-localItemSizePx.toFloat() * 10) }
+        scope.launch {
+            state.animateScrollBy(- localItemSizePx.toFloat() * 10)
+        }
 
         rule.mainClock.advanceTimeBy(milliseconds = 1000)
         assert(!state.isScrollInProgress)
@@ -389,17 +449,23 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp
+                ),
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp * 5)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp * 5))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
         rule.runOnIdle {
-            runBlocking { state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()) }
+            runBlocking {
+                state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat())
+            }
             val firstItem = state.layoutInfo.visibleItemsInfo.first()
             assertThat(firstItem.offset).isLessThan(0)
             assertThat(firstItem.offset + firstItem.size).isGreaterThan(itemSizePx)
@@ -414,9 +480,13 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(centerItemIndex).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3
+                ),
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -440,9 +510,13 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(centerItemIndex).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 4 + defaultItemSpacingDp * 3),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 4 + defaultItemSpacingDp * 3
+                ),
             ) {
-                items(6) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(6) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -450,7 +524,8 @@ public class ScalingLazyListLayoutInfoTest {
         rule.waitUntil { state.initialized.value }
         rule.runOnIdle {
             // Get the middle item on the screen
-            val edgeScreenItem = state.layoutInfo.visibleItemsInfo.find { it.index == 0 }
+            val edgeScreenItem =
+                state.layoutInfo.visibleItemsInfo.find { it.index == 0 }
 
             // And that it is it scaled
             assertThat(edgeScreenItem!!.scale).isLessThan(1.0f)
@@ -463,18 +538,24 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 reverseLayout = true,
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
         rule.runOnIdle {
-            runBlocking { state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()) }
+            runBlocking {
+                state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 4, startIndex = 1)
         }
     }
@@ -485,10 +566,14 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(2).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 2f + defaultItemSpacingDp * 1f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 2f + defaultItemSpacingDp * 1f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -507,10 +592,14 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(2, -5).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 2f + defaultItemSpacingDp * 1f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 2f + defaultItemSpacingDp * 1f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -529,11 +618,15 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(2).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 2f + defaultItemSpacingDp * 1f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 2f + defaultItemSpacingDp * 1f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 reverseLayout = true
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -552,11 +645,15 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(2, -5).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 2f + defaultItemSpacingDp * 1f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 2f + defaultItemSpacingDp * 1f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 reverseLayout = true
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -575,11 +672,15 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(8).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 4f + defaultItemSpacingDp * 3f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 4f + defaultItemSpacingDp * 3f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 reverseLayout = true
             ) {
-                items(15) { Box(Modifier.requiredSize(itemSizeDp).testTag("Item:$it")) }
+                items(15) {
+                    Box(Modifier.requiredSize(itemSizeDp).testTag("Item:$it"))
+                }
             }
         }
 
@@ -590,7 +691,9 @@ public class ScalingLazyListLayoutInfoTest {
         // Assert that items are being shown at the end of the parent as this is reverseLayout
         rule.onNodeWithTag(testTag = "Item:8").assertIsDisplayed()
 
-        rule.runOnIdle { state.layoutInfo.assertVisibleItems(count = 5, startIndex = 6) }
+        rule.runOnIdle {
+            state.layoutInfo.assertVisibleItems(count = 5, startIndex = 6)
+        }
     }
 
     @Test
@@ -598,13 +701,20 @@ public class ScalingLazyListLayoutInfoTest {
         lateinit var state: ScalingLazyListState
         rule.setContent {
             ScalingLazyColumn(
-                state =
-                    rememberScalingLazyListState(initialCenterItemIndex = 0).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                state = rememberScalingLazyListState(initialCenterItemIndex = 0)
+                    .also { state = it },
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 autoCentering = AutoCenteringParams(itemIndex = 0)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp).testTag("Item:$it")) }
+                items(5) {
+                    Box(
+                        Modifier
+                            .requiredSize(itemSizeDp)
+                            .testTag("Item:$it"))
+                }
             }
         }
 
@@ -619,13 +729,17 @@ public class ScalingLazyListLayoutInfoTest {
             assertThat(state.centerItemIndex).isEqualTo(0)
             assertThat(state.centerItemScrollOffset).isEqualTo(0)
 
-            runBlocking { state.scrollBy(scrollAmount.toFloat()) }
+            runBlocking {
+                state.scrollBy(scrollAmount.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 4)
             assertThat(state.layoutInfo.visibleItemsInfo.first().offset).isEqualTo(-scrollAmount)
         }
 
         rule.runOnIdle {
-            runBlocking { state.scrollBy(-scrollAmount.toFloat()) }
+            runBlocking {
+                state.scrollBy(-scrollAmount.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 3)
             assertThat(state.layoutInfo.visibleItemsInfo.first().offset).isEqualTo(0)
         }
@@ -637,11 +751,15 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState(8).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 4f + defaultItemSpacingDp * 3f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 4f + defaultItemSpacingDp * 3f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 reverseLayout = true
             ) {
-                items(15) { Box(Modifier.requiredSize(itemSizeDp).testTag("Item:$it")) }
+                items(15) {
+                    Box(Modifier.requiredSize(itemSizeDp).testTag("Item:$it"))
+                }
             }
         }
 
@@ -657,12 +775,16 @@ public class ScalingLazyListLayoutInfoTest {
             assertThat(state.centerItemIndex).isEqualTo(8)
             assertThat(state.centerItemScrollOffset).isEqualTo(0)
 
-            runBlocking { state.scrollBy(scrollAmount.toFloat()) }
+            runBlocking {
+                state.scrollBy(scrollAmount.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 5, startIndex = 7)
         }
 
         rule.runOnIdle {
-            runBlocking { state.scrollBy(-scrollAmount.toFloat()) }
+            runBlocking {
+                state.scrollBy(-scrollAmount.toFloat())
+            }
             state.layoutInfo.assertVisibleItems(count = 5, startIndex = 6)
         }
     }
@@ -672,13 +794,17 @@ public class ScalingLazyListLayoutInfoTest {
         lateinit var state: ScalingLazyListState
         rule.setContent {
             ScalingLazyColumn(
-                state =
-                    rememberScalingLazyListState(initialCenterItemIndex = 0).also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                state = rememberScalingLazyListState(initialCenterItemIndex = 0)
+                    .also { state = it },
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 autoCentering = AutoCenteringParams(itemIndex = 0)
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -686,14 +812,18 @@ public class ScalingLazyListLayoutInfoTest {
         rule.waitUntil { state.initialized.value }
         val scrollAmount = itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()
         rule.runOnIdle {
-            runBlocking { state.dispatchRawDelta(scrollAmount) }
+            runBlocking {
+                state.dispatchRawDelta(scrollAmount)
+            }
             state.layoutInfo.assertVisibleItems(count = 4, startIndex = 0)
             assertThat(state.layoutInfo.visibleItemsInfo.first().offset)
                 .isEqualTo(-scrollAmount.roundToInt())
         }
 
         rule.runOnIdle {
-            runBlocking { state.dispatchRawDelta(-scrollAmount) }
+            runBlocking {
+                state.dispatchRawDelta(-scrollAmount)
+            }
             state.layoutInfo.assertVisibleItems(count = 3, startIndex = 0)
             assertThat(state.layoutInfo.visibleItemsInfo.first().offset).isEqualTo(0)
         }
@@ -705,12 +835,16 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 state = rememberScalingLazyListState().also { state = it },
-                modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
+                modifier = Modifier.requiredSize(
+                    itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f
+                ),
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(1.0f, 1.0f),
                 reverseLayout = true,
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
@@ -744,15 +878,22 @@ public class ScalingLazyListLayoutInfoTest {
                 verticalArrangement = Arrangement.spacedBy(spacing),
                 autoCentering = null
             ) {
-                items(5) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(5) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
         // TODO(b/210654937): Remove the waitUntil once we no longer need 2 stage initialization
         rule.waitUntil { state.initialized.value }
         rule.runOnIdle {
-            val spacingPx = with(rule.density) { spacing.roundToPx() }
-            state.layoutInfo.assertVisibleItems(count = 4, spacing = spacingPx)
+            val spacingPx = with(rule.density) {
+                spacing.roundToPx()
+            }
+            state.layoutInfo.assertVisibleItems(
+                count = 4,
+                spacing = spacingPx
+            )
         }
     }
 
@@ -774,7 +915,9 @@ public class ScalingLazyListLayoutInfoTest {
                 modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
                 autoCentering = null
             ) {
-                items(6) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(6) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
             ObservingFun(state, currentInfo)
         }
@@ -784,7 +927,9 @@ public class ScalingLazyListLayoutInfoTest {
         rule.runOnIdle {
             // empty it here and scrolling should invoke observingFun again
             currentInfo.value = null
-            runBlocking { state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat()) }
+            runBlocking {
+                state.scrollBy(itemSizePx.toFloat() + defaultItemSpacingPx.toFloat())
+            }
         }
 
         rule.runOnIdle {
@@ -803,7 +948,9 @@ public class ScalingLazyListLayoutInfoTest {
                 modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
                 autoCentering = null
             ) {
-                items(6) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(6) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
             ObservingFun(state, currentInfo)
         }
@@ -846,7 +993,9 @@ public class ScalingLazyListLayoutInfoTest {
                 state = rememberScalingLazyListState().also { state = it },
                 modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f)
             ) {
-                items(6) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(6) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
             ObservingIsScrollInProgressTrueFun(state, currentInfo)
         }
@@ -866,7 +1015,10 @@ public class ScalingLazyListLayoutInfoTest {
     }
 
     @Composable
-    fun ObservingCentralItemIndexFun(state: ScalingLazyListState, currentInfo: StableRef<Int?>) {
+    fun ObservingCentralItemIndexFun(
+        state: ScalingLazyListState,
+        currentInfo: StableRef<Int?>
+    ) {
         currentInfo.value = state.centerItemIndex
     }
 
@@ -882,7 +1034,9 @@ public class ScalingLazyListLayoutInfoTest {
                 modifier = Modifier.requiredSize(itemSizeDp * 3.5f + defaultItemSpacingDp * 2.5f),
                 autoCentering = null
             ) {
-                items(6) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(6) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
             ObservingCentralItemIndexFun(state, currentInfo)
         }
@@ -911,8 +1065,12 @@ public class ScalingLazyListLayoutInfoTest {
             currentInfo = state.layoutInfo
         }
         rule.setContent {
-            ScalingLazyColumn(state = rememberScalingLazyListState().also { state = it }) {
-                item { Box(Modifier.requiredSize(size)) }
+            ScalingLazyColumn(
+                state = rememberScalingLazyListState().also { state = it }
+            ) {
+                item {
+                    Box(Modifier.requiredSize(size))
+                }
             }
             observingFun()
         }
@@ -942,7 +1100,9 @@ public class ScalingLazyListLayoutInfoTest {
                 Modifier.requiredSize(sizeDp),
                 state = rememberScalingLazyListState().also { state = it }
             ) {
-                items(4) { Box(Modifier.requiredSize(sizeDp)) }
+                items(4) {
+                    Box(Modifier.requiredSize(sizeDp))
+                }
             }
         }
 
@@ -974,7 +1134,9 @@ public class ScalingLazyListLayoutInfoTest {
                 contentPadding = PaddingValues(top = topPaddingDp, bottom = bottomPaddingDp),
                 state = rememberScalingLazyListState().also { state = it }
             ) {
-                items(4) { Box(Modifier.requiredSize(sizeDp)) }
+                items(4) {
+                    Box(Modifier.requiredSize(sizeDp))
+                }
             }
         }
 
@@ -1001,11 +1163,14 @@ public class ScalingLazyListLayoutInfoTest {
         rule.setContent {
             ScalingLazyColumn(
                 Modifier.requiredSize(viewPortSizeDp),
-                state =
-                    rememberScalingLazyListState(initialCenterItemIndex = 0).also { state = it },
+                state = rememberScalingLazyListState(
+                    initialCenterItemIndex = 0
+                ).also { state = it },
                 autoCentering = AutoCenteringParams()
             ) {
-                items(7) { Box(Modifier.requiredSize(itemSizeDp)) }
+                items(7) {
+                    Box(Modifier.requiredSize(itemSizeDp))
+                }
             }
         }
 
@@ -1019,11 +1184,15 @@ public class ScalingLazyListLayoutInfoTest {
             assertThat(state.layoutInfo.beforeAutoCenteringPadding).isGreaterThan(0)
             assertThat(state.layoutInfo.afterAutoCenteringPadding).isEqualTo(0)
 
-            runBlocking { state.scrollToItem(3) }
+            runBlocking {
+                state.scrollToItem(3)
+            }
             assertThat(state.layoutInfo.beforeAutoCenteringPadding).isEqualTo(0)
             assertThat(state.layoutInfo.afterAutoCenteringPadding).isEqualTo(0)
 
-            runBlocking { state.scrollToItem(5) }
+            runBlocking {
+                state.scrollToItem(5)
+            }
             assertThat(state.layoutInfo.beforeAutoCenteringPadding).isEqualTo(0)
             assertThat(state.layoutInfo.afterAutoCenteringPadding).isGreaterThan(0)
         }
@@ -1034,8 +1203,12 @@ public class ScalingLazyListLayoutInfoTest {
         var count by mutableStateOf(10)
         lateinit var state: ScalingLazyListState
         rule.setContent {
-            ScalingLazyColumn(state = rememberScalingLazyListState().also { state = it }) {
-                items(count) { Box(Modifier.requiredSize(10.dp)) }
+            ScalingLazyColumn(
+                state = rememberScalingLazyListState().also { state = it }
+            ) {
+                items(count) {
+                    Box(Modifier.requiredSize(10.dp))
+                }
             }
         }
 
@@ -1046,7 +1219,9 @@ public class ScalingLazyListLayoutInfoTest {
             count = 20
         }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.totalItemsCount).isEqualTo(20) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.totalItemsCount).isEqualTo(20)
+        }
     }
 
     private fun ScalingLazyListLayoutInfo.assertVisibleItems(

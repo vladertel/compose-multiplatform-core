@@ -61,7 +61,9 @@ private fun HintLocaleDemo(localeList: LocaleList) {
             modifier = demoTextFieldModifiers,
             value = text,
             onValueChange = { text = it },
-            keyboardOptions = KeyboardOptions(hintLocales = localeList)
+            keyboardOptions = KeyboardOptions(
+                hintLocales = localeList
+            )
         )
     }
 }

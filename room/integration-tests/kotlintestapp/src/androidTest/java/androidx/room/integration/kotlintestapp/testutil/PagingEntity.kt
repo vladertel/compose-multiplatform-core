@@ -21,23 +21,26 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity
-data class PagingEntity(@PrimaryKey val id: Int, val value: String = "item_$id") {
+data class PagingEntity(
+    @PrimaryKey
+    val id: Int,
+    val value: String = "item_$id"
+) {
     companion object {
-        val DIFF_CALLBACK =
-            object : DiffUtil.ItemCallback<PagingEntity>() {
-                override fun areItemsTheSame(
-                    oldItem: PagingEntity,
-                    newItem: PagingEntity
-                ): Boolean {
-                    return oldItem.id == newItem.id
-                }
-
-                override fun areContentsTheSame(
-                    oldItem: PagingEntity,
-                    newItem: PagingEntity
-                ): Boolean {
-                    return oldItem == newItem
-                }
+        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<PagingEntity>() {
+            override fun areItemsTheSame(
+                oldItem: PagingEntity,
+                newItem: PagingEntity
+            ): Boolean {
+                return oldItem.id == newItem.id
             }
+
+            override fun areContentsTheSame(
+                oldItem: PagingEntity,
+                newItem: PagingEntity
+            ): Boolean {
+                return oldItem == newItem
+            }
+        }
     }
 }

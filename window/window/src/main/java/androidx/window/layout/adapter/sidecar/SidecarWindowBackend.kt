@@ -35,12 +35,10 @@ import kotlin.concurrent.withLock
  * Default implementation of [WindowBackend] that uses a combination of platform APIs and
  * device-dependent OEM extensions.
  */
-internal class SidecarWindowBackend
-@VisibleForTesting
-constructor(
-    @field:VisibleForTesting
-    @field:GuardedBy("globalLock")
-    var windowExtension: ExtensionInterfaceCompat?
+internal class SidecarWindowBackend @VisibleForTesting constructor(
+    @field:VisibleForTesting @field:GuardedBy(
+        "globalLock"
+    ) var windowExtension: ExtensionInterfaceCompat?
 ) : WindowBackend {
 
     /**
@@ -83,16 +81,17 @@ constructor(
                 } else {
                     // Latest info for the previously registered callback for activity
                     // and send it to the new activity
-                    val lastInfo =
-                        windowLayoutChangeCallbacks
-                            .firstOrNull { activity == it.activity }
-                            ?.lastInfo
+                    val lastInfo = windowLayoutChangeCallbacks.firstOrNull {
+                        activity == it.activity
+                    }?.lastInfo
                     if (lastInfo != null) {
                         callbackWrapper.accept(lastInfo)
                     }
                 }
             }
-        } ?: run { callback.accept(WindowLayoutInfo(emptyList())) }
+        } ?: run {
+            callback.accept(WindowLayoutInfo(emptyList()))
+        }
     }
 
     private fun isActivityRegistered(activity: Activity): Boolean {
@@ -128,13 +127,14 @@ constructor(
     }
 
     /**
-     * Checks if there are no more registered callbacks left for the activity and inform extension
-     * if needed.
+     * Checks if there are no more registered callbacks left for the activity and inform
+     * extension if needed.
      */
-    @GuardedBy("globalLock")
+    @GuardedBy("sLock")
     private fun callbackRemovedForActivity(activity: Activity) {
-        val hasRegisteredCallback =
-            windowLayoutChangeCallbacks.any { wrapper -> wrapper.activity == activity }
+        val hasRegisteredCallback = windowLayoutChangeCallbacks.any { wrapper ->
+            wrapper.activity == activity
+        }
         if (hasRegisteredCallback) {
             return
         }
@@ -144,7 +144,10 @@ constructor(
 
     @VisibleForTesting
     internal inner class ExtensionListenerImpl : ExtensionCallbackInterface {
-        override fun onWindowLayoutChanged(activity: Activity, newLayout: WindowLayoutInfo) {
+        override fun onWindowLayoutChanged(
+            activity: Activity,
+            newLayout: WindowLayoutInfo
+        ) {
             for (callbackWrapper in windowLayoutChangeCallbacks) {
                 if (callbackWrapper.activity != activity) {
                     continue
@@ -155,8 +158,8 @@ constructor(
     }
 
     /**
-     * Wrapper around [Consumer<WindowLayoutInfo>] that also includes the [Executor] on which the
-     * callback should run and the [Activity].
+     * Wrapper around [Consumer<WindowLayoutInfo>] that also includes the [Executor]
+     * on which the callback should run and the [Activity].
      */
     internal class WindowLayoutChangeCallbackWrapper(
         val activity: Activity,
@@ -164,7 +167,6 @@ constructor(
         val callback: Consumer<WindowLayoutInfo>
     ) {
         var lastInfo: WindowLayoutInfo? = null
-
         fun accept(newLayoutInfo: WindowLayoutInfo) {
             lastInfo = newLayoutInfo
             executor.execute { callback.accept(newLayoutInfo) }
@@ -174,11 +176,14 @@ constructor(
     companion object {
         const val DEBUG = false
 
-        @Volatile private var globalInstance: SidecarWindowBackend? = null
+        @Volatile
+        private var globalInstance: SidecarWindowBackend? = null
         private val globalLock = ReentrantLock()
         private const val TAG = "WindowServer"
 
-        /** Gets the shared instance of the class. */
+        /**
+         * Gets the shared instance of the class.
+         */
         fun getInstance(context: Context): SidecarWindowBackend {
             if (globalInstance == null) {
                 globalLock.withLock {
@@ -192,9 +197,9 @@ constructor(
         }
 
         /**
-         * Loads an instance of [androidx.window.sidecar.SidecarInterface] implemented by OEM if
-         * available on this device. This also verifies if the loaded implementation conforms to the
-         * declared API version.
+         * Loads an instance of [androidx.window.sidecar.SidecarInterface] implemented by OEM
+         * if available on this device. This also verifies if the loaded implementation conforms
+         * to the declared API version.
          */
         fun initAndVerifyExtension(context: Context): ExtensionInterfaceCompat? {
             var impl: ExtensionInterfaceCompat? = null
@@ -223,9 +228,8 @@ constructor(
         }
 
         /**
-         * Checks if the Sidecar version provided on this device is supported by the current version
-         * of the library.
-         *
+         * Checks if the Sidecar version provided on this device is supported by the current
+         * version of the library.
          * @param sidecarVersion the [Version] of Sidecar that is provided on the device.
          */
         @VisibleForTesting
@@ -236,7 +240,9 @@ constructor(
             return sidecarVersion >= Version.VERSION_0_1
         }
 
-        /** Test-only affordance to forget the existing instance. */
+        /**
+         * Test-only affordance to forget the existing instance.
+         */
         @VisibleForTesting
         fun resetInstance() {
             globalInstance = null

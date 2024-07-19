@@ -52,8 +52,9 @@ import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 
-class ToggleChipTest {
-    @get:Rule val rule = createComposeRule()
+class ToggleChipBehaviourTest {
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun supports_testtag() {
@@ -340,7 +341,11 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOff().performClick().assertIsOn()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -358,7 +363,12 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).onChildAt(1).assertIsOff().performClick().assertIsOn()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .onChildAt(1)
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -375,7 +385,11 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOn().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -393,7 +407,12 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).onChildAt(1).assertIsOn().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .onChildAt(1)
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -410,7 +429,11 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOff().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOff()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -428,11 +451,37 @@ class ToggleChipTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).onChildAt(1).assertIsOff().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .onChildAt(1)
+            .assertIsOff()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
-    fun split_chip_clickable_has_role_button() {
+    fun has_role_checkbox() {
+        rule.setContentWithTheme {
+            ToggleChip(
+                checked = false,
+                onCheckedChange = {},
+                label = { Text("Label") },
+                toggleControl = { TestImage() },
+                modifier = Modifier.testTag(TEST_TAG)
+            )
+        }
+
+        rule.onNodeWithTag(TEST_TAG)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Checkbox
+                )
+            )
+    }
+
+    @Test
+    fun split_chip_has_roles_button_and_checkbox() {
         rule.setContentWithTheme {
             SplitToggleChip(
                 checked = false,
@@ -444,10 +493,21 @@ class ToggleChipTest {
             )
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
-            .onChildAt(0)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithTag(TEST_TAG).onChildAt(0)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Button
+                )
+            )
+
+        rule.onNodeWithTag(TEST_TAG).onChildAt(1)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Checkbox
+                )
+            )
     }
 
     @Test
@@ -482,32 +542,38 @@ class ToggleChipTest {
 
         rule.onNodeWithText(textContent).assertExists()
     }
+}
 
-    @Test fun gives_base_chip_correct_height() = verifyChipHeight(ChipDefaults.Height)
+class ToggleChipSizeTest {
+    @get:Rule
+    val rule = createComposeRule()
+
+    @Test
+    fun gives_base_chip_correct_height() =
+        verifyHeight(ChipDefaults.Height)
 
     @Test
     fun gives_base_chip_has_adjustable_height() {
         val expectedMinHeight = ToggleChipDefaults.Height + 1.dp
-        rule
-            .setContentWithThemeForSizeAssertions {
-                ToggleChip(
-                    checked = true,
-                    onCheckedChange = {},
-                    label = {
-                        Text(
-                            text =
-                                "ToggleChip text spanning over multiple lines of text " +
-                                    "to test height is adjustable. This should exceed the minimum height" +
-                                    " for the ToggleChip."
-                        )
-                    },
-                    toggleControl = { Checkbox(checked = true) }
-                )
-            }
-            .assertHeightIsAtLeast(expectedMinHeight)
+        rule.setContentWithThemeForSizeAssertions {
+            ToggleChip(
+                checked = true,
+                onCheckedChange = {},
+                label = {
+                    Text(
+                        text = "ToggleChip text spanning over multiple lines of text " +
+                            "to test height is adjustable. This should exceed the minimum height" +
+                            " for the ToggleChip."
+                    )
+                },
+                toggleControl = {
+                    Checkbox(checked = true)
+                }
+            )
+        }.assertHeightIsAtLeast(expectedMinHeight)
     }
 
-    private fun verifyChipHeight(expectedHeight: Dp) {
+    private fun verifyHeight(expectedHeight: Dp) {
         rule.verifyHeight(expectedHeight) {
             ToggleChip(
                 checked = true,
@@ -517,33 +583,39 @@ class ToggleChipTest {
             )
         }
     }
+}
 
-    @Test fun gives_split_chip_correct_height() = verifySplitChipHeight(ChipDefaults.Height)
+class SplitToggleChipSizeTest {
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
-    fun gives_split_chip_has_adjustable_height() {
+    fun gives_base_chip_correct_height() =
+        verifyHeight(ChipDefaults.Height)
+
+    @Test
+    fun gives_base_chip_has_adjustable_height() {
         val expectedMinHeight = ToggleChipDefaults.Height + 1.dp
-        rule
-            .setContentWithThemeForSizeAssertions {
-                SplitToggleChip(
-                    checked = true,
-                    onCheckedChange = {},
-                    onClick = {},
-                    label = {
-                        Text(
-                            text =
-                                "SplitToggleChip text spanning over multiple lines of text " +
-                                    "to test height is adjustable. This should exceed the minimum height " +
-                                    "for the SplitToggleChip."
-                        )
-                    },
-                    toggleControl = { Checkbox(checked = true) }
-                )
-            }
-            .assertHeightIsAtLeast(expectedMinHeight)
+        rule.setContentWithThemeForSizeAssertions {
+            SplitToggleChip(
+                checked = true,
+                onCheckedChange = {},
+                onClick = {},
+                label = {
+                    Text(
+                        text = "SplitToggleChip text spanning over multiple lines of text " +
+                            "to test height is adjustable. This should exceed the minimum height " +
+                            "for the SplitToggleChip."
+                    )
+                },
+                toggleControl = {
+                    Checkbox(checked = true)
+                }
+            )
+        }.assertHeightIsAtLeast(expectedMinHeight)
     }
 
-    private fun verifySplitChipHeight(expectedHeight: Dp) {
+    private fun verifyHeight(expectedHeight: Dp) {
         rule.verifyHeight(expectedHeight) {
             SplitToggleChip(
                 checked = true,
@@ -554,6 +626,11 @@ class ToggleChipTest {
             )
         }
     }
+}
+
+class ToggleChipColorTest {
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun gives_checked_colors() =
@@ -697,8 +774,7 @@ class ToggleChipTest {
             actualBackgrondColor = MaterialTheme.colors.surface
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertContainsColor(actualBackgrondColor, 50.0f)
     }
@@ -723,7 +799,9 @@ class ToggleChipTest {
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(override, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(override, 50.0f)
     }
 
     private fun verifyColors(
@@ -743,7 +821,11 @@ class ToggleChipTest {
         rule.setContentWithTheme {
             expectedLabel = labelColor()
             expectedIcon = toggleControlColor()
-            Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Transparent)
+            ) {
                 if (splitToggleChip) {
                     SplitToggleChip(
                         checked = checked,
@@ -790,5 +872,8 @@ class ToggleChipTest {
 }
 
 private fun ComposeContentTestRule.verifyHeight(expected: Dp, content: @Composable () -> Unit) {
-    setContentWithThemeForSizeAssertions { content() }.assertHeightIsEqualTo(expected)
+    setContentWithThemeForSizeAssertions {
+        content()
+    }
+        .assertHeightIsEqualTo(expected)
 }

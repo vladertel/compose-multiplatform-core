@@ -43,25 +43,31 @@ import kotlinx.coroutines.delay
 @Preview
 @Composable
 fun LookaheadWithAnimateItem() {
-    val visible by
-        produceState(true) {
-            while (true) {
-                delay(2000)
-                value = !value
-            }
+    val visible by produceState(true) {
+        while (true) {
+            delay(2000)
+            value = !value
         }
+    }
     LookaheadScope {
         LazyColumn(Modifier.padding(20.dp)) {
             items(3, key = { it }) {
                 Column(
-                    Modifier.animateItem()
+                    Modifier
+                        .animateItem()
                         .clip(RoundedCornerShape(15.dp))
                         .background(turquoiseColors[it])
+
                 ) {
-                    Box(Modifier.requiredHeight(ItemSize.dp).fillMaxWidth())
+                    Box(
+                        Modifier
+                            .requiredHeight(ItemSize.dp)
+                            .fillMaxWidth()
+                    )
                     AnimatedVisibility(visible = visible) {
                         Box(
-                            Modifier.requiredHeight(ItemSize.dp)
+                            Modifier
+                                .requiredHeight(ItemSize.dp)
                                 .fillMaxWidth()
                                 .background(Color.White)
                         )
@@ -72,4 +78,5 @@ fun LookaheadWithAnimateItem() {
     }
 }
 
-@Suppress("ConstPropertyName") private const val ItemSize = 100
+@Suppress("ConstPropertyName")
+private const val ItemSize = 100

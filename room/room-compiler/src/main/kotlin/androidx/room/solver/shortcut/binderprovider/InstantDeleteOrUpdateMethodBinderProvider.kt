@@ -21,9 +21,12 @@ import androidx.room.processor.Context
 import androidx.room.solver.shortcut.binder.DeleteOrUpdateMethodBinder
 import androidx.room.solver.shortcut.binder.InstantDeleteOrUpdateMethodBinder
 
-/** Provider for instant (blocking) delete or update method binder */
-class InstantDeleteOrUpdateMethodBinderProvider(private val context: Context) :
-    DeleteOrUpdateMethodBinderProvider {
+/**
+ * Provider for instant (blocking) delete or update method binder
+ */
+class InstantDeleteOrUpdateMethodBinderProvider(
+    private val context: Context
+) : DeleteOrUpdateMethodBinderProvider {
 
     override fun matches(declared: XType) = true
 

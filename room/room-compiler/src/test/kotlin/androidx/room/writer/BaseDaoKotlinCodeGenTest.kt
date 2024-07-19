@@ -24,7 +24,6 @@ import androidx.room.processor.Context
 import java.io.File
 import loadTestSource
 import org.jetbrains.kotlin.config.JvmDefaultMode
-import writeTestSource
 
 abstract class BaseDaoKotlinCodeGenTest {
     protected fun getTestGoldenPath(testName: String): String {
@@ -36,7 +35,7 @@ abstract class BaseDaoKotlinCodeGenTest {
         expectedFilePath: String,
         compiledFiles: List<File> = emptyList(),
         jvmDefaultMode: JvmDefaultMode = JvmDefaultMode.DEFAULT,
-        handler: (XTestInvocation) -> Unit = {}
+        handler: (XTestInvocation) -> Unit = { }
     ) {
         runKspTest(
             sources = sources,
@@ -45,25 +44,18 @@ abstract class BaseDaoKotlinCodeGenTest {
             kotlincArguments = listOf("-Xjvm-default=${jvmDefaultMode.description}")
         ) {
             val databaseFqn = "androidx.room.Database"
-            DatabaseProcessingStep()
-                .process(
-                    it.processingEnv,
-                    mapOf(databaseFqn to it.roundEnv.getElementsAnnotatedWith(databaseFqn)),
-                    it.roundEnv.isProcessingOver
-                )
+            DatabaseProcessingStep().process(
+                it.processingEnv,
+                mapOf(databaseFqn to it.roundEnv.getElementsAnnotatedWith(databaseFqn)),
+                it.roundEnv.isProcessingOver
+            )
             it.assertCompilationResult {
-                val expectedSrc = loadTestSource(expectedFilePath, "MyDao_Impl")
-                // Set ROOM_TEST_WRITE_SRCS env variable to make tests write expected sources,
-                // handy for big sweeping code gen changes. ;)
-                if (System.getenv("ROOM_TEST_WRITE_SRCS") != null) {
-                    writeTestSource(
-                        checkNotNull(this.findGeneratedSource(expectedSrc.relativePath)) {
-                            "Couldn't find gen src: $expectedSrc"
-                        },
-                        expectedFilePath
+                this.generatedSource(
+                    loadTestSource(
+                        expectedFilePath,
+                        "MyDao_Impl"
                     )
-                }
-                this.generatedSource(expectedSrc)
+                )
                 this.hasNoWarnings()
             }
             handler.invoke(it)

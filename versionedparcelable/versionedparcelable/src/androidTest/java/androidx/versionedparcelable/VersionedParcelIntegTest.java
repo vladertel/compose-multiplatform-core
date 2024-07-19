@@ -51,8 +51,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Target;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -458,17 +456,6 @@ public class VersionedParcelIntegTest {
         assertEquals(obj.mGenericType.mValue, other.mGenericType.mValue);
     }
 
-    @Test
-    public void testAnnotatedString() {
-        ParcelizableImpl obj = new ParcelizableImpl();
-        obj.mAnnotatedString = "my_string_123";
-        ParcelizableImpl other = parcelCopy(obj);
-        assertEquals(obj.mAnnotatedString, other.mAnnotatedString);
-    }
-
-    @Target(ElementType.TYPE_USE)
-    public @interface TypeUseAnnotation {}
-
     @VersionedParcelize(allowSerialization = true,
             ignoreParcelables = true,
             isCustom = true,
@@ -543,8 +530,6 @@ public class VersionedParcelIntegTest {
         public CharSequence mCharSequence;
         @ParcelField(33)
         public GenericType<String> mGenericType;
-        @ParcelField(34)
-        public @TypeUseAnnotation String mAnnotatedString;
 
         @NonParcelField
         private boolean mPreParcelled;

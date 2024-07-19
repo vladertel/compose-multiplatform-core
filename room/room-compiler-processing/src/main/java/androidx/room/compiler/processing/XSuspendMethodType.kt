@@ -17,6 +17,8 @@
 package androidx.room.compiler.processing
 
 interface XSuspendMethodType : XMethodType {
-    /** Returns the real suspend function return type as seen by Kotlin. */
+    /**
+     * Returns the real suspend function return type as seen by Kotlin.
+     */
     fun getSuspendFunctionReturnType(): XType
 }

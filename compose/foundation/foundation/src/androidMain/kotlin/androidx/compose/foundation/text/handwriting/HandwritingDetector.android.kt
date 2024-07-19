@@ -63,8 +63,9 @@ fun Modifier.handwritingDetector(callback: () -> Unit) =
         this
     }
 
-private class HandwritingDetectorElement(private val callback: () -> Unit) :
-    ModifierNodeElement<HandwritingDetectorNode>() {
+private class HandwritingDetectorElement(
+    private val callback: () -> Unit
+) : ModifierNodeElement<HandwritingDetectorNode>() {
     override fun create() = HandwritingDetectorNode(callback)
 
     override fun update(node: HandwritingDetectorNode) {
@@ -82,10 +83,11 @@ private class HandwritingDetectorElement(private val callback: () -> Unit) :
     }
 }
 
-private class HandwritingDetectorNode(var callback: () -> Unit) :
-    DelegatingNode(), PointerInputModifierNode {
-    private val composeImm by
-        lazy(LazyThreadSafetyMode.NONE) { ComposeInputMethodManager(requireView()) }
+private class HandwritingDetectorNode(var callback: () -> Unit) : DelegatingNode(),
+    PointerInputModifierNode {
+    private val composeImm by lazy(LazyThreadSafetyMode.NONE) {
+        ComposeInputMethodManager(requireView())
+    }
 
     override fun onPointerEvent(
         pointerEvent: PointerEvent,
@@ -99,12 +101,9 @@ private class HandwritingDetectorNode(var callback: () -> Unit) :
         pointerInputNode.onCancelPointerInput()
     }
 
-    val pointerInputNode =
-        delegate(
-            StylusHandwritingNodeWithNegativePadding {
-                callback()
-                composeImm.prepareStylusHandwritingDelegation()
-                return@StylusHandwritingNodeWithNegativePadding true
-            }
-        )
+    val pointerInputNode = delegate(StylusHandwritingNodeWithNegativePadding {
+        callback()
+        composeImm.prepareStylusHandwritingDelegation()
+        return@StylusHandwritingNodeWithNegativePadding true
+    })
 }

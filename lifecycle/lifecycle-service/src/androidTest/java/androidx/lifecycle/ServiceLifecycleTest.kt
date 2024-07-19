@@ -55,7 +55,8 @@ import org.junit.runner.RunWith
 class ServiceLifecycleTest {
     private lateinit var serviceIntent: Intent
 
-    @Volatile private var loggerEvents = mutableListOf<Event?>()
+    @Volatile
+    private var loggerEvents = mutableListOf<Event?>()
     private lateinit var logger: EventLogger
 
     @Before
@@ -185,14 +186,13 @@ class ServiceLifecycleTest {
     private fun bindToService(): ServiceConnection {
         val context = getApplicationContext<Context>()
         val latch = CountDownLatch(1)
-        val connection =
-            object : ServiceConnection {
-                override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                    latch.countDown()
-                }
-
-                override fun onServiceDisconnected(name: ComponentName) {}
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                latch.countDown()
             }
+
+            override fun onServiceDisconnected(name: ComponentName) {}
+        }
         val success = context.bindService(serviceIntent, connection, BIND_AUTO_CREATE)
         assertThat(success, `is`(true))
         val awaited = latch.await(TIMEOUT, MILLISECONDS)
@@ -211,7 +211,8 @@ class ServiceLifecycleTest {
         }
     }
 
-    private class EventLogger(private val loggerEvents: MutableList<Event?>) : BroadcastReceiver() {
+    private class EventLogger(private val loggerEvents: MutableList<Event?>) :
+        BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             lock.withLock {
                 loggerEvents.add(intent.getSerializableExtra(EXTRA_KEY_EVENT) as Event)

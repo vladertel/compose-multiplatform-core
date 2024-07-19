@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package androidx.core.widget
-
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Color

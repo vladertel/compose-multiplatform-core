@@ -21,7 +21,9 @@ import androidx.compose.animation.tooling.ComposeAnimation
 import androidx.compose.animation.tooling.ComposeAnimationType
 import org.jetbrains.annotations.TestOnly
 
-/** [ComposeAnimation] of type [ComposeAnimationType.INFINITE_TRANSITION]. */
+/**
+ * [ComposeAnimation] of type [ComposeAnimationType.INFINITE_TRANSITION].
+ */
 internal class InfiniteTransitionComposeAnimation
 private constructor(
     private val toolingState: ToolingState<Long>,
@@ -52,7 +54,9 @@ private constructor(
         internal fun AnimationSearch.InfiniteTransitionSearchInfo.parse():
             InfiniteTransitionComposeAnimation? {
             if (!apiAvailable) return null
-            return InfiniteTransitionComposeAnimation(toolingState, infiniteTransition)
+            return InfiniteTransitionComposeAnimation(
+                toolingState, infiniteTransition
+            )
         }
 
         /** This method is for testing only. */

@@ -73,7 +73,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ScrollingTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     private val tag = "tag"
     private lateinit var androidComposeView: AndroidComposeView
@@ -89,12 +90,22 @@ class ScrollingTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Row(
-                Modifier.size(20.toDp(), 10.toDp()).semantics(mergeDescendants = false) {
-                    horizontalScrollAxisRange = ScrollAxisRange({ scrollValue }, { scrollMaxValue })
-                }
+                Modifier
+                    .size(20.toDp(), 10.toDp())
+                    .semantics(mergeDescendants = false) {
+                        horizontalScrollAxisRange = ScrollAxisRange(
+                            { scrollValue },
+                            { scrollMaxValue }
+                        )
+                    }
             ) {
                 Text("foo", Modifier.size(10.toDp()))
-                Text("bar", Modifier.size(10.toDp()).testTag(tag))
+                Text(
+                    "bar",
+                    Modifier
+                        .size(10.toDp())
+                        .testTag(tag)
+                )
             }
         }
         rule.mainClock.advanceTimeBy(accessibilityEventLoopIntervalMs)
@@ -105,11 +116,8 @@ class ScrollingTest {
         try {
             androidComposeView.snapshotObserver.startObserving()
             rule.runOnIdle {
-                androidComposeView.accessibilityNodeProvider.performAction(
-                    virtualViewId,
-                    ACTION_ACCESSIBILITY_FOCUS,
-                    null
-                )
+                androidComposeView.accessibilityNodeProvider
+                    .performAction(virtualViewId, ACTION_ACCESSIBILITY_FOCUS, null)
                 Snapshot.notifyObjectsInitialized()
                 scrollValue = 2f
                 Snapshot.sendApplyNotifications()
@@ -121,16 +129,16 @@ class ScrollingTest {
 
         // Assert.
         rule.runOnIdle {
-            val focusedANI =
-                androidComposeView.accessibilityNodeProvider.findFocus(
-                    AccessibilityNodeInfo.FOCUS_ACCESSIBILITY
-                )
+            val focusedANI = androidComposeView.accessibilityNodeProvider
+                .findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
             assertThat(Rect().also { focusedANI?.getBoundsInScreen(it) })
                 .isEqualTo(Rect(10, 0, 20, 10))
             assertThat(dispatchedAccessibilityEvents)
                 .comparingElementsUsing(AccessibilityEventComparator)
                 .containsExactly(
-                    AccessibilityEvent().apply { eventType = TYPE_VIEW_ACCESSIBILITY_FOCUSED },
+                    AccessibilityEvent().apply {
+                        eventType = TYPE_VIEW_ACCESSIBILITY_FOCUSED
+                    },
                     AccessibilityEvent().apply {
                         eventType = TYPE_WINDOW_CONTENT_CHANGED
                         contentChangeTypes = CONTENT_CHANGE_TYPE_SUBTREE
@@ -152,9 +160,14 @@ class ScrollingTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    verticalScrollAxisRange = ScrollAxisRange({ scrollValue }, { scrollMaxValue })
-                }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        verticalScrollAxisRange = ScrollAxisRange(
+                            { scrollValue },
+                            { scrollMaxValue }
+                        )
+                    }
             )
         }
 
@@ -201,10 +214,15 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.dp).semantics(mergeDescendants = true) {
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(value = { 0f }, maxValue = { 1f }, reverseScrolling = false)
-                }
+                Modifier
+                    .size(100.dp)
+                    .semantics(mergeDescendants = true) {
+                        horizontalScrollAxisRange = ScrollAxisRange(
+                            value = { 0f },
+                            maxValue = { 1f },
+                            reverseScrolling = false
+                        )
+                    }
             )
         }
 
@@ -221,15 +239,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = false
                         )
-                }
+                    }
             )
         }
 
@@ -250,15 +269,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    verticalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        verticalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = false
                         )
-                }
+                    }
             )
         }
 
@@ -279,11 +299,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(value = { 1f }, maxValue = { 1f }, reverseScrolling = false)
-                }
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
+                            value = { 1f },
+                            maxValue = { 1f },
+                            reverseScrolling = false
+                        )
+                    }
             )
         }
 
@@ -303,11 +328,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(value = { 0f }, maxValue = { 1f }, reverseScrolling = false)
-                }
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
+                            value = { 0f },
+                            maxValue = { 1f },
+                            reverseScrolling = false
+                        )
+                    }
             )
         }
 
@@ -327,11 +357,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    verticalScrollAxisRange =
-                        ScrollAxisRange(value = { 1f }, maxValue = { 1f }, reverseScrolling = false)
-                }
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        verticalScrollAxisRange = ScrollAxisRange(
+                            value = { 1f },
+                            maxValue = { 1f },
+                            reverseScrolling = false
+                        )
+                    }
             )
         }
 
@@ -351,11 +386,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    verticalScrollAxisRange =
-                        ScrollAxisRange(value = { 0f }, maxValue = { 1f }, reverseScrolling = false)
-                }
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        verticalScrollAxisRange = ScrollAxisRange(
+                            value = { 0f },
+                            maxValue = { 1f },
+                            reverseScrolling = false
+                        )
+                    }
             )
         }
 
@@ -375,11 +415,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(value = { 0f }, maxValue = { 1f }, reverseScrolling = true)
-                }
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
+                            value = { 0f },
+                            maxValue = { 1f },
+                            reverseScrolling = true
+                        )
+                    }
             )
         }
 
@@ -399,15 +444,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(100.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(100.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = true
                         )
-                }
+                    }
             )
         }
 
@@ -429,30 +475,28 @@ class ScrollingTest {
         val viewPortSize = 100
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(viewPortSize.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(viewPortSize.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = true
                         )
 
-                    scrollBy { x, _ ->
-                        actualScrolledAmount += x
-                        false
+                        scrollBy { x, _ ->
+                            actualScrolledAmount += x
+                            false
+                        }
                     }
-                }
             )
         }
 
         val virtualViewId = rule.onNodeWithTag(tag).semanticsId
         rule.runOnIdle {
-            androidComposeView.accessibilityNodeProvider.performAction(
-                virtualViewId,
-                ACTION_SCROLL_BACKWARD,
-                null
-            )
+            androidComposeView.accessibilityNodeProvider
+                .performAction(virtualViewId, ACTION_SCROLL_BACKWARD, null)
         }
         assertThat(actualScrolledAmount).isEqualTo(viewPortSize)
     }
@@ -465,32 +509,30 @@ class ScrollingTest {
         val contentPadding = 5f
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(viewPortSize.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(viewPortSize.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = true
                         )
 
-                    scrollBy { x, _ ->
-                        actualScrolledAmount += x
-                        false
-                    }
+                        scrollBy { x, _ ->
+                            actualScrolledAmount += x
+                            false
+                        }
 
-                    getScrollViewportLength { viewPortSize - contentPadding }
-                }
+                        getScrollViewportLength { viewPortSize - contentPadding }
+                    }
             )
         }
 
         val virtualViewId = rule.onNodeWithTag(tag).semanticsId
         rule.runOnIdle {
-            androidComposeView.accessibilityNodeProvider.performAction(
-                virtualViewId,
-                ACTION_SCROLL_BACKWARD,
-                null
-            )
+            androidComposeView.accessibilityNodeProvider
+                .performAction(virtualViewId, ACTION_SCROLL_BACKWARD, null)
         }
         assertThat(actualScrolledAmount).isEqualTo(viewPortSize - contentPadding)
     }
@@ -500,15 +542,16 @@ class ScrollingTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(50.toDp()).semantics(mergeDescendants = true) {
-                    testTag = tag
-                    horizontalScrollAxisRange =
-                        ScrollAxisRange(
+                Modifier
+                    .size(50.toDp())
+                    .semantics(mergeDescendants = true) {
+                        testTag = tag
+                        horizontalScrollAxisRange = ScrollAxisRange(
                             value = { 0.5f },
                             maxValue = { 1f },
                             reverseScrolling = true
                         )
-                }
+                    }
             )
         }
 
@@ -532,10 +575,7 @@ class ScrollingTest {
             androidComposeView = LocalView.current as AndroidComposeView
             with(androidComposeView.composeAccessibilityDelegate) {
                 accessibilityForceEnabledForTesting = true
-                onSendAccessibilityEvent = {
-                    dispatchedAccessibilityEvents += it
-                    false
-                }
+                onSendAccessibilityEvent = { dispatchedAccessibilityEvents += it; false }
             }
             content()
         }
@@ -548,11 +588,10 @@ class ScrollingTest {
 
     companion object {
 
-        internal val AccessibilityEventComparator =
-            Correspondence.from<AccessibilityEvent, AccessibilityEvent>(
+        internal val AccessibilityEventComparator = Correspondence
+            .from<AccessibilityEvent, AccessibilityEvent>(
                 { actual, expected ->
-                    actual != null &&
-                        expected != null &&
+                    actual != null && expected != null &&
                         actual.eventType == expected.eventType &&
                         actual.eventTime == expected.eventTime &&
                         actual.packageName == expected.packageName &&
@@ -589,24 +628,21 @@ class ScrollingTest {
     }
 
     private val View.composeAccessibilityDelegate: AndroidComposeViewAccessibilityDelegateCompat
-        get() =
-            ViewCompat.getAccessibilityDelegate(this)
-                as AndroidComposeViewAccessibilityDelegateCompat
+        get() = ViewCompat.getAccessibilityDelegate(this)
+            as AndroidComposeViewAccessibilityDelegateCompat
 
     // TODO(b/272068594): Add api to fetch the semantics id from SemanticsNodeInteraction directly.
-    private val SemanticsNodeInteraction.semanticsId: Int
-        get() = fetchSemanticsNode().id
+    private val SemanticsNodeInteraction.semanticsId: Int get() = fetchSemanticsNode().id
 
     // TODO(b/304359126): Move this to AccessibilityEventCompat and use it wherever we use obtain().
-    private fun AccessibilityEvent(): AccessibilityEvent =
-        if (SDK_INT >= R) {
-                android.view.accessibility.AccessibilityEvent()
-            } else {
-                @Suppress("DEPRECATION") AccessibilityEvent.obtain()
-            }
-            .apply {
-                packageName = "androidx.compose.ui.test"
-                className = "android.view.View"
-                isEnabled = true
-            }
+    private fun AccessibilityEvent(): AccessibilityEvent = if (SDK_INT >= R) {
+        android.view.accessibility.AccessibilityEvent()
+    } else {
+        @Suppress("DEPRECATION")
+        AccessibilityEvent.obtain()
+    }.apply {
+        packageName = "androidx.compose.ui.test"
+        className = "android.view.View"
+        isEnabled = true
+    }
 }

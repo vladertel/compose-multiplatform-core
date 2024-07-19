@@ -66,7 +66,9 @@ data class Field(
         }
     }
 
-    /** Used when reporting errors on duplicate names */
+    /**
+     * Used when reporting errors on duplicate names
+     */
     fun getPath(): String {
         return if (parent == null) {
             name
@@ -84,8 +86,9 @@ data class Field(
     }
 
     /**
-     * List of names that include variations. e.g. if it is mUser, user is added to the list or if
-     * it is isAdmin, admin is added to the list
+     * List of names that include variations.
+     * e.g. if it is mUser, user is added to the list
+     * or if it is isAdmin, admin is added to the list
      */
     val nameWithVariations by lazy {
         val result = arrayListOf(name)
@@ -97,7 +100,10 @@ data class Field(
                 result.add(name.substring(1).decapitalize(Locale.US))
             }
 
-            if (typeName == XTypeName.PRIMITIVE_BOOLEAN || typeName == XTypeName.BOXED_BOOLEAN) {
+            if (
+                typeName == XTypeName.PRIMITIVE_BOOLEAN ||
+                typeName == XTypeName.BOXED_BOOLEAN
+            ) {
                 if (name.length > 2 && name.startsWith("is") && name[2].isUpperCase()) {
                     result.add(name.substring(2).decapitalize(Locale.US))
                 }
@@ -111,7 +117,10 @@ data class Field(
 
     val getterNameWithVariations by lazy {
         nameWithVariations.map { "get${it.capitalize(Locale.US)}" } +
-            if (typeName == XTypeName.PRIMITIVE_BOOLEAN || typeName == XTypeName.BOXED_BOOLEAN) {
+            if (
+                typeName == XTypeName.PRIMITIVE_BOOLEAN ||
+                typeName == XTypeName.BOXED_BOOLEAN
+            ) {
                 nameWithVariations.flatMap {
                     listOf("is${it.capitalize(Locale.US)}", "has${it.capitalize(Locale.US)}")
                 }
@@ -124,7 +133,9 @@ data class Field(
         nameWithVariations.map { "set${it.capitalize(Locale.US)}" }
     }
 
-    /** definition to be used in create query */
+    /**
+     * definition to be used in create query
+     */
     fun databaseDefinition(autoIncrementPKey: Boolean): String {
         val columnSpec = StringBuilder("")
         if (autoIncrementPKey) {
@@ -142,14 +153,10 @@ data class Field(
         return "`$columnName` ${(affinity ?: SQLTypeAffinity.TEXT).name}$columnSpec"
     }
 
-    fun toBundle(): FieldBundle =
-        FieldBundle(
-            pathWithDotNotation,
-            columnName,
-            affinity?.name ?: SQLTypeAffinity.TEXT.name,
-            nonNull,
-            defaultValue
-        )
+    fun toBundle(): FieldBundle = FieldBundle(
+        pathWithDotNotation, columnName,
+        affinity?.name ?: SQLTypeAffinity.TEXT.name, nonNull, defaultValue
+    )
 
     companion object {
         fun calcNonNull(type: XType, parent: EmbeddedField?): Boolean {

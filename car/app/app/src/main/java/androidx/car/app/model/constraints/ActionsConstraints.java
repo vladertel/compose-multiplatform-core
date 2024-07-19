@@ -162,17 +162,9 @@ public final class ActionsConstraints {
                     .build();
 
     /**
-     * Constraints for floating action buttons which enforces the following on the list of actions:
+     * Constraints for floating action buttons.
      *
-     * <ul>
-     *     <li>Maximum of {@code 2}
-     *     <li>Must be of type {@link Action#TYPE_CUSTOM} or {@link Action#TYPE_COMPOSE_MESSAGE}
-     *     <li>Must have an icon
-     *     <li>Must have a background color, though the host may choose to ignore this color
-     *     depending on where it appears (eg. usually only the first action is rendered with a
-     *     custom color and the rest are shown with a neutral color)
-     *     <li>Can have a click listener
-     * </ul>
+     * <p>Only buttons with icons and background color are allowed.
      */
     @SuppressLint("UnsafeOptInUsageError")
     @NonNull

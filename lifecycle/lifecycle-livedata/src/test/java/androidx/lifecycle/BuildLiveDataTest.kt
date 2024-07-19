@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,15 +38,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-@RunWith(JUnit4::class)
+ @RunWith(JUnit4::class)
 class BuildLiveDataTest {
-    @get:Rule val scopes = ScopesRule()
+    @get:Rule
+    val scopes = ScopesRule()
     private val mainScope = scopes.mainScope
     private val testScope = scopes.testScope
 
     @Test
     fun oneShot() {
-        val liveData = liveData { emit(3) }
+        val liveData = liveData {
+            emit(3)
+        }
         scopes.triggerAllActions()
         assertThat(liveData.value).isNull()
         liveData.addObserver().assertItems(3)
@@ -54,13 +57,12 @@ class BuildLiveDataTest {
 
     @Test
     fun removeObserverInBetween() {
-        val ld =
-            liveData(timeoutInMs = 10) {
-                emit(1)
-                emit(2)
-                delay(1000)
-                emit(3)
-            }
+        val ld = liveData(timeoutInMs = 10) {
+            emit(1)
+            emit(2)
+            delay(1000)
+            emit(3)
+        }
         ld.addObserver().apply {
             assertItems(1, 2)
             unsubscribe()
@@ -78,13 +80,12 @@ class BuildLiveDataTest {
 
     @Test
     fun removeObserverInBetween_largeTimeout() {
-        val ld =
-            liveData(timeoutInMs = 10000) {
-                emit(1)
-                emit(2)
-                delay(1000)
-                emit(3)
-            }
+        val ld = liveData(timeoutInMs = 10000) {
+            emit(1)
+            emit(2)
+            delay(1000)
+            emit(3)
+        }
         ld.addObserver().apply {
             assertItems(1, 2)
             unsubscribe()
@@ -105,16 +106,15 @@ class BuildLiveDataTest {
     @Test
     fun timeoutViaDuration() {
         val running = CompletableDeferred<Unit>()
-        val ld =
-            liveData(timeout = Duration.ofSeconds(5)) {
-                try {
-                    emit(1)
-                    delay(5_001)
-                    emit(2)
-                } finally {
-                    running.complete(Unit)
-                }
+        val ld = liveData(timeout = Duration.ofSeconds(5)) {
+            try {
+                emit(1)
+                delay(5_001)
+                emit(2)
+            } finally {
+                running.complete(Unit)
             }
+        }
         ld.addObserver().apply {
             assertItems(1)
             unsubscribe()
@@ -135,11 +135,12 @@ class BuildLiveDataTest {
     @Test
     fun ignoreCancelledYields() {
         val cancelMutex = Mutex(true)
-        val ld =
-            liveData(timeoutInMs = 0, context = testScope.coroutineContext) {
-                emit(1)
-                cancelMutex.withLock { emit(2) }
+        val ld = liveData(timeoutInMs = 0, context = testScope.coroutineContext) {
+            emit(1)
+            cancelMutex.withLock {
+                emit(2)
             }
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             assertItems(1)
@@ -161,8 +162,12 @@ class BuildLiveDataTest {
     @Test
     fun readLatestValue() {
         val latest = AtomicReference<Int?>()
-        val ld = liveData<Int>(testScope.coroutineContext) { latest.set(latestValue) }
-        scopes.runOnMain { ld.value = 3 }
+        val ld = liveData<Int>(testScope.coroutineContext) {
+            latest.set(latestValue)
+        }
+        scopes.runOnMain {
+            ld.value = 3
+        }
         ld.addObserver()
         scopes.triggerAllActions()
         assertThat(latest.get()).isEqualTo(3)
@@ -171,11 +176,10 @@ class BuildLiveDataTest {
     @Test
     fun readLatestValue_readWithinBlock() {
         val latest = AtomicReference<Int?>()
-        val ld =
-            liveData<Int>(testScope.coroutineContext) {
-                emit(5)
-                latest.set(latestValue)
-            }
+        val ld = liveData<Int>(testScope.coroutineContext) {
+            emit(5)
+            latest.set(latestValue)
+        }
         ld.addObserver()
         scopes.triggerAllActions()
         assertThat(latest.get()).isEqualTo(5)
@@ -184,15 +188,14 @@ class BuildLiveDataTest {
     @Test
     fun readLatestValue_keepYieldedFromBefore() {
         val latest = AtomicReference<Int?>()
-        val ld =
-            liveData<Int>(testScope.coroutineContext, 10) {
-                if (latestValue == null) {
-                    emit(5)
-                    delay(500000) // wait for cancellation
-                }
-
-                latest.set(latestValue)
+        val ld = liveData<Int>(testScope.coroutineContext, 10) {
+            if (latestValue == null) {
+                emit(5)
+                delay(500000) // wait for cancellation
             }
+
+            latest.set(latestValue)
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             assertItems(5)
@@ -209,27 +212,40 @@ class BuildLiveDataTest {
 
     @Test
     fun yieldSource_simple() {
-        val odds = liveData { (1..9 step 2).forEach { emit(it) } }
-        val ld = liveData { emitSource(odds) }
-        ld.addObserver().apply { assertItems(1, 3, 5, 7, 9) }
+        val odds = liveData {
+            (1..9 step 2).forEach {
+                emit(it)
+            }
+        }
+        val ld = liveData {
+            emitSource(odds)
+        }
+        ld.addObserver().apply {
+            assertItems(1, 3, 5, 7, 9)
+        }
     }
 
     @Test
     fun yieldSource_switchTwo() {
         val doneOddsYield = Mutex(true)
         val odds = liveData {
-            (1..9 step 2).forEach { emit(it) }
+            (1..9 step 2).forEach {
+                emit(it)
+            }
             doneOddsYield.unlock()
             delay(1)
             emit(-1)
         }
-        val evens = liveData { (2..10 step 2).forEach { emit(it) } }
-        val ld =
-            liveData(testScope.coroutineContext) {
-                emitSource(odds)
-                doneOddsYield.lock()
-                emitSource(evens)
+        val evens = liveData {
+            (2..10 step 2).forEach {
+                emit(it)
             }
+        }
+        val ld = liveData(testScope.coroutineContext) {
+            emitSource(odds)
+            doneOddsYield.lock()
+            emitSource(evens)
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             assertItems(1, 3, 5, 7, 9, 2, 4, 6, 8, 10)
@@ -239,19 +255,19 @@ class BuildLiveDataTest {
     @Test
     fun yieldSource_yieldValue() {
         val doneOddsYield = Mutex(true)
-        val odds =
-            liveData(timeoutInMs = 0) {
-                (1..9 step 2).forEach { emit(it) }
-                doneOddsYield.unlock()
-                delay(1)
-                emit(-1)
+        val odds = liveData(timeoutInMs = 0) {
+            (1..9 step 2).forEach {
+                emit(it)
             }
-        val ld =
-            liveData(testScope.coroutineContext) {
-                emitSource(odds)
-                doneOddsYield.lock()
-                emit(10)
-            }
+            doneOddsYield.unlock()
+            delay(1)
+            emit(-1)
+        }
+        val ld = liveData(testScope.coroutineContext) {
+            emitSource(odds)
+            doneOddsYield.lock()
+            emit(10)
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             scopes.advanceTimeBy(100)
@@ -263,7 +279,9 @@ class BuildLiveDataTest {
     fun yieldSource_dispose() {
         val doneOddsYield = Mutex(true)
         val odds = liveData {
-            (1..9 step 2).forEach { emit(it) }
+            (1..9 step 2).forEach {
+                emit(it)
+            }
             doneOddsYield.lock()
             emit(2)
         }
@@ -276,12 +294,18 @@ class BuildLiveDataTest {
             assertThat(odds.hasActiveObservers()).isEqualTo(false)
             doneOddsYield.unlock()
         }
-        ld.addObserver().apply { assertItems(1, 3, 5, 7, 9) }
+        ld.addObserver().apply {
+            assertItems(1, 3, 5, 7, 9)
+        }
     }
 
     @Test
     fun yieldSource_disposeTwice() {
-        val odds = liveData { (1..9 step 2).forEach { emit(it) } }
+        val odds = liveData {
+            (1..9 step 2).forEach {
+                emit(it)
+            }
+        }
         val ld = liveData {
             val disposable = emitSource(odds)
             scopes.triggerAllActions()
@@ -297,7 +321,9 @@ class BuildLiveDataTest {
             // still has the observer we added from the side channel
             assertThat(odds.hasActiveObservers()).isEqualTo(true)
         }
-        ld.addObserver().apply { assertItems(1, 3, 5, 7, 9) }
+        ld.addObserver().apply {
+            assertItems(1, 3, 5, 7, 9)
+        }
     }
 
     @Test
@@ -310,14 +336,13 @@ class BuildLiveDataTest {
         val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
             exception.complete(throwable)
         }
-        val ld =
-            liveData(testScope.coroutineContext + exceptionHandler, 10) {
-                if (exception.isActive) {
-                    throw IllegalArgumentException("i like to fail")
-                } else {
-                    emit(3)
-                }
+        val ld = liveData(testScope.coroutineContext + exceptionHandler, 10) {
+            if (exception.isActive) {
+                throw IllegalArgumentException("i like to fail")
+            } else {
+                emit(3)
             }
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             assertItems()
@@ -338,14 +363,13 @@ class BuildLiveDataTest {
         val didCancel = AtomicBoolean(false)
         val unexpected = AtomicBoolean(false)
 
-        val ld =
-            liveData<Int>(testScope.coroutineContext, 10) {
-                if (didCancel.compareAndSet(false, true)) {
-                    coroutineContext.cancel()
-                } else {
-                    unexpected.set(true)
-                }
+        val ld = liveData<Int>(testScope.coroutineContext, 10) {
+            if (didCancel.compareAndSet(false, true)) {
+                coroutineContext.cancel()
+            } else {
+                unexpected.set(true)
             }
+        }
         ld.addObserver().apply {
             scopes.triggerAllActions()
             assertItems()
@@ -365,24 +389,27 @@ class BuildLiveDataTest {
             exception.complete(throwable)
         }
         val src = MutableLiveData<Int>()
-        val ld =
-            src.switchMap {
-                liveData(testScope.coroutineContext + exceptionHandler) {
-                    if (exception.isActive) {
-                        throw IllegalArgumentException("i like to fail")
-                    } else {
-                        emit(3)
-                    }
+        val ld = src.switchMap {
+            liveData(testScope.coroutineContext + exceptionHandler) {
+                if (exception.isActive) {
+                    throw IllegalArgumentException("i like to fail")
+                } else {
+                    emit(3)
                 }
             }
+        }
         ld.addObserver().apply {
             assertItems()
-            scopes.runOnMain { src.value = 1 }
+            scopes.runOnMain {
+                src.value = 1
+            }
             scopes.triggerAllActions()
             runBlocking {
                 assertThat(exception.await()).hasMessageThat().contains("i like to fail")
             }
-            scopes.runOnMain { src.value = 2 }
+            scopes.runOnMain {
+                src.value = 2
+            }
             scopes.triggerAllActions()
             assertItems(3)
         }
@@ -402,12 +429,11 @@ class BuildLiveDataTest {
     @Test
     fun raceTest() {
         val subLiveData = MutableLiveData(1)
-        val subject =
-            liveData(testScope.coroutineContext) {
-                emitSource(subLiveData)
-                emitSource(subLiveData)
-                emit(2)
-            }
+        val subject = liveData(testScope.coroutineContext) {
+            emitSource(subLiveData)
+            emitSource(subLiveData)
+            emit(2)
+        }
         subject.addObserver().apply {
             scopes.triggerAllActions()
             assertItems(1, 1, 2)
@@ -421,11 +447,10 @@ class BuildLiveDataTest {
     @Test
     fun raceTest_withCustomDispose() {
         val subLiveData = MutableLiveData(1)
-        val subject =
-            liveData(testScope.coroutineContext) {
-                emitSource(subLiveData).dispose()
-                emitSource(subLiveData)
-            }
+        val subject = liveData(testScope.coroutineContext) {
+            emitSource(subLiveData).dispose()
+            emitSource(subLiveData)
+        }
         subject.addObserver().apply {
             scopes.triggerAllActions()
             assertItems(1, 1)

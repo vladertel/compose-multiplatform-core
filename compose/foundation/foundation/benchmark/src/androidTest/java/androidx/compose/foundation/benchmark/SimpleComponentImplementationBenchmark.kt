@@ -57,7 +57,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class SimpleComponentImplementationBenchmark {
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val twoLayoutNodesCaseFactory = { ComponentWithTwoLayoutNodesTestCase() }
     private val redrawOnlyCasefactory = { ComponentWithRedrawTestCase() }
@@ -151,7 +152,10 @@ class SimpleComponentImplementationBenchmark {
 
     @Test
     fun component_redrawOnly_update_draw() {
-        benchmarkRule.toggleStateBenchmarkDraw(redrawOnlyCasefactory, toggleCausesRecompose = false)
+        benchmarkRule.toggleStateBenchmarkDraw(
+            redrawOnlyCasefactory,
+            toggleCausesRecompose = false
+        )
     }
 
     @Test
@@ -233,7 +237,11 @@ class ComponentWithModifiersTestCase : SimpleComponentImplementationTestCase() {
             Modifier.size(48.dp)
                 .background(color = Color.Cyan)
                 .padding(innerSize.value)
-                .border(color = Color.Cyan, width = 1.dp, shape = CircleShape)
+                .border(
+                    color = Color.Cyan,
+                    width = 1.dp,
+                    shape = CircleShape
+                )
         )
     }
 }
@@ -255,15 +263,18 @@ class ComponentWithTwoLayoutNodesTestCase : SimpleComponentImplementationTestCas
     @Composable
     override fun MeasuredContent() {
         Box(
-            modifier =
-                Modifier.size(48.dp)
-                    .border(BorderStroke(1.dp, Color.Cyan), CircleShape)
-                    .padding(1.dp),
+            modifier = Modifier
+                .size(48.dp)
+                .border(BorderStroke(1.dp, Color.Cyan), CircleShape)
+                .padding(1.dp),
             contentAlignment = Alignment.Center
         ) {
             val innerSize = getInnerSize().value
             Canvas(Modifier.size(innerSize)) {
-                drawOutline(CircleShape.createOutline(size, layoutDirection, this), Color.Cyan)
+                drawOutline(
+                    CircleShape.createOutline(size, layoutDirection, this),
+                    Color.Cyan
+                )
             }
         }
     }
@@ -282,12 +293,11 @@ abstract class SimpleComponentImplementationTestCase :
 
     override fun toggleState() {
         with(state!!) {
-            value =
-                if (value == 10.dp) {
-                    20.dp
-                } else {
-                    10.dp
-                }
+            value = if (value == 10.dp) {
+                20.dp
+            } else {
+                10.dp
+            }
         }
     }
 }

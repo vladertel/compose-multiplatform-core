@@ -46,20 +46,18 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
-        val secondSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
+        val secondSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         assertThat(firstSession).isNotEqualTo(secondSession)
     }
@@ -69,20 +67,18 @@ class TextInputServiceTest {
         val platformService = mock<PlatformTextInputService>()
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
-        val secondSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
+        val secondSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         assertThat(firstSession.isOpen).isFalse()
         assertThat(secondSession.isOpen).isTrue()
@@ -94,13 +90,12 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val session =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val session = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         textInputService.stopInput(session)
         verify(platformService, times(1)).stopInput()
@@ -112,13 +107,12 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         // Start another session. The firstToken is now expired.
         textInputService.startInput(
@@ -193,14 +187,12 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        textInputService
-            .startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
-            .dispose()
+        textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        ).dispose()
 
         textInputService.showSoftwareKeyboard()
         verify(platformService, never()).showSoftwareKeyboard()
@@ -222,13 +214,12 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         val editorModel = TextFieldValue()
         firstSession.updateState(null, editorModel)
@@ -241,22 +232,20 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         // Start another session. The firstToken is now expired.
-        val secondSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val secondSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         val editorModel = TextFieldValue()
         firstSession.updateState(null, editorModel)
@@ -272,13 +261,12 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         val rect = Rect(Offset.Zero, Size(100f, 100f))
         firstSession.notifyFocusedRect(rect)
@@ -291,22 +279,20 @@ class TextInputServiceTest {
 
         val textInputService = TextInputService(platformService)
 
-        val firstSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val firstSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         // Start another session. The firstToken is now expired.
-        val secondSession =
-            textInputService.startInput(
-                TextFieldValue(),
-                ImeOptions.Default,
-                {}, // onEditCommand
-                {} // onImeActionPerformed
-            )
+        val secondSession = textInputService.startInput(
+            TextFieldValue(),
+            ImeOptions.Default,
+            {}, // onEditCommand
+            {} // onImeActionPerformed
+        )
 
         val rect = Rect(Offset.Zero, Size(100f, 100f))
         firstSession.notifyFocusedRect(rect)

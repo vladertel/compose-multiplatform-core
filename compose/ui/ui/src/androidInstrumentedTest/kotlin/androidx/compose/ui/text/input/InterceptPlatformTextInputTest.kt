@@ -84,7 +84,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class InterceptPlatformTextInputTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private lateinit var testNode: TestNode
     private lateinit var coroutineScope: CoroutineScope
@@ -96,15 +97,23 @@ class InterceptPlatformTextInputTest {
         val testRequest = TaggedRequest()
         val interceptor = PlatformTextInputInterceptor { request, _ ->
             lastRequest = request
-            suspendCancellableCoroutine { lastContinuation = it }
+            suspendCancellableCoroutine {
+                lastContinuation = it
+            }
         }
-        setContent { InterceptPlatformTextInput(interceptor) { FakeTextField() } }
+        setContent {
+            InterceptPlatformTextInput(interceptor) {
+                FakeTextField()
+            }
+        }
 
         rule.runOnIdle {
             coroutineScope.launch {
                 testNode.establishTextInputSession {
                     // This context should be propagated to startInputMethod.
-                    withContext(CoroutineName("original")) { startInputMethod(testRequest) }
+                    withContext(CoroutineName("original")) {
+                        startInputMethod(testRequest)
+                    }
                 }
             }
         }
@@ -126,11 +135,15 @@ class InterceptPlatformTextInputTest {
             }
         }
         val parentInterceptor = PlatformTextInputInterceptor { _, _ ->
-            suspendCancellableCoroutine { lastContinuation = it }
+            suspendCancellableCoroutine {
+                lastContinuation = it
+            }
         }
         setContent {
             InterceptPlatformTextInput(parentInterceptor) {
-                InterceptPlatformTextInput(childInterceptor) { FakeTextField() }
+                InterceptPlatformTextInput(childInterceptor) {
+                    FakeTextField()
+                }
             }
         }
 
@@ -138,7 +151,9 @@ class InterceptPlatformTextInputTest {
             coroutineScope.launch {
                 testNode.establishTextInputSession {
                     // This context should be propagated to startInputMethod.
-                    withContext(CoroutineName("original")) { startInputMethod(testRequest) }
+                    withContext(CoroutineName("original")) {
+                        startInputMethod(testRequest)
+                    }
                 }
             }
         }
@@ -157,7 +172,11 @@ class InterceptPlatformTextInputTest {
         val interceptor = PlatformTextInputInterceptor { _, _ ->
             throw ExpectedException().also { thrownException = it }
         }
-        setContent { InterceptPlatformTextInput(interceptor) { FakeTextField() } }
+        setContent {
+            InterceptPlatformTextInput(interceptor) {
+                FakeTextField()
+            }
+        }
 
         var exceptionFromInputNode: ExpectedException? = null
         rule.runOnIdle {
@@ -198,13 +217,17 @@ class InterceptPlatformTextInputTest {
         }
         setContent {
             InterceptPlatformTextInput(parentInterceptor) {
-                InterceptPlatformTextInput(childInterceptor) { FakeTextField() }
+                InterceptPlatformTextInput(childInterceptor) {
+                    FakeTextField()
+                }
             }
         }
 
         rule.runOnIdle {
             coroutineScope.launch {
-                testNode.establishTextInputSession { startInputMethod(testRequest) }
+                testNode.establishTextInputSession {
+                    startInputMethod(testRequest)
+                }
             }
         }
         // Let the session start.
@@ -233,7 +256,9 @@ class InterceptPlatformTextInputTest {
                 expect(1)
                 // If we don't use NonCancellable, join will immediately throw when it tries to
                 // suspend since this context is already cancelled.
-                withContext(NonCancellable) { finishInterceptor1FinallyTrigger.join() }
+                withContext(NonCancellable) {
+                    finishInterceptor1FinallyTrigger.join()
+                }
                 expect(3)
             }
         }
@@ -242,11 +267,17 @@ class InterceptPlatformTextInputTest {
             awaitCancellation()
         }
         var interceptor by mutableStateOf(interceptor1)
-        setContent { InterceptPlatformTextInput(interceptor) { FakeTextField() } }
+        setContent {
+            InterceptPlatformTextInput(interceptor) {
+                FakeTextField()
+            }
+        }
 
         rule.runOnIdle {
             coroutineScope.launch {
-                testNode.establishTextInputSession { startInputMethod(TaggedRequest()) }
+                testNode.establishTextInputSession {
+                    startInputMethod(TaggedRequest())
+                }
             }
         }
 
@@ -260,33 +291,40 @@ class InterceptPlatformTextInputTest {
             finishInterceptor1FinallyTrigger.complete()
         }
 
-        rule.runOnIdle { expect(5) }
+        rule.runOnIdle {
+            expect(5)
+        }
     }
 
     @Test
     fun interceptor_doesntCancelDownstream_whenChangedDuringSession() {
         var downstreamSessionCancelled = false
         var session2Started = false
-        val interceptor1 = PlatformTextInputInterceptor { _, _ -> awaitCancellation() }
+        val interceptor1 = PlatformTextInputInterceptor { _, _ ->
+            awaitCancellation()
+        }
         val interceptor2 = PlatformTextInputInterceptor { _, _ ->
             session2Started = true
             awaitCancellation()
         }
         var interceptor by mutableStateOf(interceptor1)
-        setContent { InterceptPlatformTextInput(interceptor) { FakeTextField() } }
+        setContent {
+            InterceptPlatformTextInput(interceptor) {
+                FakeTextField()
+            }
+        }
 
-        val sessionJob =
-            rule.runOnIdle {
-                coroutineScope.launch {
-                    testNode.establishTextInputSession {
-                        try {
-                            startInputMethod(TaggedRequest())
-                        } finally {
-                            downstreamSessionCancelled = true
-                        }
+        val sessionJob = rule.runOnIdle {
+            coroutineScope.launch {
+                testNode.establishTextInputSession {
+                    try {
+                        startInputMethod(TaggedRequest())
+                    } finally {
+                        downstreamSessionCancelled = true
                     }
                 }
             }
+        }
 
         rule.runOnIdle {
             assertTrue(sessionJob.isActive)
@@ -318,13 +356,17 @@ class InterceptPlatformTextInputTest {
         setContent {
             InterceptPlatformTextInput(rootInterceptor) {
                 InterceptPlatformTextInput(interceptor1) {
-                    InterceptPlatformTextInput(interceptor2) { FakeTextField() }
+                    InterceptPlatformTextInput(interceptor2) {
+                        FakeTextField()
+                    }
                 }
             }
         }
         rule.runOnIdle {
             coroutineScope.launch {
-                testNode.establishTextInputSession { startInputMethod(TaggedRequest("original")) }
+                testNode.establishTextInputSession {
+                    startInputMethod(TaggedRequest("original"))
+                }
             }
         }
 
@@ -342,7 +384,9 @@ class InterceptPlatformTextInputTest {
         }
         setContent {
             InterceptPlatformTextInput(interceptor) {
-                Dialog(onDismissRequest = {}) { FakeTextField() }
+                Dialog(onDismissRequest = {}) {
+                    FakeTextField()
+                }
             }
         }
 
@@ -366,7 +410,9 @@ class InterceptPlatformTextInputTest {
             init {
                 ComposeView(context).also {
                     addView(it)
-                    it.setContent { FakeTextField() }
+                    it.setContent {
+                        FakeTextField()
+                    }
                 }
             }
         }
@@ -380,11 +426,11 @@ class InterceptPlatformTextInputTest {
         }
         setContent {
             InterceptPlatformTextInput(interceptor) {
-                AndroidView(
-                    factory = { context ->
-                        FakeTextFieldAndroidView(context).also { innerAndroidView = it }
+                AndroidView(factory = { context ->
+                    FakeTextFieldAndroidView(context).also {
+                        innerAndroidView = it
                     }
-                )
+                })
             }
         }
 
@@ -412,12 +458,16 @@ class InterceptPlatformTextInputTest {
         val interceptor = PlatformTextInputInterceptor { _, _ -> awaitCancellation() }
         setContent {
             hostView = LocalView.current
-            InterceptPlatformTextInput(interceptor) { FakeTextField() }
+            InterceptPlatformTextInput(interceptor) {
+                FakeTextField()
+            }
         }
 
         rule.runOnIdle {
             coroutineScope.launch {
-                testNode.establishTextInputSession { startInputMethod(TaggedRequest()) }
+                testNode.establishTextInputSession {
+                    startInputMethod(TaggedRequest())
+                }
             }
         }
         // Let the session start.
@@ -445,28 +495,36 @@ class InterceptPlatformTextInputTest {
         var currentInterceptor by mutableStateOf(interceptor1)
         setContent {
             InterceptPlatformTextInput(parentInterceptor) {
-                InterceptPlatformTextInput(currentInterceptor) { FakeTextField() }
+                InterceptPlatformTextInput(currentInterceptor) {
+                    FakeTextField()
+                }
             }
         }
 
-        val testJob =
-            rule.runOnIdle {
-                coroutineScope.launch {
-                    testNode.establishTextInputSession {
-                        // This context should be propagated to startInputMethod.
-                        startInputMethod(TaggedRequest("root"))
-                    }
+        val testJob = rule.runOnIdle {
+            coroutineScope.launch {
+                testNode.establishTextInputSession {
+                    // This context should be propagated to startInputMethod.
+                    startInputMethod(TaggedRequest("root"))
                 }
             }
+        }
         // Let the session start.
-        rule.runOnIdle { assertThat(requests).containsExactly("one wrapping root").inOrder() }
+        rule.runOnIdle {
+            assertThat(requests).containsExactly("one wrapping root").inOrder()
+        }
 
         currentInterceptor = interceptor2
 
         // Let the session restart.
-        rule.waitUntil { requests.size == 2 }
+        rule.waitUntil {
+            requests.size == 2
+        }
         rule.runOnIdle {
-            assertThat(requests).containsExactly("one wrapping root", "two wrapping root").inOrder()
+            assertThat(requests).containsExactly(
+                "one wrapping root",
+                "two wrapping root"
+            ).inOrder()
 
             // Root request shouldn't be cancelled.
             assertTrue(testJob.isActive)
@@ -495,30 +553,33 @@ class InterceptPlatformTextInputTest {
         }
         setContent {
             InterceptPlatformTextInput(parentInterceptor) {
-                InterceptPlatformTextInput(interceptor) { FakeTextField() }
-            }
-        }
-        val testJob =
-            rule.runOnIdle {
-                coroutineScope.launch {
-                    testNode.establishTextInputSession {
-                        // This context should be propagated to startInputMethod.
-                        startInputMethod(TaggedRequest("root"))
-                    }
+                InterceptPlatformTextInput(interceptor) {
+                    FakeTextField()
                 }
             }
+        }
+        val testJob = rule.runOnIdle {
+            coroutineScope.launch {
+                testNode.establishTextInputSession {
+                    // This context should be propagated to startInputMethod.
+                    startInputMethod(TaggedRequest("root"))
+                }
+            }
+        }
         // Let the session start.
-        rule.runOnIdle { assertThat(requests).isEmpty() }
+        rule.runOnIdle {
+            assertThat(requests).isEmpty()
+        }
 
         assertTrue(requestTrigger.trySend(0).isSuccess)
 
-        rule.waitUntil { requests.size == 1 }
+        rule.waitUntil {
+            requests.size == 1
+        }
         rule.runOnIdle {
-            assertThat(requests)
-                .containsExactly(
-                    "0 wrapping root",
-                )
-                .inOrder()
+            assertThat(requests).containsExactly(
+                "0 wrapping root",
+            ).inOrder()
 
             // Root request shouldn't be cancelled.
             assertTrue(testJob.isActive)
@@ -526,14 +587,14 @@ class InterceptPlatformTextInputTest {
 
         assertTrue(requestTrigger.trySend(1).isSuccess)
 
-        rule.waitUntil { requests.size == 2 }
+        rule.waitUntil {
+            requests.size == 2
+        }
         rule.runOnIdle {
-            assertThat(requests)
-                .containsExactly(
-                    "0 wrapping root",
-                    "1 wrapping root",
-                )
-                .inOrder()
+            assertThat(requests).containsExactly(
+                "0 wrapping root",
+                "1 wrapping root",
+            ).inOrder()
 
             // Root request shouldn't be cancelled.
             assertTrue(testJob.isActive)
@@ -547,7 +608,9 @@ class InterceptPlatformTextInputTest {
             InterceptPlatformTextInput(
                 content = content,
                 interceptor = { request, nextHandler ->
-                    withContext(CoroutineName(name)) { nextHandler.startInputMethod(request) }
+                    withContext(CoroutineName(name)) {
+                        nextHandler.startInputMethod(request)
+                    }
                 }
             )
         }
@@ -560,12 +623,16 @@ class InterceptPlatformTextInputTest {
         var name by mutableStateOf("one")
         setContent {
             InterceptPlatformTextInput(rootInterceptor) {
-                NamedSessionInterceptor(name) { FakeTextField() }
+                NamedSessionInterceptor(name) {
+                    FakeTextField()
+                }
             }
         }
         rule.runOnIdle {
             coroutineScope.launch {
-                testNode.establishTextInputSession { startInputMethod(TaggedRequest()) }
+                testNode.establishTextInputSession {
+                    startInputMethod(TaggedRequest())
+                }
             }
         }
 
@@ -574,7 +641,9 @@ class InterceptPlatformTextInputTest {
             name = "two"
         }
 
-        rule.runOnIdle { assertThat(lastSessionContext[CoroutineName]?.name).isEqualTo("two") }
+        rule.runOnIdle {
+            assertThat(lastSessionContext[CoroutineName]?.name).isEqualTo("two")
+        }
     }
 
     private fun setContent(content: @Composable () -> Unit) {
@@ -586,7 +655,11 @@ class InterceptPlatformTextInputTest {
 
     @Composable
     private fun FakeTextField(modifier: Modifier = Modifier) {
-        Box(modifier.then(TestElement { testNode = it }).size(1.dp))
+        Box(
+            modifier
+                .then(TestElement { testNode = it })
+                .size(1.dp)
+        )
     }
 
     private tailrec fun View.isSameOrDescendentOf(expectedParent: ViewGroup): Boolean {
@@ -596,17 +669,18 @@ class InterceptPlatformTextInputTest {
         return myParent.isSameOrDescendentOf(expectedParent)
     }
 
-    private data class TestElement(val onNode: (TestNode) -> Unit) :
-        ModifierNodeElement<TestNode>() {
+    private data class TestElement(
+        val onNode: (TestNode) -> Unit
+    ) : ModifierNodeElement<TestNode>() {
         override fun create(): TestNode = TestNode(onNode)
-
         override fun update(node: TestNode) {
             node.onNode = onNode
         }
     }
 
-    private class TestNode(var onNode: (TestNode) -> Unit) :
-        Modifier.Node(), PlatformTextInputModifierNode {
+    private class TestNode(
+        var onNode: (TestNode) -> Unit
+    ) : Modifier.Node(), PlatformTextInputModifierNode {
 
         override fun onAttach() {
             onNode(this)
@@ -628,9 +702,7 @@ class InterceptPlatformTextInputTest {
             TODO("Not yet implemented")
 
         override fun getSelectedText(flags: Int): CharSequence = TODO("Not yet implemented")
-
         override fun getCursorCapsMode(reqModes: Int): Int = TODO("Not yet implemented")
-
         override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText =
             TODO("Not yet implemented")
 
@@ -645,34 +717,25 @@ class InterceptPlatformTextInputTest {
         override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean =
             TODO("Not yet implemented")
 
-        override fun setComposingRegion(start: Int, end: Int): Boolean = TODO("Not yet implemented")
+        override fun setComposingRegion(start: Int, end: Int): Boolean =
+            TODO("Not yet implemented")
 
         override fun finishComposingText(): Boolean = TODO("Not yet implemented")
-
         override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean =
             TODO("Not yet implemented")
 
         override fun commitCompletion(text: CompletionInfo?): Boolean = TODO("Not yet implemented")
-
         override fun commitCorrection(correctionInfo: CorrectionInfo?): Boolean =
             TODO("Not yet implemented")
 
         override fun setSelection(start: Int, end: Int): Boolean = TODO("Not yet implemented")
-
         override fun performEditorAction(editorAction: Int): Boolean = TODO("Not yet implemented")
-
         override fun performContextMenuAction(id: Int): Boolean = TODO("Not yet implemented")
-
         override fun beginBatchEdit(): Boolean = TODO("Not yet implemented")
-
         override fun endBatchEdit(): Boolean = TODO("Not yet implemented")
-
         override fun sendKeyEvent(event: KeyEvent?): Boolean = TODO("Not yet implemented")
-
         override fun clearMetaKeyStates(states: Int): Boolean = TODO("Not yet implemented")
-
         override fun reportFullscreenMode(enabled: Boolean): Boolean = TODO("Not yet implemented")
-
         override fun performPrivateCommand(action: String?, data: Bundle?): Boolean =
             TODO("Not yet implemented")
 
@@ -680,9 +743,7 @@ class InterceptPlatformTextInputTest {
             TODO("Not yet implemented")
 
         override fun getHandler(): Handler = TODO("Not yet implemented")
-
         override fun closeConnection(): Unit = TODO("Not yet implemented")
-
         override fun commitContent(
             inputContentInfo: InputContentInfo,
             flags: Int,

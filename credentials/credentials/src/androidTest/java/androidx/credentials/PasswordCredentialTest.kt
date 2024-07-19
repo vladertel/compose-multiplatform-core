@@ -37,7 +37,9 @@ class PasswordCredentialTest {
 
     @Test
     fun constructor_emptyPassword_throws() {
-        assertThrows<IllegalArgumentException> { PasswordCredential("id", "") }
+        assertThrows<IllegalArgumentException> {
+            PasswordCredential("id", "")
+        }
     }
 
     @Test
@@ -80,9 +82,13 @@ class PasswordCredentialTest {
         val customDataValue: CharSequence = "customRequestDataValue"
         data.putCharSequence(customDataKey, customDataValue)
 
-        val convertedCredential = createFrom(credential.type, data)
+        val convertedCredential = createFrom(
+            credential.type, data
+        )
 
-        assertThat(convertedCredential).isInstanceOf(PasswordCredential::class.java)
+        assertThat(convertedCredential).isInstanceOf(
+            PasswordCredential::class.java
+        )
         val convertedSubclassCredential = convertedCredential as PasswordCredential
         assertThat(convertedSubclassCredential.password).isEqualTo(credential.password)
         assertThat(convertedSubclassCredential.id).isEqualTo(credential.id)

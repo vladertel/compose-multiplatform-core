@@ -21,6 +21,7 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfo;
@@ -31,12 +32,15 @@ import androidx.camera.core.streamsharing.StreamSharing;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 
 /**
  * The camera interface. It is controlled by the change of state in use cases.
  *
  * <p> It is a Camera instance backed by a single physical camera.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraInternal extends Camera, UseCase.StateChangeCallback {
     /**
      * The state of a camera within the process.
@@ -212,17 +216,21 @@ public interface CameraInternal extends Camera, UseCase.StateChangeCallback {
     }
 
     /**
-     * Returns the current {@link CameraConfig}.
+     * Always returns only itself since there is only ever one CameraInternal.
      */
     @NonNull
     @Override
-    default CameraConfig getExtendedConfig() {
-        return CameraConfigs.defaultConfig();
+    default LinkedHashSet<CameraInternal> getCameraInternals() {
+        return new LinkedHashSet<>(Collections.singleton(this));
     }
 
-    /**
-     * Sets the {@link CameraConfig} to configure the camera.
-     */
+    @NonNull
+    @Override
+    default CameraConfig getExtendedConfig() {
+        return CameraConfigs.emptyConfig();
+    }
+
+    @Override
     default void setExtendedConfig(@Nullable CameraConfig cameraConfig) {
         // Ignore the config since CameraInternal won't use the config
     }

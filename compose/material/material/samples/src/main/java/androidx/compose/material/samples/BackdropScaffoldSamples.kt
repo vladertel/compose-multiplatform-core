@@ -51,7 +51,9 @@ fun BackdropScaffoldSample() {
     val scope = rememberCoroutineScope()
     val selection = remember { mutableStateOf(1) }
     val scaffoldState = rememberBackdropScaffoldState(BackdropValue.Concealed)
-    LaunchedEffect(scaffoldState) { scaffoldState.reveal() }
+    LaunchedEffect(scaffoldState) {
+        scaffoldState.reveal()
+    }
     BackdropScaffold(
         scaffoldState = scaffoldState,
         appBar = {
@@ -74,9 +76,8 @@ fun BackdropScaffoldSample() {
                         onClick = {
                             // show snackbar as a suspend function
                             scope.launch {
-                                scaffoldState.snackbarHostState.showSnackbar(
-                                    "Snackbar #${++clickCount}"
-                                )
+                                scaffoldState.snackbarHostState
+                                    .showSnackbar("Snackbar #${++clickCount}")
                             }
                         }
                     ) {

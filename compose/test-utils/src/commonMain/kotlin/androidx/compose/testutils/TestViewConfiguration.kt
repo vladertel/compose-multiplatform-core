@@ -26,13 +26,12 @@ import androidx.compose.ui.unit.DpSize
  * Default values for [TestViewConfiguration]. This object exists so we can leverage the default
  * implementation of members from [ViewConfiguration].
  */
-private val Default =
-    object : ViewConfiguration {
-        override val longPressTimeoutMillis: Long = 500L
-        override val doubleTapTimeoutMillis: Long = 300L
-        override val doubleTapMinTimeMillis: Long = 40L
-        override val touchSlop: Float = 18f
-    }
+private val Default = object : ViewConfiguration {
+    override val longPressTimeoutMillis: Long = 500L
+    override val doubleTapTimeoutMillis: Long = 300L
+    override val doubleTapMinTimeMillis: Long = 40L
+    override val touchSlop: Float = 18f
+}
 
 /**
  * A [ViewConfiguration] that can be used for testing. The default values are representative for
@@ -79,7 +78,10 @@ fun WithDoubleTapMinTimeMillis(doubleTapMinTimeMillis: Long, content: @Composabl
 
 @Composable
 fun WithTouchSlop(touchSlop: Float, content: @Composable () -> Unit) {
-    WithViewConfiguration(TestViewConfiguration(touchSlop = touchSlop), content = content)
+    WithViewConfiguration(
+        TestViewConfiguration(touchSlop = touchSlop),
+        content = content
+    )
 }
 
 @Composable

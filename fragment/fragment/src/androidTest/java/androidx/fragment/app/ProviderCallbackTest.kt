@@ -38,15 +38,21 @@ import org.junit.runner.RunWith
 class ProviderCallbackTest {
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule(
+        FragmentTestActivity::class.java
+    )
 
     @Test
     fun onConfigurationChanged() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
             val fragment = CallbackFragment()
 
-            withActivity { fm.beginTransaction().replace(R.id.content, fragment).commitNow() }
+            withActivity {
+                fm.beginTransaction()
+                    .replace(R.id.content, fragment)
+                    .commitNow()
+            }
 
             withActivity {
                 val newConfig = Configuration(resources.configuration)
@@ -58,16 +64,17 @@ class ProviderCallbackTest {
 
     @Test
     fun onConfigurationChangedNestedFragments() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
             val parent = StrictViewFragment(R.layout.fragment_container_view)
             val child = CallbackFragment()
 
             withActivity {
-                fm.beginTransaction().replace(R.id.content, parent).commitNow()
+                fm.beginTransaction()
+                    .replace(R.id.content, parent)
+                    .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .commitNow()
             }
@@ -88,20 +95,17 @@ class ProviderCallbackTest {
             val replacementChild = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, parent)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, replacementChild)
                     .setReorderingAllowed(true)
                     .addToBackStack(null)
@@ -128,10 +132,11 @@ class ProviderCallbackTest {
         val parent = StrictViewFragment(R.layout.fragment_container_view)
         val child = CallbackFragment()
 
-        fm.beginTransaction().replace(R.id.content, parent).commitNow()
+        fm.beginTransaction()
+            .replace(R.id.content, parent)
+            .commitNow()
 
-        parent.childFragmentManager
-            .beginTransaction()
+        parent.childFragmentManager.beginTransaction()
             .replace(R.id.fragment_container_view, child)
             .commitNow()
 
@@ -144,12 +149,11 @@ class ProviderCallbackTest {
     @SdkSuppress(minSdkVersion = 26)
     @Test
     fun onMultiWindowModeChanged() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fragment = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, fragment)
                     .commitNow()
 
@@ -163,15 +167,16 @@ class ProviderCallbackTest {
     @SdkSuppress(minSdkVersion = 26)
     @Test
     fun onMultiWindowModeChangedNestedFragments() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val parent = StrictViewFragment(R.layout.fragment_container_view)
             val child = CallbackFragment()
 
             withActivity {
-                supportFragmentManager.beginTransaction().replace(R.id.content, parent).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.content, parent)
+                    .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .commitNow()
 
@@ -192,20 +197,17 @@ class ProviderCallbackTest {
             val replacementChild = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, parent)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, replacementChild)
                     .setReorderingAllowed(true)
                     .addToBackStack(null)
@@ -232,10 +234,11 @@ class ProviderCallbackTest {
         val parent = StrictViewFragment(R.layout.fragment_container_view)
         val child = CallbackFragment()
 
-        fm.beginTransaction().replace(R.id.content, parent).commitNow()
+        fm.beginTransaction()
+            .replace(R.id.content, parent)
+            .commitNow()
 
-        parent.childFragmentManager
-            .beginTransaction()
+        parent.childFragmentManager.beginTransaction()
             .replace(R.id.fragment_container_view, child)
             .commitNow()
 
@@ -248,12 +251,11 @@ class ProviderCallbackTest {
     @Suppress("DEPRECATION")
     @Test
     fun onPictureInPictureModeChanged() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fragment = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, fragment)
                     .commitNow()
 
@@ -267,15 +269,16 @@ class ProviderCallbackTest {
     @SdkSuppress(minSdkVersion = 26)
     @Test
     fun onPictureInPictureModeChangedNestedFragments() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val parent = StrictViewFragment(R.layout.fragment_container_view)
             val child = CallbackFragment()
 
             withActivity {
-                supportFragmentManager.beginTransaction().replace(R.id.content, parent).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.content, parent)
+                    .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .commitNow()
 
@@ -296,20 +299,17 @@ class ProviderCallbackTest {
             val replacementChild = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, parent)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, replacementChild)
                     .setReorderingAllowed(true)
                     .addToBackStack(null)
@@ -336,10 +336,11 @@ class ProviderCallbackTest {
         val parent = StrictViewFragment(R.layout.fragment_container_view)
         val child = CallbackFragment()
 
-        fm.beginTransaction().replace(R.id.content, parent).commitNow()
+        fm.beginTransaction()
+            .replace(R.id.content, parent)
+            .commitNow()
 
-        parent.childFragmentManager
-            .beginTransaction()
+        parent.childFragmentManager.beginTransaction()
             .replace(R.id.fragment_container_view, child)
             .commitNow()
 
@@ -351,12 +352,11 @@ class ProviderCallbackTest {
     @Suppress("DEPRECATION")
     @Test
     fun onLowMemory() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fragment = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, fragment)
                     .commitNow()
 
@@ -368,15 +368,16 @@ class ProviderCallbackTest {
 
     @Test
     fun onLowMemoryNestedFragments() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val parent = StrictViewFragment(R.layout.fragment_container_view)
             val child = CallbackFragment()
 
             withActivity {
-                supportFragmentManager.beginTransaction().replace(R.id.content, parent).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.content, parent)
+                    .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .commitNow()
 
@@ -395,20 +396,17 @@ class ProviderCallbackTest {
             val replacementChild = CallbackFragment()
 
             withActivity {
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, parent)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                parent.childFragmentManager
-                    .beginTransaction()
+                parent.childFragmentManager.beginTransaction()
                     .replace(R.id.fragment_container_view, child)
                     .setReorderingAllowed(true)
                     .commitNow()
 
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .replace(R.id.content, replacementChild)
                     .setReorderingAllowed(true)
                     .addToBackStack(null)
@@ -434,10 +432,11 @@ class ProviderCallbackTest {
         val parent = StrictViewFragment(R.layout.fragment_container_view)
         val child = CallbackFragment()
 
-        fm.beginTransaction().replace(R.id.content, parent).commitNow()
+        fm.beginTransaction()
+            .replace(R.id.content, parent)
+            .commitNow()
 
-        parent.childFragmentManager
-            .beginTransaction()
+        parent.childFragmentManager.beginTransaction()
             .replace(R.id.fragment_container_view, child)
             .commitNow()
 

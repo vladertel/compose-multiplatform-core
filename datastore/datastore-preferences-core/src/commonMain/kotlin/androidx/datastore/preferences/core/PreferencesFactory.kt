@@ -51,7 +51,6 @@ public fun preferencesOf(vararg pairs: Preferences.Pair<*>): Preferences =
  * val counterKey = intPreferencesKey("counter")
  * val preferences = mutablePreferencesOf(counterKey to 100)
  * ```
- *
  * @param pairs the key value pairs with which to construct the preferences
  */
 @JvmName("createMutable")

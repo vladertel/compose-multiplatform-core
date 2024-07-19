@@ -31,8 +31,7 @@ internal class UwbControllerSessionScopeImpl(
     override val rangingCapabilities: RangingCapabilities,
     override val localAddress: UwbAddress,
     override val uwbComplexChannel: UwbComplexChannel
-) :
-    UwbClientSessionScopeImpl(uwbClient, rangingCapabilities, localAddress),
+) : UwbClientSessionScopeImpl(uwbClient, rangingCapabilities, localAddress),
     UwbControllerSessionScope {
     override suspend fun addControlee(address: UwbAddress) {
         val uwbAddress = com.google.android.gms.nearby.uwb.UwbAddress(address.address)
@@ -40,10 +39,8 @@ internal class UwbControllerSessionScopeImpl(
             uwbClient.addControlee(uwbAddress).await()
         } catch (e: ApiException) {
             if (e.statusCode == UwbStatusCodes.INVALID_API_CALL) {
-                throw IllegalStateException(
-                    "Please check that the ranging is active and the" +
-                        "ranging profile supports multi-device ranging."
-                )
+                throw IllegalStateException("Please check that the ranging is active and the" +
+                    "ranging profile supports multi-device ranging.")
             }
         }
     }
@@ -55,14 +52,11 @@ internal class UwbControllerSessionScopeImpl(
         } catch (e: ApiException) {
             when (e.statusCode) {
                 UwbStatusCodes.INVALID_API_CALL ->
-                    throw IllegalStateException(
-                        "Please check that the ranging is active and the" +
-                            "ranging profile supports multi-device ranging."
-                    )
+                    throw IllegalStateException("Please check that the ranging is active and the" +
+                        "ranging profile supports multi-device ranging.")
                 UwbStatusCodes.UWB_SYSTEM_CALLBACK_FAILURE ->
-                    throw UwbSystemCallbackException(
-                        "The operation failed due to hardware or " + "firmware issues."
-                    )
+                    throw UwbSystemCallbackException("The operation failed due to hardware or " +
+                        "firmware issues.")
             }
         }
     }

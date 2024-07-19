@@ -19,6 +19,7 @@ package androidx.camera.camera2.pipe.integration.adapter
 import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
+import androidx.annotation.RequiresApi
 import androidx.arch.core.util.Function
 import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.core.Log.warn
@@ -37,9 +38,6 @@ import androidx.camera.camera2.pipe.integration.interop.CaptureRequestOptions
 import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Interop
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.FocusMeteringResult
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCapture.FLASH_MODE_AUTO
-import androidx.camera.core.ImageCapture.FLASH_MODE_ON
 import androidx.camera.core.impl.CameraControlInternal
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
@@ -60,11 +58,10 @@ import kotlinx.coroutines.async
  * forward these interactions to the currently configured [UseCaseCamera].
  */
 @SuppressLint("UnsafeOptInUsageError")
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @CameraScope
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalCamera2Interop::class)
-class CameraControlAdapter
-@Inject
-constructor(
+class CameraControlAdapter @Inject constructor(
     private val cameraProperties: CameraProperties,
     private val evCompControl: EvCompControl,
     private val flashControl: FlashControl,
@@ -73,7 +70,6 @@ constructor(
     private val torchControl: TorchControl,
     private val threads: UseCaseThreads,
     private val zoomControl: ZoomControl,
-    private val zslControl: ZslControl,
     val camera2cameraControl: Camera2CameraControl,
 ) : CameraControlInternal {
     override fun getSensorRect(): Rect {
@@ -96,13 +92,11 @@ constructor(
 
     override fun enableTorch(torch: Boolean): ListenableFuture<Void> =
         Futures.nonCancellationPropagating(
-            FutureChain.from(torchControl.setTorchAsync(torch).asListenableFuture())
-                .transform(
-                    Function {
-                        return@Function null
-                    },
-                    CameraXExecutors.directExecutor()
-                )
+            FutureChain.from(
+                torchControl.setTorchAsync(torch).asListenableFuture()
+            ).transform(
+                Function { return@Function null }, CameraXExecutors.directExecutor()
+            )
         )
 
     override fun startFocusAndMetering(
@@ -112,13 +106,11 @@ constructor(
 
     override fun cancelFocusAndMetering(): ListenableFuture<Void> {
         return Futures.nonCancellationPropagating(
-            threads.sequentialScope
-                .async {
-                    focusMeteringControl.cancelFocusAndMeteringAsync().join()
-                    // Convert to null once the task is done, ignore the results.
-                    return@async null
-                }
-                .asListenableFuture()
+            threads.sequentialScope.async {
+                focusMeteringControl.cancelFocusAndMeteringAsync().join()
+                // Convert to null once the task is done, ignore the results.
+                return@async null
+            }.asListenableFuture()
         )
     }
 
@@ -132,37 +124,37 @@ constructor(
         return flashControl.flashMode
     }
 
-    override fun setFlashMode(@ImageCapture.FlashMode flashMode: Int) {
+    override fun setFlashMode(flashMode: Int) {
         flashControl.setFlashAsync(flashMode)
-        zslControl.setZslDisabledByFlashMode(
-            flashMode == FLASH_MODE_ON || flashMode == FLASH_MODE_AUTO
-        )
-    }
-
-    override fun setScreenFlash(screenFlash: ImageCapture.ScreenFlash?) {
-        flashControl.setScreenFlash(screenFlash)
     }
 
     override fun setExposureCompensationIndex(exposure: Int): ListenableFuture<Int> =
-        Futures.nonCancellationPropagating(evCompControl.updateAsync(exposure).asListenableFuture())
+        Futures.nonCancellationPropagating(
+            evCompControl.updateAsync(exposure).asListenableFuture()
+        )
 
     override fun setZslDisabledByUserCaseConfig(disabled: Boolean) {
-        zslControl.setZslDisabledByUserCaseConfig(disabled)
+        // Override if Zero-Shutter Lag needs to be disabled by user case config.
     }
 
     override fun isZslDisabledByByUserCaseConfig(): Boolean {
-        return zslControl.isZslDisabledByUserCaseConfig()
+        // Override if Zero-Shutter Lag needs to be disabled by user case config.
+        return false
     }
 
     override fun addZslConfig(sessionConfigBuilder: SessionConfig.Builder) {
-        zslControl.addZslConfig(sessionConfigBuilder)
+        // Override if Zero-Shutter Lag needs to add config to session config.
     }
 
     override fun submitStillCaptureRequests(
         captureConfigs: List<CaptureConfig>,
-        @ImageCapture.CaptureMode captureMode: Int,
-        @ImageCapture.FlashType flashType: Int,
-    ) = stillCaptureRequestControl.issueCaptureRequests(captureConfigs, captureMode, flashType)
+        captureMode: Int,
+        flashType: Int,
+    ) = stillCaptureRequestControl.issueCaptureRequests(
+        captureConfigs,
+        captureMode,
+        flashType
+    )
 
     override fun getSessionConfig(): SessionConfig {
         warn { "TODO: getSessionConfig is not yet supported" }

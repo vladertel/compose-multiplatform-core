@@ -42,13 +42,16 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalComposeUiApi::class)
 class CompositeKeyHashTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun nonZeroCompositeKeyHash() {
         // Arrange.
         val node = object : Modifier.Node() {}
-        rule.setContent { Box(Modifier.elementOf(node)) }
+        rule.setContent {
+            Box(Modifier.elementOf(node))
+        }
 
         // Act.
         val compositeKeyHash = rule.runOnIdle { node.requireLayoutNode().compositeKeyHash }
@@ -61,7 +64,11 @@ class CompositeKeyHashTest {
     fun parentAndChildLayoutNodesHaveDifferentCompositeKeyHashes() {
         // Arrange.
         val (parent, child) = List(3) { object : Modifier.Node() {} }
-        rule.setContent { Box(Modifier.elementOf(parent)) { Box(Modifier.elementOf(child)) } }
+        rule.setContent {
+            Box(Modifier.elementOf(parent)) {
+                Box(Modifier.elementOf(child))
+            }
+        }
 
         // Act.
         rule.waitForIdle()
@@ -98,8 +105,12 @@ class CompositeKeyHashTest {
         val (node1, node2) = List(3) { object : Modifier.Node() {} }
         rule.setContent {
             Row {
-                key(1) { Box(Modifier.elementOf(node1)) }
-                key(2) { Box(Modifier.elementOf(node2)) }
+                key(1) {
+                    Box(Modifier.elementOf(node1))
+                }
+                key(2) {
+                    Box(Modifier.elementOf(node2))
+                }
             }
         }
 
@@ -138,8 +149,12 @@ class CompositeKeyHashTest {
         val (node1, node2) = List(2) { object : Modifier.Node() {} }
         rule.setContent {
             Box {
-                key(1) { Box(Modifier.elementOf(node1)) }
-                key(2) { Box(Modifier.elementOf(node2)) }
+                key(1) {
+                    Box(Modifier.elementOf(node1))
+                }
+                key(2) {
+                    Box(Modifier.elementOf(node2))
+                }
             }
         }
 
@@ -158,8 +173,12 @@ class CompositeKeyHashTest {
         val (node1, node2) = List(2) { object : Modifier.Node() {} }
         rule.setContent {
             LazyColumn {
-                item { Box(Modifier.elementOf(node1)) }
-                item { Box(Modifier.elementOf(node2)) }
+                item {
+                    Box(Modifier.elementOf(node1))
+                }
+                item {
+                    Box(Modifier.elementOf(node2))
+                }
             }
         }
 
@@ -177,7 +196,11 @@ class CompositeKeyHashTest {
         // Arrange.
         val (node1, node2) = List(2) { object : Modifier.Node() {} }
         rule.setContent {
-            LazyColumn { items(2) { Box(Modifier.elementOf(if (it == 0) node1 else node2)) } }
+            LazyColumn {
+                items(2) {
+                    Box(Modifier.elementOf(if (it == 0) node1 else node2))
+                }
+            }
         }
 
         // Act.
@@ -212,7 +235,10 @@ class CompositeKeyHashTest {
         // Arrange.
         val node = object : Modifier.Node() {}
         rule.setContent {
-            AndroidView(factory = { TextView(it) }, modifier = Modifier.elementOf(node))
+            AndroidView(
+                factory = { TextView(it) },
+                modifier = Modifier.elementOf(node)
+            )
         }
 
         // Act.
@@ -249,7 +275,7 @@ class CompositeKeyHashTest {
             AndroidView(
                 factory = { TextView(it) },
                 modifier = Modifier.elementOf(node),
-                onReset = {}
+                onReset = { }
             )
         }
 
@@ -264,7 +290,9 @@ class CompositeKeyHashTest {
     fun Layout1() {
         // Arrange.
         var compositeKeyHash = 0
-        rule.setContent { Layout1 { compositeKeyHash = it } }
+        rule.setContent {
+            Layout1 { compositeKeyHash = it }
+        }
 
         // Assert.
         assertThat(compositeKeyHash).isNotEqualTo(0)
@@ -274,7 +302,9 @@ class CompositeKeyHashTest {
     fun Layout2() { // Add other overloads of Layout here.
         // Arrange.
         var compositeKeyHash = 0
-        rule.setContent { Layout2 { compositeKeyHash = it } }
+        rule.setContent {
+            Layout2 { compositeKeyHash = it }
+        }
 
         // Assert.
         assertThat(compositeKeyHash).isNotEqualTo(0)
@@ -284,7 +314,9 @@ class CompositeKeyHashTest {
     fun Layout3() { // Add other overloads of Layout here.
         // Arrange.
         var compositeKeyHash = 0
-        rule.setContent { Layout3 { compositeKeyHash = it } }
+        rule.setContent {
+            Layout3 { compositeKeyHash = it }
+        }
 
         // Assert.
         assertThat(compositeKeyHash).isNotEqualTo(0)
@@ -294,7 +326,9 @@ class CompositeKeyHashTest {
     fun Layout4() { // Add other overloads of Layout here.
         // Arrange.
         var compositeKeyHash = 0
-        rule.setContent { Layout4 { compositeKeyHash = it } }
+        rule.setContent {
+            Layout4 { compositeKeyHash = it }
+        }
 
         // Assert.
         assertThat(compositeKeyHash).isNotEqualTo(0)
@@ -310,7 +344,9 @@ class CompositeKeyHashTest {
             },
             modifier = Modifier.elementOf(node)
         )
-        SideEffect { onSetCompositionKeyHash(node.requireLayoutNode().compositeKeyHash) }
+        SideEffect {
+            onSetCompositionKeyHash(node.requireLayoutNode().compositeKeyHash)
+        }
     }
 
     @Composable
@@ -319,26 +355,34 @@ class CompositeKeyHashTest {
         Layout(
             contents = listOf({}, {}),
             measurePolicy = { measurables, constraints ->
-                measurables.forEach { it.forEach { measurable -> measurable.measure(constraints) } }
+                measurables.forEach {
+                    it.forEach { measurable ->
+                        measurable.measure(constraints)
+                    }
+                }
                 layout(0, 0) {}
             },
             modifier = Modifier.elementOf(node)
         )
-        SideEffect { onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash) }
+        SideEffect {
+            onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash)
+        }
     }
 
     @Composable
     private fun Layout3(onSetCompositionKeyHash: (Int) -> Unit) {
         val node = remember { object : Modifier.Node() {} }
         Layout(
-            content = {},
+            content = { },
             measurePolicy = { measurables, constraints ->
                 measurables.forEach { it.measure(constraints) }
                 layout(0, 0) {}
             },
             modifier = Modifier.elementOf(node)
         )
-        SideEffect { onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash) }
+        SideEffect {
+            onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash)
+        }
     }
 
     @Composable
@@ -346,13 +390,15 @@ class CompositeKeyHashTest {
         val node = remember { object : Modifier.Node() {} }
         @Suppress("DEPRECATION")
         MultiMeasureLayout(
-            content = {},
+            content = { },
             measurePolicy = { measurables, constraints ->
                 measurables.forEach { it.measure(constraints) }
                 layout(0, 0) {}
             },
             modifier = Modifier.elementOf(node)
         )
-        SideEffect { onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash) }
+        SideEffect {
+            onSetCompositionKeyHash.invoke(node.requireLayoutNode().compositeKeyHash)
+        }
     }
 }

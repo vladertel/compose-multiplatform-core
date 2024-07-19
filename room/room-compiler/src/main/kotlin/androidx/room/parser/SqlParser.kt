@@ -30,7 +30,7 @@ class QueryVisitor(
     private val original: String,
     private val syntaxErrors: List<String>,
     statement: ParseTree
-) : SQLiteParserBaseVisitor<Void?>() {
+) : SQLiteBaseVisitor<Void?>() {
     private val bindingExpressions = arrayListOf<BindParameterNode>()
     // table name alias mappings
     private val tableNames = mutableSetOf<Table>()
@@ -39,27 +39,28 @@ class QueryVisitor(
     private var foundTopLevelStarProjection: Boolean = false
 
     init {
-        queryType =
-            (0 until statement.childCount)
-                .map { findQueryType(statement.getChild(it)) }
-                .filterNot { it == QueryType.UNKNOWN }
-                .firstOrNull() ?: QueryType.UNKNOWN
+        queryType = (0 until statement.childCount).map {
+            findQueryType(statement.getChild(it))
+        }.filterNot { it == QueryType.UNKNOWN }.firstOrNull() ?: QueryType.UNKNOWN
         statement.accept(this)
     }
 
     private fun findQueryType(statement: ParseTree): QueryType {
         return when (statement) {
-            is SQLiteParser.Select_stmtContext -> QueryType.SELECT
+            is SQLiteParser.Select_stmtContext ->
+                QueryType.SELECT
             is SQLiteParser.Delete_stmt_limitedContext,
-            is SQLiteParser.Delete_stmtContext -> QueryType.DELETE
-            is SQLiteParser.Insert_stmtContext -> QueryType.INSERT
+            is SQLiteParser.Delete_stmtContext ->
+                QueryType.DELETE
+            is SQLiteParser.Insert_stmtContext ->
+                QueryType.INSERT
             is SQLiteParser.Update_stmtContext,
-            is SQLiteParser.Update_stmt_limitedContext -> QueryType.UPDATE
-            is TerminalNode ->
-                when (statement.text) {
-                    "EXPLAIN" -> QueryType.EXPLAIN
-                    else -> QueryType.UNKNOWN
-                }
+            is SQLiteParser.Update_stmt_limitedContext ->
+                QueryType.UPDATE
+            is TerminalNode -> when (statement.text) {
+                "EXPLAIN" -> QueryType.EXPLAIN
+                else -> QueryType.UNKNOWN
+            }
             else -> QueryType.UNKNOWN
         }
     }
@@ -68,10 +69,14 @@ class QueryVisitor(
         val bindParameter = ctx.BIND_PARAMETER()
         if (bindParameter != null) {
             val parentContext = ctx.parent
-            val isMultiple =
-                parentContext is SQLiteParser.Comma_separated_exprContext &&
-                    !isFixedParamFunctionExpr(parentContext)
-            bindingExpressions.add(BindParameterNode(node = bindParameter, isMultiple = isMultiple))
+            val isMultiple = parentContext is SQLiteParser.Comma_separated_exprContext &&
+                !isFixedParamFunctionExpr(parentContext)
+            bindingExpressions.add(
+                BindParameterNode(
+                    node = bindParameter,
+                    isMultiple = isMultiple
+                )
+            )
         }
         return super.visitExpr(ctx)
     }
@@ -85,12 +90,14 @@ class QueryVisitor(
 
     /**
      * Check if a comma separated expression (where multiple binding parameters are accepted) is
-     * part of a function expression that receives a fixed number of parameters. This is important
-     * for determining the priority of type converters used when binding a collection into a binding
-     * parameters and specifically if the function takes a fixed number of parameter, the collection
-     * should not be expanded.
+     * part of a function expression that receives a fixed number of parameters. This is
+     * important for determining the priority of type converters used when binding a collection
+     * into a binding parameters and specifically if the function takes a fixed number of
+     * parameter, the collection should not be expanded.
      */
-    private fun isFixedParamFunctionExpr(ctx: SQLiteParser.Comma_separated_exprContext): Boolean {
+    private fun isFixedParamFunctionExpr(
+        ctx: SQLiteParser.Comma_separated_exprContext
+    ): Boolean {
         if (ctx.parent is SQLiteParser.ExprContext) {
             val parentExpr = ctx.parent as SQLiteParser.ExprContext
             val functionName = parentExpr.function_name() ?: return false
@@ -153,39 +160,38 @@ class QueryVisitor(
 
         // List of built-in SQLite functions that take a fixed non-zero number of parameters
         // See: https://sqlite.org/lang_corefunc.html
-        val fixedParamFunctions =
-            setOf(
-                "abs",
-                "glob",
-                "hex",
-                "ifnull",
-                "iif",
-                "instr",
-                "length",
-                "like",
-                "likelihood",
-                "likely",
-                "load_extension",
-                "lower",
-                "ltrim",
-                "nullif",
-                "quote",
-                "randomblob",
-                "replace",
-                "round",
-                "rtrim",
-                "soundex",
-                "sqlite_compileoption_get",
-                "sqlite_compileoption_used",
-                "sqlite_offset",
-                "substr",
-                "trim",
-                "typeof",
-                "unicode",
-                "unlikely",
-                "upper",
-                "zeroblob"
-            )
+        val fixedParamFunctions = setOf(
+            "abs",
+            "glob",
+            "hex",
+            "ifnull",
+            "iif",
+            "instr",
+            "length",
+            "like",
+            "likelihood",
+            "likely",
+            "load_extension",
+            "lower",
+            "ltrim",
+            "nullif",
+            "quote",
+            "randomblob",
+            "replace",
+            "round",
+            "rtrim",
+            "soundex",
+            "sqlite_compileoption_get",
+            "sqlite_compileoption_used",
+            "sqlite_offset",
+            "substr",
+            "trim",
+            "typeof",
+            "unicode",
+            "unlikely",
+            "upper",
+            "zeroblob"
+        )
     }
 }
 
@@ -193,33 +199,33 @@ class SqlParser {
     companion object {
         private val INVALID_IDENTIFIER_CHARS = arrayOf('`', '\"')
 
-        fun parse(input: String) =
-            SingleQuerySqlParser.parse(
-                input = input,
-                visit = { statement, syntaxErrors ->
-                    QueryVisitor(
-                            original = input,
-                            syntaxErrors = syntaxErrors,
-                            statement = statement
-                        )
-                        .createParsedQuery()
-                },
-                fallback = { syntaxErrors ->
-                    ParsedQuery(
-                        original = input,
-                        type = QueryType.UNKNOWN,
-                        inputs = emptyList(),
-                        tables = emptySet(),
-                        hasTopStarProjection = null,
-                        syntaxErrors = syntaxErrors,
-                    )
-                }
-            )
+        fun parse(input: String) = SingleQuerySqlParser.parse(
+            input = input,
+            visit = { statement, syntaxErrors ->
+                QueryVisitor(
+                    original = input,
+                    syntaxErrors = syntaxErrors,
+                    statement = statement
+                ).createParsedQuery()
+            },
+            fallback = { syntaxErrors ->
+                ParsedQuery(
+                    original = input,
+                    type = QueryType.UNKNOWN,
+                    inputs = emptyList(),
+                    tables = emptySet(),
+                    hasTopStarProjection = null,
+                    syntaxErrors = syntaxErrors,
+                )
+            }
+        )
 
         fun isValidIdentifier(input: String): Boolean =
             input.isNotBlank() && INVALID_IDENTIFIER_CHARS.none { input.contains(it) }
 
-        /** creates a no-op select query for raw queries that queries the given list of tables. */
+        /**
+         * creates a no-op select query for raw queries that queries the given list of tables.
+         */
         fun rawQueryForTables(tableNames: Set<String>): ParsedQuery {
             return ParsedQuery(
                 original = "raw query",
@@ -262,48 +268,45 @@ enum class SQLTypeAffinity {
     fun getTypeMirrors(env: XProcessingEnv): List<XType>? {
         return when (this) {
             TEXT -> withBoxedAndNullableTypes(env, CommonTypeNames.STRING)
-            INTEGER ->
-                withBoxedAndNullableTypes(
-                    env,
-                    XTypeName.PRIMITIVE_INT,
-                    XTypeName.PRIMITIVE_BYTE,
-                    XTypeName.PRIMITIVE_CHAR,
-                    XTypeName.PRIMITIVE_LONG,
-                    XTypeName.PRIMITIVE_SHORT
-                )
-            REAL ->
-                withBoxedAndNullableTypes(
-                    env,
-                    XTypeName.PRIMITIVE_DOUBLE,
-                    XTypeName.PRIMITIVE_FLOAT
-                )
-            BLOB -> withBoxedAndNullableTypes(env, XTypeName.getArrayName(XTypeName.PRIMITIVE_BYTE))
+            INTEGER -> withBoxedAndNullableTypes(env,
+                XTypeName.PRIMITIVE_INT, XTypeName.PRIMITIVE_BYTE, XTypeName.PRIMITIVE_CHAR,
+                XTypeName.PRIMITIVE_LONG, XTypeName.PRIMITIVE_SHORT
+            )
+
+            REAL -> withBoxedAndNullableTypes(env,
+                XTypeName.PRIMITIVE_DOUBLE, XTypeName.PRIMITIVE_FLOAT
+            )
+
+            BLOB -> withBoxedAndNullableTypes(env,
+                XTypeName.getArrayName(XTypeName.PRIMITIVE_BYTE)
+            )
+
             else -> null
         }
     }
 
     /**
-     * produce acceptable variations of the given type names. For JAVAC:
-     * - If it is primitive, we'll add boxed version For KSP:
-     * - We'll add a nullable version
+     * produce acceptable variations of the given type names.
+     * For JAVAC:
+     *  - If it is primitive, we'll add boxed version
+     * For KSP:
+     *  - We'll add a nullable version
      */
     private fun withBoxedAndNullableTypes(
         env: XProcessingEnv,
         vararg typeNames: XTypeName
     ): List<XType> {
-        return typeNames
-            .flatMap { typeName ->
-                sequence {
-                    val type = env.requireType(typeName)
-                    yield(type)
-                    if (env.backend == XProcessingEnv.Backend.KSP) {
-                        yield(type.makeNullable())
-                    } else if (typeName.isPrimitive) {
-                        yield(type.boxed())
-                    }
+        return typeNames.flatMap { typeName ->
+            sequence {
+                val type = env.requireType(typeName)
+                yield(type)
+                if (env.backend == XProcessingEnv.Backend.KSP) {
+                    yield(type.makeNullable())
+                } else if (typeName.isPrimitive) {
+                    yield(type.boxed())
                 }
             }
-            .toList()
+        }.toList()
     }
 
     companion object {
@@ -342,5 +345,5 @@ enum class Collate {
 
 enum class FtsVersion {
     FTS3,
-    FTS4
+    FTS4;
 }

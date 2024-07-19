@@ -22,7 +22,9 @@ val Method.signature: String
     get() {
         val sb = StringBuilder()
         sb.append(name).append('(')
-        parameterTypes.forEach { sb.append(it.signature) }
+        parameterTypes.forEach {
+            sb.append(it.signature)
+        }
         sb.append(')').append(returnType.signature)
         return sb.toString()
     }

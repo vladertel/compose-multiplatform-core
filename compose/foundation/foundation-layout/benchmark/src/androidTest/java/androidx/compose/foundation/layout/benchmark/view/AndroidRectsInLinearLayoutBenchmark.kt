@@ -29,7 +29,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Benchmark that runs [AndroidCheckboxesInLinearLayoutTestCase]. */
+/**
+ * Benchmark that runs [AndroidCheckboxesInLinearLayoutTestCase].
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 class AndroidRectsInLinearLayoutBenchmark(private val numberOfRectangles: Int) {
@@ -40,9 +42,12 @@ class AndroidRectsInLinearLayoutBenchmark(private val numberOfRectangles: Int) {
         fun initParameters(): Array<Any> = arrayOf(10, 100)
     }
 
-    @get:Rule val benchmarkRule = AndroidBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = AndroidBenchmarkRule()
 
-    private val rectanglesCaseFactory = { AndroidRectsInLinearLayoutTestCase(numberOfRectangles) }
+    private val rectanglesCaseFactory = {
+        AndroidRectsInLinearLayoutTestCase(numberOfRectangles)
+    }
 
     @Test
     fun first_setContent() {

@@ -22,6 +22,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks;
 import androidx.camera.camera2.internal.compat.quirk.PreviewPixelHDRnetQuirk;
@@ -33,6 +34,7 @@ import androidx.camera.core.impl.SessionConfig;
  *
  * @see PreviewPixelHDRnetQuirk
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class PreviewPixelHDRnet {
 
     public static final Rational ASPECT_RATIO_16_9 = new Rational(16, 9);

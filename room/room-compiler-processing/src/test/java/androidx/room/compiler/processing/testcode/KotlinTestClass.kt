@@ -20,7 +20,10 @@ package androidx.room.compiler.processing.testcode
 
 @Suppress("UNUSED_PARAMETER", "RedundantSuspendModifier")
 class KotlinTestClass {
-    suspend fun mySuspendMethod(param1: String) {}
+    suspend fun mySuspendMethod(
+        param1: String
+    ) {
+    }
 }
 
 object KotlinTestObject

@@ -51,12 +51,11 @@ import kotlinx.coroutines.launch
  * @sample androidx.compose.foundation.samples.TransformableSample
  *
  * @param state [TransformableState] of the transformable. Defines how transformation events will be
- *   interpreted by the user land logic, contains useful information about on-going events and
- *   provides animation capabilities.
+ * interpreted by the user land logic, contains useful information about on-going events and
+ * provides animation capabilities.
  * @param lockRotationOnZoomPan If `true`, rotation is allowed only if touch slop is detected for
- *   rotation before pan or zoom motions. If not, pan and zoom gestures will be detected, but
- *   rotation gestures will not be. If `false`, once touch slop is reached, all three gestures are
- *   detected.
+ * rotation before pan or zoom motions. If not, pan and zoom gestures will be detected, but rotation
+ * gestures will not be. If `false`, once touch slop is reached, all three gestures are detected.
  * @param enabled whether zooming by gestures is enabled or not
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -76,17 +75,15 @@ fun Modifier.transformable(
  * This overload of transformable modifier provides [canPan] parameter, which allows the caller to
  * control when the pan can start. making pan gesture to not to start when the scale is 1f makes
  * transformable modifiers to work well within the scrollable container. See example:
- *
  * @sample androidx.compose.foundation.samples.TransformableSampleInsideScroll
  *
  * @param state [TransformableState] of the transformable. Defines how transformation events will be
- *   interpreted by the user land logic, contains useful information about on-going events and
- *   provides animation capabilities.
+ * interpreted by the user land logic, contains useful information about on-going events and
+ * provides animation capabilities.
  * @param canPan whether the pan gesture can be performed or not given the pan offset
  * @param lockRotationOnZoomPan If `true`, rotation is allowed only if touch slop is detected for
- *   rotation before pan or zoom motions. If not, pan and zoom gestures will be detected, but
- *   rotation gestures will not be. If `false`, once touch slop is reached, all three gestures are
- *   detected.
+ * rotation before pan or zoom motions. If not, pan and zoom gestures will be detected, but rotation
+ * gestures will not be. If `false`, once touch slop is reached, all three gestures are detected.
  * @param enabled whether zooming by gestures is enabled or not
  */
 @ExperimentalFoundationApi
@@ -103,8 +100,9 @@ private class TransformableElement(
     private val lockRotationOnZoomPan: Boolean,
     private val enabled: Boolean
 ) : ModifierNodeElement<TransformableNode>() {
-    override fun create(): TransformableNode =
-        TransformableNode(state, canPan, lockRotationOnZoomPan, enabled)
+    override fun create(): TransformableNode = TransformableNode(
+        state, canPan, lockRotationOnZoomPan, enabled
+    )
 
     override fun update(node: TransformableNode) {
         node.update(state, canPan, lockRotationOnZoomPan, enabled)
@@ -152,45 +150,38 @@ private class TransformableNode(
     private val updatedCanPan: (Offset) -> Boolean = { canPan.invoke(it) }
     private val channel = Channel<TransformEvent>(capacity = Channel.UNLIMITED)
 
-    private val pointerInputNode =
-        delegate(
-            SuspendingPointerInputModifierNode {
-                if (!enabled) return@SuspendingPointerInputModifierNode
-                coroutineScope {
-                    launch(start = CoroutineStart.UNDISPATCHED) {
-                        while (isActive) {
-                            var event = channel.receive()
-                            if (event !is TransformStarted) continue
-                            try {
-                                state.transform(MutatePriority.UserInput) {
-                                    while (event !is TransformStopped) {
-                                        (event as? TransformDelta)?.let {
-                                            transformBy(
-                                                it.zoomChange,
-                                                it.panChange,
-                                                it.rotationChange
-                                            )
-                                        }
-                                        event = channel.receive()
-                                    }
+    private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
+        if (!enabled) return@SuspendingPointerInputModifierNode
+        coroutineScope {
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                while (isActive) {
+                    var event = channel.receive()
+                    if (event !is TransformStarted) continue
+                    try {
+                        state.transform(MutatePriority.UserInput) {
+                            while (event !is TransformStopped) {
+                                (event as? TransformDelta)?.let {
+                                    transformBy(it.zoomChange, it.panChange, it.rotationChange)
                                 }
-                            } catch (_: CancellationException) {
-                                // ignore the cancellation and start over again.
+                                event = channel.receive()
                             }
                         }
-                    }
-                    awaitEachGesture {
-                        try {
-                            detectZoom(lockRotationOnZoomPan, channel, updatedCanPan)
-                        } catch (exception: CancellationException) {
-                            if (!isActive) throw exception
-                        } finally {
-                            channel.trySend(TransformStopped)
-                        }
+                    } catch (_: CancellationException) {
+                        // ignore the cancellation and start over again.
                     }
                 }
             }
-        )
+            awaitEachGesture {
+                try {
+                    detectZoom(lockRotationOnZoomPan, channel, updatedCanPan)
+                } catch (exception: CancellationException) {
+                    if (!isActive) throw exception
+                } finally {
+                    channel.trySend(TransformStopped)
+                }
+            }
+        }
+    })
 
     fun update(
         state: TransformableState,
@@ -199,10 +190,9 @@ private class TransformableNode(
         enabled: Boolean
     ) {
         this.canPan = canPan
-        val needsReset =
-            this.state != state ||
-                this.enabled != enabled ||
-                this.lockRotationOnZoomPan != lockRotationOnZoomPan
+        val needsReset = this.state != state ||
+            this.enabled != enabled ||
+            this.lockRotationOnZoomPan != lockRotationOnZoomPan
         if (needsReset) {
             this.state = state
             this.enabled = enabled
@@ -242,10 +232,9 @@ private suspend fun AwaitPointerEventScope.detectZoom(
                 val rotationMotion = abs(rotation * PI.toFloat() * centroidSize / 180f)
                 val panMotion = pan.getDistance()
 
-                if (
-                    zoomMotion > touchSlop ||
-                        rotationMotion > touchSlop ||
-                        (panMotion > touchSlop && canPan.invoke(panChange))
+                if (zoomMotion > touchSlop ||
+                    rotationMotion > touchSlop ||
+                    (panMotion > touchSlop && canPan.invoke(panChange))
                 ) {
                     pastTouchSlop = true
                     lockedToPanZoom = panZoomLock && rotationMotion < touchSlop
@@ -255,10 +244,9 @@ private suspend fun AwaitPointerEventScope.detectZoom(
 
             if (pastTouchSlop) {
                 val effectiveRotation = if (lockedToPanZoom) 0f else rotationChange
-                if (
-                    effectiveRotation != 0f ||
-                        zoomChange != 1f ||
-                        (panChange != Offset.Zero && canPan.invoke(panChange))
+                if (effectiveRotation != 0f ||
+                    zoomChange != 1f ||
+                    (panChange != Offset.Zero && canPan.invoke(panChange))
                 ) {
                     channel.trySend(TransformDelta(zoomChange, panChange, effectiveRotation))
                 }
@@ -279,9 +267,10 @@ private suspend fun AwaitPointerEventScope.detectZoom(
 
 private sealed class TransformEvent {
     object TransformStarted : TransformEvent()
-
     object TransformStopped : TransformEvent()
-
-    class TransformDelta(val zoomChange: Float, val panChange: Offset, val rotationChange: Float) :
-        TransformEvent()
+    class TransformDelta(
+        val zoomChange: Float,
+        val panChange: Offset,
+        val rotationChange: Float
+    ) : TransformEvent()
 }

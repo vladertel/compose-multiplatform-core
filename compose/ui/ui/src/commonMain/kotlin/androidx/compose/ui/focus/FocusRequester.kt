@@ -24,8 +24,7 @@ import androidx.compose.ui.focus.FocusDirection.Companion.Enter
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.visitChildren
 
-private const val FocusRequesterNotInitialized =
-    """
+private const val FocusRequesterNotInitialized = """
    FocusRequester is not initialized. Here are some possible fixes:
 
    1. Remember the FocusRequester: val focusRequester = remember { FocusRequester() }
@@ -34,16 +33,15 @@ private const val FocusRequesterNotInitialized =
    response to some event. Eg Modifier.clickable { focusRequester.requestFocus() }
 """
 
-private const val InvalidFocusRequesterInvocation =
-    """
+private const val InvalidFocusRequesterInvocation = """
     Please check whether the focusRequester is FocusRequester.Cancel or FocusRequester.Default
     before invoking any functions on the focusRequester.
 """
 
 /**
  * The [FocusRequester] is used in conjunction with
- * [Modifier.focusRequester][androidx.compose.ui.focus.focusRequester] to send requests to change
- * focus.
+ * [Modifier.focusRequester][androidx.compose.ui.focus.focusRequester] to send requests to
+ * change focus.
  *
  * @sample androidx.compose.ui.samples.RequestFocusSample
  *
@@ -55,8 +53,8 @@ class FocusRequester {
     internal val focusRequesterNodes: MutableVector<FocusRequesterModifierNode> = mutableVectorOf()
 
     /**
-     * Use this function to request focus. If the system grants focus to a component associated with
-     * this [FocusRequester], its [onFocusChanged] modifiers will receive a [FocusState] object
+     * Use this function to request focus. If the system grants focus to a component associated
+     * with this [FocusRequester], its [onFocusChanged] modifiers will receive a [FocusState] object
      * where [FocusState.isFocused] is true.
      *
      * @sample androidx.compose.ui.samples.RequestFocusSample
@@ -82,15 +80,15 @@ class FocusRequester {
     /**
      * Deny requests to clear focus.
      *
-     * Use this function to send a request to capture focus. If a component captures focus, it will
-     * send a [FocusState] object to its associated [onFocusChanged] modifiers where
-     * [FocusState.isCaptured]() == true.
+     * Use this function to send a request to capture focus. If a component captures focus,
+     * it will send a [FocusState] object to its associated [onFocusChanged]
+     * modifiers where [FocusState.isCaptured]() == true.
      *
      * When a component is in a Captured state, all focus requests from other components are
      * declined.
      *
-     * @return true if the focus was successfully captured by one of the [focus][focusTarget]
-     *   modifiers associated with this [FocusRequester]. False otherwise.
+     * @return true if the focus was successfully captured by one of the
+     * [focus][focusTarget] modifiers associated with this [FocusRequester]. False otherwise.
      *
      * @sample androidx.compose.ui.samples.CaptureFocusSample
      */
@@ -105,16 +103,16 @@ class FocusRequester {
     }
 
     /**
-     * Use this function to send a request to free focus when one of the components associated with
-     * this [FocusRequester] is in a Captured state. If a component frees focus, it will send a
-     * [FocusState] object to its associated [onFocusChanged] modifiers where
-     * [FocusState.isCaptured]() == false.
+     * Use this function to send a request to free focus when one of the components associated
+     * with this [FocusRequester] is in a Captured state. If a component frees focus,
+     * it will send a [FocusState] object to its associated [onFocusChanged]
+     * modifiers where [FocusState.isCaptured]() == false.
      *
      * When a component is in a Captured state, all focus requests from other components are
-     * declined. .
-     *
+     * declined.
+     *.
      * @return true if the captured focus was successfully released. i.e. At the end of this
-     *   operation, one of the components associated with this [focusRequester] freed focus.
+     * operation, one of the components associated with this [focusRequester] freed focus.
      *
      * @sample androidx.compose.ui.samples.CaptureFocusSample
      */
@@ -134,24 +132,26 @@ class FocusRequester {
      * child by making a call to [restoreFocusedChild].
      *
      * @return true if the focus target associated with this [FocusRequester] has a focused child
-     *   and we successfully saved a reference to it.
+     * and we successfully saved a reference to it.
      *
      * @sample androidx.compose.ui.samples.RestoreFocusSample
      */
     @ExperimentalComposeUiApi
     fun saveFocusedChild(): Boolean {
         check(focusRequesterNodes.isNotEmpty()) { FocusRequesterNotInitialized }
-        focusRequesterNodes.forEach { if (it.saveFocusedChild()) return true }
+        focusRequesterNodes.forEach {
+            if (it.saveFocusedChild()) return true
+        }
         return false
     }
 
     /**
      * Use this function to restore focus to one of the children of the node pointed to by this
-     * [FocusRequester]. This restores focus to a previously focused child that was saved by using
-     * [saveFocusedChild].
+     * [FocusRequester]. This restores focus to a previously focused child that was saved
+     * by using [saveFocusedChild].
      *
      * @return true if we successfully restored focus to one of the children of the [focusTarget]
-     *   associated with this [FocusRequester]
+     * associated with this [FocusRequester]
      *
      * @sample androidx.compose.ui.samples.RestoreFocusSample
      */
@@ -159,15 +159,17 @@ class FocusRequester {
     fun restoreFocusedChild(): Boolean {
         check(focusRequesterNodes.isNotEmpty()) { FocusRequesterNotInitialized }
         var success = false
-        focusRequesterNodes.forEach { success = it.restoreFocusedChild() || success }
+        focusRequesterNodes.forEach {
+            success = it.restoreFocusedChild() || success
+        }
         return success
     }
 
     companion object {
         /**
          * Default [focusRequester], which when used in [Modifier.focusProperties][focusProperties]
-         * implies that we want to use the default system focus order, that is based on the position
-         * of the items on the screen.
+         * implies that we want to use the default system focus order, that is based on the
+         * position of the items on the screen.
          */
         val Default = FocusRequester()
 
@@ -190,35 +192,20 @@ class FocusRequester {
          */
         object FocusRequesterFactory {
             operator fun component1() = FocusRequester()
-
             operator fun component2() = FocusRequester()
-
             operator fun component3() = FocusRequester()
-
             operator fun component4() = FocusRequester()
-
             operator fun component5() = FocusRequester()
-
             operator fun component6() = FocusRequester()
-
             operator fun component7() = FocusRequester()
-
             operator fun component8() = FocusRequester()
-
             operator fun component9() = FocusRequester()
-
             operator fun component10() = FocusRequester()
-
             operator fun component11() = FocusRequester()
-
             operator fun component12() = FocusRequester()
-
             operator fun component13() = FocusRequester()
-
             operator fun component14() = FocusRequester()
-
             operator fun component15() = FocusRequester()
-
             operator fun component16() = FocusRequester()
         }
 
@@ -234,12 +221,11 @@ class FocusRequester {
     /**
      * This function searches down the hierarchy and calls [onFound] for all focus nodes associated
      * with this [FocusRequester].
-     *
      * @param onFound the callback that is run when the child is found.
      * @return false if no focus nodes were found or if the FocusRequester is
-     *   [FocusRequester.Cancel]. Returns null if the FocusRequester is [FocusRequester.Default].
-     *   Otherwise returns a logical or of the result of calling [onFound] for each focus node
-     *   associated with this [FocusRequester].
+     * [FocusRequester.Cancel]. Returns null if the FocusRequester is [FocusRequester.Default].
+     * Otherwise returns a logical or of the result of calling [onFound] for each focus node
+     * associated with this [FocusRequester].
      */
     @ExperimentalComposeUiApi
     private inline fun findFocusTarget(onFound: (FocusTargetNode) -> Boolean): Boolean {

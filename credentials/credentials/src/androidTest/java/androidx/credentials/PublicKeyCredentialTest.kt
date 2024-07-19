@@ -25,7 +25,9 @@ import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Note that "PublicKeyCredential" and "Passkey" are used interchangeably. */
+/**
+ * Note that "PublicKeyCredential" and "Passkey" are used interchangeably.
+ */
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class PublicKeyCredentialTest {
@@ -45,9 +47,7 @@ class PublicKeyCredentialTest {
         Assert.assertThrows(
             "Expected empty Json to throw IllegalArgumentException",
             IllegalArgumentException::class.java
-        ) {
-            PublicKeyCredential("")
-        }
+        ) { PublicKeyCredential("") }
     }
 
     @Test
@@ -55,9 +55,7 @@ class PublicKeyCredentialTest {
         Assert.assertThrows(
             "Expected invalid Json to throw IllegalArgumentException",
             IllegalArgumentException::class.java
-        ) {
-            PublicKeyCredential("invalid")
-        }
+        ) { PublicKeyCredential("invalid") }
     }
 
     @Test
@@ -78,14 +76,14 @@ class PublicKeyCredentialTest {
         val jsonExpected = "{\"hi\":{\"there\":{\"lol\":\"Value\"}}}"
         val expectedData = Bundle()
         expectedData.putString(
-            PublicKeyCredential.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON,
-            jsonExpected
+            PublicKeyCredential.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON, jsonExpected
         )
 
         val publicKeyCredential = PublicKeyCredential(jsonExpected)
 
-        assertThat(publicKeyCredential.type)
-            .isEqualTo(PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL)
+        assertThat(publicKeyCredential.type).isEqualTo(
+            PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL
+        )
         assertThat(equals(publicKeyCredential.data, expectedData)).isTrue()
     }
 
@@ -101,7 +99,9 @@ class PublicKeyCredentialTest {
         val customDataValue: CharSequence = "customRequestDataValue"
         data.putCharSequence(customDataKey, customDataValue)
 
-        val convertedCredential = createFrom(credential.type, data)
+        val convertedCredential = createFrom(
+            credential.type, data
+        )
 
         assertThat(convertedCredential).isInstanceOf(PublicKeyCredential::class.java)
         val convertedSubclassCredential = convertedCredential as PublicKeyCredential

@@ -63,7 +63,8 @@ import org.junit.Rule
 import org.junit.Test
 
 class ToggleButtonBehaviourTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun supports_testtag() {
@@ -194,7 +195,11 @@ class ToggleButtonBehaviourTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOff().performClick().assertIsOn()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -210,7 +215,11 @@ class ToggleButtonBehaviourTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOn().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -226,7 +235,11 @@ class ToggleButtonBehaviourTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertIsOff().performClick().assertIsOff()
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assertIsOff()
+            .performClick()
+            .assertIsOff()
     }
 
     @Test
@@ -240,9 +253,13 @@ class ToggleButtonBehaviourTest {
             )
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        rule.onNodeWithTag(TEST_TAG)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Checkbox
+                )
+            )
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -317,7 +334,8 @@ class ToggleButtonBehaviourTest {
 }
 
 class ToggleButtonSizeTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun gives_default_correct_tapsize() {
@@ -344,7 +362,8 @@ class ToggleButtonSizeTest {
 }
 
 class ToggleButtonColorTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Test
@@ -398,15 +417,19 @@ class ToggleButtonColorTest {
                     checked = true,
                     onCheckedChange = {},
                     enabled = true,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(checkedBackgroundColor = override),
+                    colors = ToggleButtonDefaults.toggleButtonColors(
+                        checkedBackgroundColor =
+                            override
+                    ),
                     content = {},
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(override, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(override, 50.0f)
     }
 
     @Test
@@ -420,8 +443,10 @@ class ToggleButtonColorTest {
                     checked = true,
                     onCheckedChange = {},
                     enabled = true,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(checkedContentColor = override),
+                    colors = ToggleButtonDefaults.toggleButtonColors(
+                        checkedContentColor =
+                            override
+                    ),
                     content = { actualContentColor = LocalContentColor.current },
                     modifier = Modifier.testTag(TEST_TAG)
                 )
@@ -442,17 +467,19 @@ class ToggleButtonColorTest {
                     checked = false,
                     onCheckedChange = {},
                     enabled = true,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(
-                            uncheckedBackgroundColor = override
-                        ),
+                    colors = ToggleButtonDefaults.toggleButtonColors(
+                        uncheckedBackgroundColor =
+                            override
+                    ),
                     content = {},
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(override, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(override, 50.0f)
     }
 
     @Test
@@ -466,8 +493,10 @@ class ToggleButtonColorTest {
                     checked = false,
                     onCheckedChange = {},
                     enabled = true,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(uncheckedContentColor = override),
+                    colors = ToggleButtonDefaults.toggleButtonColors(
+                        uncheckedContentColor =
+                            override
+                    ),
                     content = { actualContentColor = LocalContentColor.current },
                     modifier = Modifier.testTag(TEST_TAG)
                 )
@@ -488,17 +517,17 @@ class ToggleButtonColorTest {
                     checked = true,
                     onCheckedChange = {},
                     enabled = false,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(
-                            disabledCheckedBackgroundColor = override
-                        ),
+                    colors = ToggleButtonDefaults.toggleButtonColors
+                    (disabledCheckedBackgroundColor = override),
                     content = {},
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(override, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(override, 50.0f)
     }
 
     @Test
@@ -512,11 +541,13 @@ class ToggleButtonColorTest {
                     checked = true,
                     onCheckedChange = {},
                     enabled = false,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(
-                            disabledCheckedContentColor = override
-                        ),
-                    content = { actualContentColor = LocalContentColor.current },
+                    colors = ToggleButtonDefaults.toggleButtonColors(
+                        disabledCheckedContentColor =
+                            override
+                    ),
+                    content = {
+                        actualContentColor = LocalContentColor.current
+                    },
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
@@ -536,17 +567,17 @@ class ToggleButtonColorTest {
                     checked = false,
                     onCheckedChange = {},
                     enabled = false,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(
-                            disabledUncheckedBackgroundColor = override
-                        ),
+                    colors = ToggleButtonDefaults.toggleButtonColors
+                    (disabledUncheckedBackgroundColor = override),
                     content = {},
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(override, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(override, 50.0f)
     }
 
     @Test
@@ -560,10 +591,8 @@ class ToggleButtonColorTest {
                     checked = false,
                     onCheckedChange = {},
                     enabled = false,
-                    colors =
-                        ToggleButtonDefaults.toggleButtonColors(
-                            disabledUncheckedContentColor = override
-                        ),
+                    colors = ToggleButtonDefaults.toggleButtonColors
+                    (disabledUncheckedContentColor = override),
                     content = { actualContentColor = LocalContentColor.current },
                     modifier = Modifier.testTag(TEST_TAG)
                 )
@@ -590,7 +619,11 @@ class ToggleButtonColorTest {
         rule.setContentWithTheme {
             expectedBackground = backgroundColor()
             expectedContent = contentColor()
-            Box(modifier = Modifier.fillMaxSize().background(testBackgroundColor)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(testBackgroundColor)
+            ) {
                 ToggleButton(
                     checked = checked,
                     onCheckedChange = {},
@@ -607,8 +640,7 @@ class ToggleButtonColorTest {
         if (status.enabled()) {
             assertEquals(expectedContent, actualContent)
             if (expectedBackground != Color.Transparent) {
-                rule
-                    .onNodeWithTag(TEST_TAG)
+                rule.onNodeWithTag(TEST_TAG)
                     .captureToImage()
                     .assertContainsColor(expectedBackground, 50.0f)
             }
@@ -618,14 +650,11 @@ class ToggleButtonColorTest {
             }
             assertEquals(expectedContent, actualContent)
             if (expectedBackground != Color.Transparent) {
-                rule
-                    .onNodeWithTag(TEST_TAG)
+                rule.onNodeWithTag(TEST_TAG)
                     .captureToImage()
                     .assertContainsColor(
-                        expectedBackground
-                            .copy(alpha = actualDisabledAlpha)
-                            .compositeOver(testBackgroundColor),
-                        50.0f
+                        expectedBackground.copy(alpha = actualDisabledAlpha)
+                            .compositeOver(testBackgroundColor), 50.0f
                     )
             }
         }
@@ -633,7 +662,8 @@ class ToggleButtonColorTest {
 }
 
 class ToggleButtonRoleTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun default_role_checkbox() {
@@ -684,7 +714,9 @@ private fun ComposeContentTestRule.verifyTapSize(
     expected: TapSize,
     content: @Composable () -> Unit
 ) {
-    setContentWithThemeForSizeAssertions { content() }
+    setContentWithThemeForSizeAssertions {
+        content()
+    }
         .assertHeightIsEqualTo(expected.size)
         .assertWidthIsEqualTo(expected.size)
 }
@@ -701,7 +733,13 @@ private fun ComposeContentTestRule.isCircular(
         background = MaterialTheme.colors.primary
         surface = MaterialTheme.colors.surface
         CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-            Box(Modifier.padding(padding).background(surface)) { content() }
+            Box(
+                Modifier
+                    .padding(padding)
+                    .background(surface)
+            ) {
+                content()
+            }
         }
     }
 
@@ -730,7 +768,12 @@ private fun ComposeContentTestRule.isShape(
         background = MaterialTheme.colors.surface
         buttonColor = MaterialTheme.colors.primary
         Box(Modifier.background(background)) {
-            content(Modifier.testTag(TEST_TAG).padding(padding).background(background))
+            content(
+                Modifier
+                    .testTag(TEST_TAG)
+                    .padding(padding)
+                    .background(background)
+            )
         }
     }
 

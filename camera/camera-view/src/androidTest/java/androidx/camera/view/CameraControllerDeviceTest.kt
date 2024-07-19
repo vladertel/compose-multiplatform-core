@@ -53,7 +53,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Instrumentation tests for [CameraController]. */
+/**
+ * Instrumentation tests for [CameraController].
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 @SdkSuppress(minSdkVersion = 21)
@@ -67,22 +69,21 @@ class CameraControllerDeviceTest(
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun data() =
-            listOf(
-                arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
-                arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
-            )
+        fun data() = listOf(
+            arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
+            arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
+        )
     }
 
     @get:Rule
-    val cameraPipeConfigTestRule =
-        CameraPipeConfigTestRule(
-            active = implName == CameraPipeConfig::class.simpleName,
-        )
+    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
+        active = implName == CameraPipeConfig::class.simpleName,
+    )
 
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(PreTestCameraIdList(cameraConfig))
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        PreTestCameraIdList(cameraConfig)
+    )
 
     private var controller: LifecycleCameraController? = null
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -125,12 +126,21 @@ class CameraControllerDeviceTest(
         waitUtilPreviewViewIsReady(previewView!!)
 
         // Act: set the same effect twice, which is invalid.
-        val previewEffect1 =
-            FakeSurfaceEffect(mainThreadExecutor(), FakeSurfaceProcessor(mainThreadExecutor()))
-        val previewEffect2 =
-            FakeSurfaceEffect(mainThreadExecutor(), FakeSurfaceProcessor(mainThreadExecutor()))
+        val previewEffect1 = FakeSurfaceEffect(
+            mainThreadExecutor(),
+            FakeSurfaceProcessor(mainThreadExecutor())
+        )
+        val previewEffect2 = FakeSurfaceEffect(
+            mainThreadExecutor(),
+            FakeSurfaceProcessor(mainThreadExecutor())
+        )
         instrumentation.runOnMainSync {
-            controller!!.setEffects(setOf(previewEffect1, previewEffect2))
+            controller!!.setEffects(
+                setOf(
+                    previewEffect1,
+                    previewEffect2
+                )
+            )
         }
     }
 
@@ -149,8 +159,9 @@ class CameraControllerDeviceTest(
         waitUtilPreviewViewIsReady(previewView!!)
 
         // Act: set an effect
-        val effect =
-            FakeSurfaceEffect(mainThreadExecutor(), FakeSurfaceProcessor(mainThreadExecutor()))
+        val effect = FakeSurfaceEffect(
+            mainThreadExecutor(), FakeSurfaceProcessor(mainThreadExecutor())
+        )
         instrumentation.runOnMainSync { controller!!.setEffects(setOf(effect)) }
 
         // Assert: preview has effect
@@ -241,12 +252,16 @@ class CameraControllerDeviceTest(
 
     @Test
     fun analysisIsEnabledByDefault() {
-        instrumentation.runOnMainSync { assertThat(controller!!.isImageAnalysisEnabled).isTrue() }
+        instrumentation.runOnMainSync {
+            assertThat(controller!!.isImageAnalysisEnabled).isTrue()
+        }
     }
 
     @Test
     fun captureIsEnabledByDefault() {
-        instrumentation.runOnMainSync { assertThat(controller!!.isImageCaptureEnabled).isTrue() }
+        instrumentation.runOnMainSync {
+            assertThat(controller!!.isImageCaptureEnabled).isTrue()
+        }
     }
 
     @Test
@@ -263,15 +278,15 @@ class CameraControllerDeviceTest(
     fun clearPreviewSurface_wontUnbindOthersUseCases() {
         // Arrange.
         assumeTrue(CameraUtil.hasCameraWithLensFacing(LENS_FACING_BACK))
-        var cameraProvider =
-            ProcessCameraProvider.getInstance(ApplicationProvider.getApplicationContext())[
-                    10000, TimeUnit.MILLISECONDS]
+        var cameraProvider = ProcessCameraProvider.getInstance(
+            ApplicationProvider
+                .getApplicationContext()
+        )[10000, TimeUnit.MILLISECONDS]
 
         var imageCapture = ImageCapture.Builder().build()
         instrumentation.runOnMainSync {
             cameraProvider.bindToLifecycle(
-                FakeLifecycleOwner(),
-                CameraSelector.DEFAULT_BACK_CAMERA,
+                FakeLifecycleOwner(), CameraSelector.DEFAULT_BACK_CAMERA,
                 imageCapture
             )
         }
@@ -281,7 +296,9 @@ class CameraControllerDeviceTest(
         controller!!.initializationFuture[10000, TimeUnit.MILLISECONDS]
 
         // Act.
-        instrumentation.runOnMainSync { controller!!.clearPreviewSurface() }
+        instrumentation.runOnMainSync {
+            controller!!.clearPreviewSurface()
+        }
 
         // Assert.
         assertThat(cameraProvider.isBound(imageCapture)).isTrue()
@@ -314,13 +331,17 @@ class CameraControllerDeviceTest(
         // Arrange.
         assumeTrue(CameraUtil.hasCameraWithLensFacing(LENS_FACING_BACK))
         assumeTrue(CameraUtil.hasCameraWithLensFacing(LENS_FACING_FRONT))
-        var cameraProvider =
-            ProcessCameraProvider.getInstance(ApplicationProvider.getApplicationContext())[
-                    10000, TimeUnit.MILLISECONDS]
+        var cameraProvider = ProcessCameraProvider.getInstance(
+            ApplicationProvider
+                .getApplicationContext()
+        )[10000, TimeUnit.MILLISECONDS]
 
         var imageCapture = ImageCapture.Builder().build()
         instrumentation.runOnMainSync {
-            cameraProvider.bindToLifecycle(FakeLifecycleOwner(), firstCamera, imageCapture)
+            cameraProvider.bindToLifecycle(
+                FakeLifecycleOwner(), firstCamera,
+                imageCapture
+            )
         }
 
         assertThat(cameraProvider.isBound(imageCapture)).isTrue()
@@ -328,7 +349,9 @@ class CameraControllerDeviceTest(
         controller!!.initializationFuture[10000, TimeUnit.MILLISECONDS]
 
         // Act.
-        instrumentation.runOnMainSync { controller!!.cameraSelector = secondCamera }
+        instrumentation.runOnMainSync {
+            controller!!.cameraSelector = secondCamera
+        }
 
         // Assert.
         assertThat(cameraProvider.isBound(imageCapture)).isTrue()
@@ -336,26 +359,24 @@ class CameraControllerDeviceTest(
 
     private fun waitUtilPreviewViewIsReady(previewView: PreviewView) {
         val countDownLatch = CountDownLatch(1)
-        previewView.addOnLayoutChangeListener(
-            object : View.OnLayoutChangeListener {
-                override fun onLayoutChange(
-                    v: View,
-                    left: Int,
-                    top: Int,
-                    right: Int,
-                    bottom: Int,
-                    oldLeft: Int,
-                    oldTop: Int,
-                    oldRight: Int,
-                    oldBottom: Int
-                ) {
-                    if (v.width > 0 && v.height > 0) {
-                        countDownLatch.countDown()
-                        previewView.removeOnLayoutChangeListener(this)
-                    }
+        previewView.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+            override fun onLayoutChange(
+                v: View,
+                left: Int,
+                top: Int,
+                right: Int,
+                bottom: Int,
+                oldLeft: Int,
+                oldTop: Int,
+                oldRight: Int,
+                oldBottom: Int
+            ) {
+                if (v.width > 0 && v.height > 0) {
+                    countDownLatch.countDown()
+                    previewView.removeOnLayoutChangeListener(this)
                 }
             }
-        )
+        })
         assertThat(countDownLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue()
     }
 }

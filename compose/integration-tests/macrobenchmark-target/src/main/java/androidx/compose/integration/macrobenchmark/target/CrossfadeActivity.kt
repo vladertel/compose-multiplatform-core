@@ -49,18 +49,17 @@ class CrossfadeActivity : ComponentActivity() {
                         modifier = Modifier.size(150.dp),
                         label = "Crossfade",
                         targetState = targetState
-                    ) {}
+                    ) {
+                    }
                 }
                 Button(
                     modifier = Modifier.semantics { contentDescription = "toggle-crossfade" },
-                    onClick = { toggled = !toggled }
-                ) {
+                    onClick = { toggled = !toggled }) {
                     Text(toggled.toString())
                 }
                 Button(
                     modifier = Modifier.semantics { contentDescription = "toggle-target" },
-                    onClick = { targetState = !targetState }
-                ) {
+                    onClick = { targetState = !targetState }) {
                     Text(targetState.toString())
                 }
             }

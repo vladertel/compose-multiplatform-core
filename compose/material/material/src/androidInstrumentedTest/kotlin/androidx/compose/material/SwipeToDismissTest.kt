@@ -45,7 +45,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalMaterialApi::class)
 class SwipeToDismissTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val backgroundTag = "background"
     private val dismissContentTag = "dismissContent"
@@ -60,12 +61,13 @@ class SwipeToDismissTest {
         rule.setContent {
             SwipeToDismiss(
                 state = rememberDismissState(DismissValue.Default),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize().testTag(dismissContentTag)) }
             )
         }
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(0.dp)
     }
 
     @Test
@@ -73,13 +75,14 @@ class SwipeToDismissTest {
         rule.setContent {
             SwipeToDismiss(
                 state = rememberDismissState(DismissValue.DismissedToEnd),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize().testTag(dismissContentTag)) }
             )
         }
 
         val width = rule.rootWidth()
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(width)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(width)
     }
 
     @Test
@@ -87,13 +90,14 @@ class SwipeToDismissTest {
         rule.setContent {
             SwipeToDismiss(
                 state = rememberDismissState(DismissValue.DismissedToStart),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize().testTag(dismissContentTag)) }
             )
         }
 
         val width = rule.rootWidth()
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(-width)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(-width)
     }
 
     @Test
@@ -106,7 +110,8 @@ class SwipeToDismissTest {
             )
         }
 
-        rule.onNodeWithTag(backgroundTag).assertIsSquareWithSize(100.dp)
+        rule.onNodeWithTag(backgroundTag)
+            .assertIsSquareWithSize(100.dp)
     }
 
     @Ignore("Fix test in a follow-up CL. b/179501119")
@@ -117,38 +122,43 @@ class SwipeToDismissTest {
             dismissState = rememberDismissState(DismissValue.Default)
             SwipeToDismiss(
                 state = dismissState,
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize().testTag(dismissContentTag)) }
             )
         }
 
         val width = rule.rootWidth()
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(0.dp)
 
         dismissState.dismiss(DismissDirection.StartToEnd)
 
         advanceClock()
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(width)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(width)
 
         dismissState.reset()
 
         advanceClock()
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(0.dp)
 
         dismissState.dismiss(DismissDirection.EndToStart)
 
         advanceClock()
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(-width)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(-width)
 
         dismissState.reset()
 
         advanceClock()
 
-        rule.onNodeWithTag(dismissContentTag).assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag(dismissContentTag)
+            .assertLeftPositionInRootIsEqualTo(0.dp)
     }
 
     @Test
@@ -160,7 +170,7 @@ class SwipeToDismissTest {
                 modifier = Modifier.testTag(swipeToDismissTag),
                 state = dismissState,
                 directions = setOf(DismissDirection.StartToEnd),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize()) }
             )
         }
@@ -183,7 +193,7 @@ class SwipeToDismissTest {
                 modifier = Modifier.testTag(swipeToDismissTag),
                 state = dismissState,
                 directions = setOf(DismissDirection.EndToStart),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize()) }
             )
         }
@@ -207,7 +217,7 @@ class SwipeToDismissTest {
                     modifier = Modifier.testTag(swipeToDismissTag),
                     state = dismissState,
                     directions = setOf(DismissDirection.StartToEnd),
-                    background = {},
+                    background = { },
                     dismissContent = { Box(Modifier.fillMaxSize()) }
                 )
             }
@@ -232,7 +242,7 @@ class SwipeToDismissTest {
                     modifier = Modifier.testTag(swipeToDismissTag),
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
-                    background = {},
+                    background = { },
                     dismissContent = { Box(Modifier.fillMaxSize()) }
                 )
             }
@@ -256,7 +266,7 @@ class SwipeToDismissTest {
                 modifier = Modifier.testTag(swipeToDismissTag),
                 state = dismissState,
                 directions = setOf(),
-                background = {},
+                background = { },
                 dismissContent = { Box(Modifier.fillMaxSize()) }
             )
         }
@@ -265,12 +275,16 @@ class SwipeToDismissTest {
 
         advanceClock()
 
-        rule.runOnIdle { assertThat(dismissState.currentValue).isEqualTo(DismissValue.Default) }
+        rule.runOnIdle {
+            assertThat(dismissState.currentValue).isEqualTo(DismissValue.Default)
+        }
 
         rule.onNodeWithTag(swipeToDismissTag).performTouchInput { swipeLeft() }
 
         advanceClock()
 
-        rule.runOnIdle { assertThat(dismissState.currentValue).isEqualTo(DismissValue.Default) }
+        rule.runOnIdle {
+            assertThat(dismissState.currentValue).isEqualTo(DismissValue.Default)
+        }
     }
 }

@@ -39,11 +39,14 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class ProgressIndicatorScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
 
-    @get:Rule val testName = TestName()
+    @get:Rule
+    val testName = TestName()
 
     @Test
     fun indeterminate_progress_indicator() {
@@ -59,8 +62,7 @@ class ProgressIndicatorScreenshotTest {
         rule.waitForIdle()
         rule.mainClock.advanceTimeBy(300)
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }
@@ -80,8 +82,7 @@ class ProgressIndicatorScreenshotTest {
         rule.waitForIdle()
         rule.mainClock.advanceTimeBy(300)
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }
@@ -97,8 +98,7 @@ class ProgressIndicatorScreenshotTest {
             )
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }
@@ -116,8 +116,7 @@ class ProgressIndicatorScreenshotTest {
             )
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }
@@ -134,8 +133,7 @@ class ProgressIndicatorScreenshotTest {
             )
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }

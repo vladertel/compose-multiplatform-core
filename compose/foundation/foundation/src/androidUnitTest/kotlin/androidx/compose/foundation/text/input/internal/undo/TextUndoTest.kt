@@ -310,7 +310,9 @@ class TextUndoTest {
         state.typeAtStart("e")
         state.typeAtEnd("f")
 
-        state.edit { selection = TextRange(0) }
+        state.edit {
+            selection = TextRange(0)
+        }
 
         assertThat(state.undoState.canUndo).isEqualTo(true)
     }
@@ -324,7 +326,9 @@ class TextUndoTest {
 
         val before = state.text.toString()
 
-        state.edit { replace(0, 6, "eabcdf") }
+        state.edit {
+            replace(0, 6, "eabcdf")
+        }
 
         val after = state.text.toString()
 
@@ -346,7 +350,9 @@ class TextUndoTest {
 
         private fun TextFieldState.typeAt(index: Int, text: String) {
             placeCursorAt(index)
-            editAsUser(inputTransformation = null) { replace(index, index, text) }
+            editAsUser(inputTransformation = null) {
+                replace(index, index, text)
+            }
         }
 
         private fun TextFieldState.type(text: String) {
@@ -357,7 +363,9 @@ class TextUndoTest {
         }
 
         private fun TextFieldState.deleteAt(index: Int) {
-            editAsUser(inputTransformation = null) { delete(index, index + 1) }
+            editAsUser(inputTransformation = null) {
+                delete(index, index + 1)
+            }
         }
 
         private fun TextFieldState.placeCursorAt(index: Int) {
@@ -365,11 +373,15 @@ class TextUndoTest {
         }
 
         private fun TextFieldState.select(start: Int, end: Int) {
-            editAsUser(inputTransformation = null) { setSelection(start, end) }
+            editAsUser(inputTransformation = null) {
+                setSelection(start, end)
+            }
         }
 
         private fun TextFieldState.replaceAt(start: Int, end: Int, newText: String) {
-            editAsUser(inputTransformation = null) { replace(start, end, newText) }
+            editAsUser(inputTransformation = null) {
+                replace(start, end, newText)
+            }
         }
     }
 }

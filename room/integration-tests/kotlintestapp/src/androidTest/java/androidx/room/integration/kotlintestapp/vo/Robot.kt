@@ -19,4 +19,5 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity class Robot(@field:PrimaryKey val mId: UUID, val mHiveId: UUID)
+@Entity
+class Robot(@field:PrimaryKey val mId: UUID, val mHiveId: UUID)

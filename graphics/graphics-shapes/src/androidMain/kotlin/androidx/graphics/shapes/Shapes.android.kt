@@ -35,14 +35,10 @@ fun RoundedPolygon.transformed(matrix: Matrix): RoundedPolygon {
 }
 
 /**
- * Gets a [Path] representation for a [RoundedPolygon] shape. Note that there is some rounding
- * happening (to the nearest thousandth), to work around rendering artifacts introduced by some
- * points being just slightly off from each other (far less than a pixel). This also allows for a
- * more optimal path, as redundant curves (usually a single point) can be detected and not added to
- * the resulting path.
+ * Gets a [Path] representation for a [RoundedPolygon] shape.
  *
- * @param path an optional [Path] object which, if supplied, will avoid the function having to
- *   create a new [Path] object
+ * @param path an optional [Path] object which, if supplied, will avoid the function having
+ * to create a new [Path] object
  */
 @JvmOverloads
 fun RoundedPolygon.toPath(path: Path = Path()): Path {
@@ -55,7 +51,10 @@ fun Morph.toPath(progress: Float, path: Path = Path()): Path {
     return path
 }
 
-private fun pathFromCubics(path: Path, cubics: List<Cubic>) {
+private fun pathFromCubics(
+    path: Path,
+    cubics: List<Cubic>
+) {
     var first = true
     path.rewind()
     for (i in 0 until cubics.size) {
@@ -65,12 +64,9 @@ private fun pathFromCubics(path: Path, cubics: List<Cubic>) {
             first = false
         }
         path.cubicTo(
-            cubic.control0X,
-            cubic.control0Y,
-            cubic.control1X,
-            cubic.control1Y,
-            cubic.anchor1X,
-            cubic.anchor1Y
+            cubic.control0X, cubic.control0Y,
+            cubic.control1X, cubic.control1Y,
+            cubic.anchor1X, cubic.anchor1Y
         )
     }
     path.close()

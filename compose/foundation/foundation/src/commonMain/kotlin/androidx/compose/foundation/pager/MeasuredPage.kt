@@ -48,7 +48,10 @@ internal class MeasuredPage(
     init {
         var maxCrossAxis = 0
         placeables.fastForEach {
-            maxCrossAxis = maxOf(maxCrossAxis, if (!isVertical) it.height else it.width)
+            maxCrossAxis = maxOf(
+                maxCrossAxis,
+                if (!isVertical) it.height else it.width
+            )
         }
         crossAxisSize = maxCrossAxis
         placeableOffsets = IntArray(placeables.size * 2)
@@ -59,9 +62,14 @@ internal class MeasuredPage(
 
     private var mainAxisLayoutSize: Int = Unset
 
-    fun position(offset: Int, layoutWidth: Int, layoutHeight: Int) {
+    fun position(
+        offset: Int,
+        layoutWidth: Int,
+        layoutHeight: Int
+    ) {
         this.offset = offset
-        mainAxisLayoutSize = if (isVertical) layoutHeight else layoutWidth
+        mainAxisLayoutSize =
+            if (isVertical) layoutHeight else layoutWidth
         var mainAxisOffset = offset
         placeables.fastForEachIndexed { index, placeable ->
             val indexInArray = index * 2
@@ -81,26 +89,24 @@ internal class MeasuredPage(
         }
     }
 
-    fun place(scope: Placeable.PlacementScope) =
-        with(scope) {
-            require(mainAxisLayoutSize != Unset) { "position() should be called first" }
-            repeat(placeables.size) { index ->
-                val placeable = placeables[index]
-                var offset = getOffset(index)
-                if (reverseLayout) {
-                    offset =
-                        offset.copy { mainAxisOffset ->
-                            mainAxisLayoutSize - mainAxisOffset - placeable.mainAxisSize
-                        }
-                }
-                offset += visualOffset
-                if (isVertical) {
-                    placeable.placeWithLayer(offset)
-                } else {
-                    placeable.placeRelativeWithLayer(offset)
+    fun place(scope: Placeable.PlacementScope) = with(scope) {
+        require(mainAxisLayoutSize != Unset) { "position() should be called first" }
+        repeat(placeables.size) { index ->
+            val placeable = placeables[index]
+            var offset = getOffset(index)
+            if (reverseLayout) {
+                offset = offset.copy { mainAxisOffset ->
+                    mainAxisLayoutSize - mainAxisOffset - placeable.mainAxisSize
                 }
             }
+            offset += visualOffset
+            if (isVertical) {
+                placeable.placeWithLayer(offset)
+            } else {
+                placeable.placeRelativeWithLayer(offset)
+            }
         }
+    }
 
     fun applyScrollDelta(delta: Int) {
         offset += delta
@@ -116,9 +122,7 @@ internal class MeasuredPage(
     private fun getOffset(index: Int) =
         IntOffset(placeableOffsets[index * 2], placeableOffsets[index * 2 + 1])
 
-    private val Placeable.mainAxisSize
-        get() = if (isVertical) height else width
-
+    private val Placeable.mainAxisSize get() = if (isVertical) height else width
     private inline fun IntOffset.copy(mainAxisMap: (Int) -> Int): IntOffset =
         IntOffset(if (isVertical) x else mainAxisMap(x), if (isVertical) mainAxisMap(y) else y)
 }

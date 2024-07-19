@@ -17,6 +17,7 @@
 package androidx.camera.extensions.internal.sessionprocessor;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.extensions.impl.advanced.Camera2OutputConfigImpl;
 import androidx.camera.extensions.impl.advanced.ImageReaderOutputConfigImpl;
 import androidx.camera.extensions.impl.advanced.MultiResolutionImageReaderOutputConfigImpl;
@@ -28,6 +29,7 @@ import java.util.List;
 /**
  * For converting a {@link Camera2OutputConfigImpl} to a {@link Camera2OutputConfig}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class Camera2OutputConfigConverter {
     private Camera2OutputConfigConverter() {
     }

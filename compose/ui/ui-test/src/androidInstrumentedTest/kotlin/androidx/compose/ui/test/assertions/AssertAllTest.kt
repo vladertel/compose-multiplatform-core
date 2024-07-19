@@ -34,7 +34,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AssertAllTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun twoNodes_twoSatisfied() {
@@ -45,8 +46,7 @@ class AssertAllTest {
             }
         }
 
-        rule
-            .onNodeWithTag("Parent")
+        rule.onNodeWithTag("Parent")
             .onChildren()
             .assertAll(hasTestTag("Child1") or hasTestTag("Child2"))
     }
@@ -65,7 +65,9 @@ class AssertAllTest {
                 "Found '1' node not matching:\n" +
                 "Node #X"
         ) {
-            rule.onNodeWithTag("Parent").onChildren().assertAll(hasTestTag("Child1"))
+            rule.onNodeWithTag("Parent")
+                .onChildren()
+                .assertAll(hasTestTag("Child1"))
         }
     }
 
@@ -80,18 +82,23 @@ class AssertAllTest {
         }
 
         expectErrorMessageStartsWith(
-            "Failed to assertAll(TestTag = 'Child1')\n" + "Found '2' nodes not matching:\n" + "1) "
+            "Failed to assertAll(TestTag = 'Child1')\n" +
+                "Found '2' nodes not matching:\n" +
+                "1) "
         ) {
-            rule.onNodeWithTag("Parent").onChildren().assertAll(hasTestTag("Child1"))
+            rule.onNodeWithTag("Parent")
+                .onChildren()
+                .assertAll(hasTestTag("Child1"))
         }
     }
 
     @Test
     fun zeroNodes() {
-        rule.setContent { BoundaryNode(testTag = "Parent") }
+        rule.setContent {
+            BoundaryNode(testTag = "Parent")
+        }
 
-        rule
-            .onNodeWithTag("Parent")
+        rule.onNodeWithTag("Parent")
             .onChildren()
             .assertCountEquals(0)
             .assertAll(hasTestTag("Child"))

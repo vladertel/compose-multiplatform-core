@@ -32,7 +32,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ObserverModifierNodeTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun simplyObservingValue_doesNotTriggerCallback() {
@@ -40,7 +41,9 @@ class ObserverModifierNodeTest {
         val value by mutableStateOf(1)
         var callbackInvoked = false
         val observerNode = TestObserverNode { callbackInvoked = true }
-        rule.setContent { Box(Modifier.elementOf(observerNode)) }
+        rule.setContent {
+            Box(Modifier.elementOf(observerNode))
+        }
 
         // Act.
         rule.runOnIdle {
@@ -49,7 +52,9 @@ class ObserverModifierNodeTest {
         }
 
         // Assert.
-        rule.runOnIdle { assertThat(callbackInvoked).isFalse() }
+        rule.runOnIdle {
+            assertThat(callbackInvoked).isFalse()
+        }
     }
 
     @Test
@@ -58,7 +63,9 @@ class ObserverModifierNodeTest {
         var value by mutableStateOf(1)
         var callbackInvoked = false
         val observerNode = TestObserverNode { callbackInvoked = true }
-        rule.setContent { Box(Modifier.elementOf(observerNode)) }
+        rule.setContent {
+            Box(Modifier.elementOf(observerNode))
+        }
 
         // Act.
         rule.runOnIdle {
@@ -70,7 +77,9 @@ class ObserverModifierNodeTest {
         }
 
         // Assert.
-        rule.runOnIdle { assertThat(callbackInvoked).isTrue() }
+        rule.runOnIdle {
+            assertThat(callbackInvoked).isTrue()
+        }
     }
 
     @Test(expected = IllegalStateException::class)
@@ -90,7 +99,9 @@ class ObserverModifierNodeTest {
         }
 
         // Assert.
-        rule.runOnIdle { assertThat(callbackInvoked).isFalse() }
+        rule.runOnIdle {
+            assertThat(callbackInvoked).isFalse()
+        }
     }
 
     @Test
@@ -100,7 +111,9 @@ class ObserverModifierNodeTest {
         var callbackInvoked = false
         val observerNode = TestObserverNode { callbackInvoked = true }
         var attached by mutableStateOf(true)
-        rule.setContent { Box(if (attached) Modifier.elementOf(observerNode) else Modifier) }
+        rule.setContent {
+            Box(if (attached) Modifier.elementOf(observerNode) else Modifier)
+        }
 
         // Act.
         // Read value while not attached.
@@ -111,7 +124,9 @@ class ObserverModifierNodeTest {
         rule.runOnIdle { value = 3 }
 
         // Assert.
-        rule.runOnIdle { assertThat(callbackInvoked).isTrue() }
+        rule.runOnIdle {
+            assertThat(callbackInvoked).isTrue()
+        }
     }
 
     @Test
@@ -121,7 +136,9 @@ class ObserverModifierNodeTest {
         var callbackInvoked = false
         val observerNode = TestObserverNode { callbackInvoked = true }
         var attached by mutableStateOf(true)
-        rule.setContent { Box(if (attached) Modifier.elementOf(observerNode) else Modifier) }
+        rule.setContent {
+            Box(if (attached) Modifier.elementOf(observerNode) else Modifier)
+        }
 
         // Act.
         rule.runOnIdle {
@@ -129,12 +146,16 @@ class ObserverModifierNodeTest {
             observerNode.observeReads { value.toString() }
         }
 
-        rule.runOnIdle { attached = false }
+        rule.runOnIdle {
+            attached = false
+        }
         // Write to the read value to trigger onObservedReadsChanged.
         rule.runOnIdle { value = 3 }
 
         // Assert.
-        rule.runOnIdle { assertThat(callbackInvoked).isFalse() }
+        rule.runOnIdle {
+            assertThat(callbackInvoked).isFalse()
+        }
     }
 
     class TestObserverNode(

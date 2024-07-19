@@ -37,8 +37,9 @@ import org.junit.rules.ExternalResource
 
 private const val SQLITE_INSPECTOR_ID = "androidx.sqlite.inspection"
 
-class SqliteInspectorTestEnvironment(val ioExecutorOverride: Executor? = null) :
-    ExternalResource() {
+class SqliteInspectorTestEnvironment(
+    val ioExecutorOverride: Executor? = null
+) : ExternalResource() {
     private lateinit var inspectorTester: InspectorTester
     private lateinit var artTooling: FakeArtTooling
     private val job = Job()
@@ -49,18 +50,18 @@ class SqliteInspectorTestEnvironment(val ioExecutorOverride: Executor? = null) :
         inspectorTester = runBlocking {
             InspectorTester(
                 inspectorId = SQLITE_INSPECTOR_ID,
-                environment =
-                    DefaultTestInspectorEnvironment(
-                        TestInspectorExecutors(job, ioExecutorOverride),
-                        artTooling
-                    )
+                environment = DefaultTestInspectorEnvironment(
+                    TestInspectorExecutors(job, ioExecutorOverride), artTooling
+                )
             )
         }
     }
 
     override fun after() {
         inspectorTester.dispose()
-        runBlocking { job.cancelAndJoin() }
+        runBlocking {
+            job.cancelAndJoin()
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -69,10 +70,11 @@ class SqliteInspectorTestEnvironment(val ioExecutorOverride: Executor? = null) :
     }
 
     suspend fun sendCommand(command: Command): Response {
-        inspectorTester.sendCommand(command.toByteArray()).let { responseBytes ->
-            assertThat(responseBytes).isNotEmpty()
-            return Response.parseFrom(responseBytes)
-        }
+        inspectorTester.sendCommand(command.toByteArray())
+            .let { responseBytes ->
+                assertThat(responseBytes).isNotEmpty()
+                return Response.parseFrom(responseBytes)
+            }
     }
 
     suspend fun receiveEvent(): Event {
@@ -90,7 +92,8 @@ class SqliteInspectorTestEnvironment(val ioExecutorOverride: Executor? = null) :
         artTooling.registerInstancesToFind(listOf(application))
     }
 
-    fun consumeRegisteredHooks(): List<Hook> = artTooling.consumeRegisteredHooks()
+    fun consumeRegisteredHooks(): List<Hook> =
+        artTooling.consumeRegisteredHooks()
 
     /** Assumes an event with the relevant database will be fired. */
     suspend fun awaitDatabaseOpenedEvent(databasePath: String): DatabaseOpenedEvent {
@@ -108,9 +111,17 @@ suspend fun SqliteInspectorTestEnvironment.issueQuery(
     command: String,
     queryParams: List<String?>? = null
 ): SqliteInspectorProtocol.QueryResponse =
-    sendCommand(MessageFactory.createQueryCommand(databaseId, command, queryParams)).query
+    sendCommand(
+        MessageFactory.createQueryCommand(
+            databaseId,
+            command,
+            queryParams
+        )
+    ).query
 
-suspend fun SqliteInspectorTestEnvironment.inspectDatabase(databaseInstance: SQLiteDatabase): Int {
+suspend fun SqliteInspectorTestEnvironment.inspectDatabase(
+    databaseInstance: SQLiteDatabase
+): Int {
     registerAlreadyOpenDatabases(listOf(databaseInstance))
     sendCommand(MessageFactory.createTrackDatabasesCommand())
     return awaitDatabaseOpenedEvent(databaseInstance.displayName).databaseId
@@ -119,8 +130,8 @@ suspend fun SqliteInspectorTestEnvironment.inspectDatabase(databaseInstance: SQL
 /**
  * Fake inspector environment with the following behaviour:
  * - [findInstances] returns pre-registered values from [registerInstancesToFind].
- * - [registerEntryHook] and [registerExitHook] record the calls which can later be retrieved in
- *   [consumeRegisteredHooks].
+ * - [registerEntryHook] and [registerExitHook] record the calls which can later be
+ * retrieved in [consumeRegisteredHooks].
  */
 private class FakeArtTooling : ArtTooling {
     private val instancesToFind = mutableListOf<Any>()
@@ -131,8 +142,8 @@ private class FakeArtTooling : ArtTooling {
     }
 
     /**
-     * Returns instances pre-registered in [registerInstancesToFind]. By design crashes in case of
-     * the wrong setup - indicating an issue with test code.
+     *  Returns instances pre-registered in [registerInstancesToFind].
+     *  By design crashes in case of the wrong setup - indicating an issue with test code.
      */
     @Suppress("UNCHECKED_CAST")
     // TODO: implement actual findInstances behaviour
@@ -158,7 +169,9 @@ private class FakeArtTooling : ArtTooling {
     }
 
     fun consumeRegisteredHooks(): List<Hook> =
-        registeredHooks.toList().also { registeredHooks.clear() }
+        registeredHooks.toList().also {
+            registeredHooks.clear()
+        }
 }
 
 sealed class Hook(val originClass: Class<*>, val originMethod: String) {
@@ -175,7 +188,5 @@ sealed class Hook(val originClass: Class<*>, val originMethod: String) {
     ) : Hook(originClass, originMethod)
 }
 
-val Hook.asEntryHook
-    get() = (this as Hook.EntryHook).entryHook
-val Hook.asExitHook
-    get() = (this as Hook.ExitHook).exitHook
+val Hook.asEntryHook get() = (this as Hook.EntryHook).entryHook
+val Hook.asExitHook get() = (this as Hook.ExitHook).exitHook

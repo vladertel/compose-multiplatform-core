@@ -22,8 +22,10 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import kotlinx.coroutines.delay
 
-public class RemoteFailureWorker(context: Context, parameters: WorkerParameters) :
-    RemoteCoroutineWorker(context, parameters) {
+public class RemoteFailureWorker(
+    context: Context,
+    parameters: WorkerParameters
+) : RemoteCoroutineWorker(context, parameters) {
     override suspend fun doRemoteWork(): Result {
         delay(100)
         return Result.failure(outputData())

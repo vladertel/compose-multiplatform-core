@@ -24,10 +24,10 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.test.espresso.idling.net.UriIdlingResource;
@@ -52,7 +52,6 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
             mUriIdlingResource = uriIdlingResource;
         }
 
-        /** @noinspection RedundantSuppression*/
         @Override
         @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -60,16 +59,16 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
         }
 
         @Override
+        @RequiresApi(21)
         public WebResourceResponse shouldInterceptRequest(WebView view,
                                                           WebResourceRequest request) {
-            Uri url = request.getUrl();
+            Uri url = Api21Impl.getUrl(request);
             mUriIdlingResource.beginLoad(url.toString());
             WebResourceResponse response = mAssetLoader.shouldInterceptRequest(url);
             mUriIdlingResource.endLoad(url.toString());
             return response;
         }
 
-        /** @noinspection RedundantSuppression*/
         @Override
         @SuppressWarnings("deprecation") // use the old one for compatibility with all API levels.
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
@@ -117,22 +116,13 @@ public class AssetLoaderAjaxActivity extends AppCompatActivity {
 
         WebSettings webViewSettings = mWebView.getSettings();
         webViewSettings.setJavaScriptEnabled(true);
-        setDeprecatedAllowFileAccess(webViewSettings);
+        // Setting this off for security. Off by default for SDK versions >= 16.
+        webViewSettings.setAllowFileAccessFromFileURLs(false);
+        webViewSettings.setAllowUniversalAccessFromFileURLs(false);
         // Keeping these off is less critical but still a good idea, especially
         // if your app is not using file:// or content:// URLs.
         webViewSettings.setAllowFileAccess(false);
         webViewSettings.setAllowContentAccess(false);
-
-        Button loadButton = findViewById(R.id.button_load_ajax_html);
-        loadButton.setOnClickListener(v -> loadUrl());
-    }
-
-    /** @noinspection RedundantSuppression*/
-    @SuppressWarnings("deprecation") /* b/180503860 */
-    private static void setDeprecatedAllowFileAccess(WebSettings webViewSettings) {
-        // Setting this off for security. Off by default for SDK versions >= 16.
-        webViewSettings.setAllowFileAccessFromFileURLs(false);
-        webViewSettings.setAllowUniversalAccessFromFileURLs(false);
     }
 
     /**

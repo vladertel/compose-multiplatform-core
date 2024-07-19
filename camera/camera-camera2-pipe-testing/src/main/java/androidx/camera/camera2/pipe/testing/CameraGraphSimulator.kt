@@ -17,7 +17,10 @@
 package androidx.camera.camera2.pipe.testing
 
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CaptureResult
+import android.view.Surface
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
@@ -54,8 +57,8 @@ import kotlinx.coroutines.withTimeout
  * lifecycle of a [CameraGraph]. Tests using CameraGraphSimulators should also close them after
  * they've completed their use of the simulator.
  */
-class CameraGraphSimulator
-private constructor(
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+class CameraGraphSimulator private constructor(
     val context: Context,
     val cameraMetadata: CameraMetadata,
     val graphConfig: CameraGraph.Config,
@@ -66,8 +69,8 @@ private constructor(
         /**
          * Create a CameraGraphSimulator using the current [TestScope] provided by a Kotlin
          * `runTest` block. This will create the [CameraPipe] and [CameraGraph] using the parent
-         * test scope, which helps ensure all long running operations are wrapped up by the time the
-         * test completes and allows the test to provide more fine grained control over the
+         * test scope, which helps ensure all long running operations are wrapped up by the time
+         * the test completes and allows the test to provide more fine grained control over the
          * interactions.
          */
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -77,27 +80,26 @@ private constructor(
             cameraMetadata: CameraMetadata,
             graphConfig: CameraGraph.Config
         ): CameraGraphSimulator {
-            val fakeCameraBackend =
-                FakeCameraBackend(fakeCameras = mapOf(cameraMetadata.camera to cameraMetadata))
-            val cameraPipe =
-                CameraPipe(
-                    CameraPipe.Config(
-                        context,
-                        cameraBackendConfig =
-                            CameraBackendConfig(internalBackend = fakeCameraBackend),
-                        threadConfig =
-                            CameraPipe.ThreadConfig(
-                                testOnlyDispatcher = StandardTestDispatcher(scope.testScheduler),
-                                testOnlyScope = scope,
-                            )
+            val fakeCameraBackend = FakeCameraBackend(
+                fakeCameras = mapOf(cameraMetadata.camera to cameraMetadata)
+            )
+            val cameraPipe = CameraPipe(
+                CameraPipe.Config(
+                    context,
+                    cameraBackendConfig = CameraBackendConfig(
+                        internalBackend = fakeCameraBackend
+                    ),
+                    threadConfig = CameraPipe.ThreadConfig(
+                        testOnlyDispatcher = StandardTestDispatcher(scope.testScheduler),
+                        testOnlyScope = scope,
                     )
                 )
+            )
             val cameraGraph = cameraPipe.create(graphConfig)
-            val cameraController =
-                checkNotNull(fakeCameraBackend.cameraControllers.lastOrNull()) {
-                    "Expected cameraPipe.create to create a CameraController instance from " +
-                        "$fakeCameraBackend as part of its initialization."
-                }
+            val cameraController = checkNotNull(fakeCameraBackend.cameraControllers.lastOrNull()) {
+                "Expected cameraPipe.create to create a CameraController instance from " +
+                    "$fakeCameraBackend as part of its initialization."
+            }
             return CameraGraphSimulator(
                 context,
                 cameraMetadata,
@@ -118,15 +120,19 @@ private constructor(
 
     private val closed = atomic(false)
 
+    private val surfaceTextureNames = atomic(0)
     private val frameClockNanos = atomic(0L)
     private val frameCounter = atomic(0L)
     private val pendingFrameQueue = mutableListOf<FrameSimulator>()
-    private val fakeSurfaces = FakeSurfaces()
+    private val surfacesCreated = mutableSetOf<Surface>()
 
     override fun close() {
         if (closed.compareAndSet(expect = false, update = true)) {
             cameraGraph.close()
-            fakeSurfaces.close()
+            for (surface in surfacesCreated) {
+                surface.release()
+            }
+            surfacesCreated.clear()
         }
     }
 
@@ -157,18 +163,22 @@ private constructor(
         for (stream in cameraGraph.streams.streams) {
             // Pick an output -- most will only have one.
             val output = stream.outputs.first()
-            val surface = fakeSurfaces.createFakeSurface(output.size)
+            val surface = Surface(
+                SurfaceTexture(surfaceTextureNames.getAndIncrement()).also {
+                    it.setDefaultBufferSize(output.size.width, output.size.height)
+                }
+            )
+            surfacesCreated.add(surface)
             cameraGraph.setSurface(stream.id, surface)
         }
     }
 
     suspend fun simulateNextFrame(
         advanceClockByNanos: Long = 33_366_666 // (2_000_000_000 / (60  / 1.001))
-    ): FrameSimulator =
-        generateNextFrame().also {
-            val clockNanos = frameClockNanos.addAndGet(advanceClockByNanos)
-            it.simulateStarted(clockNanos)
-        }
+    ): FrameSimulator = generateNextFrame().also {
+        val clockNanos = frameClockNanos.addAndGet(advanceClockByNanos)
+        it.simulateStarted(clockNanos)
+    }
 
     private suspend fun generateNextFrame(): FrameSimulator {
         val captureSequenceProcessor = cameraController.currentCaptureSequenceProcessor
@@ -193,13 +203,12 @@ private constructor(
 
     /**
      * A [FrameSimulator] allows a test to synchronously invoke callbacks. A single request can
-     * generate multiple captures (eg, if used as a repeating request). A [FrameSimulator] allows a
-     * test to control exactly one of those captures. This means that a new simulator is created for
-     * each frame, and allows tests to simulate unusual ordering or delays that may appear under
-     * real conditions.
+     * generate multiple captures (eg, if used as a repeating request). A [FrameSimulator] allows
+     * a test to control exactly one of those captures. This means that a new simulator is
+     * created for each frame, and allows tests to simulate unusual ordering or delays that may
+     * appear under real conditions.
      */
-    inner class FrameSimulator
-    internal constructor(
+    inner class FrameSimulator internal constructor(
         val request: Request,
         val requestSequence: FakeCaptureSequence,
     ) {
@@ -221,12 +230,11 @@ private constructor(
             extraResultMetadata: Map<Metadata.Key<*>, Any?> = emptyMap(),
             extraMetadata: Map<*, Any?> = emptyMap<Any, Any>()
         ) {
-            val metadata =
-                createFakeMetadataFor(
-                    resultMetadata = resultMetadata,
-                    extraResultMetadata = extraResultMetadata,
-                    extraMetadata = extraMetadata
-                )
+            val metadata = createFakeMetadataFor(
+                resultMetadata = resultMetadata,
+                extraResultMetadata = extraResultMetadata,
+                extraMetadata = extraMetadata
+            )
 
             requestSequence.invokeOnRequest(requestMetadata) {
                 it.onPartialCaptureResult(requestMetadata, frameNumber, metadata)
@@ -239,18 +247,15 @@ private constructor(
             extraMetadata: Map<*, Any?> = emptyMap<Any, Any>(),
             physicalResultMetadata: Map<CameraId, Map<CaptureResult.Key<*>, Any?>> = emptyMap()
         ) {
-            val metadata =
-                createFakeMetadataFor(
-                    resultMetadata = resultMetadata,
-                    extraResultMetadata = extraResultMetadata,
-                    extraMetadata = extraMetadata
-                )
-            val frameInfo =
-                FakeFrameInfo(
-                    metadata = metadata,
-                    requestMetadata,
-                    createFakePhysicalMetadata(physicalResultMetadata)
-                )
+            val metadata = createFakeMetadataFor(
+                resultMetadata = resultMetadata,
+                extraResultMetadata = extraResultMetadata,
+                extraMetadata = extraMetadata
+            )
+            val frameInfo = FakeFrameInfo(
+                metadata = metadata, requestMetadata,
+                createFakePhysicalMetadata(physicalResultMetadata)
+            )
 
             requestSequence.invokeOnRequest(requestMetadata) {
                 it.onTotalCaptureResult(requestMetadata, frameNumber, frameInfo)
@@ -263,18 +268,15 @@ private constructor(
             extraMetadata: Map<*, Any?> = emptyMap<Any, Any>(),
             physicalResultMetadata: Map<CameraId, Map<CaptureResult.Key<*>, Any?>> = emptyMap()
         ) {
-            val metadata =
-                createFakeMetadataFor(
-                    resultMetadata = resultMetadata,
-                    extraResultMetadata = extraResultMetadata,
-                    extraMetadata = extraMetadata
-                )
-            val frameInfo =
-                FakeFrameInfo(
-                    metadata = metadata,
-                    requestMetadata,
-                    createFakePhysicalMetadata(physicalResultMetadata)
-                )
+            val metadata = createFakeMetadataFor(
+                resultMetadata = resultMetadata,
+                extraResultMetadata = extraResultMetadata,
+                extraMetadata = extraMetadata
+            )
+            val frameInfo = FakeFrameInfo(
+                metadata = metadata, requestMetadata,
+                createFakePhysicalMetadata(physicalResultMetadata)
+            )
 
             requestSequence.invokeOnRequest(requestMetadata) {
                 it.onComplete(requestMetadata, frameNumber, frameInfo)
@@ -294,7 +296,9 @@ private constructor(
         }
 
         fun simulateAbort() {
-            requestSequence.invokeOnRequest(requestMetadata) { it.onAborted(request) }
+            requestSequence.invokeOnRequest(requestMetadata) {
+                it.onAborted(request)
+            }
         }
 
         private fun createFakePhysicalMetadata(
@@ -311,13 +315,12 @@ private constructor(
             resultMetadata: Map<CaptureResult.Key<*>, Any?>,
             extraResultMetadata: Map<Metadata.Key<*>, Any?> = emptyMap(),
             extraMetadata: Map<*, Any?> = emptyMap<Any, Any>(),
-        ): FakeFrameMetadata =
-            FakeFrameMetadata(
-                camera = cameraMetadata.camera,
-                frameNumber = frameNumber,
-                resultMetadata = resultMetadata.toMap(),
-                extraResultMetadata = extraResultMetadata.toMap(),
-                extraMetadata = extraMetadata.toMap()
-            )
+        ): FakeFrameMetadata = FakeFrameMetadata(
+            camera = cameraMetadata.camera,
+            frameNumber = frameNumber,
+            resultMetadata = resultMetadata.toMap(),
+            extraResultMetadata = extraResultMetadata.toMap(),
+            extraMetadata = extraMetadata.toMap()
+        )
     }
 }

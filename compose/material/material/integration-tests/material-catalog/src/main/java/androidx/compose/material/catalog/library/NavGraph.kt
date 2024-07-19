@@ -29,9 +29,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
 @Composable
-fun NavGraph(theme: Theme, onThemeChange: (theme: Theme) -> Unit) {
+fun NavGraph(
+    theme: Theme,
+    onThemeChange: (theme: Theme) -> Unit
+) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = HomeRoute) {
+    NavHost(
+        navController = navController,
+        startDestination = HomeRoute
+    ) {
         composable(HomeRoute) {
             Home(
                 components = Components,
@@ -45,8 +51,11 @@ fun NavGraph(theme: Theme, onThemeChange: (theme: Theme) -> Unit) {
             )
         }
         composable(
-            route = "$ComponentRoute/" + "{$ComponentIdArgName}",
-            arguments = listOf(navArgument(ComponentIdArgName) { type = NavType.IntType })
+            route = "$ComponentRoute/" +
+                "{$ComponentIdArgName}",
+            arguments = listOf(
+                navArgument(ComponentIdArgName) { type = NavType.IntType }
+            )
         ) { navBackStackEntry ->
             val arguments = requireNotNull(navBackStackEntry.arguments) { "No arguments" }
             val componentId = arguments.getInt(ComponentIdArgName)
@@ -64,12 +73,13 @@ fun NavGraph(theme: Theme, onThemeChange: (theme: Theme) -> Unit) {
             )
         }
         composable(
-            route = "$ExampleRoute/" + "{$ComponentIdArgName}/" + "{$ExampleIndexArgName}",
-            arguments =
-                listOf(
-                    navArgument(ComponentIdArgName) { type = NavType.IntType },
-                    navArgument(ExampleIndexArgName) { type = NavType.IntType }
-                )
+            route = "$ExampleRoute/" +
+                "{$ComponentIdArgName}/" +
+                "{$ExampleIndexArgName}",
+            arguments = listOf(
+                navArgument(ComponentIdArgName) { type = NavType.IntType },
+                navArgument(ExampleIndexArgName) { type = NavType.IntType }
+            )
         ) { navBackStackEntry ->
             val arguments = requireNotNull(navBackStackEntry.arguments) { "No arguments" }
             val componentId = arguments.getInt(ComponentIdArgName)

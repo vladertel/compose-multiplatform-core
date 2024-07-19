@@ -38,8 +38,9 @@ internal fun IgnoreResult() {
 
 internal class EmittableIgnoreResult : Emittable {
     override var modifier: GlanceModifier = GlanceModifier
-
-    override fun copy() = EmittableIgnoreResult().also { it.modifier = modifier }
+    override fun copy() = EmittableIgnoreResult().also {
+        it.modifier = modifier
+    }
 }
 
 /**

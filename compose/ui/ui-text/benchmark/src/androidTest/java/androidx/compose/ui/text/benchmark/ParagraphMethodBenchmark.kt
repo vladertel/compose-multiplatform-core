@@ -35,19 +35,25 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** The benchmark for methods of [Paragraph]. */
+/**
+ * The benchmark for methods of [Paragraph].
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 class ParagraphMethodBenchmark(private val textType: TextType, private val textLength: Int) {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
-    @get:Rule val textBenchmarkRule = TextBenchmarkTestRule()
+    @get:Rule
+    val textBenchmarkRule = TextBenchmarkTestRule()
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "type={0} length={1}")
-        fun initParameters() =
-            cartesian(arrayOf(TextType.PlainText, TextType.StyledText), arrayOf(512))
+        fun initParameters() = cartesian(
+            arrayOf(TextType.PlainText, TextType.StyledText),
+            arrayOf(512)
+        )
     }
 
     private val context: Context = InstrumentationRegistry.getInstrumentation().context
@@ -60,12 +66,11 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textLength: Int
     ): ParagraphIntrinsics {
         val text = textGenerator.nextParagraph(textLength)
-        val spanStyles =
-            if (textType == TextType.StyledText) {
-                textGenerator.createStyles(text)
-            } else {
-                listOf()
-            }
+        val spanStyles = if (textType == TextType.StyledText) {
+            textGenerator.createStyles(text)
+        } else {
+            listOf()
+        }
         return ParagraphIntrinsics(
             text = text,
             density = Density(density = 1f),
@@ -83,11 +88,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         val paragraphIntrinsics = paragraphIntrinsics(textGenerator, textLength)
         return Paragraph(
             paragraphIntrinsics = paragraphIntrinsics,
-            constraints =
-                Constraints(
-                    maxWidth =
-                        ceil(paragraphIntrinsics.maxIntrinsicWidth / preferredLineCount).toInt()
-                )
+            constraints = Constraints(
+                maxWidth = ceil(paragraphIntrinsics.maxIntrinsicWidth / preferredLineCount).toInt()
+            )
         )
     }
 
@@ -95,7 +98,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     fun getPathForRange() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
-            benchmarkRule.measureRepeated { paragraph.getPathForRange(0, textLength / 2) }
+            benchmarkRule.measureRepeated {
+                paragraph.getPathForRange(0, textLength / 2)
+            }
         }
     }
 
@@ -103,7 +108,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     fun getCursorRect() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
-            benchmarkRule.measureRepeated { paragraph.getCursorRect(textLength / 2) }
+            benchmarkRule.measureRepeated {
+                paragraph.getCursorRect(textLength / 2)
+            }
         }
     }
 
@@ -112,7 +119,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
             val line = paragraph.lineCount / 2
-            benchmarkRule.measureRepeated { paragraph.getLineLeft(line) }
+            benchmarkRule.measureRepeated {
+                paragraph.getLineLeft(line)
+            }
         }
     }
 
@@ -121,7 +130,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
             val line = paragraph.lineCount / 2
-            benchmarkRule.measureRepeated { paragraph.getLineRight(line) }
+            benchmarkRule.measureRepeated {
+                paragraph.getLineRight(line)
+            }
         }
     }
 
@@ -130,7 +141,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
             val line = paragraph.lineCount / 2
-            benchmarkRule.measureRepeated { paragraph.getLineWidth(line / 2) }
+            benchmarkRule.measureRepeated {
+                paragraph.getLineWidth(line / 2)
+            }
         }
     }
 
@@ -138,7 +151,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     fun getHorizontalPosition() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
-            benchmarkRule.measureRepeated { paragraph.getHorizontalPosition(textLength / 2, true) }
+            benchmarkRule.measureRepeated {
+                paragraph.getHorizontalPosition(textLength / 2, true)
+            }
         }
     }
 
@@ -147,7 +162,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
             val centerPosition = Offset(paragraph.width / 2, paragraph.height / 2)
-            benchmarkRule.measureRepeated { paragraph.getOffsetForPosition(centerPosition) }
+            benchmarkRule.measureRepeated {
+                paragraph.getOffsetForPosition(centerPosition)
+            }
         }
     }
 
@@ -155,7 +172,9 @@ class ParagraphMethodBenchmark(private val textType: TextType, private val textL
     fun getBoundingBox() {
         textBenchmarkRule.generator { generator ->
             val paragraph = paragraph(generator)
-            benchmarkRule.measureRepeated { paragraph.getBoundingBox(textLength / 2) }
+            benchmarkRule.measureRepeated {
+                paragraph.getBoundingBox(textLength / 2)
+            }
         }
     }
 }

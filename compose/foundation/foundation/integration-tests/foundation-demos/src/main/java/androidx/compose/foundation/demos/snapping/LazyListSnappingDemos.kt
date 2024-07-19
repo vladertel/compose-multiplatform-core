@@ -41,36 +41,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastSumBy
 
-val SnapPositionDemos =
-    listOf(
-        ComposableDemo("Center") { SnapPosition(SnapPosition.Center) },
-        ComposableDemo("Start") { SnapPosition(SnapPosition.Start) },
-        ComposableDemo("End") { SnapPosition(SnapPosition.End) },
-    )
+val SnapPositionDemos = listOf(
+    ComposableDemo("Center") { SnapPosition(SnapPosition.Center) },
+    ComposableDemo("Start") { SnapPosition(SnapPosition.Start) },
+    ComposableDemo("End") { SnapPosition(SnapPosition.End) },
+)
 
-val LazyListSnappingDemos =
-    listOf(
-        ComposableDemo("Single Item - Same Size Items") { SameItemSizeDemo() },
-        ComposableDemo("Single Item - Different Size Item") { DifferentItemSizeDemo() },
-        ComposableDemo("Single Item - Large Items") { LargeItemSizeDemo() },
-        ComposableDemo("Single Item - List with Content padding") { DifferentContentPaddingDemo() },
-        ComposableDemo("Multi Item - Decayed Snapping") { DecayedSnappingDemo() },
-        ComposableDemo("Multi Item - View Port Based Offset") { ViewPortBasedSnappingDemo() },
-        DemoCategory("Snap Position", SnapPositionDemos)
-    )
+val LazyListSnappingDemos = listOf(
+    ComposableDemo("Single Item - Same Size Items") { SameItemSizeDemo() },
+    ComposableDemo("Single Item - Different Size Item") { DifferentItemSizeDemo() },
+    ComposableDemo("Single Item - Large Items") { LargeItemSizeDemo() },
+    ComposableDemo("Single Item - List with Content padding") { DifferentContentPaddingDemo() },
+    ComposableDemo("Multi Item - Decayed Snapping") { DecayedSnappingDemo() },
+    ComposableDemo("Multi Item - View Port Based Offset") { ViewPortBasedSnappingDemo() },
+    DemoCategory("Snap Position", SnapPositionDemos)
+)
 
-/** Snapping happens to the next item and items have the same size */
+/**
+ * Snapping happens to the next item and items have the same size
+ */
 @Composable
 private fun SnapPosition(snapPosition: SnapPosition) {
     val lazyListState = rememberLazyListState()
     val layoutInfoProvider = rememberNextItemSnappingLayoutInfoProvider(lazyListState, snapPosition)
     val flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
 
-    SnappingDemoMainLayout(lazyListState = lazyListState, flingBehavior = flingBehavior) { position
-        ->
+    SnappingDemoMainLayout(
+        lazyListState = lazyListState,
+        flingBehavior = flingBehavior
+    ) { position ->
         Box(
-            modifier =
-                Modifier.size(150.dp).padding(8.dp).background(Color.White).drawWithContent {
+            modifier = Modifier
+                .size(150.dp)
+                .padding(8.dp)
+                .background(Color.White)
+                .drawWithContent {
                     drawContent()
                     drawAnchor(CenterAnchor)
                 },
@@ -81,19 +86,26 @@ private fun SnapPosition(snapPosition: SnapPosition) {
     }
 }
 
-/** Snapping happens to the next item and items have the same size */
+/**
+ * Snapping happens to the next item and items have the same size
+ */
 @Composable
 private fun SameItemSizeDemo() {
     val lazyListState = rememberLazyListState()
     val layoutInfoProvider = rememberNextItemSnappingLayoutInfoProvider(lazyListState)
     val flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
 
-    SnappingDemoMainLayout(lazyListState = lazyListState, flingBehavior = flingBehavior) {
+    SnappingDemoMainLayout(
+        lazyListState = lazyListState,
+        flingBehavior = flingBehavior
+    ) {
         DefaultSnapDemoItem(it)
     }
 }
 
-/** Snapping happens to the next item and items have the different sizes */
+/**
+ * Snapping happens to the next item and items have the different sizes
+ */
 @Composable
 private fun DifferentItemSizeDemo() {
     val lazyListState = rememberLazyListState()
@@ -101,11 +113,17 @@ private fun DifferentItemSizeDemo() {
     val flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
 
     SnappingDemoMainLayout(lazyListState = lazyListState, flingBehavior = flingBehavior) {
-        ResizableSnapDemoItem(width = PagesSizes[it], height = 500.dp, position = it)
+        ResizableSnapDemoItem(
+            width = PagesSizes[it],
+            height = 500.dp,
+            position = it
+        )
     }
 }
 
-/** Snapping happens to the next item and items are larger than the view port */
+/**
+ * Snapping happens to the next item and items are larger than the view port
+ */
 @Composable
 private fun LargeItemSizeDemo() {
     val lazyListState = rememberLazyListState()
@@ -113,15 +131,22 @@ private fun LargeItemSizeDemo() {
     val flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
 
     SnappingDemoMainLayout(lazyListState = lazyListState, flingBehavior = flingBehavior) {
-        ResizableSnapDemoItem(width = 350.dp, height = 500.dp, position = it)
+        ResizableSnapDemoItem(
+            width = 350.dp,
+            height = 500.dp,
+            position = it
+        )
     }
 }
 
-/** Snapping happens to the next item and list has content paddings */
+/**
+ * Snapping happens to the next item and list has content paddings
+ */
 @Composable
 private fun DifferentContentPaddingDemo() {
     val lazyListState = rememberLazyListState()
-    val layoutInfoProvider = remember(lazyListState) { SnapLayoutInfoProvider(lazyListState) }
+    val layoutInfoProvider =
+        remember(lazyListState) { SnapLayoutInfoProvider(lazyListState) }
     val flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
 
     SnappingDemoMainLayout(
@@ -133,7 +158,9 @@ private fun DifferentContentPaddingDemo() {
     }
 }
 
-/** Snapping happens after a decay animation and items have the same size */
+/**
+ * Snapping happens after a decay animation and items have the same size
+ */
 @Composable
 private fun DecayedSnappingDemo() {
     val lazyListState = rememberLazyListState()
@@ -143,7 +170,9 @@ private fun DecayedSnappingDemo() {
     }
 }
 
-/** Snapping happens to at max one view port item's worth distance. */
+/**
+ * Snapping happens to at max one view port item's worth distance.
+ */
 @Composable
 private fun ViewPortBasedSnappingDemo() {
     val lazyListState = rememberLazyListState()
@@ -164,7 +193,10 @@ private fun rememberNextItemSnappingLayoutInfoProvider(
         val basedSnappingLayoutInfoProvider =
             SnapLayoutInfoProvider(lazyListState = state, snapPosition = snapPosition)
         object : SnapLayoutInfoProvider by basedSnappingLayoutInfoProvider {
-            override fun calculateApproachOffset(velocity: Float, decayOffset: Float): Float = 0.0f
+            override fun calculateApproachOffset(
+                velocity: Float,
+                decayOffset: Float
+            ): Float = 0.0f
         }
     }
 }
@@ -182,9 +214,7 @@ private fun rememberViewPortSnappingLayoutInfoProvider(
                 val visibleItemsSum = state.layoutInfo.visibleItemsInfo.fastSumBy { it.size }
                 visibleItemsSum / state.layoutInfo.visibleItemsInfo.size.toFloat()
             }
-        ) {
-            state.layoutInfo.viewportSize.width.toFloat()
-        }
+        ) { state.layoutInfo.viewportSize.width.toFloat() }
     }
 }
 

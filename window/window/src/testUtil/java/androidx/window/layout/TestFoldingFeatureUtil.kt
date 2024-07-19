@@ -37,7 +37,9 @@ internal object TestFoldingFeatureUtil {
         return Rect(0, verticalMid, windowBounds.width(), verticalMid)
     }
 
-    /** @return [Rect] containing the invalid zero bounds. */
+    /**
+     * @return [Rect] containing the invalid zero bounds.
+     */
     fun invalidZeroBound(): Rect {
         return Rect()
     }
@@ -85,8 +87,9 @@ internal object TestFoldingFeatureUtil {
 
     /**
      * @param bounds for the test [FoldingFeature]
-     * @param type of the [FoldingFeature]
-     * @return [List] of [FoldingFeature] containing all the possible states for the given type.
+     * @param type   of the [FoldingFeature]
+     * @return [List] of [FoldingFeature] containing all the possible states for the
+     * given type.
      */
     @JvmStatic
     fun allFoldStates(bounds: Bounds, type: HardwareFoldingFeature.Type): List<FoldingFeature> {
@@ -98,10 +101,12 @@ internal object TestFoldingFeatureUtil {
 
     /**
      * @param bounds for the test [FoldingFeature]
-     * @return [List] of [FoldingFeature] containing all the possible states and types.
+     * @return [List] of [FoldingFeature] containing all the possible states and
+     * types.
      */
     @JvmStatic
     fun allFoldingFeatureTypeAndStates(bounds: Bounds): List<FoldingFeature> {
-        return allFoldStates(bounds, HINGE) + allFoldStates(bounds, FOLD)
+        return allFoldStates(bounds, HINGE) +
+            allFoldStates(bounds, FOLD)
     }
 }

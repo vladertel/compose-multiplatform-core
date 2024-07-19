@@ -25,7 +25,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 
-/** Receiver scope being used by the item content parameter of [LazyVerticalGrid]. */
+/**
+ * Receiver scope being used by the item content parameter of [LazyVerticalGrid].
+ */
 @Stable
 @LazyGridScopeMarker
 sealed interface LazyGridItemScope {
@@ -38,22 +40,22 @@ sealed interface LazyGridItemScope {
      *
      * @sample androidx.compose.foundation.samples.GridAnimateItemSample
      *
-     * @param fadeInSpec an animation specs to use for animating the item appearance. When null is
-     *   provided the item will be appearing without animations.
+     * @param fadeInSpec an animation specs to use for animating the item appearance.
+     * When null is provided the item will be appearing without animations.
      * @param placementSpec an animation specs that will be used to animate the item placement.
-     *   Aside from item reordering all other position changes caused by events like arrangement or
-     *   alignment changes will also be animated. When null is provided no animations will happen.
-     * @param fadeOutSpec an animation specs to use for animating the item disappearance. When null
-     *   is provided the item will be disappearance without animations.
+     * Aside from item reordering all other position changes caused by events like arrangement or
+     * alignment changes will also be animated. When null is provided no animations will happen.
+     * @param fadeOutSpec an animation specs to use for animating the item disappearance.
+     * When null is provided the item will be disappearance without animations.
      */
     fun Modifier.animateItem(
         fadeInSpec: FiniteAnimationSpec<Float>? = spring(stiffness = Spring.StiffnessMediumLow),
-        placementSpec: FiniteAnimationSpec<IntOffset>? =
-            spring(
-                stiffness = Spring.StiffnessMediumLow,
-                visibilityThreshold = IntOffset.VisibilityThreshold
-            ),
-        fadeOutSpec: FiniteAnimationSpec<Float>? = spring(stiffness = Spring.StiffnessMediumLow),
+        placementSpec: FiniteAnimationSpec<IntOffset>? = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = IntOffset.VisibilityThreshold
+        ),
+        fadeOutSpec: FiniteAnimationSpec<Float>? =
+            spring(stiffness = Spring.StiffnessMediumLow),
     ): Modifier
 
     /**
@@ -74,10 +76,13 @@ sealed interface LazyGridItemScope {
     )
     @ExperimentalFoundationApi
     fun Modifier.animateItemPlacement(
-        animationSpec: FiniteAnimationSpec<IntOffset> =
-            spring(
-                stiffness = Spring.StiffnessMediumLow,
-                visibilityThreshold = IntOffset.VisibilityThreshold
-            )
-    ): Modifier = animateItem(fadeInSpec = null, placementSpec = animationSpec, fadeOutSpec = null)
+        animationSpec: FiniteAnimationSpec<IntOffset> = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = IntOffset.VisibilityThreshold
+        )
+    ): Modifier = animateItem(
+        fadeInSpec = null,
+        placementSpec = animationSpec,
+        fadeOutSpec = null
+    )
 }

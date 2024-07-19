@@ -127,17 +127,27 @@ class PreferencesTest {
 
     @Test
     fun testStringSet() {
-        val stringSetKey = stringSetPreferencesKey("string_set_key")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set_key")
 
-        val prefs = preferencesOf(stringSetKey to setOf("string1", "string2", "string3"))
+        val prefs = preferencesOf(
+            stringSetKey to setOf(
+                "string1",
+                "string2",
+                "string3"
+            )
+        )
 
         assertTrue { prefs.contains(stringSetKey) }
-        assertEquals(setOf("string1", "string2", "string3"), prefs[stringSetKey])
+        assertEquals(
+            setOf("string1", "string2", "string3"), prefs[stringSetKey]
+        )
     }
 
     @Test
     fun testStringSetNotSet() {
-        val stringSetKey = stringSetPreferencesKey("string_set_key")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set_key")
 
         assertNull(emptyPreferences()[stringSetKey])
     }
@@ -187,9 +197,13 @@ class PreferencesTest {
     @Test
     fun testGetAll() {
         val intKey = intPreferencesKey("int_key")
-        val stringSetKey = stringSetPreferencesKey("string_set_key")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set_key")
 
-        val prefs = preferencesOf(intKey to 123, stringSetKey to setOf("1", "2", "3"))
+        val prefs = preferencesOf(
+            intKey to 123,
+            stringSetKey to setOf("1", "2", "3")
+        )
 
         val allPreferences: Map<Preferences.Key<*>, Any> = prefs.asMap()
         assertEquals(2, allPreferences.size)
@@ -266,7 +280,8 @@ class PreferencesTest {
 
     @Test
     fun testNotEqualsDifferentStringSets() {
-        val stringSetKey = stringSetPreferencesKey("string_set")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set")
 
         val prefs1 = preferencesOf(stringSetKey to setOf("1"))
         val prefs2 = preferencesOf(stringSetKey to setOf())
@@ -276,7 +291,8 @@ class PreferencesTest {
 
     @Test
     fun testEqualsByteArrayAndOther() {
-        val byteArrayKey = byteArrayPreferencesKey("byte_array")
+        val byteArrayKey =
+            byteArrayPreferencesKey("byte_array")
         val intKey = intPreferencesKey("int_key")
 
         val prefs1 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3), intKey to 1)
@@ -287,7 +303,8 @@ class PreferencesTest {
 
     @Test
     fun testNotEqualsByteArrayAndOther() {
-        val byteArrayKey = byteArrayPreferencesKey("byte_array")
+        val byteArrayKey =
+            byteArrayPreferencesKey("byte_array")
         val intKey = intPreferencesKey("int_key")
 
         val prefs1 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3), intKey to 1)
@@ -298,7 +315,8 @@ class PreferencesTest {
 
     @Test
     fun testEqualsSameByteArrays() {
-        val byteArrayKey = byteArrayPreferencesKey("byte_array")
+        val byteArrayKey =
+            byteArrayPreferencesKey("byte_array")
 
         val prefs1 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3))
         val prefs2 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3))
@@ -308,7 +326,8 @@ class PreferencesTest {
 
     @Test
     fun testNotEqualsDifferentByteArrays() {
-        val byteArrayKey = byteArrayPreferencesKey("byte_array")
+        val byteArrayKey =
+            byteArrayPreferencesKey("byte_array")
 
         val prefs1 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3))
         val prefs2 = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 4))
@@ -338,7 +357,8 @@ class PreferencesTest {
         assertEquals(1, prefs[intKey1])
         assertEquals(2, prefs[intKey2])
 
-        val mutablePreferences = preferencesOf(intKey1 to 1, intKey2 to 2)
+        val mutablePreferences =
+            preferencesOf(intKey1 to 1, intKey2 to 2)
         val mutableToPrefs = mutablePreferences.toPreferences()
         assertEquals(2, mutableToPrefs.asMap().size)
         assertEquals(1, prefs[intKey1])
@@ -355,7 +375,8 @@ class PreferencesTest {
         assertEquals(1, prefs[intKey1])
         assertEquals(2, prefs[intKey2])
 
-        val mutablePreferences = preferencesOf(intKey1 to 1, intKey2 to 2)
+        val mutablePreferences =
+            preferencesOf(intKey1 to 1, intKey2 to 2)
         val mutableToPrefs = mutablePreferences.toMutablePreferences()
         assertEquals(2, mutableToPrefs.asMap().size)
         assertEquals(1, prefs[intKey1])
@@ -366,12 +387,14 @@ class PreferencesTest {
     fun testToMutablePreferences_doesntMutateOriginal() {
         val intKey1 = intPreferencesKey("int_key1")
         val intKey2 = intPreferencesKey("int_key2")
-        val prefs = mutablePreferencesOf(intKey1 to 1, intKey2 to 2)
+        val prefs =
+            mutablePreferencesOf(intKey1 to 1, intKey2 to 2)
         val toPrefs = prefs.toMutablePreferences()
         toPrefs[intKey1] = 12903819
         assertEquals(1, prefs[intKey1])
 
-        val mutablePreferences = preferencesOf(intKey1 to 1, intKey2 to 2)
+        val mutablePreferences =
+            preferencesOf(intKey1 to 1, intKey2 to 2)
         val mutableToPrefs = mutablePreferences.toMutablePreferences()
         mutableToPrefs[intKey1] = 12903819
         assertEquals(1, prefs[intKey1])
@@ -383,20 +406,20 @@ class PreferencesTest {
         val booleanKey = booleanPreferencesKey("boolean_key")
         val floatKey = floatPreferencesKey("float_key")
         val stringKey = stringPreferencesKey("string_key")
-        val stringSetKey = stringSetPreferencesKey("string_set_key")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set_key")
         val longKey = longPreferencesKey("long_key")
         val byteArrayKey = byteArrayPreferencesKey("byte_array_key")
 
-        val prefs =
-            preferencesOf(
-                intKey to 123,
-                booleanKey to false,
-                floatKey to 3.14f,
-                stringKey to "abc",
-                stringSetKey to setOf("1", "2", "3"),
-                longKey to 10000000000L,
-                byteArrayKey to byteArrayOf(1, 2, 3, 4)
-            )
+        val prefs = preferencesOf(
+            intKey to 123,
+            booleanKey to false,
+            floatKey to 3.14f,
+            stringKey to "abc",
+            stringSetKey to setOf("1", "2", "3"),
+            longKey to 10000000000L,
+            byteArrayKey to byteArrayOf(1, 2, 3, 4)
+        )
 
         assertEquals(
             """
@@ -409,8 +432,7 @@ class PreferencesTest {
               long_key = 10000000000,
               byte_array_key = [1, 2, 3, 4]
             }
-            """
-                .trimIndent(),
+            """.trimIndent(),
             prefs.toString()
         )
     }

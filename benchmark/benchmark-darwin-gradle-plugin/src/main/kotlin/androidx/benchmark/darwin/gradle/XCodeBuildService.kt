@@ -29,7 +29,9 @@ interface XCodeBuildService : BuildService<BuildServiceParameters.None> {
     }
 }
 
-/** Register the [XCodeBuildService] as a shared gradle service. */
+/**
+ * Register the [XCodeBuildService] as a shared gradle service.
+ */
 fun Project.configureXCodeBuildService() {
     gradle.sharedServices.registerIfAbsent(
         XCodeBuildService.XCODE_BUILD_SERVICE_NAME,

@@ -26,5 +26,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DebugModule {
 
-    @Provides @Singleton fun someObject(): SomeObject = SomeObject("debug")
+    @Provides
+    @Singleton
+    fun someObject(): SomeObject = SomeObject("debug")
 }

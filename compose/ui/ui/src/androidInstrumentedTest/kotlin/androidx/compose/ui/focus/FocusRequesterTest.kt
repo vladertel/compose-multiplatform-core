@@ -43,7 +43,8 @@ import org.junit.runners.Parameterized
 @MediumTest
 @RunWith(Parameterized::class)
 class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun requestFocus_noFocusTargetInLayoutNode() {
@@ -52,8 +53,9 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onFocusChanged { focusState = it }.focusRequester(focusRequester)
+                modifier = Modifier
+                    .onFocusChanged { focusState = it }
+                    .focusRequester(focusRequester)
             )
         }
 
@@ -73,10 +75,10 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onFocusChanged { focusState = it }
-                        .focusTarget()
-                        .focusRequester(focusRequester)
+                modifier = Modifier
+                    .onFocusChanged { focusState = it }
+                    .focusTarget()
+                    .focusRequester(focusRequester)
             )
         }
 
@@ -96,10 +98,10 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onFocusChanged { focusState = it }
-                        .focusRequester(focusRequester)
-                        .focusTarget()
+                modifier = Modifier
+                    .onFocusChanged { focusState = it }
+                    .focusRequester(focusRequester)
+                    .focusTarget()
             )
         }
 
@@ -119,8 +121,9 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester).onFocusChanged { focusState = it }
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState = it }
             ) {
                 Box(modifier = Modifier.focusTarget())
             }
@@ -141,8 +144,14 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         lateinit var focusState: FocusState
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
-            Box(modifier = Modifier.onFocusChanged { focusState = it }) {
-                Box(modifier = Modifier.focusRequester(focusRequester).focusTarget())
+            Box(
+                modifier = Modifier.onFocusChanged { focusState = it }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .focusTarget()
+                )
             }
         }
 
@@ -161,8 +170,14 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         lateinit var focusState: FocusState
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
-            Box(modifier = Modifier.focusRequester(focusRequester)) {
-                Box(modifier = Modifier.onFocusChanged { focusState = it }.focusTarget())
+            Box(
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .onFocusChanged { focusState = it }
+                        .focusTarget()
+                )
             }
         }
 
@@ -182,10 +197,23 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.onFocusChanged { focusState = it }.focusRequester(focusRequester)
+                modifier = Modifier
+                    .onFocusChanged { focusState = it }
+                    .focusRequester(focusRequester)
             ) {
-                Box { Box { Box { Box { Box { Box(modifier = Modifier.focusTarget()) } } } } }
+                Box {
+                    Box {
+                        Box {
+                            Box {
+                                Box {
+                                    Box(
+                                        modifier = Modifier.focusTarget()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -205,9 +233,19 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         lateinit var focusState2: FocusState
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
-            Column(modifier = Modifier.focusRequester(focusRequester)) {
-                Box(modifier = Modifier.onFocusChanged { focusState1 = it }.focusTarget())
-                Box(modifier = Modifier.onFocusChanged { focusState2 = it }.focusTarget())
+            Column(
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .onFocusChanged { focusState1 = it }
+                        .focusTarget()
+                )
+                Box(
+                    modifier = Modifier
+                        .onFocusChanged { focusState2 = it }
+                        .focusTarget()
+                )
             }
         }
 
@@ -228,14 +266,16 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
             }
         }
@@ -257,16 +297,23 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Column(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
-                Box(modifier = Modifier.size(10.dp).focusRequester(initialFocus).focusTarget())
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusRequester(initialFocus)
+                        .focusTarget()
+                )
             }
         }
         rule.runOnIdle { initialFocus.requestFocus() }
@@ -287,16 +334,25 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
+            ) {
+                Box(
+                    modifier = Modifier
                         .focusProperties { canFocus = false }
                         .focusTarget()
-            ) {
-                Box(modifier = Modifier.focusProperties { canFocus = false }.focusTarget()) {
-                    Box(modifier = Modifier.focusProperties { canFocus = false }.focusTarget()) {
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .focusProperties { canFocus = false }
+                            .focusTarget()
+                    ) {
                         Box(
-                            modifier =
-                                Modifier.onFocusChanged { childFocusState = it }.focusTarget()
+                            modifier = Modifier
+                                .onFocusChanged { childFocusState = it }
+                                .focusTarget()
                         )
                     }
                 }
@@ -319,14 +375,16 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
             }
         }
@@ -347,20 +405,20 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusProperties {
-                            canFocus = false
-                            @OptIn(ExperimentalComposeUiApi::class)
-                            enter = {
-                                FocusRequester.Cancel
-                            }
-                        }
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties {
+                        canFocus = false
+                        @OptIn(ExperimentalComposeUiApi::class)
+                        enter = { FocusRequester.Cancel }
+                    }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
             }
         }
@@ -381,29 +439,33 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                modifier =
-                    Modifier.size(10.dp)
-                        .focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .size(10.dp)
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
                 Box(
-                    modifier =
-                        Modifier.size(10.dp)
-                            .focusProperties {
-                                canFocus = false
-                                @OptIn(ExperimentalComposeUiApi::class)
-                                enter = {
-                                    FocusRequester.Cancel
-                                }
-                            }
-                            .focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusProperties {
+                            canFocus = false
+                            @OptIn(ExperimentalComposeUiApi::class)
+                            enter = { FocusRequester.Cancel }
+                        }
+                        .focusTarget()
                 ) {
-                    Box(modifier = Modifier.size(10.dp).focusTarget())
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .focusTarget()
+                    )
                 }
             }
         }
@@ -424,21 +486,29 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Row(
-                modifier =
-                    Modifier.size(100.dp)
-                        .focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .size(100.dp)
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { childFocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget()
                 )
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).focusProperties { canFocus = false }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusProperties { canFocus = false }
+                        .focusTarget()
                 ) {
-                    Box(modifier = Modifier.size(10.dp).focusTarget())
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .focusTarget()
+                    )
                 }
             }
         }
@@ -459,24 +529,30 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Row(
-                modifier =
-                    Modifier.size(100.dp)
-                        .focusRequester(focusRequester)
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .size(100.dp)
+                    .focusRequester(focusRequester)
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).focusProperties { canFocus = false }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusProperties { canFocus = false }
+                        .focusTarget()
                 ) {
                     Box(
-                        modifier =
-                            Modifier.size(10.dp)
-                                .onFocusChanged { childFocusState = it }
-                                .focusTarget()
+                        modifier = Modifier
+                            .size(10.dp)
+                            .onFocusChanged { childFocusState = it }
+                            .focusTarget()
                     )
                 }
-                Box(modifier = Modifier.size(10.dp).focusTarget())
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusTarget()
+                )
             }
         }
 
@@ -499,22 +575,24 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val child2 = FocusRequester()
         rule.setFocusableContent {
             Column(
-                modifier =
-                    Modifier.focusRequester(focusRequester)
-                        .focusProperties { enter = { child2 } }
-                        .focusProperties { canFocus = false }
-                        .focusTarget()
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusProperties { enter = { child2 } }
+                    .focusProperties { canFocus = false }
+                    .focusTarget()
             ) {
                 Box(
-                    modifier =
-                        Modifier.size(10.dp).onFocusChanged { child1FocusState = it }.focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .onFocusChanged { child1FocusState = it }
+                        .focusTarget()
                 )
                 Box(
-                    modifier =
-                        Modifier.size(10.dp)
-                            .focusRequester(child2)
-                            .onFocusChanged { child2FocusState = it }
-                            .focusTarget()
+                    modifier = Modifier
+                        .size(10.dp)
+                        .focusRequester(child2)
+                        .onFocusChanged { child2FocusState = it }
+                        .focusTarget()
                 )
             }
         }
@@ -539,15 +617,27 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val focusRequester = FocusRequester()
         var showBox1 by mutableStateOf(false)
         rule.setFocusableContent {
-            Column(modifier = Modifier.focusRequester(focusRequester)) {
+            Column(
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
                 if (showBox1) {
-                    Box(modifier = Modifier.onFocusChanged { focusState1 = it }.focusTarget())
+                    Box(
+                        modifier = Modifier
+                            .onFocusChanged { focusState1 = it }
+                            .focusTarget()
+                    )
                 }
-                Box(modifier = Modifier.onFocusChanged { focusState2 = it }.focusTarget())
+                Box(
+                    modifier = Modifier
+                        .onFocusChanged { focusState2 = it }
+                        .focusTarget()
+                )
             }
         }
 
-        rule.runOnIdle { showBox1 = true }
+        rule.runOnIdle {
+            showBox1 = true
+        }
 
         rule.runOnIdle {
             // Act.
@@ -566,9 +656,21 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         lateinit var focusState2: FocusState
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
-            Column(modifier = Modifier.focusRequester(focusRequester)) {
-                Box { Box(modifier = Modifier.onFocusChanged { focusState1 = it }.focusTarget()) }
-                Box(modifier = Modifier.onFocusChanged { focusState2 = it }.focusTarget())
+            Column(
+                modifier = Modifier.focusRequester(focusRequester)
+            ) {
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .onFocusChanged { focusState1 = it }
+                            .focusTarget()
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .onFocusChanged { focusState2 = it }
+                        .focusTarget()
+                )
             }
         }
 
@@ -590,9 +692,19 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         val (focusRequester1, focusRequester2) = FocusRequester.createRefs()
         rule.setFocusableContent {
             hostView = LocalView.current
-            Column(modifier = Modifier.onFocusChanged { focusState = it }) {
-                Box(modifier = Modifier.focusRequester(focusRequester1).focusTarget())
-                Box(modifier = Modifier.focusRequester(focusRequester2).focusTarget())
+            Column(
+                modifier = Modifier.onFocusChanged { focusState = it }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester1)
+                        .focusTarget()
+                )
+                Box(
+                    modifier = Modifier
+                        .focusRequester(focusRequester2)
+                        .focusTarget()
+                )
             }
         }
 
@@ -627,12 +739,10 @@ class FocusRequesterTest(private val modifierNodeVersion: Boolean) {
         return if (modifierNodeVersion) {
             this.modifierNodeFocusRequester(focusRequester)
         } else {
-            composed(
-                debugInspectorInfo {
-                    name = "focusRequester"
-                    properties["focusRequester"] = focusRequester
-                }
-            ) {
+            composed(debugInspectorInfo {
+                name = "focusRequester"
+                properties["focusRequester"] = focusRequester
+            }) {
                 remember(focusRequester) {
                     object : @Suppress("DEPRECATION") FocusRequesterModifier {
                         override val focusRequester: FocusRequester

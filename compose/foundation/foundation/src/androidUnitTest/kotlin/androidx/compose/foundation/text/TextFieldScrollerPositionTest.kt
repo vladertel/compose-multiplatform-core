@@ -22,8 +22,10 @@ import org.junit.Test
 
 class TextFieldScrollerPositionTest {
 
-    private val scrollerPosition =
-        TextFieldScrollerPosition(initial = 15f, initialOrientation = Orientation.Vertical)
+    private val scrollerPosition = TextFieldScrollerPosition(
+        initial = 15f,
+        initialOrientation = Orientation.Vertical
+    )
     private val ContainerSize = 20
 
     // container is smaller than cursor

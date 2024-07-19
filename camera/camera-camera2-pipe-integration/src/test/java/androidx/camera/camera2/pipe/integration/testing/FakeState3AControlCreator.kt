@@ -16,6 +16,7 @@
 
 package androidx.camera.camera2.pipe.integration.testing
 
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.compat.StreamConfigurationMapCompat
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
 import androidx.camera.camera2.pipe.integration.compat.workaround.AeFpsRange
@@ -26,26 +27,27 @@ import androidx.camera.camera2.pipe.integration.impl.State3AControl
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
 import org.robolectric.shadows.StreamConfigurationMapBuilder
 
+@RequiresApi(21)
 object FakeState3AControlCreator {
     fun createState3AControl(
         properties: CameraProperties = FakeCameraProperties(),
         useCaseCamera: UseCaseCamera = FakeUseCaseCamera(),
-    ) =
-        State3AControl(
-                properties,
-                NoOpAutoFlashAEModeDisabler,
-                AeFpsRange(
-                    CameraQuirks(
+    ) = State3AControl(
+        properties,
+        NoOpAutoFlashAEModeDisabler,
+        AeFpsRange(
+            CameraQuirks(
+                properties.metadata,
+                StreamConfigurationMapCompat(
+                    StreamConfigurationMapBuilder.newBuilder().build(),
+                    OutputSizesCorrector(
                         properties.metadata,
-                        StreamConfigurationMapCompat(
-                            StreamConfigurationMapBuilder.newBuilder().build(),
-                            OutputSizesCorrector(
-                                properties.metadata,
-                                StreamConfigurationMapBuilder.newBuilder().build()
-                            )
-                        )
+                        StreamConfigurationMapBuilder.newBuilder().build()
                     )
-                ),
+                )
             )
-            .apply { this.useCaseCamera = useCaseCamera }
+        )
+    ).apply {
+        this.useCaseCamera = useCaseCamera
+    }
 }

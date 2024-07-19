@@ -18,6 +18,7 @@ package androidx.camera.video.internal.audio;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import com.google.auto.value.AutoValue;
 
@@ -25,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 
 /** Represents an audio stream. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface AudioStream {
 
     /**

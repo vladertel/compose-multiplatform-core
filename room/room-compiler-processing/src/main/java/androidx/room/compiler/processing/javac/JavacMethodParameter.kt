@@ -41,11 +41,12 @@ internal class JavacMethodParameter(
             enclosingElement.parameters.first() == this
 
     override fun isVarArgs() =
-        kotlinMetadata?.isVarArgs()
-            ?: (enclosingElement.isVarArgs() && enclosingElement.parameters.last() == this)
+        kotlinMetadata?.isVarArgs() ?: (enclosingElement.isVarArgs() &&
+            enclosingElement.parameters.last() == this)
 
     override fun isKotlinPropertyParam() =
-        enclosingElement is JavacMethodElement && enclosingElement.isKotlinPropertyMethod()
+        enclosingElement is JavacMethodElement &&
+            enclosingElement.isKotlinPropertyMethod()
 
     override val kotlinMetadata by lazy { kotlinMetadataFactory() }
 
@@ -66,7 +67,9 @@ internal class JavacMethodParameter(
         }
     }
 
-    override val jvmName: String by lazy { name.sanitizeAsJavaParameterName(argIndex) }
+    override val jvmName: String by lazy {
+        name.sanitizeAsJavaParameterName(argIndex)
+    }
 
     override val kotlinType: KmTypeContainer?
         get() = kotlinMetadata?.type
@@ -75,16 +78,15 @@ internal class JavacMethodParameter(
         get() = kotlinMetadata?.hasDefault() ?: false
 
     override val fallbackLocationText: String
-        get() =
-            if (
-                enclosingElement is JavacMethodElement &&
-                    enclosingElement.isSuspendFunction() &&
-                    this === enclosingElement.parameters.last()
-            ) {
-                "return type of ${enclosingElement.fallbackLocationText}"
-            } else {
-                "$name in ${enclosingElement.fallbackLocationText}"
-            }
+        get() = if (
+            enclosingElement is JavacMethodElement &&
+            enclosingElement.isSuspendFunction() &&
+            this === enclosingElement.parameters.last()
+        ) {
+            "return type of ${enclosingElement.fallbackLocationText}"
+        } else {
+            "$name in ${enclosingElement.fallbackLocationText}"
+        }
 
     override val closestMemberContainer: XMemberContainer by lazy {
         enclosingElement.enclosingElement

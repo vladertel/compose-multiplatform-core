@@ -72,7 +72,9 @@ class RecyclerViewIntegrationTest {
         assertItemIsDrawnWithCorrectSize(0)
         assertItemIsDrawnWithCorrectSize(1)
 
-        activityScenario.onActivity { it.scrollBy(ScrollAmountToHideTwoItems) }
+        activityScenario.onActivity {
+            it.scrollBy(ScrollAmountToHideTwoItems)
+        }
 
         assertItemIsDrawnWithCorrectSize(2)
         assertItemIsDrawnWithCorrectSize(3)
@@ -82,7 +84,9 @@ class RecyclerViewIntegrationTest {
         drawnSizes[0] = null
         drawnSizes[1] = null
 
-        activityScenario.onActivity { it.scrollBy(-ScrollAmountToHideTwoItems) }
+        activityScenario.onActivity {
+            it.scrollBy(-ScrollAmountToHideTwoItems)
+        }
 
         assertItemIsDrawnWithCorrectSize(1)
         assertItemIsDrawnWithCorrectSize(0)
@@ -98,7 +102,9 @@ class RecyclerViewIntegrationTest {
     private fun Modifier.fixedPxSize(height: Int) = layout { measurable, _ ->
         val constraints = Constraints.fixed(100, height)
         val placeable = measurable.measure(constraints)
-        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+        layout(placeable.width, placeable.height) {
+            placeable.place(0, 0)
+        }
     }
 }
 
@@ -124,13 +130,17 @@ class RecyclerViewActivity : TestActivity() {
 
 private class VH(context: Context) : RecyclerView.ViewHolder(ComposeView(context))
 
-private class ComposeAdapter(val count: Int, val itemContent: @Composable (Int) -> Unit) :
-    RecyclerView.Adapter<VH>() {
+private class ComposeAdapter(
+    val count: Int,
+    val itemContent: @Composable (Int) -> Unit
+) : RecyclerView.Adapter<VH>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(parent.context)
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        (holder.itemView as ComposeView).setContent { itemContent(position) }
+        (holder.itemView as ComposeView).setContent {
+            itemContent(position)
+        }
     }
 
     override fun getItemCount() = count

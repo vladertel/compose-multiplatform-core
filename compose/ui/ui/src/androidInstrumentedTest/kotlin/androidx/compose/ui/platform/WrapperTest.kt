@@ -40,8 +40,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@Composable
-private fun Wrapper(body: @Composable () -> Unit) {
+@Composable private fun Wrapper(body: @Composable () -> Unit) {
     body()
 }
 
@@ -76,7 +75,7 @@ class WrapperTest {
                     }
                     DisposableEffect(Unit) {
                         scope.invalidate()
-                        onDispose {}
+                        onDispose { }
                     }
                 }
             }
@@ -97,7 +96,11 @@ class WrapperTest {
             it.setContentView(view)
             view.setViewTreeLifecycleOwner(owner)
             view.setContent {
-                DisposableEffect(Unit) { onDispose { disposeLatch.countDown() } }
+                DisposableEffect(Unit) {
+                    onDispose {
+                        disposeLatch.countDown()
+                    }
+                }
                 composedLatch.countDown()
             }
         }
@@ -124,10 +127,14 @@ class WrapperTest {
                 // the default recomposer factory will install itself at the content view
                 // and use the available ViewTreeLifecycleOwner there. The added layer of
                 // nesting here isolates *only* the ComposeView's lifecycle observation.
-                FrameLayout(it).apply { addView(view) }
+                FrameLayout(it).apply {
+                    addView(view)
+                }
             )
             view.setViewTreeLifecycleOwner(owner)
-            view.setContent { composedLatch.countDown() }
+            view.setContent {
+                composedLatch.countDown()
+            }
         }
 
         assertTrue(composedLatch.await(1, TimeUnit.SECONDS))

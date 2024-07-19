@@ -16,8 +16,12 @@
 
 package androidx.compose.ui.hapticfeedback
 
-/** Interface for haptic feedback. */
+/**
+ * Interface for haptic feedback.
+ */
 interface HapticFeedback {
-    /** Provide haptic feedback to the user. */
+    /**
+     * Provide haptic feedback to the user.
+     */
     fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType)
 }

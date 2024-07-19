@@ -35,7 +35,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Tests if [cancel] works */
+/**
+ * Tests if [cancel] works
+ */
 @MediumTest
 class SendCancelTest {
     companion object {
@@ -43,14 +45,17 @@ class SendCancelTest {
         private val downPosition2 = Offset(20f, 20f)
     }
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val recorder = MultiPointerInputRecorder()
 
     @Before
     fun setUp() {
         // Given some content
-        rule.setContent { ClickableTestBox(recorder) }
+        rule.setContent {
+            ClickableTestBox(recorder)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -95,7 +100,9 @@ class SendCancelTest {
     @Suppress("DEPRECATION")
     @Test
     fun cancelWithoutDown() {
-        expectError<IllegalStateException> { rule.partialGesture { cancel() } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { cancel() }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -103,7 +110,9 @@ class SendCancelTest {
     fun cancelAfterUp() {
         rule.partialGesture { down(downPosition1) }
         rule.partialGesture { up() }
-        expectError<IllegalStateException> { rule.partialGesture { cancel() } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { cancel() }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -111,6 +120,8 @@ class SendCancelTest {
     fun cancelAfterCancel() {
         rule.partialGesture { down(downPosition1) }
         rule.partialGesture { cancel() }
-        expectError<IllegalStateException> { rule.partialGesture { cancel() } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { cancel() }
+        }
     }
 }

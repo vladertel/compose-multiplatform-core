@@ -25,15 +25,14 @@ class UseCompatDetectorTest {
 
     @Test
     fun checkCompatSubstitutionsOnActivity() {
-        val input =
-            arrayOf(
-                javaSample("com.example.android.appcompat.AppCompatLintDemo"),
-                javaSample("com.example.android.appcompat.AppCompatLintDemoExt"),
-                javaSample("com.example.android.appcompat.CoreActivityExt")
-            )
+        val input = arrayOf(
+            javaSample("com.example.android.appcompat.AppCompatLintDemo"),
+            javaSample("com.example.android.appcompat.AppCompatLintDemoExt"),
+            javaSample("com.example.android.appcompat.CoreActivityExt")
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/com/example/android/appcompat/AppCompatLintDemo.java:68: Warning: Use SwitchCompat from AppCompat or MaterialSwitch from Material library [UseSwitchCompatOrMaterialCode]
         Switch mySwitch = new Switch(this);
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -44,24 +43,26 @@ src/com/example/android/appcompat/AppCompatLintDemo.java:64: Warning: Use TextVi
             noop.setCompoundDrawableTintMode(PorterDuff.Mode.DST);
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 3 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
 
     @Test
     fun checkCompatSubstitutionsOnWidget() {
-        val input = arrayOf(javaSample("com.example.android.appcompat.CustomSwitch"))
+        val input = arrayOf(
+            javaSample("com.example.android.appcompat.CustomSwitch")
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/com/example/android/appcompat/CustomSwitch.java:27: Warning: Use SwitchCompat from AppCompat or MaterialSwitch from Material library [UseSwitchCompatOrMaterialCode]
 public class CustomSwitch extends Switch {
                                   ~~~~~~
 0 errors, 1 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }

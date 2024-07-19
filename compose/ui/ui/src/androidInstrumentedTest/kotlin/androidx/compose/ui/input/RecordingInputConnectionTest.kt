@@ -59,12 +59,11 @@ class RecordingInputConnectionTest {
     @Before
     fun setup() {
         mCallback = mock()
-        ic =
-            RecordingInputConnection(
-                initState = TextFieldValue("", TextRange.Zero),
-                eventCallback = mCallback,
-                autoCorrect = true
-            )
+        ic = RecordingInputConnection(
+            initState = TextFieldValue("", TextRange.Zero),
+            eventCallback = mCallback,
+            autoCorrect = true
+        )
     }
 
     @Test
@@ -73,19 +72,28 @@ class RecordingInputConnectionTest {
         assertThat(ic.getTextAfterCursor(100, 0)).isEqualTo("")
 
         // Set "Hello, World", and place the cursor at the beginning of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange.Zero)
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange.Zero
+        )
 
         assertThat(ic.getTextBeforeCursor(100, 0)).isEqualTo("")
         assertThat(ic.getTextAfterCursor(100, 0)).isEqualTo("Hello, World")
 
         // Set "Hello, World", and place the cursor between "H" and "e".
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(1))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(1)
+        )
 
         assertThat(ic.getTextBeforeCursor(100, 0)).isEqualTo("H")
         assertThat(ic.getTextAfterCursor(100, 0)).isEqualTo("ello, World")
 
         // Set "Hello, World", and place the cursor at the end of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(12))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(12)
+        )
 
         assertThat(ic.getTextBeforeCursor(100, 0)).isEqualTo("Hello, World")
         assertThat(ic.getTextAfterCursor(100, 0)).isEqualTo("")
@@ -94,19 +102,28 @@ class RecordingInputConnectionTest {
     @Test
     fun getTextBeforeAndAfterCursorTest_maxCharTest() {
         // Set "Hello, World", and place the cursor at the beginning of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange.Zero)
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange.Zero
+        )
 
         assertThat(ic.getTextBeforeCursor(5, 0)).isEqualTo("")
         assertThat(ic.getTextAfterCursor(5, 0)).isEqualTo("Hello")
 
         // Set "Hello, World", and place the cursor between "H" and "e".
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(1))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(1)
+        )
 
         assertThat(ic.getTextBeforeCursor(5, 0)).isEqualTo("H")
         assertThat(ic.getTextAfterCursor(5, 0)).isEqualTo("ello,")
 
         // Set "Hello, World", and place the cursor at the end of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(12))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(12)
+        )
 
         assertThat(ic.getTextBeforeCursor(5, 0)).isEqualTo("World")
         assertThat(ic.getTextAfterCursor(5, 0)).isEqualTo("")
@@ -115,17 +132,26 @@ class RecordingInputConnectionTest {
     @Test
     fun getSelectedTextTest() {
         // Set "Hello, World", and place the cursor at the beginning of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange.Zero)
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange.Zero
+        )
 
         assertThat(ic.getSelectedText(0)).isNull()
 
         // Set "Hello, World", and place the cursor between "H" and "e".
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(0, 1))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(0, 1)
+        )
 
         assertThat(ic.getSelectedText(0)).isEqualTo("H")
 
         // Set "Hello, World", and place the cursor at the end of the text.
-        ic.mTextFieldValue = TextFieldValue(text = "Hello, World", selection = TextRange(0, 12))
+        ic.mTextFieldValue = TextFieldValue(
+            text = "Hello, World",
+            selection = TextRange(0, 12)
+        )
 
         assertThat(ic.getSelectedText(0)).isEqualTo("Hello, World")
     }
@@ -579,12 +605,11 @@ class RecordingInputConnectionTest {
 
     @Test
     fun commitCorrection_returns_true_when_autoCorrect_is_on() {
-        val inputConnection =
-            RecordingInputConnection(
-                initState = TextFieldValue(),
-                eventCallback = mCallback,
-                autoCorrect = true
-            )
+        val inputConnection = RecordingInputConnection(
+            initState = TextFieldValue(),
+            eventCallback = mCallback,
+            autoCorrect = true
+        )
         val anyCorrectionInfo = CorrectionInfo(0, "", "")
 
         assertThat(inputConnection.commitCorrection(anyCorrectionInfo)).isTrue()
@@ -592,12 +617,11 @@ class RecordingInputConnectionTest {
 
     @Test
     fun commitCorrection_returns_false_when_autoCorrect_is_off() {
-        val inputConnection =
-            RecordingInputConnection(
-                initState = TextFieldValue(),
-                eventCallback = mCallback,
-                autoCorrect = false
-            )
+        val inputConnection = RecordingInputConnection(
+            initState = TextFieldValue(),
+            eventCallback = mCallback,
+            autoCorrect = false
+        )
         val anyCorrectionInfo = CorrectionInfo(0, "", "")
 
         assertThat(inputConnection.commitCorrection(anyCorrectionInfo)).isFalse()

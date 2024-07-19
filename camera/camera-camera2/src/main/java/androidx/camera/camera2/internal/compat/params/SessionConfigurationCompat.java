@@ -44,6 +44,7 @@ import java.util.concurrent.Executor;
  * Helper for accessing features in SessionConfiguration in a backwards compatible fashion.
  */
 @SuppressWarnings("unused")
+@RequiresApi(21)
 public final class SessionConfigurationCompat {
 
     /**
@@ -301,6 +302,7 @@ public final class SessionConfigurationCompat {
         Object getSessionConfiguration();
     }
 
+    @RequiresApi(21)
     private static final class SessionConfigurationCompatBaseImpl implements
             SessionConfigurationCompatImpl {
 

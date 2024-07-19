@@ -25,8 +25,12 @@ internal class CircularyArrayAddFromHeadAndPopFromTailBenchmark(
             array.addFirst(e)
         }
 
-        repeat(seed.size) { array.popLast() }
+        repeat(seed.size) {
+            array.popLast()
+        }
     }
 }
 
-internal fun createSeed(size: Int): List<String> = List(size) { "element $it" }
+internal fun createSeed(size: Int): List<String> = List(size) {
+    "element $it"
+}

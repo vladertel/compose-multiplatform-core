@@ -25,7 +25,10 @@ import androidx.annotation.GuardedBy
 import androidx.annotation.RestrictTo
 import androidx.health.services.client.impl.ipc.internal.ConnectionManager
 
-/** Utility to return an instance of connection manager. */
+/**
+ * Utility to return an instance of connection manager.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public object HsConnectionManager {
 

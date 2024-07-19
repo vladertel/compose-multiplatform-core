@@ -1,3 +1,5 @@
+// ktlint-disable filename
+
 /*
  * Copyright 2021 The Android Open Source Project
  *
@@ -20,19 +22,14 @@ import kotlinx.coroutines.CancellationException
 
 internal expect class AtomicReference<V>(value: V) {
     fun get(): V
-
     fun set(value: V)
-
     fun getAndSet(value: V): V
-
     fun compareAndSet(expect: V, newValue: V): Boolean
 }
 
 internal expect class AtomicLong(value: Long) {
     fun get(): Long
-
     fun set(value: Long)
-
     fun getAndIncrement(): Long
 }
 

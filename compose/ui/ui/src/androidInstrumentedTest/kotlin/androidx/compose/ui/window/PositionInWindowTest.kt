@@ -64,7 +64,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PositionInWindowTest {
 
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     lateinit var activity: ComponentActivity
 
@@ -121,10 +122,12 @@ class PositionInWindowTest {
         rule.setContent {
             with(LocalDensity.current) {
                 Box(
-                    Modifier.requiredSize(10.toDp()).onGloballyPositioned {
-                        coordinates = it
-                        latch.countDown()
-                    }
+                    Modifier
+                        .requiredSize(10.toDp())
+                        .onGloballyPositioned {
+                            coordinates = it
+                            latch.countDown()
+                        }
                 )
             }
         }
@@ -188,7 +191,8 @@ class PositionInWindowTest {
             curScrollYField.isAccessible = true
             curScrollYField.set(viewRootImpl, -10)
 
-            @Suppress("BanThreadSleep") Thread.sleep(1) // advance clock so cached value isn't used
+            @Suppress("BanThreadSleep")
+            Thread.sleep(1) // advance clock so cached value isn't used
             val newPosition = coordinates!!.positionInWindow()
             assertThat(newPosition.y).isEqualTo(position.y + 10)
         }
@@ -211,7 +215,9 @@ class PositionInWindowTest {
         }
 
         var position = Offset.Zero
-        rule.runOnIdle { position = coordinates!!.positionInWindow() }
+        rule.runOnIdle {
+            position = coordinates!!.positionInWindow()
+        }
 
         rule.runOnIdle {
             val decorView = activity.window.decorView as ViewGroup
@@ -254,10 +260,13 @@ class PositionInWindowTest {
             }
         }
 
-        rule.onNodeWithTag(smallBoxTag).performTouchInput {
-            swipe(Offset.Zero, Offset(endOffsetPx, endOffsetPx))
-        }
+        rule.onNodeWithTag(smallBoxTag)
+            .performTouchInput {
+                swipe(Offset.Zero, Offset(endOffsetPx, endOffsetPx))
+            }
 
-        rule.runOnIdle { assertThat(offset).isEqualTo(Offset(endOffsetPx, endOffsetPx)) }
+        rule.runOnIdle {
+            assertThat(offset).isEqualTo(Offset(endOffsetPx, endOffsetPx))
+        }
     }
 }

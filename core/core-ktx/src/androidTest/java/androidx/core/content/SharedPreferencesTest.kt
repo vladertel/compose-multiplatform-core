@@ -25,8 +25,7 @@ import org.junit.Test
 class SharedPreferencesTest {
     private val context = ApplicationProvider.getApplicationContext() as android.content.Context
 
-    @Test
-    fun editApply() {
+    @Test fun editApply() {
         val preferences = context.getSharedPreferences("prefs", 0)
 
         preferences.edit {
@@ -38,8 +37,7 @@ class SharedPreferencesTest {
         assertEquals(100, preferences.getInt("test_key2", 0))
     }
 
-    @Test
-    fun editCommit() {
+    @Test fun editCommit() {
         val preferences = context.getSharedPreferences("prefs", 0)
         preferences.edit(commit = true) {
             putString("test_key1", "test_value")

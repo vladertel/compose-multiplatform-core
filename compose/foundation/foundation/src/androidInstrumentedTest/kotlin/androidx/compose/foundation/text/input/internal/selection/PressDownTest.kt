@@ -51,11 +51,13 @@ private const val TargetTag = "TargetLayout"
 @RunWith(JUnit4::class)
 class PressDownTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     /**
-     * null; gesture detector has never seen a down event. true; at least a pointer is currently
-     * down. false; there was at least one down event but right now all pointers are up. Also, this
+     * null; gesture detector has never seen a down event.
+     * true; at least a pointer is currently down.
+     * false; there was at least one down event but right now all pointers are up. Also, this
      * requires onUp to be defined.
      */
     private var down: Boolean? = null
@@ -65,7 +67,10 @@ class PressDownTest {
     }
 
     private val downUpDetector = layoutWithGestureDetector {
-        detectPressDownGesture(onDown = { down = true }, onUp = { down = false })
+        detectPressDownGesture(
+            onDown = { down = true },
+            onUp = { down = false }
+        )
     }
 
     private val nothingHandler: PointerInputChange.() -> Unit = {}
@@ -83,12 +88,14 @@ class PressDownTest {
     ): @Composable () -> Unit = {
         CompositionLocalProvider(
             LocalDensity provides Density(1f),
-            LocalViewConfiguration provides
-                TestViewConfiguration(minimumTouchTargetSize = DpSize.Zero)
+            LocalViewConfiguration provides TestViewConfiguration(
+                minimumTouchTargetSize = DpSize.Zero
+            )
         ) {
             with(LocalDensity.current) {
                 Box(
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         // Some tests execute a lambda before the initial and final passes
                         // so they are called here, higher up the chain, so that the
                         // calls happen prior to the gestureDetector below. The lambdas
@@ -98,9 +105,13 @@ class PressDownTest {
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    event.changes.forEach { initialPass(it) }
+                                    event.changes.forEach {
+                                        initialPass(it)
+                                    }
                                     awaitPointerEvent(PointerEventPass.Final)
-                                    event.changes.forEach { finalPass(it) }
+                                    event.changes.forEach {
+                                        finalPass(it)
+                                    }
                                 }
                             }
                         }
@@ -130,13 +141,17 @@ class PressDownTest {
     fun normalDown() {
         rule.setContent(downUpDetector)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { down(0, Offset(5f, 5f)) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            down(0, Offset(5f, 5f))
+        }
 
         Assert.assertTrue(down!!)
 
         rule.mainClock.advanceTimeBy(50)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { up(0) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            up(0)
+        }
 
         Assert.assertFalse(down!!)
     }
@@ -145,11 +160,15 @@ class PressDownTest {
     fun normalDown_upNotSpecified() {
         rule.setContent(downDetector)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { down(0, Offset(5f, 5f)) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            down(0, Offset(5f, 5f))
+        }
 
         rule.mainClock.advanceTimeBy(50)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { up(0) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            up(0)
+        }
 
         Assert.assertTrue(down!!)
     }
@@ -173,7 +192,9 @@ class PressDownTest {
     fun downLongPress() {
         rule.setContent(downUpDetector)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { down(0, Offset(5f, 5f)) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            down(0, Offset(5f, 5f))
+        }
 
         Assert.assertTrue(down!!)
 
@@ -183,7 +204,9 @@ class PressDownTest {
 
         rule.mainClock.advanceTimeBy(500)
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { up(0) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            up(0)
+        }
 
         Assert.assertFalse(down!!)
     }
@@ -197,7 +220,9 @@ class PressDownTest {
             moveTo(0, Offset(15f, 15f))
         }
 
-        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) { up(0) }
+        performTouch(finalPass = { Assert.assertFalse(isConsumed) }) {
+            up(0)
+        }
 
         Assert.assertFalse(down!!)
     }

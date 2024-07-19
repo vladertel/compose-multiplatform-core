@@ -20,8 +20,14 @@ import org.gradle.api.Project
 
 internal class Dependencies(private val project: Project) {
 
-    private val defaultConfigurationsToCopy =
-        listOf("implementation", "api", "kapt", "annotationProcessor", "compile", "compileOnly")
+    private val defaultConfigurationsToCopy = listOf(
+        "implementation",
+        "api",
+        "kapt",
+        "annotationProcessor",
+        "compile",
+        "compileOnly"
+    )
 
     fun copy(
         fromPrefix: String,
@@ -29,15 +35,20 @@ internal class Dependencies(private val project: Project) {
         configurationsToCopy: List<String> = defaultConfigurationsToCopy
     ) {
         configurationsToCopy.forEach { configurationName ->
+
             val fromVariantConfigurationName = camelCase(fromPrefix, configurationName)
-            val fromVariantDependencies =
-                project.configurations.findByName(fromVariantConfigurationName)?.dependencies
-                    ?: return@forEach
+            val fromVariantDependencies = project
+                .configurations
+                .findByName(fromVariantConfigurationName)
+                ?.dependencies
+                ?: return@forEach
 
             val toVariantConfigurationName = camelCase(toPrefix, configurationName)
-            val toVariantDependencies =
-                project.configurations.findByName(toVariantConfigurationName)?.dependencies
-                    ?: return@forEach
+            val toVariantDependencies = project
+                .configurations
+                .findByName(toVariantConfigurationName)
+                ?.dependencies
+                ?: return@forEach
 
             toVariantDependencies.addAll(fromVariantDependencies)
         }

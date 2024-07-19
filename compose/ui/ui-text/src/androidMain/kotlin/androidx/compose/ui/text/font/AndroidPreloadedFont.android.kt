@@ -29,19 +29,16 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.util.fastMap
 import java.io.File
 
-internal sealed class AndroidPreloadedFont
-constructor(
+internal sealed class AndroidPreloadedFont constructor(
     final override val weight: FontWeight,
     final override val style: FontStyle,
     variationSettings: FontVariation.Settings
-) :
-    AndroidFont(
-        FontLoadingStrategy.Blocking,
-        AndroidPreloadedFontTypefaceLoader,
-        variationSettings
-    ) {
+) : AndroidFont(
+    FontLoadingStrategy.Blocking,
+    AndroidPreloadedFontTypefaceLoader,
+    variationSettings
+) {
     abstract val cacheKey: String?
-
     internal abstract fun doLoad(context: Context?): Typeface?
 
     private var didInitWithContext: Boolean = false
@@ -67,8 +64,7 @@ private object AndroidPreloadedFontTypefaceLoader : AndroidFont.TypefaceLoader {
 }
 
 @OptIn(ExperimentalTextApi::class) /* FontVariation.Settings */
-internal class AndroidAssetFont
-constructor(
+internal class AndroidAssetFont constructor(
     val assetManager: AssetManager,
     val path: String,
     weight: FontWeight = FontWeight.Normal,
@@ -112,8 +108,7 @@ constructor(
 }
 
 @OptIn(ExperimentalTextApi::class)
-internal class AndroidFileFont
-constructor(
+internal class AndroidFileFont constructor(
     val file: File,
     weight: FontWeight = FontWeight.Normal,
     style: FontStyle = FontStyle.Normal,
@@ -133,7 +128,6 @@ constructor(
     }
 
     override val cacheKey: String? = null
-
     override fun toString(): String {
         return "Font(file=$file, weight=$weight, style=$style)"
     }
@@ -141,8 +135,7 @@ constructor(
 
 @RequiresApi(26)
 @OptIn(ExperimentalTextApi::class)
-internal class AndroidFileDescriptorFont
-constructor(
+internal class AndroidFileDescriptorFont constructor(
     val fileDescriptor: ParcelFileDescriptor,
     weight: FontWeight = FontWeight.Normal,
     style: FontStyle = FontStyle.Normal,
@@ -166,7 +159,6 @@ constructor(
     }
 
     override val cacheKey: String? = null
-
     override fun toString(): String {
         return "Font(fileDescriptor=$fileDescriptor, weight=$weight, style=$style)"
     }
@@ -225,20 +217,17 @@ private object TypefaceBuilderCompat {
     private fun FontVariation.Settings.toVariationSettings(
         context: Context?
     ): Array<FontVariationAxis> {
-        val density =
-            if (context != null) {
-                Density(context)
-            } else if (!needsDensity) {
-                // we don't need density, so make a fake one and be on with it
-                Density(1f, 1f)
-            } else {
-                // cannot reach
-                throw IllegalStateException("Required density, but not provided")
-            }
-        return settings
-            .fastMap { setting ->
-                FontVariationAxis(setting.axisName, setting.toVariationValue(density))
-            }
-            .toTypedArray()
+        val density = if (context != null) {
+            Density(context)
+        } else if (!needsDensity) {
+            // we don't need density, so make a fake one and be on with it
+            Density(1f, 1f)
+        } else {
+            // cannot reach
+            throw IllegalStateException("Required density, but not provided")
+        }
+        return settings.fastMap { setting ->
+            FontVariationAxis(setting.axisName, setting.toVariationValue(density))
+        }.toTypedArray()
     }
 }

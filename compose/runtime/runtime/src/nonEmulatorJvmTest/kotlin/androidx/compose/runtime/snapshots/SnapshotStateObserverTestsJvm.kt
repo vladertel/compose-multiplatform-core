@@ -46,10 +46,13 @@ class SnapshotStateObserverTestsJvm {
             for (i in 1..1000) {
                 val state1 by mutableStateOf(0)
                 var state2 by mutableStateOf(true)
-                val observer = SnapshotStateObserver({}).apply { start() }
+                val observer = SnapshotStateObserver({}).apply {
+                    start()
+                }
                 repeat(1000) {
                     observer.observeReads(Unit, {}) {
-                        @Suppress("UNUSED_EXPRESSION") state1
+                        @Suppress("UNUSED_EXPRESSION")
+                        state1
                         if (state2) {
                             state2 = false
                         }
@@ -81,10 +84,13 @@ class SnapshotStateObserverTestsJvm {
             for (i in 1..1000) {
                 val state1 by mutableStateOf(0)
                 var state2 by mutableStateOf(true)
-                val observer = SnapshotStateObserver({}).apply { start() }
+                val observer = SnapshotStateObserver({}).apply {
+                    start()
+                }
                 observer.observeReads(Unit, {}) {
                     repeat(1000) {
-                        @Suppress("UNUSED_EXPRESSION") state1
+                        @Suppress("UNUSED_EXPRESSION")
+                        state1
                         if (state2) {
                             state2 = false
                         }
@@ -127,7 +133,7 @@ class SnapshotStateObserverTestsJvm {
         val stateObserver = SnapshotStateObserver { it() }
         val state1 = mutableStateOf(true)
         val state2 = mutableStateOf(0)
-        val onChanged1: (String) -> Unit = {}
+        val onChanged1: (String) -> Unit = { }
         val onChanged2: (String) -> Unit = { _ -> changes++ }
 
         fun runObservedBlocks() {
@@ -174,22 +180,21 @@ class SnapshotStateObserverTestsJvm {
             stateObserver.start()
             Snapshot.notifyObjectsInitialized()
 
-            val observer =
-                object : (Any) -> Unit {
-                    override fun invoke(affected: Any) {
-                        assertEquals(this, affected)
-                        assertEquals(0, changes)
-                        changes++
-                        readWithObservation()
-                    }
+            val observer = object : (Any) -> Unit {
+                override fun invoke(affected: Any) {
+                    assertEquals(this, affected)
+                    assertEquals(0, changes)
+                    changes++
+                    readWithObservation()
+                }
 
-                    fun readWithObservation() {
-                        stateObserver.observeReads(this, this) {
-                            // read the value
-                            nestedDerivedState.value
-                        }
+                fun readWithObservation() {
+                    stateObserver.observeReads(this, this) {
+                        // read the value
+                        nestedDerivedState.value
                     }
                 }
+            }
             // read with 0
             observer.readWithObservation()
             // increase to 1
@@ -207,7 +212,9 @@ class SnapshotStateObserverTestsJvm {
         var changes = 0
         val changeBlock: (Any) -> Unit = { changes++ }
 
-        val states = List(2) { mutableStateOf(true) }.sortedBy { System.identityHashCode(it) }
+        val states =
+            List(2) { mutableStateOf(true) }
+                .sortedBy { System.identityHashCode(it) }
 
         val derivedStates =
             List(10) {
@@ -220,7 +227,9 @@ class SnapshotStateObserverTestsJvm {
 
         runSimpleTest { stateObserver, _ ->
             // record observation for a draw scope
-            stateObserver.observeReads("draw", changeBlock) { derivedStates.forEach { it.value } }
+            stateObserver.observeReads("draw", changeBlock) {
+                derivedStates.forEach { it.value }
+            }
 
             Snapshot.sendApplyNotifications()
 

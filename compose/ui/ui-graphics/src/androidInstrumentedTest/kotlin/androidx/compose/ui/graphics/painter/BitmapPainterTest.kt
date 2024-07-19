@@ -48,7 +48,9 @@ class BitmapPainterTest {
     private fun createTestSrcImage(): ImageBitmap {
         val src = ImageBitmap(100, 100)
         val canvas = Canvas(src)
-        val paint = Paint().apply { this.color = Color.Blue }
+        val paint = Paint().apply {
+            this.color = Color.Blue
+        }
 
         canvas.drawRect(Rect(Offset.Zero, Size(100.0f, 100.0f)), paint)
         paint.color = Color.Red
@@ -59,8 +61,13 @@ class BitmapPainterTest {
     private fun createTestDstImage(): ImageBitmap {
         val dst = ImageBitmap(200, 200)
         val dstCanvas = Canvas(dst)
-        val dstPaint = Paint().apply { this.color = Color.White }
-        dstCanvas.drawRect(Rect(Offset.Zero, Size(200.0f, 200.0f)), dstPaint)
+        val dstPaint = Paint().apply {
+            this.color = Color.White
+        }
+        dstCanvas.drawRect(
+            Rect(Offset.Zero, Size(200.0f, 200.0f)),
+            dstPaint
+        )
         return dst
     }
 
@@ -89,9 +96,12 @@ class BitmapPainterTest {
         // instead of Painter's default implementation that invokes Canvas.saveLayer
         assertFalse(flagCanvas.saveLayerCalled)
 
-        val expected =
-            Color(alpha = 0.5f, red = Color.Red.red, green = Color.Red.green, blue = Color.Red.blue)
-                .compositeOver(Color.White)
+        val expected = Color(
+            alpha = 0.5f,
+            red = Color.Red.red,
+            green = Color.Red.green,
+            blue = Color.Red.blue
+        ).compositeOver(Color.White)
 
         val result = dst.toPixelMap()[50, 50]
         assertEquals(expected.red, result.red, 0.01f)
@@ -125,8 +135,11 @@ class BitmapPainterTest {
         val dst = createTestDstImage()
         val canvas = Canvas(dst)
 
-        val topLeftPainter =
-            BitmapPainter(srcImage, srcOffset = IntOffset.Zero, srcSize = IntSize(50, 50))
+        val topLeftPainter = BitmapPainter(
+            srcImage,
+            srcOffset = IntOffset.Zero,
+            srcSize = IntSize(50, 50)
+        )
 
         val intrinsicSize = topLeftPainter.intrinsicSize
         assertEquals(50.0f, intrinsicSize.width)
@@ -139,8 +152,11 @@ class BitmapPainterTest {
         assertEquals(Color.Blue, topLeftMap[49, 0])
         assertEquals(Color.Red, topLeftMap[49, 49])
 
-        val topRightPainter =
-            BitmapPainter(srcImage, srcOffset = IntOffset(50, 0), srcSize = IntSize(50, 50))
+        val topRightPainter = BitmapPainter(
+            srcImage,
+            srcOffset = IntOffset(50, 0),
+            srcSize = IntSize(50, 50)
+        )
 
         val topRightDst = createTestDstImage()
         drawPainter(topRightPainter, Canvas(topRightDst), topRightPainter.intrinsicSize)
@@ -151,8 +167,11 @@ class BitmapPainterTest {
         assertEquals(Color.Blue, topRightMap[49, 0])
         assertEquals(Color.Blue, topRightMap[49, 49])
 
-        val bottomLeftPainter =
-            BitmapPainter(srcImage, srcOffset = IntOffset(0, 50), srcSize = IntSize(50, 50))
+        val bottomLeftPainter = BitmapPainter(
+            srcImage,
+            srcOffset = IntOffset(0, 50),
+            srcSize = IntSize(50, 50)
+        )
 
         drawPainter(bottomLeftPainter, canvas, bottomLeftPainter.intrinsicSize)
 
@@ -162,8 +181,11 @@ class BitmapPainterTest {
         assertEquals(Color.Blue, bottomLeftMap[0, 49])
         assertEquals(Color.Blue, bottomLeftMap[49, 49])
 
-        val bottomRightPainter =
-            BitmapPainter(srcImage, srcOffset = IntOffset(50, 50), srcSize = IntSize(50, 50))
+        val bottomRightPainter = BitmapPainter(
+            srcImage,
+            srcOffset = IntOffset(50, 50),
+            srcSize = IntSize(50, 50)
+        )
 
         drawPainter(bottomRightPainter, canvas, bottomRightPainter.intrinsicSize)
 
@@ -178,7 +200,9 @@ class BitmapPainterTest {
     fun testFilterQualityNone() {
         val sampleBitmap = ImageBitmap(3, 3)
         val canvas = androidx.compose.ui.graphics.Canvas(sampleBitmap)
-        val samplePaint = Paint().apply { color = Color.White }
+        val samplePaint = Paint().apply {
+            color = Color.White
+        }
 
         canvas.drawRect(0f, 0f, 3f, 3f, samplePaint)
 
@@ -221,7 +245,11 @@ class BitmapPainterTest {
     @Test
     fun testInvalidLeftBoundThrows() {
         try {
-            BitmapPainter(createTestSrcImage(), IntOffset(-1, 1), IntSize(10, 10))
+            BitmapPainter(
+                createTestSrcImage(),
+                IntOffset(-1, 1),
+                IntSize(10, 10)
+            )
             fail("Left bound must be greater than or equal to zero")
         } catch (e: IllegalArgumentException) {
             // no-op
@@ -231,7 +259,11 @@ class BitmapPainterTest {
     @Test
     fun testInvalidTopBoundThrows() {
         try {
-            BitmapPainter(createTestSrcImage(), IntOffset(0, -1), IntSize(10, 10))
+            BitmapPainter(
+                createTestSrcImage(),
+                IntOffset(0, -1),
+                IntSize(10, 10)
+            )
             fail("Top bound must be greater than or equal to zero")
         } catch (e: IllegalArgumentException) {
             // no-op
@@ -242,7 +274,11 @@ class BitmapPainterTest {
     fun testInvalidRightBoundThrows() {
         try {
             val image = createTestSrcImage()
-            BitmapPainter(image, IntOffset(0, 0), IntSize(image.width + 1, 10))
+            BitmapPainter(
+                image,
+                IntOffset(0, 0),
+                IntSize(image.width + 1, 10)
+            )
             fail("Right bound must be less than ImageBitmap width")
         } catch (e: IllegalArgumentException) {
             // no-op
@@ -253,7 +289,11 @@ class BitmapPainterTest {
     fun testInvalidBottomBoundThrows() {
         try {
             val image = createTestSrcImage()
-            BitmapPainter(image, IntOffset(0, 0), IntSize(10, image.height + 1))
+            BitmapPainter(
+                image,
+                IntOffset(0, 0),
+                IntSize(10, image.height + 1)
+            )
             fail("Bottom bound must be less than ImageBitmap height")
         } catch (e: IllegalArgumentException) {
             // no-op
@@ -263,7 +303,11 @@ class BitmapPainterTest {
     @Test
     fun testRightLessThanLeftThrows() {
         try {
-            BitmapPainter(createTestSrcImage(), IntOffset(50, 0), IntSize(-40, 10))
+            BitmapPainter(
+                createTestSrcImage(),
+                IntOffset(50, 0),
+                IntSize(-40, 10)
+            )
             fail("Right bound must be greater than left bound")
         } catch (e: IllegalArgumentException) {
             // no-op
@@ -273,7 +317,11 @@ class BitmapPainterTest {
     @Test
     fun testTopLessThanBottomThrows() {
         try {
-            BitmapPainter(createTestSrcImage(), IntOffset(0, 100), IntSize(-90, -90))
+            BitmapPainter(
+                createTestSrcImage(),
+                IntOffset(0, 100),
+                IntSize(-90, -90)
+            )
             fail("Bottom bound must be larger than top bound")
         } catch (e: IllegalArgumentException) {
             // no-op

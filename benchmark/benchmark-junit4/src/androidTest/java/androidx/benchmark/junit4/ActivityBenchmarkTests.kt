@@ -40,7 +40,8 @@ fun BenchmarkRule.validateRunWithIsolationActivityHidden() {
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ActivityScenarioTest {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     private lateinit var activityScenario: ActivityScenario<Activity>
 
@@ -51,16 +52,20 @@ class ActivityScenarioTest {
 
     @Test
     fun verifyActivityLaunched() {
-        activityScenario.onActivity { benchmarkRule.validateRunWithIsolationActivityHidden() }
+        activityScenario.onActivity {
+            benchmarkRule.validateRunWithIsolationActivityHidden()
+        }
     }
 }
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ActivityScenarioRuleTest {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
-    @get:Rule val activityRule = ActivityScenarioRule(Activity::class.java)
+    @get:Rule
+    val activityRule = ActivityScenarioRule(Activity::class.java)
 
     @FlakyTest(bugId = 187106319)
     @UiThreadTest
@@ -73,7 +78,8 @@ class ActivityScenarioRuleTest {
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ActivityTestRuleTest {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     @Suppress("DEPRECATION")
     @get:Rule

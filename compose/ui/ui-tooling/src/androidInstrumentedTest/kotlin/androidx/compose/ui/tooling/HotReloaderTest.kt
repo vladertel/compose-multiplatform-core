@@ -28,24 +28,22 @@ class HotReloaderTest {
      */
     @Test
     fun checkViaReflection() {
-        val hotReloader =
-            HotReloaderTest::class
-                .java
-                .classLoader!!
-                .loadClass("androidx.compose.runtime.HotReloader")
-        val hotReloaderInstance =
-            hotReloader.getDeclaredField("Companion").let {
-                it.isAccessible = true
-                it.get(null)
-            }
+        val hotReloader = HotReloaderTest::class.java.classLoader!!
+            .loadClass("androidx.compose.runtime.HotReloader")
+        val hotReloaderInstance = hotReloader.getDeclaredField("Companion").let {
+            it.isAccessible = true
+            it.get(null)
+        }
         val saveStateAndDisposeMethod =
-            hotReloaderInstance.javaClass
-                .getDeclaredMethod("saveStateAndDispose", Any::class.java)
-                .also { it.isAccessible = true }
+            hotReloaderInstance.javaClass.getDeclaredMethod("saveStateAndDispose", Any::class.java)
+                .also {
+                    it.isAccessible = true
+                }
         val loadStateAndDisposeMethod =
-            hotReloaderInstance.javaClass
-                .getDeclaredMethod("loadStateAndCompose", Any::class.java)
-                .also { it.isAccessible = true }
+            hotReloaderInstance.javaClass.getDeclaredMethod("loadStateAndCompose", Any::class.java)
+                .also {
+                    it.isAccessible = true
+                }
         assertNotNull(saveStateAndDisposeMethod)
         assertNotNull(loadStateAndDisposeMethod)
     }

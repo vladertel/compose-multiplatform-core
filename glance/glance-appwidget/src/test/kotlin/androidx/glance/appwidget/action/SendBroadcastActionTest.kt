@@ -40,7 +40,8 @@ class SendBroadcastActionTest {
 
     @Test
     fun testLaunchClass() {
-        val modifiers = GlanceModifier.clickable(actionSendBroadcast<TestBroadcastReceiver>())
+        val modifiers =
+            GlanceModifier.clickable(actionSendBroadcast<TestBroadcastReceiver>())
         val modifier = checkNotNull(modifiers.findModifier<ActionModifier>())
         val action = assertIs<SendBroadcastClassAction>(modifier.action)
         assertThat(action.receiverClass).isEqualTo(TestBroadcastReceiver::class.java)
@@ -59,13 +60,16 @@ class SendBroadcastActionTest {
     @Test
     fun testLaunchActionWithComponentName() {
         val intentActionString = "test_action"
-        val componentName =
-            ComponentName(
-                "androidx.glance.appwidget.action",
-                "androidx.glance.appwidget.action.TestBroadcastReceiver"
+        val componentName = ComponentName(
+            "androidx.glance.appwidget.action",
+            "androidx.glance.appwidget.action.TestBroadcastReceiver"
+        )
+        val modifiers = GlanceModifier.clickable(
+            actionSendBroadcast(
+                intentActionString,
+                componentName
             )
-        val modifiers =
-            GlanceModifier.clickable(actionSendBroadcast(intentActionString, componentName))
+        )
         val modifier = checkNotNull(modifiers.findModifier<ActionModifier>())
         val action = assertIs<SendBroadcastActionAction>(modifier.action)
         assertThat(action.action).isEqualTo(intentActionString)
@@ -86,11 +90,10 @@ class SendBroadcastActionTest {
 
     @Test
     fun testLaunchComponent() {
-        val componentName =
-            ComponentName(
-                "androidx.glance.appwidget.action",
-                "androidx.glance.appwidget.action.TestBroadcastReceiver"
-            )
+        val componentName = ComponentName(
+            "androidx.glance.appwidget.action",
+            "androidx.glance.appwidget.action.TestBroadcastReceiver"
+        )
         val modifiers = GlanceModifier.clickable(actionSendBroadcast(componentName))
         val modifier = checkNotNull(modifiers.findModifier<ActionModifier>())
         val action = assertIs<SendBroadcastComponentAction>(modifier.action)

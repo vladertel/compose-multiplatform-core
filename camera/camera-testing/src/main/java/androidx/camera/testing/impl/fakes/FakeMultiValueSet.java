@@ -17,6 +17,7 @@
 package androidx.camera.testing.impl.fakes;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.core.impl.MultiValueSet;
@@ -25,6 +26,7 @@ import androidx.camera.core.impl.MultiValueSet;
  * A fake implementation for {@link MultiValueSet}.
  *
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @RestrictTo(Scope.LIBRARY_GROUP)
 public class FakeMultiValueSet extends MultiValueSet<FakeMultiValueSet> {
 

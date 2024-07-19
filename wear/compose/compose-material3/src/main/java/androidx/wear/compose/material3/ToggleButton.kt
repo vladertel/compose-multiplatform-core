@@ -34,71 +34,74 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.tokens.MotionTokens
-import androidx.wear.compose.material3.tokens.SplitToggleButtonTokens
-import androidx.wear.compose.material3.tokens.ToggleButtonTokens
 import androidx.wear.compose.materialcore.animateSelectionColor
 
 /**
- * The Wear Material [ToggleButton] offers four slots and a specific layout for an icon, a label, a
- * secondaryLabel and toggle control (such as [Checkbox] or [Switch]). The icon and secondaryLabel
- * are optional. The items are laid out in a row with the optional icon at the start, a column
- * containing the two label slots in the middle and a slot for the toggle control at the end.
+ * The Wear Material [ToggleButton] offers four slots and a specific layout for an icon, a
+ * label, a secondaryLabel and selection control. The icon and secondaryLabel are optional.
+ * The items are laid out in a row with the optional icon at the start, a column containing the two
+ * label slots in the middle and a slot for the selection control at the end.
  *
- * The [ToggleButton] is Stadium shaped and has a max height designed to take no more than two lines
- * of text. With localisation and/or large font sizes, the [ToggleButton] height adjusts to
- * accommodate the contents. The label and secondary label should be start aligned.
+ * The [ToggleButton] is Stadium shaped and has a max height designed to take no more than
+ * two lines of text.
+ * With localisation and/or large font sizes, the [ToggleButton] height adjusts to
+ * accommodate the contents. The label and secondary label should be consistently aligned.
  *
- * Samples: Example of a ToggleButton with a Checkbox:
- *
+ * Samples:
+ * Example of a ToggleButton with a Checkbox:
  * @sample androidx.wear.compose.material3.samples.ToggleButtonWithCheckbox
  *
  * Example of a ToggleButton with a Switch:
- *
  * @sample androidx.wear.compose.material3.samples.ToggleButtonWithSwitch
+ *
+ * Example of a ToggleButton with a RadioButton:
+ * @sample androidx.wear.compose.material3.samples.ToggleButtonWithRadioButton
  *
  * [ToggleButton] can be enabled or disabled. A disabled button will not respond to click events.
  *
- * The recommended set of [ToggleButton] colors can be obtained from [ToggleButtonDefaults], e.g.
- * [ToggleButtonDefaults.toggleButtonColors].
+ * The recommended set of [SplitToggleButton] can be obtained from
+ * [ToggleButtonDefaults], e.g. [ToggleButtonDefaults.toggleButtonColors].
  *
  * @param checked Boolean flag indicating whether this button is currently checked.
- * @param onCheckedChange Callback to be invoked when this buttons checked status is changed.
- * @param toggleControl A slot for providing the button's toggle control. Two built-in types of
- *   toggle control are supported: [Checkbox] and [Switch].
+ * @param onCheckedChange Callback to be invoked when this buttons checked/selected status is changed.
+ * @param selectionControl A slot for providing the button's selection control.
+ * Three built-in types of selection control are supported: [Checkbox] ,[RadioButton], and [Switch].
  * @param modifier Modifier to be applied to the [ToggleButton].
- * @param enabled Controls the enabled state of the button. When `false`, this button will not be
- *   clickable.
+ * @param enabled Controls the enabled state of the button. When `false`, this button will not
+ * be clickable.
  * @param shape Defines the button's shape. It is strongly recommended to use the default as this
- *   shape is a key characteristic of the Wear Material Theme.
- * @param colors [ToggleButtonColors] that will be used to resolve the background and content color
- *   for this button in different states.
+ * shape is a key characteristic of the Wear Material Theme.
+ * @param colors [ToggleButtonColors] that will be used to resolve the background and
+ * content color for this button in different states.
  * @param contentPadding The spacing values to apply internally between the container and the
- *   content.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- *   emitting [Interaction]s for this button's "toggleable" tap area. You can use this to change the
- *   button's appearance or preview the button in different states. Note that if `null` is provided,
- *   interactions will still happen internally.
+ * content.
+ * @param interactionSource The [MutableInteractionSource] representing the stream of
+ * [Interaction]s for this button's "toggleable" tap area. You can create and pass in your own
+ * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
+ * appearance / behavior of this Chip in different [Interaction]s.
  * @param icon An optional slot for providing an icon to indicate the purpose of the button. The
- *   contents are expected to be a horizontally and vertically center aligned icon of size 24.dp.
- * @param secondaryLabel A slot for providing the button's secondary label. The contents are
- *   expected to be text which is "start" aligned.
+ * contents are expected to be a horizontally and vertically center aligned icon of size
+ * 24.dp. In order to correctly render when the Chip is not enabled the
+ * icon must set its alpha value to [LocalContentAlpha].
+ * @param secondaryLabel A slot for providing the button's secondary label. The contents are expected
+ * to be text which is "start" aligned if there is an icon preset and "start" or "center" aligned if
+ * not. label and secondaryLabel contents should be consistently aligned.
  * @param label A slot for providing the button's main label. The contents are expected to be text
- *   which is "start" aligned.
+ * which is "start" aligned if there is an icon preset and "start" or "center" aligned if
+ * not. label and secondaryLabel contents should be consistently aligned.
  */
 @Composable
 fun ToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    toggleControl: @Composable ToggleControlScope.() -> Unit,
+    selectionControl: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    shape: Shape = ToggleButtonDefaults.toggleButtonShape,
+    shape: Shape = MaterialTheme.shapes.large,
     colors: ToggleButtonColors = ToggleButtonDefaults.toggleButtonColors(),
     contentPadding: PaddingValues = ToggleButtonDefaults.ContentPadding,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     icon: @Composable (BoxScope.() -> Unit)? = null,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
@@ -106,29 +109,24 @@ fun ToggleButton(
     androidx.wear.compose.materialcore.ToggleButton(
         checked = checked,
         onCheckedChange = onCheckedChange,
-        label =
-            provideScopeContent(
-                contentColor = colors.contentColor(enabled = enabled, checked),
-                textStyle = ToggleButtonTokens.LabelFont.value,
-                content = label
-            ),
-        toggleControl = {
-            val scope = remember(enabled, checked) { ToggleControlScope(enabled, checked) }
-            toggleControl(scope)
-        },
-        selectionControl = null,
-        modifier = modifier.defaultMinSize(minHeight = MIN_HEIGHT).height(IntrinsicSize.Min),
-        icon =
-            provideNullableScopeContent(
-                contentColor = colors.iconColor(enabled = enabled, checked),
-                content = icon
-            ),
-        secondaryLabel =
-            provideNullableScopeContent(
-                contentColor = colors.secondaryContentColor(enabled = enabled, checked),
-                textStyle = ToggleButtonTokens.SecondaryLabelFont.value,
-                content = secondaryLabel
-            ),
+        label = provideScopeContent(
+            contentColor = colors.contentColor(enabled = enabled, checked),
+            textStyle = MaterialTheme.typography.labelMedium,
+            content = label
+        ),
+        selectionControl = selectionControl,
+        modifier = modifier
+            .defaultMinSize(minHeight = MIN_HEIGHT)
+            .height(IntrinsicSize.Min),
+        icon = provideNullableScopeContent(
+            contentColor = colors.iconColor(enabled = enabled, checked),
+            content = icon
+        ),
+        secondaryLabel = provideNullableScopeContent(
+            contentColor = colors.secondaryContentColor(enabled = enabled, checked),
+            textStyle = MaterialTheme.typography.labelSmall,
+            content = secondaryLabel
+        ),
         background = { isEnabled, isChecked ->
             val backgroundColor =
                 colors.containerColor(enabled = isEnabled, checked = isChecked).value
@@ -139,191 +137,165 @@ fun ToggleButton(
         interactionSource = interactionSource,
         contentPadding = contentPadding,
         shape = shape,
-        toggleControlWidth = TOGGLE_CONTROL_WIDTH,
-        toggleControlHeight = TOGGLE_CONTROL_HEIGHT,
-        labelSpacerSize = ToggleButtonDefaults.LabelSpacerSize,
-        toggleControlSpacing = TOGGLE_CONTROL_SPACING,
-        iconSpacing = ICON_SPACING,
-        ripple = rippleOrFallbackImplementation()
+        selectionControlWidth = SELECTION_CONTROL_WIDTH,
+        selectionControlHeight = SELECTION_CONTROL_HEIGHT
     )
 
 /**
  * The Wear Material [SplitToggleButton] offers three slots and a specific layout for a label,
- * secondaryLabel and toggle control. The secondaryLabel is optional. The items are laid out with a
- * column containing the two label slots and a slot for the toggle control at the end.
+ * secondaryLabel and selection control. The secondaryLabel is optional. The items are laid out
+ * with a column containing the two label slots and a slot for the selection control at the
+ * end.
  *
- * The [SplitToggleButton] is Stadium shaped and has a max height designed to take no more than two
- * lines of text. With localisation and/or large font sizes, the [SplitToggleButton] height adjusts
- * to accommodate the contents. The label and secondary label should be start aligned.
+ * The [SplitToggleButton] is Stadium shaped and has a max height designed to take no more than
+ * two lines of text.
+ * With localisation and/or large font sizes, the [SplitToggleButton] height adjusts to
+ * accommodate the contents. The label and secondary label should be consistently aligned.
  *
  * A [SplitToggleButton] has two tappable areas, one tap area for the labels and another for the
  * toggle control. The [onClick] listener will be associated with the main body of the split toggle
  * button with the [onCheckedChange] listener associated with the toggle control area only.
  *
- * Samples: Example of a SplitToggleButton with a Checkbox:
- *
+ * Samples:
+ * Example of a SplitToggleButton with a Checkbox:
  * @sample androidx.wear.compose.material3.samples.SplitToggleButtonWithCheckbox
  *
  * Example of a SplitToggleButton with a Switch:
- *
  * @sample androidx.wear.compose.material3.samples.SplitToggleButtonWithSwitch
  *
- * For a SplitToggleButton the background of the tappable background area behind the toggle control
+ * Example of a SplitToggleButton with a RadioButton:
+ * @sample androidx.wear.compose.material3.samples.SplitToggleButtonWithRadioButton
+ *
+ * For a SplitToggleButton the background of the tappable background area behind the selection control
  * will have a visual effect applied to provide a "divider" between the two tappable areas.
  *
- * The recommended set of colors can be obtained from [ToggleButtonDefaults], e.g.
- * [ToggleButtonDefaults.splitToggleButtonColors].
+ * The recommended set of colors can be obtained from
+ * [ToggleButtonDefaults], e.g. [ToggleButtonDefaults.splitToggleButtonColors].
  *
- * [SplitToggleButton] can be enabled or disabled. A disabled button will not respond to click
- * events.
+ * [SplitToggleButton] can be enabled or disabled. A disabled button will not respond to click events.
  *
  * @param checked Boolean flag indicating whether this button is currently checked.
- * @param onCheckedChange Callback to be invoked when this buttons checked status is changed.
+ * @param onCheckedChange Callback to be invoked when this buttons checked/selected status is
+ * changed.
  * @param onClick Click listener called when the user clicks the main body of the button, the area
- *   behind the labels.
- * @param toggleControl A slot for providing the button's toggle control. Two built-in types of
- *   toggle control are supported: [Checkbox] and [Switch].
+ * behind the labels.
+ * @param selectionControl A slot for providing the button's selection control.
+ * Three built-in types of selection control are supported: [Checkbox] ,[RadioButton], and [Switch].
  * @param modifier Modifier to be applied to the button.
- * @param enabled Controls the enabled state of the button. When `false`, this button will not be
- *   clickable.
+ * @param enabled Controls the enabled state of the button. When `false`, this button will not
+ * be clickable.
  * @param shape Defines the button's shape. It is strongly recommended to use the default as this
- *   shape is a key characteristic of the Wear Material Theme.
- * @param colors [SplitToggleButtonColors] that will be used to resolve the background and content
- *   color for this button in different states.
+ * shape is a key characteristic of the Wear Material Theme.
+ * @param colors [SplitToggleButtonColors] that will be used to resolve the background and
+ * content color for this button in different states.
  * @param contentPadding The spacing values to apply internally between the container and the
- *   content.
- * @param checkedInteractionSource an optional hoisted [MutableInteractionSource] for observing and
- *   emitting [Interaction]s for this button's "toggleable" tap area. You can use this to change the
- *   button's appearance or preview the button in different states. Note that if `null` is provided,
- *   interactions will still happen internally.
- * @param clickInteractionSource an optional hoisted [MutableInteractionSource] for observing and
- *   emitting [Interaction]s for this button's "clickable" tap area. You can use this to change the
- *   button's appearance or preview the button in different states. Note that if `null` is provided,
- *   interactions will still happen internally.
- * @param secondaryLabel A slot for providing the button's secondary label. The contents are
- *   expected to be "start" aligned.
+ * content.
+ * @param checkedInteractionSource The [MutableInteractionSource] representing the stream of
+ * [Interaction]s for this button's "toggleable" tap area. You can create and pass in your own
+ * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
+ * appearance / behavior of this button in different [Interaction]s.
+ * @param clickInteractionSource The [MutableInteractionSource] representing the stream of
+ * [Interaction]s for this button's "clickable" tap area. You can create and pass in your own
+ * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
+ * appearance / behavior of this button in different [Interaction]s.
+ * @param secondaryLabel A slot for providing the button's secondary label. The contents are expected
+ * to be "start" or "center" aligned. label and secondaryLabel contents should be consistently
+ * aligned.
  * @param label A slot for providing the button's main label. The contents are expected to be text
- *   which is "start" aligned.
+ * which is "start" aligned if there is an icon preset and "start" or "center" aligned if
+ * not. label and secondaryLabel contents should be consistently aligned.
  */
 @Composable
 fun SplitToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
-    toggleControl: @Composable ToggleControlScope.() -> Unit,
+    selectionControl: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    shape: Shape = ToggleButtonDefaults.splitToggleButtonShape,
+    shape: Shape = MaterialTheme.shapes.large,
     colors: SplitToggleButtonColors = ToggleButtonDefaults.splitToggleButtonColors(),
-    checkedInteractionSource: MutableInteractionSource? = null,
-    clickInteractionSource: MutableInteractionSource? = null,
+    checkedInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    clickInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     contentPadding: PaddingValues = ToggleButtonDefaults.ContentPadding,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
-) =
-    androidx.wear.compose.materialcore.SplitToggleButton(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        label =
-            provideScopeContent(
-                contentColor = colors.contentColor(enabled = enabled, checked = checked),
-                textStyle = SplitToggleButtonTokens.LabelFont.value,
-                content = label
-            ),
-        onClick = onClick,
-        toggleControl = {
-            val scope = remember(enabled, checked) { ToggleControlScope(enabled, checked) }
-            toggleControl(scope)
-        },
-        selectionControl = null,
-        modifier = modifier.defaultMinSize(minHeight = MIN_HEIGHT).height(IntrinsicSize.Min),
-        secondaryLabel =
-            provideNullableScopeContent(
-                contentColor = colors.secondaryContentColor(enabled = enabled, checked = checked),
-                textStyle = SplitToggleButtonTokens.SecondaryLabelFont.value,
-                content = secondaryLabel
-            ),
-        backgroundColor = { isEnabled, isChecked ->
-            colors.containerColor(enabled = isEnabled, checked = isChecked)
-        },
-        splitBackgroundColor = { isEnabled, isChecked ->
-            colors.splitContainerColor(enabled = isEnabled, checked = isChecked)
-        },
-        enabled = enabled,
-        checkedInteractionSource = checkedInteractionSource,
-        clickInteractionSource = clickInteractionSource,
-        contentPadding = contentPadding,
-        shape = shape,
-        labelSpacerSize = ToggleButtonDefaults.LabelSpacerSize,
-        ripple = rippleOrFallbackImplementation()
-    )
+) = androidx.wear.compose.materialcore.SplitToggleButton(
+    checked = checked,
+    onCheckedChange = onCheckedChange,
+    label = provideScopeContent(
+        contentColor = colors.contentColor(enabled = enabled, checked = checked),
+        textStyle = MaterialTheme.typography.labelMedium,
+        content = label
+    ),
+    onClick = onClick,
+    selectionControl = selectionControl,
+    modifier = modifier
+        .defaultMinSize(minHeight = MIN_HEIGHT)
+        .height(IntrinsicSize.Min),
+    secondaryLabel = provideNullableScopeContent(
+        contentColor = colors.secondaryContentColor(enabled = enabled, checked = checked),
+        textStyle = MaterialTheme.typography.labelSmall,
+        content = secondaryLabel
+    ),
+    backgroundColor = { isEnabled, isChecked ->
+        colors.containerColor(
+            enabled = isEnabled,
+            checked = isChecked
+        )
+    },
+    splitBackgroundColor = { isEnabled, isChecked ->
+        colors.splitContainerColor(
+            enabled = isEnabled,
+            checked = isChecked
+        )
+    },
+    enabled = enabled,
+    checkedInteractionSource = checkedInteractionSource,
+    clickInteractionSource = clickInteractionSource,
+    contentPadding = contentPadding,
+    shape = shape
+)
 
-/** Contains the default values used by [ToggleButton]s and [SplitToggleButton]s */
+/**
+ * Contains the default values used by [ToggleButton]s and [SplitToggleButton]s
+ */
 object ToggleButtonDefaults {
-    /** Recommended [Shape] for [ToggleButton]. */
-    val toggleButtonShape: Shape
-        @Composable get() = ToggleButtonTokens.ContainerShape.value
-
-    /** Recommended [Shape] for [SplitToggleButton]. */
-    val splitToggleButtonShape: Shape
-        @Composable get() = SplitToggleButtonTokens.ContainerShape.value
-
-    /** Creates a [ToggleButtonColors] for use in a [ToggleButton]. */
-    @Composable fun toggleButtonColors() = MaterialTheme.colorScheme.defaultToggleButtonColors
 
     /**
      * Creates a [ToggleButtonColors] for use in a [ToggleButton].
      *
-     * @param checkedContainerColor The container color of the [ToggleButton] when enabled and
-     *   checked.
-     * @param checkedContentColor The content color of the [ToggleButton] when enabled and checked.
-     * @param checkedSecondaryContentColor The secondary content color of the [ToggleButton] when
-     *   enabled and checked, used for secondaryLabel content.
-     * @param checkedIconColor The icon color of the [ToggleButton] when enabled and checked.
-     * @param uncheckedContainerColor The container color of the [ToggleButton] when enabled and
-     *   unchecked.
-     * @param uncheckedContentColor The content color of a [ToggleButton] when enabled and
-     *   unchecked.
-     * @param uncheckedSecondaryContentColor The secondary content color of this [ToggleButton] when
-     *   enabled and unchecked, used for secondaryLabel content
-     * @param uncheckedIconColor The icon color of the [ToggleButton] when enabled and unchecked.
-     * @param disabledCheckedContainerColor The container color of the [ToggleButton] when disabled
-     *   and checked.
-     * @param disabledCheckedContentColor The content color of the [ToggleButton] when disabled and
-     *   checked.
-     * @param disabledCheckedSecondaryContentColor The secondary content color of the [ToggleButton]
-     *   when disabled and checked, used for secondaryLabel content.
-     * @param disabledCheckedIconColor The icon color of the [ToggleButton] when disabled and
-     *   checked.
-     * @param disabledUncheckedContainerColor The container color of the [ToggleButton] when
-     *   disabled and unchecked.
-     * @param disabledUncheckedContentColor The content color of a [ToggleButton] when disabled and
-     *   unchecked.
-     * @param disabledUncheckedSecondaryContentColor The secondary content color of this
-     *   [ToggleButton] when disabled and unchecked, used for secondaryLabel content
-     * @param disabledUncheckedIconColor The icon color of the [ToggleButton] when disabled and
-     *   unchecked.
+     * @param checkedContainerColor The container color of the [ToggleButton]
+     * when enabled and checked/selected.
+     * @param checkedContentColor The content color of the [ToggleButton]
+     * when enabled and checked/selected.
+     * @param checkedSecondaryContentColor The secondary content color of the [ToggleButton]
+     * when enabled and checked/selected, used for secondaryLabel content.
+     * @param checkedIconColor The icon color of the [ToggleButton]
+     * when enabled and checked/selected.
+     * @param uncheckedContainerColor  The container color of the [ToggleButton]
+     * when enabled and unchecked/not selected.
+     * @param uncheckedContentColor The content color of a [ToggleButton]
+     * when enabled and unchecked/not selected.
+     * @param uncheckedSecondaryContentColor The secondary content color of this [ToggleButton]
+     * when enabled and unchecked/not selected, used for secondaryLabel content
+     * @param uncheckedIconColor The icon color of the [ToggleButton]
+     * when enabled and unchecked/not selected.
      */
     @Composable
     fun toggleButtonColors(
-        checkedContainerColor: Color = Color.Unspecified,
-        checkedContentColor: Color = Color.Unspecified,
-        checkedSecondaryContentColor: Color = Color.Unspecified,
-        checkedIconColor: Color = Color.Unspecified,
-        uncheckedContainerColor: Color = Color.Unspecified,
-        uncheckedContentColor: Color = Color.Unspecified,
-        uncheckedSecondaryContentColor: Color = Color.Unspecified,
-        uncheckedIconColor: Color = Color.Unspecified,
-        disabledCheckedContainerColor: Color = Color.Unspecified,
-        disabledCheckedContentColor: Color = Color.Unspecified,
-        disabledCheckedSecondaryContentColor: Color = Color.Unspecified,
-        disabledCheckedIconColor: Color = Color.Unspecified,
-        disabledUncheckedContainerColor: Color = Color.Unspecified,
-        disabledUncheckedContentColor: Color = Color.Unspecified,
-        disabledUncheckedSecondaryContentColor: Color = Color.Unspecified,
-        disabledUncheckedIconColor: Color = Color.Unspecified,
+        checkedContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+        checkedContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+        checkedSecondaryContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
+            alpha = 0.8f
+        ),
+        checkedIconColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+        uncheckedContainerColor: Color = MaterialTheme.colorScheme.surface,
+        uncheckedContentColor: Color = MaterialTheme.colorScheme.onSurface,
+        uncheckedSecondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+        uncheckedIconColor: Color = MaterialTheme.colorScheme.primary,
     ) =
-        MaterialTheme.colorScheme.defaultToggleButtonColors.copy(
+        ToggleButtonColors(
             checkedContainerColor = checkedContainerColor,
             checkedContentColor = checkedContentColor,
             checkedSecondaryContentColor = checkedSecondaryContentColor,
@@ -332,76 +304,51 @@ object ToggleButtonDefaults {
             uncheckedContentColor = uncheckedContentColor,
             uncheckedSecondaryContentColor = uncheckedSecondaryContentColor,
             uncheckedIconColor = uncheckedIconColor,
-            disabledCheckedContainerColor = disabledCheckedContainerColor,
-            disabledCheckedContentColor = disabledCheckedContentColor,
-            disabledCheckedSecondaryContentColor = disabledCheckedSecondaryContentColor,
-            disabledCheckedIconColor = disabledCheckedIconColor,
-            disabledUncheckedContainerColor = disabledUncheckedContainerColor,
-            disabledUncheckedContentColor = disabledUncheckedContentColor,
-            disabledUncheckedSecondaryContentColor = disabledUncheckedSecondaryContentColor,
-            disabledUncheckedIconColor = disabledUncheckedIconColor,
+            disabledCheckedContainerColor = checkedContainerColor.toDisabledColor(),
+            disabledCheckedContentColor = checkedContentColor.toDisabledColor(),
+            disabledCheckedSecondaryContentColor = checkedSecondaryContentColor.toDisabledColor(),
+            disabledCheckedIconColor = checkedIconColor.toDisabledColor(),
+            disabledUncheckedContainerColor = uncheckedContainerColor.toDisabledColor(),
+            disabledUncheckedContentColor = uncheckedContentColor.toDisabledColor(),
+            disabledUncheckedSecondaryContentColor =
+            uncheckedSecondaryContentColor.toDisabledColor(),
+            disabledUncheckedIconColor = uncheckedIconColor.toDisabledColor(),
         )
-
-    /** Creates a [SplitToggleButtonColors] for use in a [SplitToggleButton]. */
-    @Composable
-    fun splitToggleButtonColors() = MaterialTheme.colorScheme.defaultSplitToggleButtonColors
 
     /**
      * Creates a [SplitToggleButtonColors] for use in a [SplitToggleButton].
      *
      * @param checkedContainerColor The container color of the [SplitToggleButton] when enabled and
-     *   checked.
+     * checked/selected.
      * @param checkedContentColor The content color of the [SplitToggleButton] when enabled and
-     *   checked.
+     * checked/selected.
      * @param checkedSecondaryContentColor The secondary content color of the [SplitToggleButton]
-     *   when enabled and checked, used for secondaryLabel content.
-     * @param checkedSplitContainerColor The split container color of the [SplitToggleButton] when
-     *   enabled and checked.
+     * when enabled and checked/selected, used for secondaryLabel content.
+     * @param checkedSplitContainerColor The split container color of the [SplitToggleButton]
+     * when enabled and checked/selected.
      * @param uncheckedContainerColor The container color of the [SplitToggleButton] when enabled
-     *   and unchecked.
+     * and unchecked/not selected.
      * @param uncheckedContentColor The content color of the [SplitToggleButton] when enabled and
-     *   unchecked.
+     * unchecked/not selected.
      * @param uncheckedSecondaryContentColor The secondary content color of the [SplitToggleButton]
-     *   when enabled and unchecked, used for secondaryLabel content.
+     * when enabled and unchecked/not selected, used for secondaryLabel content.
      * @param uncheckedSplitContainerColor The split container color of the [SplitToggleButton] when
-     *   enabled and unchecked.
-     * @param disabledCheckedContainerColor The container color of the [SplitToggleButton] when
-     *   disabled and checked.
-     * @param disabledCheckedContentColor The content color of the [SplitToggleButton] when disabled
-     *   and checked.
-     * @param disabledCheckedSecondaryContentColor The secondary content color of the
-     *   [SplitToggleButton] when disabled and checked, used for secondaryLabel content.
-     * @param disabledCheckedSplitContainerColor The split container color of the
-     *   [ SplitToggleButton] when disabled and checked.
-     * @param disabledUncheckedContainerColor The container color of the [SplitToggleButton] when
-     *   disabled and unchecked.
-     * @param disabledUncheckedContentColor The content color of the [SplitToggleButton] when
-     *   disabled and unchecked.
-     * @param disabledUncheckedSecondaryContentColor The secondary content color of the
-     *   [SplitToggleButton] when disabled and unchecked, used for secondaryLabel content.
-     * @param disabledUncheckedSplitContainerColor The split container color of the
-     *   [SplitToggleButton] when disabled and unchecked.
+     * enabled and unchecked/not selected.
      */
     @Composable
     fun splitToggleButtonColors(
-        checkedContainerColor: Color = Color.Unspecified,
-        checkedContentColor: Color = Color.Unspecified,
-        checkedSecondaryContentColor: Color = Color.Unspecified,
-        checkedSplitContainerColor: Color = Color.Unspecified,
-        uncheckedContainerColor: Color = Color.Unspecified,
-        uncheckedContentColor: Color = Color.Unspecified,
-        uncheckedSecondaryContentColor: Color = Color.Unspecified,
-        uncheckedSplitContainerColor: Color = Color.Unspecified,
-        disabledCheckedContainerColor: Color = Color.Unspecified,
-        disabledCheckedContentColor: Color = Color.Unspecified,
-        disabledCheckedSecondaryContentColor: Color = Color.Unspecified,
-        disabledCheckedSplitContainerColor: Color = Color.Unspecified,
-        disabledUncheckedContainerColor: Color = Color.Unspecified,
-        disabledUncheckedContentColor: Color = Color.Unspecified,
-        disabledUncheckedSecondaryContentColor: Color = Color.Unspecified,
-        disabledUncheckedSplitContainerColor: Color = Color.Unspecified,
+        checkedContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+        checkedContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+        checkedSecondaryContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer.copy(
+            alpha = 0.8f
+        ),
+        checkedSplitContainerColor: Color = MaterialTheme.colorScheme.primary.copy(.15f),
+        uncheckedContainerColor: Color = MaterialTheme.colorScheme.surface,
+        uncheckedContentColor: Color = MaterialTheme.colorScheme.onSurface,
+        uncheckedSecondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+        uncheckedSplitContainerColor: Color = MaterialTheme.colorScheme.surfaceBright
     ) =
-        MaterialTheme.colorScheme.defaultSplitToggleButtonColors.copy(
+        SplitToggleButtonColors(
             checkedContainerColor = checkedContainerColor,
             checkedContentColor = checkedContentColor,
             checkedSecondaryContentColor = checkedSecondaryContentColor,
@@ -410,200 +357,35 @@ object ToggleButtonDefaults {
             uncheckedContentColor = uncheckedContentColor,
             uncheckedSecondaryContentColor = uncheckedSecondaryContentColor,
             uncheckedSplitContainerColor = uncheckedSplitContainerColor,
-            disabledCheckedContainerColor = disabledCheckedContainerColor,
-            disabledCheckedContentColor = disabledCheckedContentColor,
-            disabledCheckedSecondaryContentColor = disabledCheckedSecondaryContentColor,
-            disabledCheckedSplitContainerColor = disabledCheckedSplitContainerColor,
-            disabledUncheckedContainerColor = disabledUncheckedContainerColor,
-            disabledUncheckedContentColor = disabledUncheckedContentColor,
-            disabledUncheckedSecondaryContentColor = disabledUncheckedSecondaryContentColor,
-            disabledUncheckedSplitContainerColor = disabledUncheckedSplitContainerColor
+            disabledCheckedContainerColor = checkedContainerColor.toDisabledColor(),
+            disabledCheckedContentColor = checkedContentColor.toDisabledColor(),
+            disabledCheckedSecondaryContentColor = checkedSecondaryContentColor.toDisabledColor(),
+            disabledCheckedSplitContainerColor = checkedSplitContainerColor.toDisabledColor(),
+            disabledUncheckedContainerColor = uncheckedContainerColor.toDisabledColor(),
+            disabledUncheckedContentColor = uncheckedContentColor.toDisabledColor(),
+            disabledUncheckedSecondaryContentColor =
+            uncheckedSecondaryContentColor.toDisabledColor(),
+            disabledUncheckedSplitContainerColor = uncheckedSplitContainerColor.toDisabledColor()
         )
 
-    internal val LabelSpacerSize = 2.dp
-    private val HorizontalPadding = 14.dp
-    private val VerticalPadding = 8.dp
+    private val ChipHorizontalPadding = 14.dp
+    private val ChipVerticalPadding = 6.dp
 
-    /** The default content padding used by [ToggleButton] */
-    val ContentPadding: PaddingValues =
-        PaddingValues(
-            start = HorizontalPadding,
-            top = VerticalPadding,
-            end = HorizontalPadding,
-            bottom = VerticalPadding
-        )
-
-    private val ColorScheme.defaultToggleButtonColors: ToggleButtonColors
-        get() {
-            return defaultToggleButtonColorsCached
-                ?: ToggleButtonColors(
-                        checkedContainerColor = fromToken(ToggleButtonTokens.CheckedContainerColor),
-                        checkedContentColor = fromToken(ToggleButtonTokens.CheckedContentColor),
-                        checkedSecondaryContentColor =
-                            fromToken(ToggleButtonTokens.CheckedSecondaryLabelColor)
-                                .copy(alpha = ToggleButtonTokens.CheckedSecondaryLabelOpacity),
-                        checkedIconColor = fromToken(ToggleButtonTokens.CheckedIconColor),
-                        uncheckedContainerColor =
-                            fromToken(ToggleButtonTokens.UncheckedContainerColor),
-                        uncheckedContentColor = fromToken(ToggleButtonTokens.UncheckedContentColor),
-                        uncheckedSecondaryContentColor =
-                            fromToken(ToggleButtonTokens.UncheckedSecondaryLabelColor),
-                        uncheckedIconColor = fromToken(ToggleButtonTokens.UncheckedIconColor),
-                        disabledCheckedContainerColor =
-                            fromToken(ToggleButtonTokens.DisabledCheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha =
-                                        ToggleButtonTokens.DisabledCheckedContainerOpacity
-                                ),
-                        disabledCheckedContentColor =
-                            fromToken(ToggleButtonTokens.DisabledCheckedContentColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledCheckedSecondaryContentColor =
-                            fromToken(ToggleButtonTokens.DisabledCheckedSecondaryLabelColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledCheckedIconColor =
-                            fromToken(ToggleButtonTokens.DisabledCheckedIconColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedContainerColor =
-                            fromToken(ToggleButtonTokens.DisabledUncheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha =
-                                        ToggleButtonTokens.DisabledUncheckedContainerOpacity
-                                ),
-                        disabledUncheckedContentColor =
-                            fromToken(ToggleButtonTokens.DisabledUncheckedContentColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedSecondaryContentColor =
-                            fromToken(ToggleButtonTokens.DisabledUncheckedSecondaryLabelColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedIconColor =
-                            fromToken(ToggleButtonTokens.DisabledUncheckedIconColor)
-                                .toDisabledColor(
-                                    disabledAlpha = ToggleButtonTokens.DisabledOpacity
-                                ),
-                    )
-                    .also { defaultToggleButtonColorsCached = it }
-        }
-
-    private val ColorScheme.defaultSplitToggleButtonColors: SplitToggleButtonColors
-        get() {
-            return defaultSplitToggleButtonColorsCached
-                ?: SplitToggleButtonColors(
-                        checkedContainerColor =
-                            fromToken(SplitToggleButtonTokens.CheckedContainerColor),
-                        checkedContentColor =
-                            fromToken(SplitToggleButtonTokens.CheckedContentColor),
-                        checkedSecondaryContentColor =
-                            fromToken(SplitToggleButtonTokens.CheckedSecondaryLabelColor)
-                                .copy(alpha = SplitToggleButtonTokens.CheckedSecondaryLabelOpacity),
-                        checkedSplitContainerColor =
-                            fromToken(SplitToggleButtonTokens.CheckedSplitContainerColor)
-                                .copy(alpha = SplitToggleButtonTokens.CheckedSplitContainerOpacity),
-                        uncheckedContainerColor =
-                            fromToken(SplitToggleButtonTokens.UncheckedContainerColor),
-                        uncheckedContentColor =
-                            fromToken(SplitToggleButtonTokens.UncheckedContentColor),
-                        uncheckedSecondaryContentColor =
-                            fromToken(SplitToggleButtonTokens.UncheckedSecondaryLabelColor),
-                        uncheckedSplitContainerColor =
-                            fromToken(SplitToggleButtonTokens.UncheckedSplitContainerColor),
-                        disabledCheckedContainerColor =
-                            fromToken(SplitToggleButtonTokens.DisabledCheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledCheckedContentColor =
-                            fromToken(SplitToggleButtonTokens.DisabledCheckedContentColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledCheckedSecondaryContentColor =
-                            fromToken(SplitToggleButtonTokens.DisabledCheckedSecondaryLabelColor)
-                                .copy(
-                                    alpha =
-                                        SplitToggleButtonTokens.DisabledCheckedSecondaryLabelOpacity
-                                )
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledCheckedSplitContainerColor =
-                            fromToken(SplitToggleButtonTokens.DisabledCheckedSplitContainerColor)
-                                .copy(
-                                    alpha =
-                                        SplitToggleButtonTokens.DisabledCheckedSplitContainerOpacity
-                                )
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedContainerColor =
-                            fromToken(SplitToggleButtonTokens.DisabledUncheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedContentColor =
-                            fromToken(SplitToggleButtonTokens.DisabledUncheckedContentColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedSecondaryContentColor =
-                            fromToken(SplitToggleButtonTokens.DisabledUncheckedSecondaryLabelColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                ),
-                        disabledUncheckedSplitContainerColor =
-                            fromToken(SplitToggleButtonTokens.DisabledUncheckedSplitContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitToggleButtonTokens.DisabledOpacity
-                                )
-                    )
-                    .also { defaultSplitToggleButtonColorsCached = it }
-        }
+    val ContentPadding: PaddingValues = PaddingValues(
+        start = ChipHorizontalPadding,
+        top = ChipVerticalPadding,
+        end = ChipHorizontalPadding,
+        bottom = ChipVerticalPadding
+    )
 }
 
 /**
- * Represents the different container and content colors used for toggle buttons ([ToggleButton],
- * [IconToggleButton], and [TextToggleButton]) in various states, that are checked, unchecked,
- * enabled and disabled.
- *
- * @param checkedContainerColor Container or background color when the toggle button is checked
- * @param checkedContentColor Color of the content like label when the toggle button is checked
- * @param checkedSecondaryContentColor Color of the secondary content like secondary label when the
- *   toggle button is checked
- * @param checkedIconColor Color of the icon when the toggle button is checked
- * @param uncheckedContainerColor Container or background color when the toggle button is unchecked
- * @param uncheckedContentColor Color of the content like label when the toggle button is unchecked
- * @param uncheckedSecondaryContentColor Color of the secondary content like secondary label when
- *   the toggle button is unchecked
- * @param uncheckedIconColor Color of the icon when the toggle button is unchecked
- * @param disabledCheckedContainerColor Container or background color when the toggle button is
- *   disabled and checked
- * @param disabledCheckedContentColor Color of content like label when the toggle button is disabled
- *   and checked
- * @param disabledCheckedSecondaryContentColor Color of the secondary content like secondary label
- *   when the toggle button is disabled and checked
- * @param disabledCheckedIconColor Icon color when the toggle button is disabled and checked
- * @param disabledUncheckedContainerColor Container or background color when the toggle button is
- *   disabled and unchecked
- * @param disabledUncheckedContentColor Color of the content like label when the toggle button is
- *   disabled and unchecked
- * @param disabledUncheckedSecondaryContentColor Color of the secondary content like secondary label
- *   when the toggle button is disabled and unchecked
- * @param disabledUncheckedIconColor Icon color when the toggle button is disabled and unchecked
- * @constructor [ToggleButtonColors] constructor to be used with [ToggleButton]
+ * Represents the different container and content colors used for toggle buttons
+ * ([ToggleButton], [IconToggleButton], and [TextToggleButton]) in various states,
+ * that are checked, unchecked, enabled and disabled.
  */
 @Immutable
-class ToggleButtonColors
-constructor(
+class ToggleButtonColors constructor(
     val checkedContainerColor: Color,
     val checkedContentColor: Color,
     val checkedSecondaryContentColor: Color,
@@ -621,25 +403,6 @@ constructor(
     val disabledUncheckedSecondaryContentColor: Color,
     val disabledUncheckedIconColor: Color,
 ) {
-    /**
-     * [ToggleButtonColors] constructor for [IconToggleButton] and [TextToggleButton].
-     *
-     * @param checkedContainerColor Container or background color of the toggle button when checked
-     * @param checkedContentColor Color of the content (text or icon) of the toggle button when
-     *   checked
-     * @param uncheckedContainerColor Container or background color of the toggle button when
-     *   unchecked
-     * @param uncheckedContentColor Color of the content (text or icon) of the toggle button when
-     *   unchecked
-     * @param disabledCheckedContainerColor Container or background color of the toggle button when
-     *   disabled and checked
-     * @param disabledCheckedContentColor Color of the content (icon or text) toggle button when
-     *   disabled and unchecked
-     * @param disabledUncheckedContainerColor Container or background color of the toggle button
-     *   when disabled and unchecked
-     * @param disabledUncheckedContentColor Color of the content (icon or text) toggle button when
-     *   disabled and unchecked
-     */
     constructor(
         checkedContainerColor: Color,
         checkedContentColor: Color,
@@ -652,7 +415,7 @@ constructor(
     ) : this(
         checkedContainerColor = checkedContainerColor,
         checkedContentColor = checkedContentColor,
-        checkedSecondaryContentColor = checkedContentColor,
+        checkedSecondaryContentColor = checkedContainerColor,
         checkedIconColor = checkedContentColor,
         uncheckedContainerColor = uncheckedContainerColor,
         uncheckedContentColor = uncheckedContentColor,
@@ -668,93 +431,15 @@ constructor(
         disabledUncheckedIconColor = disabledUncheckedContentColor,
     )
 
-    internal fun copy(
-        checkedContainerColor: Color,
-        checkedContentColor: Color,
-        checkedSecondaryContentColor: Color,
-        checkedIconColor: Color,
-        uncheckedContainerColor: Color,
-        uncheckedContentColor: Color,
-        uncheckedSecondaryContentColor: Color,
-        uncheckedIconColor: Color,
-        disabledCheckedContainerColor: Color,
-        disabledCheckedContentColor: Color,
-        disabledCheckedSecondaryContentColor: Color,
-        disabledCheckedIconColor: Color,
-        disabledUncheckedContainerColor: Color,
-        disabledUncheckedContentColor: Color,
-        disabledUncheckedSecondaryContentColor: Color,
-        disabledUncheckedIconColor: Color,
-    ): ToggleButtonColors =
-        ToggleButtonColors(
-            checkedContainerColor = checkedContainerColor.takeOrElse { this.checkedContainerColor },
-            checkedContentColor = checkedContentColor.takeOrElse { this.checkedContentColor },
-            checkedSecondaryContentColor =
-                checkedSecondaryContentColor.takeOrElse { this.checkedSecondaryContentColor },
-            checkedIconColor = checkedIconColor.takeOrElse { this.checkedIconColor },
-            uncheckedContainerColor =
-                uncheckedContainerColor.takeOrElse { this.uncheckedContainerColor },
-            uncheckedContentColor = uncheckedContentColor.takeOrElse { this.uncheckedContentColor },
-            uncheckedSecondaryContentColor =
-                uncheckedSecondaryContentColor.takeOrElse { this.uncheckedSecondaryContentColor },
-            uncheckedIconColor = uncheckedIconColor.takeOrElse { this.uncheckedIconColor },
-            disabledCheckedContainerColor =
-                disabledCheckedContainerColor.takeOrElse { this.disabledCheckedContainerColor },
-            disabledCheckedContentColor =
-                disabledCheckedContentColor.takeOrElse { this.disabledCheckedContentColor },
-            disabledCheckedSecondaryContentColor =
-                disabledCheckedSecondaryContentColor.takeOrElse {
-                    this.disabledCheckedSecondaryContentColor
-                },
-            disabledCheckedIconColor =
-                disabledCheckedIconColor.takeOrElse { this.disabledCheckedIconColor },
-            disabledUncheckedContainerColor =
-                disabledUncheckedContainerColor.takeOrElse { this.disabledUncheckedContainerColor },
-            disabledUncheckedContentColor =
-                disabledUncheckedContentColor.takeOrElse { this.disabledUncheckedContentColor },
-            disabledUncheckedSecondaryContentColor =
-                disabledUncheckedSecondaryContentColor.takeOrElse {
-                    this.disabledUncheckedSecondaryContentColor
-                },
-            disabledUncheckedIconColor =
-                disabledUncheckedIconColor.takeOrElse { this.disabledUncheckedIconColor },
-        )
-
-    /** Copy function for [IconToggleButton] and [TextToggleButton]. */
-    internal fun copy(
-        checkedContainerColor: Color,
-        checkedContentColor: Color,
-        uncheckedContainerColor: Color,
-        uncheckedContentColor: Color,
-        disabledCheckedContainerColor: Color,
-        disabledCheckedContentColor: Color,
-        disabledUncheckedContainerColor: Color,
-        disabledUncheckedContentColor: Color,
-    ): ToggleButtonColors =
-        ToggleButtonColors(
-            checkedContainerColor = checkedContainerColor.takeOrElse { this.checkedContainerColor },
-            checkedContentColor = checkedContentColor.takeOrElse { this.checkedContentColor },
-            uncheckedContainerColor =
-                uncheckedContainerColor.takeOrElse { this.uncheckedContainerColor },
-            uncheckedContentColor = uncheckedContentColor.takeOrElse { this.uncheckedContentColor },
-            disabledCheckedContainerColor =
-                disabledCheckedContainerColor.takeOrElse { this.disabledCheckedContainerColor },
-            disabledCheckedContentColor =
-                disabledCheckedContentColor.takeOrElse { this.disabledCheckedContentColor },
-            disabledUncheckedContainerColor =
-                disabledUncheckedContainerColor.takeOrElse { this.disabledUncheckedContainerColor },
-            disabledUncheckedContentColor =
-                disabledUncheckedContentColor.takeOrElse { this.disabledUncheckedContentColor },
-        )
-
     /**
-     * Determines the container color based on whether the toggle button is [enabled] and [checked].
+     * Determines the container color based on whether the toggle button is [enabled]
+     * and [checked].
      *
      * @param enabled Whether the toggle button is enabled
      * @param checked Whether the toggle button is checked
      */
     @Composable
-    internal fun containerColor(enabled: Boolean, checked: Boolean): State<Color> =
+    fun containerColor(enabled: Boolean, checked: Boolean): State<Color> =
         animateSelectionColor(
             enabled = enabled,
             checked = checked,
@@ -766,13 +451,14 @@ constructor(
         )
 
     /**
-     * Determines the content color based on whether the toggle button is [enabled] and [checked].
+     * Determines the content color based on whether the toggle button is [enabled]
+     * and [checked].
      *
      * @param enabled Whether the toggle button is enabled
      * @param checked Whether the toggle button is checked
      */
     @Composable
-    internal fun contentColor(enabled: Boolean, checked: Boolean): State<Color> =
+    fun contentColor(enabled: Boolean, checked: Boolean): State<Color> =
         animateSelectionColor(
             enabled = enabled,
             checked = checked,
@@ -787,10 +473,11 @@ constructor(
      * Represents the secondary content color depending on the [enabled] and [checked] properties.
      *
      * @param enabled Whether the ToggleButton is enabled.
-     * @param checked Whether the ToggleButton is currently checked or unchecked.
+     * @param checked Whether the ToggleButton is currently checked/selected
+     * or unchecked/not selected.
      */
     @Composable
-    internal fun secondaryContentColor(enabled: Boolean, checked: Boolean): State<Color> =
+    fun secondaryContentColor(enabled: Boolean, checked: Boolean): State<Color> =
         animateSelectionColor(
             enabled = enabled,
             checked = checked,
@@ -802,14 +489,15 @@ constructor(
         )
 
     /**
-     * Represents the icon color for the [ToggleButton] depending on the [enabled] and [checked]
-     * properties.
+     * Represents the icon color for the [ToggleButton] depending on the
+     * [enabled] and [checked] properties.
      *
      * @param enabled Whether the ToggleButton is enabled.
-     * @param checked Whether the ToggleButton is currently checked or unchecked.
+     * @param checked Whether the ToggleButton is currently checked/selected
+     * or unchecked/not selected.
      */
     @Composable
-    internal fun iconColor(enabled: Boolean, checked: Boolean): State<Color> =
+    fun iconColor(enabled: Boolean, checked: Boolean): State<Color> =
         animateSelectionColor(
             enabled = enabled,
             checked = checked,
@@ -837,14 +525,17 @@ constructor(
         if (uncheckedIconColor != other.uncheckedIconColor) return false
         if (disabledCheckedContainerColor != other.disabledCheckedContainerColor) return false
         if (disabledCheckedContentColor != other.disabledCheckedContentColor) return false
-        if (disabledCheckedSecondaryContentColor != other.disabledCheckedSecondaryContentColor)
-            return false
+        if (disabledCheckedSecondaryContentColor !=
+            other.disabledCheckedSecondaryContentColor
+        ) return false
         if (disabledCheckedIconColor != other.disabledCheckedIconColor) return false
         if (disabledUncheckedContainerColor != other.disabledUncheckedContainerColor) return false
         if (disabledUncheckedContentColor != other.disabledUncheckedContentColor) return false
-        if (disabledUncheckedSecondaryContentColor != other.disabledUncheckedSecondaryContentColor)
+        if (disabledUncheckedSecondaryContentColor !=
+            other.disabledUncheckedSecondaryContentColor
+        ) return false
+        if (disabledUncheckedIconColor != other.disabledUncheckedIconColor)
             return false
-        if (disabledUncheckedIconColor != other.disabledUncheckedIconColor) return false
 
         return true
     }
@@ -872,42 +563,8 @@ constructor(
 
 /**
  * Represents the different colors used in [SplitToggleButton] in different states.
- *
- * @param checkedContainerColor Container or background color when the split toggle button is
- *   checked
- * @param checkedContentColor Color of the content like label when the split toggle button is
- *   checked
- * @param checkedSecondaryContentColor Color of the secondary content like secondary label when the
- *   split toggle button is checked
- * @param checkedSplitContainerColor Split container color when the split toggle button is checked
- * @param uncheckedContainerColor Container or background color when the split toggle button is
- *   unchecked
- * @param uncheckedContentColor Color of the content like label when the split toggle button is
- *   unchecked
- * @param uncheckedSecondaryContentColor Color of the secondary content like secondary label when
- *   the split toggle button is unchecked
- * @param uncheckedSplitContainerColor Split container color when the split toggle button is
- *   unchecked
- * @param disabledCheckedContainerColor Container color when the split toggle button is disabled and
- *   checked
- * @param disabledCheckedContentColor Color of the content like label when the split toggle button
- *   is disabled and checked
- * @param disabledCheckedSecondaryContentColor Color of the secondary content like secondary label
- *   when the split toggle button is disabled and checked
- * @param disabledCheckedSplitContainerColor Split container color when the split toggle button is
- *   disabled and checked
- * @param disabledUncheckedContainerColor Container color when the split toggle button is unchecked
- *   and disabled
- * @param disabledUncheckedContentColor Color of the content like label when the split toggle button
- *   is unchecked and disabled
- * @param disabledUncheckedSecondaryContentColor Color of the secondary content like secondary label
- *   when the split toggle button is unchecked and disabled
- * @param disabledUncheckedSplitContainerColor Split container color when the split toggle button is
- *   unchecked and disabled
- * @constructor [SplitToggleButtonColors] constructor to be used with [SplitToggleButton]
  */
-class SplitToggleButtonColors
-constructor(
+class SplitToggleButtonColors constructor(
     val checkedContainerColor: Color,
     val checkedContentColor: Color,
     val checkedSecondaryContentColor: Color,
@@ -926,70 +583,12 @@ constructor(
     val disabledUncheckedSplitContainerColor: Color,
 ) {
 
-    internal fun copy(
-        checkedContainerColor: Color,
-        checkedContentColor: Color,
-        checkedSecondaryContentColor: Color,
-        checkedSplitContainerColor: Color,
-        uncheckedContainerColor: Color,
-        uncheckedContentColor: Color,
-        uncheckedSecondaryContentColor: Color,
-        uncheckedSplitContainerColor: Color,
-        disabledCheckedContainerColor: Color,
-        disabledCheckedContentColor: Color,
-        disabledCheckedSecondaryContentColor: Color,
-        disabledCheckedSplitContainerColor: Color,
-        disabledUncheckedContainerColor: Color,
-        disabledUncheckedContentColor: Color,
-        disabledUncheckedSecondaryContentColor: Color,
-        disabledUncheckedSplitContainerColor: Color,
-    ): SplitToggleButtonColors =
-        SplitToggleButtonColors(
-            checkedContainerColor = checkedContainerColor.takeOrElse { this.checkedContainerColor },
-            checkedContentColor = checkedContentColor.takeOrElse { this.checkedContentColor },
-            checkedSecondaryContentColor =
-                checkedSecondaryContentColor.takeOrElse { this.checkedSecondaryContentColor },
-            checkedSplitContainerColor =
-                checkedSplitContainerColor.takeOrElse { this.checkedSplitContainerColor },
-            uncheckedContainerColor =
-                uncheckedContainerColor.takeOrElse { this.uncheckedContainerColor },
-            uncheckedContentColor = uncheckedContentColor.takeOrElse { this.uncheckedContentColor },
-            uncheckedSecondaryContentColor =
-                uncheckedSecondaryContentColor.takeOrElse { this.uncheckedSecondaryContentColor },
-            uncheckedSplitContainerColor =
-                uncheckedSplitContainerColor.takeOrElse { this.uncheckedSplitContainerColor },
-            disabledCheckedContainerColor =
-                disabledCheckedContainerColor.takeOrElse { this.disabledCheckedContainerColor },
-            disabledCheckedContentColor =
-                disabledCheckedContentColor.takeOrElse { this.disabledCheckedContentColor },
-            disabledCheckedSecondaryContentColor =
-                disabledCheckedSecondaryContentColor.takeOrElse {
-                    this.disabledCheckedSecondaryContentColor
-                },
-            disabledCheckedSplitContainerColor =
-                disabledCheckedSplitContainerColor.takeOrElse {
-                    this.disabledCheckedSplitContainerColor
-                },
-            disabledUncheckedContainerColor =
-                disabledUncheckedContainerColor.takeOrElse { this.disabledUncheckedContainerColor },
-            disabledUncheckedContentColor =
-                disabledUncheckedContentColor.takeOrElse { this.disabledUncheckedContentColor },
-            disabledUncheckedSecondaryContentColor =
-                disabledUncheckedSecondaryContentColor.takeOrElse {
-                    this.disabledUncheckedSecondaryContentColor
-                },
-            disabledUncheckedSplitContainerColor =
-                disabledUncheckedSplitContainerColor.takeOrElse {
-                    this.disabledUncheckedSplitContainerColor
-                },
-        )
-
     /**
-     * Determines the container color based on whether the [SplitToggleButton] is [enabled] and
-     * [checked].
+     * Determines the container color based on whether the [SplitToggleButton] is [enabled]
+     * and [checked].
      *
      * @param enabled Whether the [SplitToggleButton] is enabled
-     * @param checked Whether the [SplitToggleButton] is currently checked
+     * @param checked Whether the [SplitToggleButton] is currently checked/selected
      */
     @Composable
     internal fun containerColor(enabled: Boolean, checked: Boolean): State<Color> =
@@ -1004,11 +603,11 @@ constructor(
         )
 
     /**
-     * Determines the content color based on whether the [SplitToggleButton] is [enabled] and
-     * [checked].
+     * Determines the content color based on whether the [SplitToggleButton] is [enabled]
+     * and [checked].
      *
      * @param enabled Whether the [SplitToggleButton] is enabled
-     * @param checked Whether the [SplitToggleButton] is currently checked
+     * @param checked Whether the [SplitToggleButton] is currently checked/selected
      */
     @Composable
     internal fun contentColor(enabled: Boolean, checked: Boolean): State<Color> =
@@ -1023,11 +622,12 @@ constructor(
         )
 
     /**
-     * Represents the secondary content color for the [SplitToggleButton] depending on the [enabled]
-     * and [checked] properties.
+     * Represents the secondary content color for the [SplitToggleButton] depending on the
+     * [enabled] and [checked] properties.
      *
      * @param enabled Whether the [SplitToggleButton] is enabled.
-     * @param checked Whether the [SplitToggleButton] is currently checked or unchecked.
+     * @param checked Whether the [SplitToggleButton] is currently checked/selected
+     * or unchecked/not selected.
      */
     @Composable
     internal fun secondaryContentColor(enabled: Boolean, checked: Boolean): State<Color> =
@@ -1042,14 +642,15 @@ constructor(
         )
 
     /**
-     * Represents the split container for the [SplitToggleButton] color depending on the [enabled]
-     * and [checked] properties.
+     * Represents the split container for the [SplitToggleButton] color depending on the
+     * [enabled] and [checked] properties.
      *
      * @param enabled Whether the [SplitToggleButton] is enabled.
-     * @param checked Whether the [SplitToggleButton] is currently checked or unchecked.
+     * @param checked Whether the [SplitToggleButton] is currently checked/selected
+     * or unchecked/not selected.
      */
     @Composable
-    internal fun splitContainerColor(enabled: Boolean, checked: Boolean): State<Color> =
+    fun splitContainerColor(enabled: Boolean, checked: Boolean): State<Color> =
         animateSelectionColor(
             enabled = enabled,
             checked = checked,
@@ -1077,14 +678,16 @@ constructor(
         if (uncheckedSplitContainerColor != other.uncheckedSplitContainerColor) return false
         if (disabledCheckedContainerColor != other.disabledCheckedContainerColor) return false
         if (disabledCheckedContentColor != other.disabledCheckedContentColor) return false
-        if (disabledCheckedSecondaryContentColor != other.disabledCheckedSecondaryContentColor)
-            return false
+        if (disabledCheckedSecondaryContentColor !=
+            other.disabledCheckedSecondaryContentColor
+        ) return false
         if (disabledCheckedSplitContainerColor != other.disabledCheckedSplitContainerColor)
             return false
         if (disabledUncheckedContainerColor != other.disabledUncheckedContainerColor) return false
         if (disabledUncheckedContentColor != other.disabledUncheckedContentColor) return false
-        if (disabledUncheckedSecondaryContentColor != other.disabledUncheckedSecondaryContentColor)
-            return false
+        if (disabledUncheckedSecondaryContentColor !=
+            other.disabledUncheckedSecondaryContentColor
+        ) return false
         if (disabledUncheckedSplitContainerColor != other.disabledUncheckedSplitContainerColor)
             return false
 
@@ -1112,21 +715,9 @@ constructor(
     }
 }
 
-/**
- * [ToggleControlScope] provides enabled and checked properties. This allows toggle controls to omit
- * enabled/checked parameters as they given by the scope.
- *
- * @param isEnabled Controls the enabled state of the toggle control. When `false`, the control is
- *   displayed with disabled colors.
- * @param isChecked Indicates whether the control is currently checked.
- */
-class ToggleControlScope(val isEnabled: Boolean, val isChecked: Boolean)
-
-private val TOGGLE_CONTROL_WIDTH = 32.dp
-private val TOGGLE_CONTROL_HEIGHT = 24.dp
-private val TOGGLE_CONTROL_SPACING = 6.dp
-private val ICON_SPACING = 6.dp
+private val SELECTION_CONTROL_WIDTH = 32.dp
+private val SELECTION_CONTROL_HEIGHT = 24.dp
 private val MIN_HEIGHT = 52.dp
 
 private val COLOR_ANIMATION_SPEC: AnimationSpec<Color> =
-    tween(MotionTokens.DurationMedium1, 0, MotionTokens.EasingStandardDecelerate)
+    tween(MEDIUM_1, 0, STANDARD_DECELERATE)

@@ -36,7 +36,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ReportDrawnTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun testReportFullyDrawnWhen() {
@@ -81,7 +82,7 @@ class ReportDrawnTest {
             recomposeInt.value
             ReportDrawnAfter {
                 lockChecks++
-                mutex.withLock {}
+                mutex.withLock { }
             }
         }
 
@@ -113,8 +114,12 @@ class ReportDrawnTest {
         val mutex = Mutex(locked = true)
         var conditionReady by mutableStateOf(false)
         rule.setContent {
-            ReportDrawnWhen { conditionReady }
-            ReportDrawnAfter { mutex.withLock {} }
+            ReportDrawnWhen {
+                conditionReady
+            }
+            ReportDrawnAfter {
+                mutex.withLock { }
+            }
         }
 
         rule.waitForIdle()
@@ -129,7 +134,9 @@ class ReportDrawnTest {
 
         // Should complete as soon as the coroutine is scheduled, which is on the UI thread.
         // We just need to wait our turn for the UI thread:
-        rule.runOnIdle { assertThat(rule.activity.reportFullyDrawnCalled).isTrue() }
+        rule.runOnIdle {
+            assertThat(rule.activity.reportFullyDrawnCalled).isTrue()
+        }
     }
 
     // same as above, but the order is swapped
@@ -138,8 +145,12 @@ class ReportDrawnTest {
         val mutex = Mutex(locked = true)
         var conditionReady by mutableStateOf(false)
         rule.setContent {
-            ReportDrawnWhen { conditionReady }
-            ReportDrawnAfter { mutex.withLock {} }
+            ReportDrawnWhen {
+                conditionReady
+            }
+            ReportDrawnAfter {
+                mutex.withLock { }
+            }
         }
 
         rule.waitForIdle()
@@ -149,7 +160,9 @@ class ReportDrawnTest {
 
         // Should complete as soon as the coroutine is scheduled, which is on the UI thread.
         // We just need to wait our turn for the UI thread:
-        rule.runOnIdle { assertThat(rule.activity.reportFullyDrawnCalled).isFalse() }
+        rule.runOnIdle {
+            assertThat(rule.activity.reportFullyDrawnCalled).isFalse()
+        }
 
         conditionReady = true
         rule.waitForIdle()
@@ -162,18 +175,24 @@ class ReportDrawnTest {
         val mutex = Mutex(locked = true)
         var conditionReady by mutableStateOf(false)
         rule.setContent {
-            AndroidView(
-                factory = { context ->
-                    ComposeView(context).apply { setContent { ReportDrawnWhen { conditionReady } } }
-                }
-            )
-            AndroidView(
-                factory = { context ->
-                    ComposeView(context).apply {
-                        setContent { ReportDrawnAfter { mutex.withLock {} } }
+            AndroidView(factory = { context ->
+                ComposeView(context).apply {
+                    setContent {
+                        ReportDrawnWhen {
+                            conditionReady
+                        }
                     }
                 }
-            )
+            })
+            AndroidView(factory = { context ->
+                ComposeView(context).apply {
+                    setContent {
+                        ReportDrawnAfter {
+                            mutex.withLock { }
+                        }
+                    }
+                }
+            })
         }
 
         rule.waitForIdle()
@@ -181,7 +200,9 @@ class ReportDrawnTest {
 
         mutex.unlock()
 
-        rule.runOnIdle { assertThat(rule.activity.reportFullyDrawnCalled).isFalse() }
+        rule.runOnIdle {
+            assertThat(rule.activity.reportFullyDrawnCalled).isFalse()
+        }
 
         conditionReady = true
         rule.waitForIdle()
@@ -191,7 +212,9 @@ class ReportDrawnTest {
 
     @Test
     fun reportAfterComposition() {
-        rule.setContent { ReportDrawn() }
+        rule.setContent {
+            ReportDrawn()
+        }
 
         rule.waitForIdle()
         assertThat(rule.activity.reportFullyDrawnCalled).isTrue()
@@ -204,9 +227,13 @@ class ReportDrawnTest {
         var useCondition2 by mutableStateOf(true)
 
         rule.setContent {
-            ReportDrawnWhen { condition1 }
+            ReportDrawnWhen {
+                condition1
+            }
             if (useCondition2) {
-                ReportDrawnWhen { condition2 }
+                ReportDrawnWhen {
+                    condition2
+                }
             }
         }
 
@@ -224,11 +251,10 @@ class ReportDrawnTest {
 
     @Test
     fun provideFullyDrawnReporter() {
-        val fullyDrawnReporterOwner =
-            object : FullyDrawnReporterOwner {
-                override val fullyDrawnReporter: FullyDrawnReporter
-                    get() = rule.activity.fullyDrawnReporter
-            }
+        val fullyDrawnReporterOwner = object : FullyDrawnReporterOwner {
+            override val fullyDrawnReporter: FullyDrawnReporter
+                get() = rule.activity.fullyDrawnReporter
+        }
         lateinit var localValue: FullyDrawnReporterOwner
         rule.setContent {
             CompositionLocalProvider(

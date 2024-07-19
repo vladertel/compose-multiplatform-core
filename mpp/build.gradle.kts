@@ -143,9 +143,10 @@ tasks.register("publishComposeJbToMavenLocal", ComposePublishingTask::class) {
 
 // isn't included in libraryToComponents for easy conflict resolution
 // (it is changed in integration and should be removed in 1.8)
-// TODO remove this and CI tasks after merging Jetpack Compose 1.8 to jb-main
 val iconsComponents =
-    emptyList<ComposeComponent>()
+    listOf(
+        ComposeComponent(":compose:material:material-icons-extended"),
+    )
 
 fun ComposePublishingTask.iconsPublications() {
     iconsComponents.forEach { publishMultiplatform(it) }

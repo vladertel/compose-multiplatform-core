@@ -34,17 +34,23 @@ class LongSubjectTest {
     @Test
     fun equalityWithInts() {
         assertThat(0L).isEqualTo(0)
-        assertFailsWith<AssertionError> { assertThat(0L).isNotEqualTo(0) }
+        assertFailsWith<AssertionError> {
+            assertThat(0L).isNotEqualTo(0)
+        }
     }
 
     @Test
     fun equalityFail() {
-        assertFailsWith<AssertionError> { assertThat(4L).isEqualTo(5L) }
+        assertFailsWith<AssertionError> {
+            assertThat(4L).isEqualTo(5L)
+        }
     }
 
     @Test
     fun inequalityFail() {
-        assertFailsWith<AssertionError> { assertThat(4L).isNotEqualTo(4L) }
+        assertFailsWith<AssertionError> {
+            assertThat(4L).isNotEqualTo(4L)
+        }
     }
 
     @Test
@@ -54,12 +60,16 @@ class LongSubjectTest {
 
     @Test
     fun equalityOfNullsFail_nullActual() {
-        assertFailsWith<AssertionError> { assertThat(null as Long?).isEqualTo(5L) }
+        assertFailsWith<AssertionError> {
+            assertThat(null as Long?).isEqualTo(5L)
+        }
     }
 
     @Test
     fun equalityOfNullsFail_nullExpected() {
-        assertFailsWith<AssertionError> { assertThat(5L).isEqualTo(null) }
+        assertFailsWith<AssertionError> {
+            assertThat(5L).isEqualTo(null)
+        }
     }
 
     @Test
@@ -70,51 +80,69 @@ class LongSubjectTest {
 
     @Test
     fun inequalityOfNullsFail() {
-        assertFailsWith<AssertionError> { assertThat(null as Long?).isNotEqualTo(null) }
+        assertFailsWith<AssertionError> {
+            assertThat(null as Long?).isNotEqualTo(null)
+        }
     }
 
     @Test
     fun testNumericTypeWithSameValue_shouldBeEqual_long_long() {
-        assertFailsWith<AssertionError> { assertThat(42L).isNotEqualTo(42L) }
+        assertFailsWith<AssertionError> {
+            assertThat(42L).isNotEqualTo(42L)
+        }
     }
 
     @Test
     fun testNumericTypeWithSameValue_shouldBeEqual_long_int() {
-        assertFailsWith<AssertionError> { assertThat(42L).isNotEqualTo(42) }
+        assertFailsWith<AssertionError> {
+            assertThat(42L).isNotEqualTo(42)
+        }
     }
 
     @Test
     fun isGreaterThan_int_strictly() {
-        assertFailsWith<AssertionError> { assertThat(2L).isGreaterThan(3) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isGreaterThan(3)
+        }
     }
 
     @Test
     fun isGreaterThan_int() {
-        assertFailsWith<AssertionError> { assertThat(2L).isGreaterThan(2) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isGreaterThan(2)
+        }
         assertThat(2L).isGreaterThan(1)
     }
 
     @Test
     fun isLessThan_int_strictly() {
-        assertFailsWith<AssertionError> { assertThat(2L).isLessThan(1) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isLessThan(1)
+        }
     }
 
     @Test
     fun isLessThan_int() {
-        assertFailsWith<AssertionError> { assertThat(2L).isLessThan(2) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isLessThan(2)
+        }
         assertThat(2L).isLessThan(3)
     }
 
     @Test
     fun isAtLeast_int() {
-        assertFailsWith<AssertionError> { assertThat(2L).isAtLeast(3) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isAtLeast(3)
+        }
         assertThat(2L).isAtLeast(2)
         assertThat(2L).isAtLeast(1)
     }
 
     @Test
     fun isAtMost_int() {
-        assertFailsWith<AssertionError> { assertThat(2L).isAtMost(1) }
+        assertFailsWith<AssertionError> {
+            assertThat(2L).isAtMost(1)
+        }
         assertThat(2L).isAtMost(2)
         assertThat(2L).isAtMost(3)
     }
@@ -141,7 +169,9 @@ class LongSubjectTest {
     }
 
     private fun assertThatIsWithinFails(actual: Long, tolerance: Long, expected: Long) {
-        assertFailsWith<AssertionError> { assertThat(actual).isWithin(tolerance).of(expected) }
+        assertFailsWith<AssertionError> {
+            assertThat(actual).isWithin(tolerance).of(expected)
+        }
     }
 
     @Test
@@ -166,7 +196,9 @@ class LongSubjectTest {
     }
 
     private fun assertThatIsNotWithinFails(actual: Long, tolerance: Long, expected: Long) {
-        assertFailsWith<AssertionError> { assertThat(actual).isNotWithin(tolerance).of(expected) }
+        assertFailsWith<AssertionError> {
+            assertThat(actual).isNotWithin(tolerance).of(expected)
+        }
     }
 
     @Test

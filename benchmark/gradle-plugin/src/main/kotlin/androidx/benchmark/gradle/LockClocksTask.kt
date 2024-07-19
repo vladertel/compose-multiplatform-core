@@ -37,9 +37,11 @@ abstract class LockClocksTask : DefaultTask() {
         description = "locks clocks of connected, supported, rooted device"
     }
 
-    @get:Input abstract val adbPath: Property<String>
+    @get:Input
+    abstract val adbPath: Property<String>
 
-    @get:Input abstract val coresArg: Property<String>
+    @get:Input
+    abstract val coresArg: Property<String>
 
     @Suppress("unused")
     @TaskAction
@@ -58,7 +60,11 @@ abstract class LockClocksTask : DefaultTask() {
         val dest = "/data/local/tmp/lockClocks.sh"
         val source = javaClass.classLoader.getResource("scripts/lockClocks.sh")
         val tmpSource = Files.createTempFile("lockClocks.sh", null).toString()
-        Files.copy(source.openStream(), Paths.get(tmpSource), StandardCopyOption.REPLACE_EXISTING)
+        Files.copy(
+            source.openStream(),
+            Paths.get(tmpSource),
+            StandardCopyOption.REPLACE_EXISTING
+        )
         adb.execSync("push $tmpSource $dest")
 
         // Files pushed by adb push don't always preserve file permissions.

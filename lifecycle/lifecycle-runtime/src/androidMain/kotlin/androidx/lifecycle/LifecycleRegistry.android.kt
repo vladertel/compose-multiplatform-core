@@ -20,4 +20,5 @@ import android.annotation.SuppressLint
 import androidx.arch.core.executor.ArchTaskExecutor
 
 @SuppressLint("RestrictedApi")
-internal actual fun isMainThread(): Boolean = ArchTaskExecutor.getInstance().isMainThread
+internal actual fun isMainThread(): Boolean =
+    ArchTaskExecutor.getInstance().isMainThread

@@ -103,12 +103,14 @@ private fun vectorShape(width: Dp, height: Dp): Painter =
                     close()
                 }
                 Path(
-                    fill =
-                        Brush.horizontalGradient(
-                            listOf(Color.Red, Color.Blue),
-                            startX = 0.0f,
-                            endX = viewportWidth / 2 + 100.0f
+                    fill = Brush.horizontalGradient(
+                        listOf(
+                            Color.Red,
+                            Color.Blue
                         ),
+                        startX = 0.0f,
+                        endX = viewportWidth / 2 + 100.0f
+                    ),
                     pathData = pathData
                 )
             }
@@ -127,15 +129,14 @@ private fun BackgroundPath(vectorWidth: Float, vectorHeight: Float) {
     }
 
     Path(
-        fill =
-            Brush.verticalGradient(
-                0.0f to Color.Cyan,
-                0.3f to Color.Green,
-                1.0f to Color.Magenta,
-                startY = 0.0f,
-                endY = vectorHeight,
-                tileMode = TileMode.Clamp
-            ),
+        fill = Brush.verticalGradient(
+            0.0f to Color.Cyan,
+            0.3f to Color.Green,
+            1.0f to Color.Magenta,
+            startY = 0.0f,
+            endY = vectorHeight,
+            tileMode = TileMode.Clamp
+        ),
         pathData = background
     )
 }
@@ -144,19 +145,21 @@ private fun BackgroundPath(vectorWidth: Float, vectorHeight: Float) {
 private fun Triangle() {
     val length = 150.0f
     Path(
-        fill =
-            Brush.radialGradient(
-                listOf(Color(0xFF000080), Color(0xFF808000), Color(0xFF008080)),
-                Offset(length / 2.0f, length / 2.0f),
-                radius = length / 2.0f,
-                tileMode = TileMode.Repeated
+        fill = Brush.radialGradient(
+            listOf(
+                Color(0xFF000080),
+                Color(0xFF808000),
+                Color(0xFF008080)
             ),
-        pathData =
-            PathData {
-                verticalLineTo(length)
-                horizontalLineTo(length)
-                close()
-            }
+            Offset(length / 2.0f, length / 2.0f),
+            radius = length / 2.0f,
+            tileMode = TileMode.Repeated
+        ),
+        pathData = PathData {
+            verticalLineTo(length)
+            horizontalLineTo(length)
+            close()
+        }
     )
 }
 
@@ -166,27 +169,27 @@ private fun TriangleWithOffsets() {
     val side1 = 150.0f
     val side2 = 150.0f
     Path(
-        fill =
-            Brush.radialGradient(
-                0.0f to Color(0xFF800000),
-                0.3f to Color.Cyan,
-                0.8f to Color.Yellow,
-                center = Offset(side1 / 2.0f, side2 / 2.0f),
-                radius = side1 / 2.0f,
-                tileMode = TileMode.Clamp
-            ),
-        pathData =
-            PathData {
-                horizontalLineToRelative(side1)
-                verticalLineToRelative(side2)
-                close()
-            }
+        fill = Brush.radialGradient(
+            0.0f to Color(0xFF800000),
+            0.3f to Color.Cyan,
+            0.8f to Color.Yellow,
+            center = Offset(side1 / 2.0f, side2 / 2.0f),
+            radius = side1 / 2.0f,
+            tileMode = TileMode.Clamp
+        ),
+        pathData = PathData {
+            horizontalLineToRelative(side1)
+            verticalLineToRelative(side2)
+            close()
+        }
     )
 }
 
 @Composable
 private fun StripePath(vectorWidth: Float, vectorHeight: Float) {
-    val stripeDelegate = PathData { stripe(vectorWidth, vectorHeight, 10) }
+    val stripeDelegate = PathData {
+        stripe(vectorWidth, vectorHeight, 10)
+    }
 
     Path(stroke = SolidColor(Color.Blue), pathData = stripeDelegate)
 }

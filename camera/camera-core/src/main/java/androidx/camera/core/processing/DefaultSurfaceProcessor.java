@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
+import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Size;
@@ -34,6 +35,7 @@ import android.view.Surface;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 import androidx.arch.core.util.Function;
@@ -70,6 +72,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p> This implementation simply copies the frame from the source to the destination with the
  * transformation defined in {@link SurfaceOutput#updateTransformMatrix}.
  */
+@RequiresApi(21)
 public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
         SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "DefaultSurfaceProcessor";
@@ -135,17 +138,7 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
             surfaceTexture.setDefaultBufferSize(surfaceRequest.getResolution().getWidth(),
                     surfaceRequest.getResolution().getHeight());
             Surface surface = new Surface(surfaceTexture);
-            surfaceRequest.setTransformationInfoListener(mGlExecutor, transformationInfo -> {
-                OpenGlRenderer.InputFormat inputFormat = OpenGlRenderer.InputFormat.DEFAULT;
-                if (surfaceRequest.getDynamicRange().is10BitHdr()
-                        && transformationInfo.hasCameraTransform()) {
-                    inputFormat = OpenGlRenderer.InputFormat.YUV;
-                }
-
-                mGlRenderer.setInputFormat(inputFormat);
-            });
             surfaceRequest.provideSurface(surface, mGlExecutor, result -> {
-                surfaceRequest.clearTransformationInfoListener();
                 surfaceTexture.setOnFrameAvailableListener(null);
                 surfaceTexture.release();
                 surface.release();
@@ -321,13 +314,17 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
     private Bitmap getBitmap(@NonNull Size size,
             @NonNull float[] textureTransform,
             int rotationDegrees) {
-        float[] snapshotTransform = textureTransform.clone();
+        float[] snapshotTransform = new float[16];
+        Matrix.setIdentityM(snapshotTransform, 0);
+
+        // Flip the snapshot. This is for reverting the GL transform added in SurfaceOutputImpl.
+        MatrixExt.preVerticalFlip(snapshotTransform, 0.5f);
 
         // Rotate the output if requested.
         MatrixExt.preRotate(snapshotTransform, rotationDegrees, 0.5f, 0.5f);
 
-        // Flip the snapshot. This is for reverting the GL transform added in SurfaceOutputImpl.
-        MatrixExt.preVerticalFlip(snapshotTransform, 0.5f);
+        // Apply the texture transform.
+        Matrix.multiplyMM(snapshotTransform, 0, snapshotTransform, 0, textureTransform, 0);
 
         // Update the size based on the rotation degrees.
         size = rotateSize(size, rotationDegrees);

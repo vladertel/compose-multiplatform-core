@@ -33,8 +33,9 @@ interface XProcessingEnvironmentTestConfigProvider {
 
     companion object {
         private val instance: XProcessingEnvironmentTestConfigProvider? by lazy {
-            val implementations =
-                ServiceLoader.load(XProcessingEnvironmentTestConfigProvider::class.java).toList()
+            val implementations = ServiceLoader.load(
+                XProcessingEnvironmentTestConfigProvider::class.java
+            ).toList()
             if (implementations.size >= 2) {
                 error(
                     "Multiple XProcessingEnvironmentTestConfigProvider implementations " +

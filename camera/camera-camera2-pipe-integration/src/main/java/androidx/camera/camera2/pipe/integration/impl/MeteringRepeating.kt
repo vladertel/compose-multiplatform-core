@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+
 package androidx.camera.camera2.pipe.integration.impl
 
 import android.graphics.ImageFormat
@@ -24,10 +26,12 @@ import android.os.Build
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.GuardedBy
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.core.Log.error
 import androidx.camera.camera2.pipe.core.Log.warn
 import androidx.camera.camera2.pipe.integration.adapter.CameraUseCaseAdapter
 import androidx.camera.camera2.pipe.integration.compat.workaround.getSupportedRepeatingSurfaceSizes
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
@@ -53,6 +57,7 @@ private val DEFAULT_PREVIEW_SIZE = Size(0, 0)
  * enabled, since taking a picture may require a repeating surface to perform pre-capture checks,
  * mainly around 3A.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class MeteringRepeating(
     private val cameraProperties: CameraProperties,
     config: MeteringRepeatingConfig,
@@ -63,7 +68,8 @@ class MeteringRepeating(
 
     private val deferrableSurfaceLock = Any()
 
-    @GuardedBy("deferrableSurfaceLock") private var deferrableSurface: DeferrableSurface? = null
+    @GuardedBy("deferrableSurfaceLock")
+    private var deferrableSurface: DeferrableSurface? = null
 
     override fun getDefaultConfig(applyDefaultConfig: Boolean, factory: UseCaseConfigFactory) =
         Builder(cameraProperties, displayInfoManager).useCaseConfig
@@ -93,16 +99,14 @@ class MeteringRepeating(
 
     private fun createPipeline(resolution: Size): SessionConfig.Builder {
         synchronized(deferrableSurfaceLock) {
-            val surfaceTexture =
-                SurfaceTexture(0).apply {
-                    setDefaultBufferSize(resolution.width, resolution.height)
-                }
+            val surfaceTexture = SurfaceTexture(0).apply {
+                setDefaultBufferSize(resolution.width, resolution.height)
+            }
             val surface = Surface(surfaceTexture)
 
             deferrableSurface?.close()
             deferrableSurface = ImmediateSurface(surface, resolution, imageFormat)
-            deferrableSurface!!
-                .terminationFuture
+            deferrableSurface!!.terminationFuture
                 .addListener(
                     {
                         surface.release()
@@ -112,23 +116,23 @@ class MeteringRepeating(
                 )
         }
 
-        return SessionConfig.Builder.createFrom(MeteringRepeatingConfig(), resolution).apply {
-            setTemplateType(CameraDevice.TEMPLATE_PREVIEW)
-            addSurface(deferrableSurface!!)
-            addErrorListener { _, _ ->
-                updateSessionConfig(createPipeline(resolution).build())
-                notifyReset()
+        return SessionConfig.Builder
+            .createFrom(MeteringRepeatingConfig(), resolution)
+            .apply {
+                setTemplateType(CameraDevice.TEMPLATE_PREVIEW)
+                addSurface(deferrableSurface!!)
+                addErrorListener { _, _ ->
+                    updateSessionConfig(createPipeline(resolution).build())
+                    notifyReset()
+                }
             }
-        }
     }
 
     private fun CameraProperties.getOutputSizes(): Array<Size>? {
-        val map =
-            metadata[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]
-                ?: run {
-                    error { "Can not retrieve SCALER_STREAM_CONFIGURATION_MAP." }
-                    return null
-                }
+        val map = metadata[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP] ?: run {
+            error { "Can not retrieve SCALER_STREAM_CONFIGURATION_MAP." }
+            return null
+        }
 
         return if (Build.VERSION.SDK_INT < 23) {
             // ImageFormat.PRIVATE is only public after Android level 23. Therefore, use
@@ -184,14 +188,13 @@ class MeteringRepeating(
     }
 
     class MeteringRepeatingConfig : UseCaseConfig<MeteringRepeating>, ImageInputConfig {
-        private val config =
-            MutableOptionsBundle.create().apply {
-                insertOption(
-                    OPTION_SESSION_CONFIG_UNPACKER,
-                    CameraUseCaseAdapter.DefaultSessionOptionsUnpacker
-                )
-                insertOption(OPTION_CAPTURE_TYPE, CaptureType.METERING_REPEATING)
-            }
+        private val config = MutableOptionsBundle.create().apply {
+            insertOption(
+                OPTION_SESSION_CONFIG_UNPACKER,
+                CameraUseCaseAdapter.DefaultSessionOptionsUnpacker
+            )
+            insertOption(OPTION_CAPTURE_TYPE, CaptureType.METERING_REPEATING)
+        }
 
         override fun getCaptureType() = UseCaseConfigFactory.CaptureType.METERING_REPEATING
 
@@ -203,7 +206,8 @@ class MeteringRepeating(
     class Builder(
         private val cameraProperties: CameraProperties,
         private val displayInfoManager: DisplayInfoManager
-    ) : UseCaseConfig.Builder<MeteringRepeating, MeteringRepeatingConfig, Builder> {
+    ) :
+        UseCaseConfig.Builder<MeteringRepeating, MeteringRepeatingConfig, Builder> {
 
         override fun getMutableConfig() = MutableOptionsBundle.create()
 
@@ -212,6 +216,8 @@ class MeteringRepeating(
         override fun setTargetClass(targetClass: Class<MeteringRepeating>) = this
 
         override fun setTargetName(targetName: String) = this
+
+        override fun setUseCaseEventCallback(eventCallback: EventCallback) = this
 
         override fun setDefaultSessionConfig(sessionConfig: SessionConfig) = this
 
@@ -223,10 +229,11 @@ class MeteringRepeating(
 
         override fun setSurfaceOccupancyPriority(priority: Int) = this
 
+        override fun setCameraSelector(cameraSelector: CameraSelector) = this
+
         override fun setZslDisabled(disabled: Boolean) = this
 
         override fun setHighResolutionDisabled(disabled: Boolean) = this
-
         override fun setCaptureType(captureType: UseCaseConfigFactory.CaptureType) = this
 
         override fun build(): MeteringRepeating {

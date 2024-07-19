@@ -21,7 +21,9 @@ import androidx.datastore.core.CorruptionException
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 
-/** Read PreferenceMap proto but convert InvalidProtocolBufferExceptions to CorruptionExceptions. */
+/**
+ * Read PreferenceMap proto but convert InvalidProtocolBufferExceptions to CorruptionExceptions.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class PreferencesMapCompat {
     companion object {

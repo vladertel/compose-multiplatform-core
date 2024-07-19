@@ -39,15 +39,19 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class RecreateLayersBenchmark {
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     @Test
     fun recreateContent() {
-        benchmarkRule.toggleStateBenchmarkLayout({ RecreateLayersTestCase() })
+        benchmarkRule.toggleStateBenchmarkLayout({
+            RecreateLayersTestCase()
+        })
     }
 }
 
-private class RecreateLayersTestCase : ComposeTestCase, ToggleableTestCase {
+private class RecreateLayersTestCase :
+    ComposeTestCase, ToggleableTestCase {
 
     private var state by mutableStateOf(false)
 
@@ -55,7 +59,9 @@ private class RecreateLayersTestCase : ComposeTestCase, ToggleableTestCase {
     override fun Content() {
         Column {
             val modifier = (if (state) Modifier.clipToBounds() else Modifier).size(10.dp)
-            repeat(100) { Box(modifier) }
+            repeat(100) {
+                Box(modifier)
+            }
         }
     }
 

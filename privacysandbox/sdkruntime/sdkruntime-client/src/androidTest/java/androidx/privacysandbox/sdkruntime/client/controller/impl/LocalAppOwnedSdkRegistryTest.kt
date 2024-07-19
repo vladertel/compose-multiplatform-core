@@ -40,8 +40,11 @@ class LocalAppOwnedSdkRegistryTest {
 
     @Test
     fun registerAppOwnedSdkSandboxInterfaceTest() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
 
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
 
@@ -56,17 +59,19 @@ class LocalAppOwnedSdkRegistryTest {
 
     @Test
     fun registerAppOwnedSdkSandboxInterface_whenAlreadyRegistered_throwsIllegalStateException() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
 
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
 
-        val interfaceWithSameName =
-            AppOwnedSdkSandboxInterfaceCompat(
-                name = appOwnedInterface.getName(),
-                version = 1,
-                binder = Binder()
-            )
+        val interfaceWithSameName = AppOwnedSdkSandboxInterfaceCompat(
+            name = appOwnedInterface.getName(),
+            version = 1,
+            binder = Binder()
+        )
         assertThrows<IllegalStateException> {
             sdkRegistry.registerAppOwnedSdkSandboxInterface(interfaceWithSameName)
         }
@@ -74,8 +79,11 @@ class LocalAppOwnedSdkRegistryTest {
 
     @Test
     fun unregisterAppOwnedSdkSandboxInterfaceTest() {
-        val appOwnedInterface =
-            AppOwnedSdkSandboxInterfaceCompat(name = "TestSDK", version = 1, binder = Binder())
+        val appOwnedInterface = AppOwnedSdkSandboxInterfaceCompat(
+            name = "TestSDK",
+            version = 1,
+            binder = Binder()
+        )
 
         sdkRegistry.registerAppOwnedSdkSandboxInterface(appOwnedInterface)
         sdkRegistry.unregisterAppOwnedSdkSandboxInterface(appOwnedInterface.getName())

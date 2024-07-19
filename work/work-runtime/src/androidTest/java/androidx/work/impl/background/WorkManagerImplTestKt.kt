@@ -37,10 +37,8 @@ import org.junit.runner.RunWith
 class WorkManagerImplTestKt {
     val clock = TestOverrideClock()
     val configuration =
-        Configuration.Builder()
-            .setClock(clock)
-            .setTaskExecutor(Executors.newSingleThreadExecutor())
-            .build()
+        Configuration.Builder().setClock(clock)
+            .setTaskExecutor(Executors.newSingleThreadExecutor()).build()
     val env = TestEnv(configuration)
     val taskExecutor = env.taskExecutor
     val trackers = Trackers(context = env.context, taskExecutor = env.taskExecutor)
@@ -53,7 +51,7 @@ class WorkManagerImplTestKt {
         preferenceUtils.lastCancelAllTimeMillis = 0L
 
         val testLifecycleOwner = TestLifecycleOwner()
-        val cancelAllTimeLiveData = workManager.getLastCancelAllTimeMillisLiveData()
+        val cancelAllTimeLiveData = workManager.lastCancelAllTimeMillisLiveData
         val firstValueLatch = CountDownLatch(1)
         val secondValueLatch = CountDownLatch(1)
         var firstCancelAll = -1L

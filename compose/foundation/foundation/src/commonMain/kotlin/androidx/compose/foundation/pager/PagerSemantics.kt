@@ -25,5 +25,7 @@ internal fun rememberPagerSemanticState(
     state: PagerState,
     isVertical: Boolean
 ): LazyLayoutSemanticState {
-    return remember(state, isVertical) { LazyLayoutSemanticState(state, isVertical) }
+    return remember(state, isVertical) {
+        LazyLayoutSemanticState(state, isVertical)
+    }
 }

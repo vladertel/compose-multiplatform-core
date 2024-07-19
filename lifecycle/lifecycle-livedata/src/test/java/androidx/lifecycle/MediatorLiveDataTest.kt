@@ -38,7 +38,9 @@ import org.mockito.Mockito.verify
 
 @RunWith(JUnit4::class)
 class MediatorLiveDataTest {
-    @JvmField @Rule var instantTaskExecutorRule = InstantTaskExecutorRule()
+    @JvmField
+    @Rule
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     @JvmField
     @Rule
@@ -53,18 +55,20 @@ class MediatorLiveDataTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setup() {
-        owner = TestLifecycleOwner(Lifecycle.State.STARTED, UnconfinedTestDispatcher(null, null))
+        owner = TestLifecycleOwner(
+            Lifecycle.State.STARTED,
+            UnconfinedTestDispatcher(null, null)
+        )
         mediator = MediatorLiveData()
-        source =
-            object : LiveData<String?>() {
-                override fun onActive() {
-                    sourceActive = true
-                }
-
-                override fun onInactive() {
-                    sourceActive = false
-                }
+        source = object : LiveData<String?>() {
+            override fun onActive() {
+                sourceActive = true
             }
+
+            override fun onInactive() {
+                sourceActive = false
+            }
+        }
         sourceActive = false
         @Suppress("unchecked_cast")
         mediator.observe(owner, mock(Observer::class.java) as Observer<in String>)
@@ -203,7 +207,8 @@ class MediatorLiveDataTest {
         // And the last: an order of an iteration over sources is not defined,
         // so I have to call it remove operation  from all observers.
         owner.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        val removingObserver: Observer<String?> = Observer { mediator.removeSource(source) }
+        val removingObserver: Observer<String?> =
+            Observer { mediator.removeSource(source) }
         mediator.addSource(source, removingObserver)
         val source2 = MutableLiveData<String>()
         source2.setValue("nana")
@@ -215,8 +220,12 @@ class MediatorLiveDataTest {
     @Suppress("unchecked_cast")
     @Test(expected = IllegalArgumentException::class)
     fun reAddSameSourceWithDifferentObserver() {
-        mediator.addSource(source, mock(Observer::class.java) as Observer<in String?>)
-        mediator.addSource(source, mock(Observer::class.java) as Observer<in String?>)
+        mediator.addSource(
+            source, mock(Observer::class.java) as Observer<in String?>
+        )
+        mediator.addSource(
+            source, mock(Observer::class.java) as Observer<in String?>
+        )
     }
 
     @Test
@@ -232,14 +241,13 @@ class MediatorLiveDataTest {
     fun addSourceDuringOnActive() {
         owner.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         source.value = "a"
-        mediator.addSource(
-            source,
-            Observer {
-                val source = MutableLiveData<String>()
-                source.value = "b"
-                mediator.addSource(source) { mediator.value = "c" }
+        mediator.addSource(source, Observer {
+            val source = MutableLiveData<String>()
+            source.value = "b"
+            mediator.addSource(source) {
+                mediator.value = "c"
             }
-        )
+        })
         owner.handleLifecycleEvent(Lifecycle.Event.ON_START)
         assertThat(mediator.value, `is`("c"))
     }

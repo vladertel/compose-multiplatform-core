@@ -30,7 +30,11 @@ interface XConstructorElement : XExecutableElement {
             append(enclosingElement.qualifiedName)
             append(".<init>")
             append("(")
-            append(parameters.joinToString(", ") { it.type.asTypeName().java.toString() })
+            append(
+                parameters.joinToString(", ") {
+                    it.type.asTypeName().java.toString()
+                }
+            )
             append(")")
         }
 
@@ -45,6 +49,8 @@ interface XConstructorElement : XExecutableElement {
      */
     override fun asMemberOf(other: XType): XConstructorType
 
-    /** Denotes if this is a synthetic constructor generated via the usage of @JvmOverloads */
+    /**
+     * Denotes if this is a synthetic constructor generated via the usage of @JvmOverloads
+     */
     fun isSyntheticConstructorForJvmOverloads(): Boolean
 }

@@ -20,11 +20,14 @@ import android.os.Build;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CameraConfig;
+import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.Lifecycle.State;
@@ -35,12 +38,14 @@ import androidx.lifecycle.OnLifecycleEvent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
  * A {@link CameraUseCaseAdapter} whose starting and stopping is controlled by a
  *  {@link Lifecycle}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class LifecycleCamera implements LifecycleObserver, Camera {
     private final Object mLock = new Object();
 
@@ -260,8 +265,19 @@ final class LifecycleCamera implements LifecycleObserver, Camera {
 
     @NonNull
     @Override
+    public LinkedHashSet<CameraInternal> getCameraInternals() {
+        return mCameraUseCaseAdapter.getCameraInternals();
+    }
+
+    @NonNull
+    @Override
     public CameraConfig getExtendedConfig() {
         return mCameraUseCaseAdapter.getExtendedConfig();
+    }
+
+    @Override
+    public void setExtendedConfig(@Nullable CameraConfig cameraConfig)  {
+        mCameraUseCaseAdapter.setExtendedConfig(cameraConfig);
     }
 
     @Override

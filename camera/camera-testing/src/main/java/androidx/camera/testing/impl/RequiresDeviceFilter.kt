@@ -16,6 +16,7 @@
 
 package androidx.camera.testing.impl
 
+import androidx.annotation.RequiresApi
 import androidx.camera.testing.impl.IgnoreProblematicDeviceRule.Companion.isEmulator
 import androidx.test.filters.AbstractFilter
 import java.util.Locale
@@ -27,6 +28,7 @@ import org.junit.runner.Description
  * The detection conditions of emulator should be the same as
  * androidx.test.internal.runner.TestRequestBuilder.RequiresDeviceFilter.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class RequiresDeviceFilter : AbstractFilter() {
 
     companion object {

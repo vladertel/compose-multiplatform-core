@@ -16,7 +16,6 @@
 package androidx.compose.material
 
 import android.os.Build
-import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.mutableStateOf
@@ -41,9 +40,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.screenshot.AndroidXScreenshotTestRule
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,16 +51,11 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 class CheckboxScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
-
-    // TODO(b/267253920): Add a compose test API to set/reset InputMode.
-    @After
-    fun resetTouchMode() =
-        with(InstrumentationRegistry.getInstrumentation()) {
-            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
-        }
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     val wrap = Modifier.wrapContentSize(Alignment.TopStart)
 
@@ -74,7 +66,9 @@ class CheckboxScreenshotTest {
     @Test
     fun checkBoxTest_checked() {
         rule.setMaterialContent {
-            Box(wrap.testTag(wrapperTestTag)) { Checkbox(checked = true, onCheckedChange = {}) }
+            Box(wrap.testTag(wrapperTestTag)) {
+                Checkbox(checked = true, onCheckedChange = { })
+            }
         }
         assertToggeableAgainstGolden("checkbox_checked")
     }
@@ -83,7 +77,7 @@ class CheckboxScreenshotTest {
     fun checkBoxTest_unchecked() {
         rule.setMaterialContent {
             Box(wrap.testTag(wrapperTestTag)) {
-                Checkbox(modifier = wrap, checked = false, onCheckedChange = {})
+                Checkbox(modifier = wrap, checked = false, onCheckedChange = { })
             }
         }
         assertToggeableAgainstGolden("checkbox_unchecked")
@@ -93,11 +87,13 @@ class CheckboxScreenshotTest {
     fun checkBoxTest_pressed() {
         rule.setMaterialContent {
             Box(wrap.testTag(wrapperTestTag)) {
-                Checkbox(modifier = wrap, checked = false, onCheckedChange = {})
+                Checkbox(modifier = wrap, checked = false, onCheckedChange = { })
             }
         }
 
-        rule.onNode(isToggleable()).performTouchInput { down(center) }
+        rule.onNode(isToggleable()).performTouchInput {
+            down(center)
+        }
 
         // Ripples are drawn on the RenderThread, not the main (UI) thread, so we can't wait for
         // synchronization. Instead just wait until after the ripples are finished animating.
@@ -124,7 +120,7 @@ class CheckboxScreenshotTest {
     fun checkBoxTest_disabled_checked() {
         rule.setMaterialContent {
             Box(wrap.testTag(wrapperTestTag)) {
-                Checkbox(modifier = wrap, checked = true, enabled = false, onCheckedChange = {})
+                Checkbox(modifier = wrap, checked = true, enabled = false, onCheckedChange = { })
             }
         }
         assertToggeableAgainstGolden("checkbox_disabled_checked")
@@ -134,7 +130,7 @@ class CheckboxScreenshotTest {
     fun checkBoxTest_disabled_unchecked() {
         rule.setMaterialContent {
             Box(wrap.testTag(wrapperTestTag)) {
-                Checkbox(modifier = wrap, checked = false, enabled = false, onCheckedChange = {})
+                Checkbox(modifier = wrap, checked = false, enabled = false, onCheckedChange = { })
             }
         }
         assertToggeableAgainstGolden("checkbox_disabled_unchecked")
@@ -173,7 +169,9 @@ class CheckboxScreenshotTest {
         // Because Ripples are drawn on the RenderThread, it is hard to synchronize them with
         // Compose animations, so instead just manually change the value instead of triggering
         // and trying to screenshot a ripple
-        rule.runOnIdle { isChecked.value = true }
+        rule.runOnIdle {
+            isChecked.value = true
+        }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -200,7 +198,9 @@ class CheckboxScreenshotTest {
         // Because Ripples are drawn on the RenderThread, it is hard to synchronize them with
         // Compose animations, so instead just manually change the value instead of triggering
         // and trying to screenshot a ripple
-        rule.runOnIdle { isChecked.value = false }
+        rule.runOnIdle {
+            isChecked.value = false
+        }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -213,11 +213,16 @@ class CheckboxScreenshotTest {
     fun checkBoxTest_hover() {
         rule.setMaterialContent {
             Box(wrap.testTag(wrapperTestTag)) {
-                Checkbox(modifier = wrap, checked = true, onCheckedChange = {})
+                Checkbox(
+                    modifier = wrap,
+                    checked = true,
+                    onCheckedChange = { }
+                )
             }
         }
 
-        rule.onNode(isToggleable()).performMouseInput { enter(center) }
+        rule.onNode(isToggleable())
+            .performMouseInput { enter(center) }
 
         rule.waitForIdle()
 
@@ -233,9 +238,10 @@ class CheckboxScreenshotTest {
             localInputModeManager = LocalInputModeManager.current
             Box(wrap.testTag(wrapperTestTag)) {
                 Checkbox(
-                    modifier = wrap.focusRequester(focusRequester),
+                    modifier = wrap
+                        .focusRequester(focusRequester),
                     checked = true,
-                    onCheckedChange = {}
+                    onCheckedChange = { }
                 )
             }
         }
@@ -253,8 +259,7 @@ class CheckboxScreenshotTest {
 
     private fun assertToggeableAgainstGolden(goldenName: String) {
         // TODO: replace with find(isToggeable()) after b/157687898 is fixed
-        rule
-            .onNodeWithTag(wrapperTestTag)
+        rule.onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }

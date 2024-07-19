@@ -18,10 +18,7 @@ package androidx.appcompat
 
 import androidx.test.uiautomator.UiDevice
 
-public enum class Orientation {
-    LEFT,
-    RIGHT
-}
+public enum class Orientation { LEFT, RIGHT }
 
 public fun UiDevice.withOrientation(orientation: Orientation, doThis: () -> Unit) {
     when (orientation) {

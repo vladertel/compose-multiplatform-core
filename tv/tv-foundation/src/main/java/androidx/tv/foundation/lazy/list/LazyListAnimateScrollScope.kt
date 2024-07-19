@@ -23,16 +23,14 @@ import androidx.compose.ui.util.fastSumBy
 import androidx.tv.foundation.lazy.layout.LazyAnimateScrollScope
 import kotlin.math.abs
 
-internal class LazyListAnimateScrollScope(private val state: TvLazyListState) :
-    LazyAnimateScrollScope {
-    override val density: Density
-        get() = state.density
+internal class LazyListAnimateScrollScope(
+    private val state: TvLazyListState
+) : LazyAnimateScrollScope {
+    override val density: Density get() = state.density
 
-    override val firstVisibleItemIndex: Int
-        get() = state.firstVisibleItemIndex
+    override val firstVisibleItemIndex: Int get() = state.firstVisibleItemIndex
 
-    override val firstVisibleItemScrollOffset: Int
-        get() = state.firstVisibleItemScrollOffset
+    override val firstVisibleItemScrollOffset: Int get() = state.firstVisibleItemScrollOffset
 
     override val lastVisibleItemIndex: Int
         get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -43,7 +41,9 @@ internal class LazyListAnimateScrollScope(private val state: TvLazyListState) :
     override val numOfItemsForTeleport: Int = 100
 
     override fun getTargetItemOffset(index: Int): Int? =
-        state.layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == index }?.offset
+        state.layoutInfo.visibleItemsInfo.fastFirstOrNull {
+            it.index == index
+        }?.offset
 
     override fun ScrollScope.snapToItem(index: Int, scrollOffset: Int) {
         state.snapToItemIndexInternal(index, scrollOffset)
@@ -57,7 +57,8 @@ internal class LazyListAnimateScrollScope(private val state: TvLazyListState) :
         val indexesDiff = index - firstVisibleItemIndex
         var coercedOffset = minOf(abs(targetScrollOffset), averageSize)
         if (targetScrollOffset < 0) coercedOffset *= -1
-        return (averageSize * indexesDiff).toFloat() + coercedOffset - firstVisibleItemScrollOffset
+        return (averageSize * indexesDiff).toFloat() +
+            coercedOffset - firstVisibleItemScrollOffset
     }
 
     override suspend fun scroll(block: suspend ScrollScope.() -> Unit) {

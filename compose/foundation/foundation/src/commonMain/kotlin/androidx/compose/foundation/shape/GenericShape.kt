@@ -37,11 +37,10 @@ class GenericShape(
         layoutDirection: LayoutDirection,
         density: Density
     ): Outline {
-        val path =
-            Path().apply {
-                builder(size, layoutDirection)
-                close()
-            }
+        val path = Path().apply {
+            builder(size, layoutDirection)
+            close()
+        }
         return Outline.Generic(path)
     }
 

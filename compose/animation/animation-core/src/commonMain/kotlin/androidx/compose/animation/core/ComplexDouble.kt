@@ -26,7 +26,6 @@ internal data class ComplexDouble(private var _real: Double, private var _imagin
         get() {
             return _real
         }
-
     val imaginary: Double
         get() {
             return _imaginary
@@ -76,7 +75,9 @@ internal data class ComplexDouble(private var _real: Double, private var _imagin
     }
 }
 
-/** Returns the roots of the polynomial [a]x^2+[b]x+[c]=0 which may be complex. */
+/**
+ * Returns the roots of the polynomial [a]x^2+[b]x+[c]=0 which may be complex.
+ */
 internal fun complexQuadraticFormula(
     a: Double,
     b: Double,
@@ -89,13 +90,14 @@ internal fun complexQuadraticFormula(
     return firstRoot to secondRoot
 }
 
-/** Returns the square root of [num] which may be imaginary. */
-internal fun complexSqrt(num: Double): ComplexDouble =
-    if (num < 0.0) {
-        ComplexDouble(0.0, sqrt(abs(num)))
-    } else {
-        ComplexDouble(sqrt(num), 0.0)
-    }
+/**
+ * Returns the square root of [num] which may be imaginary.
+ */
+internal fun complexSqrt(num: Double): ComplexDouble = if (num < 0.0) {
+    ComplexDouble(0.0, sqrt(abs(num)))
+} else {
+    ComplexDouble(sqrt(num), 0.0)
+}
 
 internal inline operator fun Double.plus(other: ComplexDouble): ComplexDouble {
     return other + this

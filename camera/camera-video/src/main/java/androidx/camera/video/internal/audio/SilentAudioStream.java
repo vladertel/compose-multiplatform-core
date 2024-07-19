@@ -24,6 +24,7 @@ import static androidx.core.util.Preconditions.checkState;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 
 import java.nio.ByteBuffer;
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>This class is not thread safe, it should be used on the same thread.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class SilentAudioStream implements AudioStream {
     private static final String TAG = "SilentAudioStream";
 

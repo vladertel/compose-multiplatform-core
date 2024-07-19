@@ -45,7 +45,8 @@ import org.junit.Test
 @MediumTest
 class LazyListPinnableContainerTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private var pinnableContainer: PinnableContainer? = null
 
@@ -61,10 +62,16 @@ class LazyListPinnableContainerTest {
 
     @Composable
     fun Item(index: Int) {
-        Box(Modifier.size(itemSize).testTag("$index"))
+        Box(
+            Modifier
+                .size(itemSize)
+                .testTag("$index")
+        )
         DisposableEffect(index) {
             composed.add(index)
-            onDispose { composed.remove(index) }
+            onDispose {
+                composed.remove(index)
+            }
         }
     }
 
@@ -83,11 +90,15 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(composed).contains(1)
-            runBlocking { state.scrollToItem(3) }
+            runBlocking {
+                state.scrollToItem(3)
+            }
         }
 
         rule.waitUntil {
@@ -100,7 +111,10 @@ class LazyListPinnableContainerTest {
             assertThat(composed).contains(1)
         }
 
-        rule.onNodeWithTag("1").assertExists().assertIsNotDisplayed().assertIsPlaced()
+        rule.onNodeWithTag("1")
+            .assertExists()
+            .assertIsNotDisplayed()
+            .assertIsPlaced()
     }
 
     @Test
@@ -118,9 +132,15 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(4) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(4)
+            }
+        }
 
         rule.waitUntil {
             // not visible items were disposed
@@ -151,7 +171,11 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(4) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(4)
+            }
+        }
 
         rule.waitUntil {
             // wait for not visible items to be disposed
@@ -163,7 +187,11 @@ class LazyListPinnableContainerTest {
             assertThat(composed).contains(5)
         }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(0) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(0)
+            }
+        }
 
         rule.waitUntil {
             // wait for not visible items to be disposed
@@ -195,23 +223,32 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        val handle = rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        val handle = rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
-        rule.runOnIdle { runBlocking { state.scrollToItem(3) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(3)
+            }
+        }
 
         rule.waitUntil {
             // wait for not visible items to be disposed
             !composed.contains(0)
         }
 
-        rule.runOnIdle { handle.release() }
+        rule.runOnIdle {
+            handle.release()
+        }
 
         rule.waitUntil {
             // wait for unpinned item to be disposed
             !composed.contains(1)
         }
 
-        rule.onNodeWithTag("1").assertIsNotPlaced()
+        rule.onNodeWithTag("1")
+            .assertIsNotPlaced()
     }
 
     @Ignore // b/268720713
@@ -236,7 +273,9 @@ class LazyListPinnableContainerTest {
             requireNotNull(pinnableContainer).pin()
         }
 
-        rule.runOnIdle { list = listOf(0, 3, 4, 1, 2) }
+        rule.runOnIdle {
+            list = listOf(0, 3, 4, 1, 2)
+        }
 
         rule.waitUntil {
             // wait for not visible item to be disposed
@@ -247,7 +286,8 @@ class LazyListPinnableContainerTest {
             assertThat(composed).containsExactly(0, 3, 4, 2) // 2 is pinned
         }
 
-        rule.onNodeWithTag("2").assertIsPlaced()
+        rule.onNodeWithTag("2")
+            .assertIsPlaced()
     }
 
     @Test
@@ -265,11 +305,15 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(composed).contains(3)
-            runBlocking { state.scrollToItem(0) }
+            runBlocking {
+                state.scrollToItem(0)
+            }
         }
 
         rule.waitUntil {
@@ -287,7 +331,8 @@ class LazyListPinnableContainerTest {
             !composed.contains(2)
         }
 
-        rule.onNodeWithTag("2").assertIsNotPlaced()
+        rule.onNodeWithTag("2")
+            .assertIsNotPlaced()
     }
 
     @Test
@@ -305,13 +350,19 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { state = TvLazyListState() }
+        rule.runOnIdle {
+            state = TvLazyListState()
+        }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(composed).contains(1)
-            runBlocking { state.scrollToItem(2) }
+            runBlocking {
+                state.scrollToItem(2)
+            }
         }
 
         rule.waitUntil {
@@ -319,7 +370,9 @@ class LazyListPinnableContainerTest {
             !composed.contains(1)
         }
 
-        rule.runOnIdle { assertThat(composed).contains(0) }
+        rule.runOnIdle {
+            assertThat(composed).contains(0)
+        }
     }
 
     @Test
@@ -339,11 +392,15 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(composed).contains(4)
-            runBlocking { state.scrollToItem(6) }
+            runBlocking {
+                state.scrollToItem(6)
+            }
         }
 
         rule.waitUntil {
@@ -351,9 +408,14 @@ class LazyListPinnableContainerTest {
             !composed.contains(4)
         }
 
-        rule.runOnIdle { assertThat(composed).contains(3) }
+        rule.runOnIdle {
+            assertThat(composed).contains(3)
+        }
 
-        rule.onNodeWithTag("3").assertExists().assertIsNotDisplayed().assertIsPlaced()
+        rule.onNodeWithTag("3")
+            .assertExists()
+            .assertIsNotDisplayed()
+            .assertIsPlaced()
     }
 
     @Test
@@ -375,7 +437,9 @@ class LazyListPinnableContainerTest {
         rule.runOnIdle {
             requireNotNull(pinnableContainer).pin()
             assertThat(composed).contains(4)
-            runBlocking { state.scrollToItem(0) }
+            runBlocking {
+                state.scrollToItem(0)
+            }
         }
 
         rule.waitUntil {
@@ -383,14 +447,17 @@ class LazyListPinnableContainerTest {
             !composed.contains(4)
         }
 
-        rule.runOnIdle { itemCount = 3 }
+        rule.runOnIdle {
+            itemCount = 3
+        }
 
         rule.waitUntil {
             // wait for pinned item to be disposed
             !composed.contains(3)
         }
 
-        rule.onNodeWithTag("3").assertIsNotPlaced()
+        rule.onNodeWithTag("3")
+            .assertIsNotPlaced()
     }
 
     @Test
@@ -409,16 +476,21 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
-        rule.runOnIdle { items = listOf(0, 2) }
+        rule.runOnIdle {
+            items = listOf(0, 2)
+        }
 
         rule.waitUntil {
             // wait for pinned item to be disposed
             !composed.contains(1)
         }
 
-        rule.onNodeWithTag("1").assertIsNotPlaced()
+        rule.onNodeWithTag("1")
+            .assertIsNotPlaced()
     }
 
     @Test
@@ -446,7 +518,9 @@ class LazyListPinnableContainerTest {
             // pinned 3 times in total
             handles.add(requireNotNull(pinnableContainer).pin())
             assertThat(composed).contains(0)
-            runBlocking { state.scrollToItem(3) }
+            runBlocking {
+                state.scrollToItem(3)
+            }
         }
 
         rule.waitUntil {
@@ -470,13 +544,12 @@ class LazyListPinnableContainerTest {
     @Test
     fun pinningIsPropagatedToParentContainer() {
         var parentPinned = false
-        val parentContainer =
-            object : PinnableContainer {
-                override fun pin(): PinnedHandle {
-                    parentPinned = true
-                    return PinnedHandle { parentPinned = false }
-                }
+        val parentContainer = object : PinnableContainer {
+            override fun pin(): PinnedHandle {
+                parentPinned = true
+                return PinnedHandle { parentPinned = false }
             }
+        }
         // Arrange.
         rule.setContent {
             CompositionLocalProvider(LocalPinnableContainer provides parentContainer) {
@@ -489,34 +562,36 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        val handle = rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        val handle = rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(parentPinned).isTrue()
             handle.release()
         }
 
-        rule.runOnIdle { assertThat(parentPinned).isFalse() }
+        rule.runOnIdle {
+            assertThat(parentPinned).isFalse()
+        }
     }
 
     @Test
     fun parentContainerChange_pinningIsMaintained() {
         var parent1Pinned = false
-        val parent1Container =
-            object : PinnableContainer {
-                override fun pin(): PinnedHandle {
-                    parent1Pinned = true
-                    return PinnedHandle { parent1Pinned = false }
-                }
+        val parent1Container = object : PinnableContainer {
+            override fun pin(): PinnedHandle {
+                parent1Pinned = true
+                return PinnedHandle { parent1Pinned = false }
             }
+        }
         var parent2Pinned = false
-        val parent2Container =
-            object : PinnableContainer {
-                override fun pin(): PinnedHandle {
-                    parent2Pinned = true
-                    return PinnedHandle { parent2Pinned = false }
-                }
+        val parent2Container = object : PinnableContainer {
+            override fun pin(): PinnedHandle {
+                parent2Pinned = true
+                return PinnedHandle { parent2Pinned = false }
             }
+        }
         var parentContainer by mutableStateOf<PinnableContainer>(parent1Container)
         // Arrange.
         rule.setContent {
@@ -530,7 +605,9 @@ class LazyListPinnableContainerTest {
             }
         }
 
-        rule.runOnIdle { requireNotNull(pinnableContainer).pin() }
+        rule.runOnIdle {
+            requireNotNull(pinnableContainer).pin()
+        }
 
         rule.runOnIdle {
             assertThat(parent1Pinned).isTrue()

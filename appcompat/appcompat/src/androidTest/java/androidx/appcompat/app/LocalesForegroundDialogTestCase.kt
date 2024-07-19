@@ -37,7 +37,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(maxSdkVersion = 32)
 class LocalesForegroundDialogTestCase {
-    @get:Rule val rule = LocalesActivityTestRule(LocalesUpdateActivity::class.java)
+    @get:Rule
+    val rule = LocalesActivityTestRule(LocalesUpdateActivity::class.java)
     private var baseLocales = LocaleListCompat.getEmptyLocaleList()
 
     @Before
@@ -59,7 +60,10 @@ class LocalesForegroundDialogTestCase {
         }
 
         // Now change the locales for the foreground activity.
-        setLocalesAndWaitForRecreate(firstActivity, CUSTOM_LOCALE_LIST)
+        setLocalesAndWaitForRecreate(
+            firstActivity,
+            CUSTOM_LOCALE_LIST
+        )
 
         // Ensure that it was recreated.
         assertNotSame(rule.activity, firstActivity)

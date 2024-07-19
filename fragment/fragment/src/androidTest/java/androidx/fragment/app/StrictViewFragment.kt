@@ -24,8 +24,9 @@ import androidx.annotation.LayoutRes
 import androidx.fragment.test.R
 import com.google.common.truth.Truth.assertWithMessage
 
-open class StrictViewFragment(@LayoutRes contentLayoutId: Int = R.layout.strict_view_fragment) :
-    StrictFragment(contentLayoutId) {
+open class StrictViewFragment(
+    @LayoutRes contentLayoutId: Int = R.layout.strict_view_fragment
+) : StrictFragment(contentLayoutId) {
 
     internal var onCreateViewCalled: Boolean = false
     internal var onViewCreatedCalled: Boolean = false
@@ -40,8 +41,7 @@ open class StrictViewFragment(@LayoutRes contentLayoutId: Int = R.layout.strict_
         checkActivityNotDestroyed()
         checkState("onCreateView", State.CREATED)
         assertWithMessage("Fragment should not have a view when calling onCreateView")
-            .that(mView)
-            .isNull()
+            .that(mView).isNull()
         return super.onCreateView(inflater, container, savedInstanceState).also {
             onCreateViewCalled = true
         }
@@ -70,7 +70,9 @@ open class StrictViewFragment(@LayoutRes contentLayoutId: Int = R.layout.strict_
 
     override fun onDestroyView() {
         super.onDestroyView()
-        assertWithMessage("getView returned null in onDestroyView").that(view).isNotNull()
+        assertWithMessage("getView returned null in onDestroyView")
+            .that(view)
+            .isNotNull()
         if (requireView().parent != null && requireView().animation != null) {
             assertWithMessage("View should be removed from parent if there is no animation")
                 .that((requireView().parent as ViewGroup).layoutTransition)

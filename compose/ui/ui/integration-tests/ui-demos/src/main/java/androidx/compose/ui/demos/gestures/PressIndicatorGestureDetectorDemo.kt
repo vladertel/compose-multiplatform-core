@@ -36,14 +36,20 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
-/** Simple [detectTapGestures] demo for indication. */
+/**
+ * Simple [detectTapGestures] demo for indication.
+ */
 @Composable
 fun PressIndicatorGestureFilterDemo() {
     val pressed = remember { mutableStateOf(false) }
 
-    val onStart: (Offset) -> Unit = { pressed.value = true }
+    val onStart: (Offset) -> Unit = {
+        pressed.value = true
+    }
 
-    val onStop = { pressed.value = false }
+    val onStop = {
+        pressed.value = false
+    }
 
     val color =
         if (pressed.value) {

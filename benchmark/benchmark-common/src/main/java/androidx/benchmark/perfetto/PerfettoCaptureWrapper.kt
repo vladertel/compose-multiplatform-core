@@ -32,7 +32,9 @@ import androidx.tracing.perfetto.handshake.protocol.ResponseResultCodes.RESULT_C
 import java.io.FileOutputStream
 import java.lang.RuntimeException
 
-/** Wrapper for [PerfettoCapture] which does nothing below API 23. */
+/**
+ * Wrapper for [PerfettoCapture] which does nothing below API 23.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class PerfettoCaptureWrapper {
     private var capture: PerfettoCapture? = null
@@ -62,7 +64,9 @@ class PerfettoCaptureWrapper {
     ): Boolean {
         capture?.apply {
             Log.d(LOG_TAG, "Recording perfetto trace")
-            if (perfettoSdkConfig != null && Build.VERSION.SDK_INT >= 30) {
+            if (perfettoSdkConfig != null &&
+                Build.VERSION.SDK_INT >= 30
+            ) {
                 val (resultCode, message) = enableAndroidxTracingPerfetto(perfettoSdkConfig)
                 Log.d(LOG_TAG, "Enable full tracing result=$message")
 
@@ -81,7 +85,9 @@ class PerfettoCaptureWrapper {
 
     @RequiresApi(23)
     private fun stop(traceLabel: String): String {
-        return Outputs.writeFile(fileName = "${traceLabel}_${dateToFileName()}.perfetto-trace") {
+        return Outputs.writeFile(
+            fileName = "${traceLabel}_${dateToFileName()}.perfetto-trace"
+        ) {
             capture!!.stop(it.absolutePath)
             if (Outputs.forceFilesForShellAccessible) {
                 // This shell written file must be made readable to be later accessed by this
@@ -120,10 +126,9 @@ class PerfettoCaptureWrapper {
         }
         // Prior to Android 11 (R), a shell property must be set to enable perfetto tracing, see
         // https://perfetto.dev/docs/quickstart/android-tracing#starting-the-tracing-services
-        val propOverride =
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-                PropOverride(TRACE_ENABLE_PROP, "1")
-            } else null
+        val propOverride = if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            PropOverride(TRACE_ENABLE_PROP, "1")
+        } else null
 
         val path: String
         try {
@@ -141,14 +146,16 @@ class PerfettoCaptureWrapper {
 
                 if (inMemoryTracingLabel != null) {
                     val inMemoryTrace = InMemoryTracing.commitToTrace(inMemoryTracingLabel)
-                    inMemoryTrace.encode(FileOutputStream(path, /* append= */ true))
+                    inMemoryTrace.encode(FileOutputStream(path, /* append = */ true))
                 }
                 traceCallback?.invoke(path)
             }
             return path
         } finally {
             propOverride?.resetIfOverridden()
-            synchronized(inUseLock) { inUse = false }
+            synchronized(inUseLock) {
+                inUse = false
+            }
         }
     }
 }

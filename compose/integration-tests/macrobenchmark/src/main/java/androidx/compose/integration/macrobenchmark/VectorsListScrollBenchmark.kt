@@ -32,7 +32,8 @@ import org.junit.Test
 
 @LargeTest
 class VectorsListScrollBenchmark {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     private lateinit var device: UiDevice
 

@@ -18,7 +18,9 @@ package androidx.camera.core.imagecapture
 
 import androidx.camera.core.imagecapture.TakePictureRequest.RetryControl
 
-/** Fake [RetryControl] that keeps track of the retried request. */
+/**
+ * Fake [RetryControl] that keeps track of the retried request.
+ */
 class FakeRetryControl : RetryControl {
 
     var retriedRequest: TakePictureRequest? = null

@@ -18,7 +18,9 @@ package androidx.glance.testing
 
 import androidx.annotation.RestrictTo
 
-/** A chainable selector that allows specifying how to select nodes from a collection. */
+/**
+ * A chainable selector that allows specifying how to select nodes from a collection.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class GlanceNodeSelector<R>(
     val description: String,
@@ -26,7 +28,9 @@ class GlanceNodeSelector<R>(
     private val selector: (Iterable<GlanceNode<R>>) -> SelectionResult<R>
 ) {
 
-    /** Returns nodes selected by previous chained selectors followed by the current selector. */
+    /**
+     * Returns nodes selected by previous chained selectors followed by the current selector.
+     */
     fun map(nodes: Iterable<GlanceNode<R>>): SelectionResult<R> {
         val previousSelectionResult = previousChainedSelector?.map(nodes)
         val inputNodes = previousSelectionResult?.selectedNodes ?: nodes
@@ -47,9 +51,13 @@ class SelectionResult<R>(
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 fun <R> GlanceNodeMatcher<R>.matcherToSelector(): GlanceNodeSelector<R> {
-    return GlanceNodeSelector(description = description, previousChainedSelector = null) {
-        glanceNodes ->
-        SelectionResult(selectedNodes = glanceNodes.filter { matches(it) })
+    return GlanceNodeSelector(
+        description = description,
+        previousChainedSelector = null
+    ) { glanceNodes ->
+        SelectionResult(
+            selectedNodes = glanceNodes.filter { matches(it) }
+        )
     }
 }
 
@@ -66,16 +74,17 @@ fun <R> GlanceNodeSelector<R>.addIndexedSelector(index: Int): GlanceNodeSelector
         val nodesList = nodes.toList()
         val minimumExpectedCount = index + 1
         if (index >= 0 && index < nodesList.size) {
-            SelectionResult(selectedNodes = listOf(nodesList[index]))
+            SelectionResult(
+                selectedNodes = listOf(nodesList[index])
+            )
         } else {
             SelectionResult(
                 selectedNodes = emptyList(),
-                errorMessageOnNoMatch =
-                    buildErrorReasonForIndexOutOfMatchedNodeBounds(
-                        description,
-                        requestedIndex = minimumExpectedCount,
-                        actualCount = nodesList.size
-                    )
+                errorMessageOnNoMatch = buildErrorReasonForIndexOutOfMatchedNodeBounds(
+                    description,
+                    requestedIndex = minimumExpectedCount,
+                    actualCount = nodesList.size
+                )
             )
         }
     }
@@ -94,7 +103,9 @@ fun <R> GlanceNodeSelector<R>.addMatcherSelector(
         description = "(${this.description}).$selectorName(${matcher.description})",
         previousChainedSelector = this
     ) { nodes ->
-        SelectionResult(selectedNodes = nodes.filter { matcher.matches(it) })
+        SelectionResult(
+            selectedNodes = nodes.filter { matcher.matches(it) }
+        )
     }
 }
 
@@ -111,15 +122,16 @@ fun <R> GlanceNodeSelector<R>.addChildrenSelector(): GlanceNodeSelector<R> {
         if (nodes.count() != 1) {
             SelectionResult(
                 selectedNodes = emptyList(),
-                errorMessageOnNoMatch =
-                    buildErrorReasonForCountMismatch(
-                        matcherDescription = description,
-                        expectedCount = 1,
-                        actualCount = nodes.count()
-                    )
+                errorMessageOnNoMatch = buildErrorReasonForCountMismatch(
+                    matcherDescription = description,
+                    expectedCount = 1,
+                    actualCount = nodes.count()
+                )
             )
         } else {
-            SelectionResult(selectedNodes = nodes.single().children())
+            SelectionResult(
+                selectedNodes = nodes.single().children()
+            )
         }
     }
 }

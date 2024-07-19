@@ -58,12 +58,18 @@ import org.junit.Rule
 import org.junit.Test
 
 public class ButtonBehaviourTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun supports_testtag_on_button_for_image() {
         rule.setContentWithTheme {
-            Button(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { TestImage() }
+            Button(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                TestImage()
+            }
         }
 
         rule.onNodeWithTag(TEST_TAG).assertExists()
@@ -72,7 +78,12 @@ public class ButtonBehaviourTest {
     @Test
     public fun supports_testtag_on_button_for_text() {
         rule.setContentWithTheme {
-            Button(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { Text("Test") }
+            Button(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                Text("Test")
+            }
         }
 
         rule.onNodeWithTag(TEST_TAG).assertExists()
@@ -81,7 +92,12 @@ public class ButtonBehaviourTest {
     @Test
     public fun supports_testtag_on_compactbutton_for_image() {
         rule.setContentWithTheme {
-            CompactButton(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { TestImage() }
+            CompactButton(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                TestImage()
+            }
         }
 
         rule.onNodeWithTag(TEST_TAG).assertExists()
@@ -90,7 +106,12 @@ public class ButtonBehaviourTest {
     @Test
     public fun supports_testtag_on_compactbutton_for_text() {
         rule.setContentWithTheme {
-            CompactButton(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { Text("Test") }
+            CompactButton(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                Text("Test")
+            }
         }
 
         rule.onNodeWithTag(TEST_TAG).assertExists()
@@ -99,7 +120,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun has_clickaction_when_enabled_for_image() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = true, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = true,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 TestImage()
             }
         }
@@ -110,7 +135,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun has_clickaction_when_enabled_for_text() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = true, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = true,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 Text("Test")
             }
         }
@@ -121,7 +150,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun has_clickaction_when_disabled_for_image() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = false, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = false,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 TestImage()
             }
         }
@@ -132,7 +165,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun has_clickaction_when_disabled_for_text() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = false, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = false,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 Text("Test")
             }
         }
@@ -143,7 +180,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun is_correctly_enabled() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = true, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = true,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 TestImage()
             }
         }
@@ -154,7 +195,11 @@ public class ButtonBehaviourTest {
     @Test
     public fun is_correctly_disabled() {
         rule.setContentWithTheme {
-            Button(onClick = {}, enabled = false, modifier = Modifier.testTag(TEST_TAG)) {
+            Button(
+                onClick = {},
+                enabled = false,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
                 Text("Test")
             }
         }
@@ -178,7 +223,9 @@ public class ButtonBehaviourTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle { assertEquals(true, clicked) }
+        rule.runOnIdle {
+            assertEquals(true, clicked)
+        }
     }
 
     @Test
@@ -197,7 +244,9 @@ public class ButtonBehaviourTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle { assertEquals(true, clicked) }
+        rule.runOnIdle {
+            assertEquals(true, clicked)
+        }
     }
 
     @Test
@@ -216,7 +265,9 @@ public class ButtonBehaviourTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle { assertEquals(false, clicked) }
+        rule.runOnIdle {
+            assertEquals(false, clicked)
+        }
     }
 
     @Test
@@ -235,29 +286,49 @@ public class ButtonBehaviourTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle { assertEquals(false, clicked) }
+        rule.runOnIdle {
+            assertEquals(false, clicked)
+        }
     }
 
     @Test
     public fun has_role_button_for_compact_image() {
         rule.setContentWithTheme {
-            CompactButton(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { TestImage() }
+            CompactButton(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                TestImage()
+            }
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithTag(TEST_TAG)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Button
+                )
+            )
     }
 
     @Test
     public fun has_role_button_for_text() {
         rule.setContentWithTheme {
-            Button(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { Text("Test") }
+            Button(
+                onClick = {},
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                Text("Test")
+            }
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+        rule.onNodeWithTag(TEST_TAG)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.Role,
+                    Role.Button
+                )
+            )
     }
 
     @Test
@@ -340,7 +411,8 @@ public class ButtonBehaviourTest {
 }
 
 public class ButtonSizeTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun gives_compactbutton_correct_tapsize() {
@@ -367,7 +439,10 @@ public class ButtonSizeTest {
     @Test
     public fun gives_small_button_correct_tapsize() {
         rule.verifyTapSize(TapSize.Small) {
-            Button(onClick = {}, modifier = Modifier.size(ButtonDefaults.SmallButtonSize)) {
+            Button(
+                onClick = {},
+                modifier = Modifier.size(ButtonDefaults.SmallButtonSize)
+            ) {
                 TestImage()
             }
         }
@@ -376,7 +451,10 @@ public class ButtonSizeTest {
     @Test
     public fun gives_large_button_correct_tapsize() {
         rule.verifyTapSize(TapSize.Large) {
-            Button(onClick = {}, modifier = Modifier.size(ButtonDefaults.LargeButtonSize)) {
+            Button(
+                onClick = {},
+                modifier = Modifier.size(ButtonDefaults.LargeButtonSize)
+            ) {
                 TestImage()
             }
         }
@@ -384,7 +462,8 @@ public class ButtonSizeTest {
 }
 
 public class ButtonShapeTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun default_button_shape_is_circle() {
@@ -394,7 +473,8 @@ public class ButtonShapeTest {
                 enabled = true,
                 colors = ButtonDefaults.primaryButtonColors(),
                 modifier = modifier
-            ) {}
+            ) {
+            }
         }
     }
 
@@ -409,7 +489,8 @@ public class ButtonShapeTest {
                 colors = ButtonDefaults.primaryButtonColors(),
                 modifier = modifier,
                 shape = shape
-            ) {}
+            ) {
+            }
         }
     }
 
@@ -422,7 +503,8 @@ public class ButtonShapeTest {
                 colors = ButtonDefaults.primaryButtonColors(),
                 backgroundPadding = 0.dp,
                 modifier = modifier
-            ) {}
+            ) {
+            }
         }
     }
 
@@ -438,13 +520,15 @@ public class ButtonShapeTest {
                 backgroundPadding = 0.dp,
                 modifier = modifier,
                 shape = shape
-            ) {}
+            ) {
+            }
         }
     }
 }
 
 public class ButtonColorTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun gives_enabled_button_primary_colors() =
@@ -537,7 +621,6 @@ public class ButtonColorTest {
             { Color.Transparent },
             { MaterialTheme.colors.primary },
         )
-
     @Test
     public fun gives_enabled_compact_button_icon_colors() =
         verifyCompactButtonColors(
@@ -564,7 +647,6 @@ public class ButtonColorTest {
             { Color.Transparent },
             { MaterialTheme.colors.primary },
         )
-
     @Test
     public fun gives_disabled_compact_button_icon_colors() =
         verifyCompactButtonColors(
@@ -585,11 +667,14 @@ public class ButtonColorTest {
                     colors = ButtonDefaults.buttonColors(backgroundColor = overrideColor),
                     enabled = true,
                     modifier = Modifier.testTag(TEST_TAG)
-                ) {}
+                ) {
+                }
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(overrideColor, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(overrideColor, 50.0f)
     }
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
@@ -603,11 +688,14 @@ public class ButtonColorTest {
                     colors = ButtonDefaults.buttonColors(backgroundColor = overrideColor),
                     enabled = true,
                     modifier = Modifier.testTag(TEST_TAG)
-                ) {}
+                ) {
+                }
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(overrideColor, 25.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(overrideColor, 25.0f)
     }
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
@@ -621,11 +709,14 @@ public class ButtonColorTest {
                     colors = ButtonDefaults.buttonColors(disabledBackgroundColor = overrideColor),
                     enabled = false,
                     modifier = Modifier.testTag(TEST_TAG)
-                ) {}
+                ) {
+                }
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(overrideColor, 50.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(overrideColor, 50.0f)
     }
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
@@ -639,11 +730,14 @@ public class ButtonColorTest {
                     colors = ButtonDefaults.buttonColors(disabledBackgroundColor = overrideColor),
                     enabled = false,
                     modifier = Modifier.testTag(TEST_TAG)
-                ) {}
+                ) {
+                }
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).captureToImage().assertContainsColor(overrideColor, 25.0f)
+        rule.onNodeWithTag(TEST_TAG)
+            .captureToImage()
+            .assertContainsColor(overrideColor, 25.0f)
     }
 
     @Test
@@ -816,22 +910,25 @@ public class ButtonColorTest {
             } else {
                 expectedBackground =
                     backgroundColor()
-                        .copy(alpha = ContentAlpha.disabled)
-                        .compositeOver(testBackground)
+                        .copy(alpha = ContentAlpha.disabled).compositeOver(testBackground)
                 expectedContent =
                     if (applyAlphaForDisabledContent)
                         contentColor().copy(alpha = ContentAlpha.disabled)
-                    else contentColor()
+                    else
+                        contentColor()
             }
-            Box(modifier = Modifier.fillMaxSize().background(testBackground)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(testBackground)
+            ) {
                 actualContent = content()
             }
         }
 
         assertEquals(expectedContent, actualContent)
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertContainsColor(
                 if (expectedBackground != Color.Transparent) expectedBackground else testBackground,
@@ -841,7 +938,8 @@ public class ButtonColorTest {
 }
 
 public class ButtonTextStyleTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun gives_button_correct_font() {
@@ -882,7 +980,9 @@ private fun ComposeContentTestRule.verifyTapSize(
     expected: TapSize,
     content: @Composable () -> Unit
 ) {
-    setContentWithThemeForSizeAssertions { content() }
+    setContentWithThemeForSizeAssertions {
+        content()
+    }
         .assertHeightIsEqualTo(expected.size)
         .assertWidthIsEqualTo(expected.size)
 }
@@ -899,7 +999,13 @@ private fun ComposeContentTestRule.isCircular(
         background = MaterialTheme.colors.primary
         surface = MaterialTheme.colors.surface
         CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-            Box(Modifier.padding(padding).background(surface)) { content() }
+            Box(
+                Modifier
+                    .padding(padding)
+                    .background(surface)
+            ) {
+                content()
+            }
         }
     }
 
@@ -928,7 +1034,11 @@ private fun ComposeContentTestRule.isShape(
         background = MaterialTheme.colors.surface
         Box(Modifier.background(background)) {
             buttonColor = MaterialTheme.colors.primary
-            content(Modifier.testTag(TEST_TAG).padding(padding))
+            content(
+                Modifier
+                    .testTag(TEST_TAG)
+                    .padding(padding)
+            )
         }
     }
 

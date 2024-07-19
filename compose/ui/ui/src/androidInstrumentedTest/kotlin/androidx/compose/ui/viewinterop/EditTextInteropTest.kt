@@ -32,7 +32,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class EditTextInteropTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun hardwareKeyInEmbeddedView() {
@@ -42,19 +43,15 @@ class EditTextInteropTest {
         rule.setContent {
             ownerView = LocalView.current
             AndroidView({
-                EditText(it).apply {
-                    width = 500
-                    editText = this
-                }
+                EditText(it).apply { width = 500; editText = this }
             })
         }
         rule.runOnIdle { editText.requestFocus() }
 
         // Act.
-        val keyConsumed =
-            rule.runOnIdle {
-                ownerView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A))
-            }
+        val keyConsumed = rule.runOnIdle {
+            ownerView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A))
+        }
 
         // Assert.
         // TODO(b/171997891): Right now we just assert that we reach here without crashing. Once we

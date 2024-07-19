@@ -45,6 +45,7 @@ interface FocusInteraction : Interaction {
      * An interaction representing a [Focus] event being released on a component.
      *
      * @property focus the source [Focus] interaction that is being released
+     *
      * @see androidx.compose.foundation.focusable
      * @see Focus
      */

@@ -16,4 +16,7 @@
 
 package androidx.bluetooth.integration.testapp.ui.advertiser
 
-data class AdvertiserUiState(val isAdvertising: Boolean = false, val resultMessage: String? = null)
+data class AdvertiserUiState(
+    val isAdvertising: Boolean = false,
+    val resultMessage: String? = null
+)

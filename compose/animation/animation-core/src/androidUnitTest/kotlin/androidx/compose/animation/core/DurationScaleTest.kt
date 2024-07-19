@@ -30,12 +30,9 @@ class DurationScaleTest {
     @Test
     fun testAnimatable() = runBlocking {
         val clock = SuspendAnimationTest.TestFrameClock()
-        withContext(
-            clock +
-                object : MotionDurationScale {
-                    override val scaleFactor: Float = 5f
-                }
-        ) {
+        withContext(clock + object : MotionDurationScale {
+            override val scaleFactor: Float = 5f
+        }) {
             var playTime = 0
             clock.frame(0L)
             animate(0f, 500f, animationSpec = tween(100, easing = LinearEasing)) { value, _ ->
@@ -47,12 +44,9 @@ class DurationScaleTest {
             }
         }
 
-        withContext(
-            clock +
-                object : MotionDurationScale {
-                    override val scaleFactor: Float = 0f
-                }
-        ) {
+        withContext(clock + object : MotionDurationScale {
+            override val scaleFactor: Float = 0f
+        }) {
             clock.frame(0L)
             animate(0f, 500f, animationSpec = tween(100, easing = LinearEasing)) { value, _ ->
                 // This should finish right away

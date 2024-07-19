@@ -57,11 +57,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.google.common.truth.Truth.assertThat
 import kotlin.math.roundToInt
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
 class TextFieldSelectionTest : FocusedWindowTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val testTag = "text field"
 
@@ -114,7 +116,7 @@ class TextFieldSelectionTest : FocusedWindowTest {
         rule.setTextFieldTestContent {
             BasicTextField(
                 value = "text".repeat(10),
-                onValueChange = {},
+                onValueChange = { },
                 visualTransformation = ReducedVisualTransformation(),
                 modifier = Modifier.testTag(testTag)
             )
@@ -176,7 +178,8 @@ class TextFieldSelectionTest : FocusedWindowTest {
         assertThat(textFieldValue.value.selection.start).isEqualTo(0)
         assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
 
-        rule.onNode(isSelectionHandle(Handle.Cursor)).performTouchInput { click() }
+        rule.onNode(isSelectionHandle(Handle.Cursor))
+            .performTouchInput { click() }
 
         assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
     }
@@ -212,11 +215,10 @@ class TextFieldSelectionTest : FocusedWindowTest {
     fun textField_noSelectionHandles_whenWindowLosesFocus() {
         val textFieldValue = mutableStateOf(TextFieldValue("texttexttext"))
         val focusWindow = mutableStateOf(true)
-        val windowInfo =
-            object : WindowInfo {
-                override val isWindowFocused: Boolean
-                    get() = focusWindow.value
-            }
+        val windowInfo = object : WindowInfo {
+            override val isWindowFocused: Boolean
+                get() = focusWindow.value
+        }
         lateinit var textToolbar: TextToolbar
 
         rule.setTextFieldTestContent {
@@ -255,11 +257,10 @@ class TextFieldSelectionTest : FocusedWindowTest {
     fun textField_redisplaysSelectionHandlesAndToolbar_whenWindowRegainsFocus() {
         val textFieldValue = mutableStateOf(TextFieldValue("texttexttext"))
         val focusWindow = mutableStateOf(true)
-        val windowInfo =
-            object : WindowInfo {
-                override val isWindowFocused: Boolean
-                    get() = focusWindow.value
-            }
+        val windowInfo = object : WindowInfo {
+            override val isWindowFocused: Boolean
+                get() = focusWindow.value
+        }
         lateinit var textToolbar: TextToolbar
 
         rule.setTextFieldTestContent {
@@ -307,8 +308,8 @@ class TextFieldSelectionTest : FocusedWindowTest {
                 value = textFieldValue.value,
                 onValueChange = {
                     textFieldValue.value = it
-                    if (
-                        it.selection.collapsed && cursorPositions.lastOrNull() != it.selection.start
+                    if (it.selection.collapsed &&
+                        cursorPositions.lastOrNull() != it.selection.start
                     ) {
                         cursorPositions.add(it.selection.start)
                     }
@@ -335,6 +336,7 @@ class TextFieldSelectionTest : FocusedWindowTest {
         assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
     }
 
+    @Ignore // b/265023621
     @Test
     fun textField_extendsSelection_toRight() {
         textField_extendsSelection(
@@ -345,6 +347,7 @@ class TextFieldSelectionTest : FocusedWindowTest {
         )
     }
 
+    @Ignore // b/265023621
     @Test
     fun textField_extendsSelection_withPasswordVisualTransformation_toRight() {
         textField_extendsSelection(
@@ -355,17 +358,21 @@ class TextFieldSelectionTest : FocusedWindowTest {
         )
     }
 
+    @Ignore // b/265023621
     @Test
     fun textField_extendsSelection_withReducedVisualTransformation_toRight() {
         textField_extendsSelection(
             text = "text".repeat(10),
             visualTransformation = ReducedVisualTransformation(),
-            expectedSelectionRanges =
-                (21..39).filter { it % 2 == 0 }.map { TextRange(0, it) }.toList(),
+            expectedSelectionRanges = (21..39)
+                .filter { it % 2 == 0 }
+                .map { TextRange(0, it) }
+                .toList(),
             toLeft = false
         )
     }
 
+    @Ignore // b/265023420
     @Test
     fun textField_extendsSelection_toLeft() {
         textField_extendsSelection(
@@ -376,6 +383,7 @@ class TextFieldSelectionTest : FocusedWindowTest {
         )
     }
 
+    @Ignore // b/265023621
     @Test
     fun textField_extendsSelection_withPasswordVisualTransformation_toLeft() {
         textField_extendsSelection(
@@ -391,8 +399,10 @@ class TextFieldSelectionTest : FocusedWindowTest {
         textField_extendsSelection(
             text = "text".repeat(10),
             visualTransformation = ReducedVisualTransformation(),
-            expectedSelectionRanges =
-                (19 downTo 1).filter { it % 2 == 0 }.map { TextRange(it, 40) }.toList(),
+            expectedSelectionRanges = (19 downTo 1)
+                .filter { it % 2 == 0 }
+                .map { TextRange(it, 40) }
+                .toList(),
             toLeft = true
         )
     }
@@ -405,17 +415,18 @@ class TextFieldSelectionTest : FocusedWindowTest {
             BasicTextField(
                 value = value,
                 onValueChange = { value = it },
-                textStyle =
-                    TextStyle(
-                        fontFamily = TEST_FONT_FAMILY,
-                        textAlign = TextAlign.End,
-                        letterSpacing = 1.2.sp,
-                    ),
+                textStyle = TextStyle(
+                    fontFamily = TEST_FONT_FAMILY,
+                    textAlign = TextAlign.End,
+                    letterSpacing = 1.2.sp,
+                ),
                 modifier = Modifier.testTag(testTag).fillMaxWidth()
             )
         }
 
-        rule.onNodeWithTag(testTag).performTouchInput { longClick(centerRight) }
+        rule.onNodeWithTag(testTag).performTouchInput {
+            longClick(centerRight)
+        }
         rule.waitForIdle()
 
         assertHandlesDisplayed()
@@ -428,7 +439,8 @@ class TextFieldSelectionTest : FocusedWindowTest {
         expectedSelectionRanges: List<TextRange>,
         toLeft: Boolean
     ) {
-        val textFieldValue = mutableStateOf(TextFieldValue(text, TextRange(Int.MAX_VALUE)))
+        val textFieldValue =
+            mutableStateOf(TextFieldValue(text, TextRange(Int.MAX_VALUE)))
         val selectionRanges = mutableListOf<TextRange>()
         rule.setTextFieldTestContent {
             BasicTextField(
@@ -468,19 +480,18 @@ class TextFieldSelectionTest : FocusedWindowTest {
         return VisualTransformation { text ->
             TransformedText(
                 text = AnnotatedString(text.text.map { "$it*" }.joinToString("")),
-                offsetMapping =
-                    object : OffsetMapping {
-                        override fun originalToTransformed(offset: Int) = offset * 2
-
-                        override fun transformedToOriginal(offset: Int) = offset / 2
-                    }
-            )
+                offsetMapping = object : OffsetMapping {
+                    override fun originalToTransformed(offset: Int) = offset * 2
+                    override fun transformedToOriginal(offset: Int) = offset / 2
+                })
         }
     }
 
     private fun performHandleDrag(handle: Handle, toLeft: Boolean, swipeFraction: Float = 0.5f) {
         val handleNode = rule.onNode(isSelectionHandle(handle))
-        val fieldWidth = rule.onNodeWithTag(testTag).fetchSemanticsNode().boundsInRoot.width
+        val fieldWidth = rule.onNodeWithTag(testTag)
+            .fetchSemanticsNode()
+            .boundsInRoot.width
 
         val swipeDistance = (fieldWidth * swipeFraction).roundToInt()
 
@@ -494,12 +505,12 @@ class TextFieldSelectionTest : FocusedWindowTest {
     }
 
     private fun assertHandlesDisplayed() {
-        rule.onNode(isSelectionHandle(Handle.SelectionStart)).assertIsDisplayed()
-        rule.onNode(isSelectionHandle(Handle.SelectionEnd)).assertIsDisplayed()
+            rule.onNode(isSelectionHandle(Handle.SelectionStart)).assertIsDisplayed()
+            rule.onNode(isSelectionHandle(Handle.SelectionEnd)).assertIsDisplayed()
     }
 
     private fun assertHandlesNotExist() {
-        rule.onNode(isSelectionHandle(Handle.SelectionStart)).assertDoesNotExist()
-        rule.onNode(isSelectionHandle(Handle.SelectionEnd)).assertDoesNotExist()
+            rule.onNode(isSelectionHandle(Handle.SelectionStart)).assertDoesNotExist()
+            rule.onNode(isSelectionHandle(Handle.SelectionEnd)).assertDoesNotExist()
     }
 }

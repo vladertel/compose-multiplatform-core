@@ -34,8 +34,7 @@ import org.junit.runner.RunWith
 @SmallTest
 class RecyclerViewWithTransitionsTest {
 
-    val activity: TestActivity
-        get() = mActivityRule.getActivity()
+    val activity: TestActivity get() = mActivityRule.getActivity()
 
     @Rule
     @JvmField
@@ -45,12 +44,13 @@ class RecyclerViewWithTransitionsTest {
     @Test
     fun ignoreCachedViewWhileItIsAttachedToOverlay() {
         val testAdapter = TestAdapter()
-        val recyclerView =
-            WrappedRecyclerView(activity).apply {
-                layoutManager = LinearLayoutManager(context)
-                adapter = testAdapter
-            }
-        activity.runOnUiThread { activity.container.addView(recyclerView) }
+        val recyclerView = WrappedRecyclerView(activity).apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = testAdapter
+        }
+        activity.runOnUiThread {
+            activity.container.addView(recyclerView)
+        }
 
         // helper fun to change itemCount, wait for it to be applied and validate childCount
         val changeItemCount = { itemsCount: Int ->

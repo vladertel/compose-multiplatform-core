@@ -60,35 +60,53 @@ fun TextFieldCursorBlinkingDemo() {
     Column(Modifier.verticalScroll(rememberScrollState())) {
         BasicText("Focus on any of the text fields below to observe cursor behavior.")
         BasicText("All fields are not editable, with a fixed selection position")
-        Item("Default cursor") { DefaultCursor() }
-        Item("Color cursor") { ColorCursor() }
-        Item("Color changing cursor") { RainbowCursor() }
-        Item("Gradient Cursor") { GradientCursor() }
-        Item("Cursors don't blink when typing (fake typing)") { TypingCursorNeverBlinks() }
-        Item("Changing selection shows cursor") { ChangingSelectionShowsCursor() }
+        Item("Default cursor") {
+            DefaultCursor()
+        }
+        Item("Color cursor") {
+            ColorCursor()
+        }
+        Item("Color changing cursor") {
+            RainbowCursor()
+        }
+        Item("Gradient Cursor") {
+            GradientCursor()
+        }
+        Item("Cursors don't blink when typing (fake typing)") {
+            TypingCursorNeverBlinks()
+        }
+        Item("Changing selection shows cursor") {
+            ChangingSelectionShowsCursor()
+        }
     }
 }
 
 @Composable
 private fun Item(title: String, content: @Composable () -> Unit) {
     Column {
-        BasicText(
-            title,
-            style = TextStyle.Default.copy(color = Color(0xFFAAAAAA), fontSize = 20.sp)
-        )
+        BasicText(title, style = TextStyle.Default.copy(
+            color = Color(0xFFAAAAAA),
+            fontSize = 20.sp
+        ))
         content()
     }
 }
 
 @Composable
 private fun DefaultCursor() {
-    val textFieldValue = TextFieldValue(text = "Normal blink", selection = TextRange(3))
+    val textFieldValue = TextFieldValue(
+        text = "Normal blink",
+        selection = TextRange(3)
+    )
     BasicTextField(value = textFieldValue, modifier = demoTextFieldModifiers, onValueChange = {})
 }
 
 @Composable
 private fun ColorCursor() {
-    val textFieldValue = TextFieldValue(text = "Red cursor", selection = TextRange(3))
+    val textFieldValue = TextFieldValue(
+        text = "Red cursor",
+        selection = TextRange(3)
+    )
     BasicTextField(
         value = textFieldValue,
         modifier = demoTextFieldModifiers,
@@ -107,13 +125,18 @@ private val Rainbow = listOf(Orange, Yellow, Green, Blue, Purple, Red)
 
 @Composable
 private fun RainbowCursor() {
-    val textFieldValue = TextFieldValue(text = "Rainbow cursor", selection = TextRange(3))
+    val textFieldValue = TextFieldValue(
+        text = "Rainbow cursor",
+        selection = TextRange(3)
+    )
 
     val color = remember { Animatable(Red) }
     var shouldAnimate by remember { mutableStateOf(false) }
     LaunchedEffect(shouldAnimate) {
         while (shouldAnimate) {
-            Rainbow.forEach { color.animateTo(it, TweenSpec(1_800)) }
+            Rainbow.forEach {
+                color.animateTo(it, TweenSpec(1_800))
+            }
         }
     }
     BasicTextField(
@@ -126,7 +149,10 @@ private fun RainbowCursor() {
 
 @Composable
 private fun GradientCursor() {
-    val textFieldValue = TextFieldValue(text = "Gradient cursor", selection = TextRange(3))
+    val textFieldValue = TextFieldValue(
+        text = "Gradient cursor",
+        selection = TextRange(3)
+    )
 
     BasicTextField(
         value = textFieldValue,
@@ -149,11 +175,10 @@ fun TypingCursorNeverBlinks() {
             }
         }
     }
-    val textFieldValue =
-        TextFieldValue(
-            text = text,
-            selection = TextRange(text.length),
-        )
+    val textFieldValue = TextFieldValue(
+        text = text,
+        selection = TextRange(text.length),
+    )
     BasicTextField(
         value = textFieldValue,
         onValueChange = {},
@@ -172,7 +197,10 @@ fun ChangingSelectionShowsCursor() {
             delay(500)
         }
     }
-    val textFieldValue = TextFieldValue(text = text, selection = selection)
+    val textFieldValue = TextFieldValue(
+        text = text,
+        selection = selection
+    )
     Column {
         BasicTextField(
             value = textFieldValue,
@@ -202,11 +230,14 @@ fun CursorNotBlinkingInUnfocusedWindowDemo() {
                     val dialogFocusRequester = remember { FocusRequester() }
                     Text(
                         "Hello! This is a dialog.",
-                        Modifier.padding(20.dp)
+                        Modifier
+                            .padding(20.dp)
                             .focusRequester(dialogFocusRequester)
                             .background(Color.DarkGray)
                     )
-                    LaunchedEffect(Unit) { dialogFocusRequester.requestFocus() }
+                    LaunchedEffect(Unit) {
+                        dialogFocusRequester.requestFocus()
+                    }
                 }
             }
         }

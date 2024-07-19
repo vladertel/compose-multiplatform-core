@@ -33,7 +33,8 @@ open class SplashScreenTestActivity : Activity(), SplashScreenTestControllerHold
 
 class SplashScreenWithIconBgTestActivity : SplashScreenTestActivity()
 
-class SplashScreenAppCompatTestActivity : AppCompatActivity(), SplashScreenTestControllerHolder {
+class SplashScreenAppCompatTestActivity :
+    AppCompatActivity(), SplashScreenTestControllerHolder {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

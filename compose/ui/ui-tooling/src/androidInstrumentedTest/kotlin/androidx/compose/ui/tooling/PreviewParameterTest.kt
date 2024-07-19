@@ -41,7 +41,8 @@ class PreviewParameterTest {
 
     @Before
     fun setup() {
-        composeViewAdapter = activityTestRule.activity.findViewById(R.id.compose_view_adapter)
+        composeViewAdapter =
+            activityTestRule.activity.findViewById(R.id.compose_view_adapter)
     }
 
     @Test
@@ -70,8 +71,9 @@ class PreviewParameterTest {
         }
     }
 
-    private class MyColorsProvider :
-        CollectionPreviewParameterProvider<Colors>(listOf(lightColors(), darkColors()))
+    private class MyColorsProvider : CollectionPreviewParameterProvider<Colors>(
+        listOf(lightColors(), darkColors())
+    )
 
     @Test
     fun checkColorsProvider() {
@@ -85,8 +87,9 @@ class PreviewParameterTest {
         }
     }
 
-    private class MyBooleanProvider :
-        CollectionPreviewParameterProvider<Boolean>(listOf(true, false))
+    private class MyBooleanProvider : CollectionPreviewParameterProvider<Boolean>(
+        listOf(true, false)
+    )
 
     @Test
     fun checkBooleanProvider() {
@@ -100,10 +103,9 @@ class PreviewParameterTest {
         }
     }
 
-    class MyCornerRadiusProvider :
-        CollectionPreviewParameterProvider<CornerRadius>(
-            listOf(CornerRadius.Zero, CornerRadius(5f))
-        )
+    class MyCornerRadiusProvider : CollectionPreviewParameterProvider<CornerRadius>(
+        listOf(CornerRadius.Zero, CornerRadius(5f))
+    )
 
     @Test
     fun checkKotlinValueClasses() {

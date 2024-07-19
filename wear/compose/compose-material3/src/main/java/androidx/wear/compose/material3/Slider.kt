@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -50,7 +51,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.tokens.MotionTokens
 import androidx.wear.compose.materialcore.InlineSliderButton
 import androidx.wear.compose.materialcore.RangeDefaults.calculateCurrentStepValue
 import androidx.wear.compose.materialcore.RangeDefaults.snapValueToStep
@@ -73,38 +73,37 @@ import kotlin.math.roundToInt
  * [steps] + 1 value.
  *
  * A continuous non-segmented slider sample:
- *
  * @sample androidx.wear.compose.material3.samples.InlineSliderSample
  *
  * A segmented slider sample:
- *
  * @sample androidx.wear.compose.material3.samples.InlineSliderSegmentedSample
  *
  * @param value Current value of the Slider. If outside of [valueRange] provided, value will be
- *   coerced to this range.
+ * coerced to this range.
  * @param onValueChange Lambda in which value should be updated.
  * @param steps Specifies the number of discrete values, excluding min and max values, evenly
- *   distributed across the whole value range. Must not be negative. If 0, slider will have only min
- *   and max values and no steps in between.
+ * distributed across the whole value range. Must not be negative. If 0, slider will have only min
+ * and max values and no steps in between.
  * @param decreaseIcon A slot for an icon which is placed on the decrease (start) button such as
- *   [InlineSliderDefaults.Decrease].
+ * [InlineSliderDefaults.Decrease].
  * @param increaseIcon A slot for an icon which is placed on the increase (end) button such as
- *   [InlineSliderDefaults.Increase].
+ * [InlineSliderDefaults.Increase].
  * @param modifier Modifiers for the Slider layout.
  * @param enabled Controls the enabled state of the slider. When `false`, this slider will not be
- *   clickable.
+ * clickable.
  * @param valueRange Range of values that Slider value can take. Passed [value] will be coerced to
- *   this range.
+ * this range.
  * @param segmented A boolean value which specifies whether a bar will be split into segments or
- *   not. Recommendation is while using this flag do not have more than 8 [steps] as it might affect
- *   user experience. By default true if number of [steps] is <=8.
+ * not. Recommendation is while using this flag do not have more than 8 [steps] as it might affect
+ * user experience. By default true if number of [steps] is <=8.
  * @param colors [InlineSliderColors] that will be used to resolve the background and content color
- *   for this slider in different states.
+ * for this slider in different states.
  */
 @ExperimentalWearMaterial3Api
 @Composable
 fun InlineSlider(
     value: Float,
+    @Suppress("PrimitiveInLambda")
     onValueChange: (Float) -> Unit,
     steps: Int,
     decreaseIcon: @Composable () -> Unit,
@@ -119,15 +118,17 @@ fun InlineSlider(
     val currentStep =
         remember(value, valueRange, steps) { snapValueToStep(value, valueRange, steps) }
     BoxWithConstraints(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .rangeSemantics(value, enabled, onValueChange, valueRange, steps)
-                .height(InlineSliderDefaults.SliderHeight)
-                .clip(CircleShape) // TODO(b/290625297) Replace with tokens
+        modifier = modifier
+            .fillMaxWidth()
+            .rangeSemantics(
+                value, enabled, onValueChange, valueRange, steps
+            )
+            .height(InlineSliderDefaults.SliderHeight)
+            .clip(CircleShape) // TODO(b/290625297) Replace with tokens
     ) {
         val visibleSegments = if (segmented) steps + 1 else 1
 
+        @Suppress("PrimitiveInLambda")
         val updateValue: (Int) -> Unit = { stepDiff ->
             val newValue = calculateCurrentStepValue(currentStep + stepDiff, steps, valueRange)
             if (newValue != value) onValueChange(newValue)
@@ -137,13 +138,14 @@ fun InlineSlider(
         val containerColor = colors.containerColor(enabled)
         val barSeparatorColor = colors.barSeparatorColor(enabled)
         CompositionLocalProvider(
-            LocalIndication provides
-                rippleOrFallbackImplementation(bounded = false, radius = this.maxWidth / 2)
+            LocalIndication provides rememberRipple(bounded = false, radius = this.maxWidth / 2)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
-                modifier = Modifier.fillMaxWidth().background(containerColor.value)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(containerColor.value)
             ) {
                 val increaseButtonEnabled = enabled && currentStep < steps + 1
                 val decreaseButtonEnabled = enabled && currentStep > 0
@@ -163,39 +165,33 @@ fun InlineSlider(
                     }
                 )
 
-                val valueRatio by
-                    animateFloatAsState(
-                        targetValue = currentStep.toFloat() / (steps + 1).toFloat(),
-                        animationSpec =
-                            tween(
-                                durationMillis = MotionTokens.DurationShort3,
-                                delayMillis = 0,
-                                easing = MotionTokens.EasingStandardDecelerate
-                            )
-                    )
+                val valueRatio by animateFloatAsState(
+                    targetValue = currentStep.toFloat() / (steps + 1).toFloat(),
+                    animationSpec = tween(SHORT_3, 0, STANDARD_DECELERATE)
+                )
 
                 Box(
-                    modifier =
-                        Modifier.height(InlineSliderDefaults.BarHeight)
-                            .weight(1f)
-                            .clip(CircleShape) // TODO(b/290625297) Replace with token
-                            .drawProgressBar(
-                                selectedBarColor = selectedBarColor,
-                                unselectedBarColor = unselectedBarColor,
-                                barSeparatorColor = barSeparatorColor,
-                                visibleSegments = visibleSegments,
-                                valueRatio = valueRatio,
-                                direction = LocalLayoutDirection.current,
-                                drawSelectedProgressBar = { color, ratio, direction, drawScope ->
-                                    drawScope.drawSelectedProgressBar(color, ratio, direction)
-                                },
-                                drawUnselectedProgressBar = { color, ratio, direction, drawScope ->
-                                    drawScope.drawUnselectedProgressBar(color, ratio, direction)
-                                },
-                                drawProgressBarSeparator = { color, position, drawScope ->
-                                    drawScope.drawProgressBarSeparator(color, position)
-                                }
-                            )
+                    modifier = Modifier
+                        .height(InlineSliderDefaults.BarHeight)
+                        .weight(1f)
+                        .clip(CircleShape) // TODO(b/290625297) Replace with token
+                        .drawProgressBar(
+                            selectedBarColor = selectedBarColor,
+                            unselectedBarColor = unselectedBarColor,
+                            barSeparatorColor = barSeparatorColor,
+                            visibleSegments = visibleSegments,
+                            valueRatio = valueRatio,
+                            direction = LocalLayoutDirection.current,
+                            drawSelectedProgressBar = { color, ratio, direction, drawScope ->
+                                drawScope.drawSelectedProgressBar(color, ratio, direction)
+                            },
+                            drawUnselectedProgressBar = { color, ratio, direction, drawScope ->
+                                drawScope.drawUnselectedProgressBar(color, ratio, direction)
+                            },
+                            drawProgressBarSeparator = { color, position, drawScope ->
+                                drawScope.drawProgressBarSeparator(color, position)
+                            }
+                        )
                 )
 
                 InlineSliderButton(
@@ -236,35 +232,34 @@ fun InlineSlider(
  * example, 1..13 range and a step = 5, steps will be 1(first) , 6 , 11(last)
  *
  * A continuous non-segmented slider sample:
- *
  * @sample androidx.wear.compose.material3.samples.InlineSliderWithIntegerSample
  *
  * A segmented slider sample:
- *
  * @sample androidx.wear.compose.material3.samples.InlineSliderSegmentedSample
  *
  * @param value Current value of the Slider. If outside of [valueProgression] provided, value will
- *   be coerced to this range.
+ * be coerced to this range.
  * @param onValueChange Lambda in which value should be updated.
  * @param valueProgression Progression of values that Slider value can take. Consists of rangeStart,
- *   rangeEnd and step. Range will be equally divided by step size.
+ * rangeEnd and step. Range will be equally divided by step size.
  * @param decreaseIcon A slot for an icon which is placed on the decrease (start) button such as
- *   [InlineSliderDefaults.Decrease].
+ * [InlineSliderDefaults.Decrease].
  * @param increaseIcon A slot for an icon which is placed on the increase (end) button such as
- *   [InlineSliderDefaults.Increase].
+ * [InlineSliderDefaults.Increase].
  * @param modifier Modifiers for the Slider layout.
  * @param enabled Controls the enabled state of the slider. When `false`, this slider will not be
- *   clickable.
+ * clickable.
  * @param segmented A boolean value which specifies whether a bar will be split into segments or
- *   not. Recommendation is while using this flag do not have more than 8 steps as it might affect
- *   user experience. By default true if number of steps is <=8.
+ * not. Recommendation is while using this flag do not have more than 8 steps as it might affect
+ * user experience. By default true if number of steps is <=8.
  * @param colors [InlineSliderColors] that will be used to resolve the background and content color
- *   for this slider in different states.
+ * for this slider in different states.
  */
 @ExperimentalWearMaterial3Api
 @Composable
 fun InlineSlider(
     value: Int,
+    @Suppress("PrimitiveInLambda")
     onValueChange: (Int) -> Unit,
     valueProgression: IntProgression,
     decreaseIcon: @Composable () -> Unit,
@@ -291,7 +286,9 @@ fun InlineSlider(
 /** Defaults used by slider. */
 @ExperimentalWearMaterial3Api
 object InlineSliderDefaults {
-    /** Default slider measurements. */
+    /**
+     * Default slider measurements.
+     */
     internal val SliderHeight = 52.dp
 
     internal val ControlSize = 36.dp
@@ -306,7 +303,9 @@ object InlineSliderDefaults {
 
     internal val BarSeparatorRadius = 2.dp
 
-    /** The recommended size for Slider [Decrease] and [Increase] button icons. */
+    /**
+     * The recommended size for Slider [Decrease] and [Increase] button icons.
+     */
     val IconSize = 24.dp
 
     /**
@@ -322,36 +321,36 @@ object InlineSliderDefaults {
      * @param disabledButtonIconColor The color of the icon of buttons when disabled
      * @param disabledSelectedBarColor The color of the progress bar when disabled
      * @param disabledUnselectedBarColor The background color of the progress bar when disabled
-     * @param disabledBarSeparatorColor The color of separator between visible segments when
-     *   disabled
+     * @param disabledBarSeparatorColor The color of separator between visible segments when disabled
      */
     @Composable
     fun colors(
-        containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor: Color = MaterialTheme.colorScheme.surface,
         buttonIconColor: Color = MaterialTheme.colorScheme.secondary,
         selectedBarColor: Color = MaterialTheme.colorScheme.primary,
         unselectedBarColor: Color = MaterialTheme.colorScheme.background.copy(alpha = 0.3f),
         barSeparatorColor: Color = MaterialTheme.colorScheme.primaryDim,
-        disabledContainerColor: Color =
-            containerColor.toDisabledColor(disabledAlpha = DisabledContainerAlpha),
+        disabledContainerColor: Color = containerColor.toDisabledColor(
+            disabledAlpha = DisabledContainerAlpha
+        ),
         disabledButtonIconColor: Color = buttonIconColor.toDisabledColor(),
         disabledSelectedBarColor: Color = selectedBarColor.toDisabledColor(),
         disabledUnselectedBarColor: Color = unselectedBarColor.toDisabledColor(),
-        disabledBarSeparatorColor: Color =
-            barSeparatorColor.toDisabledColor(disabledAlpha = DisabledContainerAlpha)
-    ): InlineSliderColors =
-        InlineSliderColors(
-            containerColor = containerColor,
-            buttonIconColor = buttonIconColor,
-            selectedBarColor = selectedBarColor,
-            unselectedBarColor = unselectedBarColor,
-            barSeparatorColor = barSeparatorColor,
-            disabledContainerColor = disabledContainerColor,
-            disabledButtonIconColor = disabledButtonIconColor,
-            disabledSelectedBarColor = disabledSelectedBarColor,
-            disabledUnselectedBarColor = disabledUnselectedBarColor,
-            disabledBarSeparatorColor = disabledBarSeparatorColor
+        disabledBarSeparatorColor: Color = barSeparatorColor.toDisabledColor(
+            disabledAlpha = DisabledContainerAlpha
         )
+    ): InlineSliderColors = InlineSliderColors(
+        containerColor = containerColor,
+        buttonIconColor = buttonIconColor,
+        selectedBarColor = selectedBarColor,
+        unselectedBarColor = unselectedBarColor,
+        barSeparatorColor = barSeparatorColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledButtonIconColor = disabledButtonIconColor,
+        disabledSelectedBarColor = disabledSelectedBarColor,
+        disabledUnselectedBarColor = disabledUnselectedBarColor,
+        disabledBarSeparatorColor = disabledBarSeparatorColor
+    )
 
     /** Decrease [ImageVector]. */
     val Decrease = RangeIcons.Minus
@@ -363,6 +362,10 @@ object InlineSliderDefaults {
 /**
  * Represents the background and content colors used in [InlineSlider] in different states.
  *
+ * @constructor create an instance with arbitrary colors.
+ * See [InlineSliderDefaults.colors] for the default implementation that follows Material
+ * specifications.
+ *
  * @param containerColor The background color of this [InlineSlider] when enabled.
  * @param buttonIconColor The color of the icon of buttons when enabled.
  * @param selectedBarColor The color of the progress bar when enabled.
@@ -373,13 +376,10 @@ object InlineSliderDefaults {
  * @param disabledSelectedBarColor The color of the progress bar when disabled.
  * @param disabledUnselectedBarColor The background color of the progress bar when disabled.
  * @param disabledBarSeparatorColor The color of separator between visible segments when disabled.
- * @constructor create an instance with arbitrary colors. See [InlineSliderDefaults.colors] for the
- *   default implementation that follows Material specifications.
  */
 @ExperimentalWearMaterial3Api
 @Immutable
-class InlineSliderColors
-constructor(
+class InlineSliderColors constructor(
     val containerColor: Color,
     val buttonIconColor: Color,
     val selectedBarColor: Color,
@@ -413,15 +413,13 @@ constructor(
         )
 
     @Composable
-    internal fun barColor(enabled: Boolean, selected: Boolean): State<Color> =
-        animateColorAsState(
-            if (enabled) {
-                if (selected) selectedBarColor else unselectedBarColor
-            } else {
-                if (selected) disabledSelectedBarColor else disabledUnselectedBarColor
-            },
-            label = "sliderBarColorAnimation"
-        )
+    internal fun barColor(enabled: Boolean, selected: Boolean): State<Color> = animateColorAsState(
+        if (enabled) {
+            if (selected) selectedBarColor else unselectedBarColor
+        } else {
+            if (selected) disabledSelectedBarColor else disabledUnselectedBarColor
+        }, label = "sliderBarColorAnimation"
+    )
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -468,11 +466,10 @@ internal fun DrawScope.drawSelectedProgressBar(
     val barHeightInPx = InlineSliderDefaults.SelectedBarHeight.toPx()
     drawRoundRect(
         color = color,
-        topLeft =
-            Offset(
-                directedValue(direction, 0f, size.width * (1 - valueRatio)),
-                (size.height - barHeightInPx) / 2
-            ),
+        topLeft = Offset(
+            directedValue(direction, 0f, size.width * (1 - valueRatio)),
+            (size.height - barHeightInPx) / 2
+        ),
         size = Size(size.width * valueRatio, barHeightInPx),
         cornerRadius = CornerRadius(barHeightInPx / 2)
     )
@@ -487,11 +484,9 @@ internal fun DrawScope.drawUnselectedProgressBar(
     val barHeightInPx = InlineSliderDefaults.UnselectedBarHeight.toPx()
     drawRoundRect(
         color = color,
-        topLeft =
-            Offset(
-                directedValue(direction, size.width * valueRatio, 0f),
-                (size.height - barHeightInPx) / 2
-            ),
+        topLeft = Offset(
+            directedValue(direction, size.width * valueRatio, 0f), (size.height - barHeightInPx) / 2
+        ),
         size = Size(size.width * (1 - valueRatio), barHeightInPx),
         cornerRadius = CornerRadius(barHeightInPx / 2)
     )
@@ -512,8 +507,10 @@ private fun InlineSliderButtonContent(
     enabled: Boolean,
     buttonIconColor: @Composable (enabled: Boolean) -> State<Color>,
     content: @Composable () -> Unit
-) =
-    CompositionLocalProvider(
-        LocalContentColor provides buttonIconColor(enabled).value,
-        content = content
-    )
+) = CompositionLocalProvider(
+    LocalContentColor provides buttonIconColor(enabled).value,
+    LocalContentAlpha provides if (enabled) {
+        LocalContentAlpha.current
+    } else ContentAlpha.disabled,
+    content = content
+)

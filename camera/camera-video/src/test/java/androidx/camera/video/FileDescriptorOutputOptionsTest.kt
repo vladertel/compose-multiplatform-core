@@ -63,8 +63,9 @@ class FileDescriptorOutputOptionsTest {
         val parcelFileDescriptor = mock(ParcelFileDescriptor::class.java)
         val options1 = FileDescriptorOutputOptions.Builder(parcelFileDescriptor).build()
         val options2 = FileDescriptorOutputOptions.Builder(parcelFileDescriptor).build()
-        val options3 =
-            FileDescriptorOutputOptions.Builder(parcelFileDescriptor).setFileSizeLimit(100).build()
+        val options3 = FileDescriptorOutputOptions.Builder(parcelFileDescriptor)
+            .setFileSizeLimit(100)
+            .build()
 
         assertThat(options1 == options2 && options1 == options2).isTrue()
         assertThat(options1 != options3 && options1 != options3).isTrue()

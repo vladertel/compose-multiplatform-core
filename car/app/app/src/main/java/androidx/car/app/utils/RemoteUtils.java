@@ -37,10 +37,7 @@ import androidx.car.app.SurfaceContainer;
 import androidx.car.app.annotations.RequiresCarApi;
 import androidx.car.app.serialization.Bundleable;
 import androidx.car.app.serialization.BundlerException;
-import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
 
 /**
  * Assorted utilities to deal with serialization of remote calls.
@@ -269,22 +266,11 @@ public final class RemoteUtils {
 
     private static class SurfaceCallbackStub extends ISurfaceCallback.Stub {
         private final Lifecycle mLifecycle;
-        @Nullable
-        private SurfaceCallback mSurfaceCallback;
+        private final SurfaceCallback mSurfaceCallback;
 
         SurfaceCallbackStub(Lifecycle lifecycle, SurfaceCallback surfaceCallback) {
             mLifecycle = lifecycle;
             mSurfaceCallback = surfaceCallback;
-
-            LifecycleObserver observer = new DefaultLifecycleObserver() {
-                @Override
-                public void onDestroy(@NonNull LifecycleOwner owner) {
-                    mSurfaceCallback = null;
-                    owner.getLifecycle().removeObserver(this);
-                }
-            };
-
-            lifecycle.addObserver(observer);
         }
 
         @Override
@@ -294,10 +280,8 @@ public final class RemoteUtils {
                     callback,
                     "onSurfaceAvailable",
                     () -> {
-                        if (mSurfaceCallback != null) {
-                            mSurfaceCallback.onSurfaceAvailable(
-                                    (SurfaceContainer) surfaceContainer.get());
-                        }
+                        mSurfaceCallback.onSurfaceAvailable(
+                                (SurfaceContainer) surfaceContainer.get());
                         return null;
                     });
         }
@@ -309,9 +293,7 @@ public final class RemoteUtils {
                     callback,
                     "onVisibleAreaChanged",
                     () -> {
-                        if (mSurfaceCallback != null) {
-                            mSurfaceCallback.onVisibleAreaChanged(visibleArea);
-                        }
+                        mSurfaceCallback.onVisibleAreaChanged(visibleArea);
                         return null;
                     });
         }
@@ -321,9 +303,7 @@ public final class RemoteUtils {
             dispatchCallFromHost(
                     mLifecycle, callback,
                     "onStableAreaChanged", () -> {
-                        if (mSurfaceCallback != null) {
-                            mSurfaceCallback.onStableAreaChanged(stableArea);
-                        }
+                        mSurfaceCallback.onStableAreaChanged(stableArea);
                         return null;
                     });
         }
@@ -335,10 +315,8 @@ public final class RemoteUtils {
                     callback,
                     "onSurfaceDestroyed",
                     () -> {
-                        if (mSurfaceCallback != null) {
-                            mSurfaceCallback.onSurfaceDestroyed(
-                                    (SurfaceContainer) surfaceContainer.get());
-                        }
+                        mSurfaceCallback.onSurfaceDestroyed(
+                                (SurfaceContainer) surfaceContainer.get());
                         return null;
                     });
         }
@@ -346,9 +324,7 @@ public final class RemoteUtils {
         @Override
         public void onScroll(float distanceX, float distanceY) {
             dispatchCallFromHost(mLifecycle, "onScroll", () -> {
-                if (mSurfaceCallback != null) {
-                    mSurfaceCallback.onScroll(distanceX, distanceY);
-                }
+                mSurfaceCallback.onScroll(distanceX, distanceY);
                 return null;
             });
         }
@@ -356,9 +332,7 @@ public final class RemoteUtils {
         @Override
         public void onFling(float velocityX, float velocityY) {
             dispatchCallFromHost(mLifecycle, "onFling", () -> {
-                if (mSurfaceCallback != null) {
-                    mSurfaceCallback.onFling(velocityX, velocityY);
-                }
+                mSurfaceCallback.onFling(velocityX, velocityY);
                 return null;
             });
         }
@@ -366,9 +340,7 @@ public final class RemoteUtils {
         @Override
         public void onScale(float focusX, float focusY, float scaleFactor) {
             dispatchCallFromHost(mLifecycle, "onScale", () -> {
-                if (mSurfaceCallback != null) {
-                    mSurfaceCallback.onScale(focusX, focusY, scaleFactor);
-                }
+                mSurfaceCallback.onScale(focusX, focusY, scaleFactor);
                 return null;
             });
         }
@@ -376,9 +348,7 @@ public final class RemoteUtils {
         @Override
         public void onClick(float x, float y) throws RemoteException {
             dispatchCallFromHost(mLifecycle, "onClick", () -> {
-                if (mSurfaceCallback != null) {
-                    mSurfaceCallback.onClick(x, y);
-                }
+                mSurfaceCallback.onClick(x, y);
                 return null;
             });
         }

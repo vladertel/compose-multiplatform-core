@@ -40,7 +40,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun DropdownMenuSelection() {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -83,7 +85,9 @@ private fun DropdownMenuInSelectionContainer() {
     Button(onClick = { expanded = true }) { Text("DropdownMenu in SelectionContainer") }
     SelectionContainer {
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            repeat(4) { DropdownMenuItem(onClick = { expanded = false }) { Text("Item $it") } }
+            repeat(4) {
+                DropdownMenuItem(onClick = { expanded = false }) { Text("Item $it") }
+            }
         }
     }
 }
@@ -95,7 +99,9 @@ private fun SelectionContainerInDropdownMenu() {
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         SelectionContainer {
             Column {
-                repeat(4) { DropdownMenuItem(onClick = { expanded = false }) { Text("Item $it") } }
+                repeat(4) {
+                    DropdownMenuItem(onClick = { expanded = false }) { Text("Item $it") }
+                }
             }
         }
     }

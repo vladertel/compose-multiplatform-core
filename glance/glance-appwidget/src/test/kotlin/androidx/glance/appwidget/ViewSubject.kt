@@ -40,8 +40,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import org.robolectric.Shadows.shadowOf
 
-internal open class ViewSubject(metaData: FailureMetadata, private val actual: View?) :
-    Subject(metaData, actual) {
+internal open class ViewSubject(
+    metaData: FailureMetadata,
+    private val actual: View?
+) : Subject(metaData, actual) {
     fun hasBackgroundColor(@ColorInt color: Int) {
         isNotNull()
         actual!!
@@ -84,8 +86,10 @@ internal open class ViewSubject(metaData: FailureMetadata, private val actual: V
     }
 }
 
-internal open class TextViewSubject(metaData: FailureMetadata, private val actual: TextView?) :
-    ViewSubject(metaData, actual) {
+internal open class TextViewSubject(
+    metaData: FailureMetadata,
+    private val actual: TextView?
+) : ViewSubject(metaData, actual) {
     fun hasTextColor(@ColorInt color: Int) {
         isNotNull()
         actual!!
@@ -109,8 +113,10 @@ internal open class TextViewSubject(metaData: FailureMetadata, private val actua
     }
 }
 
-internal open class ImageViewSubject(metaData: FailureMetadata, private val actual: ImageView?) :
-    ViewSubject(metaData, actual) {
+internal open class ImageViewSubject(
+    metaData: FailureMetadata,
+    private val actual: ImageView?
+) : ViewSubject(metaData, actual) {
     fun hasColorFilter(@ColorInt color: Int) {
         assertNotNull(actual)
         val colorFilter = actual.colorFilter
@@ -136,7 +142,8 @@ internal open class ImageViewSubject(metaData: FailureMetadata, private val actu
             }
         }
 
-        fun assertThat(view: ImageView?): ImageViewSubject = assertAbout(imageViews()).that(view)
+        fun assertThat(view: ImageView?): ImageViewSubject =
+            assertAbout(imageViews()).that(view)
     }
 }
 
@@ -149,13 +156,11 @@ internal open class FrameLayoutSubject(
         if (actual.childCount == 0) {
             return
         }
-        check("children.getLayoutParams().gravity")
-            .that(
-                actual.children
-                    .map { view -> assertIs<FrameLayout.LayoutParams>(view.layoutParams).gravity }
-                    .toSet()
-            )
-            .containsExactly(alignment.toGravity())
+        check("children.getLayoutParams().gravity").that(actual.children.map { view ->
+            assertIs<FrameLayout.LayoutParams>(
+                view.layoutParams
+            ).gravity
+        }.toSet()).containsExactly(alignment.toGravity())
     }
 
     companion object {
@@ -190,8 +195,7 @@ internal open class LinearLayoutSubject(
             // LinearLayout.getGravity was introduced on Android N, prior to that, you could set the
             // gravity, but not read it back.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                check("getGravity()")
-                    .that(actual.gravity and Gravity.VERTICAL_GRAVITY_MASK)
+                check("getGravity()").that(actual.gravity and Gravity.VERTICAL_GRAVITY_MASK)
                     .isEqualTo(alignment.toGravity())
             }
             return
@@ -199,16 +203,10 @@ internal open class LinearLayoutSubject(
         if (actual.childCount == 0) {
             return
         }
-        check("children.getLayoutParams().gravity")
-            .that(
-                actual.children
-                    .map { view ->
-                        assertIs<LinearLayout.LayoutParams>(view.layoutParams).gravity and
-                            Gravity.VERTICAL_GRAVITY_MASK
-                    }
-                    .toSet()
-            )
-            .containsExactly(alignment.toGravity())
+        check("children.getLayoutParams().gravity").that(actual.children.map { view ->
+            assertIs<LinearLayout.LayoutParams>(
+                view.layoutParams).gravity and Gravity.VERTICAL_GRAVITY_MASK
+        }.toSet()).containsExactly(alignment.toGravity())
     }
 
     fun hasContentAlignment(alignment: Alignment.Horizontal) {
@@ -236,16 +234,10 @@ internal open class LinearLayoutSubject(
         if (actual.childCount == 0) {
             return
         }
-        check("children.getLayoutParams().gravity")
-            .that(
-                actual.children
-                    .map { view ->
-                        assertIs<LinearLayout.LayoutParams>(view.layoutParams).gravity and
-                            Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK
-                    }
-                    .toSet()
-            )
-            .containsExactly(alignment.toGravity())
+        check("children.getLayoutParams().gravity").that(actual.children.map { view ->
+            assertIs<LinearLayout.LayoutParams>(
+                view.layoutParams).gravity and Gravity.RELATIVE_HORIZONTAL_GRAVITY_MASK
+        }.toSet()).containsExactly(alignment.toGravity())
     }
 
     fun hasContentAlignment(alignment: Alignment) {
@@ -265,8 +257,10 @@ internal open class LinearLayoutSubject(
     }
 }
 
-internal class ColorSubject(metaData: FailureMetadata, private val actual: Color?) :
-    Subject(metaData, actual) {
+internal class ColorSubject(
+    metaData: FailureMetadata,
+    private val actual: Color?
+) : Subject(metaData, actual) {
     fun isSameColorAs(string: String) {
         isEqualTo(Color(android.graphics.Color.parseColor(string)))
     }
@@ -294,6 +288,7 @@ internal class ColorSubject(metaData: FailureMetadata, private val actual: Color
             }
         }
 
-        fun assertThat(color: Color?): ColorSubject = assertAbout(colors()).that(color)
+        fun assertThat(color: Color?): ColorSubject =
+            assertAbout(colors()).that(color)
     }
 }

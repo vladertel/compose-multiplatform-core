@@ -19,7 +19,6 @@ package androidx.room.processor
 import COMMON
 import androidx.room.Dao
 import androidx.room.Transaction
-import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
@@ -44,8 +43,7 @@ import org.junit.runners.JUnit4
 class TransactionMethodProcessorTest {
 
     companion object {
-        const val DAO_PREFIX =
-            """
+        const val DAO_PREFIX = """
                 package foo.bar;
                 import androidx.room.*;
                 import java.util.*;
@@ -80,7 +78,9 @@ class TransactionMethodProcessorTest {
         ) { transaction, invocation ->
             assertThat(transaction.jvmName, `is`("doInTransaction"))
             invocation.assertCompilationResult {
-                hasErrorContaining(ProcessorErrors.TRANSACTION_METHOD_MODIFIERS)
+                hasErrorContaining(
+                    ProcessorErrors.TRANSACTION_METHOD_MODIFIERS
+                )
             }
         }
     }
@@ -114,7 +114,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        FLOW.rawTypeName.toString(CodeLanguage.JAVA)
+                        FLOW.rawTypeName.toString()
                     )
                 )
             }
@@ -133,7 +133,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        LIVE_DATA.rawTypeName.toString(CodeLanguage.JAVA)
+                        LIVE_DATA.rawTypeName.toString()
                     )
                 )
             }
@@ -152,7 +152,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        COMPUTABLE_LIVE_DATA.rawTypeName.toString(CodeLanguage.JAVA)
+                        COMPUTABLE_LIVE_DATA.rawTypeName.toString()
                     )
                 )
             }
@@ -171,7 +171,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava2TypeNames.FLOWABLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava2TypeNames.FLOWABLE.rawTypeName.toString()
                     )
                 )
             }
@@ -192,7 +192,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava3TypeNames.FLOWABLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava3TypeNames.FLOWABLE.rawTypeName.toString()
                     )
                 )
             }
@@ -211,7 +211,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava2TypeNames.COMPLETABLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava2TypeNames.COMPLETABLE.rawTypeName.toString()
                     )
                 )
             }
@@ -232,7 +232,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava3TypeNames.COMPLETABLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava3TypeNames.COMPLETABLE.rawTypeName.toString()
                     )
                 )
             }
@@ -251,7 +251,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava2TypeNames.SINGLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava2TypeNames.SINGLE.rawTypeName.toString()
                     )
                 )
             }
@@ -272,7 +272,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        RxJava3TypeNames.SINGLE.rawTypeName.toString(CodeLanguage.JAVA)
+                        RxJava3TypeNames.SINGLE.rawTypeName.toString()
                     )
                 )
             }
@@ -291,7 +291,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        LISTENABLE_FUTURE.rawTypeName.toString(CodeLanguage.JAVA)
+                        LISTENABLE_FUTURE.rawTypeName.toString()
                     )
                 )
             }
@@ -310,7 +310,7 @@ class TransactionMethodProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorContaining(
                     ProcessorErrors.transactionMethodAsync(
-                        PUBLISHER.rawTypeName.toString(CodeLanguage.JAVA)
+                        PUBLISHER.rawTypeName.toString()
                     )
                 )
             }
@@ -324,48 +324,37 @@ class TransactionMethodProcessorTest {
         vararg input: String,
         handler: (TransactionMethod, XTestInvocation) -> Unit
     ) {
-        val inputSource =
-            listOf(
-                Source.java("foo.bar.MyClass", DAO_PREFIX + input.joinToString("\n") + DAO_SUFFIX)
+        val inputSource = listOf(
+            Source.java(
+                "foo.bar.MyClass",
+                DAO_PREFIX + input.joinToString("\n") + DAO_SUFFIX
             )
-        val otherSources =
-            listOf(
-                COMMON.LIVE_DATA,
-                COMMON.COMPUTABLE_LIVE_DATA,
-                COMMON.RX2_FLOWABLE,
-                COMMON.PUBLISHER,
-                COMMON.RX2_COMPLETABLE,
-                COMMON.RX2_SINGLE,
-                COMMON.RX3_FLOWABLE,
-                COMMON.RX3_COMPLETABLE,
-                COMMON.RX3_SINGLE,
-                COMMON.LISTENABLE_FUTURE,
-                COMMON.FLOW
-            )
+        )
+        val otherSources = listOf(
+            COMMON.LIVE_DATA, COMMON.COMPUTABLE_LIVE_DATA, COMMON.RX2_FLOWABLE, COMMON.PUBLISHER,
+            COMMON.RX2_COMPLETABLE, COMMON.RX2_SINGLE, COMMON.RX3_FLOWABLE, COMMON.RX3_COMPLETABLE,
+            COMMON.RX3_SINGLE, COMMON.LISTENABLE_FUTURE, COMMON.FLOW
+        )
         runProcessorTest(
-            sources = inputSource + otherSources,
-            options = mapOf(Context.BooleanProcessorOptions.GENERATE_KOTLIN.argName to "false")
+            sources = inputSource + otherSources
         ) { invocation ->
-            val (owner, methods) =
-                invocation.roundEnv
-                    .getElementsAnnotatedWith(Dao::class.qualifiedName!!)
-                    .filterIsInstance<XTypeElement>()
-                    .map {
-                        Pair(
-                            it,
-                            it.getAllMethods()
-                                .filter { it.hasAnnotation(Transaction::class) }
-                                .toList()
-                        )
-                    }
-                    .first { it.second.isNotEmpty() }
-            val processor =
-                TransactionMethodProcessor(
-                    baseContext = invocation.context,
-                    containingElement = owner,
-                    containingType = owner.type,
-                    executableElement = methods.first()
-                )
+            val (owner, methods) = invocation.roundEnv
+                .getElementsAnnotatedWith(Dao::class.qualifiedName!!)
+                .filterIsInstance<XTypeElement>()
+                .map {
+                    Pair(
+                        it,
+                        it.getAllMethods().filter {
+                            it.hasAnnotation(Transaction::class)
+                        }.toList()
+                    )
+                }.first { it.second.isNotEmpty() }
+            val processor = TransactionMethodProcessor(
+                baseContext = invocation.context,
+                containingElement = owner,
+                containingType = owner.type,
+                executableElement = methods.first()
+            )
             val processed = processor.process()
             handler(processed, invocation)
         }

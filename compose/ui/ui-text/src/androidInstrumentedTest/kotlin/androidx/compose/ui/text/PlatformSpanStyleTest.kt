@@ -85,8 +85,9 @@ class PlatformSpanStyleTest {
         val style = SpanStyle(platformStyle = null)
 
         val platformStyle = PlatformSpanStyle()
-        assertThat(style.copy(platformStyle = platformStyle).platformStyle)
-            .isSameInstanceAs(platformStyle)
+        assertThat(
+            style.copy(platformStyle = platformStyle).platformStyle
+        ).isSameInstanceAs(platformStyle)
     }
 
     @Test

@@ -21,17 +21,14 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class IgnoreClassLevelDetectorTest :
-    AbstractLintDetectorTest(
-        useDetector = IgnoreClassLevelDetector(),
-        useIssues = listOf(IgnoreClassLevelDetector.ISSUE),
+class IgnoreClassLevelDetectorTest : AbstractLintDetectorTest(
+    useDetector = IgnoreClassLevelDetector(),
+    useIssues = listOf(IgnoreClassLevelDetector.ISSUE),
     ) {
     @Test
     fun `Detection of class level ignore in Kotlin sources`() {
-        val input =
-            arrayOf(
-                kotlin(
-                    """
+        val input = arrayOf(
+            kotlin("""
                 package java.androidx
 
                 import org.junit.Ignore
@@ -46,29 +43,28 @@ class IgnoreClassLevelDetectorTest :
                     @Ignore
                     fun twoTest() {}
                 }
-            """
-                ),
-                Stubs.IgnoreAnnotation,
-                Stubs.TestAnnotation
-            )
+            """),
+            Stubs.IgnoreAnnotation,
+            Stubs.TestAnnotation
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/java/androidx/TestClass.kt:7: Error: @Ignore should not be used at the class level. Move the annotation to each test individually. [IgnoreClassLevelDetector]
                 @Ignore("Class")
                 ~~~~~~~~~~~~~~~~
 1 errors, 0 warnings
         """
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
 
     @Test
     fun `Detection of class level ignore in Java sources`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                     package java.androidx;
 
                     import org.junit.Ignore;
@@ -84,28 +80,28 @@ src/java/androidx/TestClass.kt:7: Error: @Ignore should not be used at the class
                         public void twoTest() {}
                     }
                 """
-                ),
-                Stubs.IgnoreAnnotation,
-                Stubs.TestAnnotation
-            )
+            ),
+            Stubs.IgnoreAnnotation,
+            Stubs.TestAnnotation
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/java/androidx/TestClass.java:7: Error: @Ignore should not be used at the class level. Move the annotation to each test individually. [IgnoreClassLevelDetector]
                     @Ignore
                     ~~~~~~~
 1 errors, 0 warnings
         """
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
 
     @Test
     fun `Test level ignore allowed in Kotlin sources`() {
-        val input =
-            arrayOf(
-                kotlin(
-                    """
+        val input = arrayOf(
+            kotlin(
+                """
                     package java.androidx
 
                     import org.junit.Ignore
@@ -120,20 +116,19 @@ src/java/androidx/TestClass.java:7: Error: @Ignore should not be used at the cla
                         fun twoTest() {}
                     }
                 """
-                ),
-                Stubs.IgnoreAnnotation,
-                Stubs.TestAnnotation
-            )
+            ),
+            Stubs.IgnoreAnnotation,
+            Stubs.TestAnnotation
+        )
 
         check(*input).expectClean()
     }
 
     @Test
     fun `Test level ignore allowed in Java sources`() {
-        val input =
-            arrayOf(
-                java(
-                    """
+        val input = arrayOf(
+            java(
+                """
                 package java.androidx;
 
                 import org.junit.Ignore;
@@ -147,11 +142,10 @@ src/java/androidx/TestClass.java:7: Error: @Ignore should not be used at the cla
                     @Test
                     public void twoTest() {}
                 }
-            """
-                ),
-                Stubs.IgnoreAnnotation,
-                Stubs.TestAnnotation
-            )
+            """),
+            Stubs.IgnoreAnnotation,
+            Stubs.TestAnnotation
+        )
 
         check(*input).expectClean()
     }

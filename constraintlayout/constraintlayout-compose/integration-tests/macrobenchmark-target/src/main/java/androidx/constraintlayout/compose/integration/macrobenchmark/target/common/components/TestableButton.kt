@@ -33,5 +33,10 @@ internal fun TestableButton(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Button(modifier = modifier.testTag(text), onClick = onClick) { Text(text = text) }
+    Button(
+        modifier = modifier.testTag(text),
+        onClick = onClick
+    ) {
+        Text(text = text)
+    }
 }

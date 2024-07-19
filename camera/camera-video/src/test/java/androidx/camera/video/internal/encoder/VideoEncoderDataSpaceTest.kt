@@ -36,8 +36,11 @@ class VideoEncoderDataSpaceTest {
 
     @Test
     fun canRetrieveFields() {
-        val dataSpace =
-            VideoEncoderDataSpace.create(TEST_COLOR_STANDARD, TEST_TRANSFER_FN, TEST_COLOR_RANGE)
+        val dataSpace = VideoEncoderDataSpace.create(
+            TEST_COLOR_STANDARD,
+            TEST_TRANSFER_FN,
+            TEST_COLOR_RANGE
+        )
 
         assertThat(dataSpace.standard).isEqualTo(TEST_COLOR_STANDARD)
         assertThat(dataSpace.transfer).isEqualTo(TEST_TRANSFER_FN)

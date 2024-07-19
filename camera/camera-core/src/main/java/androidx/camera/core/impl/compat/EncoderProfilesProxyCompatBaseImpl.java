@@ -24,6 +24,7 @@ import android.media.CamcorderProfile;
 import android.media.EncoderProfiles;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.EncoderProfilesProxy;
 import androidx.camera.core.impl.EncoderProfilesProxy.AudioProfileProxy;
 import androidx.camera.core.impl.EncoderProfilesProxy.ImmutableEncoderProfilesProxy;
@@ -32,6 +33,7 @@ import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy;
 import java.util.ArrayList;
 import java.util.List;
 
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class EncoderProfilesProxyCompatBaseImpl {
 
     /** Creates an EncoderProfilesProxy instance from {@link CamcorderProfile}. */

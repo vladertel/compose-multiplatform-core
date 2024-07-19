@@ -48,7 +48,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FocusGroupTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val initialFocus = FocusRequester()
     private lateinit var focusManager: FocusManager
@@ -60,7 +61,8 @@ class FocusGroupTest {
         var isFocused = false
         rule.setContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .focusGroup()
             ) {
@@ -82,7 +84,8 @@ class FocusGroupTest {
         var isFocused = false
         rule.setContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .focusGroup()
             ) {
@@ -104,7 +107,8 @@ class FocusGroupTest {
         var isFocused = false
         rule.setContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .focusProperties { canFocus = true }
                     .focusGroup()
@@ -128,7 +132,8 @@ class FocusGroupTest {
         var internalIsFocused = false
         rule.setContent {
             BoxWithFocusGroup(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { isFocused = it.isFocused }
                     .focusable()
                     .onFocusChanged { internalIsFocused = it.isFocused }
@@ -206,7 +211,8 @@ class FocusGroupTest {
                     Box(Modifier.focusRequester(initialFocus).focusable())
                 }
                 Column(
-                    Modifier.onFocusChanged { expectedFocus = it }
+                    Modifier
+                        .onFocusChanged { expectedFocus = it }
                         .focusProperties { canFocus = true }
                         .focusGroup()
                 ) {
@@ -253,16 +259,22 @@ class FocusGroupTest {
         lateinit var expectedFocus: FocusState
         rule.setContentWithInitialFocus {
             Box(
-                Modifier.focusRequester(initialFocus)
+                Modifier
+                    .focusRequester(initialFocus)
                     .focusProperties { canFocus = true }
                     .focusGroup()
             ) {
-                Box(Modifier.onFocusChanged { expectedFocus = it }.focusable())
+                Box(
+                    Modifier
+                        .onFocusChanged { expectedFocus = it }
+                        .focusable()
+                )
             }
         }
 
         // Act.
-        @OptIn(ExperimentalComposeUiApi::class) rule.runOnIdle { focusManager.moveFocus(Enter) }
+        @OptIn(ExperimentalComposeUiApi::class)
+        rule.runOnIdle { focusManager.moveFocus(Enter) }
 
         // Assert.
         rule.runOnIdle { assertThat(expectedFocus.isFocused).isTrue() }
@@ -274,16 +286,22 @@ class FocusGroupTest {
         lateinit var expectedFocus: FocusState
         rule.setContentWithInitialFocus {
             Box(
-                Modifier.onFocusChanged { expectedFocus = it }
+                Modifier
+                    .onFocusChanged { expectedFocus = it }
                     .focusProperties { canFocus = true }
                     .focusGroup()
             ) {
-                Box(Modifier.focusRequester(initialFocus).focusable())
+                Box(
+                    Modifier
+                        .focusRequester(initialFocus)
+                        .focusable()
+                )
             }
         }
 
         // Act.
-        @OptIn(ExperimentalComposeUiApi::class) rule.runOnIdle { focusManager.moveFocus(Exit) }
+        @OptIn(ExperimentalComposeUiApi::class)
+        rule.runOnIdle { focusManager.moveFocus(Exit) }
 
         // Assert.
         rule.runOnIdle { assertThat(expectedFocus.isFocused).isTrue() }
@@ -324,7 +342,8 @@ class FocusGroupTest {
                     Box(Modifier.focusable())
                 }
                 Column(
-                    Modifier.onFocusChanged { expectedFocus = it }
+                    Modifier
+                        .onFocusChanged { expectedFocus = it }
                         .focusProperties { canFocus = true }
                         .focusGroup()
                 ) {
@@ -348,14 +367,16 @@ class FocusGroupTest {
         rule.setContentWithInitialFocus {
             Row {
                 Column(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .focusProperties { canFocus = true }
                         .focusGroup()
                 ) {
                     Box(Modifier.focusable())
                 }
                 Column(
-                    Modifier.onFocusChanged { expectedFocus = it }
+                    Modifier
+                        .onFocusChanged { expectedFocus = it }
                         .focusProperties { canFocus = true }
                         .focusGroup()
                 ) {
@@ -380,12 +401,17 @@ class FocusGroupTest {
         lateinit var expectedFocus: FocusState
         rule.setContentWithInitialFocus {
             Row {
-                Column(Modifier.focusProperties { canFocus = true }.focusGroup()) {
+                Column(
+                    Modifier
+                        .focusProperties { canFocus = true }
+                        .focusGroup()
+                ) {
                     Box(Modifier.focusRequester(initialFocus).focusable())
                     Box(Modifier.focusable())
                 }
                 Column(
-                    Modifier.onFocusChanged { expectedFocus = it }
+                    Modifier
+                        .onFocusChanged { expectedFocus = it }
                         .focusProperties { canFocus = true }
                         .focusGroup()
                 ) {
@@ -412,8 +438,14 @@ class FocusGroupTest {
     // Using this helper function because both initial focus (From Android) and focus search need
     // the items to have a non-zero size.
     @Composable
-    private fun Box(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit = {}) {
-        androidx.compose.foundation.layout.Box(modifier = modifier.size(10.dp), content = content)
+    private fun Box(
+        modifier: Modifier = Modifier,
+        content: @Composable BoxScope.() -> Unit = {}
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = modifier.size(10.dp),
+            content = content
+        )
     }
 
     @Suppress("NOTHING_TO_INLINE")
@@ -422,6 +454,7 @@ class FocusGroupTest {
         modifier: Modifier = Modifier,
         noinline content: @Composable BoxScope.() -> Unit = {}
     ) {
-        @OptIn(ExperimentalFoundationApi::class) Box(modifier.focusGroup(), content)
+        @OptIn(ExperimentalFoundationApi::class)
+        Box(modifier.focusGroup(), content)
     }
 }

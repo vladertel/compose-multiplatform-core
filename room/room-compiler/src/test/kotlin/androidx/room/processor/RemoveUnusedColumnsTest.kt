@@ -39,22 +39,37 @@ class RemoveUnusedColumnsTest {
 
     @Test
     fun annotateMethod() {
-        compile(annotateMethod = true) { result -> result.hasNoWarnings() }
+        compile(
+            annotateMethod = true
+        ) { result ->
+            result.hasNoWarnings()
+        }
     }
 
     @Test
     fun annotateDao() {
-        compile(annotateDao = true) { result -> result.hasNoWarnings() }
+        compile(
+            annotateDao = true
+        ) { result ->
+            result.hasNoWarnings()
+        }
     }
 
     @Test
     fun annotateDb() {
-        compile(annotateDb = true) { result -> result.hasNoWarnings() }
+        compile(
+            annotateDb = true
+        ) { result ->
+            result.hasNoWarnings()
+        }
     }
 
     @Test
     fun expandProjection_annotateDb() {
-        compile(annotateDb = true, enableExpandProjection = true) { result ->
+        compile(
+            annotateDb = true,
+            enableExpandProjection = true
+        ) { result ->
             result.hasWarningContaining(ProcessorErrors.EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED)
             result.hasWarningCount(1)
         }
@@ -62,7 +77,10 @@ class RemoveUnusedColumnsTest {
 
     @Test
     fun expandProjection_annotateMethod() {
-        compile(annotateMethod = true, enableExpandProjection = true) { result ->
+        compile(
+            annotateMethod = true,
+            enableExpandProjection = true
+        ) { result ->
             result.hasWarningContaining(ProcessorErrors.EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED)
             result.hasWarningCount(1)
         }
@@ -70,8 +88,13 @@ class RemoveUnusedColumnsTest {
 
     @Test
     fun expandProjection_annotateDao() {
-        compile(annotateDao = true, enableExpandProjection = true) { result ->
-            result.hasWarningContaining(ProcessorErrors.EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED)
+        compile(
+            annotateDao = true,
+            enableExpandProjection = true
+        ) { result ->
+            result.hasWarningContaining(
+                ProcessorErrors.EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED
+            )
             result.hasWarningCount(1)
         }
     }
@@ -83,25 +106,28 @@ class RemoveUnusedColumnsTest {
         enableExpandProjection: Boolean = false,
         validate: (CompilationResultSubject) -> Unit,
     ) {
-        val sources =
-            dao(
-                annotateDao = annotateDao,
-                annotateDb = annotateDb,
-                annotateMethod = annotateMethod
-            ) + COMMON.USER
+        val sources = dao(
+            annotateDao = annotateDao,
+            annotateDb = annotateDb,
+            annotateMethod = annotateMethod
+        ) + COMMON.USER
 
         runProcessorTest(
             sources = sources,
-            createProcessingSteps = { listOf(DatabaseProcessingStep()) },
-            options =
-                mapOf(
-                    "room.expandProjection" to enableExpandProjection.toString(),
-                    "room.generateKotlin" to "false",
-                )
+            createProcessingSteps = {
+                listOf(DatabaseProcessingStep())
+            },
+            options = mapOf(
+                "room.expandProjection" to enableExpandProjection.toString()
+            )
         ) { result ->
             validate(result)
-            result.generatedSourceFileWithPath("foo/bar/MyDao_Impl.java")
-            result.generatedSourceFileWithPath("foo/bar/MyDb_Impl.java")
+            result.generatedSourceFileWithPath(
+                "foo/bar/MyDao_Impl.java"
+            )
+            result.generatedSourceFileWithPath(
+                "foo/bar/MyDb_Impl.java"
+            )
         }
     }
 
@@ -111,29 +137,25 @@ class RemoveUnusedColumnsTest {
             annotateDao: Boolean,
             annotateMethod: Boolean
         ): List<Source> {
-            fun annotationText(enabled: Boolean) =
-                if (enabled) {
-                    "@${RewriteQueriesToDropUnusedColumns::class.java.canonicalName}"
-                } else {
-                    ""
-                }
+            fun annotationText(enabled: Boolean) = if (enabled) {
+                "@${RewriteQueriesToDropUnusedColumns::class.java.canonicalName}"
+            } else {
+                ""
+            }
 
-            val pojo =
-                Source.java(
-                    "foo.bar.Pojo",
-                    """
+            val pojo = Source.java(
+                "foo.bar.Pojo",
+                """
                     package foo.bar;
                     public class Pojo {
                         public String name;
                         public String lastName;
                     }
+                """.trimIndent()
+            )
+            val dao = Source.java(
+                "foo.bar.MyDao",
                 """
-                        .trimIndent()
-                )
-            val dao =
-                Source.java(
-                    "foo.bar.MyDao",
-                    """
                     package foo.bar;
                     import androidx.room.*;
                     @Dao
@@ -143,13 +165,11 @@ class RemoveUnusedColumnsTest {
                         @Query("SELECT * FROM User")
                         public java.util.List<Pojo> loadAll();
                     }
+                """.trimIndent()
+            )
+            val db = Source.java(
+                "foo.bar.MyDb",
                 """
-                        .trimIndent()
-                )
-            val db =
-                Source.java(
-                    "foo.bar.MyDb",
-                    """
                     package foo.bar;
                     import androidx.room.*;
                     @Database(
@@ -161,9 +181,8 @@ class RemoveUnusedColumnsTest {
                     abstract class MyDb extends RoomDatabase {
                         abstract public MyDao getDao();
                     }
-                """
-                        .trimIndent()
-                )
+                """.trimIndent()
+            )
             return listOf(pojo, dao, db)
         }
     }

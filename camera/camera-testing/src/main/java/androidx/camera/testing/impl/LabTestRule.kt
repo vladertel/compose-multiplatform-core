@@ -17,6 +17,7 @@
 package androidx.camera.testing.impl
 
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.camera.core.CameraSelector
 import androidx.camera.testing.impl.LabTestRule.LabTestFrontCamera
 import androidx.camera.testing.impl.LabTestRule.LabTestOnly
@@ -31,12 +32,12 @@ import org.junit.runners.model.Statement
  * throws the AssumptionViolatedException to ignore the test if the test environment is not in the
  * lab. Useful for the tests not needed to run on the PostSubmit.
  *
- * To use this [TestRule], do the following. Add the Rule to your JUnit test:
+ * To use this [TestRule], do the following.
+ * Add the Rule to your JUnit test:
  * ```
  * @get:Rule
  * val labTestRule = LabTestRule()
  * ```
- *
  * Add only one of [LabTestOnly], [LabTestFrontCamera] or, [LabTestRearCamera] annotation to your
  * test case like:
  * ```
@@ -45,13 +46,11 @@ import org.junit.runners.model.Statement
  *
  *  }
  * ```
- *
  * To local run the test with the [LabTestOnly] annotation, please run the following command on the
  * DUT:
  * ```
  * adb shell setprop log.tag.MH DEBUG
  * ```
- *
  * [LabTestFrontCamera] and [LabTestRearCamera] can be tested on local DUT with the following debug
  * options:
  * ```
@@ -59,36 +58,38 @@ import org.junit.runners.model.Statement
  * adb shell setprop log.tag.rearCameraE2E DEBUG
  * ```
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class LabTestRule : TestRule {
 
     /**
-     * The annotation for tests that only want to run on the CameraX lab environment. Local device
-     * testing will ignore the tests with this annotation. Please reference the doc of [LabTestRule]
-     * to test on local devices.
+     * The annotation for tests that only want to run on the CameraX lab environment.
+     * Local device testing will ignore the tests with this annotation. Please reference the
+     * doc of [LabTestRule] to test on local devices.
      */
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.RUNTIME)
     annotation class LabTestOnly()
 
     /**
-     * The annotation for tests that only want to run on the CameraX lab environment with enabling
-     * front camera. Local device testing will ignore the tests with this annotation. Please
-     * reference the doc of [LabTestRule] to test on local devices.
+     * The annotation for tests that only want to run on the CameraX lab environment with
+     * enabling front camera. Local device testing will ignore the tests with this annotation.
+     * Please reference the doc of [LabTestRule] to test on local devices.
      */
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.RUNTIME)
     annotation class LabTestFrontCamera()
 
     /**
-     * The annotation for tests that only want to run on the CameraX lab environment with enabling
-     * rear camera. Local device testing will ignore the tests with this annotation. Please
-     * reference the doc of [LabTestRule] to test on local devices.
+     * The annotation for tests that only want to run on the CameraX lab environment with
+     * enabling rear camera. Local device testing will ignore the tests with this annotation.
+     * Please reference the doc of [LabTestRule] to test on local devices.
      */
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.RUNTIME)
     annotation class LabTestRearCamera()
 
-    class LabTestStatement(private val statement: Statement) : Statement() {
+    class LabTestStatement(private val statement: Statement) :
+        Statement() {
 
         @Throws(Throwable::class)
         override fun evaluate() {
@@ -100,7 +101,8 @@ class LabTestRule : TestRule {
         }
     }
 
-    class LabTestFrontCameraStatement(private val statement: Statement) : Statement() {
+    class LabTestFrontCameraStatement(private val statement: Statement) :
+        Statement() {
 
         @Throws(Throwable::class)
         override fun evaluate() {
@@ -111,7 +113,8 @@ class LabTestRule : TestRule {
         }
     }
 
-    class LabTestRearCameraStatement(private val statement: Statement) : Statement() {
+    class LabTestRearCameraStatement(private val statement: Statement) :
+        Statement() {
 
         @Throws(Throwable::class)
         override fun evaluate() {

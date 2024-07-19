@@ -39,11 +39,12 @@ import org.junit.runner.RunWith
 @LargeTest
 class FragmentArchLifecycleTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun testFragmentAdditionDuringOnStop() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
             val activityLifecycle = withActivity { lifecycle }
 
@@ -52,19 +53,14 @@ class FragmentArchLifecycleTest {
             fm.beginTransaction().add(first, "first").commit()
             executePendingTransactions()
             onActivity {
-                first.lifecycle.addObserver(
-                    object : LifecycleEventObserver {
-                        override fun onStateChanged(
-                            source: LifecycleOwner,
-                            event: Lifecycle.Event
-                        ) {
-                            if (event == Lifecycle.Event.ON_STOP) {
-                                fm.beginTransaction().add(second, "second").commitNow()
-                                first.lifecycle.removeObserver(this)
-                            }
+                first.lifecycle.addObserver(object : LifecycleEventObserver {
+                    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            fm.beginTransaction().add(second, "second").commitNow()
+                            first.lifecycle.removeObserver(this)
                         }
                     }
-                )
+                })
             }
             moveToState(Lifecycle.State.CREATED)
             assertThat(first.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
@@ -75,7 +71,7 @@ class FragmentArchLifecycleTest {
 
     @Test
     fun testFragmentAdditionDuringOnStopViewLifecycle() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
             val activityLifecycle = withActivity { lifecycle }
 
@@ -84,19 +80,14 @@ class FragmentArchLifecycleTest {
             fm.beginTransaction().add(android.R.id.content, first).commit()
             executePendingTransactions()
             onActivity {
-                first.viewLifecycleOwner.lifecycle.addObserver(
-                    object : LifecycleEventObserver {
-                        override fun onStateChanged(
-                            source: LifecycleOwner,
-                            event: Lifecycle.Event
-                        ) {
-                            if (event == Lifecycle.Event.ON_STOP) {
-                                fm.beginTransaction().add(second, "second").commitNow()
-                                first.viewLifecycleOwner.lifecycle.removeObserver(this)
-                            }
+                first.viewLifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+                    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                        if (event == Lifecycle.Event.ON_STOP) {
+                            fm.beginTransaction().add(second, "second").commitNow()
+                            first.viewLifecycleOwner.lifecycle.removeObserver(this)
                         }
                     }
-                )
+                })
             }
             moveToState(Lifecycle.State.CREATED)
             assertThat(first.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
@@ -109,7 +100,8 @@ class FragmentArchLifecycleTest {
 
     @Test
     fun testNestedFragmentLifecycle() {
-        withUse(ActivityScenario.launch(FragmentArchLifecycleActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentArchLifecycleActivity::class.java)) {
+
             val collectedEvents = withActivity { collectedEvents }
 
             assertThat(collectedEvents)
@@ -118,9 +110,11 @@ class FragmentArchLifecycleTest {
                     // TODO b/127528777 Properly nest ON_CREATE callbacks
                     "child" to Lifecycle.Event.ON_CREATE,
                     "parent" to Lifecycle.Event.ON_CREATE,
+
                     "activity" to Lifecycle.Event.ON_START,
                     "parent" to Lifecycle.Event.ON_START,
                     "child" to Lifecycle.Event.ON_START,
+
                     "activity" to Lifecycle.Event.ON_RESUME,
                     "post_activity" to Lifecycle.Event.ON_RESUME,
                     "parent" to Lifecycle.Event.ON_RESUME,
@@ -138,9 +132,11 @@ class FragmentArchLifecycleTest {
                     "child" to Lifecycle.Event.ON_PAUSE,
                     "parent" to Lifecycle.Event.ON_PAUSE,
                     "activity" to Lifecycle.Event.ON_PAUSE,
+
                     "child" to Lifecycle.Event.ON_STOP,
                     "parent" to Lifecycle.Event.ON_STOP,
                     "activity" to Lifecycle.Event.ON_STOP,
+
                     "child" to Lifecycle.Event.ON_DESTROY,
                     "parent" to Lifecycle.Event.ON_DESTROY,
                     "activity" to Lifecycle.Event.ON_DESTROY
@@ -151,7 +147,8 @@ class FragmentArchLifecycleTest {
 
     @Test
     fun testNestedFragmentLifecycleOnRemove() {
-        withUse(ActivityScenario.launch(FragmentArchLifecycleActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentArchLifecycleActivity::class.java)) {
+
             val fm = withActivity { supportFragmentManager }
             val parent = withActivity {
                 fm.findFragmentById(R.id.content) as NestedLifecycleFragmentParent
@@ -164,9 +161,11 @@ class FragmentArchLifecycleTest {
                     // TODO b/127528777 Properly nest ON_CREATE callbacks
                     "child" to Lifecycle.Event.ON_CREATE,
                     "parent" to Lifecycle.Event.ON_CREATE,
+
                     "activity" to Lifecycle.Event.ON_START,
                     "parent" to Lifecycle.Event.ON_START,
                     "child" to Lifecycle.Event.ON_START,
+
                     "activity" to Lifecycle.Event.ON_RESUME,
                     "post_activity" to Lifecycle.Event.ON_RESUME,
                     "parent" to Lifecycle.Event.ON_RESUME,
@@ -177,15 +176,19 @@ class FragmentArchLifecycleTest {
             // Now test the downward events
             collectedEvents.clear()
 
-            fm.beginTransaction().remove(parent).commit()
+            fm.beginTransaction()
+                .remove(parent)
+                .commit()
             executePendingTransactions()
 
             assertThat(collectedEvents)
                 .containsExactly(
                     "child" to Lifecycle.Event.ON_PAUSE,
                     "parent" to Lifecycle.Event.ON_PAUSE,
+
                     "child" to Lifecycle.Event.ON_STOP,
                     "parent" to Lifecycle.Event.ON_STOP,
+
                     "child" to Lifecycle.Event.ON_DESTROY,
                     "parent" to Lifecycle.Event.ON_DESTROY
                 )
@@ -195,7 +198,7 @@ class FragmentArchLifecycleTest {
 
     @Test
     fun testOverriddenLifecycleFragment() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
 
             val fragment = OverriddenLifecycleFragment()
@@ -214,8 +217,7 @@ class FragmentArchLifecycleActivity : FragmentActivity(R.layout.activity_content
         collectedEvents.add("activity" to Lifecycle.Event.ON_CREATE)
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
-            supportFragmentManager
-                .beginTransaction()
+            supportFragmentManager.beginTransaction()
                 .add(R.id.content, NestedLifecycleFragmentParent())
                 .commitNow()
         }
@@ -253,7 +255,9 @@ class FragmentArchLifecycleActivity : FragmentActivity(R.layout.activity_content
 }
 
 class NestedLifecycleFragmentParent : StrictFragment(), FragmentOnAttachListener {
-    private val archLifecycleActivity by lazy { requireActivity() as FragmentArchLifecycleActivity }
+    private val archLifecycleActivity by lazy {
+        requireActivity() as FragmentArchLifecycleActivity
+    }
 
     init {
         lifecycle.addObserver(
@@ -271,7 +275,9 @@ class NestedLifecycleFragmentParent : StrictFragment(), FragmentOnAttachListener
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
-            childFragmentManager.beginTransaction().add(StrictFragment(), "child").commitNow()
+            childFragmentManager.beginTransaction()
+                .add(StrictFragment(), "child")
+                .commitNow()
         }
     }
 

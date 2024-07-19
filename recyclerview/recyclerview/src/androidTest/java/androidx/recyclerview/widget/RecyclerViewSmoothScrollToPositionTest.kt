@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Assert
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,7 +43,12 @@ class RecyclerViewSmoothScrollToPositionTest {
     @Throws(Throwable::class)
     fun smoothScrollToPosition_calledDuringScrollJustBeforeStop_scrollStateCallbacksCorrect() {
 
-        val recyclerView = setup(500 to 500, 500 to 200, 100)
+        val recyclerView =
+            setup(
+                500 to 500,
+                500 to 200,
+                100
+            )
 
         val called2ndTime = -1
 
@@ -54,25 +58,23 @@ class RecyclerViewSmoothScrollToPositionTest {
         val log: MutableList<Int> = mutableListOf()
         val latch = CountDownLatch(1)
 
-        recyclerView.addOnScrollListener(
-            object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    log.add(newState)
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        latch.countDown()
-                    }
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                log.add(newState)
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    latch.countDown()
                 }
+            }
 
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    recyclerView.findChildWithTag(target)?.let {
-                        if (it.bottom == 500) {
-                            log.add(called2ndTime)
-                            recyclerView.smoothScrollToPosition(target)
-                        }
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                recyclerView.findChildWithTag(target)?.let {
+                    if (it.bottom == 500) {
+                        log.add(called2ndTime)
+                        recyclerView.smoothScrollToPosition(target)
                     }
                 }
             }
-        )
+        })
 
         // Act
         mActivityTestRule.runOnUiThread { recyclerView.smoothScrollToPosition(target) }
@@ -85,7 +87,6 @@ class RecyclerViewSmoothScrollToPositionTest {
         assertThat(log[2], `is`(RecyclerView.SCROLL_STATE_IDLE))
     }
 
-    @Ignore("b/291327689")
     @Test
     @Throws(Throwable::class)
     fun smoothScroll_whenSmoothScrollerStops_destinationReached() {
@@ -140,7 +141,11 @@ class RecyclerViewSmoothScrollToPositionTest {
         // Act
 
         BaseRecyclerViewInstrumentationTest.mActivityRule.runOnUiThread(
-            Runnable { recyclerView.smoothScrollToPosition(targetPosition) }
+            Runnable {
+                recyclerView.smoothScrollToPosition(
+                    targetPosition
+                )
+            }
         )
 
         // Assert
@@ -161,11 +166,8 @@ class RecyclerViewSmoothScrollToPositionTest {
         mActivityTestRule.runOnUiThread {
             Assert.assertNotNull(
                 "smoothScrollToPosition should succeed " +
-                    "(first visible item: " +
-                    layoutManager.findFirstVisibleItemPosition() +
-                    ", last visible item: " +
-                    layoutManager.findLastVisibleItemPosition() +
-                    ")",
+                    "(first visible item: " + layoutManager.findFirstVisibleItemPosition() +
+                    ", last visible item: " + layoutManager.findLastVisibleItemPosition() + ")",
                 recyclerView.findViewHolderForLayoutPosition(targetPosition)
             )
         }
@@ -197,22 +199,25 @@ class RecyclerViewSmoothScrollToPositionTest {
 
 private fun ViewGroup.findChildWithTag(tag: Int): View? {
     for (i in 0 until this.childCount) {
-        this.getChildAt(i).also { if (it.tag == tag) return it }
+        this.getChildAt(i).also {
+            if (it.tag == tag) return it
+        }
     }
     return null
 }
 
-private class MyAdapter(val itemDimensions: Pair<Int, Int>, val numItems: Int) :
-    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+private class MyAdapter(
+    val itemDimensions: Pair<Int, Int>,
+    val numItems: Int
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        object :
-            RecyclerView.ViewHolder(
-                TextView(parent.context).apply {
-                    minWidth = itemDimensions.first
-                    minHeight = itemDimensions.second
-                }
-            ) {}
+        object : RecyclerView.ViewHolder(
+            TextView(parent.context).apply {
+                minWidth = itemDimensions.first
+                minHeight = itemDimensions.second
+            }
+        ) {}
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         (holder.itemView as TextView).apply {

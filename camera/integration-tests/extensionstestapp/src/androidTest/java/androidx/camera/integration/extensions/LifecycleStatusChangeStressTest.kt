@@ -18,10 +18,9 @@ package androidx.camera.integration.extensions
 
 import android.Manifest
 import android.content.Context
+import androidx.camera.camera2.Camera2Config
 import androidx.camera.extensions.ExtensionsManager
-import androidx.camera.integration.extensions.CameraExtensionsActivity.CAMERA_PIPE_IMPLEMENTATION_OPTION
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil
-import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.CameraXExtensionTestParams
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.VERIFICATION_TARGET_IMAGE_CAPTURE
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.VERIFICATION_TARGET_PREVIEW
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.launchCameraExtensionsActivity
@@ -29,8 +28,8 @@ import androidx.camera.integration.extensions.util.HOME_TIMEOUT_MS
 import androidx.camera.integration.extensions.util.takePictureAndWaitForImageSavedIdle
 import androidx.camera.integration.extensions.util.waitForPreviewViewIdle
 import androidx.camera.integration.extensions.util.waitForPreviewViewStreaming
+import androidx.camera.integration.extensions.utils.CameraIdExtensionModePair
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
 import androidx.camera.testing.impl.CoreAppTestUtil
@@ -59,25 +58,16 @@ import org.junit.runners.Parameterized
  */
 @LargeTest
 @RunWith(Parameterized::class)
-class LifecycleStatusChangeStressTest(private val config: CameraXExtensionTestParams) {
+class LifecycleStatusChangeStressTest(private val config: CameraIdExtensionModePair) {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @get:Rule
-    val cameraPipeConfigTestRule =
-        CameraPipeConfigTestRule(active = config.implName == CAMERA_PIPE_IMPLEMENTATION_OPTION)
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        PreTestCameraIdList(Camera2Config.defaultConfig())
+    )
 
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            PreTestCameraIdList(config.cameraXConfig)
-        )
-
-    @get:Rule
-    val permissionRule =
-        GrantPermissionRule.grant(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO,
-        )
+    val permissionRule = GrantPermissionRule.grant(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -88,18 +78,17 @@ class LifecycleStatusChangeStressTest(private val config: CameraXExtensionTestPa
     }
 
     private var isTestStarted = false
-
     @Before
     fun setup() {
         assumeTrue(CameraXExtensionsTestUtil.isTargetDeviceAvailableForExtensions())
         CoreAppTestUtil.assumeCompatibleDevice()
-        ProcessCameraProvider.configureInstance(config.cameraXConfig)
         val cameraProvider =
             ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
 
-        val extensionsManager =
-            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
-                    10000, TimeUnit.MILLISECONDS]
+        val extensionsManager = ExtensionsManager.getInstanceAsync(
+            context,
+            cameraProvider
+        )[10000, TimeUnit.MILLISECONDS]
 
         // Checks whether the extension mode can be supported first before launching the activity.
         CameraXExtensionsTestUtil.assumeExtensionModeSupported(
@@ -123,16 +112,18 @@ class LifecycleStatusChangeStressTest(private val config: CameraXExtensionTestPa
     fun tearDown(): Unit = runBlocking {
         val cameraProvider =
             ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
-        withContext(Dispatchers.Main) { cameraProvider.shutdownAsync() }
+        withContext(Dispatchers.Main) {
+            cameraProvider.shutdownAsync()
+        }
 
-        val extensionsManager =
-            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
-                    10000, TimeUnit.MILLISECONDS]
+        val extensionsManager = ExtensionsManager.getInstanceAsync(
+            context,
+            cameraProvider
+        )[10000, TimeUnit.MILLISECONDS]
         extensionsManager.shutdown()
 
         if (isTestStarted) {
-            // Unfreeze rotation so the device can choose the orientation via its own policy. Be
-            // nice
+            // Unfreeze rotation so the device can choose the orientation via its own policy. Be nice
             // to other tests :)
             device.unfreezeRotation()
             device.pressHome()

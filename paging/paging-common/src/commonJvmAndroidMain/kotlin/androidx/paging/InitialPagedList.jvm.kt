@@ -23,8 +23,9 @@ import kotlinx.coroutines.CoroutineScope
 /**
  * [InitialPagedList] is an empty placeholder that's sent at the front of a stream of [PagedList].
  *
- * It's used solely for listening to [LoadType.REFRESH] loading events, and retrying any errors that
- * occur during initial load.
+ * It's used solely for listening to [LoadType.REFRESH] loading events, and retrying
+ * any errors that occur during initial load.
+ *
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class InitialPagedList<K : Any, V : Any>(
@@ -33,14 +34,13 @@ public class InitialPagedList<K : Any, V : Any>(
     backgroundDispatcher: CoroutineDispatcher,
     config: Config,
     initialLastKey: K?
-) :
-    ContiguousPagedList<K, V>(
-        pagingSource = LegacyPagingSource(notifyDispatcher, InitialDataSource()),
-        coroutineScope = coroutineScope,
-        notifyDispatcher = notifyDispatcher,
-        backgroundDispatcher = backgroundDispatcher,
-        boundaryCallback = null,
-        config = config,
-        initialPage = PagingSource.LoadResult.Page.empty(),
-        initialLastKey = initialLastKey
-    )
+) : ContiguousPagedList<K, V>(
+    pagingSource = LegacyPagingSource(notifyDispatcher, InitialDataSource()),
+    coroutineScope = coroutineScope,
+    notifyDispatcher = notifyDispatcher,
+    backgroundDispatcher = backgroundDispatcher,
+    boundaryCallback = null,
+    config = config,
+    initialPage = PagingSource.LoadResult.Page.empty(),
+    initialLastKey = initialLastKey
+)

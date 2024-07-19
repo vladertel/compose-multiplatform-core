@@ -44,7 +44,9 @@ internal fun Fragment.addButton(text: String, fragment: Fragment) {
                     addToBackStack(null)
                 }
             }
-            layoutParams = LinearLayout.LayoutParams(-1, 0).apply { weight = 1f }
+            layoutParams = LinearLayout.LayoutParams(-1, 0).apply {
+                weight = 1f
+            }
         }
     )
 }

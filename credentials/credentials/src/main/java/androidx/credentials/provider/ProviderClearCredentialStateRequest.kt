@@ -19,8 +19,10 @@ package androidx.credentials.provider
 /**
  * Request class for clearing a user's credential state from the credential providers.
  *
- * @param callingAppInfo info pertaining to the calling app that's making the request
  * @constructor constructs an instance of [ProviderClearCredentialStateRequest]
+ *
+ * @param callingAppInfo info pertaining to the calling app that's making the request
+ *
  * @throws NullPointerException If [callingAppInfo] is null
  *
  * Note : Credential providers are not expected to utilize the constructor in this class for any

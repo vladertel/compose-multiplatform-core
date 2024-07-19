@@ -27,12 +27,13 @@ import java.util.AbstractList
  * prefetching.
  */
 internal class PagedStorage<T : Any> :
-    AbstractList<T>, LegacyPageFetcher.KeyProvider<Any>, PlaceholderPaddedList<T> {
+    AbstractList<T>,
+    LegacyPageFetcher.KeyProvider<Any>,
+    NullPaddedList<T> {
     private val pages = mutableListOf<Page<*, T>>()
 
     internal val firstLoadedItem: T
         get() = pages.first().data.first()
-
     internal val lastLoadedItem: T
         get() = pages.last().data.last()
 
@@ -47,24 +48,32 @@ internal class PagedStorage<T : Any> :
 
     private var counted = true
 
-    /** Number of loaded items held by [pages]. */
-    override var dataCount: Int = 0
+    /**
+     * Number of loaded items held by [pages].
+     */
+    override var storageCount: Int = 0
         private set
 
-    /** Last accessed index for loadAround in storage space */
+    /**
+     * Last accessed index for loadAround in storage space
+     */
     private var lastLoadAroundLocalIndex: Int = 0
     var lastLoadAroundIndex: Int
         get() = placeholdersBefore + lastLoadAroundLocalIndex
         set(value) {
-            lastLoadAroundLocalIndex = (value - placeholdersBefore).coerceIn(0, dataCount - 1)
+            lastLoadAroundLocalIndex = (value - placeholdersBefore).coerceIn(0, storageCount - 1)
         }
 
     val middleOfLoadedRange: Int
-        get() = placeholdersBefore + dataCount / 2
+        get() = placeholdersBefore + storageCount / 2
 
     constructor()
 
-    constructor(leadingNulls: Int, page: Page<*, T>, trailingNulls: Int) : this() {
+    constructor(
+        leadingNulls: Int,
+        page: Page<*, T>,
+        trailingNulls: Int
+    ) : this() {
         init(leadingNulls, page, trailingNulls, 0, true)
     }
 
@@ -74,7 +83,7 @@ internal class PagedStorage<T : Any> :
         placeholdersAfter = other.placeholdersAfter
         positionOffset = other.positionOffset
         counted = other.counted
-        dataCount = other.dataCount
+        storageCount = other.storageCount
         lastLoadAroundLocalIndex = other.lastLoadAroundLocalIndex
     }
 
@@ -93,7 +102,7 @@ internal class PagedStorage<T : Any> :
         placeholdersAfter = trailingNulls
 
         this.positionOffset = positionOffset
-        dataCount = page.data.size
+        storageCount = page.data.size
         this.counted = counted
 
         lastLoadAroundLocalIndex = page.data.size / 2
@@ -115,25 +124,23 @@ internal class PagedStorage<T : Any> :
     // ------------- Adjacent Provider interface ------------------
 
     override val prevKey: Any?
-        get() =
-            if (!counted || placeholdersBefore + positionOffset > 0) {
-                pages.first().prevKey
-            } else {
-                null
-            }
+        get() = if (!counted || placeholdersBefore + positionOffset > 0) {
+            pages.first().prevKey
+        } else {
+            null
+        }
 
     override val nextKey: Any?
-        get() =
-            if (!counted || placeholdersAfter > 0) {
-                pages.last().nextKey
-            } else {
-                null
-            }
+        get() = if (!counted || placeholdersAfter > 0) {
+            pages.last().nextKey
+        } else {
+            null
+        }
 
     /**
      * Traverse to the page and pageInternalIndex of localIndex.
      *
-     * Bounds check (between 0 and storageCount) must be performed before calling this function.
+     * Bounds check (between 0 and storageCount) must be performed  before calling this function.
      */
     private inline fun <V> traversePages(
         localIndex: Int,
@@ -156,9 +163,13 @@ internal class PagedStorage<T : Any> :
         return onLastPage(pages[localPageIndex], pageInternalIndex)
     }
 
-    /** Walk through the list of pages to find the data at local index */
-    override fun getItem(index: Int): T =
-        traversePages(index) { page, pageInternalIndex -> page.data[pageInternalIndex] }
+    /**
+     * Walk through the list of pages to find the data at local index
+     */
+    override fun getFromStorage(localIndex: Int): T =
+        traversePages(localIndex) { page, pageInternalIndex ->
+            page.data[pageInternalIndex]
+        }
 
     fun getRefreshKeyInfo(@Suppress("DEPRECATION") config: PagedList.Config): PagingState<*, T>? {
         if (pages.isEmpty()) {
@@ -169,14 +180,13 @@ internal class PagedStorage<T : Any> :
         return PagingState(
             pages = pages.toList() as List<Page<Any, T>>,
             anchorPosition = lastLoadAroundIndex,
-            config =
-                PagingConfig(
-                    config.pageSize,
-                    config.prefetchDistance,
-                    config.enablePlaceholders,
-                    config.initialLoadSizeHint,
-                    config.maxSize
-                ),
+            config = PagingConfig(
+                config.pageSize,
+                config.prefetchDistance,
+                config.enablePlaceholders,
+                config.initialLoadSizeHint,
+                config.maxSize
+            ),
             leadingPlaceholderCount = placeholdersBefore
         )
     }
@@ -188,26 +198,22 @@ internal class PagedStorage<T : Any> :
         return when {
             index < 0 || index >= size ->
                 throw IndexOutOfBoundsException("Index: $index, Size: $size")
-            localIndex < 0 || localIndex >= dataCount -> null
-            else -> getItem(localIndex)
+            localIndex < 0 || localIndex >= storageCount -> null
+            else -> getFromStorage(localIndex)
         }
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     interface Callback {
         fun onInitialized(count: Int)
-
         fun onPagePrepended(leadingNulls: Int, changed: Int, added: Int)
-
         fun onPageAppended(endPosition: Int, changed: Int, added: Int)
-
         fun onPagesRemoved(startOfDrops: Int, count: Int)
-
         fun onPagesSwappedToPlaceholder(startOfDrops: Int, count: Int)
     }
 
     override val size
-        get() = placeholdersBefore + dataCount + placeholdersAfter
+        get() = placeholdersBefore + storageCount + placeholdersAfter
 
     // ---------------- Trimming API -------------------
     // Trimming is always done at the beginning or end of the list, as content is loaded.
@@ -221,9 +227,9 @@ internal class PagedStorage<T : Any> :
 
     private fun needsTrim(maxSize: Int, requiredRemaining: Int, localPageIndex: Int): Boolean {
         val page = pages[localPageIndex]
-        return dataCount > maxSize &&
+        return storageCount > maxSize &&
             pages.size > 2 &&
-            dataCount - page.data.size >= requiredRemaining
+            storageCount - page.data.size >= requiredRemaining
     }
 
     fun needsTrimFromFront(maxSize: Int, requiredRemaining: Int) =
@@ -233,7 +239,9 @@ internal class PagedStorage<T : Any> :
         needsTrim(maxSize, requiredRemaining, pages.size - 1)
 
     fun shouldPreTrimNewPage(maxSize: Int, requiredRemaining: Int, countToBeAdded: Int) =
-        dataCount + countToBeAdded > maxSize && pages.size > 1 && dataCount >= requiredRemaining
+        storageCount + countToBeAdded > maxSize &&
+            pages.size > 1 &&
+            storageCount >= requiredRemaining
 
     internal fun trimFromFront(
         insertNulls: Boolean,
@@ -246,7 +254,7 @@ internal class PagedStorage<T : Any> :
             val page = pages.removeAt(0)
             val removed = page.data.size
             totalRemoved += removed
-            dataCount -= removed
+            storageCount -= removed
         }
         lastLoadAroundLocalIndex = (lastLoadAroundLocalIndex - totalRemoved).coerceAtLeast(0)
 
@@ -276,12 +284,12 @@ internal class PagedStorage<T : Any> :
             val page = pages.removeAt(pages.size - 1)
             val removed = page.data.size
             totalRemoved += removed
-            dataCount -= removed
+            storageCount -= removed
         }
-        lastLoadAroundLocalIndex = lastLoadAroundLocalIndex.coerceAtMost(dataCount - 1)
+        lastLoadAroundLocalIndex = lastLoadAroundLocalIndex.coerceAtMost(storageCount - 1)
 
         if (totalRemoved > 0) {
-            val newEndPosition = placeholdersBefore + dataCount
+            val newEndPosition = placeholdersBefore + storageCount
             if (insertNulls) {
                 // replace removed items with nulls
                 placeholdersAfter += totalRemoved
@@ -304,7 +312,7 @@ internal class PagedStorage<T : Any> :
         }
 
         pages.add(0, page)
-        dataCount += count
+        storageCount += count
 
         val changedCount = minOf(placeholdersBefore, count)
         val addedCount = count - changedCount
@@ -324,7 +332,7 @@ internal class PagedStorage<T : Any> :
         }
 
         pages.add(page)
-        dataCount += count
+        storageCount += count
 
         val changedCount = minOf(placeholdersAfter, count)
         val addedCount = count - changedCount
@@ -333,10 +341,13 @@ internal class PagedStorage<T : Any> :
             placeholdersAfter -= changedCount
         }
 
-        callback?.onPageAppended(placeholdersBefore + dataCount - count, changedCount, addedCount)
+        callback?.onPageAppended(
+            placeholdersBefore + storageCount - count,
+            changedCount, addedCount
+        )
     }
 
     override fun toString(): String =
-        "leading $placeholdersBefore, dataCount $dataCount, trailing $placeholdersAfter " +
+        "leading $placeholdersBefore, storage $storageCount, trailing $placeholdersAfter " +
             pages.joinToString(" ")
 }

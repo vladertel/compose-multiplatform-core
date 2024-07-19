@@ -72,44 +72,7 @@ abstract class BaseKeyEventsTestCase<A : BaseTestActivity>(private val activityC
             val scenario = (this as? ActivityScenario<BaseTestActivity>)!!
 
             scenario.withActivity {
-                startSupportActionMode(
-                    object : ActionMode.Callback {
-                        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-                            mode.menuInflater.inflate(R.menu.sample_actions, menu)
-                            return true
-                        }
-
-                        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
-                            return false
-                        }
-
-                        override fun onActionItemClicked(
-                            mode: ActionMode,
-                            item: MenuItem
-                        ): Boolean {
-                            return false
-                        }
-
-                        override fun onDestroyActionMode(mode: ActionMode) {
-                            destroyed.set(true)
-                        }
-                    }
-                )!!
-            }
-
-            pressBack()
-            PollingCheck.waitFor { destroyed.get() }
-        }
-    }
-
-    @Test
-    @MediumTest
-    fun testBackDismissesActionModeTwice() {
-        with(ActivityScenario.launch(activityClass)) {
-            val destroyed = AtomicBoolean()
-            val scenario = (this as? ActivityScenario<BaseTestActivity>)!!
-            val callback =
-                object : ActionMode.Callback {
+                startSupportActionMode(object : ActionMode.Callback {
                     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
                         mode.menuInflater.inflate(R.menu.sample_actions, menu)
                         return true
@@ -126,9 +89,42 @@ abstract class BaseKeyEventsTestCase<A : BaseTestActivity>(private val activityC
                     override fun onDestroyActionMode(mode: ActionMode) {
                         destroyed.set(true)
                     }
+                })!!
+            }
+
+            pressBack()
+            PollingCheck.waitFor { destroyed.get() }
+        }
+    }
+
+    @Test
+    @MediumTest
+    fun testBackDismissesActionModeTwice() {
+        with(ActivityScenario.launch(activityClass)) {
+            val destroyed = AtomicBoolean()
+            val scenario = (this as? ActivityScenario<BaseTestActivity>)!!
+            val callback = object : ActionMode.Callback {
+                override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
+                    mode.menuInflater.inflate(R.menu.sample_actions, menu)
+                    return true
                 }
 
-            scenario.withActivity { startSupportActionMode(callback)!! }
+                override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean {
+                    return false
+                }
+
+                override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
+                    return false
+                }
+
+                override fun onDestroyActionMode(mode: ActionMode) {
+                    destroyed.set(true)
+                }
+            }
+
+            scenario.withActivity {
+                startSupportActionMode(callback)!!
+            }
 
             pressBack()
             PollingCheck.waitFor { destroyed.get() }
@@ -136,7 +132,9 @@ abstract class BaseKeyEventsTestCase<A : BaseTestActivity>(private val activityC
             // Now try to dismiss the ActionMode a second time
             destroyed.set(false)
 
-            scenario.withActivity { startSupportActionMode(callback)!! }
+            scenario.withActivity {
+                startSupportActionMode(callback)!!
+            }
 
             pressBack()
             PollingCheck.waitFor { destroyed.get() }
@@ -188,7 +186,9 @@ abstract class BaseKeyEventsTestCase<A : BaseTestActivity>(private val activityC
 
     @Test
     @MediumTest
-    @Throws(InterruptedException::class)
+    @Throws(
+        InterruptedException::class
+    )
     fun testBackPressWithMenuInvokesOnPanelClosed() {
         with(ActivityScenario.launch(activityClass)) {
             // Pressing the menu key opens the menu.
@@ -290,7 +290,10 @@ abstract class BaseKeyEventsTestCase<A : BaseTestActivity>(private val activityC
                     alphaItem,
                     getString(R.string.alpha_menu_description)
                 )
-                MenuItemCompat.setTooltipText(alphaItem, getString(R.string.alpha_menu_tooltip))
+                MenuItemCompat.setTooltipText(
+                    alphaItem,
+                    getString(R.string.alpha_menu_tooltip)
+                )
             }
             onView(withId(R.id.action_alpha_shortcut))
                 .check(matches(isDisplayed()))

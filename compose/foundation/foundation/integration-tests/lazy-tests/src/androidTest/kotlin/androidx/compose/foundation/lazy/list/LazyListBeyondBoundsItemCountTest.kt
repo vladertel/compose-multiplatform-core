@@ -48,7 +48,11 @@ class LazyListBeyondBoundsItemCountTest(config: Config) :
         val state = LazyListState(firstVisibleItem)
 
         // Act
-        setLazyListContent(state = state) { items(ItemCount) { ListItem(index = it) } }
+        setLazyListContent(state = state) {
+            items(ItemCount) {
+                ListItem(index = it)
+            }
+        }
 
         // Assert
         assertBeforeItemsArePlaced(state)
@@ -63,10 +67,18 @@ class LazyListBeyondBoundsItemCountTest(config: Config) :
     fun verifyItemsArePlacedBeforeAndAfterVisibleItemsAfterScroll() {
         // Arrange
         val state = LazyListState()
-        setLazyListContent(state = state) { items(ItemCount) { ListItem(index = it) } }
+        setLazyListContent(state = state) {
+            items(ItemCount) {
+                ListItem(index = it)
+            }
+        }
 
         // Act
-        rule.runOnIdle { runBlocking { state.scrollToItem(firstVisibleItem) } }
+        rule.runOnIdle {
+            runBlocking {
+                state.scrollToItem(firstVisibleItem)
+            }
+        }
 
         // Assert
         assertBeforeItemsArePlaced(state)
@@ -115,7 +127,11 @@ class LazyListBeyondBoundsItemCountTest(config: Config) :
 
     @Composable
     private fun ListItem(index: Int) {
-        Box(modifier = Modifier.size(25.dp).testTag(index.toString()))
+        Box(
+            modifier = Modifier
+                .size(25.dp)
+                .testTag(index.toString())
+        )
     }
 
     companion object {

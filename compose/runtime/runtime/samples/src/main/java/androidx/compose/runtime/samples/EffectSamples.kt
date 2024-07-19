@@ -37,8 +37,12 @@ fun observeUserSample() {
     fun observeUser(userId: Int): User? {
         val user = remember(userId) { mutableStateOf<User?>(null) }
         DisposableEffect(userId) {
-            val subscription = UserAPI.subscribeToUser(userId) { user.value = it }
-            onDispose { subscription.unsubscribe() }
+            val subscription = UserAPI.subscribeToUser(userId) {
+                user.value = it
+            }
+            onDispose {
+                subscription.unsubscribe()
+            }
         }
         return user.value
     }
@@ -59,7 +63,9 @@ fun SimpleStateSample() {
     val count = remember { mutableStateOf(0) }
 
     Text(text = "You clicked ${count.value} times")
-    Button(onClick = { count.value++ }) { Text("Click me") }
+    Button(onClick = { count.value++ }) {
+        Text("Click me")
+    }
 }
 
 @Sampled
@@ -68,14 +74,17 @@ fun DestructuredStateSample() {
     val (count, setCount) = remember { mutableStateOf(0) }
 
     Text(text = "You clicked $count times")
-    Button(onClick = { setCount(count + 1) }) { Text("Click me") }
+    Button(onClick = { setCount(count + 1) }) {
+        Text("Click me")
+    }
 }
 
 @Sampled
 @Composable
 fun DelegatedReadOnlyStateSample() {
     // Composable function that manages a subscription to a data source, returning it as State
-    @Composable fun observeSampleData(): State<String> = TODO()
+    @Composable
+    fun observeSampleData(): State<String> = TODO()
 
     // Subscription is managed here, but currentValue is not read yet
     val currentValue by observeSampleData()
@@ -95,7 +104,9 @@ fun DelegatedStateSample() {
     var count by remember { mutableStateOf(0) }
 
     Text(text = "You clicked $count times")
-    Button(onClick = { count = count + 1 }) { Text("Click me") }
+    Button(onClick = { count = count + 1 }) {
+        Text("Click me")
+    }
 }
 
 private class Subscription {
@@ -113,7 +124,9 @@ private val elements = listOf<Element>()
 
 private class Element(val id: Int)
 
-@Suppress("UNUSED_PARAMETER") @Composable private fun ListItem(item: Any, selected: Boolean) {}
+@Suppress("UNUSED_PARAMETER")
+@Composable
+private fun ListItem(item: Any, selected: Boolean) {}
 
 private const val parentId = 0
 
@@ -121,13 +134,11 @@ private const val parentId = 0
 @Sampled
 @Composable
 fun DerivedStateSample() {
-    @Composable
-    fun CountDisplay(count: State<Int>) {
+    @Composable fun CountDisplay(count: State<Int>) {
         Text("Count: ${count.value}")
     }
 
-    @Composable
-    fun Example() {
+    @Composable fun Example() {
         var a by remember { mutableStateOf(0) }
         var b by remember { mutableStateOf(0) }
         val sum = remember { derivedStateOf { a + b } }

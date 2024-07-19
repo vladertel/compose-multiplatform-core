@@ -36,7 +36,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ModifierLocalMultiLayoutNodeTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val defaultValue = "Default Value"
 
@@ -100,7 +101,8 @@ class ModifierLocalMultiLayoutNodeTest {
         rule.setContent {
             Box(Modifier.modifierLocalProvider(localString) { providedValue1 }) {
                 Box(
-                    Modifier.modifierLocalProvider(localString) { providedValue2 }
+                    Modifier
+                        .modifierLocalProvider(localString) { providedValue2 }
                         .modifierLocalConsumer { readValue = localString.current }
                 )
             }
@@ -230,7 +232,11 @@ class ModifierLocalMultiLayoutNodeTest {
                     if (useFirstValue) value1 else value2
                 }
             ) {
-                Box(Modifier.modifierLocalConsumer { readString = localString.current })
+                Box(
+                    Modifier.modifierLocalConsumer {
+                        readString = localString.current
+                    }
+                )
             }
         }
 
@@ -288,6 +294,7 @@ class ModifierLocalMultiLayoutNodeTest {
                         Modifier.modifierLocalProvider(localString) { providedValue }
                     }
                 )
+
             ) {
                 Box(Modifier.modifierLocalConsumer { readString = localString.current })
             }

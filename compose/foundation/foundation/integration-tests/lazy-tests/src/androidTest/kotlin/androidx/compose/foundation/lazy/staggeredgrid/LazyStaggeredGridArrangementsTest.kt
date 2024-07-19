@@ -69,17 +69,17 @@ import org.junit.runners.Parameterized
 
 @MediumTest
 @RunWith(Parameterized::class)
-class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
-    BaseLazyStaggeredGridWithOrientation(orientation) {
+class LazyStaggeredGridArrangementsTest(
+    orientation: Orientation
+) : BaseLazyStaggeredGridWithOrientation(orientation) {
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun initParameters(): Array<Any> =
-            arrayOf(
-                Orientation.Vertical,
-                Orientation.Horizontal,
-            )
+        fun initParameters(): Array<Any> = arrayOf(
+            Orientation.Vertical,
+            Orientation.Horizontal,
+        )
 
         private const val LazyStaggeredGrid = "Lazy"
     }
@@ -91,7 +91,9 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
 
     @Before
     fun setUp() {
-        with(rule.density) { itemSizeDp = itemSizePx.toDp() }
+        with(rule.density) {
+            itemSizeDp = itemSizePx.toDp()
+        }
     }
 
     @Test
@@ -100,42 +102,41 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
         rule.setContent {
             LazyStaggeredGrid(
                 lanes = 2,
-                modifier =
-                    Modifier.testTag(LazyStaggeredGrid).axisSize(itemSizeDp * 3, itemSizeDp * 5),
+                modifier = Modifier
+                    .testTag(LazyStaggeredGrid)
+                    .axisSize(itemSizeDp * 3, itemSizeDp * 5),
                 state = state,
                 mainAxisSpacing = itemSizeDp,
                 crossAxisArrangement = Arrangement.spacedBy(itemSizeDp / 2)
             ) {
-                items(100) { Spacer(Modifier.testTag("$it").mainAxisSize(itemSizeDp)) }
+                items(100) {
+                    Spacer(Modifier.testTag("$it").mainAxisSize(itemSizeDp))
+                }
             }
         }
 
         val crossAxisSizeDp = (itemSizeDp * 2.5f) / 2
         val spacing = itemSizeDp / 2
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(crossAxisSizeDp)
 
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(crossAxisSizeDp + spacing)
             .assertCrossAxisSizeIsEqualTo(crossAxisSizeDp)
 
-        rule
-            .onNodeWithTag("2")
+        rule.onNodeWithTag("2")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp * 2) // item + spacing
             .assertMainAxisSizeIsEqualTo(itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(crossAxisSizeDp)
 
-        rule
-            .onNodeWithTag("3")
+        rule.onNodeWithTag("3")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp * 2) // item + spacing
             .assertMainAxisSizeIsEqualTo(itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(crossAxisSizeDp + spacing)
@@ -148,15 +149,19 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
         rule.setContent {
             LazyStaggeredGrid(
                 lanes = 2,
-                modifier =
-                    Modifier.testTag(LazyStaggeredGrid).axisSize(itemSizeDp * 2, itemSizeDp * 5),
+                modifier = Modifier
+                    .testTag(LazyStaggeredGrid)
+                    .axisSize(itemSizeDp * 2, itemSizeDp * 5),
                 state = state,
                 mainAxisSpacing = itemSizeDp
             ) {
                 items(100) {
                     BasicText(
                         text = "$it",
-                        modifier = Modifier.testTag("$it").mainAxisSize(itemSizeDp).debugBorder()
+                        modifier = Modifier
+                            .testTag("$it")
+                            .mainAxisSize(itemSizeDp)
+                            .debugBorder()
                     )
                 }
             }
@@ -164,13 +169,11 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
 
         state.scrollTo(100)
 
-        rule
-            .onNodeWithTag("98")
+        rule.onNodeWithTag("98")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp * 5 - itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
 
-        rule
-            .onNodeWithTag("99")
+        rule.onNodeWithTag("99")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp * 5 - itemSizeDp)
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp)
     }
@@ -181,39 +184,38 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
         rule.setContent {
             LazyStaggeredGrid(
                 lanes = 2,
-                modifier =
-                    Modifier.testTag(LazyStaggeredGrid).axisSize(itemSizeDp * 2, itemSizeDp * 5),
+                modifier = Modifier
+                    .testTag(LazyStaggeredGrid)
+                    .axisSize(itemSizeDp * 2, itemSizeDp * 5),
                 state = state,
                 mainAxisSpacing = -itemSizeDp
             ) {
                 items(100) {
                     BasicText(
                         text = "$it",
-                        modifier = Modifier.testTag("$it").mainAxisSize(itemSizeDp * 2)
+                        modifier = Modifier
+                            .testTag("$it")
+                            .mainAxisSize(itemSizeDp * 2)
                     )
                 }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
-        rule
-            .onNodeWithTag("2")
+        rule.onNodeWithTag("2")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
         state.scrollBy(itemSizeDp)
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertMainAxisStartPositionInRootIsEqualTo(-itemSizeDp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
-        rule
-            .onNodeWithTag("2")
+        rule.onNodeWithTag("2")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
@@ -227,8 +229,9 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
         rule.setContent {
             LazyStaggeredGrid(
                 lanes = 2,
-                modifier =
-                    Modifier.testTag(LazyStaggeredGrid).axisSize(itemSizeDp * 2, itemSizeDp * 5),
+                modifier = Modifier
+                    .testTag(LazyStaggeredGrid)
+                    .axisSize(itemSizeDp * 2, itemSizeDp * 5),
                 state = state,
                 mainAxisSpacing = -itemSizeDp,
                 contentPadding = PaddingValues(beforeContent = itemSizeDp)
@@ -236,31 +239,29 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
                 items(100) {
                     BasicText(
                         text = "$it",
-                        modifier = Modifier.testTag("$it").mainAxisSize(itemSizeDp * 2)
+                        modifier = Modifier
+                            .testTag("$it")
+                            .mainAxisSize(itemSizeDp * 2)
                     )
                 }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
-        rule
-            .onNodeWithTag("2")
+        rule.onNodeWithTag("2")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp * 2)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
         state.scrollBy(itemSizeDp)
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
-        rule
-            .onNodeWithTag("2")
+        rule.onNodeWithTag("2")
             .assertMainAxisStartPositionInRootIsEqualTo(itemSizeDp)
             .assertMainAxisSizeIsEqualTo(itemSizeDp * 2)
 
@@ -279,11 +280,16 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
                 mainAxisSpacing = -largerThanItemSize,
                 state = state
             ) {
-                items(8) { index -> Box(Modifier.size(itemSizeDp).testTag(index.toString())) }
+                items(8) { index ->
+                    Box(Modifier.size(itemSizeDp).testTag(index.toString()))
+                }
             }
         }
 
-        repeat(8) { rule.onNodeWithTag("$it").assertMainAxisStartPositionInRootIsEqualTo(0.dp) }
+        repeat(8) {
+            rule.onNodeWithTag("$it")
+                .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
+        }
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(0)
@@ -301,16 +307,16 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
                 crossAxisArrangement = Arrangement.Center,
                 state = state
             ) {
-                items(10) { index -> Box(Modifier.size(itemSizeDp).testTag(index.toString())) }
+                items(10) { index ->
+                    Box(Modifier.size(itemSizeDp).testTag(index.toString()))
+                }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp * 0.5f)
             .assertCrossAxisSizeIsEqualTo(itemSizeDp * 2)
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp * 2.5f)
             .assertCrossAxisSizeIsEqualTo(itemSizeDp * 2)
     }
@@ -322,31 +328,27 @@ class LazyStaggeredGridArrangementsTest(orientation: Orientation) :
             LazyStaggeredGrid(
                 cells = StaggeredGridCells.FixedSize(itemSizeDp * 2),
                 modifier = Modifier.axisSize(crossAxis = itemSizeDp * 5, mainAxis = itemSizeDp * 5),
-                crossAxisArrangement =
-                    object :
-                        Arrangement.HorizontalOrVertical,
-                        Arrangement.Horizontal by Arrangement.spacedBy(
-                            itemSizeDp * 0.5f,
-                            Alignment.End
-                        ),
-                        Arrangement.Vertical by Arrangement.spacedBy(
-                            itemSizeDp * 0.5f,
-                            Alignment.Bottom
-                        ) {
+                crossAxisArrangement = object : Arrangement.HorizontalOrVertical,
+                    Arrangement.Horizontal by Arrangement.spacedBy(
+                        itemSizeDp * 0.5f, Alignment.End
+                    ),
+                    Arrangement.Vertical by Arrangement.spacedBy(
+                        itemSizeDp * 0.5f, Alignment.Bottom
+                    ) {
                         override val spacing: Dp = itemSizeDp * 0.5f
                     },
                 state = state
             ) {
-                items(10) { index -> Box(Modifier.size(itemSizeDp).testTag(index.toString())) }
+                items(10) { index ->
+                    Box(Modifier.size(itemSizeDp).testTag(index.toString()))
+                }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp * 0.5f)
             .assertCrossAxisSizeIsEqualTo(itemSizeDp * 2)
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertCrossAxisStartPositionInRootIsEqualTo(itemSizeDp * 3f)
             .assertCrossAxisSizeIsEqualTo(itemSizeDp * 2)
     }

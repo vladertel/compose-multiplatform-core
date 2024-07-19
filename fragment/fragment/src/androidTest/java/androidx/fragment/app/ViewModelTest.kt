@@ -38,7 +38,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ViewModelTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test(expected = IllegalStateException::class)
     @UiThreadTest
@@ -49,11 +50,10 @@ class ViewModelTest {
 
     @Test
     fun testMaxLifecycleInitializedFragment() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = StrictFragment()
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .setReorderingAllowed(true)
                     .add(android.R.id.content, fragment)
                     .setMaxLifecycle(fragment, Lifecycle.State.INITIALIZED)
@@ -62,13 +62,11 @@ class ViewModelTest {
                 try {
                     fragment.viewModelStore
                 } catch (e: IllegalStateException) {
-                    assertThat(e)
-                        .hasMessageThat()
-                        .contains(
-                            "Calling getViewModelStore() before a Fragment " +
-                                "reaches onCreate() when using setMaxLifecycle(INITIALIZED) is " +
-                                "not supported"
-                        )
+                    assertThat(e).hasMessageThat().contains(
+                        "Calling getViewModelStore() before a Fragment " +
+                            "reaches onCreate() when using setMaxLifecycle(INITIALIZED) is " +
+                            "not supported"
+                    )
                 }
             }
         }
@@ -76,33 +74,29 @@ class ViewModelTest {
 
     @Test
     fun testMaxLifecycleInitializedNestedFragment() {
-        withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(EmptyFragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = StrictFragment()
                 val childFragment = StrictFragment()
 
-                supportFragmentManager
-                    .beginTransaction()
+                supportFragmentManager.beginTransaction()
                     .setReorderingAllowed(true)
                     .add(android.R.id.content, fragment)
                     .setMaxLifecycle(fragment, Lifecycle.State.INITIALIZED)
                     .commitNow()
 
-                fragment.childFragmentManager
-                    .beginTransaction()
+                fragment.childFragmentManager.beginTransaction()
                     .add(android.R.id.content, childFragment)
                     .commitNow()
 
                 try {
                     childFragment.viewModelStore
                 } catch (e: IllegalStateException) {
-                    assertThat(e)
-                        .hasMessageThat()
-                        .contains(
-                            "Calling getViewModelStore() before a Fragment " +
-                                "reaches onCreate() when using setMaxLifecycle(INITIALIZED) is " +
-                                "not supported"
-                        )
+                    assertThat(e).hasMessageThat().contains(
+                        "Calling getViewModelStore() before a Fragment " +
+                            "reaches onCreate() when using setMaxLifecycle(INITIALIZED) is " +
+                            "not supported"
+                    )
                 }
             }
         }
@@ -110,7 +104,7 @@ class ViewModelTest {
 
     @Test
     fun testSameActivityViewModels() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val activityModel = withActivity { activityModel }
             val defaultActivityModel = withActivity { defaultActivityModel }
             assertThat(defaultActivityModel).isNotSameInstanceAs(activityModel)
@@ -147,7 +141,7 @@ class ViewModelTest {
 
     @Test
     fun testSameFragmentViewModels() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             var fragment1 = withActivity { getFragment(ViewModelActivity.FRAGMENT_TAG_1) }
             var fragment2 = withActivity { getFragment(ViewModelActivity.FRAGMENT_TAG_2) }
             assertThat(fragment1).isNotNull()
@@ -171,15 +165,14 @@ class ViewModelTest {
 
     @Test
     fun testCreateFragmentViewModelViaExtras() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val fragment = withActivity { getFragment(ViewModelActivity.FRAGMENT_TAG_1) }
 
-            val creationViewModel =
-                ViewModelProvider(
-                    fragment.viewModelStore,
-                    fragment.defaultViewModelProviderFactory,
-                    fragment.defaultViewModelCreationExtras
-                )["test", TestViewModel::class.java]
+            val creationViewModel = ViewModelProvider(
+                fragment.viewModelStore,
+                fragment.defaultViewModelProviderFactory,
+                fragment.defaultViewModelCreationExtras
+            )["test", TestViewModel::class.java]
 
             recreate()
 
@@ -192,7 +185,7 @@ class ViewModelTest {
 
     @Test
     fun testFragmentOnClearedWhenFinished() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val fragmentModel = withActivity {
                 getFragment(ViewModelActivity.FRAGMENT_TAG_1).fragmentModel
             }
@@ -228,7 +221,7 @@ class ViewModelTest {
 
     @Test
     fun testFragmentOnCleared() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val fragment = withActivity {
                 Fragment().also {
                     supportFragmentManager.beginTransaction().add(it, "temp").commitNow()
@@ -246,7 +239,7 @@ class ViewModelTest {
 
     @Test
     fun testDefaultFactoryAfterReuse() {
-        withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
+       withUse(ActivityScenario.launch(ViewModelActivity::class.java)) {
             val fragment = withActivity {
                 Fragment().also {
                     supportFragmentManager.beginTransaction().add(it, "temp").commitNow()
@@ -261,7 +254,9 @@ class ViewModelTest {
 
             // Now re-add the removed fragment
             onActivity { activity ->
-                activity.supportFragmentManager.beginTransaction().add(fragment, "temp").commitNow()
+                activity.supportFragmentManager.beginTransaction()
+                    .add(fragment, "temp")
+                    .commitNow()
             }
 
             val newDefaultFactory = fragment.defaultViewModelProviderFactory

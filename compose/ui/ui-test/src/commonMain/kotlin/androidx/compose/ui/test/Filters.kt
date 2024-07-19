@@ -48,30 +48,34 @@ fun isNotEnabled(): SemanticsMatcher =
  *
  * @see SemanticsProperties.ToggleableState
  */
-fun isToggleable(): SemanticsMatcher = hasKey(SemanticsProperties.ToggleableState)
+fun isToggleable(): SemanticsMatcher =
+    hasKey(SemanticsProperties.ToggleableState)
 
 /**
  * Returns whether the node is toggled.
  *
  * @see SemanticsProperties.ToggleableState
  */
-fun isOn(): SemanticsMatcher =
-    SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On)
+fun isOn(): SemanticsMatcher = SemanticsMatcher.expectValue(
+    SemanticsProperties.ToggleableState, ToggleableState.On
+)
 
 /**
  * Returns whether the node is not toggled.
  *
  * @see SemanticsProperties.ToggleableState
  */
-fun isOff(): SemanticsMatcher =
-    SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off)
+fun isOff(): SemanticsMatcher = SemanticsMatcher.expectValue(
+    SemanticsProperties.ToggleableState, ToggleableState.Off
+)
 
 /**
  * Return whether the node is selectable.
  *
  * @see SemanticsProperties.Selected
  */
-fun isSelectable(): SemanticsMatcher = hasKey(SemanticsProperties.Selected)
+fun isSelectable(): SemanticsMatcher =
+    hasKey(SemanticsProperties.Selected)
 
 /**
  * Returns whether the node is selected.
@@ -94,21 +98,24 @@ fun isNotSelected(): SemanticsMatcher =
  *
  * @see SemanticsProperties.Focused
  */
-fun isFocusable(): SemanticsMatcher = hasKey(SemanticsProperties.Focused)
+fun isFocusable(): SemanticsMatcher =
+    hasKey(SemanticsProperties.Focused)
 
 /**
  * Return whether the node is not able to receive focus.
  *
  * @see SemanticsProperties.Focused
  */
-fun isNotFocusable(): SemanticsMatcher = SemanticsMatcher.keyNotDefined(SemanticsProperties.Focused)
+fun isNotFocusable(): SemanticsMatcher =
+    SemanticsMatcher.keyNotDefined(SemanticsProperties.Focused)
 
 /**
  * Returns whether the node is focused.
  *
  * @see SemanticsProperties.Focused
  */
-fun isFocused(): SemanticsMatcher = SemanticsMatcher.expectValue(SemanticsProperties.Focused, true)
+fun isFocused(): SemanticsMatcher =
+    SemanticsMatcher.expectValue(SemanticsProperties.Focused, true)
 
 /**
  * Returns whether the node is not focused.
@@ -123,21 +130,24 @@ fun isNotFocused(): SemanticsMatcher =
  *
  * @see SemanticsActions.OnClick
  */
-fun hasClickAction(): SemanticsMatcher = hasKey(SemanticsActions.OnClick)
+fun hasClickAction(): SemanticsMatcher =
+    hasKey(SemanticsActions.OnClick)
 
 /**
  * Return whether the node has no semantics click action defined.
  *
  * @see SemanticsActions.OnClick
  */
-fun hasNoClickAction(): SemanticsMatcher = SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick)
+fun hasNoClickAction(): SemanticsMatcher =
+    SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick)
 
 /**
  * Return whether the node has a semantics scrollable action defined.
  *
  * @see SemanticsActions.ScrollBy
  */
-fun hasScrollAction(): SemanticsMatcher = hasKey(SemanticsActions.ScrollBy)
+fun hasScrollAction(): SemanticsMatcher =
+    hasKey(SemanticsActions.ScrollBy)
 
 /**
  * Return whether the node has no semantics scrollable action defined.
@@ -157,6 +167,7 @@ fun hasNoScrollAction(): SemanticsMatcher =
  * @param value Value to match as one of the items in the list of content descriptions.
  * @param substring Whether to use substring matching.
  * @param ignoreCase Whether case should be ignored.
+ *
  * @see SemanticsProperties.ContentDescription
  */
 fun hasContentDescription(
@@ -169,17 +180,15 @@ fun hasContentDescription(
             "${SemanticsProperties.ContentDescription.name} contains '$value' " +
                 "(ignoreCase: $ignoreCase)"
         ) {
-            it.config.getOrNull(SemanticsProperties.ContentDescription)?.any { item ->
-                item.contains(value, ignoreCase)
-            } ?: false
+            it.config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.any { item -> item.contains(value, ignoreCase) } ?: false
         }
     } else {
         SemanticsMatcher(
             "${SemanticsProperties.ContentDescription.name} = '$value' (ignoreCase: $ignoreCase)"
         ) {
-            it.config.getOrNull(SemanticsProperties.ContentDescription)?.any { item ->
-                item.equals(value, ignoreCase)
-            } ?: false
+            it.config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.any { item -> item.equals(value, ignoreCase) } ?: false
         }
     }
 }
@@ -193,18 +202,22 @@ fun hasContentDescription(
  * which ones to announce.
  *
  * @param values List of values to match (the order does not matter)
+ *
  * @see SemanticsProperties.ContentDescription
  */
-fun hasContentDescriptionExactly(vararg values: String): SemanticsMatcher {
+fun hasContentDescriptionExactly(
+    vararg values: String
+): SemanticsMatcher {
     val expected = values.toList()
     return SemanticsMatcher(
-        "${SemanticsProperties.ContentDescription.name} = " + "[${values.joinToString(",")}]"
+        "${SemanticsProperties.ContentDescription.name} = " +
+            "[${values.joinToString(",")}]"
     ) { node ->
-        node.config.getOrNull(SemanticsProperties.ContentDescription)?.let { given ->
-            given.size == expected.size &&
-                given.containsAll(expected) &&
-                expected.containsAll(given)
-        } ?: values.isEmpty()
+        node.config.getOrNull(SemanticsProperties.ContentDescription)
+            ?.let { given ->
+                given.size == expected.size &&
+                    given.containsAll(expected) && expected.containsAll(given)
+            } ?: values.isEmpty()
     }
 }
 
@@ -213,13 +226,14 @@ fun hasContentDescriptionExactly(vararg values: String): SemanticsMatcher {
  *
  * This will also search in [SemanticsProperties.EditableText].
  *
- * Note that in merged semantics tree there can be a list of text items that got merged from the
- * child nodes. Typically an accessibility tooling will decide based on its heuristics which ones to
- * use.
+ * Note that in merged semantics tree there can be a list of text items that got merged from
+ * the child nodes. Typically an accessibility tooling will decide based on its heuristics which
+ * ones to use.
  *
  * @param text Value to match as one of the items in the list of text values.
  * @param substring Whether to use substring matching.
  * @param ignoreCase Whether case should be ignored.
+ *
  * @see SemanticsProperties.Text
  * @see SemanticsProperties.EditableText
  */
@@ -230,29 +244,23 @@ fun hasText(
 ): SemanticsMatcher {
     val propertyName = "${SemanticsProperties.Text.name} + ${SemanticsProperties.EditableText.name}"
     return if (substring) {
-        SemanticsMatcher("$propertyName contains '$text' (ignoreCase: $ignoreCase) as substring") {
-            val isInEditableTextValue =
-                it.config
-                    .getOrNull(SemanticsProperties.EditableText)
-                    ?.text
-                    ?.contains(text, ignoreCase) ?: false
-            val isInTextValue =
-                it.config.getOrNull(SemanticsProperties.Text)?.any { item ->
-                    item.text.contains(text, ignoreCase)
-                } ?: false
+        SemanticsMatcher(
+            "$propertyName contains '$text' (ignoreCase: $ignoreCase) as substring"
+        ) {
+            val isInEditableTextValue = it.config.getOrNull(SemanticsProperties.EditableText)
+                ?.text?.contains(text, ignoreCase) ?: false
+            val isInTextValue = it.config.getOrNull(SemanticsProperties.Text)
+                ?.any { item -> item.text.contains(text, ignoreCase) } ?: false
             isInEditableTextValue || isInTextValue
         }
     } else {
-        SemanticsMatcher("$propertyName contains '$text' (ignoreCase: $ignoreCase)") {
-            val isInEditableTextValue =
-                it.config
-                    .getOrNull(SemanticsProperties.EditableText)
-                    ?.text
-                    ?.equals(text, ignoreCase) ?: false
-            val isInTextValue =
-                it.config.getOrNull(SemanticsProperties.Text)?.any { item ->
-                    item.text.equals(text, ignoreCase)
-                } ?: false
+        SemanticsMatcher(
+            "$propertyName contains '$text' (ignoreCase: $ignoreCase)"
+        ) {
+            val isInEditableTextValue = it.config.getOrNull(SemanticsProperties.EditableText)
+                ?.text?.equals(text, ignoreCase) ?: false
+            val isInTextValue = it.config.getOrNull(SemanticsProperties.Text)
+                ?.any { item -> item.text.equals(text, ignoreCase) } ?: false
             isInEditableTextValue || isInTextValue
         }
     }
@@ -263,12 +271,13 @@ fun hasText(
  *
  * This will also search in [SemanticsProperties.EditableText] by default.
  *
- * Note that in merged semantics tree there can be a list of text items that got merged from the
- * child nodes. Typically an accessibility tooling will decide based on its heuristics which ones to
- * use.
+ * Note that in merged semantics tree there can be a list of text items that got merged from
+ * the child nodes. Typically an accessibility tooling will decide based on its heuristics which
+ * ones to use.
  *
  * @param textValues List of values to match (the order does not matter)
  * @param includeEditableText Whether to also assert against the editable text
+ *
  * @see SemanticsProperties.Text
  * @see SemanticsProperties.EditableText
  */
@@ -277,20 +286,21 @@ fun hasTextExactly(
     includeEditableText: Boolean = true
 ): SemanticsMatcher {
     val expected = textValues.toList()
-    val propertyName =
-        if (includeEditableText) {
-            "${SemanticsProperties.Text.name} + ${SemanticsProperties.EditableText.name}"
-        } else {
-            SemanticsProperties.Text.name
-        }
-    return SemanticsMatcher("$propertyName = [${textValues.joinToString(",")}]") { node ->
+    val propertyName = if (includeEditableText) {
+        "${SemanticsProperties.Text.name} + ${SemanticsProperties.EditableText.name}"
+    } else {
+        SemanticsProperties.Text.name
+    }
+    return SemanticsMatcher(
+        "$propertyName = [${textValues.joinToString(",")}]"
+    ) { node ->
         val actual = mutableListOf<String>()
         if (includeEditableText) {
-            node.config.getOrNull(SemanticsProperties.EditableText)?.let { actual.add(it.text) }
+            node.config.getOrNull(SemanticsProperties.EditableText)
+                ?.let { actual.add(it.text) }
         }
-        node.config.getOrNull(SemanticsProperties.Text)?.let {
-            actual.addAll(it.map { anStr -> anStr.text })
-        }
+        node.config.getOrNull(SemanticsProperties.Text)
+            ?.let { actual.addAll(it.map { anStr -> anStr.text }) }
         actual.containsAll(expected) && expected.containsAll(actual)
     }
 }
@@ -299,31 +309,36 @@ fun hasTextExactly(
  * Returns whether the node's value matches exactly to the given accessibility value.
  *
  * @param value Value to match.
+ *
  * @see SemanticsProperties.StateDescription
  */
-fun hasStateDescription(value: String): SemanticsMatcher =
-    SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, value)
+fun hasStateDescription(value: String): SemanticsMatcher = SemanticsMatcher.expectValue(
+    SemanticsProperties.StateDescription, value
+)
 
 /**
  * Returns whether the node is marked as an accessibility header.
  *
  * @see SemanticsProperties.Heading
  */
-fun isHeading(): SemanticsMatcher = hasKey(SemanticsProperties.Heading)
+fun isHeading(): SemanticsMatcher =
+    hasKey(SemanticsProperties.Heading)
 
 /**
  * Returns whether the node's range info matches exactly to the given accessibility range info.
  *
  * @param rangeInfo range info to match.
+ *
  * @see SemanticsProperties.ProgressBarRangeInfo
  */
-fun hasProgressBarRangeInfo(rangeInfo: ProgressBarRangeInfo): SemanticsMatcher =
-    SemanticsMatcher.expectValue(SemanticsProperties.ProgressBarRangeInfo, rangeInfo)
+fun hasProgressBarRangeInfo(rangeInfo: ProgressBarRangeInfo): SemanticsMatcher = SemanticsMatcher
+    .expectValue(SemanticsProperties.ProgressBarRangeInfo, rangeInfo)
 
 /**
  * Returns whether the node is annotated by the given test tag.
  *
  * @param testTag Value to match.
+ *
  * @see SemanticsProperties.TestTag
  */
 fun hasTestTag(testTag: String): SemanticsMatcher =
@@ -337,7 +352,8 @@ fun hasTestTag(testTag: String): SemanticsMatcher =
  *
  * @see SemanticsProperties.IsDialog
  */
-fun isDialog(): SemanticsMatcher = hasKey(SemanticsProperties.IsDialog)
+fun isDialog(): SemanticsMatcher =
+    hasKey(SemanticsProperties.IsDialog)
 
 /**
  * Returns whether the node is a popup.
@@ -347,7 +363,8 @@ fun isDialog(): SemanticsMatcher = hasKey(SemanticsProperties.IsDialog)
  *
  * @see SemanticsProperties.IsPopup
  */
-fun isPopup(): SemanticsMatcher = hasKey(SemanticsProperties.IsPopup)
+fun isPopup(): SemanticsMatcher =
+    hasKey(SemanticsProperties.IsPopup)
 
 /**
  * Returns whether the node defines the given IME action.
@@ -364,7 +381,8 @@ fun hasImeAction(actionType: ImeAction) =
  *
  * @see SemanticsActions.SetText
  */
-fun hasSetTextAction() = hasKey(SemanticsActions.SetText)
+fun hasSetTextAction() =
+    hasKey(SemanticsActions.SetText)
 
 /**
  * Returns whether the node defines a semantics action to insert text on it.
@@ -373,7 +391,8 @@ fun hasSetTextAction() = hasKey(SemanticsActions.SetText)
  *
  * @see SemanticsActions.InsertTextAtCursor
  */
-fun hasInsertTextAtCursorAction() = hasKey(SemanticsActions.InsertTextAtCursor)
+fun hasInsertTextAtCursorAction() =
+    hasKey(SemanticsActions.InsertTextAtCursor)
 
 /**
  * Returns whether the node defines a semantics action to perform the
@@ -394,10 +413,11 @@ fun hasRequestFocusAction() = hasKey(SemanticsActions.RequestFocus)
  * Returns whether the node defines the ability to scroll to an item index.
  *
  * Note that not all scrollable containers have item indices. For example, a
- * [scrollable][androidx.compose.foundation.gestures.scrollable] doesn't have items with an index,
- * while [LazyColumn][androidx.compose.foundation.lazy.LazyColumn] does.
+ * [scrollable][androidx.compose.foundation.gestures.scrollable] doesn't have items with an
+ * index, while [LazyColumn][androidx.compose.foundation.lazy.LazyColumn] does.
  */
-fun hasScrollToIndexAction() = hasKey(SemanticsActions.ScrollToIndex)
+fun hasScrollToIndexAction() =
+    hasKey(SemanticsActions.ScrollToIndex)
 
 /**
  * Returns whether the node defines the ability to scroll to an item identified by a key, such as
@@ -405,9 +425,12 @@ fun hasScrollToIndexAction() = hasKey(SemanticsActions.ScrollToIndex)
  * [LazyRow][androidx.compose.foundation.lazy.LazyRow].
  */
 fun hasScrollToKeyAction() =
-    hasKey(SemanticsActions.ScrollToIndex).and(hasKey(SemanticsProperties.IndexForKey))
+    hasKey(SemanticsActions.ScrollToIndex)
+        .and(hasKey(SemanticsProperties.IndexForKey))
 
-/** Returns whether the node defines the ability to scroll to content identified by a matcher. */
+/**
+ * Returns whether the node defines the ability to scroll to content identified by a matcher.
+ */
 fun hasScrollToNodeAction() =
     hasKey(SemanticsActions.ScrollToIndex)
         .and(hasKey(SemanticsActions.ScrollBy))
@@ -421,14 +444,16 @@ fun hasScrollToNodeAction() =
  *
  * @see SemanticsProperties.IsEditable
  */
-fun isEditable() = SemanticsMatcher.expectValue(SemanticsProperties.IsEditable, true)
+fun isEditable() =
+    SemanticsMatcher.expectValue(SemanticsProperties.IsEditable, true)
 
 /**
  * Return whether the node is the root semantics node.
  *
  * There is always one root in every node tree, added implicitly by Compose.
  */
-fun isRoot() = SemanticsMatcher("isRoot") { it.isRoot }
+fun isRoot() =
+    SemanticsMatcher("isRoot") { it.isRoot }
 
 /**
  * Returns whether the node's parent satisfies the given matcher.
@@ -443,7 +468,9 @@ fun hasParent(matcher: SemanticsMatcher): SemanticsMatcher {
     }
 }
 
-/** Returns whether the node has at least one child that satisfies the given matcher. */
+/**
+ * Returns whether the node has at least one child that satisfies the given matcher.
+ */
 fun hasAnyChild(matcher: SemanticsMatcher): SemanticsMatcher {
     // TODO(b/150292800): If this is used in assert we should print the children nodes semantics
     //  in the error message or say that no children were found.
@@ -460,7 +487,9 @@ fun hasAnyChild(matcher: SemanticsMatcher): SemanticsMatcher {
 fun hasAnySibling(matcher: SemanticsMatcher): SemanticsMatcher {
     // TODO(b/150292800): If this is used in assert we should print the sibling nodes semantics
     //  in the error message or say that no siblings were found.
-    return SemanticsMatcher("hasAnySiblingThat(${matcher.description})") {
+    return SemanticsMatcher(
+        "hasAnySiblingThat(${matcher.description})"
+    ) {
         val node = it
         it.parent?.run { matcher.matchesAny(this.children.filter { child -> child.id != node.id }) }
             ?: false
@@ -471,7 +500,6 @@ fun hasAnySibling(matcher: SemanticsMatcher): SemanticsMatcher {
  * Returns whether the node has at least one ancestor that satisfies the given matcher.
  *
  * Example: For the following tree
- *
  * ```
  * |-X
  * |-A
@@ -479,7 +507,6 @@ fun hasAnySibling(matcher: SemanticsMatcher): SemanticsMatcher {
  *     |-C1
  *     |-C2
  * ```
- *
  * In case of C1, we would check the matcher against A and B
  */
 fun hasAnyAncestor(matcher: SemanticsMatcher): SemanticsMatcher {
@@ -494,7 +521,6 @@ fun hasAnyAncestor(matcher: SemanticsMatcher): SemanticsMatcher {
  * Returns whether the node has at least one descendant that satisfies the given matcher.
  *
  * Example: For the following tree
- *
  * ```
  * |-X
  * |-A
@@ -502,7 +528,6 @@ fun hasAnyAncestor(matcher: SemanticsMatcher): SemanticsMatcher {
  *     |-C1
  *     |-C2
  * ```
- *
  * In case of A, we would check the matcher against B,C1 and C2
  */
 fun hasAnyDescendant(matcher: SemanticsMatcher): SemanticsMatcher {
@@ -522,23 +547,21 @@ fun hasAnyDescendant(matcher: SemanticsMatcher): SemanticsMatcher {
 }
 
 internal val SemanticsNode.ancestors: Iterable<SemanticsNode>
-    get() =
-        object : Iterable<SemanticsNode> {
-            override fun iterator(): Iterator<SemanticsNode> {
-                return object : Iterator<SemanticsNode> {
-                    @JsName("nextVar")
-                    var next = parent
+    get() = object : Iterable<SemanticsNode> {
+        override fun iterator(): Iterator<SemanticsNode> {
+            return object : Iterator<SemanticsNode> {
+                @JsName("nextVar")
+                var next = parent
+                override fun hasNext(): Boolean {
+                    return next != null
+                }
 
-                    override fun hasNext(): Boolean {
-                        return next != null
-                    }
-
-                    override fun next(): SemanticsNode {
-                        return next!!.also { next = it.parent }
-                    }
+                override fun next(): SemanticsNode {
+                    return next!!.also { next = it.parent }
                 }
             }
         }
+    }
 
 private fun hasKey(key: SemanticsPropertyKey<*>): SemanticsMatcher =
     SemanticsMatcher.keyIsDefined(key)

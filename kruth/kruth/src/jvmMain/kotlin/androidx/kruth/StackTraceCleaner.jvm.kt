@@ -24,9 +24,9 @@ import java.lang.Thread.currentThread
 private const val CLEANER_LINK: String = "https://goo.gl/aH3UyP"
 
 /**
- * Returns true if stack trace cleaning is explicitly disabled in a system property. This switch is
- * intended to be used when attempting to debug the frameworks which are collapsed or filtered out
- * of stack traces by the cleaner.
+ * Returns true if stack trace cleaning is explicitly disabled in a system property. This switch
+ * is intended to be used when attempting to debug the frameworks which are collapsed or filtered
+ * out of stack traces by the cleaner.
  */
 private fun isStackTraceCleaningDisabled(): Boolean {
     // Reading system properties might be forbidden.
@@ -40,16 +40,19 @@ private fun isStackTraceCleaningDisabled(): Boolean {
 }
 
 private val SUBJECT_CLASS: Set<String> = setOf(Subject::class.java.canonicalName!!)
-private val STANDARD_SUBJECT_BUILDER_CLASS: Set<String> =
-    setOf(StandardSubjectBuilder::class.java.canonicalName!!)
-private val JUNIT_INFRASTRUCTURE_CLASSES: Set<String> =
-    setOf("org.junit.runner.Runner", "org.junit.runners.model.Statement")
+private val STANDARD_SUBJECT_BUILDER_CLASS: Set<String> = setOf(
+    StandardSubjectBuilder::class.java.canonicalName!!
+)
+private val JUNIT_INFRASTRUCTURE_CLASSES: Set<String> = setOf(
+    "org.junit.runner.Runner",
+    "org.junit.runners.model.Statement"
+)
 
 /**
  * Utility that cleans stack traces to remove noise from common frameworks.
  *
  * @constructor A new instance is instantiated for each throwable to be cleaned. This is so that
- *   helper methods can make use of instance variables describing the state of the cleaning process.
+ * helper methods can make use of instance variables describing the state of the cleaning process.
  */
 internal class StackTraceCleaner(private val throwable: Throwable) {
     private val cleanedStackTrace = mutableListOf<StackTraceElementWrapper>()
@@ -86,8 +89,8 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
         stackIndex += 1
 
         var endIndex = 0
-        while (
-            endIndex <= stackFrames.lastIndex && !stackFrames[endIndex].isJUnitInfrastructure()
+        while (endIndex <= stackFrames.lastIndex &&
+            !stackFrames[endIndex].isJUnitInfrastructure()
         ) {
             // Find last frame of setup frames, and remove from there down.
             endIndex++
@@ -126,9 +129,8 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
         val iterator = cleanedStackTrace.listIterator(cleanedStackTrace.size)
         while (iterator.hasPrevious()) {
             val stackTraceElementWrapper = iterator.previous()
-            if (
-                stackTraceElementWrapper.stackFrameType == StackFrameType.TEST_FRAMEWORK ||
-                    stackTraceElementWrapper.stackFrameType == StackFrameType.REFLECTION
+            if (stackTraceElementWrapper.stackFrameType == StackFrameType.TEST_FRAMEWORK ||
+                stackTraceElementWrapper.stackFrameType == StackFrameType.REFLECTION
             ) {
                 iterator.remove()
             } else {
@@ -137,22 +139,23 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
         }
 
         // Replace the stack trace on the Throwable with the cleaned one.
-        val result =
-            Array<StackTraceElement>(cleanedStackTrace.size) { i ->
-                cleanedStackTrace[i].stackTraceElement
-            }
+        val result = Array<StackTraceElement>(cleanedStackTrace.size) { i ->
+            cleanedStackTrace[i].stackTraceElement
+        }
         throwable.setStackTrace(result)
 
         // Recurse on any related Throwables that are attached to this one
-        throwable.cause?.also { StackTraceCleaner(it).clean(seenThrowables) }
+        throwable.cause?.also {
+            StackTraceCleaner(it).clean(seenThrowables)
+        }
         for (suppressed in getSuppressed(throwable)) {
             StackTraceCleaner(suppressed).clean(seenThrowables)
         }
     }
 
     /**
-     * Either adds the given frame to the running streak or closes out the running streak and starts
-     * a new one.
+     * Either adds the given frame to the running streak or closes out the running streak and starts a
+     * new one.
      */
     private fun addToStreak(stackTraceElementWrapper: StackTraceElementWrapper) {
         if (stackTraceElementWrapper.stackFrameType != currentStreakType) {
@@ -211,12 +214,11 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
     private fun StackTraceElement.isFromClassOrClassNestedInside(
         recognizedClasses: Set<String>
     ): Boolean {
-        var stackClass: Class<*>? =
-            try {
-                loadClass(className)
-            } catch (e: ClassNotFoundException) {
-                return false
-            }
+        var stackClass: Class<*>? = try {
+            loadClass(className)
+        } catch (e: ClassNotFoundException) {
+            return false
+        }
 
         try {
             while (stackClass != null) {
@@ -259,13 +261,14 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
         return false
     }
 
-    private fun StackTraceElement.isFromClassDirectly(recognizedClasses: Set<String>): Boolean {
-        val stackClass =
-            try {
-                loadClass(className)
-            } catch (e: ClassNotFoundException) {
-                return false
-            }
+    private fun StackTraceElement.isFromClassDirectly(
+        recognizedClasses: Set<String>
+    ): Boolean {
+        val stackClass = try {
+            loadClass(className)
+        } catch (e: ClassNotFoundException) {
+            return false
+        }
         for (recognizedClass in recognizedClasses) {
             if (isSubtypeOf(stackClass, recognizedClass)) {
                 return true
@@ -274,7 +277,9 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
         return false
     }
 
-    /** @throws ClassNotFoundException */
+    /**
+     * @throws ClassNotFoundException
+     */
     // Using plain Class.forName can cause problems.
     /*
      * TODO(cpovirk): Consider avoiding classloading entirely by reading classes with ASM. But that
@@ -286,18 +291,16 @@ internal class StackTraceCleaner(private val throwable: Throwable) {
      * classloader.
      */
     private fun loadClass(name: String): Class<*> {
-        val loader: ClassLoader =
-            firstNonNull(
-                currentThread().getContextClassLoader(),
-                StackTraceCleaner::class.java.classLoader!!
-            )
+        val loader: ClassLoader = firstNonNull(
+            currentThread().getContextClassLoader(), StackTraceCleaner::class.java.classLoader!!
+        )
         return loader.loadClass(name)
     }
 }
 
 /**
- * Wrapper around a [StackTraceElement] for calculating and holding the metadata used to clean the
- * stack trace.
+ * Wrapper around a [StackTraceElement] for calculating and holding the metadata used to clean
+ * the stack trace.
  *
  * @constructor Creates a wrapper with the given frame and the given frame type.
  */
@@ -308,20 +311,24 @@ internal class StackTraceElementWrapper(
     internal val stackFrameType: StackFrameType
 ) {
 
-    /** Creates a wrapper with the given frame with frame type inferred from frame's class name. */
-    constructor(
-        stackTraceElement: StackTraceElement
-    ) : this(stackTraceElement, StackFrameType.forClassName(stackTraceElement.className))
+    /**
+     *  Creates a wrapper with the given frame with frame type inferred from frame's class name.
+     */
+    constructor(stackTraceElement: StackTraceElement) : this(
+        stackTraceElement,
+        StackFrameType.forClassName(stackTraceElement.className)
+    )
 }
 
 /**
  * Enum of the package or class-name based categories of stack frames that might be removed or
  * collapsed by the cleaner.
  *
- * @constructor Each type of stack frame has a name of the summary displayed in the cleaned trace.
+ * @constructor Each type of stack frame has a name of the summary displayed in the cleaned
+ *  trace.
  *
- * Most also have a set of fully qualified class name prefixes that identify when a frame belongs to
- * this type.
+ *  Most also have a set of fully qualified class name prefixes that identify when a
+ *  frame belongs to this type.
  */
 internal enum class StackFrameType(
     /** Returns the name of this frame type to display in the cleaned trace */
@@ -361,8 +368,8 @@ internal enum class StackFrameType(
     fun belongsToType(fullyQualifiedClassName: String): Boolean {
         for (prefix in prefixes) {
             // TODO(cpovirk): Should we also check prefix + "$"?
-            if (
-                fullyQualifiedClassName == prefix || fullyQualifiedClassName.startsWith("$prefix.")
+            if (fullyQualifiedClassName == prefix ||
+                fullyQualifiedClassName.startsWith("$prefix.")
             ) {
                 return true
             }
@@ -376,16 +383,14 @@ internal enum class StackFrameType(
 
         /** Helper method to determine the frame type from the fully qualified class name. */
         internal fun forClassName(fullyQualifiedClassName: String): StackFrameType {
-            // Never remove the frames from a test class. These will probably be the frame of a
-            // failing
+            // Never remove the frames from a test class. These will probably be the frame of a failing
             // assertion.
             // TODO(cpovirk): This is really only for tests in Truth itself, so this doesn't matter
             //  yet, but.... If the Truth tests someday start calling into nested classes, we may
             //  want to add:
             //  || fullyQualifiedClassName.contains("Test$")
-            if (
-                fullyQualifiedClassName.endsWith("Test") &&
-                    fullyQualifiedClassName != NON_LEAKY_TEST_FQN
+            if (fullyQualifiedClassName.endsWith("Test") &&
+                fullyQualifiedClassName != NON_LEAKY_TEST_FQN
             ) {
                 return NEVER_REMOVE
             }
@@ -399,15 +404,17 @@ internal enum class StackFrameType(
             return NEVER_REMOVE
         }
 
-        internal fun createStreakReplacementFrame(stackFrameType: StackFrameType, length: Int) =
-            StackTraceElementWrapper(
-                StackTraceElement(
-                    "[[${stackFrameType.stackFrameName}: $length frames collapsed ($CLEANER_LINK)]]",
-                    "",
-                    "",
-                    0
-                ),
-                stackFrameType
-            )
+        internal fun createStreakReplacementFrame(
+            stackFrameType: StackFrameType,
+            length: Int
+        ) = StackTraceElementWrapper(
+            StackTraceElement(
+                "[[${stackFrameType.stackFrameName}: $length frames collapsed ($CLEANER_LINK)]]",
+                "",
+                "",
+                0
+            ),
+            stackFrameType
+        )
     }
 }

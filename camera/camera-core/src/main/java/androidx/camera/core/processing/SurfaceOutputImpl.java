@@ -33,6 +33,7 @@ import androidx.annotation.AnyThread;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.Logger;
@@ -52,6 +53,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * A implementation of {@link SurfaceOutput} that is connected to a {@link SurfaceEdge}.
  */
+@RequiresApi(21)
 final class SurfaceOutputImpl implements SurfaceOutput {
 
     private static final String TAG = "SurfaceOutputImpl";
@@ -213,7 +215,7 @@ final class SurfaceOutputImpl implements SurfaceOutput {
     }
 
     @VisibleForTesting
-    public boolean isMirroring() {
+    public boolean getMirroring() {
         return mMirroring;
     }
 

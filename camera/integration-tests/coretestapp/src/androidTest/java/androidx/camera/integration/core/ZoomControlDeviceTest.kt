@@ -81,18 +81,17 @@ class ZoomControlDeviceTest(
     private val cameraConfig: CameraXConfig
 ) {
     @get:Rule
-    val cameraPipeConfigTestRule =
-        CameraPipeConfigTestRule(
-            active = implName == CameraPipeConfig::class.simpleName,
-        )
+    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
+        active = implName == CameraPipeConfig::class.simpleName,
+    )
 
     @get:Rule
-    val cameraRule =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            CameraUtil.PreTestCameraIdList(cameraConfig)
-        )
+    val cameraRule = CameraUtil.grantCameraPermissionAndPreTest(
+        CameraUtil.PreTestCameraIdList(cameraConfig)
+    )
 
-    @get:Rule val wakelockEmptyActivityRule = WakelockEmptyActivityRule()
+    @get:Rule
+    val wakelockEmptyActivityRule = WakelockEmptyActivityRule()
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private lateinit var camera: Camera
@@ -114,20 +113,17 @@ class ZoomControlDeviceTest(
         withContext(Dispatchers.Main) {
             fakeLifecycleOwner = FakeLifecycleOwner()
             fakeLifecycleOwner.startAndResume()
-            camera =
-                cameraProvider.bindToLifecycle(
-                    fakeLifecycleOwner,
-                    cameraSelector,
-                    ImageCapture.Builder()
-                        .also { builder ->
-                            CameraPipeUtil.setCameraCaptureSessionCallback(
-                                implName,
-                                builder,
-                                captureCallback
-                            )
-                        }
-                        .build()
-                )
+            camera = cameraProvider.bindToLifecycle(
+                fakeLifecycleOwner,
+                cameraSelector,
+                ImageCapture.Builder().also { builder ->
+                    CameraPipeUtil.setCameraCaptureSessionCallback(
+                        implName,
+                        builder,
+                        captureCallback
+                    )
+                }.build()
+            )
         }
 
         cameraControl = camera.cameraControl
@@ -137,7 +133,9 @@ class ZoomControlDeviceTest(
     @After
     fun tearDown(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
-            withContext(Dispatchers.Main) { cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS] }
+            withContext(Dispatchers.Main) {
+                cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
+            }
         }
     }
 
@@ -168,7 +166,8 @@ class ZoomControlDeviceTest(
 
         cameraControl.setZoomRatio(newZoomRatio).await()
 
-        assertThat(cameraInfo.zoomState.value?.zoomRatio).isEqualTo(newZoomRatio)
+        assertThat(cameraInfo.zoomState.value?.zoomRatio)
+            .isEqualTo(newZoomRatio)
     }
 
     @Test
@@ -179,13 +178,14 @@ class ZoomControlDeviceTest(
         val maxZoomRatio = cameraInfo.zoomState.value!!.maxZoomRatio
 
         /**
-         * The exception is caught but not handled here intentionally. Because in this test, we want
-         * to focus on the value of the zoomRatio after exception is thrown. The exception itself is
-         * tested with [setZoomRatio_largerThanMax_OutOfRangeException]
+         * The exception is caught but not handled here intentionally. Because in this test,
+         * we want to focus on the value of the zoomRatio after exception is thrown.
+         * The exception itself is tested with [setZoomRatio_largerThanMax_OutOfRangeException]
          */
         try {
             cameraControl.setZoomRatio(maxZoomRatio + 1.0f)[5, TimeUnit.SECONDS]
-        } catch (_: ExecutionException) {}
+        } catch (_: ExecutionException) {
+        }
 
         assertThat(cameraInfo.zoomState.value?.zoomRatio).isEqualTo(2.0f)
     }
@@ -206,13 +206,14 @@ class ZoomControlDeviceTest(
         val minZoomRatio = cameraInfo.zoomState.value!!.minZoomRatio
 
         /**
-         * The exception is caught but not handled here intentionally. Because in this test, we want
-         * to focus on the value of the zoomRatio after exception is thrown. The exception itself is
-         * tested with [setZoomRatio_smallerThanMin_OutOfRangeException]
+         * The exception is caught but not handled here intentionally. Because in this test,
+         * we want to focus on the value of the zoomRatio after exception is thrown.
+         * The exception itself is tested with [setZoomRatio_smallerThanMin_OutOfRangeException]
          */
         try {
             cameraControl.setZoomRatio(minZoomRatio - 1.0f)[5, TimeUnit.SECONDS]
-        } catch (_: ExecutionException) {}
+        } catch (_: ExecutionException) {
+        }
 
         assertThat(cameraInfo.zoomState.value?.zoomRatio).isEqualTo(2.0f)
     }
@@ -266,11 +267,15 @@ class ZoomControlDeviceTest(
         val sensorRect = getSensorRect()
         val cropX = sensorRect.width() / 4
         val cropY = sensorRect.height() / 4
-        val cropRect =
-            Rect(cropX, cropY, cropX + sensorRect.width() / 2, cropY + sensorRect.height() / 2)
+        val cropRect = Rect(
+            cropX, cropY, cropX + sensorRect.width() / 2,
+            cropY + sensorRect.height() / 2
+        )
 
         captureCallback.verify(
-            { captureRequest, _ -> captureRequest[CaptureRequest.SCALER_CROP_REGION] == cropRect },
+            { captureRequest, _ ->
+                captureRequest[CaptureRequest.SCALER_CROP_REGION] == cropRect
+            },
             5000
         )
     }
@@ -294,10 +299,9 @@ class ZoomControlDeviceTest(
     @Test
     fun setLinearZoomBy0_isSameAsMinRatio() = runBlocking {
         cameraControl.setLinearZoom(0f)
-        val ratioAtPercentage0 =
-            cameraInfo.zoomState
-                .waitForValue { value -> areFloatsEqual(value.linearZoom, 0f) }
-                .zoomRatio
+        val ratioAtPercentage0 = cameraInfo.zoomState.waitForValue { value ->
+            areFloatsEqual(value.linearZoom, 0f)
+        }.zoomRatio
 
         val ratioAtMinZoomRatio = cameraInfo.zoomState.value?.minZoomRatio
 
@@ -307,10 +311,9 @@ class ZoomControlDeviceTest(
     @Test
     fun setLinearZoomBy1_isSameAsMaxRatio() = runBlocking {
         cameraControl.setLinearZoom(1f)
-        val ratioAtPercentage1 =
-            cameraInfo.zoomState
-                .waitForValue { value -> areFloatsEqual(value.linearZoom, 1f) }
-                .zoomRatio
+        val ratioAtPercentage1 = cameraInfo.zoomState.waitForValue { value ->
+            areFloatsEqual(value.linearZoom, 1f)
+        }.zoomRatio
 
         val ratioAtMaxZoomRatio = cameraInfo.zoomState.value?.maxZoomRatio
 
@@ -370,7 +373,9 @@ class ZoomControlDeviceTest(
             } else {
                 val widthDelta = (prevCropRegion.width() - cropRegion.width()).toFloat()
 
-                assertThat(widthDelta).isWithin(TOLERANCE).of(prevWidthDelta)
+                assertThat(widthDelta)
+                    .isWithin(TOLERANCE)
+                    .of(prevWidthDelta)
             }
             prevCropRegion = cropRegion
 
@@ -399,7 +404,9 @@ class ZoomControlDeviceTest(
             } else {
                 val widthDelta = prevCropWidth - cropWidthForTheRatio
 
-                assertThat(widthDelta).isWithin(TOLERANCE).of(prevWidthDelta)
+                assertThat(widthDelta)
+                    .isWithin(TOLERANCE)
+                    .of(prevWidthDelta)
             }
             prevCropWidth = cropWidthForTheRatio
 
@@ -412,13 +419,14 @@ class ZoomControlDeviceTest(
         cameraControl.setLinearZoom(0.5f)[5, TimeUnit.SECONDS]
 
         /**
-         * The exception is caught but not handled here intentionally. Because in this test, we want
-         * to focus on the value of the zoomRatio after exception is thrown. The exception itself is
-         * tested with [setLinearZoom_largerThan1_outOfRangeException]
+         * The exception is caught but not handled here intentionally. Because in this test,
+         * we want to focus on the value of the zoomRatio after exception is thrown.
+         * The exception itself is tested with [setLinearZoom_largerThan1_outOfRangeException]
          */
         try {
             cameraControl.setLinearZoom(1.1f)[5, TimeUnit.SECONDS]
-        } catch (_: ExecutionException) {}
+        } catch (_: ExecutionException) {
+        }
 
         assertThat(cameraInfo.zoomState.value?.linearZoom).isEqualTo(0.5f)
     }
@@ -435,13 +443,14 @@ class ZoomControlDeviceTest(
         cameraControl.setLinearZoom(0.5f)[5, TimeUnit.SECONDS]
 
         /**
-         * The exception is caught but not handled here intentionally. Because in this test, we want
-         * to focus on the value of the zoomRatio after exception is thrown. The exception itself is
-         * tested with [setLinearZoom_smallerThan0_outOfRangeException]
+         * The exception is caught but not handled here intentionally. Because in this test,
+         * we want to focus on the value of the zoomRatio after exception is thrown.
+         * The exception itself is tested with [setLinearZoom_smallerThan0_outOfRangeException]
          */
         try {
             cameraControl.setLinearZoom(-0.1f)[5, TimeUnit.SECONDS]
-        } catch (_: ExecutionException) {}
+        } catch (_: ExecutionException) {
+        }
 
         assertThat(cameraInfo.zoomState.value?.linearZoom).isEqualTo(0.5f)
     }
@@ -496,14 +505,12 @@ class ZoomControlDeviceTest(
         withContext(Dispatchers.Main) {
             val lifecycleOwner = FakeLifecycleOwner()
             lifecycleOwner.startAndResume()
-            cameraInfo.zoomState.observe(
-                lifecycleOwner,
+            cameraInfo.zoomState.observe(lifecycleOwner,
                 Observer { value: ZoomState ->
                     if (value.zoomRatio != getMaxDigitalZoom()) {
                         latch.countDown()
                     }
-                }
-            )
+                })
             cameraControl.setLinearZoom(0.1f)
             cameraControl.setLinearZoom(0.2f)
             cameraControl.setLinearZoom(0.3f)
@@ -547,14 +554,12 @@ class ZoomControlDeviceTest(
         withContext(Dispatchers.Main) {
             val lifecycleOwner = FakeLifecycleOwner()
             lifecycleOwner.startAndResume()
-            cameraInfo.zoomState.observe(
-                lifecycleOwner,
+            cameraInfo.zoomState.observe(lifecycleOwner,
                 Observer { value: ZoomState ->
                     if (value.linearZoom != 0f) {
                         latch.countDown()
                     }
-                }
-            )
+                })
             cameraControl.setZoomRatio(1.2f)
             cameraControl.setZoomRatio(1.5f)
             cameraControl.setZoomRatio(2.0f)
@@ -601,9 +606,13 @@ class ZoomControlDeviceTest(
     @Test
     fun valueIsResetAfterUseCasesDetached() = runBlocking {
         cameraControl.setLinearZoom(0.2f) // this will change ratio and percentage.
-        withContext(Dispatchers.Main) { cameraProvider.unbindAll() }
+        withContext(Dispatchers.Main) {
+            cameraProvider.unbindAll()
+        }
 
-        cameraInfo.zoomState.waitForValue { value -> areFloatsEqual(value.zoomRatio, 1.0f) }
+        cameraInfo.zoomState.waitForValue { value ->
+            areFloatsEqual(value.zoomRatio, 1.0f)
+        }
 
         return@runBlocking
     }
@@ -623,15 +632,13 @@ class ZoomControlDeviceTest(
         withContext(Dispatchers.Main) {
             val lifecycleOwner = FakeLifecycleOwner()
             lifecycleOwner.startAndResume()
-            observe(
-                lifecycleOwner,
+            observe(lifecycleOwner,
                 Observer { value: ZoomState ->
                     if (waitCondition(value)) {
                         awaitedValue = value
                         latch.countDown()
                     }
-                }
-            )
+                })
         }
 
         latch.await(3, TimeUnit.SECONDS)
@@ -719,14 +726,13 @@ class ZoomControlDeviceTest(
         Build.VERSION.SDK_INT >= 30 && getZoomRatioRange(cameraCharacteristics) != null
 
     @RequiresApi(30)
-    private fun getZoomRatioRange(cameraCharacteristics: CameraCharacteristics) =
-        try {
-            cameraCharacteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
-        } catch (e: AssertionError) {
-            // Some devices may throw AssertionError when failed to get CameraCharacteristic.
-            // Catch the AssertionError and return null to workaround it. b/231701345
-            null
-        }
+    private fun getZoomRatioRange(cameraCharacteristics: CameraCharacteristics) = try {
+        cameraCharacteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
+    } catch (e: AssertionError) {
+        // Some devices may throw AssertionError when failed to get CameraCharacteristic.
+        // Catch the AssertionError and return null to workaround it. b/231701345
+        null
+    }
 
     private fun <T> assertFutureCompletes(future: ListenableFuture<T>) {
         try {
@@ -757,13 +763,13 @@ class ZoomControlDeviceTest(
         private val failureException =
             TimeoutException("Test doesn't complete after waiting for $captureCount frames.")
 
-        @Volatile private var startReceiving = false
         @Volatile
-        private var _verifyBlock:
-            (captureRequest: CaptureRequest, captureResult: TotalCaptureResult) -> Boolean =
-            { _, _ ->
-                false
-            }
+        private var startReceiving = false
+        @Volatile
+        private var _verifyBlock: (
+            captureRequest: CaptureRequest,
+            captureResult: TotalCaptureResult
+        ) -> Boolean = { _, _ -> false }
 
         private var signal = CompletableDeferred<Unit>()
 
@@ -775,11 +781,10 @@ class ZoomControlDeviceTest(
         }
 
         suspend fun verify(
-            verifyBlock:
-                (captureRequest: CaptureRequest, captureResult: TotalCaptureResult) -> Boolean =
-                { _, _ ->
-                    false
-                },
+            verifyBlock: (
+                captureRequest: CaptureRequest,
+                captureResult: TotalCaptureResult
+            ) -> Boolean = { _, _ -> false },
             timeout: Long = TimeUnit.SECONDS.toMillis(5),
         ) {
             withTimeout(timeout) {
@@ -813,32 +818,31 @@ class ZoomControlDeviceTest(
 
         @JvmStatic
         @Parameterized.Parameters(name = "selector={0},config={2}")
-        fun data() =
-            listOf(
-                arrayOf(
-                    "front",
-                    CameraSelector.DEFAULT_FRONT_CAMERA,
-                    Camera2Config::class.simpleName,
-                    Camera2Config.defaultConfig()
-                ),
-                arrayOf(
-                    "front",
-                    CameraSelector.DEFAULT_FRONT_CAMERA,
-                    CameraPipeConfig::class.simpleName,
-                    CameraPipeConfig.defaultConfig()
-                ),
-                arrayOf(
-                    "back",
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    Camera2Config::class.simpleName,
-                    Camera2Config.defaultConfig()
-                ),
-                arrayOf(
-                    "back",
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    CameraPipeConfig::class.simpleName,
-                    CameraPipeConfig.defaultConfig()
-                ),
-            )
+        fun data() = listOf(
+            arrayOf(
+                "front",
+                CameraSelector.DEFAULT_FRONT_CAMERA,
+                Camera2Config::class.simpleName,
+                Camera2Config.defaultConfig()
+            ),
+            arrayOf(
+                "front",
+                CameraSelector.DEFAULT_FRONT_CAMERA,
+                CameraPipeConfig::class.simpleName,
+                CameraPipeConfig.defaultConfig()
+            ),
+            arrayOf(
+                "back",
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                Camera2Config::class.simpleName,
+                Camera2Config.defaultConfig()
+            ),
+            arrayOf(
+                "back",
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                CameraPipeConfig::class.simpleName,
+                CameraPipeConfig.defaultConfig()
+            ),
+        )
     }
 }

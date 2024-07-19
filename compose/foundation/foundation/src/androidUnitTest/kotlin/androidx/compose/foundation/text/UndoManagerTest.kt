@@ -29,14 +29,24 @@ class UndoManagerTest {
         val manager = UndoManager(10)
         manager.makeSnapshot(TextFieldValue("hi"))
         manager.makeSnapshot(TextFieldValue("hello"))
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hi"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hi")
+        )
         assertThat(manager.undo()).isNull()
-        assertThat(manager.redo()).isEqualTo(TextFieldValue("hello"))
+        assertThat(manager.redo()).isEqualTo(
+            TextFieldValue("hello")
+        )
         assertThat(manager.redo()).isNull()
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hi"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hi")
+        )
         manager.makeSnapshot(TextFieldValue("hola"))
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hi"))
-        assertThat(manager.redo()).isEqualTo(TextFieldValue("hola"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hi")
+        )
+        assertThat(manager.redo()).isEqualTo(
+            TextFieldValue("hola")
+        )
     }
 
     @Test
@@ -45,9 +55,13 @@ class UndoManagerTest {
         manager.makeSnapshot(TextFieldValue("hi"))
         manager.makeSnapshot(TextFieldValue("hello"))
         manager.makeSnapshot(TextFieldValue("hola"))
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hello"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hello")
+        )
         assertThat(manager.undo()).isNull()
-        assertThat(manager.redo()).isEqualTo(TextFieldValue("hola"))
+        assertThat(manager.redo()).isEqualTo(
+            TextFieldValue("hola")
+        )
     }
 
     @Test
@@ -56,8 +70,12 @@ class UndoManagerTest {
         manager.makeSnapshot(TextFieldValue("hi"))
         manager.makeSnapshot(TextFieldValue("hello"))
         manager.makeSnapshot(TextFieldValue("hola"))
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hello"))
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hi"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hello")
+        )
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hi")
+        )
     }
 
     @Test
@@ -68,7 +86,9 @@ class UndoManagerTest {
         assertThat(manager.undo()).isNull()
 
         manager.snapshotIfNeeded(TextFieldValue("hi"), now = SNAPSHOTS_INTERVAL_MILLIS + 1L)
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hello"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hello")
+        )
     }
 
     @Test
@@ -77,6 +97,8 @@ class UndoManagerTest {
         manager.makeSnapshot(TextFieldValue("hello"))
         manager.forceNextSnapshot()
         manager.snapshotIfNeeded(TextFieldValue("hi"), now = 0)
-        assertThat(manager.undo()).isEqualTo(TextFieldValue("hello"))
+        assertThat(manager.undo()).isEqualTo(
+            TextFieldValue("hello")
+        )
     }
 }

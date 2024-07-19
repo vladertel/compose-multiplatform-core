@@ -35,8 +35,11 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class NestedListsScrollBenchmark(private val compilationMode: CompilationMode) {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+class NestedListsScrollBenchmark(
+    private val compilationMode: CompilationMode
+) {
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     private lateinit var device: UiDevice
 

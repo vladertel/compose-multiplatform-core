@@ -38,7 +38,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 internal class NavGraphBuilderTest {
-    @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
     @Test
     fun testCurrentBackStackEntryNavigate() {
@@ -50,8 +51,8 @@ internal class NavGraphBuilderTest {
             navController.navigatorProvider += createBottomSheetNavigator()
 
             NavHost(navController, startDestination = firstRoute) {
-                bottomSheet(firstRoute) {}
-                bottomSheet("$secondRoute/{$key}") {}
+                bottomSheet(firstRoute) { }
+                bottomSheet("$secondRoute/{$key}") { }
             }
         }
 
@@ -72,11 +73,11 @@ internal class NavGraphBuilderTest {
             navController.navigatorProvider += createBottomSheetNavigator()
 
             NavHost(navController, startDestination = firstRoute) {
-                bottomSheet(firstRoute) {}
+                bottomSheet(firstRoute) { }
                 bottomSheet(
                     secondRoute,
                     arguments = listOf(navArgument(key) { defaultValue = defaultArg })
-                ) {}
+                ) { }
             }
         }
 
@@ -97,11 +98,11 @@ internal class NavGraphBuilderTest {
             navController.navigatorProvider += createBottomSheetNavigator()
 
             NavHost(navController, startDestination = firstRoute) {
-                bottomSheet(firstRoute) {}
+                bottomSheet(firstRoute) { }
                 bottomSheet(
                     secondRoute,
                     deepLinks = listOf(navDeepLink { uriPattern = uriString })
-                ) {}
+                ) { }
             }
         }
 
@@ -113,10 +114,8 @@ internal class NavGraphBuilderTest {
     }
 
     private fun createBottomSheetNavigator() =
-        BottomSheetNavigator(
-            sheetState =
-                ModalBottomSheetState(ModalBottomSheetValue.Hidden, composeTestRule.density)
-        )
+        BottomSheetNavigator(sheetState =
+        ModalBottomSheetState(ModalBottomSheetValue.Hidden, composeTestRule.density))
 }
 
 private const val firstRoute = "first"

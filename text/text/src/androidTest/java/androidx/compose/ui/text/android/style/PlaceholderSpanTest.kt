@@ -34,15 +34,14 @@ class PlaceholderSpanTest {
     fun width_isSp_equalsGiven() {
         val width = 1f
         val pxPerSp = 10f
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = width,
-                widthUnit = PlaceholderSpan.UNIT_SP,
-                height = 0f,
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = width,
+            widthUnit = PlaceholderSpan.UNIT_SP,
+            height = 0f,
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         assertThat(placeholderSpan.getSize(Paint(), "ab", 1, 2, null))
             .isEqualTo((width * pxPerSp).toInt())
         assertThat(placeholderSpan.widthPx).isEqualTo((width * pxPerSp).toInt())
@@ -53,15 +52,14 @@ class PlaceholderSpanTest {
         val width = 1f
         val fontSize = 24f
         val paint = Paint().apply { textSize = fontSize }
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = width,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = 0f,
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = width,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = 0f,
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         assertThat(placeholderSpan.getSize(paint, "ab", 1, 2, null))
             .isEqualTo((width * fontSize).toInt())
         assertThat(placeholderSpan.widthPx).isEqualTo((width * fontSize).toInt())
@@ -69,15 +67,14 @@ class PlaceholderSpanTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun width_isUnspecified() {
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_UNSPECIFIED,
-                height = 0f,
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_UNSPECIFIED,
+            height = 0f,
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         placeholderSpan.getSize(TextPaint(), "ab", 0, 2, null)
     }
 
@@ -89,15 +86,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to ascent / 2 converted into Sp.
         val height = abs(fontMetricsInt.ascent) / 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -115,15 +111,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to ascent / 2 converted into EM.
         val height = abs(fontMetricsInt.ascent) / 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -142,15 +137,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to 2 * ascent converted into SP.
         val height = abs(fontMetricsInt.ascent) * 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -169,15 +163,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to 2 * ascent converted into EM.
         val height = abs(fontMetricsInt.ascent) * 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -197,15 +190,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -224,15 +216,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_TOP
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_TOP
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -250,15 +241,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_TOP
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_TOP
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -277,15 +267,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_TOP
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_TOP
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -304,15 +293,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_TOP
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_TOP
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -331,15 +319,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -358,15 +345,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -385,15 +371,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -413,15 +398,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -439,15 +423,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight / 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) / 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_BOTTOM
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -466,15 +449,14 @@ class PlaceholderSpanTest {
         val pxPerSp = 2
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / pxPerSp
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_SP,
-                pxPerSp = pxPerSp.toFloat(),
-                verticalAlign = PlaceholderSpan.ALIGN_CENTER
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_SP,
+            pxPerSp = pxPerSp.toFloat(),
+            verticalAlign = PlaceholderSpan.ALIGN_CENTER
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -495,15 +477,14 @@ class PlaceholderSpanTest {
         val fontMetricsInt = paint.fontMetricsInt
         // Height equals to lineHeight * 2 converted into EM.
         val height = abs(fontMetricsInt.descent - fontMetricsInt.ascent) * 2 / fontSize
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = height.toFloat(),
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_CENTER
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = height.toFloat(),
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_CENTER
+        )
         val resultFontMetricsInt = Paint.FontMetricsInt()
         placeholderSpan.getSize(paint, "ab", 1, 2, resultFontMetricsInt)
 
@@ -519,57 +500,53 @@ class PlaceholderSpanTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun height_isUnspecified() {
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 0f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = 0f,
-                heightUnit = PlaceholderSpan.UNIT_UNSPECIFIED,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 0f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = 0f,
+            heightUnit = PlaceholderSpan.UNIT_UNSPECIFIED,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         placeholderSpan.getSize(TextPaint(), "ab", 0, 2, null)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun align_isIllegal() {
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 1f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = 1f,
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = 7
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 1f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = 1f,
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = 7
+        )
         placeholderSpan.getSize(TextPaint(), "ab", 0, 2, Paint.FontMetricsInt())
     }
 
     @Test(expected = IllegalStateException::class)
     fun widthPx_accessBeforeGetSize() {
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 1f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = 1f,
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 1f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = 1f,
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         placeholderSpan.widthPx
     }
 
     @Test(expected = IllegalStateException::class)
     fun heightPx_accessBeforeGetSize() {
-        val placeholderSpan =
-            PlaceholderSpan(
-                width = 1f,
-                widthUnit = PlaceholderSpan.UNIT_EM,
-                height = 1f,
-                heightUnit = PlaceholderSpan.UNIT_EM,
-                pxPerSp = 1f,
-                verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
-            )
+        val placeholderSpan = PlaceholderSpan(
+            width = 1f,
+            widthUnit = PlaceholderSpan.UNIT_EM,
+            height = 1f,
+            heightUnit = PlaceholderSpan.UNIT_EM,
+            pxPerSp = 1f,
+            verticalAlign = PlaceholderSpan.ALIGN_ABOVE_BASELINE
+        )
         placeholderSpan.heightPx
     }
 }

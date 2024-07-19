@@ -26,18 +26,16 @@ fun localLoadStatesOf(
     refreshLocal: LoadState = NotLoading(endOfPaginationReached = false),
     prependLocal: LoadState = NotLoading(endOfPaginationReached = false),
     appendLocal: LoadState = NotLoading(endOfPaginationReached = false)
-) =
-    CombinedLoadStates(
+) = CombinedLoadStates(
+    refresh = refreshLocal,
+    prepend = prependLocal,
+    append = appendLocal,
+    source = LoadStates(
         refresh = refreshLocal,
         prepend = prependLocal,
         append = appendLocal,
-        source =
-            LoadStates(
-                refresh = refreshLocal,
-                prepend = prependLocal,
-                append = appendLocal,
-            ),
-    )
+    ),
+)
 
 /**
  * Test-only remote LoadStates builder which defaults each state to [NotLoading], with
@@ -53,24 +51,21 @@ fun remoteLoadStatesOf(
     refreshRemote: LoadState = NotLoading(endOfPaginationReached = false),
     prependRemote: LoadState = NotLoading(endOfPaginationReached = false),
     appendRemote: LoadState = NotLoading(endOfPaginationReached = false)
-) =
-    CombinedLoadStates(
-        refresh = refresh,
-        prepend = prepend,
-        append = append,
-        source =
-            LoadStates(
-                refresh = refreshLocal,
-                prepend = prependLocal,
-                append = appendLocal,
-            ),
-        mediator =
-            LoadStates(
-                refresh = refreshRemote,
-                prepend = prependRemote,
-                append = appendRemote,
-            ),
-    )
+) = CombinedLoadStates(
+    refresh = refresh,
+    prepend = prepend,
+    append = append,
+    source = LoadStates(
+        refresh = refreshLocal,
+        prepend = prependLocal,
+        append = appendLocal,
+    ),
+    mediator = LoadStates(
+        refresh = refreshRemote,
+        prepend = prependRemote,
+        append = appendRemote,
+    ),
+)
 
 /**
  * Test-only LoadStates builder which defaults each state to [NotLoading], with
@@ -80,9 +75,8 @@ fun loadStates(
     refresh: LoadState = NotLoading(endOfPaginationReached = false),
     prepend: LoadState = NotLoading(endOfPaginationReached = false),
     append: LoadState = NotLoading(endOfPaginationReached = false),
-) =
-    LoadStates(
-        refresh = refresh,
-        prepend = prepend,
-        append = append,
-    )
+) = LoadStates(
+    refresh = refresh,
+    prepend = prepend,
+    append = append,
+)

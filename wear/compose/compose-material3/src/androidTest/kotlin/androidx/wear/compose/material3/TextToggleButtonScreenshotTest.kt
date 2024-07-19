@@ -36,51 +36,49 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class TextToggleButtonScreenshotTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
 
-    @get:Rule val testName = TestName()
-
-    @Test
-    fun textToggleButtonEnabledAndChecked() =
-        rule.verifyScreenshot(
-            methodName = testName.methodName,
-            screenshotRule = screenshotRule,
-            content = { sampleTextToggleButton() }
-        )
+    @get:Rule
+    val testName = TestName()
 
     @Test
-    fun textToggleButtonEnabledAndUnchecked() =
-        rule.verifyScreenshot(
-            methodName = testName.methodName,
-            screenshotRule = screenshotRule,
-            content = { sampleTextToggleButton(checked = false) }
-        )
+    fun textToggleButtonEnabledAndChecked() = rule.verifyScreenshot(
+        methodName = testName.methodName,
+        screenshotRule = screenshotRule,
+        content = { sampleTextToggleButton() }
+    )
 
     @Test
-    fun textToggleButtonDisabledAndChecked() =
-        rule.verifyScreenshot(
-            methodName = testName.methodName,
-            screenshotRule = screenshotRule,
-            content = { sampleTextToggleButton(enabled = false) }
-        )
+    fun textToggleButtonEnabledAndUnchecked() = rule.verifyScreenshot(
+        methodName = testName.methodName,
+        screenshotRule = screenshotRule,
+        content = { sampleTextToggleButton(checked = false) }
+    )
 
     @Test
-    fun textToggleButtonDisabledAndUnchecked() =
-        rule.verifyScreenshot(
-            methodName = testName.methodName,
-            screenshotRule = screenshotRule,
-            content = { sampleTextToggleButton(enabled = false, checked = false) }
-        )
+    fun textToggleButtonDisabledAndChecked() = rule.verifyScreenshot(
+        methodName = testName.methodName,
+        screenshotRule = screenshotRule,
+        content = { sampleTextToggleButton(enabled = false) }
+    )
 
     @Test
-    fun textToggleButtonWithOffset() =
-        rule.verifyScreenshot(
-            methodName = testName.methodName,
-            screenshotRule = screenshotRule,
-            content = { sampleTextToggleButton(modifier = Modifier.offset(10.dp)) }
-        )
+    fun textToggleButtonDisabledAndUnchecked() = rule.verifyScreenshot(
+        methodName = testName.methodName,
+        screenshotRule = screenshotRule,
+        content = { sampleTextToggleButton(enabled = false, checked = false) }
+    )
+
+    @Test
+    fun textToggleButtonWithOffset() = rule.verifyScreenshot(
+        methodName = testName.methodName,
+        screenshotRule = screenshotRule,
+        content = { sampleTextToggleButton(modifier = Modifier.offset(10.dp)) }
+    )
 
     @Composable
     private fun sampleTextToggleButton(
@@ -92,8 +90,7 @@ class TextToggleButtonScreenshotTest {
             checked = checked,
             onCheckedChange = {},
             enabled = enabled,
-            modifier = modifier.testTag(TEST_TAG)
-        ) {
+            modifier = modifier.testTag(TEST_TAG)) {
             Text(text = if (checked) "ON" else "OFF")
         }
     }

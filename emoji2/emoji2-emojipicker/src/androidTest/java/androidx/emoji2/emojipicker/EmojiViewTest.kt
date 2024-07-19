@@ -45,9 +45,11 @@ class EmojiViewTest {
         private const val GRINNING_FACE = "\uD83D\uDE00"
     }
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule("emoji2/emoji2-emojipicker")
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule("emoji2/emoji2-emojipicker")
 
-    @get:Rule val activityRule = ActivityScenarioRule(EmojiViewTestActivity::class.java)
+    @get:Rule
+    val activityRule = ActivityScenarioRule(EmojiViewTestActivity::class.java)
 
     private lateinit var emojiView: EmojiView
 
@@ -65,9 +67,9 @@ class EmojiViewTest {
     }
 
     private fun dumpAndAssertAgainstGolden(golden: String) {
-        Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
-            .applyCanvas { emojiView.draw(this) }
-            .assertAgainstGolden(screenshotRule, golden)
+        Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888).applyCanvas {
+            emojiView.draw(this)
+        }.assertAgainstGolden(screenshotRule, golden)
     }
 
     @Test
@@ -78,13 +80,9 @@ class EmojiViewTest {
 
     @Test
     fun testDrawSpannedString() {
-        setAndWait(
-            SpannableString("0")
-                .apply {
-                    setSpan(ForegroundColorSpan(Color.RED), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                .toSpanned()
-        )
+        setAndWait(SpannableString("0").apply {
+            setSpan(ForegroundColorSpan(Color.RED), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }.toSpanned())
 
         dumpAndAssertAgainstGolden("draw_red_zero")
     }

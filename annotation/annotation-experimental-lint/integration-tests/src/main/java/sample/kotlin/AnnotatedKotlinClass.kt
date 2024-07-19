@@ -25,7 +25,8 @@ open class AnnotatedKotlinClass {
     }
 
     companion object {
-        @JvmStatic val fieldStatic: Int = -1
+        @JvmStatic
+        val fieldStatic: Int = -1
 
         @JvmStatic
         fun methodStatic(): Int {

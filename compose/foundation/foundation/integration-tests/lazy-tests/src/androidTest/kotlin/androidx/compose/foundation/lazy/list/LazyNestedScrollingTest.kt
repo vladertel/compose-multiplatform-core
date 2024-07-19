@@ -47,7 +47,8 @@ import org.junit.runner.RunWith
 class LazyNestedScrollingTest {
     private val LazyTag = "LazyTag"
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val expectedDragOffset = 20f
     private val dragOffsetWithTouchSlop = expectedDragOffset + TestTouchSlop
@@ -61,20 +62,36 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Vertical, state = scrollable)) {
-                LazyColumn(Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Vertical,
+                    state = scrollable
+                )
+            ) {
+                LazyColumn(
+                    Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = 0f, y = 100f + TestTouchSlop))
-            up()
-        }
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = 0f, y = 100f + TestTouchSlop))
+                up()
+            }
 
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(100f) }
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(100f)
+        }
     }
 
     @Test
@@ -86,28 +103,46 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Vertical, state = scrollable)) {
-                LazyColumn(Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Vertical,
+                    state = scrollable
+                )
+            ) {
+                LazyColumn(
+                    Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
         // scroll forward
-        rule.onNodeWithTag(LazyTag).scrollBy(y = 20.dp, density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(y = 20.dp, density = rule.density)
 
         // scroll back so we again on 0 position
         // we scroll one extra dp to prevent rounding issues
-        rule.onNodeWithTag(LazyTag).scrollBy(y = -(21.dp), density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(y = -(21.dp), density = rule.density)
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            draggedOffset = 0f
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = 0f, y = dragOffsetWithTouchSlop))
-            up()
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                draggedOffset = 0f
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = 0f, y = dragOffsetWithTouchSlop))
+                up()
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset)
         }
-
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset) }
     }
 
     @Test
@@ -119,20 +154,36 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Vertical, state = scrollable)) {
-                LazyColumn(Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(40.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Vertical,
+                    state = scrollable
+                )
+            ) {
+                LazyColumn(
+                    Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(40.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = 0f, y = -dragOffsetWithTouchSlop))
-            up()
-        }
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = 0f, y = -dragOffsetWithTouchSlop))
+                up()
+            }
 
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset) }
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset)
+        }
     }
 
     @Test
@@ -144,24 +195,41 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Vertical, state = scrollable)) {
-                LazyColumn(Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Vertical,
+                    state = scrollable
+                )
+            ) {
+                LazyColumn(
+                    Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
         // scroll till the end
-        rule.onNodeWithTag(LazyTag).scrollBy(y = 55.dp, density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(y = 55.dp, density = rule.density)
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            draggedOffset = 0f
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = 0f, y = -dragOffsetWithTouchSlop))
-            up()
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                draggedOffset = 0f
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = 0f, y = -dragOffsetWithTouchSlop))
+                up()
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset)
         }
-
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset) }
     }
 
     @Test
@@ -173,20 +241,37 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Horizontal, state = scrollable)) {
-                LazyRow(modifier = Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Horizontal,
+                    state = scrollable
+                )
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)
+                ) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = dragOffsetWithTouchSlop, y = 0f))
-            up()
-        }
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = dragOffsetWithTouchSlop, y = 0f))
+                up()
+            }
 
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset) }
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset)
+        }
     }
 
     @Test
@@ -198,28 +283,47 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Horizontal, state = scrollable)) {
-                LazyRow(modifier = Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Horizontal,
+                    state = scrollable
+                )
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)
+                ) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
         // scroll forward
-        rule.onNodeWithTag(LazyTag).scrollBy(x = 20.dp, density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(x = 20.dp, density = rule.density)
 
         // scroll back so we again on 0 position
         // we scroll one extra dp to prevent rounding issues
-        rule.onNodeWithTag(LazyTag).scrollBy(x = -(21.dp), density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(x = -(21.dp), density = rule.density)
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            draggedOffset = 0f
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = dragOffsetWithTouchSlop, y = 0f))
-            up()
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                draggedOffset = 0f
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = dragOffsetWithTouchSlop, y = 0f))
+                up()
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset)
         }
-
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(expectedDragOffset) }
     }
 
     @Test
@@ -231,20 +335,37 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Horizontal, state = scrollable)) {
-                LazyRow(modifier = Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(40.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Horizontal,
+                    state = scrollable
+                )
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)
+                ) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(40.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = -dragOffsetWithTouchSlop, y = 0f))
-            up()
-        }
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = -dragOffsetWithTouchSlop, y = 0f))
+                up()
+            }
 
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset) }
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset)
+        }
     }
 
     @Test
@@ -256,24 +377,42 @@ class LazyNestedScrollingTest {
             it
         }
         rule.setContentWithTestViewConfiguration {
-            Box(Modifier.scrollable(orientation = Orientation.Horizontal, state = scrollable)) {
-                LazyRow(modifier = Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                    items(items) { Spacer(Modifier.requiredSize(50.dp).testTag("$it")) }
+            Box(
+                Modifier.scrollable(
+                    orientation = Orientation.Horizontal,
+                    state = scrollable
+                )
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .requiredSize(100.dp)
+                        .testTag(LazyTag)
+                ) {
+                    items(items) {
+                        Spacer(
+                            Modifier
+                                .requiredSize(50.dp)
+                                .testTag("$it"))
+                    }
                 }
             }
         }
 
         // scroll till the end
-        rule.onNodeWithTag(LazyTag).scrollBy(x = 55.dp, density = rule.density)
+        rule.onNodeWithTag(LazyTag)
+            .scrollBy(x = 55.dp, density = rule.density)
 
-        rule.onNodeWithTag(LazyTag).performTouchInput {
-            draggedOffset = 0f
-            down(Offset(x = 10f, y = 10f))
-            moveBy(Offset(x = -dragOffsetWithTouchSlop, y = 0f))
-            up()
+        rule.onNodeWithTag(LazyTag)
+            .performTouchInput {
+                draggedOffset = 0f
+                down(Offset(x = 10f, y = 10f))
+                moveBy(Offset(x = -dragOffsetWithTouchSlop, y = 0f))
+                up()
+            }
+
+        rule.runOnIdle {
+            Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset)
         }
-
-        rule.runOnIdle { Truth.assertThat(draggedOffset).isEqualTo(-expectedDragOffset) }
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -289,29 +428,47 @@ class LazyNestedScrollingTest {
         }
         rule.setContentWithTestViewConfiguration {
             Box(
-                Modifier.scrollable(orientation = Orientation.Vertical, state = scrollable)
-                    .testTag(boxTab)
+                Modifier.scrollable(
+                    orientation = Orientation.Vertical,
+                    state = scrollable
+                ).testTag(boxTab)
             ) {
-                LazyColumn(modifier = Modifier.requiredSize(200.dp)) {
+                LazyColumn(
+                    modifier = Modifier.requiredSize(200.dp)
+                ) {
                     item {
-                        LazyRow(modifier = Modifier.requiredSize(100.dp).testTag(LazyTag)) {
-                            items(items) { Spacer(Modifier.requiredSize(50.dp)) }
+                        LazyRow(
+                            modifier = Modifier
+                                .requiredSize(100.dp)
+                                .testTag(LazyTag)
+                        ) {
+                            items(items) {
+                                Spacer(Modifier.requiredSize(50.dp))
+                            }
                         }
                     }
-                    items(items) { Spacer(Modifier.requiredSize(50.dp)) }
+                    items(items) {
+                        Spacer(Modifier.requiredSize(50.dp))
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag(LazyTag).performMouseInput { this.scroll(100f) }
+        rule.onNodeWithTag(LazyTag).performMouseInput {
+            this.scroll(100f)
+        }
 
         rule.runOnIdle {
             // Mouse scroll is opposite, so we test is it less than zero (negative number).
             Truth.assertThat(total).isLessThan(0)
         }
 
-        rule.onNodeWithTag(boxTab).performMouseInput { this.scroll(-100f) }
+        rule.onNodeWithTag(boxTab).performMouseInput {
+            this.scroll(-100f)
+        }
 
-        rule.runOnIdle { Truth.assertThat(total).isLessThan(0.01f) }
+        rule.runOnIdle {
+            Truth.assertThat(total).isLessThan(0.01f)
+        }
     }
 }

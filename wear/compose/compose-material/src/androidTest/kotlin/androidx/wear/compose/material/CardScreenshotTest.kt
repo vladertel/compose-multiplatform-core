@@ -50,41 +50,50 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class CardScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
 
-    @get:Rule val testName = TestName()
-
-    @Test
-    fun app_card_ltr() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) { sampleAppCard() }
-
-    @Test
-    fun app_card_disabled() =
-        verifyScreenshot(layoutDirection = LayoutDirection.Ltr) { sampleAppCard(enabled = false) }
+    @get:Rule
+    val testName = TestName()
 
     @Test
-    fun app_card_rtl() = verifyScreenshot(layoutDirection = LayoutDirection.Rtl) { sampleAppCard() }
+    fun app_card_ltr() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
+        sampleAppCard()
+    }
 
     @Test
-    fun title_card_ltr() =
-        verifyScreenshot(layoutDirection = LayoutDirection.Ltr) { sampleTitleCard() }
+    fun app_card_disabled() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
+        sampleAppCard(enabled = false)
+    }
 
     @Test
-    fun title_card_disabled() =
-        verifyScreenshot(layoutDirection = LayoutDirection.Ltr) { sampleTitleCard(enabled = false) }
+    fun app_card_rtl() = verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+        sampleAppCard()
+    }
 
     @Test
-    fun title_card_rtl() =
-        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) { sampleTitleCard() }
+    fun title_card_ltr() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
+        sampleTitleCard()
+    }
+
+    @Test
+    fun title_card_disabled() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
+        sampleTitleCard(enabled = false)
+    }
+
+    @Test
+    fun title_card_rtl() = verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+        sampleTitleCard()
+    }
 
     @Test
     fun title_card_image_background() = verifyScreenshot {
         sampleTitleCard(
-            backgroundPainter =
-                CardDefaults.imageWithScrimBackgroundPainter(
-                    backgroundImagePainter = painterResource(id = R.drawable.backgroundimage1)
-                )
+            backgroundPainter = CardDefaults.imageWithScrimBackgroundPainter(
+                backgroundImagePainter = painterResource(id = R.drawable.backgroundimage1))
         )
     }
 
@@ -127,11 +136,12 @@ class CardScreenshotTest {
         content: @Composable () -> Unit
     ) {
         rule.setContentWithTheme {
-            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) { content() }
+            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                content()
+            }
         }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }

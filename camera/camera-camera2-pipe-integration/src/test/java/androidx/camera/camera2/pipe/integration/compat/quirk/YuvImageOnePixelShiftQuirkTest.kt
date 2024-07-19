@@ -42,18 +42,16 @@ class YuvImageOnePixelShiftQuirkTest(
         ShadowBuild.setBrand(brand)
         ShadowBuild.setModel(model)
 
-        val cameraQuirks =
-            CameraQuirks(
+        val cameraQuirks = CameraQuirks(
+            FakeCameraMetadata(),
+            StreamConfigurationMapCompat(
+                StreamConfigurationMapBuilder.newBuilder().build(),
+                OutputSizesCorrector(
                     FakeCameraMetadata(),
-                    StreamConfigurationMapCompat(
-                        StreamConfigurationMapBuilder.newBuilder().build(),
-                        OutputSizesCorrector(
-                            FakeCameraMetadata(),
-                            StreamConfigurationMapBuilder.newBuilder().build()
-                        )
-                    )
+                    StreamConfigurationMapBuilder.newBuilder().build()
                 )
-                .quirks
+            )
+        ).quirks
 
         assertThat(cameraQuirks.contains(OnePixelShiftQuirk::class.java))
             .isEqualTo(quirkEnablingExpected)
@@ -62,12 +60,11 @@ class YuvImageOnePixelShiftQuirkTest(
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "Brand: {0}, Model: {1}")
-        fun data() =
-            listOf(
-                arrayOf("motorola", "MotoG3", true),
-                arrayOf("samsung", "SM-G532F", true),
-                arrayOf("samsung", "SM-J700F", true),
-                arrayOf("motorola", "MotoG100", false),
-            )
+        fun data() = listOf(
+            arrayOf("motorola", "MotoG3", true),
+            arrayOf("samsung", "SM-G532F", true),
+            arrayOf("samsung", "SM-J700F", true),
+            arrayOf("motorola", "MotoG100", false),
+        )
     }
 }

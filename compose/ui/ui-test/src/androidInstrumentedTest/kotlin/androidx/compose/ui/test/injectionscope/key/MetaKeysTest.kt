@@ -41,21 +41,27 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Tests if the meta key methods in [KeyInjectionScope] such as [isShiftDown] work. */
+/**
+ * Tests if the meta key methods in [KeyInjectionScope] such as [isShiftDown] work.
+ */
 @MediumTest
 class MetaKeysTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Before
     fun setUp() {
         // Set content to a simple text field.
-        rule.setContent { TestTextField() }
+        rule.setContent {
+            TestTextField()
+        }
         // Bring text field into focus by clicking on it.
         rule.onNodeWithTag(Tag).performClick()
     }
 
-    @Test fun metaKeys_startUp() = assertAllMetaKeysUp()
+    @Test
+    fun metaKeys_startUp() = assertAllMetaKeysUp()
 
     @Test
     fun metaKeys_areDown_afterDown() {
@@ -70,15 +76,20 @@ class MetaKeysTest {
         assertAllMetaKeysUp()
     }
 
-    @Test fun functionKey_isDown_withFnDown() = assertKeyDownIsTrueWithKeyDown(Key.Function)
+    @Test
+    fun functionKey_isDown_withFnDown() = assertKeyDownIsTrueWithKeyDown(Key.Function)
 
-    @Test fun ctrl_isDown_withCtrlDown() = assertKeyDownIsTrueWithKeyDown(Key.CtrlLeft)
+    @Test
+    fun ctrl_isDown_withCtrlDown() = assertKeyDownIsTrueWithKeyDown(Key.CtrlLeft)
 
-    @Test fun alt_isDown_withAltDown() = assertKeyDownIsTrueWithKeyDown(Key.AltLeft)
+    @Test
+    fun alt_isDown_withAltDown() = assertKeyDownIsTrueWithKeyDown(Key.AltLeft)
 
-    @Test fun meta_isDown_withMetaDown() = assertKeyDownIsTrueWithKeyDown(Key.MetaLeft)
+    @Test
+    fun meta_isDown_withMetaDown() = assertKeyDownIsTrueWithKeyDown(Key.MetaLeft)
 
-    @Test fun shift_isDown_withShiftDown() = assertKeyDownIsTrueWithKeyDown(Key.ShiftLeft)
+    @Test
+    fun shift_isDown_withShiftDown() = assertKeyDownIsTrueWithKeyDown(Key.ShiftLeft)
 
     @Test
     fun allMetaKeysDown_withKeysDown() {
@@ -111,8 +122,8 @@ class MetaKeysTest {
     @Test
     fun fnDown_inWithFnDown_throwsIllegalStateException() {
         expectError<IllegalStateException>(
-            expectedMessage =
-                "Cannot send key down event, " + "Key\\(${Key.Function}\\) is already pressed down."
+            expectedMessage = "Cannot send key down event, " +
+                "Key\\(${Key.Function}\\) is already pressed down."
         ) {
             rule.performKeyInput {
                 withKeyDown(Key.Function) {
@@ -129,9 +140,7 @@ class MetaKeysTest {
             try {
                 // When an exception is thrown during withKeyDown
                 withKeyDown(Key.ShiftLeft) { error("") }
-            } catch (e: Exception) {
-                /* ignore */
-            }
+            } catch (e: Exception) { /* ignore */ }
             // The key was restored to up
             assertFalse(isShiftDown)
         }
@@ -143,9 +152,7 @@ class MetaKeysTest {
             try {
                 // When an exception is thrown during withKeysDown
                 withKeysDown(listOf(Key.ShiftLeft, Key.AltRight)) { error("") }
-            } catch (e: Exception) {
-                /* ignore */
-            }
+            } catch (e: Exception) { /* ignore */ }
             // The keys were restored to up
             assertFalse(isShiftDown)
             assertFalse(isAltDown)

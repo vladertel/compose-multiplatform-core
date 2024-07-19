@@ -41,7 +41,11 @@ fun PainterModifierSample() {
             get() = Size(300.0f, 300.0f)
 
         override fun DrawScope.onDraw() {
-            drawCircle(center = center, radius = size.minDimension / 2.0f, color = Color.Red)
+            drawCircle(
+                center = center,
+                radius = size.minDimension / 2.0f,
+                color = Color.Red
+            )
         }
     }
 
@@ -51,9 +55,7 @@ fun PainterModifierSample() {
                 .padding(30.dp)
                 .background(color = Color.Yellow)
                 .paint(CustomPainter())
-    ) {
-        /** intentionally empty */
-    }
+    ) { /** intentionally empty */ }
 }
 
 @Sampled

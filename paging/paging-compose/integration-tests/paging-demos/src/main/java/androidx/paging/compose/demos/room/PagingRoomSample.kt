@@ -47,7 +47,13 @@ fun PagingRoomDemo() {
 
     val pageSize = 15
     val pager = remember {
-        Pager(PagingConfig(pageSize = pageSize, enablePlaceholders = true, maxSize = 200)) {
+        Pager(
+            PagingConfig(
+                pageSize = pageSize,
+                enablePlaceholders = true,
+                maxSize = 200
+            )
+        ) {
             dao.allUsers()
         }
     }
@@ -64,7 +70,13 @@ fun PagingRoomDemo() {
             Text("Add random user")
         }
 
-        Button(onClick = { scope.launch(Dispatchers.IO) { dao.clearAll() } }) {
+        Button(
+            onClick = {
+                scope.launch(Dispatchers.IO) {
+                    dao.clearAll()
+                }
+            }
+        ) {
             Text("Clear all users")
         }
 
@@ -87,7 +99,10 @@ fun PagingRoomDemo() {
                     val randomUser = dao.getRandomUser()
                     if (randomUser != null) {
                         val newName = Names[Random.nextInt(Names.size)]
-                        val updatedUser = User(randomUser.id, newName)
+                        val updatedUser = User(
+                            randomUser.id,
+                            newName
+                        )
                         dao.update(updatedUser)
                     }
                 }
@@ -114,19 +129,18 @@ fun PagingRoomDemo() {
     }
 }
 
-val Names =
-    listOf(
-        "John",
-        "Jack",
-        "Ben",
-        "Sally",
-        "Tom",
-        "Jinny",
-        "Mark",
-        "Betty",
-        "Liam",
-        "Noah",
-        "Olivia",
-        "Emma",
-        "Ava"
-    )
+val Names = listOf(
+    "John",
+    "Jack",
+    "Ben",
+    "Sally",
+    "Tom",
+    "Jinny",
+    "Mark",
+    "Betty",
+    "Liam",
+    "Noah",
+    "Olivia",
+    "Emma",
+    "Ava"
+)

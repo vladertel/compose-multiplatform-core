@@ -19,7 +19,9 @@ package androidx.compose.ui.tooling.animation
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.tooling.ComposeAnimation
 
-/** [ComposeAnimation] where [animationObject] is [Transition]. */
+/**
+ * [ComposeAnimation] where [animationObject] is [Transition].
+ */
 internal interface TransitionBasedAnimation<T> : ComposeAnimation {
     override val animationObject: Transition<T>
 }

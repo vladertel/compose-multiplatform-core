@@ -44,7 +44,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalWearMaterial3Api::class)
 public class SliderTest {
-    @get:Rule public val rule = createComposeRule()
+    @get:Rule
+    public val rule = createComposeRule()
 
     @Test
     public fun supports_testtag() {
@@ -74,8 +75,11 @@ public class SliderTest {
                 modifier = Modifier.testTag(TEST_TAG)
             )
         }
-        rule.runOnIdle { state.value = 20f }
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..10f, 4))
+        rule.runOnIdle {
+            state.value = 20f
+        }
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..10f, 4))
     }
 
     @Test
@@ -91,14 +95,22 @@ public class SliderTest {
                 modifier = Modifier.testTag(TEST_TAG)
             )
         }
-        rule.runOnIdle { state.value = -20f }
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..10f, 4))
+        rule.runOnIdle {
+            state.value = -20f
+        }
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..10f, 4))
     }
 
     @Test(expected = IllegalArgumentException::class)
     public fun throws_when_steps_negative() {
         rule.setContent {
-            DefaultInlineSlider(value = 0f, valueRange = 0f..10f, onValueChange = {}, steps = -1)
+            DefaultInlineSlider(
+                value = 0f,
+                valueRange = 0f..10f,
+                onValueChange = {},
+                steps = -1
+            )
         }
     }
 
@@ -117,9 +129,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 0.6f }
+        rule.runOnUiThread {
+            state.value = 0.6f
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
     }
 
     @Test
@@ -137,9 +152,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 0.65f }
+        rule.runOnUiThread {
+            state.value = 0.65f
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
     }
 
     @Test
@@ -157,9 +175,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 0.55f }
+        rule.runOnUiThread {
+            state.value = 0.55f
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0.6f, range, 4))
     }
 
     @Test
@@ -176,7 +197,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(1f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(1f)
+        }
     }
 
     @Test
@@ -193,7 +216,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(width - 15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(3f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(3f)
+        }
     }
 
     @Test
@@ -206,15 +231,13 @@ public class SliderTest {
                 enabled = false,
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        "Increase",
+                        InlineSliderDefaults.Increase, "Increase",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        "Decrease",
+                        InlineSliderDefaults.Decrease, "Decrease",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -225,7 +248,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(2f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(2f)
+        }
     }
 
     @Test
@@ -239,15 +264,13 @@ public class SliderTest {
                 onValueChange = { state.value = it },
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        "Increase",
+                        InlineSliderDefaults.Increase, "Increase",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        "Decrease",
+                        InlineSliderDefaults.Decrease, "Decrease",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -257,7 +280,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(width - 15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(2f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(2f)
+        }
     }
 
     @Test
@@ -274,7 +299,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(1f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(1f)
+        }
     }
 
     @Test
@@ -291,7 +318,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(width - 15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isWithin(0.001f).of(4f) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isWithin(0.001f).of(4f)
+        }
     }
 
     @Test
@@ -306,14 +335,15 @@ public class SliderTest {
                 onValueChange = {},
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        "Increase",
+                        InlineSliderDefaults.Increase, "Increase",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        modifier = Modifier.testTag(iconTag).size(InlineSliderDefaults.IconSize),
+                        modifier = Modifier
+                            .testTag(iconTag)
+                            .size(InlineSliderDefaults.IconSize),
                         imageVector = Icons.Default.Star,
                         contentDescription = ""
                     )
@@ -322,8 +352,7 @@ public class SliderTest {
         }
 
         rule.waitForIdle()
-        rule
-            .onNodeWithTag(iconTag, true)
+        rule.onNodeWithTag(iconTag, true)
             .assertExists()
             .assertLeftPositionInRootIsEqualTo(IconsOuterHorizontalMargin)
     }
@@ -340,15 +369,16 @@ public class SliderTest {
                 onValueChange = {},
                 increaseIcon = {
                     Icon(
-                        modifier = Modifier.testTag(iconTag).size(InlineSliderDefaults.IconSize),
+                        modifier = Modifier
+                            .testTag(iconTag)
+                            .size(InlineSliderDefaults.IconSize),
                         imageVector = Icons.Default.Star,
                         contentDescription = ""
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        "Decrease",
+                        InlineSliderDefaults.Decrease, "Decrease",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -357,11 +387,11 @@ public class SliderTest {
         val unclippedBoundsInRoot = rule.onRoot().getUnclippedBoundsInRoot()
 
         rule.waitForIdle()
-        rule
-            .onNodeWithTag(iconTag, true)
+        rule.onNodeWithTag(iconTag, true)
             .assertExists()
             .assertLeftPositionInRootIsEqualTo(
-                unclippedBoundsInRoot.width - IconsOuterHorizontalMargin - DefaultIconWidth
+                unclippedBoundsInRoot.width -
+                    IconsOuterHorizontalMargin - DefaultIconWidth
             )
     }
 
@@ -376,15 +406,13 @@ public class SliderTest {
                 steps = 5,
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        "Increase",
+                        InlineSliderDefaults.Increase, "Increase",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        testContentDescription,
+                        InlineSliderDefaults.Decrease, testContentDescription,
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -393,8 +421,7 @@ public class SliderTest {
         }
 
         rule.waitForIdle()
-        rule
-            .onNodeWithTag(TEST_TAG, true)
+        rule.onNodeWithTag(TEST_TAG, true)
             // 0 is the index of decrease button, 1 - increase button
             .onChildAt(0)
             .onChild()
@@ -412,15 +439,13 @@ public class SliderTest {
                 steps = 5,
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        testContentDescription,
+                        InlineSliderDefaults.Increase, testContentDescription,
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        "Decrease",
+                        InlineSliderDefaults.Decrease, "Decrease",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -429,8 +454,7 @@ public class SliderTest {
         }
 
         rule.waitForIdle()
-        rule
-            .onNodeWithTag(TEST_TAG, true)
+        rule.onNodeWithTag(TEST_TAG, true)
             // 0 is the index of decrease button, 1 - increase button
             .onChildAt(1)
             .onChild()
@@ -462,7 +486,8 @@ public class SliderTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(2f, 0f..10f, 9))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(2f, 0f..10f, 9))
     }
 
     @Test
@@ -476,7 +501,8 @@ public class SliderTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(2f, 0f..10f, 4))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(2f, 0f..10f, 4))
     }
 
     @Test
@@ -490,7 +516,8 @@ public class SliderTest {
             )
         }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 1))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 1))
     }
 
     @Test
@@ -505,8 +532,11 @@ public class SliderTest {
                 modifier = Modifier.testTag(TEST_TAG)
             )
         }
-        rule.runOnIdle { state.value = 20 }
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..10f, 9))
+        rule.runOnIdle {
+            state.value = 20
+        }
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(10f, 0f..10f, 9))
     }
 
     @Test
@@ -521,8 +551,11 @@ public class SliderTest {
                 modifier = Modifier.testTag(TEST_TAG)
             )
         }
-        rule.runOnIdle { state.value = -20 }
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..10f, 9))
+        rule.runOnIdle {
+            state.value = -20
+        }
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..10f, 9))
     }
 
     @Test
@@ -538,9 +571,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 6 }
+        rule.runOnUiThread {
+            state.value = 6
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 3))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 3))
     }
 
     @Test
@@ -556,9 +592,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 7 }
+        rule.runOnUiThread {
+            state.value = 7
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 3))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(6f, 0f..12f, 3))
     }
 
     @Test
@@ -574,9 +613,12 @@ public class SliderTest {
             )
         }
 
-        rule.runOnUiThread { state.value = 8 }
+        rule.runOnUiThread {
+            state.value = 8
+        }
 
-        rule.onNodeWithTag(TEST_TAG).assertRangeInfoEquals(ProgressBarRangeInfo(9f, 0f..12f, 3))
+        rule.onNodeWithTag(TEST_TAG)
+            .assertRangeInfoEquals(ProgressBarRangeInfo(9f, 0f..12f, 3))
     }
 
     @Test
@@ -592,7 +634,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isEqualTo(1) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isEqualTo(1)
+        }
     }
 
     @Test
@@ -608,7 +652,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(width - 15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isEqualTo(3) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isEqualTo(3)
+        }
     }
 
     @Test
@@ -621,15 +667,13 @@ public class SliderTest {
                 enabled = false,
                 increaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Increase,
-                        "Increase",
+                        InlineSliderDefaults.Increase, "Increase",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
                 decreaseIcon = {
                     Icon(
-                        InlineSliderDefaults.Decrease,
-                        "Decrease",
+                        InlineSliderDefaults.Decrease, "Decrease",
                         Modifier.size(InlineSliderDefaults.IconSize)
                     )
                 },
@@ -639,7 +683,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isEqualTo(2) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isEqualTo(2)
+        }
     }
 
     @Test
@@ -655,7 +701,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isEqualTo(1) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isEqualTo(1)
+        }
     }
 
     @Test
@@ -671,7 +719,9 @@ public class SliderTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput { click(Offset(width - 15f, height / 2f)) }
-        rule.runOnIdle { Truth.assertThat(state.value).isEqualTo(4) }
+        rule.runOnIdle {
+            Truth.assertThat(state.value).isEqualTo(4)
+        }
     }
 
     @Composable
@@ -687,15 +737,13 @@ public class SliderTest {
             value = value,
             increaseIcon = {
                 Icon(
-                    InlineSliderDefaults.Increase,
-                    "Increase",
+                    InlineSliderDefaults.Increase, "Increase",
                     Modifier.size(InlineSliderDefaults.IconSize)
                 )
             },
             decreaseIcon = {
                 Icon(
-                    InlineSliderDefaults.Decrease,
-                    "Decrease",
+                    InlineSliderDefaults.Decrease, "Decrease",
                     Modifier.size(InlineSliderDefaults.IconSize)
                 )
             },
@@ -717,15 +765,13 @@ public class SliderTest {
             value = value,
             increaseIcon = {
                 Icon(
-                    InlineSliderDefaults.Increase,
-                    "Increase",
+                    InlineSliderDefaults.Increase, "Increase",
                     Modifier.size(InlineSliderDefaults.IconSize)
                 )
             },
             decreaseIcon = {
                 Icon(
-                    InlineSliderDefaults.Decrease,
-                    "Decrease",
+                    InlineSliderDefaults.Decrease, "Decrease",
                     Modifier.size(InlineSliderDefaults.IconSize)
                 )
             },

@@ -59,6 +59,8 @@ fun NestedNavComposable() {
     }
 }
 
-@HiltViewModel class ExampleViewModel @Inject constructor() : ViewModel()
+@HiltViewModel
+class ExampleViewModel @Inject constructor() : ViewModel()
 
-@HiltViewModel class ParentViewModel @Inject constructor() : ViewModel()
+@HiltViewModel
+class ParentViewModel @Inject constructor() : ViewModel()

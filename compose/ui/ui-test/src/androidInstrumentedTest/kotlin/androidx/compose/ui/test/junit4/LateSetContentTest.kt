@@ -32,14 +32,21 @@ import org.junit.Test
 @OptIn(ExperimentalTestApi::class)
 class LateSetContentTest {
 
-    @Test fun test() = runAndroidComposeUiTest<Activity> { onNodeWithTag("Node").assertExists() }
+    @Test
+    fun test() = runAndroidComposeUiTest<Activity> {
+        onNodeWithTag("Node").assertExists()
+    }
 
     class Activity : ComponentActivity() {
         private val handler = Handler(Looper.getMainLooper())
-
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
-            handler.postDelayed({ setContent { BoundaryNode("Node") } }, 500)
+            handler.postDelayed(
+                {
+                    setContent { BoundaryNode("Node") }
+                },
+                500
+            )
         }
     }
 }

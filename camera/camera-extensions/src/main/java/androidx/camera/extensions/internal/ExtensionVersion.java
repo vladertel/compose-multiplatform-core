@@ -18,6 +18,7 @@ package androidx.camera.extensions.internal;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.Logger;
 import androidx.camera.extensions.impl.ExtensionVersionImpl;
@@ -25,6 +26,7 @@ import androidx.camera.extensions.impl.ExtensionVersionImpl;
 /**
  * Provides interfaces to check the extension version.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public abstract class ExtensionVersion {
     private static final String TAG = "ExtenderVersion";
 

@@ -33,11 +33,14 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Test {@link AppCompatTextView} under non-linear font scaling. */
+/**
+ * Test {@link AppCompatTextView} under non-linear font scaling.
+ */
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class AppCompatTextViewFontScalingTest {
-    @get:Rule val scenarioRule = ActivityScenarioRule(TextViewFontScalingActivity::class.java)
+    @get:Rule
+    val scenarioRule = ActivityScenarioRule(TextViewFontScalingActivity::class.java)
 
     @After
     fun teardown() {
@@ -164,10 +167,10 @@ class AppCompatTextViewFontScalingTest {
         /**
          * Tolerance for comparing expected float lineHeight to the integer one returned by
          * getLineHeight(). It is pretty lenient to account for integer rounding when text size is
-         * loaded from an attribute. (When loading an SP resource from an attribute for textSize, it
-         * is rounded to the nearest pixel, which can throw off calculations quite a lot. Not enough
-         * to make much of a difference to the user, but enough to need a wide tolerance in tests.
-         * See b/279456702 for more details.)
+         * loaded from an attribute. (When loading an SP resource from an attribute for textSize,
+         * it is rounded to the nearest pixel, which can throw off calculations quite a lot. Not
+         * enough to make much of a difference to the user, but enough to need a wide tolerance in
+         * tests. See b/279456702 for more details.)
          */
         private const val TOLERANCE = 5f
 
@@ -181,14 +184,14 @@ class AppCompatTextViewFontScalingTest {
             // Calculate what line height would be without non-linear font scaling compressing it.
             // The trick is multiplying afterwards (by the pixel value) instead of before (by the SP
             // value)
-            val expectedLineHeightPx =
-                lineHeightMultiplier *
-                    TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_SP,
-                        textSizeSp,
-                        activity.resources.displayMetrics
-                    )
-            assertThat(textView.lineHeight.toFloat()).isWithin(TOLERANCE).of(expectedLineHeightPx)
+            val expectedLineHeightPx = lineHeightMultiplier * TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                textSizeSp,
+                activity.resources.displayMetrics
+            )
+            assertThat(textView.lineHeight.toFloat())
+                .isWithin(TOLERANCE)
+                .of(expectedLineHeightPx)
         }
     }
 }

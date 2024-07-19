@@ -27,13 +27,15 @@ public class TestActivity : Activity() {
         // callback when the activity created
         onActivityCreated(this)
         // disable enter animation
-        @Suppress("Deprecation") overridePendingTransition(0, 0)
+        @Suppress("Deprecation")
+        overridePendingTransition(0, 0)
     }
 
     override fun finish() {
         super.finish()
         // disable exit animation
-        @Suppress("Deprecation") overridePendingTransition(0, 0)
+        @Suppress("Deprecation")
+        overridePendingTransition(0, 0)
     }
 
     public companion object {

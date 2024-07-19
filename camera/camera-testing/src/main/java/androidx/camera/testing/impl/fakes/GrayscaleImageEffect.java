@@ -24,9 +24,11 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.ImageProcessor;
 import androidx.camera.core.ImageProxy;
@@ -35,6 +37,7 @@ import androidx.camera.core.imagecapture.RgbaImageProxy;
 /**
  * Create a grayscale image effect for testing.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class GrayscaleImageEffect extends CameraEffect {
 
     public GrayscaleImageEffect() {

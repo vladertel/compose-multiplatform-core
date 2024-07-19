@@ -59,7 +59,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class CollectionInfoTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     private lateinit var composeView: AndroidComposeView
     private val tag = "TestTag"
@@ -93,7 +94,9 @@ class CollectionInfoTest {
     fun testDefaultCollectionInfo_lazyList() {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
-            LazyColumn(Modifier.testTag(tag)) { items(2) { BasicText("Text") } }
+            LazyColumn(Modifier.testTag(tag)) {
+                items(2) { BasicText("Text") }
+            }
         }
         val virtualId = rule.onNodeWithTag(tag).semanticsId
 
@@ -114,7 +117,11 @@ class CollectionInfoTest {
     fun testCollectionInfo_lazyList() {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
-            LazyColumn(Modifier.testTag(tag).semantics { collectionInfo = CollectionInfo(2, 1) }) {
+            LazyColumn(
+                Modifier
+                    .testTag(tag)
+                    .semantics { collectionInfo = CollectionInfo(2, 1) }
+            ) {
                 items(2) { BasicText("Text") }
             }
         }
@@ -137,7 +144,9 @@ class CollectionInfoTest {
     fun testCollectionInfo_withSelectableGroup_andDefaultLazyListSemantics() {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
-            LazyColumn(Modifier.testTag(tag).selectableGroup()) { items(2) { BasicText("Text") } }
+            LazyColumn(Modifier.testTag(tag).selectableGroup()) {
+                items(2) { BasicText("Text") }
+            }
         }
         val virtualId = rule.onNodeWithTag(tag).semanticsId
 
@@ -159,9 +168,10 @@ class CollectionInfoTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             LazyColumn(
-                Modifier.testTag(tag).selectableGroup().semantics {
-                    collectionInfo = CollectionInfo(2, 1)
-                }
+                Modifier
+                    .testTag(tag)
+                    .selectableGroup()
+                    .semantics { collectionInfo = CollectionInfo(2, 1) }
             ) {
                 items(2) { BasicText("Text") }
             }
@@ -187,8 +197,17 @@ class CollectionInfoTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Column(Modifier.selectableGroup()) {
-                Box(Modifier.size(50.dp).testTag(tag).selectable(selected = true, onClick = {}))
-                Box(Modifier.size(50.dp).selectable(selected = false, onClick = {}))
+                Box(
+                    Modifier
+                        .size(50.dp)
+                        .testTag(tag)
+                        .selectable(selected = true, onClick = {})
+                )
+                Box(
+                    Modifier
+                        .size(50.dp)
+                        .selectable(selected = false, onClick = {})
+                )
             }
         }
         val virtualId = rule.onNodeWithTag(tag).semanticsId
@@ -326,9 +345,10 @@ class CollectionInfoTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Column(
-                Modifier.size(10.dp).testTag(tag).semantics {
-                    collectionInfo = CollectionInfo(1, 1)
-                }
+                Modifier
+                    .size(10.dp)
+                    .testTag(tag)
+                    .semantics { collectionInfo = CollectionInfo(1, 1) }
             ) {
                 // items
             }
@@ -349,7 +369,12 @@ class CollectionInfoTest {
     fun testSemanticsNodeHasCollectionInfo_whenProvidedViaSelectableGroup() {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
-            Column(Modifier.size(10.dp).testTag(tag).selectableGroup()) {
+            Column(
+                Modifier
+                    .size(10.dp)
+                    .testTag(tag)
+                    .selectableGroup()
+            ) {
                 // items
                 Box(Modifier.size(10.dp).selectable(selected = true, onClick = {}))
                 Box(Modifier.size(10.dp).selectable(selected = false, onClick = {}))
@@ -372,7 +397,12 @@ class CollectionInfoTest {
     fun testSemanticsNodeHasCollectionInfo_whenProvidedViaEmptySelectableGroup() {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
-            Column(Modifier.size(10.dp).testTag(tag).selectableGroup()) {
+            Column(
+                Modifier
+                    .size(10.dp)
+                    .testTag(tag)
+                    .selectableGroup()
+            ) {
                 // items
             }
         }
@@ -408,19 +438,22 @@ class CollectionInfoTest {
         rule.setContentWithAccessibilityEnabled {
             Column(Modifier.selectableGroup()) {
                 Box(
-                    Modifier.size(50.dp)
+                    Modifier
+                        .size(50.dp)
                         .selectable(selected = true, onClick = {})
                         .zIndex(3f)
                         .testTag("item0")
                 )
                 Box(
-                    Modifier.size(50.dp)
+                    Modifier
+                        .size(50.dp)
                         .selectable(selected = false, onClick = {})
                         .zIndex(2f)
                         .testTag("item1")
                 )
                 Box(
-                    Modifier.size(50.dp)
+                    Modifier
+                        .size(50.dp)
                         .selectable(selected = false, onClick = {})
                         .zIndex(1f)
                         .testTag("item2")
@@ -480,8 +513,7 @@ class CollectionInfoTest {
     }
 
     // TODO(b/272068594): Add api to fetch the semantics id from SemanticsNodeInteraction directly.
-    private val SemanticsNodeInteraction.semanticsId: Int
-        get() = fetchSemanticsNode().id
+    private val SemanticsNodeInteraction.semanticsId: Int get() = fetchSemanticsNode().id
 
     private fun ComposeContentTestRule.setContentWithAccessibilityEnabled(
         content: @Composable () -> Unit

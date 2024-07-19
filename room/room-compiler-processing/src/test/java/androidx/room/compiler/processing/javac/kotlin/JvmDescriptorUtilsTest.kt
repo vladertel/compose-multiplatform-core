@@ -47,8 +47,7 @@ class JvmDescriptorUtilsTest {
 
         @Target({ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR})
         public @interface Describe { }
-        """
-            .toJFO("androidx.room.test.Describe")
+        """.toJFO("androidx.room.test.Describe")
 
     @Test
     fun descriptor_method_simple() {
@@ -61,10 +60,10 @@ class JvmDescriptorUtilsTest {
                 public void emptyMethod() {
                 }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass")
+            """.toJFO("androidx.room.test.DummyClass")
         ) { descriptors ->
-            assertThat(descriptors.first()).isEqualTo("emptyMethod()V")
+            assertThat(descriptors.first())
+                .isEqualTo("emptyMethod()V")
         }
     }
 
@@ -89,18 +88,16 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 List<String> field4;
             }
-            """
-                .toJFO("androidx.room.test.DummyClass")
+            """.toJFO("androidx.room.test.DummyClass")
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "field1:I",
-                        "field2:Ljava/lang/String;",
-                        "field3:Ljava/lang/Object;",
-                        "field4:Ljava/util/List;"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "field1:I",
+                    "field2:Ljava/lang/String;",
+                    "field3:Ljava/lang/Object;",
+                    "field4:Ljava/util/List;"
                 )
+            )
         }
     }
 
@@ -143,23 +140,21 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 static <P extends String & List<Character>> P method9() { return null; }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass")
+            """.toJFO("androidx.room.test.DummyClass")
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "method1(Ljava/lang/Object;)V",
-                        "method2()Ljava/lang/Object;",
-                        "method3()Ljava/util/List;",
-                        "method4()Ljava/util/Map;",
-                        "method5()Ljava/util/ArrayList;",
-                        "method6(Ljava/lang/Object;)Ljava/lang/Object;",
-                        "method7(Ljava/lang/Object;)Ljava/lang/String;",
-                        "method8()Ljava/util/Collection;",
-                        "method9()Ljava/lang/String;"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "method1(Ljava/lang/Object;)V",
+                    "method2()Ljava/lang/Object;",
+                    "method3()Ljava/util/List;",
+                    "method4()Ljava/util/Map;",
+                    "method5()Ljava/util/ArrayList;",
+                    "method6(Ljava/lang/Object;)Ljava/lang/Object;",
+                    "method7(Ljava/lang/Object;)Ljava/lang/String;",
+                    "method8()Ljava/util/Collection;",
+                    "method9()Ljava/lang/String;"
                 )
+            )
         }
     }
 
@@ -182,8 +177,7 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 void method4(long bigNumber, short littlerNumber) { }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass")
+            """.toJFO("androidx.room.test.DummyClass")
         ) { descriptors ->
             assertThat(descriptors)
                 .isEqualTo(setOf("method1(ZI)V", "method2(C)B", "method3(DF)V", "method4(JS)V"))
@@ -213,18 +207,16 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 Map<String, Object> method4() { return null; }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass")
+            """.toJFO("androidx.room.test.DummyClass")
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "method1(Ljava/lang/Object;)V",
-                        "method2()Ljava/lang/Object;",
-                        "method3(Ljava/util/ArrayList;)Ljava/util/List;",
-                        "method4()Ljava/util/Map;"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "method1(Ljava/lang/Object;)V",
+                    "method2()Ljava/lang/Object;",
+                    "method3(Ljava/util/ArrayList;)Ljava/util/List;",
+                    "method4()Ljava/util/Map;"
                 )
+            )
         }
     }
 
@@ -235,8 +227,7 @@ class JvmDescriptorUtilsTest {
             package androidx.room.test;
 
             class DataClass { }
-            """
-                .toJFO("androidx.room.test.DataClass")
+            """.toJFO("androidx.room.test.DataClass")
 
         singleRun(
             """
@@ -249,17 +240,15 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 DataClass method2() { return null; }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass"),
+            """.toJFO("androidx.room.test.DummyClass"),
             extraJfo
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "method1(Landroidx/room/test/DataClass;)V",
-                        "method2()Landroidx/room/test/DataClass;"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "method1(Landroidx/room/test/DataClass;)V",
+                    "method2()Landroidx/room/test/DataClass;"
                 )
+            )
         }
     }
 
@@ -279,8 +268,7 @@ class JvmDescriptorUtilsTest {
                     VALUE1, VALUE2
                 }
             }
-            """
-                .toJFO("androidx.room.test.DataClass")
+            """.toJFO("androidx.room.test.DataClass")
 
         singleRun(
             """
@@ -299,19 +287,17 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 DataClass.StaticInnerData method4() { return null; }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass"),
+            """.toJFO("androidx.room.test.DummyClass"),
             extraJfo
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "method1(Landroidx/room/test/DataClass\$MemberInnerData;)V",
-                        "method2(Landroidx/room/test/DataClass\$StaticInnerData;)V",
-                        "method3(Landroidx/room/test/DataClass\$EnumData;)V",
-                        "method4()Landroidx/room/test/DataClass\$StaticInnerData;"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "method1(Landroidx/room/test/DataClass\$MemberInnerData;)V",
+                    "method2(Landroidx/room/test/DataClass\$StaticInnerData;)V",
+                    "method3(Landroidx/room/test/DataClass\$EnumData;)V",
+                    "method4()Landroidx/room/test/DataClass\$StaticInnerData;"
                 )
+            )
         }
     }
 
@@ -322,8 +308,7 @@ class JvmDescriptorUtilsTest {
             package androidx.room.test;
 
             class DataClass { }
-            """
-                .toJFO("androidx.room.test.DataClass")
+            """.toJFO("androidx.room.test.DataClass")
 
         singleRun(
             """
@@ -342,19 +327,17 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 void method4(int... array) { }
             }
-            """
-                .toJFO("androidx.room.test.DummyClass"),
+            """.toJFO("androidx.room.test.DummyClass"),
             extraJfo
         ) { descriptors ->
-            assertThat(descriptors)
-                .isEqualTo(
-                    setOf(
-                        "method1([Landroidx/room/test/DataClass;)V",
-                        "method2()[Landroidx/room/test/DataClass;",
-                        "method3([I)V",
-                        "method4([I)V"
-                    )
+            assertThat(descriptors).isEqualTo(
+                setOf(
+                    "method1([Landroidx/room/test/DataClass;)V",
+                    "method2()[Landroidx/room/test/DataClass;",
+                    "method3([I)V",
+                    "method4([I)V"
                 )
+            )
         }
     }
 
@@ -375,8 +358,7 @@ class JvmDescriptorUtilsTest {
                     }
                 }
             }
-            """
-                .toJFO("Custom")
+            """.toJFO("Custom")
         singleRun(
             """
             package androidx.room.test;
@@ -397,26 +379,30 @@ class JvmDescriptorUtilsTest {
                 @Describe
                 int[][] intArrayOfArray;
             }
-            """
-                .toJFO("androidx.room.test.Foo"),
+            """.toJFO("androidx.room.test.Foo"),
             extraJfo
         ) {
             assertThat(
-                    it.map {
-                        // the format is name:type so we strip everything before `:`
-                        it.split(':')[1].typeNameFromJvmSignature()
-                    }
-                )
-                .containsExactly(
-                    TypeName.INT,
-                    ClassName.get(Map::class.java),
-                    ClassName.get(Map.Entry::class.java),
-                    ArrayTypeName.of(TypeName.INT),
-                    ArrayTypeName.of(ArrayTypeName.of(TypeName.INT)),
-                    ClassName.get("", "Custom"),
-                    ClassName.get("", "Custom", "Nested1"),
-                    ClassName.get("", "Custom", "Nested1", "Nested2"),
-                )
+                it.map {
+                    // the format is name:type so we strip everything before `:`
+                    it.split(':')[1].typeNameFromJvmSignature()
+                }
+            ).containsExactly(
+                TypeName.INT,
+                ClassName.get(Map::class.java),
+                ClassName.get(Map.Entry::class.java),
+                ArrayTypeName.of(
+                    TypeName.INT
+                ),
+                ArrayTypeName.of(
+                    ArrayTypeName.of(
+                        TypeName.INT
+                    )
+                ),
+                ClassName.get("", "Custom"),
+                ClassName.get("", "Custom", "Nested1"),
+                ClassName.get("", "Custom", "Nested1", "Nested2"),
+            )
         }
     }
 
@@ -424,41 +410,34 @@ class JvmDescriptorUtilsTest {
         JavaFileObjects.forSourceLines(qName, this)
 
     @Suppress("UnstableApiUsage")
-    private fun singleRun(vararg jfo: JavaFileObject, handler: (Set<String>) -> Unit) {
+    private fun singleRun(
+        vararg jfo: JavaFileObject,
+        handler: (Set<String>) -> Unit
+    ) {
         Truth.assertAbout(JavaSourcesSubjectFactory.javaSources())
             .that(listOf(describeAnnotation) + jfo)
-            .processedWith(
-                object : AbstractProcessor() {
-                    override fun process(
-                        annotations: Set<TypeElement>,
-                        roundEnv: RoundEnvironment
-                    ): Boolean {
-                        if (annotations.isNotEmpty()) {
-                            roundEnv
-                                .getElementsAnnotatedWith(annotations.first())
-                                .map { element ->
-                                    when (element.kind) {
-                                        FIELD ->
-                                            MoreElements.asVariable(element)
-                                                .descriptor(processingEnv)
-                                        METHOD,
-                                        CONSTRUCTOR ->
-                                            MoreElements.asExecutable(element)
-                                                .descriptor(processingEnv)
-                                        else -> error("Unsupported element to describe.")
-                                    }
-                                }
-                                .toSet()
-                                .let(handler)
-                        }
-                        return true
+            .processedWith(object : AbstractProcessor() {
+                override fun process(
+                    annotations: Set<TypeElement>,
+                    roundEnv: RoundEnvironment
+                ): Boolean {
+                    if (annotations.isNotEmpty()) {
+                        roundEnv.getElementsAnnotatedWith(annotations.first()).map { element ->
+                            when (element.kind) {
+                                FIELD ->
+                                    MoreElements.asVariable(element).descriptor(processingEnv)
+                                METHOD, CONSTRUCTOR ->
+                                    MoreElements.asExecutable(element).descriptor(processingEnv)
+                                else -> error("Unsupported element to describe.")
+                            }
+                        }.toSet().let(handler)
                     }
-
-                    override fun getSupportedAnnotationTypes(): Set<String> {
-                        return setOf("androidx.room.test.Describe")
-                    }
+                    return true
                 }
-            )
-            .compilesWithoutError()
+
+                override fun getSupportedAnnotationTypes(): Set<String> {
+                    return setOf("androidx.room.test.Describe")
+                }
+            }).compilesWithoutError()
     }
 }

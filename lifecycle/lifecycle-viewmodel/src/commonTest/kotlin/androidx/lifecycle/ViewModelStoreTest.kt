@@ -38,7 +38,6 @@ class ViewModelStoreTest {
 
     private open class TestViewModel : ViewModel() {
         var cleared = false
-
         public override fun onCleared() {
             cleared = true
         }

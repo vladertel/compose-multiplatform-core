@@ -27,10 +27,9 @@ import org.junit.Test
 
 class TypeAssignmentTest {
     companion object {
-        private val TEST_OBJECT =
-            Source.java(
-                "foo.bar.MyObject",
-                """
+        private val TEST_OBJECT = Source.java(
+            "foo.bar.MyObject",
+            """
             package foo.bar;
             import java.util.Set;
             import java.util.HashSet;
@@ -44,9 +43,8 @@ class TypeAssignmentTest {
                 Map<String, ?> mUnboundedMap;
                 Map<String, String> mStringMap;
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
     }
 
     @Test
@@ -55,7 +53,11 @@ class TypeAssignmentTest {
             val testObject = processingEnv.requireTypeElement("foo.bar.MyObject")
             val string = testObject.getField("mString")
             val integer = testObject.getField("mInteger")
-            assertThat(integer.type.isAssignableFromWithoutVariance(string.type), `is`(false))
+            assertThat(
+                integer.type
+                    .isAssignableFromWithoutVariance(string.type),
+                `is`(false)
+            )
         }
     }
 
@@ -73,8 +75,10 @@ class TypeAssignmentTest {
     @Test
     fun variance() {
         /**
-         * Set<User> userSet = null; Set<? extends User> userSet2 = null; userSet = userSet2; // NOT
-         * OK for java but kotlin data classes hit this so we want // to accept it
+         *  Set<User> userSet = null;
+         *  Set<? extends User> userSet2 = null;
+         *  userSet = userSet2;  // NOT OK for java but kotlin data classes hit this so we want
+         *                       // to accept it
          */
         runTest {
             val testObject = processingEnv.requireTypeElement("foo.bar.MyObject")
@@ -96,11 +100,17 @@ class TypeAssignmentTest {
         }
     }
 
-    private fun XTypeElement.getField(name: String): XVariableElement {
-        return getAllFieldsIncludingPrivateSupers().first { it.name == name }
+    private fun XTypeElement.getField(
+        name: String
+    ): XVariableElement {
+        return getAllFieldsIncludingPrivateSupers().first {
+            it.name == name
+        }
     }
 
     private fun runTest(handler: XTestInvocation.() -> Unit) {
-        runProcessorTest(sources = listOf(TEST_OBJECT)) { it.apply { handler() } }
+        runProcessorTest(sources = listOf(TEST_OBJECT)) {
+            it.apply { handler() }
+        }
     }
 }

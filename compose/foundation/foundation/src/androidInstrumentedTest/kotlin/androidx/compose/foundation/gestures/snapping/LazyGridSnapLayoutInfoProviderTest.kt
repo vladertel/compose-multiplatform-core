@@ -75,13 +75,15 @@ class LazyGridSnapLayoutInfoProviderTest(orientation: Orientation) :
 
         rule.runOnIdle {
             val offset = state.layoutInfo.visibleItemsInfo.first { it.index == 100 }.offset
-            val expectedResult =
-                if (vertical) {
-                    offset.y
-                } else {
-                    offset.x
-                }
-            assertEquals(layoutInfoProvider.calculateSnapOffset(0f).roundToInt(), expectedResult)
+            val expectedResult = if (vertical) {
+                offset.y
+            } else {
+                offset.x
+            }
+            assertEquals(
+                layoutInfoProvider.calculateSnapOffset(0f).roundToInt(),
+                expectedResult
+            )
         }
     }
 
@@ -105,19 +107,16 @@ class LazyGridSnapLayoutInfoProviderTest(orientation: Orientation) :
         rule.mainClock.advanceTimeUntil { state.firstVisibleItemScrollOffset != 0 } // apply scroll
 
         rule.runOnIdle {
-            val offset =
-                state.layoutInfo.visibleItemsInfo
-                    .first { it.index == state.firstVisibleItemIndex + 3 }
-                    .offset
-            val expectedResult =
-                if (vertical) {
-                    offset.y
-                } else {
-                    offset.x
-                }
+            val offset = state
+                .layoutInfo
+                .visibleItemsInfo.first { it.index == state.firstVisibleItemIndex + 3 }.offset
+            val expectedResult = if (vertical) {
+                offset.y
+            } else {
+                offset.x
+            }
             assertEquals(
-                layoutInfoProvider
-                    .calculateSnapOffset(2 * minVelocityThreshold.toFloat())
+                layoutInfoProvider.calculateSnapOffset(2 * minVelocityThreshold.toFloat())
                     .roundToInt(),
                 expectedResult
             )
@@ -144,19 +143,17 @@ class LazyGridSnapLayoutInfoProviderTest(orientation: Orientation) :
         rule.mainClock.advanceTimeUntil { state.firstVisibleItemScrollOffset != 0 } // apply scroll
 
         rule.runOnIdle {
-            val offset =
-                state.layoutInfo.visibleItemsInfo
-                    .first { it.index == state.firstVisibleItemIndex }
-                    .offset
-            val expectedResult =
-                if (vertical) {
-                    offset.y
-                } else {
-                    offset.x
-                }
+            val offset = state
+                .layoutInfo
+                .visibleItemsInfo
+                .first { it.index == state.firstVisibleItemIndex }.offset
+            val expectedResult = if (vertical) {
+                offset.y
+            } else {
+                offset.x
+            }
             assertEquals(
-                layoutInfoProvider
-                    .calculateSnapOffset(-2 * minVelocityThreshold.toFloat())
+                layoutInfoProvider.calculateSnapOffset(-2 * minVelocityThreshold.toFloat())
                     .roundToInt(),
                 expectedResult
             )
@@ -170,7 +167,9 @@ class LazyGridSnapLayoutInfoProviderTest(orientation: Orientation) :
             state = state,
             flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
         ) {
-            items(200) { Box(modifier = Modifier.size(itemSizeDp)) }
+            items(200) {
+                Box(modifier = Modifier.size(itemSizeDp))
+            }
         }
     }
 

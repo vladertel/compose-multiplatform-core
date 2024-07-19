@@ -35,11 +35,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NightModeLocalBeforeAttachBaseTestCase {
     @get:Rule
-    val rule =
-        NightModeActivityTestRule(
-            NightModeLocalBeforeAttachBaseActivity::class.java,
-            launchActivity = false
-        )
+    val rule = NightModeActivityTestRule(
+        NightModeLocalBeforeAttachBaseActivity::class.java,
+        launchActivity = false
+    )
 
     @Test
     fun testLocalDayNightBeforeAttachBaseContext() {
@@ -73,15 +72,10 @@ class NightModeLocalBeforeAttachBaseTestCase {
         }
 
         override fun onActivityStarted(activity: Activity) = Unit
-
         override fun onActivityResumed(activity: Activity) = Unit
-
         override fun onActivityPaused(activity: Activity) = Unit
-
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-
         override fun onActivityStopped(activity: Activity) = Unit
-
         override fun onActivityDestroyed(activity: Activity) = Unit
     }
 }

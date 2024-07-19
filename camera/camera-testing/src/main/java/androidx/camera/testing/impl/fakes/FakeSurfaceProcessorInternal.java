@@ -16,8 +16,11 @@
 
 package androidx.camera.testing.impl.fakes;
 
+import android.os.Build;
+
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.core.processing.SurfaceProcessorInternal;
 
@@ -28,6 +31,7 @@ import java.util.concurrent.Executor;
 /**
  * Fake {@link SurfaceProcessorInternal} used in tests.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class FakeSurfaceProcessorInternal extends FakeSurfaceProcessor implements
         SurfaceProcessorInternal {
 

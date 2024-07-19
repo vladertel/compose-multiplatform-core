@@ -16,5 +16,7 @@
 
 package androidx.credentials
 
-/** Request class for clearing a user's credential state from the credential providers. */
+/**
+ * Request class for clearing a user's credential state from the credential providers.
+ */
 class ClearCredentialStateRequest

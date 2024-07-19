@@ -76,7 +76,8 @@ class SendSwipeTest {
         private const val tag = "widget"
     }
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val recorder = SinglePointerInputRecorder()
 
@@ -90,7 +91,8 @@ class SendSwipeTest {
     @Test
     fun swipeUp() {
         rule.setContent { Ui(Alignment.TopStart) }
-        @Suppress("DEPRECATION") rule.onNodeWithTag(tag).performGesture { swipeUp() }
+        @Suppress("DEPRECATION")
+        rule.onNodeWithTag(tag).performGesture { swipeUp() }
         rule.runOnIdle {
             recorder.run {
                 assertTimestampsAreIncreasing()
@@ -103,7 +105,8 @@ class SendSwipeTest {
     @Test
     fun swipeDown() {
         rule.setContent { Ui(Alignment.TopEnd) }
-        @Suppress("DEPRECATION") rule.onNodeWithTag(tag).performGesture { swipeDown() }
+        @Suppress("DEPRECATION")
+        rule.onNodeWithTag(tag).performGesture { swipeDown() }
         rule.runOnIdle {
             recorder.run {
                 assertTimestampsAreIncreasing()
@@ -116,7 +119,8 @@ class SendSwipeTest {
     @Test
     fun swipeLeft() {
         rule.setContent { Ui(Alignment.BottomEnd) }
-        @Suppress("DEPRECATION") rule.onNodeWithTag(tag).performGesture { swipeLeft() }
+        @Suppress("DEPRECATION")
+        rule.onNodeWithTag(tag).performGesture { swipeLeft() }
         rule.runOnIdle {
             recorder.run {
                 assertTimestampsAreIncreasing()
@@ -129,7 +133,8 @@ class SendSwipeTest {
     @Test
     fun swipeRight() {
         rule.setContent { Ui(Alignment.BottomStart) }
-        @Suppress("DEPRECATION") rule.onNodeWithTag(tag).performGesture { swipeRight() }
+        @Suppress("DEPRECATION")
+        rule.onNodeWithTag(tag).performGesture { swipeRight() }
         rule.runOnIdle {
             recorder.run {
                 assertTimestampsAreIncreasing()
@@ -142,7 +147,8 @@ class SendSwipeTest {
     @Test
     fun swipeUp_withParameters() {
         rule.setContent { Ui(Alignment.TopStart) }
-        @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+        @Suppress("DEPRECATION")
+        @OptIn(ExperimentalTestApi::class)
         rule.onNodeWithTag(tag).performGesture { swipeUp(endY = centerY) }
         rule.runOnIdle {
             recorder.run {
@@ -156,7 +162,8 @@ class SendSwipeTest {
     @Test
     fun swipeDown_withParameters() {
         rule.setContent { Ui(Alignment.TopEnd) }
-        @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+        @Suppress("DEPRECATION")
+        @OptIn(ExperimentalTestApi::class)
         rule.onNodeWithTag(tag).performGesture { swipeDown(endY = centerY) }
         rule.runOnIdle {
             recorder.run {
@@ -170,7 +177,8 @@ class SendSwipeTest {
     @Test
     fun swipeLeft_withParameters() {
         rule.setContent { Ui(Alignment.BottomEnd) }
-        @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+        @Suppress("DEPRECATION")
+        @OptIn(ExperimentalTestApi::class)
         rule.onNodeWithTag(tag).performGesture { swipeLeft(endX = centerX) }
         rule.runOnIdle {
             recorder.run {
@@ -184,7 +192,8 @@ class SendSwipeTest {
     @Test
     fun swipeRight_withParameters() {
         rule.setContent { Ui(Alignment.BottomStart) }
-        @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+        @Suppress("DEPRECATION")
+        @OptIn(ExperimentalTestApi::class)
         rule.onNodeWithTag(tag).performGesture { swipeRight(endX = centerX) }
         rule.runOnIdle {
             recorder.run {
@@ -201,7 +210,8 @@ class SendSwipeTest {
         expectError<IllegalArgumentException>(
             expectedMessage = "startY=0.0 needs to be greater than or equal to endY=1.0"
         ) {
-            @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+            @Suppress("DEPRECATION")
+            @OptIn(ExperimentalTestApi::class)
             rule.onNodeWithTag(tag).performGesture { swipeUp(startY = 0f, endY = 1f) }
         }
     }
@@ -212,7 +222,8 @@ class SendSwipeTest {
         expectError<IllegalArgumentException>(
             expectedMessage = "startY=1.0 needs to be less than or equal to endY=0.0"
         ) {
-            @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+            @Suppress("DEPRECATION")
+            @OptIn(ExperimentalTestApi::class)
             rule.onNodeWithTag(tag).performGesture { swipeDown(startY = 1f, endY = 0f) }
         }
     }
@@ -223,7 +234,8 @@ class SendSwipeTest {
         expectError<IllegalArgumentException>(
             expectedMessage = "startX=0.0 needs to be greater than or equal to endX=1.0"
         ) {
-            @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+            @Suppress("DEPRECATION")
+            @OptIn(ExperimentalTestApi::class)
             rule.onNodeWithTag(tag).performGesture { swipeLeft(startX = 0f, endX = 1f) }
         }
     }
@@ -234,7 +246,8 @@ class SendSwipeTest {
         expectError<IllegalArgumentException>(
             expectedMessage = "startX=1.0 needs to be less than or equal to endX=0.0"
         ) {
-            @Suppress("DEPRECATION") @OptIn(ExperimentalTestApi::class)
+            @Suppress("DEPRECATION")
+            @OptIn(ExperimentalTestApi::class)
             rule.onNodeWithTag(tag).performGesture { swipeRight(startX = 1f, endX = 0f) }
         }
     }
@@ -275,11 +288,14 @@ class SendSwipeTest {
                 with(LocalDensity.current) {
                     // Scrollable with a viewport the size of 10 boxes
                     Column(
-                        Modifier.testTag("scrollable")
+                        Modifier
+                            .testTag("scrollable")
                             .requiredSize(100.toDp(), 1000.toDp())
                             .verticalScroll(scrollState)
                     ) {
-                        repeat(100) { ClickableTestBox() }
+                        repeat(100) {
+                            ClickableTestBox()
+                        }
                     }
                 }
             }

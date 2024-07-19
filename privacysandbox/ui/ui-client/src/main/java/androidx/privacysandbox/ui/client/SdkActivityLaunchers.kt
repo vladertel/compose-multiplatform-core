@@ -42,42 +42,38 @@ import kotlinx.coroutines.withContext
  * activity as a starting context.
  *
  * @param T the current activity from which new SDK activities will be launched. If this activity is
- *   destroyed any further SDK activity launches will simply be ignored.
- * @param allowLaunch predicate called each time an activity is about to be launched by the SDK, the
- *   activity will only be launched if it returns true.
+ * destroyed any further SDK activity launches will simply be ignored.
+ * @param allowLaunch predicate called each time an activity is about to be launched by the
+ * SDK, the activity will only be launched if it returns true.
  */
-@Deprecated(
-    "Use the Privacy Sandbox Activity library version instead.",
+@Deprecated("Use the Privacy Sandbox Activity library version instead.",
     ReplaceWith(
         expression = "createSdkActivityLauncher",
-        imports = arrayOf("androidx.privacysandbox.activity.client.createSdkActivityLauncher")
-    )
-)
-fun <T> T.createSdkActivityLauncher(allowLaunch: () -> Boolean): LocalSdkActivityLauncher<T> where
-T : Activity,
-T : LifecycleOwner {
+        imports = arrayOf("androidx.privacysandbox.activity.client.createSdkActivityLauncher")))
+fun <T> T.createSdkActivityLauncher(
+    allowLaunch: () -> Boolean
+): LocalSdkActivityLauncher<T>
+    where T : Activity, T : LifecycleOwner {
     val cancellationJob = Job(parent = lifecycleScope.coroutineContext[Job])
-    val launcher =
-        LocalSdkActivityLauncherImpl(
-            activity = this,
-            allowLaunch = allowLaunch,
-            onDispose = { cancellationJob.cancel() },
-        )
-    cancellationJob.invokeOnCompletion { launcher.dispose() }
+    val launcher = LocalSdkActivityLauncherImpl(
+        activity = this,
+        allowLaunch = allowLaunch,
+        onDispose = { cancellationJob.cancel() },
+    )
+    cancellationJob.invokeOnCompletion {
+        launcher.dispose()
+    }
     return launcher
 }
 
 /**
- * Returns a [Bundle] with the information necessary to recreate this launcher. Possibly in a
- * different process.
+ * Returns a [Bundle] with the information necessary to recreate this launcher.
+ * Possibly in a different process.
  */
-@Deprecated(
-    "Use the Privacy Sandbox Activity library version instead.",
+@Deprecated("Use the Privacy Sandbox Activity library version instead.",
     ReplaceWith(
         expression = "toLauncherInfo",
-        imports = arrayOf("androidx.privacysandbox.activity.client.toLauncherInfo")
-    )
-)
+        imports = arrayOf("androidx.privacysandbox.activity.client.toLauncherInfo")))
 fun SdkActivityLauncher.toLauncherInfo(): Bundle {
     val binderDelegate = SdkActivityLauncherBinderDelegate(this)
     return Bundle().also { bundle ->
@@ -90,13 +86,10 @@ fun SdkActivityLauncher.toLauncherInfo(): Bundle {
  *
  * It allows callers in the app process to dispose resources used to launch SDK activities.
  */
-@Deprecated(
-    "Use the Privacy Sandbox Activity library version instead.",
+@Deprecated("Use the Privacy Sandbox Activity library version instead.",
     ReplaceWith(
         expression = "LocalSdkActivityLauncher",
-        imports = arrayOf("androidx.privacysandbox.activity.client.LocalSdkActivityLauncher")
-    )
-)
+        imports = arrayOf("androidx.privacysandbox.activity.client.LocalSdkActivityLauncher")))
 interface LocalSdkActivityLauncher<T> : SdkActivityLauncher where T : Activity, T : LifecycleOwner {
     /**
      * Clears references used to launch activities.
@@ -123,15 +116,17 @@ private class LocalSdkActivityLauncherImpl<T>(
 
     private val stateReference: AtomicReference<LocalLauncherState<T>?> =
         AtomicReference<LocalLauncherState<T>?>(
-            LocalLauncherState(
-                activity,
-                allowLaunch,
-                SdkSandboxManagerCompat.from(activity),
-                onDispose
-            )
+        LocalLauncherState(
+            activity,
+            allowLaunch,
+            SdkSandboxManagerCompat.from(activity),
+            onDispose
         )
+    )
 
-    override suspend fun launchSdkActivity(sdkActivityHandlerToken: IBinder): Boolean {
+    override suspend fun launchSdkActivity(
+        sdkActivityHandlerToken: IBinder
+    ): Boolean {
         val state = stateReference.get() ?: return false
         return withContext(Dispatchers.Main.immediate) {
             state.run {
@@ -145,7 +140,9 @@ private class LocalSdkActivityLauncherImpl<T>(
     }
 
     override fun dispose() {
-        stateReference.getAndSet(null)?.run { onDispose() }
+        stateReference.getAndSet(null)?.run {
+            onDispose()
+        }
     }
 }
 
@@ -162,13 +159,12 @@ private class SdkActivityLauncherBinderDelegate(private val launcher: SdkActivit
         requireNotNull(callback)
 
         coroutineScope.launch {
-            val accepted =
-                try {
-                    launcher.launchSdkActivity(sdkActivityHandlerToken)
-                } catch (t: Throwable) {
-                    callback.onLaunchError(t.message ?: "Unknown error launching SDK activity.")
-                    return@launch
-                }
+            val accepted = try {
+                launcher.launchSdkActivity(sdkActivityHandlerToken)
+            } catch (t: Throwable) {
+                callback.onLaunchError(t.message ?: "Unknown error launching SDK activity.")
+                return@launch
+            }
 
             if (accepted) {
                 callback.onLaunchAccepted(sdkActivityHandlerToken)

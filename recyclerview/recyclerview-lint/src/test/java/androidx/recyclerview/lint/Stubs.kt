@@ -22,24 +22,20 @@ import com.android.tools.lint.checks.infrastructure.LintDetectorTest.kotlin
 import com.android.tools.lint.checks.infrastructure.TestFile
 
 object Stubs {
-    val VIEW: TestFile =
-        kotlin(
-                "android/view/View.kt",
-                """
+    val VIEW: TestFile = kotlin(
+        "android/view/View.kt",
+        """
             package android.view;
 
             open class View {
                 fun <T: View> findViewById(id: Int) : T? = TODO()
             }
         """
-            )
-            .indented()
-            .within("src")
+    ).indented().within("src")
 
-    val RECYCLER_VIEW: TestFile =
-        kotlin(
-                "androidx/recyclerview/widget/RecyclerView.kt",
-                """
+    val RECYCLER_VIEW: TestFile = kotlin(
+        "androidx/recyclerview/widget/RecyclerView.kt",
+        """
         package androidx.recyclerview.widget
 
         open class RecyclerView : View() {
@@ -48,7 +44,5 @@ object Stubs {
             }
         }
     """
-            )
-            .indented()
-            .within("src")
+    ).indented().within("src")
 }

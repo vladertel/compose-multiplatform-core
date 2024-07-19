@@ -49,7 +49,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BringIntoViewResponderTest {
 
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     private fun Float.toDp(): Dp = with(rule.density) { this@toDp.toDp() }
 
@@ -60,16 +61,21 @@ class BringIntoViewResponderTest {
         var requestedRect: Rect? = null
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { requestedRect = it() }
+                Modifier
+                    .fakeScrollable { requestedRect = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
 
         // Act.
-        runBlocking { bringIntoViewRequester.bringIntoView() }
+        runBlocking {
+            bringIntoViewRequester.bringIntoView()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect.Zero) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect.Zero)
+        }
     }
 
     @Test
@@ -79,7 +85,8 @@ class BringIntoViewResponderTest {
         var requestedRect: Rect? = null
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { requestedRect = it() }
+                Modifier
+                    .fakeScrollable { requestedRect = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
@@ -88,7 +95,9 @@ class BringIntoViewResponderTest {
         runBlocking { bringIntoViewRequester.bringIntoView(Rect(1f, 2f, 3f, 4f)) }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect(1f, 2f, 3f, 4f)) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect(1f, 2f, 3f, 4f))
+        }
     }
 
     @Test
@@ -99,7 +108,8 @@ class BringIntoViewResponderTest {
         rule.setContent {
             Box(Modifier) {
                 Box(
-                    Modifier.fakeScrollable { requestedRect = it() }
+                    Modifier
+                        .fakeScrollable { requestedRect = it() }
                         .size(20f.toDp(), 10f.toDp())
                         .offset { IntOffset(40, 30) }
                         .bringIntoViewRequester(bringIntoViewRequester)
@@ -111,7 +121,9 @@ class BringIntoViewResponderTest {
         runBlocking { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect(40f, 30f, 60f, 40f)) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect(40f, 30f, 60f, 40f))
+        }
     }
 
     @Test
@@ -121,7 +133,8 @@ class BringIntoViewResponderTest {
         var requestedRect: Rect? = null
         rule.setContent {
             Box(
-                Modifier.size(1f.toDp())
+                Modifier
+                    .size(1f.toDp())
                     .fakeScrollable { requestedRect = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
                     .size(20f.toDp(), 10f.toDp())
@@ -132,7 +145,9 @@ class BringIntoViewResponderTest {
         runBlocking { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect(0f, 0f, 20f, 10f)) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect(0f, 0f, 20f, 10f))
+        }
     }
 
     @Test
@@ -143,7 +158,8 @@ class BringIntoViewResponderTest {
         val bringIntoViewRequester = BringIntoViewRequester()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { parentRequest = it() }
+                Modifier
+                    .fakeScrollable { parentRequest = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
                     .fakeScrollable { childRequest = it() }
             )
@@ -167,7 +183,8 @@ class BringIntoViewResponderTest {
         val bringIntoViewRequester = BringIntoViewRequester()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { parentRequest = it() }
+                Modifier
+                    .fakeScrollable { parentRequest = it() }
                     .fakeScrollable { childRequest = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
@@ -190,7 +207,8 @@ class BringIntoViewResponderTest {
         val bringIntoViewRequester = BringIntoViewRequester()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { requestedRect = it() }
+                Modifier
+                    .fakeScrollable { requestedRect = it() }
                     .fakeScrollable(Offset(2f, 3f)) {}
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
@@ -200,7 +218,9 @@ class BringIntoViewResponderTest {
         runBlocking { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect(2f, 3f, 2f, 3f)) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect(2f, 3f, 2f, 3f))
+        }
     }
 
     @Test
@@ -211,18 +231,25 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { requests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { requests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
 
         // Act.
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         val initialRequest = requests.single()
         assertThat(initialRequest.isActive).isTrue()
 
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(5f, 5f, 15f, 15f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(5f, 5f, 15f, 15f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(requests).hasSize(2)
         val newRequest = requests.last()
@@ -238,13 +265,18 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { requests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { requests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
 
         // Act.
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         val initialRequest = requests.single()
         assertThat(initialRequest.isActive).isTrue()
@@ -271,11 +303,16 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { requests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { requests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(requests).hasSize(1)
 
@@ -300,12 +337,19 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { parentRequests += it } }
-                    .fakeScrollable { suspendCancellableCoroutine { childRequests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { parentRequests += it }
+                    }
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { childRequests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(childRequests).hasSize(1)
         assertThat(parentRequests).hasSize(1)
@@ -326,12 +370,19 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { parentRequests += it } }
-                    .fakeScrollable { suspendCancellableCoroutine { childRequests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { parentRequests += it }
+                    }
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { childRequests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(childRequests).hasSize(1)
         assertThat(parentRequests).hasSize(1)
@@ -351,11 +402,16 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { requests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { requests += it }
+                    }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(requests).hasSize(1)
 
@@ -380,7 +436,10 @@ class BringIntoViewResponderTest {
         val requestScope = TestScope()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable { suspendCancellableCoroutine { requests += it } }
+                Modifier
+                    .fakeScrollable {
+                        suspendCancellableCoroutine { requests += it }
+                    }
                     .fakeScrollable {
                         // Child never completes requests.
                         suspendCancellableCoroutine {}
@@ -388,7 +447,9 @@ class BringIntoViewResponderTest {
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
-        requestScope.launch { bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f)) }
+        requestScope.launch {
+            bringIntoViewRequester.bringIntoView(rect = Rect(0f, 0f, 10f, 10f))
+        }
         requestScope.advanceUntilIdle()
         assertThat(requests).hasSize(1)
 
@@ -410,7 +471,8 @@ class BringIntoViewResponderTest {
         val bringIntoViewRequester = BringIntoViewRequester()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable(Offset.Zero) { requestedRect = it() }
+                Modifier
+                    .fakeScrollable(Offset.Zero) { requestedRect = it() }
                     .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
@@ -419,7 +481,9 @@ class BringIntoViewResponderTest {
         runBlocking { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule.runOnIdle { assertThat(requestedRect).isEqualTo(Rect.Zero) }
+        rule.runOnIdle {
+            assertThat(requestedRect).isEqualTo(Rect.Zero)
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -433,7 +497,8 @@ class BringIntoViewResponderTest {
         val bringIntoViewRequester = BringIntoViewRequester()
         rule.setContent {
             Box(
-                Modifier.fakeScrollable {
+                Modifier
+                    .fakeScrollable {
                         parentStarted = true
                         try {
                             awaitCancellation()
@@ -453,7 +518,9 @@ class BringIntoViewResponderTest {
             )
         }
         val testScope = TestScope()
-        val requestJob = testScope.launch { bringIntoViewRequester.bringIntoView() }
+        val requestJob = testScope.launch {
+            bringIntoViewRequester.bringIntoView()
+        }
         rule.waitForIdle()
 
         assertThat(childStarted).isFalse()

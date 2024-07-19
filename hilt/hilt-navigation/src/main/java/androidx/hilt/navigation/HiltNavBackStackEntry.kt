@@ -58,23 +58,26 @@ public fun HiltViewModelFactory(
     context: Context,
     delegateFactory: ViewModelProvider.Factory
 ): ViewModelProvider.Factory {
-    val activity =
-        context.let {
-            var ctx = it
-            while (ctx is ContextWrapper) {
-                // Hilt can only be used with ComponentActivity
-                if (ctx is ComponentActivity) {
-                    return@let ctx
-                }
-                ctx = ctx.baseContext
+    val activity = context.let {
+        var ctx = it
+        while (ctx is ContextWrapper) {
+            // Hilt can only be used with ComponentActivity
+            if (ctx is ComponentActivity) {
+                return@let ctx
             }
-            throw IllegalStateException(
-                "Expected an activity context for creating a HiltViewModelFactory " +
-                    "but instead found: $ctx"
-            )
+            ctx = ctx.baseContext
         }
+        throw IllegalStateException(
+            "Expected an activity context for creating a HiltViewModelFactory " +
+                "but instead found: $ctx"
+        )
+    }
+    // TODO(kuanyingchou): The `owner` is actually not used. We pass
+    //  `activity` here since it's a NonNull parameter. This can be removed with Dagger 2.45.
     return HiltViewModelFactory.createInternal(
         /* activity = */ activity,
+        /* owner = */ activity,
+        /* defaultArgs = */ null,
         /* delegateFactory = */ delegateFactory
     )
 }

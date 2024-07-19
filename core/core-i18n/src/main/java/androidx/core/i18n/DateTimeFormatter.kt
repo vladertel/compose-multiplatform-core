@@ -31,13 +31,13 @@ import java.util.Locale
 /**
  * DateTimeFormatter is a class for international-aware date/time formatting.
  *
- * It is designed to encourage best i18n practices, and work correctly on old / new Android
- * versions, without having to test the API level everywhere.
+ * It is designed to encourage best i18n practices, and work correctly on
+ * old / new Android versions, without having to test the API level everywhere.
  *
  * @param context the application context.
  * @param options various options for the formatter (what fields should be rendered, length, etc.).
- * @param locale the locale used for formatting. If missing then the application locale will be
- *   used.
+ * @param locale the locale used for formatting.
+ *     If missing then the application locale will be used.
  */
 class DateTimeFormatter {
 
@@ -66,7 +66,11 @@ class DateTimeFormatter {
         dateFormatter = DateTimeFormatterImplJdkStyle(options.dateStyle, options.timeStyle, locale)
     }
 
-    private fun skeletonRespectingPrefs(context: Context, locale: Locale, options: String): String {
+    private fun skeletonRespectingPrefs(
+        context: Context,
+        locale: Locale,
+        options: String
+    ): String {
         var strSkeleton =
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
                 options
@@ -95,20 +99,21 @@ class DateTimeFormatter {
         }
 
         // The caller does not force 12h/24h, look at the Android user prefs.
-        val deviceHour =
-            Settings.System.getString(context.contentResolver, Settings.System.TIME_12_24)
+        val deviceHour = Settings.System.getString(
+            context.contentResolver,
+            Settings.System.TIME_12_24
+        )
 
         return when (deviceHour) {
             "12" -> strSkeleton.replace('j', 'h')
             "24" -> strSkeleton.replace('j', 'H')
-            else ->
-                if (is24HourLocale(locale)) {
-                    // The locale is a 24h locale, the time period ( `a` or `B` ) does not matter
-                    strSkeleton
-                } else {
-                    strSkeleton.replace("a", "")
-                    strSkeleton.replace('j', 'h')
-                }
+            else -> if (is24HourLocale(locale)) {
+                // The locale is a 24h locale, the time period ( `a` or `B` ) does not matter
+                strSkeleton
+            } else {
+                strSkeleton.replace("a", "")
+                strSkeleton.replace('j', 'h')
+            }
         }
     }
 
@@ -120,11 +125,9 @@ class DateTimeFormatter {
         return tempPattern.contains('H')
     }
 
-    /**
-     * Formats an epoch time into a user friendly, locale aware, date/time string.
-     *
-     * @param milliseconds the date / time to format expressed in milliseconds since January 1,
-     *   1970, 00:00:00 GMT.
+    /** Formats an epoch time into a user friendly, locale aware, date/time string.
+     * @param milliseconds the date / time to format expressed in milliseconds since
+     *     January 1, 1970, 00:00:00 GMT.
      * @return the formatted date / time string.
      */
     fun format(milliseconds: Long): String {
@@ -133,9 +136,7 @@ class DateTimeFormatter {
         return format(calendar)
     }
 
-    /**
-     * Formats a Date object into a user friendly locale aware date/time string.
-     *
+    /** Formats a Date object into a user friendly locale aware date/time string.
      * @param date the date / time to format.
      * @return the formatted date / time string.
      */
@@ -145,9 +146,7 @@ class DateTimeFormatter {
         return format(calendar)
     }
 
-    /**
-     * Formats a Calendar object into a user friendly locale aware date/time string.
-     *
+    /** Formats a Calendar object into a user friendly locale aware date/time string.
      * @param calendar the date / time to format.
      * @return the formatted date / time string.
      */
@@ -162,7 +161,8 @@ class DateTimeFormatter {
             companion object {
                 @DoNotInline
                 fun is24HourLocale(locale: Locale): Boolean {
-                    val tmpDf = android.icu.text.DateFormat.getInstanceForSkeleton("jm", locale)
+                    val tmpDf =
+                        android.icu.text.DateFormat.getInstanceForSkeleton("jm", locale)
                     val tmpPattern =
                         // This is true for all ICU implementation until now, but just in case
                         if (tmpDf is SimpleDateFormat) {

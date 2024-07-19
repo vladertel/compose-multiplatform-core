@@ -31,8 +31,7 @@ class SpannableStringTest {
 
     @Test fun toSpannableString() = assertTrue("Hello, World".toSpannable() is SpannableString)
 
-    @Test
-    fun clearSpans() {
+    @Test fun clearSpans() {
         val s = "Hello, World".toSpannable()
         s.setSpan(StyleSpan(BOLD), 0, s.length, SPAN_INCLUSIVE_EXCLUSIVE)
         s.setSpan(UnderlineSpan(), 0, s.length, SPAN_INCLUSIVE_EXCLUSIVE)
@@ -41,8 +40,7 @@ class SpannableStringTest {
         assertTrue(s.getSpans<Any>().isEmpty())
     }
 
-    @Test
-    fun setIndices() {
+    @Test fun setIndices() {
         val s = "Hello, World".toSpannable()
         s[0, 5] = StyleSpan(BOLD)
         s[7, 12] = UnderlineSpan()
@@ -58,8 +56,7 @@ class SpannableStringTest {
         assertEquals(12, s.getSpanEnd(underline))
     }
 
-    @Test
-    fun setRange() {
+    @Test fun setRange() {
         val s = "Hello, World".toSpannable()
         s[0..5] = StyleSpan(BOLD)
         s[7..12] = UnderlineSpan()

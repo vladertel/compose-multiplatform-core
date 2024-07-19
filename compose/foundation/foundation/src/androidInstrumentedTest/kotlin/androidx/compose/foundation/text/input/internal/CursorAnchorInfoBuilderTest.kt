@@ -98,7 +98,13 @@ class CursorAnchorInfoBuilderTest {
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder()
-                .build(text, selection, composition, getTextLayoutResult(text), matrix)
+                .build(
+                    text,
+                    selection,
+                    composition,
+                    getTextLayoutResult(text),
+                    matrix
+                )
 
         Truth.assertThat(cursorAnchorInfo.selectionStart).isEqualTo(1)
         Truth.assertThat(cursorAnchorInfo.selectionEnd).isEqualTo(2)
@@ -112,7 +118,13 @@ class CursorAnchorInfoBuilderTest {
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder()
-                .build(text, selection, composition, getTextLayoutResult(text), matrix)
+                .build(
+                    text,
+                    selection,
+                    composition,
+                    getTextLayoutResult(text),
+                    matrix
+                )
 
         Truth.assertThat(cursorAnchorInfo.composingTextStart).isEqualTo(-1)
         Truth.assertThat(cursorAnchorInfo.composingText).isNull()
@@ -126,7 +138,13 @@ class CursorAnchorInfoBuilderTest {
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder()
-                .build(text, selection, composition, getTextLayoutResult(text), matrix)
+                .build(
+                    text,
+                    selection,
+                    composition,
+                    getTextLayoutResult(text),
+                    matrix
+                )
 
         Truth.assertThat(cursorAnchorInfo.composingTextStart).isEqualTo(0)
         Truth.assertThat(cursorAnchorInfo.composingText.toString()).isEqualTo(text)
@@ -143,7 +161,13 @@ class CursorAnchorInfoBuilderTest {
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder()
-                .build(text, selection, composition, getTextLayoutResult(text), matrix)
+                .build(
+                    text,
+                    selection,
+                    composition,
+                    getTextLayoutResult(text),
+                    matrix
+                )
 
         Truth.assertThat(cursorAnchorInfo.composingTextStart).isEqualTo(word1.length)
         Truth.assertThat(cursorAnchorInfo.composingText.toString()).isEqualTo(word2)
@@ -181,7 +205,13 @@ class CursorAnchorInfoBuilderTest {
         val builder = CursorAnchorInfo.Builder()
 
         val cursorAnchorInfo =
-            builder.build(text, selection, composition, getTextLayoutResult(text), matrix)
+            builder.build(
+                text,
+                selection,
+                composition,
+                getTextLayoutResult(text),
+                matrix
+            )
 
         Truth.assertThat(cursorAnchorInfo.composingText.toString()).isEqualTo(text)
         Truth.assertThat(cursorAnchorInfo.composingTextStart).isEqualTo(composition.min)
@@ -231,7 +261,13 @@ class CursorAnchorInfoBuilderTest {
             builder.build(text, selection, composition, textLayoutResult, matrix)
 
         val cursorAnchorInfo2 =
-            builder.build(text, selection = TextRange(1), composition, textLayoutResult, matrix)
+            builder.build(
+                text,
+                selection = TextRange(1),
+                composition,
+                textLayoutResult,
+                matrix
+            )
 
         Truth.assertThat(cursorAnchorInfo1.insertionMarkerHorizontal)
             .isEqualTo(cursorAnchorInfo2.insertionMarkerHorizontal)
@@ -254,7 +290,8 @@ class CursorAnchorInfoBuilderTest {
         val selection = TextRange(5)
         val composition: TextRange? = null
         val width = 4 * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder().build(text, selection, composition, textLayoutResult, matrix)
@@ -277,7 +314,8 @@ class CursorAnchorInfoBuilderTest {
         val selection = TextRange(0)
         val composition: TextRange? = null
         val width = 3 * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder().build(text, selection, composition, textLayoutResult, matrix)
@@ -354,7 +392,7 @@ class CursorAnchorInfoBuilderTest {
         Truth.assertThat(cursorAnchorInfo.insertionMarkerFlags)
             .isEqualTo(
                 CursorAnchorInfo.FLAG_HAS_VISIBLE_REGION or
-                    CursorAnchorInfo.FLAG_HAS_INVISIBLE_REGION
+                CursorAnchorInfo.FLAG_HAS_INVISIBLE_REGION
             )
     }
 
@@ -393,7 +431,8 @@ class CursorAnchorInfoBuilderTest {
         // Composition is on "bc"
         val composition = TextRange(2, 4)
         val width = text.length * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder().build(text, selection, composition, textLayoutResult, matrix)
@@ -422,7 +461,8 @@ class CursorAnchorInfoBuilderTest {
         // Composition is on "\u05D1\u05D2"
         val composition = TextRange(2, 4)
         val width = text.length * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder().build(text, selection, composition, textLayoutResult, matrix)
@@ -440,7 +480,8 @@ class CursorAnchorInfoBuilderTest {
                     )
                 Truth.assertThat(cursorAnchorInfo.getCharacterBoundsFlags(index))
                     .isEqualTo(
-                        CursorAnchorInfo.FLAG_HAS_VISIBLE_REGION or CursorAnchorInfo.FLAG_IS_RTL
+                        CursorAnchorInfo.FLAG_HAS_VISIBLE_REGION or
+                            CursorAnchorInfo.FLAG_IS_RTL
                     )
             } else {
                 Truth.assertThat(cursorAnchorInfo.getCharacterBounds(index)).isNull()
@@ -458,7 +499,8 @@ class CursorAnchorInfoBuilderTest {
         // Composition is on "bc"
         val composition = TextRange(2, 4)
         val width = text.length * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
         val innerTextFieldBounds = Rect(3.5f * fontSizeInPx, 0f, 4f * fontSizeInPx, fontSizeInPx)
 
         val cursorAnchorInfo =
@@ -495,7 +537,8 @@ class CursorAnchorInfoBuilderTest {
         // Composition is on "bc"
         val composition = TextRange(2, 4)
         val width = text.length * fontSizeInPx
-        val textLayoutResult = getTextLayoutResult(text, fontSize = fontSize, width = width)
+        val textLayoutResult =
+            getTextLayoutResult(text, fontSize = fontSize, width = width)
 
         val cursorAnchorInfo =
             CursorAnchorInfo.Builder()

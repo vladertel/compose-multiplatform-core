@@ -27,9 +27,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+/* ktlint-disable max-line-length */
 @RunWith(JUnit4::class)
 
-/** Test for [ProduceStateDetector]. */
+/**
+ * Test for [ProduceStateDetector].
+ */
 class ProduceStateDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = ProduceStateDetector()
 
@@ -38,10 +41,9 @@ class ProduceStateDetectorTest : LintDetectorTest() {
 
     @Test
     fun errors() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.runtime.foo
 
                 import androidx.compose.runtime.*
@@ -71,10 +73,10 @@ class ProduceStateDetectorTest : LintDetectorTest() {
 
                 fun <T> doSomethingElseWithState(state: State<T>) {}
             """
-                ),
-                Stubs.Composable,
-                Stubs.SnapshotState
-            )
+            ),
+            Stubs.Composable,
+            Stubs.SnapshotState
+        )
             .skipTestModes(TestMode.TYPE_ALIAS)
             .run()
             .expect(
@@ -98,10 +100,9 @@ src/androidx/compose/runtime/foo/test.kt:21: Error: produceState calls should as
 
     @Test
     fun noErrors() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.runtime.foo
 
                 import androidx.compose.runtime.*
@@ -136,11 +137,12 @@ src/androidx/compose/runtime/foo/test.kt:21: Error: produceState calls should as
 
                 fun <T> doSomethingElseWithScope(scope: ProduceStateScope<T>) {}
             """
-                ),
-                Stubs.Composable,
-                Stubs.SnapshotState
-            )
+            ),
+            Stubs.Composable,
+            Stubs.SnapshotState
+        )
             .run()
             .expectClean()
     }
 }
+/* ktlint-enable max-line-length */

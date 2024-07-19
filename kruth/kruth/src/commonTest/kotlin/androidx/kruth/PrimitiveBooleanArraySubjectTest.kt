@@ -77,6 +77,8 @@ class PrimitiveBooleanArraySubjectTest {
     @Test
     fun isNotEqualTo_FailSame() {
         val same = booleanArrayOf(true, false)
-        assertFailsWith<AssertionError> { assertThat(same).isNotEqualTo(same) }
+        assertFailsWith<AssertionError> {
+            assertThat(same).isNotEqualTo(same)
+        }
     }
 }

@@ -33,7 +33,6 @@ class JvmtiRule : ExternalResource() {
                 // to make art to load JVMTI plugin.
             }
         }
-
         fun ensureInitialised() {
             // Calling this makes sure init {} block is triggered
         }

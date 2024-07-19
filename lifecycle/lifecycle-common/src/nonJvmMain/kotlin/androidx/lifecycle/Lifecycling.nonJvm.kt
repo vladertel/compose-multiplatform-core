@@ -17,7 +17,9 @@ package androidx.lifecycle
 
 import androidx.annotation.RestrictTo
 
-/** Internal class to handle lifecycle conversion etc. */
+/**
+ * Internal class to handle lifecycle conversion etc.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 public actual object Lifecycling {
     public actual fun lifecycleEventObserver(`object`: Any): LifecycleEventObserver {
@@ -38,7 +40,9 @@ public actual object Lifecycling {
         throw IllegalArgumentException()
     }
 
-    /** Create a name for an adapter class. */
+    /**
+     * Create a name for an adapter class.
+     */
     public actual fun getAdapterName(className: String): String {
         return className.replace(".", "_") + "_LifecycleAdapter"
     }

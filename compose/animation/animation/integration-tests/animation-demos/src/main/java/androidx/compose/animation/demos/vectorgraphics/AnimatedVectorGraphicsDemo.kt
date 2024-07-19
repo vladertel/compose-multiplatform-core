@@ -66,7 +66,9 @@ fun AnimatedVectorGraphicsDemo() {
         Image(
             painter = rememberAnimatedVectorPainter(image, atEnd),
             contentDescription = "AnimatedImageVector",
-            modifier = Modifier.size(200.dp).clickable { atEnd = !atEnd },
+            modifier = Modifier.size(200.dp).clickable {
+                atEnd = !atEnd
+            },
             contentScale = ContentScale.Crop
         )
 
@@ -74,7 +76,9 @@ fun AnimatedVectorGraphicsDemo() {
         Image(
             painter = createSampleVectorPainter(toggle),
             contentDescription = "Transition with vector graphics",
-            modifier = Modifier.size(200.dp).clickable { toggle = !toggle },
+            modifier = Modifier.size(200.dp).clickable {
+                toggle = !toggle
+            },
             contentScale = ContentScale.Crop
         )
     }
@@ -93,78 +97,70 @@ fun createSampleVectorPainter(toggle: Boolean): Painter {
         val transition = updateTransition(targetState = toggle, label = "sample")
         val duration = 3000
         Path(
-            pathData =
-                PathData {
-                    horizontalLineTo(24f)
-                    verticalLineTo(24f)
-                    horizontalLineTo(0f)
-                    close()
-                },
+            pathData = PathData {
+                horizontalLineTo(24f)
+                verticalLineTo(24f)
+                horizontalLineTo(0f)
+                close()
+            },
             fill = SolidColor(Color.Cyan)
         )
-        val rotation by
-            transition.animateFloat(
-                transitionSpec = {
-                    if (targetState) {
-                        keyframes {
-                            durationMillis = duration
-                            0f at 0
-                            360f at duration using LinearEasing
-                        }
-                    } else {
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessVeryLow
-                        )
+        val rotation by transition.animateFloat(
+            transitionSpec = {
+                if (targetState) {
+                    keyframes {
+                        durationMillis = duration
+                        0f at 0
+                        360f at duration using LinearEasing
                     }
-                },
-                label = "rotation"
-            ) { state ->
-                if (state) 360f else 0f
-            }
+                } else {
+                    spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessVeryLow
+                    )
+                }
+            },
+            label = "rotation"
+        ) { state ->
+            if (state) 360f else 0f
+        }
 
         @Suppress("UnusedTransitionTargetStateParameter")
-        val translationX by
-            transition.animateFloat(
-                transitionSpec = {
-                    if (targetState) {
-                        keyframes {
-                            durationMillis = duration
-                            -6f at 500
-                            6f at 1500
-                            -6f at 2000
-                            6f at 2500
-                        }
-                    } else {
-                        spring(
-                            dampingRatio = Spring.DampingRatioHighBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
+        val translationX by transition.animateFloat(
+            transitionSpec = {
+                if (targetState) {
+                    keyframes {
+                        durationMillis = duration
+                        -6f at 500
+                        6f at 1500
+                        -6f at 2000
+                        6f at 2500
                     }
-                },
-                label = "translationX"
-            ) {
-                0f
-            }
+                } else {
+                    spring(
+                        dampingRatio = Spring.DampingRatioHighBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                }
+            },
+            label = "translationX"
+        ) { 0f }
 
         @Suppress("UnusedTransitionTargetStateParameter")
-        val translationY by
-            transition.animateFloat(
-                transitionSpec = {
-                    if (targetState) {
-                        keyframes {
-                            durationMillis = duration
-                            -6f at 1000
-                            6f at 2000
-                        }
-                    } else {
-                        spring()
+        val translationY by transition.animateFloat(
+            transitionSpec = {
+                if (targetState) {
+                    keyframes {
+                        durationMillis = duration
+                        -6f at 1000
+                        6f at 2000
                     }
-                },
-                label = "translationY"
-            ) {
-                0f
-            }
+                } else {
+                    spring()
+                }
+            },
+            label = "translationY"
+        ) { 0f }
         Group(
             name = "rectangle",
             rotation = rotation,
@@ -173,32 +169,30 @@ fun createSampleVectorPainter(toggle: Boolean): Painter {
             pivotX = 12f,
             pivotY = 12f
         ) {
-            val fillColor by
-                transition.animateColor(
-                    transitionSpec = {
-                        if (targetState) {
-                            keyframes {
-                                durationMillis = duration
-                                Color.Red at 0
-                                Color.Blue at duration using LinearEasing
-                            }
-                        } else {
-                            spring()
+            val fillColor by transition.animateColor(
+                transitionSpec = {
+                    if (targetState) {
+                        keyframes {
+                            durationMillis = duration
+                            Color.Red at 0
+                            Color.Blue at duration using LinearEasing
                         }
-                    },
-                    label = "fillColor"
-                ) { state ->
-                    if (state) Color.Blue else Color.Red
-                }
+                    } else {
+                        spring()
+                    }
+                },
+                label = "fillColor"
+            ) { state ->
+                if (state) Color.Blue else Color.Red
+            }
             Path(
-                pathData =
-                    PathData {
-                        moveTo(8f, 8f)
-                        lineTo(16f, 8f)
-                        lineTo(16f, 16f)
-                        lineTo(8f, 16f)
-                        close()
-                    },
+                pathData = PathData {
+                    moveTo(8f, 8f)
+                    lineTo(16f, 8f)
+                    lineTo(16f, 16f)
+                    lineTo(8f, 16f)
+                    close()
+                },
                 fill = SolidColor(fillColor)
             )
         }

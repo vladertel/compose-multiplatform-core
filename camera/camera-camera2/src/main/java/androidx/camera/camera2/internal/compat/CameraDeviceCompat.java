@@ -21,6 +21,7 @@ import android.os.Build;
 import android.os.Handler;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.camera2.internal.compat.params.SessionConfigurationCompat;
@@ -31,6 +32,7 @@ import java.util.concurrent.Executor;
 /**
  * Helper for accessing features in {@link CameraDevice} in a backwards compatible fashion.
  */
+@RequiresApi(21)
 public final class CameraDeviceCompat {
 
     /**
@@ -133,6 +135,7 @@ public final class CameraDeviceCompat {
         CameraDevice unwrap();
     }
 
+    @RequiresApi(21)
     static final class StateCallbackExecutorWrapper extends CameraDevice.StateCallback {
 
         final CameraDevice.StateCallback mWrappedCallback;

@@ -37,7 +37,9 @@ class UndoManagerSaverTest {
         // undoStack; 1-2 redoStack; 3
 
         val saver = UndoManager.createSaver(autoSaver<Int>())
-        val saved = with(saver) { TestSaverScope.save(undoManager) }
+        val saved = with(saver) {
+            TestSaverScope.save(undoManager)
+        }
         assertNotNull(saved)
         val restoredState = saver.restore(saved)
 

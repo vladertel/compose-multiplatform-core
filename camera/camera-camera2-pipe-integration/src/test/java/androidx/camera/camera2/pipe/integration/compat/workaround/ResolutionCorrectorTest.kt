@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21)
+
 package androidx.camera.camera2.pipe.integration.compat.workaround
 
 import android.os.Build
 import android.util.Size
+import androidx.annotation.RequiresApi
 import androidx.camera.core.impl.SurfaceConfig
 import com.google.common.truth.Truth
 import org.junit.Before
@@ -37,7 +40,9 @@ private val SELECT_RESOLUTION_JPEG = Size(3264, 1836)
 
 private val SUPPORTED_RESOLUTIONS = listOf(RESOLUTION_1, RESOLUTION_2)
 
-/** Unit test for [ResolutionCorrector]. */
+/**
+ * Unit test for [ResolutionCorrector].
+ */
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -68,12 +73,14 @@ class ResolutionCorrectorTest {
         hasResolution_prioritized(SurfaceConfig.ConfigType.JPEG, SELECT_RESOLUTION_JPEG)
     }
 
-    private fun hasResolution_prioritized(configType: SurfaceConfig.ConfigType, resolution: Size) {
+    private fun hasResolution_prioritized(
+        configType: SurfaceConfig.ConfigType,
+        resolution: Size
+    ) {
         val resolutions: MutableList<Size> = ArrayList<Size>(SUPPORTED_RESOLUTIONS)
         resolutions.add(resolution)
         Truth.assertThat(mResolutionCorrector!!.insertOrPrioritize(configType, resolutions))
-            .containsExactly(resolution, RESOLUTION_1, RESOLUTION_2)
-            .inOrder()
+            .containsExactly(resolution, RESOLUTION_1, RESOLUTION_2).inOrder()
     }
 
     @Test
@@ -91,23 +98,27 @@ class ResolutionCorrectorTest {
         noResolution_inserted(SurfaceConfig.ConfigType.JPEG, SELECT_RESOLUTION_JPEG)
     }
 
-    private fun noResolution_inserted(configType: SurfaceConfig.ConfigType, resolution: Size) {
+    private fun noResolution_inserted(
+        configType: SurfaceConfig.ConfigType,
+        resolution: Size
+    ) {
         Truth.assertThat(
-                mResolutionCorrector!!.insertOrPrioritize(configType, SUPPORTED_RESOLUTIONS)
+            mResolutionCorrector!!.insertOrPrioritize(
+                configType,
+                SUPPORTED_RESOLUTIONS
             )
-            .containsExactly(resolution, RESOLUTION_1, RESOLUTION_2)
-            .inOrder()
+        )
+            .containsExactly(resolution, RESOLUTION_1, RESOLUTION_2).inOrder()
     }
 
     @Test
     fun noQuirk_returnsOriginalSupportedResolutions() {
         ReflectionHelpers.setStaticField(Build::class.java, "BRAND", "notsamsung")
         val resolutionCorrector = ResolutionCorrector()
-        val result =
-            resolutionCorrector.insertOrPrioritize(
-                SurfaceConfig.ConfigType.PRIV,
-                SUPPORTED_RESOLUTIONS
-            )
+        val result = resolutionCorrector.insertOrPrioritize(
+            SurfaceConfig.ConfigType.PRIV,
+            SUPPORTED_RESOLUTIONS
+        )
         Truth.assertThat(result).containsExactlyElementsIn(SUPPORTED_RESOLUTIONS)
     }
 }

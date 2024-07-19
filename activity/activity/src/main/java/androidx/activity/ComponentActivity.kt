@@ -65,7 +65,6 @@ import androidx.core.app.MultiWindowModeChangedInfo
 import androidx.core.app.OnMultiWindowModeChangedProvider
 import androidx.core.app.OnNewIntentProvider
 import androidx.core.app.OnPictureInPictureModeChangedProvider
-import androidx.core.app.OnUserLeaveHintProvider
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.content.ContextCompat
 import androidx.core.content.OnConfigurationChangedProvider
@@ -105,12 +104,11 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Base class for activities that enables composition of higher level components.
  *
- * Rather than all functionality being built directly into this class, only the minimal set of lower
- * level building blocks are included. Higher level components can then be used as needed without
- * enforcing a deep Activity class hierarchy or strong coupling between components.
+ * Rather than all functionality being built directly into this class, only the minimal set of
+ * lower level building blocks are included. Higher level components can then be used as needed
+ * without enforcing a deep Activity class hierarchy or strong coupling between components.
  */
-open class ComponentActivity() :
-    androidx.core.app.ComponentActivity(),
+open class ComponentActivity() : androidx.core.app.ComponentActivity(),
     ContextAware,
     LifecycleOwner,
     ViewModelStoreOwner,
@@ -124,7 +122,6 @@ open class ComponentActivity() :
     OnNewIntentProvider,
     OnMultiWindowModeChangedProvider,
     OnPictureInPictureModeChangedProvider,
-    OnUserLeaveHintProvider,
     MenuHost,
     FullyDrawnReporterOwner {
     internal class NonConfigurationInstances {
@@ -142,10 +139,15 @@ open class ComponentActivity() :
     private var _viewModelStore: ViewModelStore? = null
     private val reportFullyDrawnExecutor = createFullyDrawnExecutor()
     override val fullyDrawnReporter by lazy {
-        FullyDrawnReporter(reportFullyDrawnExecutor) { reportFullyDrawn() }
+        FullyDrawnReporter(
+            reportFullyDrawnExecutor
+        ) {
+            reportFullyDrawn()
+        }
     }
 
-    @LayoutRes private var contentLayoutId = 0
+    @LayoutRes
+    private var contentLayoutId = 0
     private val nextLocalRequestCode = AtomicInteger()
 
     /**
@@ -168,7 +170,10 @@ open class ComponentActivity() :
                 val synchronousResult = contract.getSynchronousResult(activity, input)
                 if (synchronousResult != null) {
                     Handler(Looper.getMainLooper()).post {
-                        dispatchResult(requestCode, synchronousResult.value)
+                        dispatchResult(
+                            requestCode,
+                            synchronousResult.value
+                        )
                     }
                     return
                 }
@@ -194,27 +199,21 @@ open class ComponentActivity() :
                     }
                     ActivityCompat.requestPermissions(activity, permissions, requestCode)
                 } else if (ACTION_INTENT_SENDER_REQUEST == intent.action) {
-                    val request =
-                        intent.getParcelableExtra<IntentSenderRequest>(EXTRA_INTENT_SENDER_REQUEST)
+                    val request = intent.getParcelableExtra<IntentSenderRequest>(
+                        EXTRA_INTENT_SENDER_REQUEST
+                    )
                     try {
                         // startIntentSenderForResult path
                         ActivityCompat.startIntentSenderForResult(
-                            activity,
-                            request!!.intentSender,
-                            requestCode,
-                            request.fillInIntent,
-                            request.flagsMask,
-                            request.flagsValues,
-                            0,
-                            optionsBundle
+                            activity, request!!.intentSender,
+                            requestCode, request.fillInIntent, request.flagsMask,
+                            request.flagsValues, 0, optionsBundle
                         )
                     } catch (e: SendIntentException) {
                         Handler(Looper.getMainLooper()).post {
                             dispatchResult(
-                                requestCode,
-                                RESULT_CANCELED,
-                                Intent()
-                                    .setAction(ACTION_INTENT_SENDER_REQUEST)
+                                requestCode, RESULT_CANCELED,
+                                Intent().setAction(ACTION_INTENT_SENDER_REQUEST)
                                     .putExtra(EXTRA_SEND_INTENT_EXCEPTION, e)
                             )
                         }
@@ -237,13 +236,13 @@ open class ComponentActivity() :
         CopyOnWriteArrayList<Consumer<MultiWindowModeChangedInfo>>()
     private val onPictureInPictureModeChangedListeners =
         CopyOnWriteArrayList<Consumer<PictureInPictureModeChangedInfo>>()
-    private val onUserLeaveHintListeners = CopyOnWriteArrayList<Runnable>()
     private var dispatchingOnMultiWindowModeChanged = false
     private var dispatchingOnPictureInPictureModeChanged = false
 
     /**
-     * Default constructor for ComponentActivity. All Activities must have a default constructor for
-     * API 27 and lower devices or when using the default [android.app.AppComponentFactory].
+     * Default constructor for ComponentActivity. All Activities must have a default constructor
+     * for API 27 and lower devices or when using the default
+     * [android.app.AppComponentFactory].
      */
     init {
         @Suppress("RedundantRequireNotNullCall", "LeakingThis")
@@ -254,49 +253,49 @@ open class ComponentActivity() :
                 "initialization."
         }
         @Suppress("LeakingThis")
-        lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_STOP) {
-                    window?.peekDecorView()?.cancelPendingInputEvents()
-                }
+        lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                window?.peekDecorView()?.cancelPendingInputEvents()
             }
-        )
+        })
         @Suppress("LeakingThis")
-        lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    // Clear out the available context
-                    contextAwareHelper.clearAvailableContext()
-                    // And clear the ViewModelStore
-                    if (!isChangingConfigurations) {
-                        viewModelStore.clear()
-                    }
-                    reportFullyDrawnExecutor.activityDestroyed()
+        lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                // Clear out the available context
+                contextAwareHelper.clearAvailableContext()
+                // And clear the ViewModelStore
+                if (!isChangingConfigurations) {
+                    viewModelStore.clear()
                 }
+                reportFullyDrawnExecutor.activityDestroyed()
             }
-        )
+        })
         @Suppress("LeakingThis")
-        lifecycle.addObserver(
-            object : LifecycleEventObserver {
-                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                    ensureViewModelStore()
-                    lifecycle.removeObserver(this)
-                }
+        lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(
+                source: LifecycleOwner,
+                event: Lifecycle.Event
+            ) {
+                ensureViewModelStore()
+                lifecycle.removeObserver(this)
             }
-        )
+        })
         savedStateRegistryController.performAttach()
         enableSavedStateHandles()
-        if (Build.VERSION.SDK_INT <= 23) {
-            @Suppress("LeakingThis") lifecycle.addObserver(ImmLeaksCleaner(this))
+        if (Build.VERSION.SDK_INT in 19..23) {
+            @Suppress("LeakingThis")
+            lifecycle.addObserver(ImmLeaksCleaner(this))
         }
-        savedStateRegistry.registerSavedStateProvider(ACTIVITY_RESULT_TAG) {
+        savedStateRegistry.registerSavedStateProvider(
+            ACTIVITY_RESULT_TAG
+        ) {
             val outState = Bundle()
             activityResultRegistry.onSaveInstanceState(outState)
             outState
         }
         addOnContextAvailableListener {
-            val savedInstanceState =
-                savedStateRegistry.consumeRestoredStateForKey(ACTIVITY_RESULT_TAG)
+            val savedInstanceState = savedStateRegistry
+                .consumeRestoredStateForKey(ACTIVITY_RESULT_TAG)
             if (savedInstanceState != null) {
                 activityResultRegistry.onRestoreInstanceState(savedInstanceState)
             }
@@ -304,11 +303,12 @@ open class ComponentActivity() :
     }
 
     /**
-     * Alternate constructor that can be used to provide a default layout that will be inflated as
-     * part of `super.onCreate(savedInstanceState)`.
+     * Alternate constructor that can be used to provide a default layout
+     * that will be inflated as part of `super.onCreate(savedInstanceState)`.
      *
-     * This should generally be called from your constructor that takes no parameters, as is
-     * required for API 27 and lower or when using the default [android.app.AppComponentFactory].
+     * This should generally be called from your constructor that takes no parameters,
+     * as is required for API 27 and lower or when using the default
+     * [android.app.AppComponentFactory].
      */
     @ContentView
     constructor(@LayoutRes contentLayoutId: Int) : this() {
@@ -318,8 +318,8 @@ open class ComponentActivity() :
     /**
      * {@inheritDoc}
      *
-     * If your ComponentActivity is annotated with [ContentView], this will call [setContentView]
-     * for you.
+     * If your ComponentActivity is annotated with [ContentView], this will
+     * call [setContentView] for you.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         // Restore the Saved State first so that it is available to
@@ -343,8 +343,9 @@ open class ComponentActivity() :
     }
 
     /**
-     * Retain all appropriate non-config state. You can NOT override this yourself! Use a
-     * [androidx.lifecycle.ViewModel] if you want to retain your own non config state.
+     * Retain all appropriate non-config state.  You can NOT
+     * override this yourself!  Use a [androidx.lifecycle.ViewModel] if you want to
+     * retain your own non config state.
      */
     @Suppress("deprecation")
     final override fun onRetainNonConfigurationInstance(): Any? {
@@ -369,8 +370,8 @@ open class ComponentActivity() :
     }
 
     /**
-     * Use this instead of [onRetainNonConfigurationInstance]. Retrieve later with
-     * [lastCustomNonConfigurationInstance].
+     * Use this instead of [onRetainNonConfigurationInstance].
+     * Retrieve later with [lastCustomNonConfigurationInstance].
      */
     @Deprecated("Use a {@link androidx.lifecycle.ViewModel} to store non config state.")
     open fun onRetainCustomNonConfigurationInstance(): Any? {
@@ -379,7 +380,10 @@ open class ComponentActivity() :
 
     @get:Deprecated("Use a {@link androidx.lifecycle.ViewModel} to store non config state.")
     open val lastCustomNonConfigurationInstance: Any?
-        /** Return the value previously returned from [onRetainCustomNonConfigurationInstance]. */
+        /**
+         * Return the value previously returned from
+         * [onRetainCustomNonConfigurationInstance].
+         */
         get() {
             val nc = lastNonConfigurationInstance as NonConfigurationInstances?
             return nc?.custom
@@ -403,15 +407,18 @@ open class ComponentActivity() :
         super.setContentView(view, params)
     }
 
-    override fun addContentView(view: View?, params: ViewGroup.LayoutParams?) {
+    override fun addContentView(
+        view: View?,
+        params: ViewGroup.LayoutParams?
+    ) {
         initializeViewTreeOwners()
         reportFullyDrawnExecutor.viewCreated(window.decorView)
         super.addContentView(view, params)
     }
 
     /**
-     * Sets the view tree owners before setting the content view so that the inflation process and
-     * attach listeners will see them already present.
+     * Sets the view tree owners before setting the content view so that the
+     * inflation process and attach listeners will see them already present.
      */
     @CallSuper
     open fun initializeViewTreeOwners() {
@@ -429,16 +436,21 @@ open class ComponentActivity() :
     /**
      * {@inheritDoc}
      *
-     * Any listener added here will receive a callback as part of `super.onCreate()`, but
-     * importantly **before** any other logic is done (including calling through to the framework
-     * [Activity.onCreate] with the exception of restoring the state of the [savedStateRegistry] for
-     * use in your listener.
+     * Any listener added here will receive a callback as part of
+     * `super.onCreate()`, but importantly **before** any other
+     * logic is done (including calling through to the framework
+     * [Activity.onCreate] with the exception of restoring the state
+     * of the [savedStateRegistry] for use in your listener.
      */
-    final override fun addOnContextAvailableListener(listener: OnContextAvailableListener) {
+    final override fun addOnContextAvailableListener(
+        listener: OnContextAvailableListener
+    ) {
         contextAwareHelper.addOnContextAvailableListener(listener)
     }
 
-    final override fun removeOnContextAvailableListener(listener: OnContextAvailableListener) {
+    final override fun removeOnContextAvailableListener(
+        listener: OnContextAvailableListener
+    ) {
         contextAwareHelper.removeOnContextAvailableListener(listener)
     }
 
@@ -500,13 +512,15 @@ open class ComponentActivity() :
     /**
      * {@inheritDoc}
      *
-     * Overriding this method is no longer supported and this method will be made `final` in a
-     * future version of ComponentActivity. If you do override this method, you *must*:
-     * 1. Return an instance of [LifecycleRegistry]
-     * 1. Lazily initialize your LifecycleRegistry object when this is first called.
+     * Overriding this method is no longer supported and this method will be made
+     * `final` in a future version of ComponentActivity. If you do override
+     * this method, you *must*:
      *
-     * Note that this method will be called in the super classes' constructor, before any field
-     * initialization or object state creation is complete.
+     *  1. Return an instance of [LifecycleRegistry]
+     *  1. Lazily initialize your LifecycleRegistry object when this is first called.
+     *
+     * Note that this method will be called in the super classes' constructor, before any
+     * field initialization or object state creation is complete.
      */
     override val lifecycle: Lifecycle
         get() = super.lifecycle
@@ -515,12 +529,12 @@ open class ComponentActivity() :
         /**
          * Returns the [ViewModelStore] associated with this activity
          *
-         * Overriding this method is no longer supported and this method will be made `final` in a
-         * future version of ComponentActivity.
+         * Overriding this method is no longer supported and this method will be made
+         * `final` in a future version of ComponentActivity.
          *
          * @return a [ViewModelStore]
          * @throws IllegalStateException if called before the Activity is attached to the
-         *   Application instance i.e., before onCreate()
+         * Application instance i.e., before onCreate()
          */
         get() {
             checkNotNull(application) {
@@ -545,7 +559,11 @@ open class ComponentActivity() :
     }
 
     override val defaultViewModelProviderFactory: ViewModelProvider.Factory by lazy {
-        SavedStateViewModelFactory(application, this, if (intent != null) intent.extras else null)
+        SavedStateViewModelFactory(
+            application,
+            this,
+            if (intent != null) intent.extras else null
+        )
     }
 
     @get:CallSuper
@@ -553,8 +571,9 @@ open class ComponentActivity() :
         /**
          * {@inheritDoc}
          *
-         * The extras of [getIntent] when this is first called will be used as the defaults to any
-         * [androidx.lifecycle.SavedStateHandle] passed to a view model created using this extra.
+         * The extras of [getIntent] when this is first called will be used as
+         * the defaults to any [androidx.lifecycle.SavedStateHandle] passed to a view model
+         * created using this extra.
          */
         get() {
             val extras = MutableCreationExtras()
@@ -571,9 +590,10 @@ open class ComponentActivity() :
         }
 
     /**
-     * Called when the activity has detected the user's press of the back key. The
-     * [onBackPressedDispatcher] will be given a chance to handle the back button before the default
-     * behavior of [android.app.Activity.onBackPressed] is invoked.
+     * Called when the activity has detected the user's press of the back
+     * key. The [onBackPressedDispatcher] will be given a
+     * chance to handle the back button before the default behavior of
+     * [android.app.Activity.onBackPressed] is invoked.
      *
      * @see onBackPressedDispatcher
      */
@@ -590,63 +610,50 @@ open class ComponentActivity() :
     }
 
     /**
-     * Retrieve the [OnBackPressedDispatcher] that will be triggered when [onBackPressed] is called.
-     *
+     * Retrieve the [OnBackPressedDispatcher] that will be triggered when
+     * [onBackPressed] is called.
      * @return The [OnBackPressedDispatcher] associated with this ComponentActivity.
      */
     @Suppress("DEPRECATION")
     final override val onBackPressedDispatcher: OnBackPressedDispatcher by lazy {
         OnBackPressedDispatcher {
-                // Calling onBackPressed() on an Activity with its state saved can cause an
-                // error on devices on API levels before 26. We catch that specific error
-                // and throw all others.
-                try {
-                    super@ComponentActivity.onBackPressed()
-                } catch (e: IllegalStateException) {
-                    if (e.message != "Can not perform this action after onSaveInstanceState") {
-                        throw e
-                    }
-                } catch (e: NullPointerException) {
-                    if (
-                        e.message !=
-                            "Attempt to invoke virtual method 'android.os.Handler " +
-                                "android.app.FragmentHostCallback.getHandler()' on a " +
-                                "null object reference"
-                    ) {
-                        throw e
-                    }
+            // Calling onBackPressed() on an Activity with its state saved can cause an
+            // error on devices on API levels before 26. We catch that specific error
+            // and throw all others.
+            try {
+                super@ComponentActivity.onBackPressed()
+            } catch (e: IllegalStateException) {
+                if (e.message != "Can not perform this action after onSaveInstanceState") {
+                    throw e
+                }
+            } catch (e: NullPointerException) {
+                if (e.message != "Attempt to invoke virtual method 'android.os.Handler " +
+                    "android.app.FragmentHostCallback.getHandler()' on a " +
+                    "null object reference") {
+                    throw e
                 }
             }
-            .also { dispatcher ->
-                if (Build.VERSION.SDK_INT >= 33) {
-                    if (Looper.myLooper() != Looper.getMainLooper()) {
-                        Handler(Looper.getMainLooper()).post {
-                            addObserverForBackInvoker(dispatcher)
-                        }
-                    } else {
-                        addObserverForBackInvoker(dispatcher)
-                    }
-                }
-            }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun addObserverForBackInvoker(dispatcher: OnBackPressedDispatcher) {
-        lifecycle.addObserver(
-            LifecycleEventObserver { _, event ->
+        }.also { dispatcher ->
+            lifecycle.addObserver(LifecycleEventObserver { lifecycleOwner, event ->
                 if (event == Lifecycle.Event.ON_CREATE) {
-                    dispatcher.setOnBackInvokedDispatcher(
-                        Api33Impl.getOnBackInvokedDispatcher(this@ComponentActivity)
-                    )
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        dispatcher.setOnBackInvokedDispatcher(
+                            Api33Impl.getOnBackInvokedDispatcher(
+                                lifecycleOwner as ComponentActivity
+                            )
+                        )
+                    }
                 }
-            }
-        )
+            })
+        }
     }
 
     final override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
       which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
@@ -657,11 +664,16 @@ open class ComponentActivity() :
       {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
       passing in a {@link StartActivityForResult} object for the {@link ActivityResultContract}."""
     )
-    override fun startActivityForResult(intent: Intent, requestCode: Int) {
+    override fun startActivityForResult(
+        intent: Intent,
+        requestCode: Int
+    ) {
         super.startActivityForResult(intent, requestCode)
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
       which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
@@ -672,11 +684,17 @@ open class ComponentActivity() :
       {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}
       passing in a {@link StartActivityForResult} object for the {@link ActivityResultContract}."""
     )
-    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+    override fun startActivityForResult(
+        intent: Intent,
+        requestCode: Int,
+        options: Bundle?
+    ) {
         super.startActivityForResult(intent, requestCode, options)
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
       which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
@@ -688,7 +706,9 @@ open class ComponentActivity() :
       passing in a {@link StartIntentSenderForResult} object for the
       {@link ActivityResultContract}."""
     )
-    @Throws(SendIntentException::class)
+    @Throws(
+        SendIntentException::class
+    )
     override fun startIntentSenderForResult(
         intent: IntentSender,
         requestCode: Int,
@@ -698,16 +718,14 @@ open class ComponentActivity() :
         extraFlags: Int
     ) {
         super.startIntentSenderForResult(
-            intent,
-            requestCode,
-            fillInIntent,
-            flagsMask,
-            flagsValues,
+            intent, requestCode, fillInIntent, flagsMask, flagsValues,
             extraFlags
         )
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
       which brings increased type safety via an {@link ActivityResultContract} and the prebuilt
@@ -719,7 +737,9 @@ open class ComponentActivity() :
       passing in a {@link StartIntentSenderForResult} object for the
       {@link ActivityResultContract}."""
     )
-    @Throws(SendIntentException::class)
+    @Throws(
+        SendIntentException::class
+    )
     override fun startIntentSenderForResult(
         intent: IntentSender,
         requestCode: Int,
@@ -730,17 +750,14 @@ open class ComponentActivity() :
         options: Bundle?
     ) {
         super.startIntentSenderForResult(
-            intent,
-            requestCode,
-            fillInIntent,
-            flagsMask,
-            flagsValues,
-            extraFlags,
-            options
+            intent, requestCode, fillInIntent, flagsMask, flagsValues,
+            extraFlags, options
         )
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @CallSuper
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
@@ -759,7 +776,9 @@ open class ComponentActivity() :
         }
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @CallSuper
     @Deprecated(
         """This method has been deprecated in favor of using the Activity Result API
@@ -777,11 +796,8 @@ open class ComponentActivity() :
         permissions: Array<String>,
         grantResults: IntArray
     ) {
-        if (
-            !activityResultRegistry.dispatchResult(
-                requestCode,
-                RESULT_OK,
-                Intent()
+        if (!activityResultRegistry.dispatchResult(
+                requestCode, RESULT_OK, Intent()
                     .putExtra(EXTRA_PERMISSIONS, permissions)
                     .putExtra(EXTRA_PERMISSION_GRANT_RESULTS, grantResults)
             )
@@ -798,10 +814,7 @@ open class ComponentActivity() :
         callback: ActivityResultCallback<O>
     ): ActivityResultLauncher<I> {
         return registry.register(
-            "activity_rq#" + nextLocalRequestCode.getAndIncrement(),
-            this,
-            contract,
-            callback
+            "activity_rq#" + nextLocalRequestCode.getAndIncrement(), this, contract, callback
         )
     }
 
@@ -825,11 +838,15 @@ open class ComponentActivity() :
         }
     }
 
-    final override fun addOnConfigurationChangedListener(listener: Consumer<Configuration>) {
+    final override fun addOnConfigurationChangedListener(
+        listener: Consumer<Configuration>
+    ) {
         onConfigurationChangedListeners.add(listener)
     }
 
-    final override fun removeOnConfigurationChangedListener(listener: Consumer<Configuration>) {
+    final override fun removeOnConfigurationChangedListener(
+        listener: Consumer<Configuration>
+    ) {
         onConfigurationChangedListeners.remove(listener)
     }
 
@@ -857,10 +874,14 @@ open class ComponentActivity() :
     /**
      * {@inheritDoc}
      *
-     * Dispatches this call to all listeners added via [addOnNewIntentListener].
+     * Dispatches this call to all listeners added via
+     * [addOnNewIntentListener].
      */
     @CallSuper
-    override fun onNewIntent(@Suppress("InvalidNullabilityOverride") intent: Intent) {
+    override fun onNewIntent(
+        @Suppress("InvalidNullabilityOverride")
+        intent: Intent
+    ) {
         super.onNewIntent(intent)
         for (listener in onNewIntentListeners) {
             listener.accept(intent)
@@ -901,7 +922,10 @@ open class ComponentActivity() :
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
     @CallSuper
-    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+    override fun onMultiWindowModeChanged(
+        isInMultiWindowMode: Boolean,
+        newConfig: Configuration
+    ) {
         dispatchingOnMultiWindowModeChanged = true
         try {
             // We can unconditionally call super.onMultiWindowModeChanged() here because this
@@ -950,7 +974,8 @@ open class ComponentActivity() :
     /**
      * {@inheritDoc}
      *
-     * Dispatches this call to all listeners added via [addOnPictureInPictureModeChangedListener].
+     * Dispatches this call to all listeners added via
+     * [addOnPictureInPictureModeChangedListener].
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
     @CallSuper
@@ -968,7 +993,11 @@ open class ComponentActivity() :
             dispatchingOnPictureInPictureModeChanged = false
         }
         for (listener in onPictureInPictureModeChangedListeners) {
-            listener.accept(PictureInPictureModeChangedInfo(isInPictureInPictureMode, newConfig))
+            listener.accept(
+                PictureInPictureModeChangedInfo(
+                    isInPictureInPictureMode, newConfig
+                )
+            )
         }
     }
 
@@ -984,27 +1013,6 @@ open class ComponentActivity() :
         onPictureInPictureModeChangedListeners.remove(listener)
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Dispatches this call to all listeners added via [addOnUserLeaveHintListener].
-     */
-    @CallSuper
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        for (listener in onUserLeaveHintListeners) {
-            listener.run()
-        }
-    }
-
-    final override fun addOnUserLeaveHintListener(listener: Runnable) {
-        onUserLeaveHintListeners.add(listener)
-    }
-
-    final override fun removeOnUserLeaveHintListener(listener: Runnable) {
-        onUserLeaveHintListeners.remove(listener)
-    }
-
     override fun reportFullyDrawn() {
         try {
             if (Trace.isEnabled()) {
@@ -1012,12 +1020,10 @@ open class ComponentActivity() :
             }
             if (Build.VERSION.SDK_INT > 19) {
                 super.reportFullyDrawn()
-            } else if (
-                Build.VERSION.SDK_INT == 19 &&
-                    ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.UPDATE_DEVICE_STATS
-                    ) == PackageManager.PERMISSION_GRANTED
+            } else if (Build.VERSION.SDK_INT == 19 && ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.UPDATE_DEVICE_STATS
+                ) == PackageManager.PERMISSION_GRANTED
             ) {
                 // On API 19, the Activity.reportFullyDrawn() method requires the
                 // UPDATE_DEVICE_STATS permission, otherwise it throws an exception. Instead of
@@ -1045,16 +1051,14 @@ open class ComponentActivity() :
 
     private interface ReportFullyDrawnExecutor : Executor {
         fun viewCreated(view: View)
-
         fun activityDestroyed()
     }
 
-    private inner class ReportFullyDrawnExecutorImpl :
-        ReportFullyDrawnExecutor, OnDrawListener, Runnable {
+    private inner class ReportFullyDrawnExecutorImpl : ReportFullyDrawnExecutor,
+        OnDrawListener, Runnable {
         val endWatchTimeMillis = SystemClock.uptimeMillis() + 10000
         var currentRunnable: Runnable? = null
         var onDrawScheduled = false
-
         override fun viewCreated(view: View) {
             if (!onDrawScheduled) {
                 onDrawScheduled = true
@@ -1112,8 +1116,8 @@ open class ComponentActivity() :
         }
 
         /**
-         * Called when we want to remove the OnDrawListener. OnDrawListener can't be removed from
-         * within the onDraw() method.
+         * Called when we want to remove the OnDrawListener. OnDrawListener can't be removed
+         * from within the onDraw() method.
          */
         override fun run() {
             window.decorView.getViewTreeObserver().removeOnDrawListener(this)

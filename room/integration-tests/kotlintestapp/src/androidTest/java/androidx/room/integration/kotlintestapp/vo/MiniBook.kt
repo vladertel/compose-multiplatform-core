@@ -18,4 +18,8 @@ package androidx.room.integration.kotlintestapp.vo
 
 import androidx.room.PrimaryKey
 
-data class MiniBook(@PrimaryKey val bookId: String, val title: String, val bookPublisherId: String)
+data class MiniBook(
+    @PrimaryKey val bookId: String,
+    val title: String,
+    val bookPublisherId: String
+)

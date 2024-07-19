@@ -32,7 +32,8 @@ public class ExtendedCameraConfigProviderStoreTest {
     @Test
     public fun canRetrieveStoredCameraConfigProvider() {
         val id = Object()
-        val cameraConfigProvider = CameraConfigProvider { _, _ -> CameraConfigs.defaultConfig() }
+        val cameraConfigProvider =
+            CameraConfigProvider { _, _ -> CameraConfigs.emptyConfig() }
 
         ExtendedCameraConfigProviderStore.addConfig(id, cameraConfigProvider)
 
@@ -42,7 +43,8 @@ public class ExtendedCameraConfigProviderStoreTest {
 
     @Test
     public fun returnDefaultEmptyCameraConfigProvider_whenNoDataStored() {
-        assertThat(ExtendedCameraConfigProviderStore.getConfigProvider(Object()))
-            .isEqualTo(CameraConfigProvider.EMPTY)
+        assertThat(ExtendedCameraConfigProviderStore.getConfigProvider(Object())).isEqualTo(
+            CameraConfigProvider.EMPTY
+        )
     }
 }

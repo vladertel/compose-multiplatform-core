@@ -26,19 +26,7 @@ internal abstract class InternalXAnnotationValue : XAnnotationValue {
      * distinguish between `String` and `String[]` you can check `valueType.isArray()`.
      */
     private enum class Kind {
-        BOOLEAN,
-        INT,
-        SHORT,
-        LONG,
-        FLOAT,
-        DOUBLE,
-        BYTE,
-        CHAR,
-        STRING,
-        ENUM,
-        ANNOTATION,
-        TYPE;
-
+        BOOLEAN, INT, SHORT, LONG, FLOAT, DOUBLE, BYTE, CHAR, STRING, ENUM, ANNOTATION, TYPE;
         companion object {
             fun of(type: XType): Kind {
                 if (type.isArray()) {
@@ -65,7 +53,9 @@ internal abstract class InternalXAnnotationValue : XAnnotationValue {
     }
 
     /** The kind of the value. */
-    private val kind: Kind by lazy { Kind.of(valueType) }
+    private val kind: Kind by lazy {
+        Kind.of(valueType)
+    }
 
     final override fun hasListValue() = valueType.isArray()
 

@@ -26,8 +26,11 @@ class RecyclerViewActivity : AppCompatActivity() {
 
     val recyclerView: RecyclerView by lazy {
         RecyclerView(this).apply {
-            layoutManager =
-                LinearLayoutManager(this@RecyclerViewActivity, RecyclerView.VERTICAL, false)
+            layoutManager = LinearLayoutManager(
+                this@RecyclerViewActivity,
+                RecyclerView.VERTICAL,
+                false
+            )
             layoutParams = FrameLayout.LayoutParams(100, 100)
         }
     }

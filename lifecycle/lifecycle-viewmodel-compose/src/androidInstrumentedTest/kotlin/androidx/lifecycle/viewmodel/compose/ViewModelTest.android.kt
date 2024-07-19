@@ -45,7 +45,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 public class ViewModelTest {
 
-    @get:Rule public val rule: ComposeContentTestRule = createComposeRule()
+    @get:Rule
+    public val rule: ComposeContentTestRule = createComposeRule()
 
     @Test
     public fun nullViewModelStoreOwner() {
@@ -55,15 +56,14 @@ public class ViewModelTest {
             val lifecycleOwner = LocalLifecycleOwner.current
             val savedStateRegistryOwner = LocalSavedStateRegistryOwner.current
             DisposableEffect(context, lifecycleOwner, savedStateRegistryOwner) {
-                val dialog =
-                    Dialog(context).apply {
-                        val composeView = ComposeView(context)
-                        composeView.setContent {
-                            // This should return null because no LocalViewModelStoreOwner was set
-                            owner = LocalViewModelStoreOwner.current
-                        }
-                        setContentView(composeView)
+                val dialog = Dialog(context).apply {
+                    val composeView = ComposeView(context)
+                    composeView.setContent {
+                        // This should return null because no LocalViewModelStoreOwner was set
+                        owner = LocalViewModelStoreOwner.current
                     }
+                    setContentView(composeView)
+                }
                 dialog.show()
                 dialog.window?.decorView?.run {
                     // Specifically only set the LifecycleOwner and SavedStateRegistryOwner
@@ -71,7 +71,9 @@ public class ViewModelTest {
                     setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
                 }
 
-                onDispose { dialog.dismiss() }
+                onDispose {
+                    dialog.dismiss()
+                }
             }
         }
 
@@ -99,7 +101,8 @@ public class ViewModelTest {
         var createdInComposition: Any? = null
         rule.setContent {
             CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                createdInComposition = viewModel<TestViewModel>(key = "test")
+                createdInComposition =
+                    viewModel<TestViewModel>(key = "test")
             }
         }
 
@@ -112,17 +115,22 @@ public class ViewModelTest {
     public fun viewModelCreatedViaDefaultFactoryWithKeyAndCreationExtras() {
         val owner = FakeViewModelStoreOwner()
         var createdInComposition: Any? = null
-        val extrasKey = object : CreationExtras.Key<String> {}
-        val extras = MutableCreationExtras().apply { set(extrasKey, "value") }
+        val extrasKey = object : CreationExtras.Key<String> { }
+        val extras = MutableCreationExtras().apply {
+            set(extrasKey, "value")
+        }
         rule.setContent {
             CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                createdInComposition = viewModel<TestViewModel>(key = "test", extras = extras)
+                createdInComposition =
+                    viewModel<TestViewModel>(key = "test", extras = extras)
             }
         }
 
         assertThat(owner.factory.createCalled).isTrue()
-        assertThat(owner.factory.passedInExtras.get(extrasKey)).isEqualTo("value")
-        val createdManually = ViewModelProvider(owner)["test", TestViewModel::class.java]
+        assertThat(owner.factory.passedInExtras.get(extrasKey))
+            .isEqualTo("value")
+        val createdManually =
+            ViewModelProvider(owner)["test", TestViewModel::class.java]
         assertThat(createdInComposition).isEqualTo(createdManually)
     }
 
@@ -130,23 +138,23 @@ public class ViewModelTest {
     public fun viewModelCreatedCreationExtrasInitializer() {
         val owner = FakeViewModelStoreOwner()
         var createdInComposition: Any? = null
-        val extrasKey = object : CreationExtras.Key<String> {}
+        val extrasKey = object : CreationExtras.Key<String> { }
         rule.setContent {
             CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                createdInComposition =
-                    viewModel(
-                        key = "test",
-                        initializer = {
-                            TestViewModel(
-                                MutableCreationExtras(this).apply { set(extrasKey, "value") }
-                            )
-                        }
-                    )
+                createdInComposition = viewModel(
+                    key = "test",
+                    initializer = {
+                        TestViewModel(MutableCreationExtras(this).apply {
+                            set(extrasKey, "value")
+                        })
+                    }
+                )
             }
         }
 
         assertThat(owner.factory.createCalled).isFalse()
-        val createdManually = ViewModelProvider(owner)["test", TestViewModel::class.java]
+        val createdManually =
+            ViewModelProvider(owner)["test", TestViewModel::class.java]
         assertThat(createdInComposition).isEqualTo(createdManually)
         assertThat(createdManually.extras[extrasKey]).isEqualTo("value")
     }
@@ -185,7 +193,9 @@ public class ViewModelTest {
     public fun customFactoryProducerIsUsedWhenProvided() {
         val owner = FakeViewModelStoreOwner()
         val customFactory = FakeViewModelProviderFactory()
-        rule.setContent { viewModel<TestViewModel>(owner, factory = customFactory) }
+        rule.setContent {
+            viewModel<TestViewModel>(owner, factory = customFactory)
+        }
 
         assertThat(customFactory.createCalled).isTrue()
     }
@@ -226,7 +236,8 @@ public class ViewModelTest {
         val customFactory = FakeViewModelProviderFactory()
         rule.setContent {
             CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                createdInComposition = viewModel<TestViewModel>(key = "test")
+                createdInComposition =
+                    viewModel<TestViewModel>(key = "test")
             }
         }
 
@@ -242,11 +253,11 @@ private class TestViewModel(val extras: CreationExtras = CreationExtras.Empty) :
 private class FakeViewModelProviderFactory : ViewModelProvider.Factory {
     var createCalled = false
     var passedInExtras: CreationExtras = CreationExtras.Empty
-
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass == TestViewModel::class.java)
         createCalled = true
-        @Suppress("UNCHECKED_CAST") return TestViewModel() as T
+        @Suppress("UNCHECKED_CAST")
+        return TestViewModel() as T
     }
 
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {

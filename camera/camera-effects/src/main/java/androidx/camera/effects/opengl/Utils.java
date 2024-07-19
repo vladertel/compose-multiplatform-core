@@ -23,6 +23,7 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 
 import java.nio.ByteBuffer;
@@ -32,6 +33,7 @@ import java.nio.FloatBuffer;
 /**
  * Utility methods for OpenGL.
  */
+@RequiresApi(21)
 class Utils {
 
     private static final String TAG = "GlUtils";

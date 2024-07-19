@@ -30,7 +30,9 @@ class SaveableStateRegistryTest {
 
         registry.registerProvider("key") { 10 }
 
-        registry.performSave().apply { assertThat(get("key")).isEqualTo(listOf(10)) }
+        registry.performSave().apply {
+            assertThat(get("key")).isEqualTo(listOf(10))
+        }
     }
 
     @Test
@@ -41,7 +43,9 @@ class SaveableStateRegistryTest {
         val entry = registry.registerProvider("key", provider)
         entry.unregister()
 
-        registry.performSave().apply { assertThat(containsKey("key")).isFalse() }
+        registry.performSave().apply {
+            assertThat(containsKey("key")).isFalse()
+        }
     }
 
     @Test
@@ -53,7 +57,9 @@ class SaveableStateRegistryTest {
         entry.unregister()
         registry.registerProvider("key") { "value2" }
 
-        registry.performSave().apply { assertThat(get("key")).isEqualTo(listOf("value2")) }
+        registry.performSave().apply {
+            assertThat(get("key")).isEqualTo(listOf("value2"))
+        }
     }
 
     @Test
@@ -81,7 +87,9 @@ class SaveableStateRegistryTest {
 
         registry.registerProvider("key") { null }
 
-        registry.performSave().apply { assertThat(containsKey("key")).isFalse() }
+        registry.performSave().apply {
+            assertThat(containsKey("key")).isFalse()
+        }
     }
 
     @Test
@@ -90,7 +98,9 @@ class SaveableStateRegistryTest {
 
         registry.registerProvider("a") { 1 }
 
-        registry.performSave().apply { assertThat(get("a")).isEqualTo(listOf(1)) }
+        registry.performSave().apply {
+            assertThat(get("a")).isEqualTo(listOf(1))
+        }
     }
 
     @Test(expected = IllegalArgumentException::class)

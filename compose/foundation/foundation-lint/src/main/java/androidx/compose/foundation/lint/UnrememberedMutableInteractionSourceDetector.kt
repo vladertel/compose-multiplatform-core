@@ -37,8 +37,9 @@ import org.jetbrains.uast.UCallExpression
  * inside a Composable body, they are `remember`ed.
  */
 class UnrememberedMutableInteractionSourceDetector : Detector(), SourceCodeScanner {
-    override fun getApplicableMethodNames(): List<String> =
-        listOf(FoundationNames.Interaction.MutableInteractionSource.shortName)
+    override fun getApplicableMethodNames(): List<String> = listOf(
+        FoundationNames.Interaction.MutableInteractionSource.shortName
+    )
 
     override fun visitMethodCall(context: JavaContext, node: UCallExpression, method: PsiMethod) {
         if (!method.isInPackageName(FoundationNames.Interaction.PackageName)) return
@@ -55,23 +56,20 @@ class UnrememberedMutableInteractionSourceDetector : Detector(), SourceCodeScann
     }
 
     companion object {
-        val UnrememberedMutableInteractionSource =
-            Issue.create(
-                "UnrememberedMutableInteractionSource",
-                "Creating a MutableInteractionSource during composition without using " +
-                    "`remember`",
-                "MutableInteractionSource instances created during composition need to be " +
-                    "`remember`ed, otherwise they will be recreated during recomposition, and lose " +
-                    "their state. Either hoist the MutableInteractionSource to an object that is not " +
-                    "created during composition, or wrap the MutableInteractionSource in a call to " +
-                    "`remember`.",
-                Category.CORRECTNESS,
-                3,
-                Severity.ERROR,
-                Implementation(
-                    UnrememberedMutableInteractionSourceDetector::class.java,
-                    EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES)
-                )
+        val UnrememberedMutableInteractionSource = Issue.create(
+            "UnrememberedMutableInteractionSource",
+            "Creating a MutableInteractionSource during composition without using " +
+                "`remember`",
+            "MutableInteractionSource instances created during composition need to be " +
+                "`remember`ed, otherwise they will be recreated during recomposition, and lose " +
+                "their state. Either hoist the MutableInteractionSource to an object that is not " +
+                "created during composition, or wrap the MutableInteractionSource in a call to " +
+                "`remember`.",
+            Category.CORRECTNESS, 3, Severity.ERROR,
+            Implementation(
+                UnrememberedMutableInteractionSourceDetector::class.java,
+                EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES)
             )
+        )
     }
 }

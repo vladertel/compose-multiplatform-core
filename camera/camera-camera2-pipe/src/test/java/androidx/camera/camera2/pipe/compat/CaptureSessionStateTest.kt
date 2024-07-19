@@ -38,11 +38,11 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -62,11 +62,10 @@ class CaptureSessionStateTest {
             ): CaptureSequenceProcessor<Request, FakeCaptureSequence> = fakeCaptureSequenceProcessor
         }
     private val timeSource = SystemTimeSource()
-    private val cameraGraphFlags =
-        CameraGraph.Flags(
-            quirkFinalizeSessionOnCloseBehavior = FinalizeSessionOnCloseBehavior.OFF,
-            quirkCloseCaptureSessionOnDisconnect = false,
-        )
+    private val cameraGraphFlags = CameraGraph.Flags(
+        quirkFinalizeSessionOnCloseBehavior = FinalizeSessionOnCloseBehavior.OFF,
+        quirkCloseCaptureSessionOnDisconnect = false,
+    )
 
     private val surface1: Surface = Surface(SurfaceTexture(1))
     private val surface2: Surface = Surface(SurfaceTexture(2))
@@ -76,8 +75,7 @@ class CaptureSessionStateTest {
 
     private val captureSessionFactory =
         FakeCaptureSessionFactory(
-            requiredStreams = setOf(stream1, stream2),
-            deferrableStreams = setOf(stream3Deferred)
+            requiredStreams = setOf(stream1, stream2), deferrableStreams = setOf(stream3Deferred)
         )
 
     private val fakeCameraDevice: CameraDeviceWrapper = mock()
@@ -109,7 +107,7 @@ class CaptureSessionStateTest {
 
         // And a captureSession is never created
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
     }
 
     @Test
@@ -135,7 +133,7 @@ class CaptureSessionStateTest {
 
         // Then fakeSurfaceListener marks surfaces as inactive.
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface1))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface2))
     }
@@ -169,7 +167,7 @@ class CaptureSessionStateTest {
 
         // Then fakeSurfaceListener does not mark surfaces as inactive.
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
         verify(fakeSurfaceListener, never()).onSurfaceInactive(eq(surface1))
         verify(fakeSurfaceListener, never()).onSurfaceInactive(eq(surface2))
     }
@@ -193,7 +191,7 @@ class CaptureSessionStateTest {
 
         // Then fakeSurfaceListener marks surfaces as inactive.
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface1))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface2))
     }
@@ -217,7 +215,7 @@ class CaptureSessionStateTest {
 
         // Then fakeSurfaceListener marks surfaces as inactive.
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface1))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface2))
     }
@@ -241,7 +239,7 @@ class CaptureSessionStateTest {
 
         // Then fakeSurfaceListener marks surfaces as inactive.
         advanceUntilIdle()
-        verify(fakeGraphListener, times(1)).onGraphStopped(isNull())
+        verifyNoInteractions(fakeGraphListener)
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface1))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(surface2))
     }

@@ -19,6 +19,7 @@ package androidx.camera.core.internal.compat.workaround;
 import android.media.MediaCodec;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Preview;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.core.impl.SessionConfig;
@@ -34,6 +35,7 @@ import java.util.List;
  *
  * @see SurfaceOrderQuirk
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class SurfaceSorter {
     // The larger priority value will be placed at the back of the list.
     private static final int PRIORITY_PREVIEW_SURFACE = 0;

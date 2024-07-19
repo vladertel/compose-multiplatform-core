@@ -38,7 +38,9 @@ import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
-/** Tests for Fragment startActivityForResult and startIntentSenderForResult. */
+/**
+ * Tests for Fragment startActivityForResult and startIntentSenderForResult.
+ */
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class FragmentReceiveResultTest {
@@ -47,8 +49,8 @@ class FragmentReceiveResultTest {
 
     // Detect leaks BEFORE and AFTER activity is destroyed
     @get:Rule
-    val ruleChain: RuleChain =
-        RuleChain.outerRule(DetectLeaksAfterTestSuccess()).around(activityRule)
+    val ruleChain: RuleChain = RuleChain.outerRule(DetectLeaksAfterTestSuccess())
+        .around(activityRule)
 
     @Suppress("DEPRECATION")
     @Test
@@ -148,8 +150,7 @@ class FragmentReceiveResultTest {
         val activity = activityRule.activity
         val fragment = TestFragment()
         activityRule.runOnUiThread {
-            activity.supportFragmentManager
-                .beginTransaction()
+            activity.supportFragmentManager.beginTransaction()
                 .add(R.id.content, fragment)
                 .addToBackStack(null)
                 .commitAllowingStateLoss()
@@ -175,12 +176,9 @@ class FragmentReceiveResultTest {
             fragment.startActivityForResult(intent, requestCode)
         }
         assertThat(
-                fragment.resultReceiveLatch[fragment.onActivityResultCount].await(
-                    1,
-                    TimeUnit.SECONDS
-                )
-            )
-            .isTrue()
+            fragment.resultReceiveLatch[fragment.onActivityResultCount]
+                .await(1, TimeUnit.SECONDS)
+        ).isTrue()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
@@ -198,23 +196,14 @@ class FragmentReceiveResultTest {
             intent.putExtra(FragmentResultActivity.EXTRA_RESULT_CODE, resultCode)
             intent.putExtra(FragmentResultActivity.EXTRA_RESULT_CONTENT, content)
 
-            val pendingIntent =
-                PendingIntent.getActivity(
-                    activity,
-                    requestCode,
-                    intent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
+            val pendingIntent = PendingIntent.getActivity(
+                activity, requestCode, intent, PendingIntent.FLAG_IMMUTABLE
+            )
 
             try {
                 fragment.startIntentSenderForResult(
                     pendingIntent.intentSender,
-                    requestCode,
-                    null,
-                    0,
-                    0,
-                    0,
-                    options
+                    requestCode, null, 0, 0, 0, options
                 )
             } catch (e: IntentSender.SendIntentException) {
                 fail("IntentSender failed")

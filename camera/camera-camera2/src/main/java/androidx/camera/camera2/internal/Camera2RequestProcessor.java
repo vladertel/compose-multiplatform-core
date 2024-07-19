@@ -25,6 +25,7 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureFailure;
@@ -58,12 +59,13 @@ import java.util.concurrent.ExecutionException;
  * <p>This class is thread-safe. It is safe to invoke methods of {@link Camera2RequestProcessor}
  * from any threads.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class Camera2RequestProcessor implements RequestProcessor {
     private static final String TAG = "Camera2RequestProcessor";
-    @Nullable
-    private CaptureSession mCaptureSession;
-    @Nullable
-    private List<SessionProcessorSurface> mProcessorSurfaces;
+    @NonNull
+    private final CaptureSession mCaptureSession;
+    @NonNull
+    private final List<SessionProcessorSurface> mProcessorSurfaces;
     private volatile boolean mIsClosed = false;
     @Nullable
     private volatile SessionConfig mSessionConfig;
@@ -81,9 +83,6 @@ public class Camera2RequestProcessor implements RequestProcessor {
      */
     public void close() {
         mIsClosed = true;
-        mCaptureSession = null;
-        mSessionConfig = null;
-        mProcessorSurfaces = null;
     }
 
     /**
@@ -131,7 +130,7 @@ public class Camera2RequestProcessor implements RequestProcessor {
     public int submit(
             @NonNull List<RequestProcessor.Request> requests,
             @NonNull RequestProcessor.Callback callback) {
-        if (mIsClosed || !areRequestsValid(requests) || mCaptureSession == null) {
+        if (mIsClosed || !areRequestsValid(requests)) {
             return -1;
         }
 
@@ -161,7 +160,7 @@ public class Camera2RequestProcessor implements RequestProcessor {
     public int setRepeating(
             @NonNull RequestProcessor.Request request,
             @NonNull RequestProcessor.Callback callback) {
-        if (mIsClosed || !isRequestValid(request) || mCaptureSession == null) {
+        if (mIsClosed || !isRequestValid(request)) {
             return -1;
         }
 
@@ -195,7 +194,7 @@ public class Camera2RequestProcessor implements RequestProcessor {
 
     @Override
     public void abortCaptures() {
-        if (mIsClosed || mCaptureSession == null) {
+        if (mIsClosed) {
             return;
         }
         mCaptureSession.abortCaptures();
@@ -203,7 +202,7 @@ public class Camera2RequestProcessor implements RequestProcessor {
 
     @Override
     public void stopRepeating() {
-        if (mIsClosed || mCaptureSession == null) {
+        if (mIsClosed) {
             return;
         }
         mCaptureSession.stopRepeating();
@@ -280,9 +279,6 @@ public class Camera2RequestProcessor implements RequestProcessor {
 
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     int findOutputConfigId(@NonNull Surface surface) {
-        if (mProcessorSurfaces == null) {
-            return -1;
-        }
         for (SessionProcessorSurface sessionProcessorSurface : mProcessorSurfaces) {
             try {
                 if (sessionProcessorSurface.getSurface().get() == surface) {
@@ -299,9 +295,6 @@ public class Camera2RequestProcessor implements RequestProcessor {
 
     @Nullable
     private DeferrableSurface findSurface(int outputConfigId) {
-        if (mProcessorSurfaces == null) {
-            return null;
-        }
         for (SessionProcessorSurface sessionProcessorSurface : mProcessorSurfaces) {
             if (sessionProcessorSurface.getOutputConfigId() == outputConfigId) {
                 return sessionProcessorSurface;

@@ -27,7 +27,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 
-/** Unit tests for [DefaultSurfaceProcessor]. */
+/**
+ * Unit tests for [DefaultSurfaceProcessor].
+ */
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
@@ -36,14 +38,16 @@ class DefaultSurfaceProcessorTest {
     @Test
     fun setFactorySupplier_factoryProvidesInstance() {
         // Arrange: create a no-op processor and set it on the factory.
-        val noOpProcessor =
-            object : SurfaceProcessorInternal {
-                override fun onInputSurface(request: SurfaceRequest) {}
-
-                override fun onOutputSurface(surfaceOutput: SurfaceOutput) {}
-
-                override fun release() {}
+        val noOpProcessor = object : SurfaceProcessorInternal {
+            override fun onInputSurface(request: SurfaceRequest) {
             }
+
+            override fun onOutputSurface(surfaceOutput: SurfaceOutput) {
+            }
+
+            override fun release() {
+            }
+        }
         DefaultSurfaceProcessor.Factory.setSupplier { noOpProcessor }
         // Assert: new instance returns the no-op processor.
         assertThat(DefaultSurfaceProcessor.Factory.newInstance(DynamicRange.SDR))

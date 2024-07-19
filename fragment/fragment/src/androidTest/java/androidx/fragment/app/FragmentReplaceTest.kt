@@ -30,16 +30,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Test to prevent regressions in SupportFragmentManager fragment replace method. */
+/**
+ * Test to prevent regressions in SupportFragmentManager fragment replace method.
+ */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class FragmentReplaceTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun testReplaceFragment() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fm = withActivity { supportFragmentManager }
 
             fm.beginTransaction()
@@ -79,10 +82,11 @@ class FragmentReplaceTest {
 
     @Test
     fun testReplaceFragmentInOnCreate() {
-        withUse(ActivityScenario.launch(ReplaceInCreateActivity::class.java)) {
+       withUse(ActivityScenario.launch(ReplaceInCreateActivity::class.java)) {
             val replaceInCreateFragment = withActivity { this.replaceInCreateFragment }
 
-            assertThat(replaceInCreateFragment.isAdded).isFalse()
+            assertThat(replaceInCreateFragment.isAdded)
+                .isFalse()
             withActivity {
                 assertThat(findViewById<View>(R.id.textA)).isNull()
                 assertThat(findViewById<View>(R.id.textB)).isNotNull()
@@ -94,7 +98,6 @@ class FragmentReplaceTest {
 class ReplaceInCreateActivity : FragmentActivity(R.layout.activity_content) {
     private val parentFragment: ParentFragment
         get() = supportFragmentManager.findFragmentById(R.id.content) as ParentFragment
-
     val replaceInCreateFragment: ReplaceInCreateFragment
         get() = parentFragment.replaceInCreateFragment
 
@@ -103,8 +106,7 @@ class ReplaceInCreateActivity : FragmentActivity(R.layout.activity_content) {
         if (savedInstanceState == null) {
             // This issue only appears for child fragments
             // so add parent fragment that contains the ReplaceInCreateFragment
-            supportFragmentManager
-                .beginTransaction()
+            supportFragmentManager.beginTransaction()
                 .add(R.id.content, ParentFragment())
                 .setReorderingAllowed(true)
                 .commit()
@@ -118,8 +120,7 @@ class ReplaceInCreateActivity : FragmentActivity(R.layout.activity_content) {
             super.onCreate(savedInstanceState)
             if (savedInstanceState == null) {
                 replaceInCreateFragment = ReplaceInCreateFragment()
-                childFragmentManager
-                    .beginTransaction()
+                childFragmentManager.beginTransaction()
                     .add(R.id.fragmentContainer, replaceInCreateFragment)
                     .setReorderingAllowed(true)
                     .commit()
@@ -132,8 +133,7 @@ class ReplaceInCreateFragment : StrictViewFragment(R.layout.fragment_a) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        parentFragmentManager
-            .beginTransaction()
+        parentFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, StrictViewFragment(R.layout.fragment_b))
             .setReorderingAllowed(true)
             .commit()

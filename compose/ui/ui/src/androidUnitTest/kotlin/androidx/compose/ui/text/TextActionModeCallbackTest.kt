@@ -38,7 +38,9 @@ import org.junit.Test
 class TextActionModeCallbackTest {
     @Test
     fun addMenuItem_correctValues() {
-        val callback = TextActionModeCallback(onCopyRequested = { /* copy */ })
+        val callback = TextActionModeCallback(
+            onCopyRequested = { /* copy */ }
+        )
         val menu = ItemTrackingFakeMenu()
         callback.addMenuItem(menu, MenuItemOption.Copy)
 
@@ -203,9 +205,7 @@ private class FakeMenuItem(
     private val testOrder: Int,
     private val testTitleRes: Int
 ) : MenuItem {
-    constructor(
-        menuItemOption: MenuItemOption
-    ) : this(
+    constructor(menuItemOption: MenuItemOption) : this(
         testId = menuItemOption.id,
         testOrder = menuItemOption.order,
         testTitleRes = menuItemOption.titleResource
@@ -333,7 +333,8 @@ private class FakeMenuItem(
         TODO("Not yet implemented")
     }
 
-    override fun setShowAsAction(actionEnum: Int) {}
+    override fun setShowAsAction(actionEnum: Int) {
+    }
 
     override fun setShowAsActionFlags(actionEnum: Int): MenuItem {
         TODO("Not yet implemented")

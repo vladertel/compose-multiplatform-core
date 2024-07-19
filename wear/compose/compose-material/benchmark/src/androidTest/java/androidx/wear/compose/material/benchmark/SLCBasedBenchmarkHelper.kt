@@ -29,9 +29,11 @@ import androidx.compose.testutils.doFramesUntilNoChangesPending
 import org.junit.Assert
 
 // TODO (b/270318565): Remove/Update these once the necessary changes in SLC has been made.
-internal fun ComposeBenchmarkRule.benchmarkFirstMeasure(caseFactory: () -> LayeredComposeTestCase) {
+internal fun ComposeBenchmarkRule.benchmarkFirstMeasure(
+    caseFactory: () -> LayeredComposeTestCase
+) {
     runBenchmarkFor(LayeredCaseAdapter.of(caseFactory)) {
-        measureRepeatedOnUiThread {
+        measureRepeated {
             runWithTimingDisabled {
                 doFramesUntilNoChangesPending()
                 // Add the content to benchmark
@@ -52,9 +54,11 @@ internal fun ComposeBenchmarkRule.benchmarkFirstMeasure(caseFactory: () -> Layer
 }
 
 // TODO (b/270318565): Remove/Update these once the necessary changes in SLC has been made.
-internal fun ComposeBenchmarkRule.benchmarkFirstLayout(caseFactory: () -> LayeredComposeTestCase) {
+internal fun ComposeBenchmarkRule.benchmarkFirstLayout(
+    caseFactory: () -> LayeredComposeTestCase
+) {
     runBenchmarkFor(LayeredCaseAdapter.of(caseFactory)) {
-        measureRepeatedOnUiThread {
+        measureRepeated {
             runWithTimingDisabled {
                 doFramesUntilNoChangesPending()
                 // Add the content to benchmark
@@ -76,9 +80,11 @@ internal fun ComposeBenchmarkRule.benchmarkFirstLayout(caseFactory: () -> Layere
 }
 
 // TODO (b/270318565): Remove/Update these once the necessary changes in SLC has been made.
-internal fun ComposeBenchmarkRule.benchmarkFirstDraw(caseFactory: () -> LayeredComposeTestCase) {
+internal fun ComposeBenchmarkRule.benchmarkFirstDraw(
+    caseFactory: () -> LayeredComposeTestCase
+) {
     runBenchmarkFor(LayeredCaseAdapter.of(caseFactory)) {
-        measureRepeatedOnUiThread {
+        measureRepeated {
             runWithTimingDisabled {
                 doFramesUntilNoChangesPending()
                 // Add the content to benchmark

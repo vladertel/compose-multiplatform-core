@@ -17,6 +17,7 @@
 package androidx.camera.camera2.pipe.integration.impl
 
 import android.hardware.camera2.CaptureRequest
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.adapter.propagateTo
 import androidx.camera.camera2.pipe.integration.compat.workaround.isFlashAvailable
 import androidx.camera.camera2.pipe.integration.config.CameraScope
@@ -34,11 +35,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 
-/** Implementation of Torch control exposed by [CameraControlInternal]. */
+/**
+ * Implementation of Torch control exposed by [CameraControlInternal].
+ */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @CameraScope
-class TorchControl
-@Inject
-constructor(
+class TorchControl @Inject constructor(
     cameraProperties: CameraProperties,
     private val state3AControl: State3AControl,
     private val threads: UseCaseThreads,
@@ -50,18 +52,19 @@ constructor(
         set(value) {
             _useCaseCamera = value
             setTorchAsync(
-                torch =
-                    when (torchStateLiveData.value) {
-                        TorchState.ON -> true
-                        else -> false
-                    },
+                torch = when (torchStateLiveData.value) {
+                    TorchState.ON -> true
+                    else -> false
+                },
                 cancelPreviousTask = false,
             )
         }
 
     override fun reset() {
         _torchState.setLiveDataValue(false)
-        threads.sequentialScope.launch { stopRunningTaskInternal() }
+        threads.sequentialScope.launch {
+            stopRunningTaskInternal()
+        }
         setTorchAsync(false)
     }
 
@@ -73,26 +76,15 @@ constructor(
 
     private var _updateSignal: CompletableDeferred<Unit>? = null
 
-    /**
-     * Turn the torch on or off.
-     *
-     * @param torch Whether the torch should be on or off.
-     * @param cancelPreviousTask Whether to cancel the previous task if it's running.
-     * @param ignoreFlashUnitAvailability Whether to ignore the flash unit availability. When true,
-     *   torch mode setting will be attempted even if a physical flash unit is not available.
-     */
-    fun setTorchAsync(
-        torch: Boolean,
-        cancelPreviousTask: Boolean = true,
-        ignoreFlashUnitAvailability: Boolean = false
-    ): Deferred<Unit> {
+    fun setTorchAsync(torch: Boolean, cancelPreviousTask: Boolean = true): Deferred<Unit> {
         val signal = CompletableDeferred<Unit>()
 
-        if (!ignoreFlashUnitAvailability && !hasFlashUnit) {
+        if (!hasFlashUnit) {
             return signal.createFailureResult(IllegalStateException("No flash unit"))
         }
 
         useCaseCamera?.let { useCaseCamera ->
+
             _torchState.setLiveDataValue(torch)
 
             threads.sequentialScope.launch {
@@ -118,19 +110,20 @@ constructor(
                 state3AControl.invalidate()
                 state3AControl.updateSignal?.propagateTo(signal) ?: run { signal.complete(Unit) }
             }
+        } ?: run {
+            signal.createFailureResult(
+                CameraControl.OperationCanceledException("Camera is not active.")
+            )
         }
-            ?: run {
-                signal.createFailureResult(
-                    CameraControl.OperationCanceledException("Camera is not active.")
-                )
-            }
 
         return signal
     }
 
     private fun stopRunningTaskInternal() {
         _updateSignal?.createFailureResult(
-            CameraControl.OperationCanceledException("There is a new enableTorch being set")
+            CameraControl.OperationCanceledException(
+                "There is a new enableTorch being set"
+            )
         )
         _updateSignal = null
     }
@@ -139,17 +132,16 @@ constructor(
         completeExceptionally(exception)
     }
 
-    private fun MutableLiveData<Int>.setLiveDataValue(enableTorch: Boolean) =
-        when (enableTorch) {
-            true -> TorchState.ON
-            false -> TorchState.OFF
-        }.let { torchState ->
-            if (Threads.isMainThread()) {
-                this.value = torchState
-            } else {
-                this.postValue(torchState)
-            }
+    private fun MutableLiveData<Int>.setLiveDataValue(enableTorch: Boolean) = when (enableTorch) {
+        true -> TorchState.ON
+        false -> TorchState.OFF
+    }.let { torchState ->
+        if (Threads.isMainThread()) {
+            this.value = torchState
+        } else {
+            this.postValue(torchState)
         }
+    }
 
     @Module
     abstract class Bindings {

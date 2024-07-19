@@ -20,9 +20,13 @@ import android.content.Context
 import androidx.privacysandbox.sdkruntime.client.config.LocalSdkConfig
 import java.io.File
 
-/** Extract SDK DEX files in [rootFolder] / <packageName>. */
-internal class TestLocalSdkStorage(private val context: Context, private val rootFolder: File) :
-    LocalSdkStorage {
+/**
+ * Extract SDK DEX files in [rootFolder] / <packageName>.
+ */
+internal class TestLocalSdkStorage(
+    private val context: Context,
+    private val rootFolder: File
+) : LocalSdkStorage {
     override fun dexFilesFor(sdkConfig: LocalSdkConfig): LocalSdkDexFiles {
         val outputFolder = File(rootFolder, sdkConfig.packageName)
         outputFolder.deleteRecursively()
@@ -33,7 +37,9 @@ internal class TestLocalSdkStorage(private val context: Context, private val roo
                 val dexFile = File(outputFolder, "$index.dex")
                 dexFile.createNewFile()
                 context.assets.open(sdkConfig.dexPaths[index]).use { inputStream ->
-                    dexFile.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
+                    dexFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
                 }
                 dexFile.setReadOnly()
                 add(dexFile)

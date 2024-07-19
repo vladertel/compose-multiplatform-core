@@ -23,47 +23,43 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class BanKeepAnnotationTest :
-    AbstractLintDetectorTest(
-        useDetector = BanKeepAnnotation(),
-        useIssues = listOf(BanKeepAnnotation.ISSUE),
-        stubs = arrayOf(Stubs.Keep),
-    ) {
+class BanKeepAnnotationTest : AbstractLintDetectorTest(
+    useDetector = BanKeepAnnotation(),
+    useIssues = listOf(BanKeepAnnotation.ISSUE),
+    stubs = arrayOf(Stubs.Keep),
+) {
 
     @Test
     fun `Detection of Keep annotation in Java sources`() {
-        val input =
-            arrayOf(
-                javaSample("androidx.KeepAnnotationUsageJava"),
-            )
+        val input = arrayOf(
+            javaSample("androidx.KeepAnnotationUsageJava"),
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/androidx/KeepAnnotationUsageJava.java:21: Error: Uses @Keep annotation [BanKeepAnnotation]
 @Keep
 ~~~~~
 1 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
-
     @Test
     fun `Detection of Keep annotation in Kotlin sources`() {
-        val input =
-            arrayOf(
-                ktSample("androidx.KeepAnnotationUsageKotlin"),
-            )
+        val input = arrayOf(
+            ktSample("androidx.KeepAnnotationUsageKotlin"),
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/androidx/KeepAnnotationUsageKotlin.kt:21: Error: Uses @Keep annotation [BanKeepAnnotation]
-@Keep class KeepAnnotationUsageKotlin
+@Keep
 ~~~~~
 1 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }

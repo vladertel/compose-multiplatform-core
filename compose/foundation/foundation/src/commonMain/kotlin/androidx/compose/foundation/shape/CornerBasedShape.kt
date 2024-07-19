@@ -25,11 +25,12 @@ import androidx.compose.ui.unit.LayoutDirection
 /**
  * Base class for [Shape]s defined by four [CornerSize]s.
  *
+ * @see RoundedCornerShape for an example of the usage.
+ *
  * @param topStart a size of the top start corner
  * @param topEnd a size of the top end corner
  * @param bottomEnd a size of the bottom end corner
  * @param bottomStart a size of the bottom start corner
- * @see RoundedCornerShape for an example of the usage.
  */
 abstract class CornerBasedShape(
     val topStart: CornerSize,
@@ -108,7 +109,6 @@ abstract class CornerBasedShape(
 
     /**
      * Creates a copy of this Shape with a new corner size.
-     *
      * @param all a size to apply for all four corners
      */
     fun copy(all: CornerSize): CornerBasedShape = copy(all, all, all, all)

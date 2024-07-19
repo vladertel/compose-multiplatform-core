@@ -107,7 +107,10 @@ class WordIteratorTest {
     @Test
     fun testNextBoundary_iterate_through_RTL() { // Hebrew -- "אבג דה-וז. חט"
         val text = "\u05d0\u05d1\u05d2 \u05d3\u05d4-\u05d5\u05d6. \u05d7\u05d8"
-        val wordIterator = WordIterator(text, 0, text.length, Locale("he", "IL"))
+        val wordIterator = WordIterator(
+            text, 0, text.length,
+            Locale("he", "IL")
+        )
         // Start from the beginning.
         var currentOffset = 0
         // The word is "\u05d0\u05d1\u05d2"("אבג")
@@ -191,7 +194,10 @@ class WordIteratorTest {
     @Test
     fun testPrevBoundary_iterate_through_RTL() { // Hebrew -- "אבג דה-וז. חט"
         val text = "\u05d0\u05d1\u05d2 \u05d3\u05d4-\u05d5\u05d6. \u05d7\u05d8"
-        val wordIterator = WordIterator(text, 0, text.length, Locale("he", "IL"))
+        val wordIterator = WordIterator(
+            text, 0, text.length,
+            Locale("he", "IL")
+        )
         // Start from the end.
         var currentOffset = text.length
         // The word is "\u05d7\u05d8"("חט")
@@ -317,7 +323,8 @@ class WordIteratorTest {
     fun testGetNextWordEndOnTwoWordBoundary_Empty_String() {
         val text = ""
         val wordIterator = WordIterator(text, 0, text.length, Locale.ENGLISH)
-        assertThat(wordIterator.getNextWordEndOnTwoWordBoundary(0)).isEqualTo(BreakIterator.DONE)
+        assertThat(wordIterator.getNextWordEndOnTwoWordBoundary(0))
+            .isEqualTo(BreakIterator.DONE)
     }
 
     @Test
@@ -405,7 +412,8 @@ class WordIteratorTest {
             .isEqualTo(text.indexOf(';'))
         assertThat(wordIterator.getPunctuationBeginning(text.indexOf(')')))
             .isEqualTo(text.indexOf(';'))
-        assertThat(wordIterator.getPunctuationBeginning(text.length)).isEqualTo(text.indexOf(';'))
+        assertThat(wordIterator.getPunctuationBeginning(text.length))
+            .isEqualTo(text.indexOf(';'))
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -443,8 +451,10 @@ class WordIteratorTest {
             .isEqualTo(text.indexOf(')') + 1)
         assertThat(wordIterator.getPunctuationEnd(text.indexOf(')') + 1))
             .isEqualTo(text.indexOf(')') + 1)
-        assertThat(wordIterator.getPunctuationEnd(text.indexOf('d'))).isEqualTo(BreakIterator.DONE)
-        assertThat(wordIterator.getPunctuationEnd(text.length)).isEqualTo(BreakIterator.DONE)
+        assertThat(wordIterator.getPunctuationEnd(text.indexOf('d')))
+            .isEqualTo(BreakIterator.DONE)
+        assertThat(wordIterator.getPunctuationEnd(text.length))
+            .isEqualTo(BreakIterator.DONE)
     }
 
     @Test
@@ -557,7 +567,8 @@ class WordIteratorTest {
     ) {
         for (i in beginning..end) {
             if (i == surrogateIndex) continue
-            assertThat(wordIterator.getPrevWordBeginningOnTwoWordsBoundary(i)).isEqualTo(beginning)
+            assertThat(wordIterator.getPrevWordBeginningOnTwoWordsBoundary(i))
+                .isEqualTo(beginning)
             assertThat(wordIterator.getNextWordEndOnTwoWordBoundary(i)).isEqualTo(end)
         }
     }

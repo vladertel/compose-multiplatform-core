@@ -34,13 +34,10 @@ class PixelPerfectMatcherTest {
         val second = loadBitmap("round_rect_gray")
 
         val matcher = PixelPerfectMatcher()
-        val result =
-            matcher.compareBitmaps(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.compareBitmaps(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result.matches).isTrue()
     }
@@ -51,13 +48,10 @@ class PixelPerfectMatcherTest {
         val second = loadBitmap("round_rect_green")
 
         val matcher = PixelPerfectMatcher()
-        val result =
-            matcher.compareBitmaps(
-                first.toIntArray(),
-                second.toIntArray(),
-                first.width,
-                first.height
-            )
+        val result = matcher.compareBitmaps(
+            first.toIntArray(), second.toIntArray(),
+            first.width, first.height
+        )
 
         assertThat(result.matches).isFalse()
     }

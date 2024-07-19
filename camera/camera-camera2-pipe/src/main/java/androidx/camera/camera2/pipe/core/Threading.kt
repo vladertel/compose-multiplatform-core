@@ -16,6 +16,7 @@
 
 package androidx.camera.camera2.pipe.core
 
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 internal object Threading {
     private val globalSupervisorScope =
         CoroutineScope(CoroutineName("GlobalThreadingScope") + SupervisorJob())
@@ -44,7 +46,9 @@ internal object Threading {
     ): T? {
         return runBlocking {
             val result = runAsyncSupervised(dispatcher, block)
-            withTimeout(timeoutMs) { result.await() }
+            withTimeout(timeoutMs) {
+                result.await()
+            }
         }
     }
 
@@ -61,7 +65,9 @@ internal object Threading {
     ): T? {
         return runBlocking {
             val result = runAsyncSupervised(dispatcher, block)
-            withTimeoutOrNull(timeoutMs) { result.await() }
+            withTimeoutOrNull(timeoutMs) {
+                result.await()
+            }
         }
     }
 
@@ -69,6 +75,8 @@ internal object Threading {
         dispatcher: CoroutineDispatcher,
         block: suspend () -> T
     ): Deferred<T> {
-        return globalSupervisorScope.async(dispatcher) { block() }
+        return globalSupervisorScope.async(dispatcher) {
+            block()
+        }
     }
 }

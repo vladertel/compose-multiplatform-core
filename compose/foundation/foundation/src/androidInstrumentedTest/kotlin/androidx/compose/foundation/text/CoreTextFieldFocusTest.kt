@@ -46,7 +46,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class CoreTextFieldFocusTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val inputMethodInterceptor = InputMethodInterceptor(rule)
 
@@ -92,7 +93,9 @@ class CoreTextFieldFocusTest {
         rule.onNodeWithTag("TextField").requestFocus()
         inputMethodInterceptor.assertSessionActive()
 
-        rule.runOnIdle { focusManager.clearFocus() }
+        rule.runOnIdle {
+            focusManager.clearFocus()
+        }
 
         inputMethodInterceptor.assertNoSessionActive()
     }

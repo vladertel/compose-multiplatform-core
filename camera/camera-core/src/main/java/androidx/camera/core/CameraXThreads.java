@@ -16,6 +16,7 @@
 
 package androidx.camera.core;
 
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 
@@ -24,6 +25,7 @@ import androidx.annotation.RestrictTo.Scope;
  * threads to executors is complete.
  *
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @RestrictTo(Scope.LIBRARY_GROUP)
 public final class CameraXThreads {
     @RestrictTo(Scope.LIBRARY_GROUP)

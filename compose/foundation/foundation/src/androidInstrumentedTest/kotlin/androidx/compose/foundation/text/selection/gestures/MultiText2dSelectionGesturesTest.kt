@@ -71,13 +71,13 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
                         repeat(sideLength) { j ->
                             BasicText(
                                 text = text,
-                                style =
-                                    TextStyle(
-                                        fontFamily = fontFamily,
-                                        fontSize = fontSize,
-                                    ),
-                                modifier =
-                                    Modifier.padding(24.dp).testTag("${i * sideLength + j + 1}"),
+                                style = TextStyle(
+                                    fontFamily = fontFamily,
+                                    fontSize = fontSize,
+                                ),
+                                modifier = Modifier
+                                    .padding(24.dp)
+                                    .testTag("${i * sideLength + j + 1}"),
                             )
                         }
                     }
@@ -178,7 +178,12 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
 
     @Test
     fun dragTopContainer() {
-        dragTest(dragPosition = topEnd, selectableId = 1, offset = 0, crossed = true)
+        dragTest(
+            dragPosition = topEnd,
+            selectableId = 1,
+            offset = 0,
+            crossed = true
+        )
     }
 
     @Test
@@ -203,7 +208,12 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
 
     @Test
     fun dragBottomContainer() {
-        dragTest(dragPosition = bottomStart, selectableId = 9, offset = 19, crossed = false)
+        dragTest(
+            dragPosition = bottomStart,
+            selectableId = 9,
+            offset = 19,
+            crossed = false
+        )
     }
 
     @Test
@@ -254,9 +264,16 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
         offset: Int,
         crossed: Boolean,
     ) {
-        performTouchGesture { longPress(characterPosition(5, 6)) }
+        performTouchGesture {
+            longPress(characterPosition(5, 6))
+        }
 
-        assertSelection(startOffset = 5, endSelectableId = 5, endOffset = 9, handlesCrossed = false)
+        assertSelection(
+            startOffset = 5,
+            endSelectableId = 5,
+            endOffset = 9,
+            handlesCrossed = false
+        )
 
         touchDragTo(dragPosition)
 
@@ -267,7 +284,9 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
             handlesCrossed = crossed
         )
 
-        performTouchGesture { up() }
+        performTouchGesture {
+            up()
+        }
 
         assertSelection(
             startOffset = if (crossed) 9 else 5,
@@ -287,8 +306,7 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
             rule.onNodeWithTag(pointerAreaTag).fetchSemanticsNode().positionInRoot
         val nodePosition = rule.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot
         val textLayoutResult = rule.onNodeWithTag(tag).fetchTextLayoutResult()
-        return textLayoutResult
-            .getBoundingBox(offset)
+        return textLayoutResult.getBoundingBox(offset)
             .translate(nodePosition - pointerAreaPosition)
             .centerLeft
             .nudge(HorizontalDirection.END)
@@ -316,18 +334,16 @@ internal class MultiText2dSelectionGesturesTest : AbstractSelectionGesturesTest(
         assertThat(selection.value)
             .isEqualTo(
                 Selection(
-                    start =
-                        Selection.AnchorInfo(
-                            direction = ResolvedTextDirection.Ltr,
-                            offset = startOffset,
-                            selectableId = 5L
-                        ),
-                    end =
-                        Selection.AnchorInfo(
-                            direction = ResolvedTextDirection.Ltr,
-                            offset = endOffset,
-                            selectableId = endSelectableId.toLong()
-                        ),
+                    start = Selection.AnchorInfo(
+                        direction = ResolvedTextDirection.Ltr,
+                        offset = startOffset,
+                        selectableId = 5L
+                    ),
+                    end = Selection.AnchorInfo(
+                        direction = ResolvedTextDirection.Ltr,
+                        offset = endOffset,
+                        selectableId = endSelectableId.toLong()
+                    ),
                     handlesCrossed = handlesCrossed,
                 )
             )

@@ -34,7 +34,9 @@ import kotlin.math.sin
 @Sampled
 @Composable
 fun AndroidExternalSurfaceColors() {
-    AndroidExternalSurface(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+    AndroidExternalSurface(
+        modifier = Modifier.fillMaxWidth().height(400.dp)
+    ) {
         // Resources can be initialized/cached here
 
         // A surface is available, we can start rendering
@@ -55,7 +57,8 @@ fun AndroidExternalSurfaceColors() {
             }
 
             // Cleanup if needed
-            surface.onDestroyed {}
+            surface.onDestroyed {
+            }
 
             // Render loop, automatically cancelled on surface destruction
             while (true) {
@@ -75,7 +78,9 @@ fun AndroidExternalSurfaceColors() {
 @Sampled
 @Composable
 fun AndroidEmbeddedExternalSurfaceColors() {
-    AndroidEmbeddedExternalSurface(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+    AndroidEmbeddedExternalSurface(
+        modifier = Modifier.fillMaxWidth().height(400.dp)
+    ) {
         // Resources can be initialized/cached here
 
         // A surface is available, we can start rendering
@@ -96,7 +101,8 @@ fun AndroidEmbeddedExternalSurfaceColors() {
             }
 
             // Cleanup if needed
-            surface.onDestroyed {}
+            surface.onDestroyed {
+            }
 
             // Render loop, automatically cancelled on surface destruction
             while (true) {

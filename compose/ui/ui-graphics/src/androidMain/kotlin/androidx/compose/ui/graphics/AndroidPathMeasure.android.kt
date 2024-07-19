@@ -20,8 +20,9 @@ import androidx.compose.ui.geometry.Offset
 
 actual fun PathMeasure(): PathMeasure = AndroidPathMeasure(android.graphics.PathMeasure())
 
-class AndroidPathMeasure
-internal constructor(private val internalPathMeasure: android.graphics.PathMeasure) : PathMeasure {
+class AndroidPathMeasure internal constructor(
+    private val internalPathMeasure: android.graphics.PathMeasure
+) : PathMeasure {
 
     override val length: Float
         get() = internalPathMeasure.length
@@ -48,7 +49,9 @@ internal constructor(private val internalPathMeasure: android.graphics.PathMeasu
         internalPathMeasure.setPath(path?.asAndroidPath(), forceClosed)
     }
 
-    override fun getPosition(distance: Float): Offset {
+    override fun getPosition(
+        distance: Float
+    ): Offset {
         if (positionArray == null) {
             positionArray = FloatArray(2)
         }
@@ -63,7 +66,9 @@ internal constructor(private val internalPathMeasure: android.graphics.PathMeasu
         }
     }
 
-    override fun getTangent(distance: Float): Offset {
+    override fun getTangent(
+        distance: Float
+    ): Offset {
         if (positionArray == null) {
             positionArray = FloatArray(2)
         }

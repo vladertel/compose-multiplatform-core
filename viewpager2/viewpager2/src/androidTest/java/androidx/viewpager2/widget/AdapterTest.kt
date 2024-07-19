@@ -53,7 +53,9 @@ class AdapterTest : BaseTest() {
         test.assertBasicState(0)
         test.viewPager.setCurrentItemSync(1, false, 2, SECONDS)
         test.assertBasicState(1)
-        test.runOnUiThreadSync { test.viewPager.adapter = test.viewPager.adapter }
+        test.runOnUiThreadSync {
+            test.viewPager.adapter = test.viewPager.adapter
+        }
         test.assertBasicState(0)
 
         assertThat(
@@ -205,7 +207,10 @@ class AdapterTest : BaseTest() {
     }
 
     private fun expectedEventsForPage(page: Int): List<Event> {
-        return listOf(OnPageSelectedEvent(page), OnPageScrolledEvent(page, 0f, 0))
+        return listOf(
+            OnPageSelectedEvent(page),
+            OnPageScrolledEvent(page, 0f, 0)
+        )
     }
 
     private fun setUpAdapterSync(pageCount: Int, initialPage: Int? = null) {
@@ -250,17 +255,14 @@ class AdapterTest : BaseTest() {
             val positionOffset: Float,
             val positionOffsetPixels: Int
         ) : Event()
-
         data class OnPageSelectedEvent(val position: Int) : Event()
-
         data class OnPageScrollStateChangedEvent(val state: Int) : Event()
     }
 
     private class RecordingCallback : ViewPager2.OnPageChangeCallback() {
         private val events = mutableListOf<Event>()
 
-        val allEvents
-            get() = events.toList()
+        val allEvents get() = events.toList()
 
         override fun onPageScrolled(
             position: Int,
@@ -273,11 +275,15 @@ class AdapterTest : BaseTest() {
         }
 
         override fun onPageSelected(position: Int) {
-            synchronized(events) { events.add(OnPageSelectedEvent(position)) }
+            synchronized(events) {
+                events.add(OnPageSelectedEvent(position))
+            }
         }
 
         override fun onPageScrollStateChanged(state: Int) {
-            synchronized(events) { events.add(OnPageScrollStateChangedEvent(state)) }
+            synchronized(events) {
+                events.add(OnPageScrollStateChangedEvent(state))
+            }
         }
     }
 }

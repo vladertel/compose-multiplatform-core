@@ -30,6 +30,8 @@ class MainActivity : ComponentActivity() {
         initializeData(deserializedData)
 
         super.onCreate(savedInstanceState)
-        setContent { App() }
+        setContent {
+            App()
+        }
     }
 }

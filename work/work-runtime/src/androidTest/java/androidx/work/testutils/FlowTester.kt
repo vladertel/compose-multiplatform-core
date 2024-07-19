@@ -40,12 +40,11 @@ class FlowTester<T>(private val flow: Flow<T>) {
     private val channel = Channel<T>(10)
 
     suspend fun awaitNext(): T {
-        val result =
-            try {
-                withTimeout(3000L) { channel.receive() }
-            } catch (e: TimeoutCancellationException) {
-                throw AssertionError("Didn't receive event")
-            }
+        val result = try {
+            withTimeout(3000L) { channel.receive() }
+        } catch (e: TimeoutCancellationException) {
+            throw AssertionError("Didn't receive event")
+        }
         val next = channel.tryReceive()
         if (next.isSuccess || next.isClosed)
             throw AssertionError(

@@ -31,16 +31,15 @@ import org.w3c.dom.Element
 @Suppress("UnstableApiUsage")
 class ColorStateListAlphaDetector : Detector(), XmlScanner {
     companion object {
-        internal val NOT_USING_ANDROID_ALPHA: Issue =
-            Issue.create(
-                "UseAndroidAlpha",
-                "`android:alpha` attribute missing on `ColorStateList`",
-                "`ColorStateList` uses app:alpha without `android:alpha`",
-                Category.CORRECTNESS,
-                1,
-                Severity.ERROR,
-                Implementation(ColorStateListAlphaDetector::class.java, Scope.RESOURCE_FILE_SCOPE)
-            )
+        internal val NOT_USING_ANDROID_ALPHA: Issue = Issue.create(
+            "UseAndroidAlpha",
+            "`android:alpha` attribute missing on `ColorStateList`",
+            "`ColorStateList` uses app:alpha without `android:alpha`",
+            Category.CORRECTNESS,
+            1,
+            Severity.ERROR,
+            Implementation(ColorStateListAlphaDetector::class.java, Scope.RESOURCE_FILE_SCOPE)
+        )
     }
 
     override fun getApplicableElements(): Collection<String>? = listOf("selector")
@@ -61,13 +60,10 @@ class ColorStateListAlphaDetector : Detector(), XmlScanner {
                     item,
                     context.getLocation(item.getAttributeNodeNS(SdkConstants.AUTO_URI, "alpha")),
                     "Must use `android:alpha` if `app:alpha` is used",
-                    LintFix.create()
-                        .set(
-                            SdkConstants.ANDROID_URI,
-                            "alpha",
-                            item.getAttributeNS(SdkConstants.AUTO_URI, "alpha")
-                        )
-                        .build()
+                    LintFix.create().set(
+                        SdkConstants.ANDROID_URI, "alpha",
+                        item.getAttributeNS(SdkConstants.AUTO_URI, "alpha")
+                    ).build()
                 )
             }
         }

@@ -28,7 +28,9 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-/** The unit tests for [ActivityEmbeddingController]. */
+/**
+ * The unit tests for [ActivityEmbeddingController].
+ */
 class ActivityEmbeddingControllerTest {
 
     private lateinit var mockEmbeddingBackend: EmbeddingBackend

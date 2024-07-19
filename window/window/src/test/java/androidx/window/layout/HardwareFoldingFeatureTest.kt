@@ -25,7 +25,9 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Tests for [HardwareFoldingFeature] that run on the JVM to verify the logic. */
+/**
+ * Tests for [HardwareFoldingFeature] that run on the JVM to verify the logic.
+ */
 class HardwareFoldingFeatureTest {
 
     @Test(expected = IllegalArgumentException::class)
@@ -139,12 +141,10 @@ class HardwareFoldingFeatureTest {
     @Test
     fun testIsSeparating_falseForFlatFold() {
         val bounds = Bounds(1, 0, 1, 10)
-        val feature =
-            HardwareFoldingFeature(
-                bounds,
-                HardwareFoldingFeature.Type.FOLD,
-                FoldingFeature.State.FLAT
-            )
+        val feature = HardwareFoldingFeature(bounds,
+            HardwareFoldingFeature.Type.FOLD,
+            FoldingFeature.State.FLAT
+        )
         assertFalse(feature.isSeparating)
     }
 

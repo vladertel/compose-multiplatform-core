@@ -16,7 +16,6 @@
 
 @file:JvmName("SnapshotStateKt")
 @file:JvmMultifileClass
-
 package androidx.compose.runtime
 
 import kotlin.coroutines.CoroutineContext
@@ -25,11 +24,13 @@ import kotlin.jvm.JvmName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-/** Receiver scope for use with [produceState]. */
+/**
+ * Receiver scope for use with [produceState].
+ */
 interface ProduceStateScope<T> : MutableState<T>, CoroutineScope {
     /**
-     * Await the disposal of this producer whether it left the composition, the source changed, or
-     * an error occurred. Always runs [onDispose] before resuming.
+     * Await the disposal of this producer whether it left the composition,
+     * the source changed, or an error occurred. Always runs [onDispose] before resuming.
      *
      * This method is useful when configuring callback-based state producers that do not suspend,
      * for example:
@@ -46,7 +47,7 @@ private class ProduceStateScopeImpl<T>(
 
     override suspend fun awaitDispose(onDispose: () -> Unit): Nothing {
         try {
-            suspendCancellableCoroutine<Nothing> {}
+            suspendCancellableCoroutine<Nothing> { }
         } finally {
             onDispose()
         }
@@ -58,12 +59,12 @@ private class ProduceStateScopeImpl<T>(
  * produces values over time without a defined data source.
  *
  * [producer] is launched when [produceState] enters the composition and is cancelled when
- * [produceState] leaves the composition. [producer] should use [ProduceStateScope.value] to set new
- * values on the returned [State].
+ * [produceState] leaves the composition. [producer] should use [ProduceStateScope.value]
+ * to set new values on the returned [State].
  *
- * The returned [State] conflates values; no change will be observable if [ProduceStateScope.value]
- * is used to set a value that is [equal][Any.equals] to its old value, and observers may only see
- * the latest value if several values are set in rapid succession.
+ * The returned [State] conflates values; no change will be observable if
+ * [ProduceStateScope.value] is used to set a value that is [equal][Any.equals] to its old value,
+ * and observers may only see the latest value if several values are set in rapid succession.
  *
  * [produceState] may be used to observe either suspending or non-suspending sources of external
  * data, for example:
@@ -73,9 +74,14 @@ private class ProduceStateScopeImpl<T>(
  * @sample androidx.compose.runtime.samples.ProduceStateAwaitDispose
  */
 @Composable
-fun <T> produceState(initialValue: T, producer: suspend ProduceStateScope<T>.() -> Unit): State<T> {
+fun <T> produceState(
+    initialValue: T,
+    producer: suspend ProduceStateScope<T>.() -> Unit
+): State<T> {
     val result = remember { mutableStateOf(initialValue) }
-    LaunchedEffect(Unit) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    LaunchedEffect(Unit) {
+        ProduceStateScopeImpl(result, coroutineContext).producer()
+    }
     return result
 }
 
@@ -84,13 +90,13 @@ fun <T> produceState(initialValue: T, producer: suspend ProduceStateScope<T>.() 
  * produces values over time from [key1].
  *
  * [producer] is launched when [produceState] enters the composition and is cancelled when
- * [produceState] leaves the composition. If [key1] changes, a running [producer] will be cancelled
- * and re-launched for the new source. [producer] should use [ProduceStateScope.value] to set new
- * values on the returned [State].
+ * [produceState] leaves the composition. If [key1] changes, a running [producer] will be
+ * cancelled and re-launched for the new source. [producer] should use [ProduceStateScope.value]
+ * to set new values on the returned [State].
  *
- * The returned [State] conflates values; no change will be observable if [ProduceStateScope.value]
- * is used to set a value that is [equal][Any.equals] to its old value, and observers may only see
- * the latest value if several values are set in rapid succession.
+ * The returned [State] conflates values; no change will be observable if
+ * [ProduceStateScope.value] is used to set a value that is [equal][Any.equals] to its old value,
+ * and observers may only see the latest value if several values are set in rapid succession.
  *
  * [produceState] may be used to observe either suspending or non-suspending sources of external
  * data, for example:
@@ -106,7 +112,9 @@ fun <T> produceState(
     producer: suspend ProduceStateScope<T>.() -> Unit
 ): State<T> {
     val result = remember { mutableStateOf(initialValue) }
-    LaunchedEffect(key1) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    LaunchedEffect(key1) {
+        ProduceStateScopeImpl(result, coroutineContext).producer()
+    }
     return result
 }
 
@@ -115,13 +123,13 @@ fun <T> produceState(
  * produces values over time from [key1] and [key2].
  *
  * [producer] is launched when [produceState] enters the composition and is cancelled when
- * [produceState] leaves the composition. If [key1] or [key2] change, a running [producer] will be
- * cancelled and re-launched for the new source. [producer] should use [ProduceStateScope.value] to
- * set new values on the returned [State].
+ * [produceState] leaves the composition. If [key1] or [key2] change, a running [producer]
+ * will be cancelled and re-launched for the new source. [producer] should use
+ * [ProduceStateScope.value] to set new values on the returned [State].
  *
- * The returned [State] conflates values; no change will be observable if [ProduceStateScope.value]
- * is used to set a value that is [equal][Any.equals] to its old value, and observers may only see
- * the latest value if several values are set in rapid succession.
+ * The returned [State] conflates values; no change will be observable if
+ * [ProduceStateScope.value] is used to set a value that is [equal][Any.equals] to its old value,
+ * and observers may only see the latest value if several values are set in rapid succession.
  *
  * [produceState] may be used to observe either suspending or non-suspending sources of external
  * data, for example:
@@ -138,7 +146,9 @@ fun <T> produceState(
     producer: suspend ProduceStateScope<T>.() -> Unit
 ): State<T> {
     val result = remember { mutableStateOf(initialValue) }
-    LaunchedEffect(key1, key2) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    LaunchedEffect(key1, key2) {
+        ProduceStateScopeImpl(result, coroutineContext).producer()
+    }
     return result
 }
 
@@ -147,13 +157,13 @@ fun <T> produceState(
  * produces values over time from [key1], [key2] and [key3].
  *
  * [producer] is launched when [produceState] enters the composition and is cancelled when
- * [produceState] leaves the composition. If [key1], [key2] or [key3] change, a running [producer]
- * will be cancelled and re-launched for the new source.
- * [producer should use [ProduceStateScope.value] to set new values on the returned [State].
+ * [produceState] leaves the composition. If [key1], [key2] or [key3] change, a running
+ * [producer] will be cancelled and re-launched for the new source. [producer should use
+ * [ProduceStateScope.value] to set new values on the returned [State].
  *
- * The returned [State] conflates values; no change will be observable if [ProduceStateScope.value]
- * is used to set a value that is [equal][Any.equals] to its old value, and observers may only see
- * the latest value if several values are set in rapid succession.
+ * The returned [State] conflates values; no change will be observable if
+ * [ProduceStateScope.value] is used to set a value that is [equal][Any.equals] to its old value,
+ * and observers may only see the latest value if several values are set in rapid succession.
  *
  * [produceState] may be used to observe either suspending or non-suspending sources of external
  * data, for example:
@@ -171,7 +181,9 @@ fun <T> produceState(
     producer: suspend ProduceStateScope<T>.() -> Unit
 ): State<T> {
     val result = remember { mutableStateOf(initialValue) }
-    LaunchedEffect(key1, key2, key3) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    LaunchedEffect(key1, key2, key3) {
+        ProduceStateScopeImpl(result, coroutineContext).producer()
+    }
     return result
 }
 
@@ -180,13 +192,13 @@ fun <T> produceState(
  * produces values over time from [keys].
  *
  * [producer] is launched when [produceState] enters the composition and is cancelled when
- * [produceState] leaves the composition. If [keys] change, a running [producer] will be cancelled
- * and re-launched for the new source. [producer] should use [ProduceStateScope.value] to set new
- * values on the returned [State].
+ * [produceState] leaves the composition. If [keys] change, a running [producer] will be
+ * cancelled and re-launched for the new source. [producer] should use [ProduceStateScope.value]
+ * to set new values on the returned [State].
  *
- * The returned [State] conflates values; no change will be observable if [ProduceStateScope.value]
- * is used to set a value that is [equal][Any.equals] to its old value, and observers may only see
- * the latest value if several values are set in rapid succession.
+ * The returned [State] conflates values; no change will be observable if
+ * [ProduceStateScope.value] is used to set a value that is [equal][Any.equals] to its old value,
+ * and observers may only see the latest value if several values are set in rapid succession.
  *
  * [produceState] may be used to observe either suspending or non-suspending sources of external
  * data, for example:
@@ -203,6 +215,8 @@ fun <T> produceState(
 ): State<T> {
     val result = remember { mutableStateOf(initialValue) }
     @Suppress("CHANGING_ARGUMENTS_EXECUTION_ORDER_FOR_NAMED_VARARGS")
-    LaunchedEffect(keys = keys) { ProduceStateScopeImpl(result, coroutineContext).producer() }
+    LaunchedEffect(keys = keys) {
+        ProduceStateScopeImpl(result, coroutineContext).producer()
+    }
     return result
 }

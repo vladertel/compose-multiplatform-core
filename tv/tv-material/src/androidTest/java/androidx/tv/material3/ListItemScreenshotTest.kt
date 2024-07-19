@@ -49,12 +49,16 @@ import org.junit.runners.Parameterized
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 @OptIn(ExperimentalTvMaterial3Api::class)
 class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
 
-    val wrapperModifier =
-        Modifier.testTag(ListItemWrapperTag).background(scheme.colorScheme.surface).padding(20.dp)
+    val wrapperModifier = Modifier
+        .testTag(ListItemWrapperTag)
+        .background(scheme.colorScheme.surface)
+        .padding(20.dp)
 
     @Test
     fun listItem_customColor() {
@@ -119,7 +123,10 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun listItem_twoLine() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Column(modifier = wrapperModifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                modifier = wrapperModifier,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 ListItem(
                     selected = false,
                     onClick = {},
@@ -141,7 +148,10 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun listItem_twoLine_withIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Column(modifier = wrapperModifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                modifier = wrapperModifier,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
                 ListItem(
                     selected = false,
                     onClick = {},
@@ -236,7 +246,9 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
             }
         }
 
-        rule.onNodeWithTag(ListItemWrapperTag).onChild().requestFocus()
+        rule.onNodeWithTag(ListItemWrapperTag)
+            .onChild()
+            .requestFocus()
         rule.waitForIdle()
 
         assertAgainstGolden("listItem_${scheme.name}_threeLine_focused")
@@ -289,7 +301,9 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
             }
         }
 
-        rule.onNodeWithTag(ListItemWrapperTag).onChild().requestFocus()
+        rule.onNodeWithTag(ListItemWrapperTag)
+            .onChild()
+            .requestFocus()
         rule.waitForIdle()
 
         assertAgainstGolden("listItem_${scheme.name}_threeLine_focusedDisabled")
@@ -340,7 +354,9 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
             }
         }
 
-        rule.onNodeWithTag(ListItemWrapperTag).onChild().requestFocus()
+        rule.onNodeWithTag(ListItemWrapperTag)
+            .onChild()
+            .requestFocus()
         rule.waitForIdle()
 
         assertAgainstGolden("listItem_${scheme.name}_threeLine_focusedSelected")
@@ -378,8 +394,7 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
     }
 
     private fun assertAgainstGolden(goldenName: String) {
-        rule
-            .onNodeWithTag(ListItemWrapperTag)
+        rule.onNodeWithTag(ListItemWrapperTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
@@ -391,11 +406,10 @@ class ListItemScreenshotTest(private val scheme: ColorSchemeWrapper) {
         @OptIn(ExperimentalTvMaterial3Api::class)
         @Parameterized.Parameters(name = "{0}")
         @JvmStatic
-        fun parameters() =
-            arrayOf(
-                ColorSchemeWrapper("lightTheme", lightColorScheme()),
-                ColorSchemeWrapper("darkTheme", darkColorScheme()),
-            )
+        fun parameters() = arrayOf(
+            ColorSchemeWrapper("lightTheme", lightColorScheme()),
+            ColorSchemeWrapper("darkTheme", darkColorScheme()),
+        )
     }
 
     @OptIn(ExperimentalTvMaterial3Api::class)

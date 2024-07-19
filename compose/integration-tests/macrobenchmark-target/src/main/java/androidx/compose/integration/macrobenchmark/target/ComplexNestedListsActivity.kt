@@ -82,17 +82,16 @@ class ComplexNestedListsActivity : ComponentActivity() {
 
     internal fun ComponentActivity.launchIdlenessTracking() {
         val contentView: View = findViewById(android.R.id.content)
-        val callback: Choreographer.FrameCallback =
-            object : Choreographer.FrameCallback {
-                override fun doFrame(frameTimeNanos: Long) {
-                    if (Recomposer.runningRecomposers.value.any { it.hasPendingWork }) {
-                        contentView.contentDescription = "COMPOSE-BUSY"
-                    } else {
-                        contentView.contentDescription = "COMPOSE-IDLE"
-                    }
-                    Choreographer.getInstance().postFrameCallback(this)
+        val callback: Choreographer.FrameCallback = object : Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
+                if (Recomposer.runningRecomposers.value.any { it.hasPendingWork }) {
+                    contentView.contentDescription = "COMPOSE-BUSY"
+                } else {
+                    contentView.contentDescription = "COMPOSE-IDLE"
                 }
+                Choreographer.getInstance().postFrameCallback(this)
             }
+        }
         Choreographer.getInstance().postFrameCallback(callback)
     }
 }
@@ -102,9 +101,21 @@ private fun Greeting() {
     LazyColumn(Modifier.semantics { contentDescription = "IamLazy" }) {
         items(1000) {
             LazyRow {
-                items(10) { Video(modifier = Modifier.width(200.dp).height(120.dp).padding(16.dp)) }
+                items(10) {
+                    Video(
+                        modifier = Modifier
+                            .width(200.dp)
+                            .height(120.dp)
+                            .padding(16.dp)
+                    )
+                }
             }
-            Box(modifier = Modifier.height(1.dp).fillMaxWidth().background(Color.Black))
+            Box(
+                modifier = Modifier
+                    .height(1.dp)
+                    .fillMaxWidth()
+                    .background(Color.Black)
+            )
         }
     }
 }
@@ -118,12 +129,11 @@ private fun Video(
     shimmerModifier: Modifier = Modifier
 ) {
     Column(
-        modifier =
-            modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onVideoClick
-            )
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onVideoClick
+        )
     ) {
         VideoImageBox(
             modifier = Modifier.then(shimmerModifier),
@@ -140,41 +150,38 @@ private fun VideoImageBox(
     duration: String,
 ) {
     Card(
-        modifier =
-            modifier
-                .aspectRatio(16f / 9)
-                .shadow(
-                    elevation = 12.dp,
-                    spotColor = Color.Gray,
-                    shape = RoundedCornerShape(size = 12.dp)
-                )
+        modifier = modifier
+            .aspectRatio(16f / 9)
+            .shadow(
+                elevation = 12.dp,
+                spotColor = Color.Gray,
+                shape = RoundedCornerShape(size = 12.dp)
+            )
     ) {
         ConstraintLayout(Modifier.fillMaxSize()) {
             val (image, durationBox) = createRefs()
 
             AsyncImage(
-                modifier =
-                    Modifier.constrainAs(image) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.fillToConstraints
-                    },
+                modifier = Modifier.constrainAs(image) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                },
                 model = imageRes,
                 contentDescription = null,
                 contentScale = ContentScale.Crop
             )
 
             Row(
-                modifier =
-                    Modifier.constrainAs(durationBox) {
-                        bottom.linkTo(parent.bottom)
-                        end.linkTo(parent.end)
-                        width = Dimension.wrapContent
-                        height = Dimension.wrapContent
-                    },
+                modifier = Modifier.constrainAs(durationBox) {
+                    bottom.linkTo(parent.bottom)
+                    end.linkTo(parent.end)
+                    width = Dimension.wrapContent
+                    height = Dimension.wrapContent
+                },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -183,7 +190,9 @@ private fun VideoImageBox(
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Icon(
-                    modifier = Modifier.size(12.dp).padding(2.dp),
+                    modifier = Modifier
+                        .size(12.dp)
+                        .padding(2.dp),
                     imageVector = Icons.Default.AccountBox,
                     contentDescription = null,
                     tint = Color.White

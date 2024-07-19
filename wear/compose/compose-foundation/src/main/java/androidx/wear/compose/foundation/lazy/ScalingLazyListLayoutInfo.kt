@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.IntSize
  * Use [ScalingLazyListState.layoutInfo] to retrieve this
  */
 public sealed interface ScalingLazyListLayoutInfo {
-    /** The list of [ScalingLazyListItemInfo] representing all the currently visible items. */
+    /**
+     * The list of [ScalingLazyListItemInfo] representing all the currently visible items.
+     */
     val visibleItemsInfo: List<ScalingLazyListItemInfo>
 
     /**
@@ -47,7 +49,9 @@ public sealed interface ScalingLazyListLayoutInfo {
      */
     val viewportEndOffset: Int
 
-    /** The total count of items passed to [ScalingLazyColumn]. */
+    /**
+     * The total count of items passed to [ScalingLazyColumn].
+     */
     val totalItemsCount: Int
 
     /**
@@ -56,10 +60,14 @@ public sealed interface ScalingLazyListLayoutInfo {
      */
     val viewportSize: IntSize
 
-    /** The orientation of the scaling lazy list. */
+    /**
+     * The orientation of the scaling lazy list.
+     */
     val orientation: Orientation
 
-    /** True if the direction of scrolling and layout is reversed. */
+    /**
+     * True if the direction of scrolling and layout is reversed.
+     */
     val reverseLayout: Boolean
 
     /**
@@ -70,8 +78,9 @@ public sealed interface ScalingLazyListLayoutInfo {
     val beforeContentPadding: Int
 
     /**
-     * The content padding in pixels applied after the last item in the direction of scrolling. For
-     * example it is a bottom content padding for ScalingLazyColumn with reverseLayout set to false.
+     * The content padding in pixels applied after the last item in the direction of scrolling.
+     * For example it is a bottom content padding for ScalingLazyColumn with reverseLayout set to
+     * false.
      */
     val afterContentPadding: Int
 
@@ -89,6 +98,8 @@ public sealed interface ScalingLazyListLayoutInfo {
      */
     val afterAutoCenteringPadding: Int
 
-    /** How to anchor list items to the center-line of the viewport */
+    /**
+     * How to anchor list items to the center-line of the viewport
+     */
     val anchorType: ScalingLazyListAnchorType
 }

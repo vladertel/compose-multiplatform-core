@@ -87,7 +87,8 @@ class ReflectiveGenericLifecycleObserverTest {
 
     @Suppress("deprecation")
     private open class CreatedStateListener : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_CREATE) open fun onCreated() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        open fun onCreated() {}
 
         @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
         open fun onCreated(provider: LifecycleOwner?) {}
@@ -126,17 +127,18 @@ class ReflectiveGenericLifecycleObserverTest {
 
     @Suppress("deprecation")
     private open class AllMethodsListener : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_CREATE) open fun created() {}
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) open fun started() {}
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_RESUME) open fun resumed() {}
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE) open fun paused() {}
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP) open fun stopped() {}
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY) open fun destroyed() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        open fun created() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        open fun started() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        open fun resumed() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        open fun paused() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+        open fun stopped() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        open fun destroyed() {}
     }
 
     @Suppress("deprecation")
@@ -144,19 +146,21 @@ class ReflectiveGenericLifecycleObserverTest {
     fun testFailingObserver() {
         class UnprecedentedError : Error()
 
-        val obj: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_START)
-                fun started() {
-                    throw UnprecedentedError()
-                }
+        val obj: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_START)
+            fun started() {
+                throw UnprecedentedError()
             }
+        }
         val observer = ReflectiveGenericLifecycleObserver(obj)
         try {
             observer.onStateChanged(owner, Lifecycle.Event.ON_START)
             fail()
         } catch (e: Exception) {
-            assertThat("exception cause is wrong", e.cause is UnprecedentedError)
+            assertThat(
+                "exception cause is wrong",
+                e.cause is UnprecedentedError
+            )
         }
     }
 
@@ -164,7 +168,6 @@ class ReflectiveGenericLifecycleObserverTest {
     fun testPrivateObserverMethods() {
         open class ObserverWithPrivateMethod : LifecycleObserver {
             var called = false
-
             @OnLifecycleEvent(Lifecycle.Event.ON_START)
             private fun started() {
                 called = true
@@ -179,44 +182,40 @@ class ReflectiveGenericLifecycleObserverTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun testWrongFirstParam1() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_START)
-                private fun started(e: Lifecycle.Event) {}
-            }
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_START)
+            private fun started(e: Lifecycle.Event) {}
+        }
         ReflectiveGenericLifecycleObserver(observer)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun testWrongFirstParam2() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
-                private fun started(l: Lifecycle, e: Lifecycle.Event) {}
-            }
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+            private fun started(l: Lifecycle, e: Lifecycle.Event) {}
+        }
         ReflectiveGenericLifecycleObserver(observer)
     }
 
     @Test
     fun testLifecycleOwnerSubclassFirstParam() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_ANY) private fun started() {}
-            }
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+            private fun started() {}
+        }
         ReflectiveGenericLifecycleObserver(observer)
     }
 
     @Test
     fun testLifecycleEventSecondParam() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
-                private fun started(owner: LifecycleOwner, l: Lifecycle) {}
-            }
-        val expectedException =
-            assertThrows(IllegalArgumentException::class.java) {
-                ReflectiveGenericLifecycleObserver(observer)
-            }
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+            private fun started(owner: LifecycleOwner, l: Lifecycle) {}
+        }
+        val expectedException = assertThrows(
+            IllegalArgumentException::class.java
+        ) { ReflectiveGenericLifecycleObserver(observer) }
         assertEquals(
             "invalid parameter type. second arg must be an event",
             expectedException.message
@@ -225,34 +224,36 @@ class ReflectiveGenericLifecycleObserverTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun testThreeParams() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
-                private fun started(owner: LifecycleOwner, e: Lifecycle.Event, i: Int) {}
-            }
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
+            private fun started(owner: LifecycleOwner, e: Lifecycle.Event, i: Int) {}
+        }
         ReflectiveGenericLifecycleObserver(observer)
     }
 
     @Test
     fun testOwnerMethodWithSecondParam_eventMustBeOnAny() {
-        val observer: LifecycleObserver =
-            object : LifecycleObserver {
-                @OnLifecycleEvent(Lifecycle.Event.ON_START)
-                private fun started(owner: LifecycleOwner, e: Lifecycle.Event) {}
-            }
-        val expectedException =
-            assertThrows(IllegalArgumentException::class.java) {
-                ReflectiveGenericLifecycleObserver(observer)
-            }
-        assertEquals("Second arg is supported only for ON_ANY value", expectedException.message)
+        val observer: LifecycleObserver = object : LifecycleObserver {
+            @OnLifecycleEvent(Lifecycle.Event.ON_START)
+            private fun started(owner: LifecycleOwner, e: Lifecycle.Event) {}
+        }
+        val expectedException = assertThrows(
+            IllegalArgumentException::class.java
+        ) { ReflectiveGenericLifecycleObserver(observer) }
+        assertEquals(
+            "Second arg is supported only for ON_ANY value",
+            expectedException.message
+        )
     }
 
     internal open class BaseClass1 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) open fun foo(owner: LifecycleOwner?) {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        open fun foo(owner: LifecycleOwner?) {}
     }
 
     internal class DerivedClass1 : BaseClass1() {
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP) override fun foo(owner: LifecycleOwner?) {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+        override fun foo(owner: LifecycleOwner?) {}
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -261,11 +262,13 @@ class ReflectiveGenericLifecycleObserverTest {
     }
 
     internal class BaseClass2 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) fun foo() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        fun foo() {}
     }
 
     internal open class DerivedClass2 : BaseClass1() {
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP) open fun foo() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+        open fun foo() {}
     }
 
     @Test
@@ -282,11 +285,13 @@ class ReflectiveGenericLifecycleObserverTest {
     }
 
     internal open class BaseClass3 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) open fun foo(owner: LifecycleOwner?) {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        open fun foo(owner: LifecycleOwner?) {}
     }
 
     internal interface Interface3 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP) fun foo(owner: LifecycleOwner?)
+        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+        fun foo(owner: LifecycleOwner?)
     }
 
     internal class DerivedClass3 : BaseClass3(), Interface3 {
@@ -299,17 +304,21 @@ class ReflectiveGenericLifecycleObserverTest {
     }
 
     internal open class BaseClass4 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) open fun foo(owner: LifecycleOwner?) {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        open fun foo(owner: LifecycleOwner?) {}
     }
 
     internal interface Interface4 : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) fun foo(owner: LifecycleOwner?)
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        fun foo(owner: LifecycleOwner?)
     }
 
     internal open class DerivedClass4 : BaseClass4(), Interface4 {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) override fun foo(owner: LifecycleOwner?) {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        override fun foo(owner: LifecycleOwner?) {}
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) fun foo() {}
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        fun foo() {}
     }
 
     @Test
@@ -322,11 +331,13 @@ class ReflectiveGenericLifecycleObserverTest {
     }
 
     internal interface InterfaceStart : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_START) fun foo(owner: LifecycleOwner?)
+        @OnLifecycleEvent(Lifecycle.Event.ON_START)
+        fun foo(owner: LifecycleOwner?)
     }
 
     internal interface InterfaceStop : LifecycleObserver {
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP) fun foo(owner: LifecycleOwner?)
+        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+        fun foo(owner: LifecycleOwner?)
     }
 
     internal class DerivedClass5 : InterfaceStart, InterfaceStop {

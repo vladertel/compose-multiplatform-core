@@ -32,6 +32,7 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.arch.core.util.Function;
 import androidx.camera.core.Logger;
@@ -56,6 +57,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>This implementation only expects one input surface and one output surface.
  */
+@RequiresApi(21)
 public class SurfaceProcessorImpl implements SurfaceProcessor,
         SurfaceTexture.OnFrameAvailableListener {
 
@@ -94,14 +96,11 @@ public class SurfaceProcessorImpl implements SurfaceProcessor,
 
     private boolean mIsReleased = false;
 
-    private final int mQueueDepth;
-
     // Thread and handler for receiving overlay texture updates.
     private final HandlerThread mOverlayHandlerThread;
     private final Handler mOverlayHandler;
 
     public SurfaceProcessorImpl(int queueDepth, @NonNull Handler glHandler) {
-        mQueueDepth = queueDepth;
         mGlHandler = glHandler;
         mGlExecutor = CameraXExecutors.newHandlerExecutor(mGlHandler);
         mGlRenderer = new GlRenderer(queueDepth);
@@ -268,7 +267,7 @@ public class SurfaceProcessorImpl implements SurfaceProcessor,
      * exception.
      */
     @NonNull
-    public ListenableFuture<Integer> drawFrameAsync(long timestampNs) {
+    public ListenableFuture<Integer> drawFrame(long timestampNs) {
         return CallbackToFutureAdapter.getFuture(completer -> {
             runOnGlThread(() -> {
                 if (mIsReleased) {
@@ -285,21 +284,6 @@ public class SurfaceProcessorImpl implements SurfaceProcessor,
             });
             return "drawFrameFuture";
         });
-    }
-
-    /**
-     * Gets the depth of the buffer.
-     */
-    public int getQueueDepth() {
-        return mQueueDepth;
-    }
-
-    /**
-     * Gets the GL handler.
-     */
-    @NonNull
-    public Handler getGlHandler() {
-        return mGlHandler;
     }
 
     // *** Private methods ***
@@ -347,10 +331,10 @@ public class SurfaceProcessorImpl implements SurfaceProcessor,
                 return OverlayEffect.RESULT_INVALID_SURFACE;
             }
             // Only draw if frame is associated with the current output surface.
-            if (drawOverlay(frame.getTimestampNanos())) {
+            if (drawOverlay(frame.getTimestampNs())) {
                 mGlRenderer.renderQueueTextureToSurface(
                         frame.getTextureId(),
-                        frame.getTimestampNanos(),
+                        frame.getTimestampNs(),
                         frame.getTransform(),
                         frame.getSurface());
                 return OverlayEffect.RESULT_SUCCESS;

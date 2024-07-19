@@ -19,15 +19,12 @@ package androidx.wear.compose.material3.samples
 import androidx.annotation.Sampled
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ChildButton
-import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.OutlinedButton
@@ -36,17 +33,9 @@ import androidx.wear.compose.material3.Text
 @Sampled
 @Composable
 fun SimpleButtonSample() {
-    Button(onClick = { /* Do something */ }, label = { Text("Button") })
-}
-
-@Sampled
-@Composable
-fun ButtonWithOnLongClickSample(onClickHandler: () -> Unit, onLongClickHandler: () -> Unit) {
     Button(
-        onClick = onClickHandler,
-        onLongClick = onLongClickHandler,
-        onLongClickLabel = "OnLongClick action",
-        label = { Text("With onLongClick") }
+        onClick = { /* Do something */ },
+        label = { Text("Button") }
     )
 }
 
@@ -70,20 +59,9 @@ fun ButtonSample() {
 @Sampled
 @Composable
 fun SimpleFilledTonalButtonSample() {
-    FilledTonalButton(onClick = { /* Do something */ }, label = { Text("Filled Tonal Button") })
-}
-
-@Sampled
-@Composable
-fun FilledTonalButtonWithOnLongClickSample(
-    onClickHandler: () -> Unit,
-    onLongClickHandler: () -> Unit
-) {
     FilledTonalButton(
-        onClick = onClickHandler,
-        onLongClick = onLongClickHandler,
-        onLongClickLabel = "OnLongClick action",
-        label = { Text("With onLongClick") }
+        onClick = { /* Do something */ },
+        label = { Text("Filled Tonal Button") }
     )
 }
 
@@ -107,20 +85,9 @@ fun FilledTonalButtonSample() {
 @Sampled
 @Composable
 fun SimpleOutlinedButtonSample() {
-    OutlinedButton(onClick = { /* Do something */ }, label = { Text("Outlined Button") })
-}
-
-@Sampled
-@Composable
-fun OutlinedButtonWithOnLongClickSample(
-    onClickHandler: () -> Unit,
-    onLongClickHandler: () -> Unit
-) {
     OutlinedButton(
-        onClick = onClickHandler,
-        onLongClick = onLongClickHandler,
-        onLongClickLabel = "OnLongClick action",
-        label = { Text("With onLongClick") }
+        onClick = { /* Do something */ },
+        label = { Text("Outlined Button") }
     )
 }
 
@@ -144,17 +111,9 @@ fun OutlinedButtonSample() {
 @Sampled
 @Composable
 fun SimpleChildButtonSample() {
-    ChildButton(onClick = { /* Do something */ }, label = { Text("Child Button") })
-}
-
-@Sampled
-@Composable
-fun ChildButtonWithOnLongClickSample(onClickHandler: () -> Unit, onLongClickHandler: () -> Unit) {
     ChildButton(
-        onClick = onClickHandler,
-        onLongClick = onLongClickHandler,
-        onLongClickLabel = "OnLongClick action",
-        label = { Text("With onLongClick") }
+        onClick = { /* Do something */ },
+        label = { Text("Child Button") }
     )
 }
 
@@ -173,69 +132,4 @@ fun ChildButtonSample() {
             )
         }
     )
-}
-
-@Sampled
-@Composable
-fun CompactButtonSample() {
-    CompactButton(
-        onClick = { /* Do something */ },
-        icon = {
-            Icon(
-                Icons.Filled.Favorite,
-                contentDescription = "Favorite icon",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
-            )
-        }
-    ) {
-        Text("Compact Button", maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Sampled
-@Composable
-fun CompactButtonWithOnLongClickSample(onClickHandler: () -> Unit, onLongClickHandler: () -> Unit) {
-    CompactButton(
-        onClick = onClickHandler,
-        onLongClick = onLongClickHandler,
-        onLongClickLabel = "OnLongClick action",
-        label = { Text("With onLongClick") }
-    )
-}
-
-@Sampled
-@Composable
-fun FilledTonalCompactButtonSample() {
-    CompactButton(
-        onClick = { /* Do something */ },
-        icon = {
-            Icon(
-                Icons.Filled.Favorite,
-                contentDescription = "Favorite icon",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
-            )
-        },
-        colors = ButtonDefaults.filledTonalButtonColors()
-    ) {
-        Text("Filled Tonal Compact Button", maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Sampled
-@Composable
-fun OutlinedCompactButtonSample() {
-    CompactButton(
-        onClick = { /* Do something */ },
-        icon = {
-            Icon(
-                Icons.Filled.ArrowDropDown,
-                contentDescription = "Expand",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
-            )
-        },
-        colors = ButtonDefaults.outlinedButtonColors(),
-        border = ButtonDefaults.outlinedButtonBorder(enabled = true)
-    ) {
-        Text("Show More", maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
 }

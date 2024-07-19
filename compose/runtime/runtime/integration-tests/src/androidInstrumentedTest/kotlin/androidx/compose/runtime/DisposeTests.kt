@@ -27,32 +27,35 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class DisposeTests : BaseComposeTest() {
-    @get:Rule override val activityRule = makeTestActivityRule()
+    @get:Rule
+    override val activityRule = makeTestActivityRule()
 
-    private val NeverEqualObject =
-        object {
-            override fun equals(other: Any?): Boolean {
-                return false
-            }
+    private val NeverEqualObject = object {
+        override fun equals(other: Any?): Boolean {
+            return false
         }
+    }
 
     @Test
     fun testDisposeComposition() {
         val log = mutableListOf<String>()
 
         lateinit var recomposeScope: RecomposeScope
-        val composable =
-            @Composable {
-                recomposeScope = currentRecomposeScope
-                DisposableEffect(NeverEqualObject) {
-                    log.add("onCommit")
-                    onDispose { log.add("onCommitDispose") }
-                }
-                DisposableEffect(Unit) {
-                    log.add("onActive")
-                    onDispose { log.add("onActiveDispose") }
+        val composable = @Composable {
+            recomposeScope = currentRecomposeScope
+            DisposableEffect(NeverEqualObject) {
+                log.add("onCommit")
+                onDispose {
+                    log.add("onCommitDispose")
                 }
             }
+            DisposableEffect(Unit) {
+                log.add("onActive")
+                onDispose {
+                    log.add("onActiveDispose")
+                }
+            }
+        }
 
         fun assertLog(expected: String, block: () -> Unit) {
             log.clear()
@@ -71,7 +74,9 @@ class DisposeTests : BaseComposeTest() {
         }
 
         assertLog("onActiveDispose, onCommitDispose") {
-            activity.uiThread { activity.setContentView(View(activity)) }
+            activity.uiThread {
+                activity.setContentView(View(activity))
+            }
             activity.waitForAFrame()
         }
 

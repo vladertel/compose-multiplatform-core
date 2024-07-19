@@ -23,6 +23,7 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Logger;
 import androidx.camera.core.UseCase;
@@ -56,6 +57,7 @@ import androidx.core.util.Preconditions;
  *
  * </code></pre>
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @TransformExperimental
 public final class CoordinateTransform {
 
@@ -71,7 +73,6 @@ public final class CoordinateTransform {
      * <p> The source and the target must be associated with the same {@link ViewPort}.
      *
      * @param source the source
-     * @param target the target
      * @see UseCaseGroup
      * @see ViewPort
      */

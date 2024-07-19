@@ -16,10 +16,12 @@
 
 package androidx.camera.view;
 
+import android.os.Build;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.Camera;
-import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.UseCase;
@@ -33,6 +35,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Implementation of {@link ProcessCameraProviderWrapper} that wraps a round a real
  * {@link ProcessCameraProvider} object.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class ProcessCameraProviderWrapperImpl implements ProcessCameraProviderWrapper {
 
     private final ProcessCameraProvider mProcessCameraProvider;
@@ -69,11 +72,5 @@ class ProcessCameraProviderWrapperImpl implements ProcessCameraProviderWrapper {
     @Override
     public ListenableFuture<Void> shutdownAsync() {
         return mProcessCameraProvider.shutdownAsync();
-    }
-
-    @NonNull
-    @Override
-    public CameraInfo getCameraInfo(CameraSelector cameraSelector) {
-        return mProcessCameraProvider.getCameraInfo(cameraSelector);
     }
 }

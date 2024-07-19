@@ -24,7 +24,9 @@ internal data class FrameStatsResult(
      */
     val uniqueName: String,
 
-    /** Most recent clock monotonic (e.g. System.nanoTime()) timestamp of a frame's vsync. */
+    /**
+     * Most recent clock monotonic (e.g. System.nanoTime()) timestamp of a frame's vsync.
+     */
     val lastFrameNs: Long?
 ) {
     companion object {
@@ -43,16 +45,18 @@ internal data class FrameStatsResult(
                      * Window: com.pkg/com.pkg.MyActivity
                      * ```
                      */
-                    val (uniqueName) =
-                        it[0]
-                            .split("\r?\n")
-                            .firstNotNullOf { line -> NAME_REGEX.find(line) }
-                            .destructured
+                    val (uniqueName) = it[0]
+                        .split("\r?\n")
+                        .firstNotNullOf { line ->
+                            NAME_REGEX.find(line)
+                        }.destructured
 
                     val profileData = it[1]
                     FrameStatsResult(
                         uniqueName = uniqueName,
-                        lastFrameNs = profileDataLatestActivityLaunchNs(profileData)
+                        lastFrameNs = profileDataLatestActivityLaunchNs(
+                            profileData
+                        )
                     )
                 }
         }
@@ -84,7 +88,9 @@ internal data class FrameStatsResult(
             lines.forEachIndexed { index, s -> println("$index $s") }
             return lines
                 .drop(1)
-                .map { it.split(",")[intendedVsyncIndex].toLong() }
+                .map {
+                    it.split(",")[intendedVsyncIndex].toLong()
+                }
                 .maxOfOrNull { it }
         }
     }

@@ -56,7 +56,9 @@ import kotlinx.coroutines.delay
 @Composable
 fun LoadingAnimationDemo() {
     val isLoading = remember { mutableStateOf(true) }
-    Box(Modifier.fillMaxSize().background(BackgroundColor).clickable { isLoading.value = false }) {
+    Box(Modifier.fillMaxSize().background(BackgroundColor).clickable {
+        isLoading.value = false
+    }) {
         ActualContent()
         LoadingOverlay(isLoading = isLoading)
     }
@@ -84,15 +86,23 @@ fun ActualContent() {
             fontFamily = FontFamily(typeface = Typeface.SANS_SERIF),
             fontSize = 40.sp,
             color = Color(0xff173d6e),
-            modifier =
-                Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 5.dp)
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+                .padding(top = 10.dp, bottom = 5.dp)
         )
         Row {
-            Text("Age:", fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp))
+            Text(
+                "Age:",
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.width(80.dp)
+            )
             Text("10")
         }
         Row {
-            Text("Breed:", fontWeight = FontWeight.Bold, modifier = Modifier.width(80.dp))
+            Text(
+                "Breed:",
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.width(80.dp)
+            )
             Text("Tabby")
         }
         Text(
@@ -115,7 +125,9 @@ val GradientColor: Color = Color(0xff173d6e)
 val BackgroundColor: Color = Color(0xffdbe5ef)
 
 @Composable
-fun LoadingOverlay(isLoading: State<Boolean>) {
+fun LoadingOverlay(
+    isLoading: State<Boolean>
+) {
     val fraction = remember { Animatable(0f) }
     var reveal by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -138,14 +150,21 @@ fun LoadingOverlay(isLoading: State<Boolean>) {
 
     // Draw gradient..
     Box(
-        Modifier.fillMaxSize().drawWithCache {
-            val gradient =
-                Brush.verticalGradient(
-                    listOf(Color.Transparent, GradientColor.copy(alpha = 0.2f), BackgroundColor),
+        Modifier
+            .fillMaxSize()
+            .drawWithCache {
+                val gradient = Brush.verticalGradient(
+                    listOf(
+                        Color.Transparent,
+                        GradientColor.copy(alpha = 0.2f),
+                        BackgroundColor
+                    ),
                     startY = size.height * (fraction.value - 0.1f),
                     endY = size.height * (fraction.value + 0.1f)
                 )
-            onDrawWithContent { drawRect(gradient) }
-        }
+                onDrawWithContent {
+                    drawRect(gradient)
+                }
+            }
     )
 }

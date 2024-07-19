@@ -26,7 +26,10 @@ import org.gradle.api.provider.Provider
 internal fun Variant.taskName(baseName: String) =
     "$baseName${name.replaceFirstChar(Char::titlecase)}"
 
-internal fun Project.taskWorkingDir(variant: Variant, baseName: String): Provider<Directory> {
+internal fun Project.taskWorkingDir(
+    variant: Variant,
+    baseName: String
+): Provider<Directory> {
     return layout.buildDirectory.dir("androidx_inspection/$baseName/${variant.name}")
 }
 

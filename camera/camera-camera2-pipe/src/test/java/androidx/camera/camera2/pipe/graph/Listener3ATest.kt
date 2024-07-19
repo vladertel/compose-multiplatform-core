@@ -65,7 +65,8 @@ internal class Listener3ATest {
             UpdateCounting3AStateListener(
                 Result3AStateListenerImpl(
                     mapOf(
-                        CaptureResult.CONTROL_AF_MODE to listOf(CaptureResult.CONTROL_AF_MODE_AUTO)
+                        CaptureResult.CONTROL_AF_MODE to
+                            listOf(CaptureResult.CONTROL_AF_MODE_AUTO)
                     )
                 )
             )
@@ -104,7 +105,8 @@ internal class Listener3ATest {
             UpdateCounting3AStateListener(
                 Result3AStateListenerImpl(
                     mapOf(
-                        CaptureResult.CONTROL_AF_MODE to listOf(CaptureResult.CONTROL_AF_MODE_AUTO)
+                        CaptureResult.CONTROL_AF_MODE to
+                            listOf(CaptureResult.CONTROL_AF_MODE_AUTO)
                     )
                 )
             )
@@ -112,7 +114,8 @@ internal class Listener3ATest {
             UpdateCounting3AStateListener(
                 Result3AStateListenerImpl(
                     mapOf(
-                        CaptureResult.CONTROL_AE_MODE to listOf(CaptureResult.CONTROL_AE_MODE_OFF)
+                        CaptureResult.CONTROL_AE_MODE to
+                            listOf(CaptureResult.CONTROL_AE_MODE_OFF)
                     )
                 )
             )

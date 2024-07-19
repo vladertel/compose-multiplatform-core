@@ -19,6 +19,8 @@ package androidx.benchmark
 import androidx.test.platform.app.InstrumentationRegistry
 
 object Packages {
-    val TEST: String = InstrumentationRegistry.getInstrumentation().context.packageName
+    val TEST: String = InstrumentationRegistry.getInstrumentation()
+        .context
+        .packageName
     val FAKE = "com.notalive.package.notarealapp"
 }

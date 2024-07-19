@@ -64,7 +64,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class VelocityTrackingListParityTest {
 
-    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<ComponentActivity>()
 
     private var layoutManager: LinearLayoutManager? = null
     private var latestComposeVelocity = 0f
@@ -112,8 +113,8 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
@@ -154,8 +155,8 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
@@ -196,8 +197,8 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
@@ -238,8 +239,8 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
@@ -280,8 +281,8 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
@@ -322,18 +323,21 @@ class VelocityTrackingListParityTest {
         rule.runOnIdle {
             val currentTopInCompose = state.firstVisibleItemIndex
             val diff = (currentTopInCompose - childAtTheTopOfView).absoluteValue
-            val message =
-                "Compose=$currentTopInCompose View=$childAtTheTopOfView " + "Difference was=$diff"
+            val message = "Compose=$currentTopInCompose View=$childAtTheTopOfView " +
+                "Difference was=$diff"
             assertTrue(message) { diff <= ItemDifferenceThreshold }
         }
     }
 
     private fun createActivity(state: LazyListState) {
-        rule.activityRule.scenario.createActivityWithComposeContent(
-            R.layout.android_compose_lists_fling
-        ) {
-            TestComposeList(state)
-        }
+        rule
+            .activityRule
+            .scenario
+            .createActivityWithComposeContent(R.layout.android_compose_lists_fling) {
+                TestComposeList(
+                    state
+                )
+            }
     }
 
     private fun ActivityScenario<*>.createActivityWithComposeContent(
@@ -343,7 +347,9 @@ class VelocityTrackingListParityTest {
         onActivity { activity ->
             activity.setTheme(R.style.Theme_MaterialComponents_Light)
             activity.setContentView(layout)
-            with(activity.findViewById<ComposeView>(R.id.compose_view)) { setContent(content) }
+            with(activity.findViewById<ComposeView>(R.id.compose_view)) {
+                setContent(content)
+            }
 
             activity.findViewById<RecyclerView>(R.id.view_list)?.let {
                 it.adapter = ListAdapter()
@@ -351,16 +357,11 @@ class VelocityTrackingListParityTest {
                     LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false).also {
                         this@VelocityTrackingListParityTest.layoutManager = it
                     }
-                it.addOnScrollListener(
-                    object : OnScrollListener() {
-                        override fun onScrollStateChanged(
-                            recyclerView: RecyclerView,
-                            newState: Int
-                        ) {
-                            latestRVState = newState
-                        }
+                it.addOnScrollListener(object : OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        latestRVState = newState
                     }
-                )
+                })
             }
 
             activity.findViewById<ComposeView>(R.id.compose_view).visibility = View.GONE
@@ -374,7 +375,9 @@ class VelocityTrackingListParityTest {
     private fun composeView(): ComposeView = rule.activity.findViewById(R.id.compose_view)
 
     private fun checkVisibility(view: View, visibility: Int) {
-        assertTrue { view.visibility == visibility }
+        assertTrue {
+            view.visibility == visibility
+        }
     }
 }
 
@@ -382,7 +385,12 @@ class VelocityTrackingListParityTest {
 fun TestComposeList(state: LazyListState) {
     LazyColumn(Modifier.fillMaxSize(), state = state) {
         items(1000) {
-            Box(modifier = Modifier.fillMaxWidth().height(64.dp).background(Color.Black)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .background(Color.Black)
+            ) {
                 Text(text = it.toString(), color = Color.White)
             }
         }
@@ -391,7 +399,6 @@ fun TestComposeList(state: LazyListState) {
 
 private class ListAdapter : RecyclerView.Adapter<ListViewHolder>() {
     val items = (0 until 1000).map { it.toString() }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
         return ListViewHolder(
             LayoutInflater.from(parent.context)
@@ -427,14 +434,13 @@ private suspend fun RecyclerView.awaitScrollIdle() {
     val rv = this
     withContext(Dispatchers.Main) {
         suspendCancellableCoroutine<Unit> { continuation ->
-            val listener =
-                object : OnScrollListener() {
-                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                        if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                            continuation.resume(Unit)
-                        }
+            val listener = object : OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                        continuation.resume(Unit)
                     }
                 }
+            }
 
             rv.addOnScrollListener(listener)
 

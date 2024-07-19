@@ -24,6 +24,8 @@ import androidx.compose.testutils.LayeredComposeTestCase
 class JetsnackCaseFactory : LayeredComposeTestCase() {
     @Composable
     override fun MeasuredContent() {
-        JetsnackTheme { Feed(onSnackClick = {}) }
+        JetsnackTheme {
+            Feed(onSnackClick = {})
+        }
     }
 }

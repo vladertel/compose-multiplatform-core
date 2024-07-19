@@ -40,9 +40,19 @@ internal enum class RxType(
         className = RxJava2TypeNames.OBSERVABLE,
         factoryMethodName = RoomRxJava2TypeNames.RX_ROOM_CREATE_OBSERVABLE
     ),
-    RX2_SINGLE(version = RxVersion.TWO, className = RxJava2TypeNames.SINGLE),
-    RX2_MAYBE(version = RxVersion.TWO, className = RxJava2TypeNames.MAYBE, canBeNull = true),
-    RX2_COMPLETABLE(version = RxVersion.TWO, className = RxJava2TypeNames.COMPLETABLE),
+    RX2_SINGLE(
+        version = RxVersion.TWO,
+        className = RxJava2TypeNames.SINGLE
+    ),
+    RX2_MAYBE(
+        version = RxVersion.TWO,
+        className = RxJava2TypeNames.MAYBE,
+        canBeNull = true
+    ),
+    RX2_COMPLETABLE(
+        version = RxVersion.TWO,
+        className = RxJava2TypeNames.COMPLETABLE
+    ),
     // RxJava3 types
     RX3_FLOWABLE(
         version = RxVersion.THREE,
@@ -54,9 +64,19 @@ internal enum class RxType(
         className = RxJava3TypeNames.OBSERVABLE,
         factoryMethodName = RoomRxJava3TypeNames.RX_ROOM_CREATE_OBSERVABLE
     ),
-    RX3_SINGLE(version = RxVersion.THREE, className = RxJava3TypeNames.SINGLE),
-    RX3_MAYBE(version = RxVersion.THREE, className = RxJava3TypeNames.MAYBE, canBeNull = true),
-    RX3_COMPLETABLE(version = RxVersion.THREE, className = RxJava3TypeNames.COMPLETABLE);
+    RX3_SINGLE(
+        version = RxVersion.THREE,
+        className = RxJava3TypeNames.SINGLE
+    ),
+    RX3_MAYBE(
+        version = RxVersion.THREE,
+        className = RxJava3TypeNames.MAYBE,
+        canBeNull = true
+    ),
+    RX3_COMPLETABLE(
+        version = RxVersion.THREE,
+        className = RxJava3TypeNames.COMPLETABLE
+    );
 
     fun isSingle() = this == RX2_SINGLE || this == RX3_SINGLE
 }
@@ -75,5 +95,5 @@ internal enum class RxVersion(
         rxRoomClassName = RoomRxJava3TypeNames.RX_ROOM,
         emptyResultExceptionClassName = RoomRxJava3TypeNames.RX_EMPTY_RESULT_SET_EXCEPTION,
         missingArtifactMessage = ProcessorErrors.MISSING_ROOM_RXJAVA3_ARTIFACT
-    )
+    );
 }

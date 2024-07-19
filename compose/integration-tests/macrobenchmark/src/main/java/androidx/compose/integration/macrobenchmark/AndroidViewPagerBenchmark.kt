@@ -34,8 +34,11 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class AndroidViewPagerBenchmark(private val compilationMode: CompilationMode) {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+class AndroidViewPagerBenchmark(
+    private val compilationMode: CompilationMode
+) {
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
     private lateinit var device: UiDevice
 
     @Before
@@ -57,7 +60,12 @@ class AndroidViewPagerBenchmark(private val compilationMode: CompilationMode) {
                 startActivityAndWait(intent)
             }
         ) {
-            val pager = device.findObject(By.res(PackageName, ResourceId))
+            val pager = device.findObject(
+                By.res(
+                    PackageName,
+                    ResourceId
+                )
+            )
             // Setting a gesture margin is important otherwise gesture nav is triggered.
             pager.setGestureMargin(device.displayWidth / 5)
             repeat(10) {

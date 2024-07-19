@@ -88,7 +88,13 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionUp)
 
         assertThat(onItemTouchListener.motionEventItems)
-            .isEqualTo(listOf(ActionDown to true, ActionMove1 to true, ActionUp to true))
+            .isEqualTo(
+                listOf(
+                    ActionDown to true,
+                    ActionMove1 to true,
+                    ActionUp to true
+                )
+            )
     }
 
     @Test
@@ -110,15 +116,14 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionMove1)
         parent.dispatchMotionEventItem(ActionUp)
 
-        assertThat(onItemTouchListener.motionEventItems)
-            .isEqualTo(
-                listOf(
-                    ActionDown to true,
-                    ActionDown to false,
-                    ActionMove1 to false,
-                    ActionUp to false
-                )
+        assertThat(onItemTouchListener.motionEventItems).isEqualTo(
+            listOf(
+                ActionDown to true,
+                ActionDown to false,
+                ActionMove1 to false,
+                ActionUp to false
             )
+        )
     }
 
     @Test
@@ -140,15 +145,14 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionMove2)
         parent.dispatchMotionEventItem(ActionUp)
 
-        assertThat(onItemTouchListener.motionEventItems)
-            .isEqualTo(
-                listOf(
-                    ActionDown to true,
-                    ActionMove1 to true,
-                    ActionMove2 to false,
-                    ActionUp to false
-                )
+        assertThat(onItemTouchListener.motionEventItems).isEqualTo(
+            listOf(
+                ActionDown to true,
+                ActionMove1 to true,
+                ActionMove2 to false,
+                ActionUp to false
             )
+        )
     }
 
     @Test
@@ -170,8 +174,12 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionDown)
         parent.dispatchMotionEventItem(ActionMove1)
 
-        assertThat(childView.motionEventItems)
-            .isEqualTo(listOf(ActionDown, ActionMove1.toCancelledVersion()))
+        assertThat(childView.motionEventItems).isEqualTo(
+            listOf(
+                ActionDown,
+                ActionMove1.toCancelledVersion()
+            )
+        )
     }
 
     @Test
@@ -182,8 +190,12 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionDown)
         parent.dispatchMotionEventItem(ActionUp)
 
-        assertThat(childView.motionEventItems)
-            .isEqualTo(listOf(ActionDown, ActionUp.toCancelledVersion()))
+        assertThat(childView.motionEventItems).isEqualTo(
+            listOf(
+                ActionDown,
+                ActionUp.toCancelledVersion()
+            )
+        )
     }
 
     @Test
@@ -197,15 +209,14 @@ class RecyclerViewOnItemTouchListenerTest {
         parent.dispatchMotionEventItem(ActionMove3)
         parent.dispatchMotionEventItem(ActionUp)
 
-        assertThat(onItemTouchListener.motionEventItems)
-            .isEqualTo(
-                listOf(
-                    ActionDown to true,
-                    ActionMove1 to true,
-                    ActionMove2 to false,
-                    ActionMove3.toCancelledVersion() to false
-                )
+        assertThat(onItemTouchListener.motionEventItems).isEqualTo(
+            listOf(
+                ActionDown to true,
+                ActionMove1 to true,
+                ActionMove2 to false,
+                ActionMove3.toCancelledVersion() to false
             )
+        )
     }
 }
 
@@ -216,7 +227,8 @@ private fun MotionEventItem.toMotionEvent(): MotionEvent =
 
 private fun MotionEventItem.toCancelledVersion() = copy(action = ACTION_CANCEL)
 
-private fun MotionEvent.toMotionEventItem() = MotionEventItem(eventTime, actionMasked, x, y)
+private fun MotionEvent.toMotionEventItem() =
+    MotionEventItem(eventTime, actionMasked, x, y)
 
 private fun View.dispatchMotionEventItem(motionEventItem: MotionEventItem) {
     motionEventItem.toMotionEvent().also {
@@ -227,9 +239,7 @@ private fun View.dispatchMotionEventItem(motionEventItem: MotionEventItem) {
 
 private class InternalTestAdapter(var view: View) : RecyclerView.Adapter<MyViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = MyViewHolder(view)
-
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {}
-
     override fun getItemCount() = 1
 }
 
@@ -256,14 +266,16 @@ private class MyView : View {
     var motionEventItems = mutableListOf<MotionEventItem>()
 
     constructor(context: Context?) : super(context)
-
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
-
     constructor(
         context: Context?,
         attrs: AttributeSet?,
         defStyleAttr: Int
-    ) : super(context, attrs, defStyleAttr)
+    ) : super(
+        context,
+        attrs,
+        defStyleAttr
+    )
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         motionEventItems.add(event.toMotionEventItem())

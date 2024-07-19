@@ -72,32 +72,24 @@ class GlanceAppWidgetDemoActivity : ComponentActivity() {
         lifecycleScope.launch {
             // Discover the GlanceAppWidget
             val appWidgetManager = AppWidgetManager.getInstance(this@GlanceAppWidgetDemoActivity)
-            val receivers =
-                appWidgetManager.installedProviders
-                    .filter { it.provider.packageName == packageName }
-                    .map { it.provider.className }
-            val data =
-                receivers.mapNotNull { receiverName ->
-                    val receiverClass = Class.forName(receiverName)
-                    if (!GlanceAppWidgetReceiver::class.java.isAssignableFrom(receiverClass)) {
-                        return@mapNotNull null
-                    }
-                    val receiver =
-                        receiverClass.getDeclaredConstructor().newInstance()
-                            as GlanceAppWidgetReceiver
-                    val provider = receiver.glanceAppWidget.javaClass
-                    ProviderData(
-                        provider = provider,
-                        receiver = receiver.javaClass,
-                        appWidgets =
-                            manager.getGlanceIds(provider).map { id ->
-                                AppWidgetDesc(
-                                    appWidgetId = id,
-                                    sizes = manager.getAppWidgetSizes(id)
-                                )
-                            }
-                    )
+            val receivers = appWidgetManager.installedProviders
+                .filter { it.provider.packageName == packageName }
+                .map { it.provider.className }
+            val data = receivers.mapNotNull { receiverName ->
+                val receiverClass = Class.forName(receiverName)
+                if (!GlanceAppWidgetReceiver::class.java.isAssignableFrom(receiverClass)) {
+                    return@mapNotNull null
                 }
+                val receiver = receiverClass.getDeclaredConstructor()
+                    .newInstance() as GlanceAppWidgetReceiver
+                val provider = receiver.glanceAppWidget.javaClass
+                ProviderData(
+                    provider = provider,
+                    receiver = receiver.javaClass,
+                    appWidgets = manager.getGlanceIds(provider).map { id ->
+                        AppWidgetDesc(appWidgetId = id, sizes = manager.getAppWidgetSizes(id))
+                    })
+            }
 
             setContent {
                 val scope = rememberCoroutineScope()
@@ -111,7 +103,9 @@ class GlanceAppWidgetDemoActivity : ComponentActivity() {
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(data) {
@@ -119,8 +113,8 @@ class GlanceAppWidgetDemoActivity : ComponentActivity() {
                                 scope.launch {
                                     manager.requestPinGlanceAppWidget(
                                         receiver = it.receiver,
-                                        preview =
-                                            it.provider.getDeclaredConstructor().newInstance(),
+                                        preview = it.provider.getDeclaredConstructor()
+                                            .newInstance(),
                                         previewState = emptyPreferences()
                                     )
                                 }
@@ -136,10 +130,19 @@ class GlanceAppWidgetDemoActivity : ComponentActivity() {
 
 @Composable
 fun ShowProvider(providerData: ProviderData, onProviderClicked: (ProviderData) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().clickable { onProviderClicked(providerData) }) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onProviderClicked(providerData)
+            }
+    ) {
         Text(providerData.provider.simpleName, fontWeight = FontWeight.Medium)
         Column(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp).background(Color.LightGray)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp)
+                .background(Color.LightGray)
         ) {
             providerData.appWidgets.forEachIndexed { index, widget ->
                 ShowAppWidget(index, widget)
@@ -161,8 +164,7 @@ fun ShowAppWidget(index: Int, widgetDesc: AppWidgetDesc) {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            widgetDesc.sizes
-                .sortedBy { it.width.value * it.height.value }
+            widgetDesc.sizes.sortedBy { it.width.value * it.height.value }
                 .forEachIndexed { index, size ->
                     Text(
                         String.format(

@@ -24,7 +24,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.ResourceFont
 
-/** Layoutlib implementation for [Font.ResourceLoader] */
+/**
+ * Layoutlib implementation for [Font.ResourceLoader]
+ */
 @Suppress("DEPRECATION")
 internal class LayoutlibFontResourceLoader(private val context: Context) : Font.ResourceLoader {
     @Deprecated(

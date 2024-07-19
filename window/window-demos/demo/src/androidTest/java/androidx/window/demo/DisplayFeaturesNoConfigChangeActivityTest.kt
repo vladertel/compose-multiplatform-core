@@ -43,7 +43,8 @@ class DisplayFeaturesNoConfigChangeActivityTest {
         ActivityScenarioRule(DisplayFeaturesNoConfigChangeActivity::class.java)
     private val publisherRule = WindowLayoutInfoPublisherRule()
 
-    @get:Rule val testRule: TestRule
+    @get:Rule
+    val testRule: TestRule
 
     init {
         testRule = RuleChain.outerRule(publisherRule).around(activityRule)

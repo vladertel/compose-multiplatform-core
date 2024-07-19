@@ -41,8 +41,7 @@ public interface Availability {
                     DataTypeAvailability.fromProto(proto.dataTypeAvailability)
                 AvailabilityCase.LOCATION_AVAILABILITY ->
                     LocationAvailability.fromProto(proto.locationAvailability)
-                null,
-                AvailabilityCase.AVAILABILITY_NOT_SET -> DataTypeAvailability.UNKNOWN
+                null, AvailabilityCase.AVAILABILITY_NOT_SET -> DataTypeAvailability.UNKNOWN
             }
     }
 }

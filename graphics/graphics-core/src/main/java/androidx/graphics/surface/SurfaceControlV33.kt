@@ -31,52 +31,73 @@ import androidx.hardware.SyncFenceImpl
 import androidx.hardware.SyncFenceV33
 import java.util.concurrent.Executor
 
-/** Implementation of [SurfaceControlImpl] that wraps the SDK's [SurfaceControl] API. */
+/**
+ * Implementation of [SurfaceControlImpl] that wraps the SDK's [SurfaceControl] API.
+ */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-internal class SurfaceControlV33 internal constructor(internal val surfaceControl: SurfaceControl) :
-    SurfaceControlImpl {
+internal class SurfaceControlV33 internal constructor(
+    internal val surfaceControl: SurfaceControl
+) : SurfaceControlImpl {
 
-    /** See [SurfaceControlImpl.isValid] */
+    /**
+     * See [SurfaceControlImpl.isValid]
+     */
     override fun isValid(): Boolean = surfaceControl.isValid
 
-    /** See [SurfaceControlImpl.release] */
+    /**
+     * See [SurfaceControlImpl.release]
+     */
     override fun release() {
         surfaceControl.release()
     }
 
-    /** See [SurfaceControlImpl.Builder] */
+    /**
+     * See [SurfaceControlImpl.Builder]
+     */
     class Builder : SurfaceControlImpl.Builder {
 
         private val builder = SurfaceControl.Builder()
 
-        /** See [SurfaceControlImpl.Builder.setParent] */
+        /**
+         * See [SurfaceControlImpl.Builder.setParent]
+         */
         override fun setParent(surfaceView: SurfaceView): SurfaceControlImpl.Builder {
             builder.setParent(surfaceView.surfaceControl)
             return this
         }
 
-        /** See [SurfaceControlImpl.Builder.setParent] */
+        /**
+         * See [SurfaceControlImpl.Builder.setParent]
+         */
         override fun setParent(surfaceControl: SurfaceControlCompat): SurfaceControlImpl.Builder {
             builder.setParent(surfaceControl.scImpl.asFrameworkSurfaceControl())
             return this
         }
 
-        /** See [SurfaceControlImpl.Builder.setName] */
+        /**
+         * See [SurfaceControlImpl.Builder.setName]
+         */
         override fun setName(name: String): Builder {
             builder.setName(name)
             return this
         }
 
-        /** See [SurfaceControlImpl.Builder.build] */
+        /**
+         * See [SurfaceControlImpl.Builder.build]
+         */
         override fun build(): SurfaceControlImpl = SurfaceControlV33(builder.build())
     }
 
-    /** See [SurfaceControlImpl.Transaction] */
+    /**
+     * See [SurfaceControlImpl.Transaction]
+     */
     class Transaction : SurfaceControlImpl.Transaction {
 
         private val mTransaction = SurfaceControl.Transaction()
 
-        /** See [SurfaceControlImpl.Transaction.setOpaque] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setOpaque]
+         */
         override fun setOpaque(
             surfaceControl: SurfaceControlImpl,
             isOpaque: Boolean
@@ -85,7 +106,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setVisibility] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setVisibility]
+         */
         override fun setVisibility(
             surfaceControl: SurfaceControlImpl,
             visible: Boolean
@@ -94,7 +117,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setBuffer] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setBuffer]
+         */
         override fun setBuffer(
             surfaceControl: SurfaceControlImpl,
             buffer: HardwareBuffer?,
@@ -111,7 +136,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setLayer] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setLayer]
+         */
         override fun setLayer(
             surfaceControl: SurfaceControlImpl,
             z: Int
@@ -120,7 +147,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.reparent] */
+        /**
+         * See [SurfaceControlImpl.Transaction.reparent]
+         */
         override fun reparent(
             surfaceControl: SurfaceControlImpl,
             newParent: SurfaceControlImpl?
@@ -132,22 +161,24 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.reparent] */
+        /**
+         * See [SurfaceControlImpl.Transaction.reparent]
+         */
         override fun reparent(
             surfaceControl: SurfaceControlImpl,
             attachedSurfaceControl: AttachedSurfaceControl
         ): SurfaceControlImpl.Transaction {
-            val reparentTransaction =
-                attachedSurfaceControl.buildReparentTransaction(
-                    surfaceControl.asFrameworkSurfaceControl()
-                )
+            val reparentTransaction = attachedSurfaceControl
+                .buildReparentTransaction(surfaceControl.asFrameworkSurfaceControl())
             if (reparentTransaction != null) {
                 mTransaction.merge(reparentTransaction)
             }
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.addTransactionCommittedListener] */
+        /**
+         * See [SurfaceControlImpl.Transaction.addTransactionCommittedListener]
+         */
         override fun addTransactionCommittedListener(
             executor: Executor,
             listener: SurfaceControlCompat.TransactionCommittedListener
@@ -158,7 +189,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setDamageRegion] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setDamageRegion]
+         */
         override fun setDamageRegion(
             surfaceControl: SurfaceControlImpl,
             region: Region?
@@ -167,7 +200,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setAlpha] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setAlpha]
+         */
         override fun setAlpha(
             surfaceControl: SurfaceControlImpl,
             alpha: Float
@@ -176,7 +211,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setCrop] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setCrop]
+         */
         override fun setCrop(
             surfaceControl: SurfaceControlImpl,
             crop: Rect?
@@ -185,7 +222,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setPosition] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setPosition]
+         */
         override fun setPosition(
             surfaceControl: SurfaceControlImpl,
             x: Float,
@@ -195,7 +234,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setScale] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setScale]
+         */
         override fun setScale(
             surfaceControl: SurfaceControlImpl,
             scaleX: Float,
@@ -205,7 +246,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.setBufferTransform] */
+        /**
+         * See [SurfaceControlImpl.Transaction.setBufferTransform]
+         */
         override fun setBufferTransform(
             surfaceControl: SurfaceControlImpl,
             @SurfaceControlCompat.Companion.BufferTransform transformation: Int
@@ -217,7 +260,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlCompat.Transaction.setExtendedRangeBrightness] */
+        /**
+         * See [SurfaceControlCompat.Transaction.setExtendedRangeBrightness]
+         */
         @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
         override fun setExtendedRangeBrightness(
             surfaceControl: SurfaceControlImpl,
@@ -239,7 +284,9 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             }
         }
 
-        /** See [SurfaceControlCompat.Transaction.setDataSpace] */
+        /**
+         * See [SurfaceControlCompat.Transaction.setDataSpace]
+         */
         override fun setDataSpace(
             surfaceControl: SurfaceControlImpl,
             dataSpace: Int
@@ -293,17 +340,23 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             return this
         }
 
-        /** See [SurfaceControlImpl.Transaction.commit] */
+        /**
+         * See [SurfaceControlImpl.Transaction.commit]
+         */
         override fun commit() {
             mTransaction.apply()
         }
 
-        /** See [SurfaceControlImpl.Transaction.close] */
+        /**
+         * See [SurfaceControlImpl.Transaction.close]
+         */
         override fun close() {
             mTransaction.close()
         }
 
-        /** See [SurfaceControlImpl.Transaction.commitTransactionOnDraw] */
+        /**
+         * See [SurfaceControlImpl.Transaction.commitTransactionOnDraw]
+         */
         override fun commitTransactionOnDraw(attachedSurfaceControl: AttachedSurfaceControl) {
             attachedSurfaceControl.applyTransactionOnDraw(mTransaction)
         }
@@ -312,9 +365,8 @@ internal class SurfaceControlV33 internal constructor(internal val surfaceContro
             if (this is SyncFenceV33) {
                 mSyncFence
             } else {
-                throw IllegalArgumentException(
-                    "Expected SyncFenceCompat implementation for API level 33"
-                )
+                throw
+                IllegalArgumentException("Expected SyncFenceCompat implementation for API level 33")
             }
     }
 
@@ -382,7 +434,10 @@ private object SurfaceControlVerificationHelperV30 {
 private object SurfaceControlVerificationHelperV34 {
 
     @androidx.annotation.DoNotInline
-    fun clearFrameRate(transaction: Transaction, surfaceControl: SurfaceControl) {
+    fun clearFrameRate(
+        transaction: Transaction,
+        surfaceControl: SurfaceControl
+    ) {
         transaction.clearFrameRate(surfaceControl)
     }
 }

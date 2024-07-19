@@ -21,7 +21,9 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 
-/** Captures user's menstruation periods. */
+/**
+ * Captures user's menstruation periods.
+ */
 class MenstruationPeriodRecord(
     override val startTime: Instant,
     override val startZoneOffset: ZoneOffset?,

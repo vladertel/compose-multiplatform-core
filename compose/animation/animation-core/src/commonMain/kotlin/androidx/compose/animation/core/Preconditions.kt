@@ -30,7 +30,9 @@ internal fun throwIllegalArgumentException(message: String) {
 @Suppress("BanInlineOptIn") // same opt-in as using Kotlin's require()
 @OptIn(ExperimentalContracts::class)
 internal inline fun requirePrecondition(value: Boolean, lazyMessage: () -> String) {
-    contract { returns() implies value }
+    contract {
+        returns() implies value
+    }
     if (!value) {
         throwIllegalArgumentException(lazyMessage())
     }
@@ -49,7 +51,9 @@ internal fun throwIllegalStateExceptionForNullCheck(message: String): Nothing {
 @Suppress("BanInlineOptIn") // same opt-in as using Kotlin's check()
 @OptIn(ExperimentalContracts::class)
 internal inline fun checkPrecondition(value: Boolean, lazyMessage: () -> String) {
-    contract { returns() implies value }
+    contract {
+        returns() implies value
+    }
     if (!value) {
         throwIllegalStateException(lazyMessage())
     }
@@ -59,7 +63,9 @@ internal inline fun checkPrecondition(value: Boolean, lazyMessage: () -> String)
 @Suppress("BanInlineOptIn") // same opt-in as using Kotlin's check()
 @OptIn(ExperimentalContracts::class)
 internal inline fun <T : Any> checkPreconditionNotNull(value: T?, lazyMessage: () -> String): T {
-    contract { returns() implies (value != null) }
+    contract {
+        returns() implies (value != null)
+    }
 
     if (value == null) {
         throwIllegalStateExceptionForNullCheck(lazyMessage())

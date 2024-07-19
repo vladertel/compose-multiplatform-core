@@ -55,7 +55,10 @@ class DelayedWorkTrackerTest {
         val request = builder.build()
         mDelayedWorkTracker.schedule(request.workSpec, now + delay)
 
-        verify(mRunnableScheduler).scheduleWithDelay(anyLong(), any(Runnable::class.java))
+        verify(mRunnableScheduler).scheduleWithDelay(
+            anyLong(),
+            any(Runnable::class.java)
+        )
     }
 
     private fun newWorkRequestBuilder(): OneTimeWorkRequest.Builder {

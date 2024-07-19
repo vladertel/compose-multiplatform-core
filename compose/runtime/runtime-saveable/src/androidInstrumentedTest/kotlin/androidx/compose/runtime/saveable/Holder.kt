@@ -18,4 +18,7 @@ package androidx.compose.runtime.saveable
 
 internal data class Holder(var value: Int)
 
-internal val HolderSaver = Saver<Holder, Int>(save = { it.value }, restore = { Holder(it) })
+internal val HolderSaver = Saver<Holder, Int>(
+    save = { it.value },
+    restore = { Holder(it) }
+)

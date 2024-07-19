@@ -28,6 +28,8 @@ internal fun createFile(name: String, parent: File): File {
 
 internal fun ZipFile.getEntryNames(): List<String> {
     val flattened = mutableListOf<String>()
-    entries().iterator().forEach { entry -> flattened += entry.name }
+    entries().iterator().forEach { entry ->
+        flattened += entry.name
+    }
     return flattened
 }

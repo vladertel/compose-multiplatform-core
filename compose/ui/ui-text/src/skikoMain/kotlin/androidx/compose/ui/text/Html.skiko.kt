@@ -36,5 +36,5 @@ actual fun AnnotatedString.Companion.fromHtml(
     linkStyles: TextLinkStyles?,
     linkInteractionListener: LinkInteractionListener?
 ): AnnotatedString {
-    throw UnsupportedOperationException("Compose Multiplatform doesn't support parseAsHtml")
+    throw UnsupportedOperationException("Compose Multiplatform doesn't support fromHtml")
 }

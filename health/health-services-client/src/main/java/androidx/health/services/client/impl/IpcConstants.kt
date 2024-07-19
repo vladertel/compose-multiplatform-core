@@ -2,7 +2,10 @@ package androidx.health.services.client.impl
 
 import androidx.annotation.RestrictTo
 
-/** Collection of constants used for IPC. */
+/**
+ * Collection of constants used for IPC.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public object IpcConstants {
     public const val SERVICE_PACKAGE_NAME: String = "com.google.android.wearable.healthservices"

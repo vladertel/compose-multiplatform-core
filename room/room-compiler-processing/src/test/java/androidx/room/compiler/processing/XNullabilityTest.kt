@@ -29,19 +29,21 @@ import androidx.room.compiler.processing.util.runProcessorTestWithoutKsp
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.javapoet.JTypeName
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class XNullabilityTest {
-    /** This is important for javac */
+    /**
+     * This is important for javac
+     */
     @Test
     fun elementInferredNullability() {
-        val source =
-            Source.java(
-                "foo.bar.Baz",
-                """
+        val source = Source.java(
+            "foo.bar.Baz",
+            """
             package foo.bar;
 
             import androidx.annotation.*;
@@ -67,11 +69,12 @@ class XNullabilityTest {
                     return "";
                 }
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
         // TODO run with KSP once https://github.com/google/ksp/issues/167 is fixed
-        runProcessorTestWithoutKsp(sources = listOf(source)) {
+        runProcessorTestWithoutKsp(
+            sources = listOf(source)
+        ) {
             val element = it.processingEnv.requireTypeElement("foo.bar.Baz")
             element.getField("primitiveInt").let { field ->
                 assertThat(field.type.nullability).isEqualTo(NONNULL)
@@ -87,7 +90,8 @@ class XNullabilityTest {
             }
             element.getMethodByJvmName("returnsNonNull").let { method ->
                 assertThat(method.returnType.nullability).isEqualTo(NONNULL)
-                assertThat(method.executableType.returnType.nullability).isEqualTo(NONNULL)
+                assertThat(method.executableType.returnType.nullability)
+                    .isEqualTo(NONNULL)
             }
             element.getMethodByJvmName("parameters").let { method ->
                 assertThat(method.returnType.nullability).isEqualTo(UNKNOWN)
@@ -131,10 +135,9 @@ class XNullabilityTest {
 
     @Test
     fun kotlinNullability() {
-        val source =
-            Source.kotlin(
-                "Baz.kt",
-                """
+        val source = Source.kotlin(
+            "Baz.kt",
+            """
             package foo.bar;
 
             import androidx.annotation.*;
@@ -162,10 +165,11 @@ class XNullabilityTest {
                 ) {
                 }
             }
-            """
-                    .trimIndent()
-            )
-        runProcessorTest(sources = listOf(source)) {
+            """.trimIndent()
+        )
+        runProcessorTest(
+            sources = listOf(source)
+        ) {
             val element = it.processingEnv.requireTypeElement("foo.bar.Baz")
             element.getField("intField").let { field ->
                 assertThat(field.type.nullability).isEqualTo(NONNULL)
@@ -194,8 +198,10 @@ class XNullabilityTest {
             element.getMethodByJvmName("genericWithNullableTypeArgReturn").let { method ->
                 listOf(method.returnType, method.executableType.returnType).forEach { type ->
                     assertThat(type.nullability).isEqualTo(NONNULL)
-                    assertThat(type.typeArguments[0].nullability).isEqualTo(NONNULL)
-                    assertThat(type.typeArguments[1].nullability).isEqualTo(NULLABLE)
+                    assertThat(type.typeArguments[0].nullability)
+                        .isEqualTo(NONNULL)
+                    assertThat(type.typeArguments[1].nullability)
+                        .isEqualTo(NULLABLE)
                 }
             }
             element.getMethodByJvmName("suspendGenericWithNullableTypeArgReturn").let { method ->
@@ -203,8 +209,10 @@ class XNullabilityTest {
                 check(executableType.isSuspendFunction())
                 executableType.getSuspendFunctionReturnType().let { type ->
                     assertThat(type.nullability).isEqualTo(NONNULL)
-                    assertThat(type.typeArguments[0].nullability).isEqualTo(NONNULL)
-                    assertThat(type.typeArguments[1].nullability).isEqualTo(NULLABLE)
+                    assertThat(type.typeArguments[0].nullability)
+                        .isEqualTo(NONNULL)
+                    assertThat(type.typeArguments[1].nullability)
+                        .isEqualTo(NULLABLE)
                 }
                 listOf(method.returnType, executableType.returnType).forEach { type ->
                     // kotlin suspend functions return nullable in jvm stub
@@ -226,25 +234,26 @@ class XNullabilityTest {
                     .isEqualTo(NONNULL)
             }
             element.getMethodByJvmName("methodParams").let { method ->
-                assertThat(method.getParameter("nonNull").type.nullability).isEqualTo(NONNULL)
-                assertThat(method.getParameter("nullable").type.nullability).isEqualTo(NULLABLE)
+                assertThat(method.getParameter("nonNull").type.nullability)
+                    .isEqualTo(NONNULL)
+                assertThat(method.getParameter("nullable").type.nullability)
+                    .isEqualTo(NULLABLE)
                 assertThat(
-                        method.parameters
-                            .filter { it.type.typeArguments.isNotEmpty() }
-                            .map {
-                                Triple(
-                                    first = it.name,
-                                    second = it.type.nullability,
-                                    third = it.type.typeArguments.single().nullability
-                                )
-                            }
-                    )
-                    .containsExactly(
-                        Triple("nullableGenericWithNonNullType", NULLABLE, NONNULL),
-                        Triple("nullableGenericWithNullableType", NULLABLE, NULLABLE),
-                        Triple("nonNullGenericWithNonNullType", NONNULL, NONNULL),
-                        Triple("nonNullGenericWithNullableType", NONNULL, NULLABLE)
-                    )
+                    method.parameters.filter {
+                        it.type.typeArguments.isNotEmpty()
+                    }.map {
+                        Triple(
+                            first = it.name,
+                            second = it.type.nullability,
+                            third = it.type.typeArguments.single().nullability
+                        )
+                    }
+                ).containsExactly(
+                    Triple("nullableGenericWithNonNullType", NULLABLE, NONNULL),
+                    Triple("nullableGenericWithNullableType", NULLABLE, NULLABLE),
+                    Triple("nonNullGenericWithNonNullType", NONNULL, NONNULL),
+                    Triple("nonNullGenericWithNullableType", NONNULL, NULLABLE)
+                )
             }
         }
     }
@@ -282,28 +291,24 @@ class XNullabilityTest {
     @Test
     fun changeNullability_typeArguments() {
         // we need to make sure we don't convert type arguments into primitives!!
-        val kotlinSrc =
-            Source.kotlin(
-                "KotlinClas.kt",
-                """
-                class KotlinClass(val subject: List<Int?>)
+        val kotlinSrc = Source.kotlin(
+            "KotlinClas.kt",
             """
-                    .trimIndent()
-            )
-        val javaSrc =
-            Source.java(
-                "JavaClass",
-                """
+                class KotlinClass(val subject: List<Int?>)
+            """.trimIndent()
+        )
+        val javaSrc = Source.java(
+            "JavaClass",
+            """
                 class JavaClass {
                     java.util.List<Integer> subject;
                 }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
         runProcessorTest(sources = listOf(javaSrc, kotlinSrc)) { invocation ->
             listOf("KotlinClass", "JavaClass").forEach {
-                val subject =
-                    invocation.processingEnv.requireTypeElement(it).getField("subject").type
+                val subject = invocation.processingEnv.requireTypeElement(it)
+                    .getField("subject").type
                 val typeArg = subject.typeArguments.first()
                 assertThat(typeArg.asTypeName().java).isEqualTo(JTypeName.INT.box())
                 typeArg.makeNonNullable().let {
@@ -315,7 +320,15 @@ class XNullabilityTest {
                     assertThat(it.nullability).isEqualTo(NULLABLE)
                 }
                 if (invocation.isKsp) {
-                    assertThat(typeArg.asTypeName().kotlin).isEqualTo(INT.copy(nullable = true))
+                    assertThat(typeArg.asTypeName().kotlin).isEqualTo(
+                        when (it) {
+                            "KotlinClass" -> INT.copy(nullable = true)
+                            // A type arg from Java has unknown nullability,
+                            // so name defaults to not-null
+                            "JavaClass" -> INT
+                            else -> fail("Unknown src $it")
+                        }
+                    )
 
                     typeArg.makeNonNullable().let {
                         assertThat(it.asTypeName().kotlin).isEqualTo(INT)
@@ -332,8 +345,12 @@ class XNullabilityTest {
     fun changeNullability_declared() {
         runProcessorTest { invocation ->
             val subject = invocation.processingEnv.requireType("java.util.List")
-            subject.makeNullable().let { assertThat(it.nullability).isEqualTo(NULLABLE) }
-            subject.makeNonNullable().let { assertThat(it.nullability).isEqualTo(NONNULL) }
+            subject.makeNullable().let {
+                assertThat(it.nullability).isEqualTo(NULLABLE)
+            }
+            subject.makeNonNullable().let {
+                assertThat(it.nullability).isEqualTo(NONNULL)
+            }
             // ksp defaults to non-null so we do double conversion here to ensure it flips
             // nullability
             subject.makeNullable().makeNonNullable().let {
@@ -345,10 +362,9 @@ class XNullabilityTest {
     @Test
     fun changeNullability_arrayTypes() {
         runProcessorTest { invocation ->
-            val subject =
-                invocation.processingEnv.getArrayType(
-                    invocation.processingEnv.requireType("java.util.List")
-                )
+            val subject = invocation.processingEnv.getArrayType(
+                invocation.processingEnv.requireType("java.util.List")
+            )
             subject.makeNullable().let {
                 assertThat(it.nullability).isEqualTo(NULLABLE)
                 assertThat(it.isArray()).isTrue()
@@ -368,22 +384,17 @@ class XNullabilityTest {
 
     @Test
     fun makeNullable_void() {
-        val src =
-            Source.java(
-                "Foo",
-                """
+        val src = Source.java(
+            "Foo",
+            """
             class Foo {
                 void subject() {}
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
         runProcessorTest(sources = listOf(src)) { invocation ->
-            val voidType =
-                invocation.processingEnv
-                    .requireTypeElement("Foo")
-                    .getMethodByJvmName("subject")
-                    .returnType
+            val voidType = invocation.processingEnv.requireTypeElement("Foo")
+                .getMethodByJvmName("subject").returnType
             assertThat(voidType.asTypeName().java).isEqualTo(JTypeName.VOID)
             voidType.makeNullable().let {
                 assertThat(it.nullability).isEqualTo(NULLABLE)
@@ -400,28 +411,26 @@ class XNullabilityTest {
     }
 
     companion object {
-        val PRIMITIVE_JTYPE_NAMES =
-            listOf(
-                JTypeName.BOOLEAN,
-                JTypeName.BYTE,
-                JTypeName.SHORT,
-                JTypeName.INT,
-                JTypeName.LONG,
-                JTypeName.CHAR,
-                JTypeName.FLOAT,
-                JTypeName.DOUBLE,
-            )
+        val PRIMITIVE_JTYPE_NAMES = listOf(
+            JTypeName.BOOLEAN,
+            JTypeName.BYTE,
+            JTypeName.SHORT,
+            JTypeName.INT,
+            JTypeName.LONG,
+            JTypeName.CHAR,
+            JTypeName.FLOAT,
+            JTypeName.DOUBLE,
+        )
 
-        val PRIMITIVE_KTYPE_NAMES =
-            listOf(
-                com.squareup.kotlinpoet.BOOLEAN,
-                com.squareup.kotlinpoet.BYTE,
-                com.squareup.kotlinpoet.SHORT,
-                com.squareup.kotlinpoet.INT,
-                com.squareup.kotlinpoet.LONG,
-                com.squareup.kotlinpoet.CHAR,
-                com.squareup.kotlinpoet.FLOAT,
-                com.squareup.kotlinpoet.DOUBLE,
-            )
+        val PRIMITIVE_KTYPE_NAMES = listOf(
+            com.squareup.kotlinpoet.BOOLEAN,
+            com.squareup.kotlinpoet.BYTE,
+            com.squareup.kotlinpoet.SHORT,
+            com.squareup.kotlinpoet.INT,
+            com.squareup.kotlinpoet.LONG,
+            com.squareup.kotlinpoet.CHAR,
+            com.squareup.kotlinpoet.FLOAT,
+            com.squareup.kotlinpoet.DOUBLE,
+        )
     }
 }

@@ -49,17 +49,15 @@ fun callGetCredential(
 
     val getPasswordOption = GetPasswordOption()
 
-    val getPublicKeyCredentialOption =
-        GetPublicKeyCredentialOption(
-            requestJson = generateGetPasskeyRequestJsonFromServer(),
-            // No need to fill this unless you are a browser and are making an origin-based request
-            clientDataHash = null,
-        )
+    val getPublicKeyCredentialOption = GetPublicKeyCredentialOption(
+        requestJson = generateGetPasskeyRequestJsonFromServer(),
+        // No need to fill this unless you are a browser and are making an origin-based request
+        clientDataHash = null,
+    )
 
-    val request =
-        GetCredentialRequest(
-            credentialOptions = listOf(getPasswordOption, getPublicKeyCredentialOption)
-        )
+    val request = GetCredentialRequest(
+        credentialOptions = listOf(getPasswordOption, getPublicKeyCredentialOption)
+    )
 
     // The API call will launch a credential selector UI for the user to pick a login credential.
     // It will be canceled if this coroutine scope is canceled. If you want the operation to persist
@@ -67,16 +65,13 @@ fun callGetCredential(
     // broader than your UI lifecycle (e.g. ViewModelScope)
     yourCoroutineScope.launch {
         try {
-            val response =
-                credentialManager.getCredential(
-                    // Important: use an Activity context to ensure that the system credential
-                    // selector
-                    // ui is launched within the same activity stack to avoid undefined UI
-                    // transition
-                    // behavior.
-                    context = activity,
-                    request = request,
-                )
+            val response = credentialManager.getCredential(
+                // Important: use an Activity context to ensure that the system credential selector
+                // ui is launched within the same activity stack to avoid undefined UI transition
+                // behavior.
+                context = activity,
+                request = request,
+            )
             signInWithCredential(response.credential)
         } catch (e: GetCredentialException) {
             handleGetCredentialFailure(e)
@@ -87,16 +82,16 @@ fun callGetCredential(
 val yourCoroutineScope = MainScope()
 
 fun generateGetPasskeyRequestJsonFromServer(): String {
-    throw NotImplementedError(
-        "Apps using this sample code should " +
-            "add a call here to generate the passkey request json from " +
-            "their own server"
-    )
+    throw NotImplementedError("Apps using this sample code should " +
+         "add a call here to generate the passkey request json from " +
+         "their own server")
 }
 
 const val TAG: String = "TAG"
 
-/** Sample showing how to use a [CreateCredentialResponse] object. */
+/**
+ * Sample showing how to use a [CreateCredentialResponse] object.
+ */
 @Sampled
 fun processCreateCredentialResponse(
     response: CreateCredentialResponse,
@@ -129,15 +124,13 @@ fun processCreateCredentialResponse(
                 Log.w(
                     TAG,
                     "Received unrecognized response type ${response.type}. " +
-                        "This shouldn't happen"
-                )
+                        "This shouldn't happen")
             }
         }
         else -> {
             Log.w(
                 TAG,
-                "Received unrecognized response type ${response.type}. This shouldn't happen"
-            )
+                "Received unrecognized response type ${response.type}. This shouldn't happen")
         }
     }
 }
@@ -182,20 +175,23 @@ fun processCredential(
                 Log.w(
                     TAG,
                     "Received unrecognized credential type ${credential.type}. " +
-                        "This shouldn't happen"
-                )
+                        "This shouldn't happen")
             }
         }
         else -> {
             Log.w(
                 TAG,
-                "Received unrecognized credential type ${credential.type}. This shouldn't happen"
-            )
+                "Received unrecognized credential type ${credential.type}. This shouldn't happen")
         }
     }
 }
 
-class ExampleCustomCredential(data: Bundle) : CustomCredential(type = TYPE, data = data) {
+class ExampleCustomCredential(
+    data: Bundle
+) : CustomCredential(
+    type = TYPE,
+    data = data
+) {
     companion object {
         const val TYPE = "androidx.credentials.samples.ExampleCustomCredential"
 
@@ -206,11 +202,17 @@ class ExampleCustomCredential(data: Bundle) : CustomCredential(type = TYPE, data
     class ExampleCustomCredentialParsingException(e: Throwable? = null) : Exception(e)
 }
 
-class CreateExampleCustomCredentialResponse(data: Bundle) :
-    CreateCustomCredentialResponse(type = ExampleCustomCredential.TYPE, data = data) {
+class CreateExampleCustomCredentialResponse(
+    data: Bundle
+) : CreateCustomCredentialResponse(
+    type = ExampleCustomCredential.TYPE,
+    data = data
+) {
     companion object {
         @JvmStatic
-        fun createFrom(response: CreateCredentialResponse): CreateExampleCustomCredentialResponse =
+        fun createFrom(
+            response: CreateCredentialResponse
+        ): CreateExampleCustomCredentialResponse =
             CreateExampleCustomCredentialResponse(response.data)
     }
 

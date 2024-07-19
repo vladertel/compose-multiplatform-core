@@ -43,11 +43,8 @@ class MutableCollectionFragmentActivity : MutableCollectionBaseActivity() {
                 val itemText = items.getItemById(itemId)
                 return PageFragment.create(itemText)
             }
-
             override fun getItemCount(): Int = items.size
-
             override fun getItemId(position: Int): Long = items.itemId(position)
-
             override fun containsItem(itemId: Long): Boolean = items.contains(itemId)
         }
     }
@@ -76,16 +73,18 @@ class PageFragment : Fragment() {
         }
         updateCountText(savedInstanceState?.getInt(KEY_CLICK_COUNT) ?: 0)
 
-        buttonCountIncrease.setOnClickListener { updateCountText(clickCount() + 1) }
+        buttonCountIncrease.setOnClickListener {
+            updateCountText(clickCount() + 1)
+        }
 
         return view
     }
 
     /**
      * [FragmentStateAdapter] minimizes the number of [Fragment]s kept in memory by saving state of
-     * [Fragment]s that are no longer near the viewport. Here we demonstrate this behavior by
-     * relying on it to persist click counts through configuration changes (rotation) and data-set
-     * changes (when items are added or removed).
+     [Fragment]s that are no longer near the viewport. Here we demonstrate this behavior by relying
+     on it to persist click counts through configuration changes (rotation) and data-set changes
+     (when items are added or removed).
      */
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(KEY_CLICK_COUNT, clickCount())
@@ -98,7 +97,9 @@ class PageFragment : Fragment() {
     companion object {
         fun create(itemText: String) =
             PageFragment().apply {
-                arguments = Bundle(1).apply { putString(KEY_ITEM_TEXT, itemText) }
+                arguments = Bundle(1).apply {
+                    putString(KEY_ITEM_TEXT, itemText)
+                }
             }
     }
 }

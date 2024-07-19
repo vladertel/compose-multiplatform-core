@@ -16,7 +16,6 @@
 
 package androidx.wear.watchface.control
 
-import android.os.Build
 import android.util.Log
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
@@ -199,12 +198,8 @@ internal class InteractiveInstanceManager {
             val engine = impl.engine!!
             engine.setUserStyle(value.params.userStyle)
 
-            // Note prior to android U, auxiliaryComponentPackageName may be non null for regular
-            // watch faces.
-            if (
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    engine.resourceOnlyWatchFacePackageName !=
-                        value.params.auxiliaryComponentPackageName
+            if (engine.resourceOnlyWatchFacePackageName !=
+                    value.params.auxiliaryComponentPackageName
             ) {
                 val message =
                     "Existing instance has the resourceOnlyWatchFacePackageName of " +

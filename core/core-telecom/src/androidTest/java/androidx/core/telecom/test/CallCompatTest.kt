@@ -28,21 +28,21 @@ import androidx.core.telecom.CallsManager
 import androidx.core.telecom.extensions.Capability
 import androidx.core.telecom.extensions.CapabilityExchange
 import androidx.core.telecom.extensions.ParticipantClientActionsImpl
-import androidx.core.telecom.extensions.addParticipantExtension
+import androidx.core.telecom.extensions.voip.CapabilityExchangeListener
+import androidx.core.telecom.extensions.voip.VoipExtensionManager
+import androidx.core.telecom.internal.CallChannels
 import androidx.core.telecom.internal.CallCompat
-import androidx.core.telecom.internal.CapabilityExchangeListener
 import androidx.core.telecom.internal.InCallServiceCompat
-import androidx.core.telecom.internal.ParticipantActions
 import androidx.core.telecom.internal.utils.Utils
 import androidx.core.telecom.test.utils.BaseTelecomTest
 import androidx.core.telecom.test.utils.TestUtils
-import androidx.core.telecom.util.ExperimentalAppActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.rule.GrantPermissionRule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -55,11 +55,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * This test class verifies the [CallCompat] functionality around resolving the call extension type
- * in order to determine the supported extensions between the VOIP app and the associated
- * InCallServices. This test constructs calls via TelecomManager and modifies the call details (if
- * required) to test each scenario. This is explained in more detail at the test level for each of
- * the applicable cases below.
+ * This test class verifies the [CallCompat] functionality around resolving the call
+ * extension type in order to determine the supported extensions between the VOIP app and the
+ * associated InCallServices. This test constructs calls via TelecomManager and modifies the call
+ * details (if required) to test each scenario. This is explained in more detail at the test level
+ * for each of the applicable cases below.
  *
  * Note: [Call] is package-private so we still need to leverage Telecom to create calls on our
  * behalf for testing. The call properties and extras fields aren't mutable so we need to ensure
@@ -67,7 +67,6 @@ import org.junit.runner.RunWith
  */
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalAppActions::class)
 @RunWith(AndroidJUnit4::class)
 class CallCompatTest : BaseTelecomTest() {
     private lateinit var callCompat: CallCompat
@@ -82,7 +81,9 @@ class CallCompatTest : BaseTelecomTest() {
         GrantPermissionRule.grant(Manifest.permission.READ_PHONE_NUMBERS)!!
 
     companion object {
-        /** Logging for within the test class. */
+        /**
+         * Logging for within the test class.
+         */
         internal val TAG = CallCompatTest::class.simpleName
         private const val ICS_TEST_ID = 1
     }
@@ -99,11 +100,11 @@ class CallCompatTest : BaseTelecomTest() {
 
     /**
      * Assert that for calls supporting [InCallServiceCompat.CAPABILITY_EXCHANGE] that capability
-     * exchange between the VOIP app and associated ICS is successful. This is signaled from the ICS
-     * side when the feature setup is completed via CapabilityExchange#featureSetupComplete.
+     * exchange between the VOIP app and associated ICS is successful. This is signaled from the
+     * ICS side when the feature setup is completed via CapabilityExchange#featureSetupComplete.
      *
-     * Note: The version codes for V is not available so we need to enforce a strict manual check to
-     * ensure the V test path is not executed by incompatible devices.
+     * Note: The version codes for V is not available so we need to enforce a strict manual check
+     * to ensure the V test path is not executed by incompatible devices.
      */
     @LargeTest
     @Test(timeout = 10000)
@@ -131,20 +132,12 @@ class CallCompatTest : BaseTelecomTest() {
         // Add EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED for pre-U testing
         val backwardsCompatExtra = configureCapabilityExchangeTypeTest()
 
-        val icsParticipantCap =
-            initializeCapability(
-                CallsManager.PARTICIPANT,
-                CallsManager.RAISE_HAND_ACTION,
-                CallsManager.KICK_PARTICIPANT_ACTION
-            )
-        val voipParticipantCap =
-            initializeCapability(
-                CallsManager.PARTICIPANT,
-                CallsManager.RAISE_HAND_ACTION,
-                CallsManager.KICK_PARTICIPANT_ACTION
-            )
-        val expectedNegotiatedActions =
-            intArrayOf(CallsManager.RAISE_HAND_ACTION, CallsManager.KICK_PARTICIPANT_ACTION)
+        val icsParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.RAISE_HAND_ACTION, CallsManager.KICK_PARTICIPANT_ACTION)
+        val voipParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.RAISE_HAND_ACTION, CallsManager.KICK_PARTICIPANT_ACTION)
+        val expectedNegotiatedActions = intArrayOf(CallsManager.RAISE_HAND_ACTION,
+            CallsManager.KICK_PARTICIPANT_ACTION)
 
         verifyCompareSupportedCapabilitiesSuccessful(
             TestUtils.OUTGOING_CALL_ATTRIBUTES,
@@ -159,8 +152,8 @@ class CallCompatTest : BaseTelecomTest() {
     }
 
     /**
-     * In the case that the ICS and VOIP apps both support the Participant [Capability] but only
-     * [CallsManager.RAISE_HAND_ACTION], this test asserts that
+     * In the case that the ICS and VOIP apps both support the Participant [Capability]
+     * but only [CallsManager.RAISE_HAND_ACTION], this test asserts that
      * [CallCompat.setupSupportedCapabilities] successfully sets
      * [ParticipantClientActionsImpl.mIsParticipantExtensionSupported] to true and populates
      * [ParticipantClientActionsImpl.mNegotiatedActions] with the supported action.
@@ -171,10 +164,10 @@ class CallCompatTest : BaseTelecomTest() {
         // Add EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED for pre-U testing
         val backwardsCompatExtra = configureCapabilityExchangeTypeTest()
 
-        val icsParticipantCap =
-            initializeCapability(CallsManager.PARTICIPANT, CallsManager.RAISE_HAND_ACTION)
-        val voipParticipantCap =
-            initializeCapability(CallsManager.PARTICIPANT, CallsManager.RAISE_HAND_ACTION)
+        val icsParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.RAISE_HAND_ACTION)
+        val voipParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.RAISE_HAND_ACTION)
         val expectedNegotiatedActions = intArrayOf(CallsManager.RAISE_HAND_ACTION)
 
         verifyCompareSupportedCapabilitiesSuccessful(
@@ -190,9 +183,10 @@ class CallCompatTest : BaseTelecomTest() {
     }
 
     /**
-     * In the case that the ICS and VOIP apps both support the Participant [Capability] but none of
-     * the same actions, this test asserts that [CallCompat.setupSupportedCapabilities] successfully
-     * sets [ParticipantClientActionsImpl.mIsParticipantExtensionSupported] to true and leaves
+     * In the case that the ICS and VOIP apps both support the Participant [Capability]
+     * but none of the same actions, this test asserts that
+     * [CallCompat.setupSupportedCapabilities] successfully sets
+     * [ParticipantClientActionsImpl.mIsParticipantExtensionSupported] to true and leaves
      * [ParticipantClientActionsImpl.mNegotiatedActions] empty.
      */
     @LargeTest
@@ -201,10 +195,10 @@ class CallCompatTest : BaseTelecomTest() {
         // Add EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED for pre-U testing
         val backwardsCompatExtra = configureCapabilityExchangeTypeTest()
 
-        val icsParticipantCap =
-            initializeCapability(CallsManager.PARTICIPANT, CallsManager.KICK_PARTICIPANT_ACTION)
-        val voipParticipantCap =
-            initializeCapability(CallsManager.PARTICIPANT, CallsManager.RAISE_HAND_ACTION)
+        val icsParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.KICK_PARTICIPANT_ACTION)
+        val voipParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.RAISE_HAND_ACTION)
 
         verifyCompareSupportedCapabilitiesSuccessful(
             TestUtils.OUTGOING_CALL_ATTRIBUTES,
@@ -230,8 +224,8 @@ class CallCompatTest : BaseTelecomTest() {
         // Add EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED for pre-U testing
         val backwardsCompatExtra = configureCapabilityExchangeTypeTest()
 
-        val icsParticipantCap =
-            initializeCapability(CallsManager.PARTICIPANT, CallsManager.KICK_PARTICIPANT_ACTION)
+        val icsParticipantCap = initializeCapability(CallsManager.PARTICIPANT,
+            CallsManager.KICK_PARTICIPANT_ACTION)
         val voipCallSilenceCap = initializeCapability(CallsManager.CALL_SILENCE)
 
         verifyCompareSupportedCapabilitiesSuccessful(
@@ -246,11 +240,9 @@ class CallCompatTest : BaseTelecomTest() {
         )
     }
 
-    /**
-     * ********************************************************************************************
-     * Helpers
-     * *******************************************************************************************
-     */
+    /***********************************************************************************************
+     *                           Helpers
+     *********************************************************************************************/
 
     /**
      * Helper to add a call via CallsManager#addCall and verify that the capabilities are properly
@@ -267,25 +259,24 @@ class CallCompatTest : BaseTelecomTest() {
         extraToInclude: Pair<String, Boolean>? = null
     ) {
         runBlocking {
-            assertWithinTimeout_addCallWithExtensions(callAttributesCompat) {
-                val extension = addParticipantExtension()
-                onCall {
+            assertWithinTimeout_addCall(callAttributesCompat) {
+                launch {
                     try {
                         // Enforce waiting logic to ensure that call details extras are populated.
-                        val call =
-                            configureCallWithSanitizedExtras(
-                                waitForCallDetailExtras,
-                                extraToInclude
-                            )
+                        val call = configureCallWithSanitizedExtras(
+                            waitForCallDetailExtras, extraToInclude)
 
-                        callCompat = CallCompat(call)
-                        callCompat.startCapabilityExchange()
-                        assertTrue(callCompat.capExchangeSetupComplete)
-                        extension.updateParticipants(emptySet())
+                        callCompat = CallCompat(call, mScope)
+
+                        mScope.async {
+                            callCompat.startCapabilityExchange()
+                            Assert.assertTrue(callCompat.capExchangeSetupComplete)
+                        }.await()
                     } finally {
                         // Always send disconnect signal if possible.
-                        val result = disconnect(DisconnectCause(DisconnectCause.LOCAL))
-                        assertEquals(CallControlResult.Success(), result)
+                        assertEquals(
+                            CallControlResult.Success(),
+                            disconnect(DisconnectCause(DisconnectCause.LOCAL)))
                     }
                 }
             }
@@ -319,32 +310,25 @@ class CallCompatTest : BaseTelecomTest() {
                 launch {
                     try {
                         // Enforce waiting logic to ensure that call details extras are populated.
-                        val call =
-                            configureCallWithSanitizedExtras(
-                                waitForCallDetailExtras,
-                                extraToInclude
-                            )
+                        val call = configureCallWithSanitizedExtras(
+                            waitForCallDetailExtras, extraToInclude)
 
                         // Setup the CapExchange and CallCompat instances for testing:
                         val voipCaps: MutableList<Capability> = mutableListOf(voipCap)
                         val capExchange = createCapExchange(voipCaps)
-                        callCompat = CallCompat(call)
+                        callCompat = CallCompat(call, mScope)
                         callCompat.icsCapabilities.add(icsCap)
-                        callCompat.addExtension {}
+                        callCompat.addExtension { }
 
                         // Directly invoke the helper method that handles capability comparison:
                         callCompat.setupSupportedCapabilities(capExchange)
 
                         // Check all expected values:
                         val participantListener = callCompat.participantStateListener
-                        assertEquals(
-                            participantListener.mIsParticipantExtensionSupported,
-                            expectedIsParticipantExtensionSupported
-                        )
-                        assertEquals(
-                            participantListener.mNegotiatedActions.size,
-                            expectedNegotiatedActions.size
-                        )
+                        assertEquals(participantListener.mIsParticipantExtensionSupported,
+                            expectedIsParticipantExtensionSupported)
+                        assertEquals(participantListener.mNegotiatedActions.size,
+                            expectedNegotiatedActions.size)
                         for (action in expectedNegotiatedActions) {
                             assertTrue(participantListener.mNegotiatedActions.contains(action))
                         }
@@ -352,15 +336,16 @@ class CallCompatTest : BaseTelecomTest() {
                         // Always send disconnect signal if possible.
                         assertEquals(
                             CallControlResult.Success(),
-                            disconnect(DisconnectCause(DisconnectCause.LOCAL))
-                        )
+                            disconnect(DisconnectCause(DisconnectCause.LOCAL)))
                     }
                 }
             }
         }
     }
 
-    /** Helper to initialize and populate an instance of [Capability] for unit testing purposes. */
+    /**
+     * Helper to initialize and populate an instance of [Capability] for unit testing purposes.
+     */
     private fun initializeCapability(featureId: Int, vararg actions: Int): Capability {
         val cap = Capability()
         cap.featureId = featureId
@@ -370,32 +355,23 @@ class CallCompatTest : BaseTelecomTest() {
     }
 
     /**
-     * Helper to initialize and populate an instance of [CapabilityExchange] for unit testing
-     * purposes.
+     * Helper to initialize and populate an instance of [CapabilityExchange] for unit testing purposes.
      */
     private fun createCapExchange(voipCaps: MutableList<Capability>): CapabilityExchange {
         val capExchange = CapabilityExchange()
-        // Stub implementation to finish cap exchange
-        val capExchangeListener =
-            CapabilityExchangeListener(
-                onCreateParticipantExtension = { _, binder ->
-                    // Call finishSync to ensure CallCompat completes cap exchange
-                    binder.finishSync(
-                        ParticipantActions(
-                            setHandRaised = { _, _ -> },
-                            kickParticipant = { _, _ -> }
-                        )
-                    )
-                }
-            )
+        val callChannels = CallChannels()
+        val emptyExtensions = emptyList<Capability>()
+        val voipExtensionManager =
+            VoipExtensionManager(mContext, mWorkerContext, callChannels, emptyExtensions)
+        val capExchangeListener = CapabilityExchangeListener(voipExtensionManager, ICS_TEST_ID)
         capExchange.voipCapabilities = voipCaps
         capExchange.capabilityExchangeListener = capExchangeListener
         return capExchange
     }
 
     /**
-     * Helper to retrieve the call from MockInCallService and wait for any call detail extras to be
-     * populated, if needed.
+     * Helper to retrieve the call from MockInCallService and wait for any call detail extras
+     * to be populated, if needed.
      */
     private suspend fun configureCallWithSanitizedExtras(
         waitForCallDetailExtras: Boolean,

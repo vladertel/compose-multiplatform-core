@@ -44,7 +44,9 @@ fun AnimatedImageVector.Companion.animatedVectorResource(
     val context = LocalContext.current
     val res = context.resources
     val theme = context.theme
-    return remember(id) { loadAnimatedVectorResource(theme, res, id) }
+    return remember(id) {
+        loadAnimatedVectorResource(theme, res, id)
+    }
 }
 
 @ExperimentalAnimationGraphicsApi

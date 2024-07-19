@@ -20,8 +20,10 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 /** Factory class to create {@link AudioStream}. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 interface AudioStreamFactory {
 
     /**

@@ -45,8 +45,7 @@ private const val VOLUME_PERCENTAGE: Double = 1.0
 private const val TAG = "SignalGeneratorViewModel"
 
 enum class ActivationSignal {
-    Active,
-    Inactive
+    Active, Inactive
 }
 
 class SignalGeneratorViewModel : ViewModel() {
@@ -59,19 +58,14 @@ class SignalGeneratorViewModel : ViewModel() {
 
     var isGeneratorReady: Boolean by mutableStateOf(false)
         private set
-
     var isRecorderReady: Boolean by mutableStateOf(false)
         private set
-
     var isSignalGenerating: Boolean by mutableStateOf(false)
         private set
-
     var isActivePeriod: Boolean by mutableStateOf(false)
         private set
-
     var isRecording: Boolean by mutableStateOf(false)
         private set
-
     var isPaused: Boolean by mutableStateOf(false)
         private set
 
@@ -112,26 +106,22 @@ class SignalGeneratorViewModel : ViewModel() {
 
         signalGenerationJob?.cancel()
         isSignalGenerating = true
-        signalGenerationJob =
-            activationSignalFlow()
-                .map { activationSignal ->
-                    when (activationSignal) {
-                        ActivationSignal.Active -> {
-                            isActivePeriod = true
-                            playBeepSound()
-                        }
-                        ActivationSignal.Inactive -> {
-                            isActivePeriod = false
-                            stopBeepSound()
-                        }
-                    }
+        signalGenerationJob = activationSignalFlow().map { activationSignal ->
+            when (activationSignal) {
+                ActivationSignal.Active -> {
+                    isActivePeriod = true
+                    playBeepSound()
                 }
-                .onCompletion {
-                    stopBeepSound()
-                    restoreOriginalVolume()
+                ActivationSignal.Inactive -> {
                     isActivePeriod = false
+                    stopBeepSound()
                 }
-                .launchIn(viewModelScope)
+            }
+        }.onCompletion {
+            stopBeepSound()
+            restoreOriginalVolume()
+            isActivePeriod = false
+        }.launchIn(viewModelScope)
     }
 
     fun stopSignalGeneration() {

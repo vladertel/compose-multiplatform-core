@@ -38,7 +38,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.LOLLIPOP)
 class BaseActivityInjectionTest {
 
-    @get:Rule val rule = HiltAndroidRule(this)
+    @get:Rule
+    val rule = HiltAndroidRule(this)
 
     @Test
     fun verifyInjection() {
@@ -51,7 +52,8 @@ class BaseActivityInjectionTest {
         }
     }
 
-    @AndroidEntryPoint class TestActivity : BaseActivity()
+    @AndroidEntryPoint
+    class TestActivity : BaseActivity()
 
     abstract class BaseActivity : FragmentActivity() {
         val myAndroidViewModel by viewModels<MyAndroidViewModel>()

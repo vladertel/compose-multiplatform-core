@@ -56,7 +56,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class TextOverflowTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val density = Density(1f)
     private val fontFamilyResolver =
@@ -82,17 +83,16 @@ class TextOverflowTest {
                 Box(Modifier.testTag(BoxTag).size(boxWidth.dp, boxHeight.dp)) {
                     BasicText(
                         text = text,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .heightIn(max = (2 * lineHeight).dp)
-                                .padding(bottom = lineHeight.dp),
-                        style =
-                            TextStyle(
-                                fontSize = 20.sp,
-                                fontFamily = fontFamily,
-                                color = Color.Red,
-                                lineHeight = 20.sp
-                            ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = (2 * lineHeight).dp)
+                            .padding(bottom = lineHeight.dp),
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            fontFamily = fontFamily,
+                            color = Color.Red,
+                            lineHeight = 20.sp
+                        ),
                         overflow = TextOverflow.Visible
                     )
                 }
@@ -100,8 +100,13 @@ class TextOverflowTest {
         }
 
         val boxBitmap = rule.onNodeWithTag(BoxTag).captureToImage().asAndroidBitmap()
-        val croppedBoxBitmap =
-            Bitmap.createBitmap(boxBitmap, 0, 2 * lineHeight, boxWidth, boxHeight - 2 * lineHeight)
+        val croppedBoxBitmap = Bitmap.createBitmap(
+            boxBitmap,
+            0,
+            2 * lineHeight,
+            boxWidth,
+            boxHeight - 2 * lineHeight
+        )
         croppedBoxBitmap.asImageBitmap().assertContainsColor(Color.Red)
     }
 
@@ -110,7 +115,9 @@ class TextOverflowTest {
     fun paint_multiParagraph_withVisibleOverflow() {
         val text = buildAnnotatedString {
             append("Hello\nHello")
-            withStyle(ParagraphStyle(textAlign = TextAlign.Center)) { append("Hello\nHello") }
+            withStyle(ParagraphStyle(textAlign = TextAlign.Center)) {
+                append("Hello\nHello")
+            }
         }
         val lineHeight = 20
         val boxHeight = 100
@@ -124,17 +131,16 @@ class TextOverflowTest {
                 Box(Modifier.testTag(BoxTag).size(boxWidth.dp, boxHeight.dp)) {
                     BasicText(
                         text = text,
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .heightIn(max = (2 * lineHeight).dp)
-                                .padding(bottom = lineHeight.dp),
-                        style =
-                            TextStyle(
-                                fontSize = 20.sp,
-                                fontFamily = fontFamily,
-                                color = Color.Red,
-                                lineHeight = 20.sp
-                            ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = (2 * lineHeight).dp)
+                            .padding(bottom = lineHeight.dp),
+                        style = TextStyle(
+                            fontSize = 20.sp,
+                            fontFamily = fontFamily,
+                            color = Color.Red,
+                            lineHeight = 20.sp
+                        ),
                         overflow = TextOverflow.Visible
                     )
                 }
@@ -142,8 +148,13 @@ class TextOverflowTest {
         }
 
         val boxBitmap = rule.onNodeWithTag(BoxTag).captureToImage().asAndroidBitmap()
-        val croppedBoxBitmap =
-            Bitmap.createBitmap(boxBitmap, 0, 2 * lineHeight, boxWidth, boxHeight - 2 * lineHeight)
+        val croppedBoxBitmap = Bitmap.createBitmap(
+            boxBitmap,
+            0,
+            2 * lineHeight,
+            boxWidth,
+            boxHeight - 2 * lineHeight
+        )
         croppedBoxBitmap.asImageBitmap().assertContainsColor(Color.Red)
     }
 }

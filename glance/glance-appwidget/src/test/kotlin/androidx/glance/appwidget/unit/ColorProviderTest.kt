@@ -39,12 +39,11 @@ class ColorProviderTest {
 
     @Test
     fun createCheckableColorProvider_checkedNotNull_uncheckedNotNull_shouldNotUseFallback() {
-        val provider =
-            createCheckableColorProvider(
-                source = "ColorProviderTest",
-                checked = ColorProvider(day = Color.Blue, night = Color.Green),
-                unchecked = ColorProvider(day = Color.Red, night = Color.Yellow),
-            )
+        val provider = createCheckableColorProvider(
+            source = "ColorProviderTest",
+            checked = ColorProvider(day = Color.Blue, night = Color.Green),
+            unchecked = ColorProvider(day = Color.Red, night = Color.Yellow),
+        )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
         assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
@@ -59,12 +58,11 @@ class ColorProviderTest {
 
     @Test
     fun createCheckableColorProvider_fixedColors_shouldUseSameColorInDayAndNight() {
-        val provider =
-            createCheckableColorProvider(
-                source = "ColorProviderTest",
-                checked = ColorProvider(Color.Blue),
-                unchecked = ColorProvider(Color.Red),
-            )
+        val provider = createCheckableColorProvider(
+            source = "ColorProviderTest",
+            checked = ColorProvider(Color.Blue),
+            unchecked = ColorProvider(Color.Red),
+        )
 
         assertIs<CheckedUncheckedColorProvider>(provider)
         assertThat(provider.getColor(context, isNightMode = false, isChecked = true))
@@ -113,6 +111,7 @@ class ColorProviderTest {
     @Test
     @Config(qualifiers = "+night")
     fun resolveColorProvider_DayNightColorProvider() {
-        assertThat(ColorProvider(Color.Blue, Color.Red).getColor(context)).isSameColorAs(Color.Red)
+        assertThat(ColorProvider(Color.Blue, Color.Red).getColor(context))
+            .isSameColorAs(Color.Red)
     }
 }

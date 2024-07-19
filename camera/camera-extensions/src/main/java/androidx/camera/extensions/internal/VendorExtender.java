@@ -25,6 +25,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.impl.SessionProcessor;
 
@@ -36,6 +37,7 @@ import java.util.Map;
  * A unified vendor extensions interface which interacts with both basic and advanced extender
  * vendor implementation.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface VendorExtender {
     /**
      * Indicates whether the extension is supported on the device.
@@ -119,46 +121,6 @@ public interface VendorExtender {
     @NonNull
     default Size[] getSupportedYuvAnalysisResolutions() {
         return new Size[0];
-    }
-
-    /**
-     * Returns supported output format/size map for postview image.
-     *
-     * <p>The returned sizes must be smaller than or equal to the provided capture size and have the
-     * same aspect ratio as the given capture size. If no supported resolution exists for the
-     * provided capture size then an empty map is returned.
-     */
-    @NonNull
-    default Map<Integer, List<Size>> getSupportedPostviewResolutions(@NonNull Size captureSize) {
-        return Collections.emptyMap();
-    }
-
-    /**
-     * Returns if postview is supported or not.
-     */
-    default boolean isPostviewAvailable() {
-        return false;
-    }
-
-    /**
-     * Returns if the capture process progress is supported or not.
-     */
-    default boolean isCaptureProcessProgressAvailable() {
-        return false;
-    }
-
-    /**
-     * Returns if extension strength is supported or not.
-     */
-    default boolean isExtensionStrengthAvailable() {
-        return false;
-    }
-
-    /**
-     * Returns if reporting current extension mode is supported or not.
-     */
-    default boolean isCurrentExtensionModeAvailable() {
-        return false;
     }
 
     /**

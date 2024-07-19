@@ -17,6 +17,7 @@
 package androidx.paging
 
 import androidx.kruth.assertThat
+import androidx.paging.ContiguousPagedListTest.Companion.EXCEPTION
 import androidx.paging.LoadType.REFRESH
 import androidx.testutils.TestDispatcher
 import androidx.testutils.TestExecutor
@@ -39,17 +40,19 @@ class PagedListTest {
         private val ITEMS = List(100) { "$it" }
         private val config = Config(10)
 
-        private val pagingSource =
-            object : PagingSource<Int, String>() {
-                override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> =
-                    when (params) {
-                        is LoadParams.Refresh ->
-                            LoadResult.Page(data = listOf("a"), prevKey = null, nextKey = null)
-                        else -> throw NotImplementedError("Test should fail if we get here")
-                    }
+        private val pagingSource = object : PagingSource<Int, String>() {
+            override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> =
+                when (params) {
+                    is LoadParams.Refresh -> LoadResult.Page(
+                        data = listOf("a"),
+                        prevKey = null,
+                        nextKey = null
+                    )
+                    else -> throw NotImplementedError("Test should fail if we get here")
+                }
 
-                override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
-            }
+            override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
+        }
     }
 
     private val testCoroutineScope = CoroutineScope(EmptyCoroutineContext)
@@ -65,25 +68,23 @@ class PagedListTest {
             }
         }
         @Suppress("DEPRECATION")
-        val pagedList =
-            PagedList.Builder(TestPositionalDataSource(ITEMS), 100)
-                .setNotifyExecutor(TestExecutor())
-                .setFetchExecutor(slowFetchExecutor)
-                .build()
+        val pagedList = PagedList.Builder(TestPositionalDataSource(ITEMS), 100)
+            .setNotifyExecutor(TestExecutor())
+            .setFetchExecutor(slowFetchExecutor)
+            .build()
         // if build succeeds without flushing an executor, success!
         assertEquals(ITEMS, pagedList)
     }
 
     @Test
     fun createNoInitialPageThrow() = runTest {
-        val pagingSource =
-            object : PagingSource<Int, String>() {
-                override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
-                    throw IllegalStateException()
-                }
-
-                override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
+        val pagingSource = object : PagingSource<Int, String>() {
+            override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
+                throw IllegalStateException()
             }
+
+            override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
+        }
         assertFailsWith<IllegalStateException> {
             @Suppress("DEPRECATION")
             PagedList.create(
@@ -102,14 +103,13 @@ class PagedListTest {
     @Test
     fun createNoInitialPageError() = runTest {
         val exception = IllegalStateException()
-        val pagingSource =
-            object : PagingSource<Int, String>() {
-                override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
-                    return LoadResult.Error(exception)
-                }
-
-                override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
+        val pagingSource = object : PagingSource<Int, String>() {
+            override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
+                return LoadResult.Error(exception)
             }
+
+            override fun getRefreshKey(state: PagingState<Int, String>): Int? = null
+        }
 
         // create doesn't differentiate between throw vs error runnable, which is why
         // PagedList.Builder without the initial page is deprecated
@@ -130,58 +130,53 @@ class PagedListTest {
 
     @Test
     fun createNoInitialPageInvalidResult() = runTest {
-        val pagingSource =
-            object : PagingSource<Int, String>() {
-                override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
-                    return LoadResult.Invalid()
-                }
-
-                override fun getRefreshKey(state: PagingState<Int, String>): Int? {
-                    fail("should not reach here")
-                }
+        val pagingSource = object : PagingSource<Int, String>() {
+            override suspend fun load(params: LoadParams<Int>): LoadResult<Int, String> {
+                return LoadResult.Invalid()
             }
 
-        val expectedException =
-            assertFailsWith<IllegalStateException> {
-                @Suppress("DEPRECATION")
-                PagedList.create(
-                    pagingSource,
-                    initialPage = null,
-                    testCoroutineScope,
-                    Dispatchers.Default,
-                    Dispatchers.IO,
-                    boundaryCallback = null,
-                    Config(10),
-                    key = 0
-                )
+            override fun getRefreshKey(state: PagingState<Int, String>): Int? {
+                fail("should not reach here")
             }
-        assertThat(expectedException.message)
-            .isEqualTo(
-                "Failed to create PagedList. The provided PagingSource returned " +
-                    "LoadResult.Invalid, but a LoadResult.Page was expected. To use a " +
-                    "PagingSource which supports invalidation, use a PagedList builder that " +
-                    "accepts a factory method for PagingSource or DataSource.Factory, such as " +
-                    "LivePagedList."
+        }
+
+        val expectedException = assertFailsWith<IllegalStateException> {
+            @Suppress("DEPRECATION")
+            PagedList.create(
+                pagingSource,
+                initialPage = null,
+                testCoroutineScope,
+                Dispatchers.Default,
+                Dispatchers.IO,
+                boundaryCallback = null,
+                Config(10),
+                key = 0
             )
+        }
+        assertThat(expectedException.message).isEqualTo(
+            "Failed to create PagedList. The provided PagingSource returned " +
+                "LoadResult.Invalid, but a LoadResult.Page was expected. To use a " +
+                "PagingSource which supports invalidation, use a PagedList builder that " +
+                "accepts a factory method for PagingSource or DataSource.Factory, such as " +
+                "LivePagedList."
+        )
     }
 
     @Test
     fun defaults() = runTest {
-        val initialPage =
-            pagingSource.load(
-                PagingSource.LoadParams.Refresh(
-                    key = null,
-                    loadSize = 10,
-                    placeholdersEnabled = false,
-                )
-            ) as PagingSource.LoadResult.Page
+        val initialPage = pagingSource.load(
+            PagingSource.LoadParams.Refresh(
+                key = null,
+                loadSize = 10,
+                placeholdersEnabled = false,
+            )
+        ) as PagingSource.LoadResult.Page
 
         @Suppress("DEPRECATION")
-        val pagedList =
-            PagedList.Builder(pagingSource, initialPage, config)
-                .setNotifyDispatcher(Dispatchers.Default)
-                .setFetchDispatcher(Dispatchers.IO)
-                .build()
+        val pagedList = PagedList.Builder(pagingSource, initialPage, config)
+            .setNotifyDispatcher(Dispatchers.Default)
+            .setFetchDispatcher(Dispatchers.IO)
+            .build()
 
         assertEquals(pagingSource, pagedList.pagingSource)
         assertEquals(config, pagedList.config)
@@ -191,17 +186,15 @@ class PagedListTest {
     fun setState_Error() {
         var onStateChangeCalls = 0
 
-        val exception = Exception()
         @Suppress("DEPRECATION")
-        val loadStateManager =
-            object : PagedList.LoadStateManager() {
-                override fun onStateChanged(type: LoadType, state: LoadState) {
-                    onStateChangeCalls++
-                }
+        val loadStateManager = object : PagedList.LoadStateManager() {
+            override fun onStateChanged(type: LoadType, state: LoadState) {
+                onStateChangeCalls++
             }
+        }
 
-        loadStateManager.setState(REFRESH, LoadState.Error(exception))
-        loadStateManager.setState(REFRESH, LoadState.Error(exception))
+        loadStateManager.setState(REFRESH, LoadState.Error(EXCEPTION))
+        loadStateManager.setState(REFRESH, LoadState.Error(EXCEPTION))
 
         assertEquals(1, onStateChangeCalls)
     }
@@ -211,25 +204,23 @@ class PagedListTest {
         val notifyDispatcher = TestDispatcher()
 
         @Suppress("DEPRECATION")
-        val pagedList =
-            object :
-                PagedList<String>(
-                    pagingSource,
-                    testCoroutineScope,
-                    notifyDispatcher,
-                    PagedStorage(),
-                    config
-                ) {
-                override val lastKey: Any? = null
+        val pagedList = object : PagedList<String>(
+            pagingSource,
+            testCoroutineScope,
+            notifyDispatcher,
+            PagedStorage(),
+            config
+        ) {
+            override val lastKey: Any? = null
 
-                override val isDetached: Boolean = true
+            override val isDetached: Boolean = true
 
-                override fun dispatchCurrentLoadState(callback: (LoadType, LoadState) -> Unit) {}
+            override fun dispatchCurrentLoadState(callback: (LoadType, LoadState) -> Unit) {}
 
-                override fun loadAroundInternal(index: Int) {}
+            override fun loadAroundInternal(index: Int) {}
 
-                override fun detach() {}
-            }
+            override fun detach() {}
+        }
 
         assertTrue { notifyDispatcher.queue.isEmpty() }
 

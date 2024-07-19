@@ -21,16 +21,15 @@ import androidx.compose.ui.text.AnnotatedString
 class TextAnnotatedStringNodeInvalidationTest : NodeInvalidationTestParent() {
     override fun Any.updateAll(params: Params): Pair<Boolean, Boolean> {
         this as TextAnnotatedStringNode
-        return updateText(AnnotatedString(params.text)) to
-            updateLayoutRelatedArgs(
-                style = params.style,
-                minLines = params.minLines,
-                maxLines = params.maxLines,
-                softWrap = params.softWrap,
-                fontFamilyResolver = params.fontFamilyResolver,
-                overflow = params.overflow,
-                placeholders = null
-            )
+        return updateText(AnnotatedString(params.text)) to updateLayoutRelatedArgs(
+            style = params.style,
+            minLines = params.minLines,
+            maxLines = params.maxLines,
+            softWrap = params.softWrap,
+            fontFamilyResolver = params.fontFamilyResolver,
+            overflow = params.overflow,
+            placeholders = null
+        )
     }
 
     override fun Any.invalidateAll() {

@@ -49,25 +49,41 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class InvalidatingNotPlacedChildTest {
 
-    @get:Rule val composeTestRule = createComposeRule()
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
-    @get:Rule val excessiveAssertions = AndroidOwnerExtraAssertionsRule()
+    @get:Rule
+    val excessiveAssertions = AndroidOwnerExtraAssertionsRule()
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun childIsDisplayedWhenItWasNotPlacedOriginallyButPlacedLater() {
         val shouldPlace = mutableStateOf(false)
         composeTestRule.setContent {
-            ConditionallyPlacedChild(shouldPlace, Modifier.background(Color.Blue).testTag("node")) {
-                Spacer(Modifier.requiredSize(5.dp).graphicsLayer().background(Color.Red))
+            ConditionallyPlacedChild(
+                shouldPlace,
+                Modifier.background(Color.Blue)
+                    .testTag("node")
+            ) {
+                Spacer(
+                    Modifier.requiredSize(5.dp)
+                        .graphicsLayer()
+                        .background(Color.Red)
+                )
             }
         }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Blue)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Blue)
 
-        composeTestRule.runOnIdle { shouldPlace.value = true }
+        composeTestRule.runOnIdle {
+            shouldPlace.value = true
+        }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Red)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Red)
     }
 
     @Test
@@ -75,18 +91,32 @@ class InvalidatingNotPlacedChildTest {
     fun grandChildIsDisplayedWhenItWasNotPlacedOriginallyButPlacedLater() {
         val shouldPlace = mutableStateOf(false)
         composeTestRule.setContent {
-            ConditionallyPlacedChild(shouldPlace, Modifier.background(Color.Blue).testTag("node")) {
+            ConditionallyPlacedChild(
+                shouldPlace,
+                Modifier.background(Color.Blue)
+                    .testTag("node")
+            ) {
                 MeasureInLayoutBlock {
-                    Spacer(Modifier.fillMaxSize().graphicsLayer().background(Color.Gray))
+                    Spacer(
+                        Modifier.fillMaxSize()
+                            .graphicsLayer()
+                            .background(Color.Gray)
+                    )
                 }
             }
         }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Blue)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Blue)
 
-        composeTestRule.runOnIdle { shouldPlace.value = true }
+        composeTestRule.runOnIdle {
+            shouldPlace.value = true
+        }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Gray)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Gray)
     }
 
     @Test
@@ -96,15 +126,25 @@ class InvalidatingNotPlacedChildTest {
         composeTestRule.setContent {
             ConditionallyPlacedChild(
                 shouldPlace,
-                Modifier.background(Color.Blue).graphicsLayer().testTag("node")
+                Modifier.background(Color.Blue)
+                    .graphicsLayer()
+                    .testTag("node")
             ) {
-                Spacer(Modifier.fillMaxSize().graphicsLayer().background(Color.Red))
+                Spacer(
+                    Modifier.fillMaxSize()
+                        .graphicsLayer()
+                        .background(Color.Red)
+                )
             }
         }
 
-        composeTestRule.runOnIdle { shouldPlace.value = false }
+        composeTestRule.runOnIdle {
+            shouldPlace.value = false
+        }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Blue)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Blue)
     }
 
     @Test
@@ -112,7 +152,12 @@ class InvalidatingNotPlacedChildTest {
     fun childRedrawRequestedWhileNotPlaced() {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
-                Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                Spacer(
+                    Modifier.fillMaxSize()
+                        .drawBehind {
+                            drawRect(color.value)
+                        }
+                )
             }
         }
     }
@@ -122,7 +167,13 @@ class InvalidatingNotPlacedChildTest {
     fun childRedrawRequestedWhileNotPlaced_hadLayer() {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
-                Spacer(Modifier.fillMaxSize().graphicsLayer().drawBehind { drawRect(color.value) })
+                Spacer(
+                    Modifier.fillMaxSize()
+                        .graphicsLayer()
+                        .drawBehind {
+                            drawRect(color.value)
+                        }
+                )
             }
         }
     }
@@ -133,7 +184,12 @@ class InvalidatingNotPlacedChildTest {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
                 Box(Modifier.graphicsLayer()) {
-                    Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                    Spacer(
+                        Modifier.fillMaxSize()
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
+                    )
                 }
             }
         }
@@ -144,7 +200,12 @@ class InvalidatingNotPlacedChildTest {
     fun childRedrawRequestedWhileNotPlaced_placedWithLayer() {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace, placeWithLayer = true) {
-                Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                Spacer(
+                    Modifier.fillMaxSize()
+                        .drawBehind {
+                            drawRect(color.value)
+                        }
+                )
             }
         }
     }
@@ -155,9 +216,11 @@ class InvalidatingNotPlacedChildTest {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
                 Spacer(
-                    Modifier.fillMaxSize().layout(useDuringMeasure = color).drawBehind {
-                        drawRect(color.value)
-                    }
+                    Modifier.fillMaxSize()
+                        .layout(useDuringMeasure = color)
+                        .drawBehind {
+                            drawRect(color.value)
+                        }
                 )
             }
         }
@@ -169,9 +232,11 @@ class InvalidatingNotPlacedChildTest {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
                 Spacer(
-                    Modifier.fillMaxSize().layout(useDuringLayout = color).drawBehind {
-                        drawRect(color.value)
-                    }
+                    Modifier.fillMaxSize()
+                        .layout(useDuringLayout = color)
+                        .drawBehind {
+                            drawRect(color.value)
+                        }
                 )
             }
         }
@@ -183,7 +248,12 @@ class InvalidatingNotPlacedChildTest {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock {
-                    Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                    Spacer(
+                        Modifier.fillMaxSize()
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
+                    )
                 }
             }
         }
@@ -196,7 +266,11 @@ class InvalidatingNotPlacedChildTest {
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock {
                     Spacer(
-                        Modifier.fillMaxSize().graphicsLayer().drawBehind { drawRect(color.value) }
+                        Modifier.fillMaxSize()
+                            .graphicsLayer()
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
                     )
                 }
             }
@@ -210,7 +284,12 @@ class InvalidatingNotPlacedChildTest {
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock {
                     Box(Modifier.graphicsLayer()) {
-                        Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                        Spacer(
+                            Modifier.fillMaxSize()
+                                .drawBehind {
+                                    drawRect(color.value)
+                                }
+                        )
                     }
                 }
             }
@@ -223,7 +302,12 @@ class InvalidatingNotPlacedChildTest {
         assertChangeWhileNotPlacedIsApplied { shouldPlace, color ->
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock(placeWithLayer = true) {
-                    Spacer(Modifier.fillMaxSize().drawBehind { drawRect(color.value) })
+                    Spacer(
+                        Modifier.fillMaxSize()
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
+                    )
                 }
             }
         }
@@ -236,9 +320,11 @@ class InvalidatingNotPlacedChildTest {
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock {
                     Spacer(
-                        Modifier.fillMaxSize().layout(useDuringMeasure = color).drawBehind {
-                            drawRect(color.value)
-                        }
+                        Modifier.fillMaxSize()
+                            .layout(useDuringMeasure = color)
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
                     )
                 }
             }
@@ -252,9 +338,11 @@ class InvalidatingNotPlacedChildTest {
             ConditionallyPlacedChild(shouldPlace) {
                 MeasureInLayoutBlock {
                     Spacer(
-                        Modifier.fillMaxSize().layout(useDuringLayout = color).drawBehind {
-                            drawRect(color.value)
-                        }
+                        Modifier.fillMaxSize()
+                            .layout(useDuringLayout = color)
+                            .drawBehind {
+                                drawRect(color.value)
+                            }
                     )
                 }
             }
@@ -269,16 +357,29 @@ class InvalidatingNotPlacedChildTest {
         val shouldPlace = mutableStateOf(true)
         var color = mutableStateOf(Color.Gray)
         composeTestRule.setContent {
-            Box(Modifier.background(Color.Blue).testTag("node")) { content(shouldPlace, color) }
+            Box(
+                Modifier.background(Color.Blue)
+                    .testTag("node")
+            ) {
+                content(shouldPlace, color)
+            }
         }
 
-        composeTestRule.runOnIdle { shouldPlace.value = false }
+        composeTestRule.runOnIdle {
+            shouldPlace.value = false
+        }
 
-        composeTestRule.runOnIdle { color.value = Color.Red }
+        composeTestRule.runOnIdle {
+            color.value = Color.Red
+        }
 
-        composeTestRule.runOnIdle { shouldPlace.value = true }
+        composeTestRule.runOnIdle {
+            shouldPlace.value = true
+        }
 
-        composeTestRule.onNodeWithTag("node").captureToImage().assertCenterPixelColor(Color.Red)
+        composeTestRule.onNodeWithTag("node")
+            .captureToImage()
+            .assertCenterPixelColor(Color.Red)
     }
 }
 

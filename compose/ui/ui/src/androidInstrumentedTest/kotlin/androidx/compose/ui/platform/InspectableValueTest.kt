@@ -32,7 +32,8 @@ import org.junit.Rule
 import org.junit.Test
 
 class InspectableValueTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Before
     fun before() {
@@ -45,22 +46,23 @@ class InspectableValueTest {
     }
 
     @Suppress("DEPRECATION")
-    fun Modifier.simple(padding: Int, border: Dp) =
-        inspectable(
-            debugInspectorInfo {
-                name = "simple"
-                properties["padding"] = padding
-                properties["border"] = border
-            }
-        ) {
-            padding(padding).border(border, color = Color.Blue)
+    fun Modifier.simple(padding: Int, border: Dp) = inspectable(
+        debugInspectorInfo {
+            name = "simple"
+            properties["padding"] = padding
+            properties["border"] = border
         }
+    ) {
+        padding(padding).border(border, color = Color.Blue)
+    }
 
     @Test
     fun simpleLayoutTest() {
         val modifier = Modifier.simple(10, 3.dp).first() as InspectableValue
         assertThat(modifier.nameFallback).isEqualTo("simple")
-        assertThat(modifier.inspectableElements.asIterable())
-            .containsExactly(ValueElement("padding", 10), ValueElement("border", 3.0.dp))
+        assertThat(modifier.inspectableElements.asIterable()).containsExactly(
+            ValueElement("padding", 10),
+            ValueElement("border", 3.0.dp)
+        )
     }
 }

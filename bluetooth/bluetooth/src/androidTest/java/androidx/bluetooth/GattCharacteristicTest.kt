@@ -17,39 +17,44 @@
 package androidx.bluetooth
 
 import android.bluetooth.BluetoothGattCharacteristic as FwkCharacteristic
-import com.google.common.truth.Truth.assertThat
 import java.util.UUID
+import org.junit.Assert
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
-/** Test cases for [GattCharacteristic] */
 @RunWith(JUnit4::class)
 class GattCharacteristicTest {
-
     @Test
     fun constructorWithFwkInstance() {
-        val propertiesMap =
-            mapOf(
-                FwkCharacteristic.PROPERTY_BROADCAST to GattCharacteristic.PROPERTY_BROADCAST,
-                FwkCharacteristic.PROPERTY_EXTENDED_PROPS to
-                    GattCharacteristic.PROPERTY_EXTENDED_PROPS,
-                FwkCharacteristic.PROPERTY_INDICATE to GattCharacteristic.PROPERTY_INDICATE,
-                FwkCharacteristic.PROPERTY_NOTIFY to GattCharacteristic.PROPERTY_NOTIFY,
-                FwkCharacteristic.PROPERTY_READ to GattCharacteristic.PROPERTY_READ,
-                FwkCharacteristic.PROPERTY_SIGNED_WRITE to GattCharacteristic.PROPERTY_SIGNED_WRITE,
-                FwkCharacteristic.PROPERTY_WRITE to GattCharacteristic.PROPERTY_WRITE,
-                FwkCharacteristic.PROPERTY_WRITE_NO_RESPONSE to
-                    GattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-            )
+        val propertiesMap = mapOf(
+            FwkCharacteristic.PROPERTY_BROADCAST to
+                GattCharacteristic.PROPERTY_BROADCAST,
+            FwkCharacteristic.PROPERTY_EXTENDED_PROPS to
+                GattCharacteristic.PROPERTY_EXTENDED_PROPS,
+            FwkCharacteristic.PROPERTY_INDICATE to
+                GattCharacteristic.PROPERTY_INDICATE,
+            FwkCharacteristic.PROPERTY_NOTIFY
+                to GattCharacteristic.PROPERTY_NOTIFY,
+            FwkCharacteristic.PROPERTY_READ
+                to GattCharacteristic.PROPERTY_READ,
+            FwkCharacteristic.PROPERTY_SIGNED_WRITE
+                to GattCharacteristic.PROPERTY_SIGNED_WRITE,
+            FwkCharacteristic.PROPERTY_WRITE
+                to GattCharacteristic.PROPERTY_WRITE,
+            FwkCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+                to GattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+        )
 
         propertiesMap.forEach {
             val charUuid = UUID.randomUUID()
-            val fwkGattCharacteristic = FwkCharacteristic(charUuid, it.key, /* permissions= */ 0)
+            val fwkGattCharacteristic = FwkCharacteristic(charUuid, it.key,
+                /*permissions=*/0)
             val gattCharacteristic = GattCharacteristic(fwkGattCharacteristic)
 
-            assertThat(gattCharacteristic.uuid).isEqualTo(fwkGattCharacteristic.uuid)
-            assertThat(gattCharacteristic.properties).isEqualTo(it.value)
+            Assert.assertEquals(fwkGattCharacteristic.uuid, gattCharacteristic.uuid)
+            Assert.assertEquals(it.value, gattCharacteristic.properties)
         }
     }
 
@@ -61,26 +66,18 @@ class GattCharacteristicTest {
 
         val characteristic = GattCharacteristic(uuid, properties)
 
-        assertThat(characteristic.uuid).isEqualTo(uuid)
-        assertThat(characteristic.properties).isEqualTo(properties)
+        Assert.assertEquals(uuid, characteristic.uuid)
+        Assert.assertEquals(properties, characteristic.properties)
     }
 
     @Test
     fun subscriableCharacteristicHasCccd() {
-        val notifyCharacteristic =
-            GattCharacteristic(
-                UUID.randomUUID(),
-                GattCharacteristic.PROPERTY_READ or GattCharacteristic.PROPERTY_NOTIFY
-            )
-        val indicateCharacteristic =
-            GattCharacteristic(
-                UUID.randomUUID(),
-                GattCharacteristic.PROPERTY_READ or GattCharacteristic.PROPERTY_INDICATE
-            )
+        val notifyCharacteristic = GattCharacteristic(UUID.randomUUID(),
+            GattCharacteristic.PROPERTY_READ or GattCharacteristic.PROPERTY_NOTIFY)
+        val indicateCharacteristic = GattCharacteristic(UUID.randomUUID(),
+            GattCharacteristic.PROPERTY_READ or GattCharacteristic.PROPERTY_INDICATE)
 
-        assertThat(notifyCharacteristic.fwkCharacteristic.getDescriptor(GattCommon.UUID_CCCD))
-            .isNotNull()
-        assertThat(indicateCharacteristic.fwkCharacteristic.getDescriptor(GattCommon.UUID_CCCD))
-            .isNotNull()
+        assertNotNull(notifyCharacteristic.fwkCharacteristic.getDescriptor(GattCommon.UUID_CCCD))
+        assertNotNull(indicateCharacteristic.fwkCharacteristic.getDescriptor(GattCommon.UUID_CCCD))
     }
 }

@@ -21,7 +21,10 @@ import androidx.annotation.RestrictTo
 import androidx.health.services.client.proto.DataProto
 import androidx.health.services.client.proto.DataProto.ExerciseTrackedStatus.EXERCISE_TRACKED_STATUS_UNKNOWN
 
-/** Status representing if an exercise is being tracked and which app owns the exercise. */
+/**
+ * Status representing if an exercise is being tracked and which app owns the exercise.
+ *
+ */
 @Retention(AnnotationRetention.SOURCE)
 @IntDef(
     ExerciseTrackedStatus.OTHER_APP_IN_PROGRESS,
@@ -42,8 +45,8 @@ public annotation class ExerciseTrackedStatus {
         public const val NO_EXERCISE_IN_PROGRESS: Int = 3
 
         @RestrictTo(RestrictTo.Scope.LIBRARY)
-        internal fun @receiver:ExerciseTrackedStatus Int.toProto():
-            DataProto.ExerciseTrackedStatus =
+        internal fun @receiver:ExerciseTrackedStatus
+        Int.toProto(): DataProto.ExerciseTrackedStatus =
             DataProto.ExerciseTrackedStatus.forNumber(this) ?: EXERCISE_TRACKED_STATUS_UNKNOWN
 
         @RestrictTo(RestrictTo.Scope.LIBRARY)

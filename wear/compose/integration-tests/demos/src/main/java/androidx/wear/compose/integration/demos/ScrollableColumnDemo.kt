@@ -40,12 +40,12 @@ fun ScrollableColumnDemo() {
         NotScrollableLabel(Modifier.weight(1f))
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier =
-                Modifier.fillMaxHeight()
-                    .wrapContentWidth()
-                    .verticalScroll(rememberScrollState())
-                    .background(Color.Green.copy(alpha = 0.1f))
-                    .padding(horizontal = 24.dp)
+            modifier = Modifier
+                .fillMaxHeight()
+                .wrapContentWidth()
+                .verticalScroll(rememberScrollState())
+                .background(Color.Green.copy(alpha = 0.1f))
+                .padding(horizontal = 24.dp)
         ) {
             for (i in 0 until 100) {
                 Text("$i")
@@ -61,6 +61,9 @@ private fun NotScrollableLabel(modifier: Modifier) {
         "Not scrollable",
         color = Color.Red,
         textAlign = TextAlign.Center,
-        modifier = modifier.fillMaxSize().background(Color.Red.copy(alpha = 0.1f)).wrapContentSize()
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Red.copy(alpha = 0.1f))
+            .wrapContentSize()
     )
 }

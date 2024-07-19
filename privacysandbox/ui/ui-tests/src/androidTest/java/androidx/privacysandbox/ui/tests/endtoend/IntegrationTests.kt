@@ -16,26 +16,25 @@
 
 package androidx.privacysandbox.ui.tests.endtoend
 
-import android.app.Activity
-import android.app.Instrumentation
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.graphics.Color
+import android.os.Binder
+import android.os.Bundle
+import android.os.IBinder
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnLayoutChangeListener
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.BackwardCompatUtil
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
-import androidx.privacysandbox.ui.tests.util.TestSessionManager
-import androidx.privacysandbox.ui.tests.util.TestSessionManager.Companion.TIMEOUT
-import androidx.privacysandbox.ui.tests.util.TestSessionManager.TestSandboxedUiAdapter
-import androidx.privacysandbox.ui.tests.util.TestSessionManager.TestSessionClient
+import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -43,6 +42,7 @@ import androidx.testutils.withActivity
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -57,30 +57,28 @@ import org.junit.runners.Parameterized
 @MediumTest
 class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
-    @get:Rule var activityScenarioRule = ActivityScenarioRule(MainActivity::class.java)
+    @get:Rule
+    var activityScenarioRule = ActivityScenarioRule(MainActivity::class.java)
 
     companion object {
+        const val TEST_ONLY_USE_REMOTE_ADAPTER = "testOnlyUseRemoteAdapter"
+        const val TIMEOUT = 1000.toLong()
         const val INITIAL_HEIGHT = 100
         const val INITIAL_WIDTH = 100
 
         @JvmStatic
         @Parameterized.Parameters(name = "invokeBackwardsCompatFlow={0}")
-        fun data(): Array<Any> =
-            arrayOf(
-                arrayOf(true),
-                arrayOf(false),
-            )
+        fun data(): Array<Any> = arrayOf(
+            arrayOf(true),
+            arrayOf(false),
+        )
     }
 
     private val context = InstrumentationRegistry.getInstrumentation().context
 
     private lateinit var view: SandboxedSdkView
     private lateinit var stateChangeListener: TestStateChangeListener
-    private lateinit var activity: Activity
     private lateinit var errorLatch: CountDownLatch
-    private lateinit var linearLayout: LinearLayout
-    private lateinit var mInstrumentation: Instrumentation
-    private lateinit var sessionManager: TestSessionManager
 
     @Before
     fun setup() {
@@ -89,22 +87,16 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
             assumeTrue(BackwardCompatUtil.canProviderBeRemote())
         }
 
-        mInstrumentation = InstrumentationRegistry.getInstrumentation()
-        sessionManager = TestSessionManager(context, invokeBackwardsCompatFlow)
-
-        activity = activityScenarioRule.withActivity { this }
         activityScenarioRule.withActivity {
             view = SandboxedSdkView(context)
             errorLatch = CountDownLatch(1)
             stateChangeListener = TestStateChangeListener(errorLatch)
             view.addStateChangedListener(stateChangeListener)
-            linearLayout = LinearLayout(context)
-            linearLayout.layoutParams =
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
-                )
-            linearLayout.setBackgroundColor(Color.RED)
+            val linearLayout = LinearLayout(context)
+            linearLayout.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
             setContentView(linearLayout)
             view.layoutParams = LinearLayout.LayoutParams(INITIAL_WIDTH, INITIAL_HEIGHT)
             linearLayout.addView(view)
@@ -114,19 +106,19 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
     @Ignore // b/271299184
     @Test
     fun testChangingSandboxedSdkViewLayoutChangesChildLayout() {
-        sessionManager.createAdapterAndEstablishSession(viewForSession = view)
+        createAdapterAndEstablishSession()
 
         val layoutChangeLatch = CountDownLatch(1)
         val childAddedLatch = CountDownLatch(1)
 
-        val hierarchyChangeListener =
-            object : ViewGroup.OnHierarchyChangeListener {
-                override fun onChildViewAdded(parent: View, child: View) {
-                    childAddedLatch.countDown()
-                }
-
-                override fun onChildViewRemoved(p0: View?, p1: View?) {}
+        val hierarchyChangeListener = object : ViewGroup.OnHierarchyChangeListener {
+            override fun onChildViewAdded(parent: View, child: View) {
+                childAddedLatch.countDown()
             }
+
+            override fun onChildViewRemoved(p0: View?, p1: View?) {
+            }
+        }
         view.setOnHierarchyChangeListener(hierarchyChangeListener)
 
         val onLayoutChangeListener: OnLayoutChangeListener =
@@ -158,45 +150,48 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
     @Test
     fun testOpenSession_onSetAdapter() {
-        val adapter = sessionManager.createAdapterAndEstablishSession(viewForSession = view)
+        val adapter = createAdapterAndEstablishSession()
         assertThat(adapter.session).isNotNull()
     }
 
     @Test
     fun testOpenSession_fromAdapter() {
-        val adapter = sessionManager.createAdapterAndEstablishSession(viewForSession = null)
+        val adapter = createAdapterAndEstablishSession(viewForSession = null)
         assertThat(adapter.session).isNotNull()
     }
 
     @Test
     fun testConfigurationChanged() {
-        val sdkAdapter = sessionManager.createAdapterAndEstablishSession(viewForSession = view)
+        val sdkAdapter = createAdapterAndEstablishSession()
 
         activityScenarioRule.withActivity {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
-        assertWithMessage("Configuration changed")
-            .that(testSession.config?.orientation)
-            .isEqualTo(Configuration.ORIENTATION_LANDSCAPE)
+        assertWithMessage("Configuration changed").that(testSession.config?.orientation)
+                .isEqualTo(Configuration.ORIENTATION_LANDSCAPE)
     }
 
-    /** Tests that the provider receives Z-order change updates. */
+    /**
+     * Tests that the provider receives Z-order change updates.
+     */
     @Test
     @Ignore("b/302090927")
     fun testZOrderChanged() {
-        val adapter = sessionManager.createAdapterAndEstablishSession(viewForSession = view)
+        val adapter = createAdapterAndEstablishSession()
 
         view.orderProviderUiAboveClientUi(!adapter.initialZOrderOnTop)
         val testSession = adapter.session as TestSandboxedUiAdapter.TestSession
         assertThat(testSession.zOrderChanged).isTrue()
     }
 
-    /** Tests that the provider does not receive Z-order updates if the Z-order is unchanged. */
+    /**
+     * Tests that the provider does not receive Z-order updates if the Z-order is unchanged.
+     */
     @Test
     fun testZOrderUnchanged() {
-        val adapter = sessionManager.createAdapterAndEstablishSession(viewForSession = view)
+        val adapter = createAdapterAndEstablishSession()
 
         view.orderProviderUiAboveClientUi(adapter.initialZOrderOnTop)
         val testSession = adapter.session as TestSandboxedUiAdapter.TestSession
@@ -208,11 +203,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         // TODO(b/301976432): Stop skipping this for backwards compat flow
         assumeTrue(!invokeBackwardsCompatFlow)
 
-        val adapter =
-            sessionManager.createAdapterAndWaitToBeActive(
-                viewForSession = view,
-                initialZOrder = true
-            )
+        val adapter = createAdapterAndWaitToBeActive(initialZOrder = true)
         injectInputEventOnView()
         // the injected touch should be handled by the provider in Z-above mode
         assertThat(adapter.touchedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
@@ -224,11 +215,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         // TODO(b/300396631): Skip for backward compat
         assumeTrue(!invokeBackwardsCompatFlow)
 
-        val adapter =
-            sessionManager.createAdapterAndWaitToBeActive(
-                viewForSession = view,
-                initialZOrder = false
-            )
+        val adapter = createAdapterAndWaitToBeActive(initialZOrder = false)
         injectInputEventOnView()
         // the injected touch should not reach the provider in Z-below mode
         assertThat(adapter.touchedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isFalse()
@@ -236,27 +223,21 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
     @Test
     fun testSessionError() {
-        sessionManager.createAdapterAndEstablishSession(
-            viewForSession = view,
-            hasFailingTestSession = true
-        )
+        createAdapterAndEstablishSession(hasFailingTestSession = true)
 
         assertThat(errorLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(stateChangeListener.error?.message).isEqualTo("Test Session Exception")
     }
 
     /**
-     * Tests that a provider-initiated resize is accepted if the view's parent does not impose exact
-     * restrictions on the view's size.
+     * Tests that a provider-initiated resize is accepted if the view's parent does not impose
+     * exact restrictions on the view's size.
      */
     @Test
     fun testResizeRequested_requestedAccepted_atMostMeasureSpec() {
-        view.layoutParams =
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        val sdkAdapter = sessionManager.createAdapterAndWaitToBeActive(viewForSession = view)
+        view.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        val sdkAdapter = createAdapterAndWaitToBeActive()
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
         val newWidth = INITIAL_WIDTH - 10
@@ -269,8 +250,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assertWithMessage("Resized width").that(testSession.resizedHeight).isEqualTo(newHeight)
         testSession.assertResizeOccurred(
             /* expectedWidth=*/ newWidth,
-            /* expectedHeight=*/ newHeight
-        )
+            /* expectedHeight=*/ newHeight)
     }
 
     /**
@@ -280,7 +260,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
     @Test
     fun testResizeRequested_requestIgnored_exactlyMeasureSpec() {
         view.layoutParams = LinearLayout.LayoutParams(INITIAL_WIDTH, INITIAL_HEIGHT)
-        val sdkAdapter = sessionManager.createAdapterAndWaitToBeActive(viewForSession = view)
+        val sdkAdapter = createAdapterAndWaitToBeActive()
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
 
         activityScenarioRule.withActivity {
@@ -291,7 +271,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
     @Test
     fun testResize_ClientInitiated() {
-        val sdkAdapter = sessionManager.createAdapterAndWaitToBeActive(viewForSession = view)
+        val sdkAdapter = createAdapterAndWaitToBeActive()
         val newWidth = INITIAL_WIDTH - 10
         val newHeight = INITIAL_HEIGHT - 10
         activityScenarioRule.withActivity {
@@ -299,12 +279,13 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         }
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
-        assertWithMessage("Resized width").that(testSession.resizedWidth).isEqualTo(newWidth)
-        assertWithMessage("Resized height").that(testSession.resizedHeight).isEqualTo(newHeight)
+        assertWithMessage("Resized width").that(testSession.resizedWidth)
+            .isEqualTo(newWidth)
+        assertWithMessage("Resized height").that(testSession.resizedHeight)
+            .isEqualTo(newHeight)
         testSession.assertResizeOccurred(
             /* expectedWidth=*/ newWidth,
-            /* expectedHeight=*/ newHeight
-        )
+            /* expectedHeight=*/ newHeight)
     }
 
     @Test
@@ -313,11 +294,10 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assumeTrue(invokeBackwardsCompatFlow)
 
         val testSessionClient = TestSessionClient()
-        val sdkAdapter =
-            sessionManager.createAdapterAndEstablishSession(
-                viewForSession = null,
-                testSessionClient = testSessionClient
-            )
+        val sdkAdapter = createAdapterAndEstablishSession(
+            viewForSession = null,
+            testSessionClient = testSessionClient
+        )
 
         // Verify toString, hashCode and equals have been implemented for dynamic proxy
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
@@ -329,43 +309,76 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assertThat(client.hashCode()).isEqualTo(client.hashCode())
     }
 
-    /**
-     * Verifies that when the [View] returned as part of a [SandboxedUiAdapter.Session] is a
-     * [ViewGroup], that the child view is measured and laid out by its parent.
-     */
-    @Test
-    fun testViewGroup_ChildViewIsLaidOut() {
-        val adapter =
-            sessionManager.createAdapterAndWaitToBeActive(
-                viewForSession = view,
-                placeViewInsideFrameLayout = true
-            )
-        val session = adapter.session as TestSandboxedUiAdapter.TestSession
+    private fun getCoreLibInfoFromAdapter(sdkAdapter: SandboxedUiAdapter): Bundle {
+        val bundle = sdkAdapter.toCoreLibInfo(context)
+        bundle.putBoolean(TEST_ONLY_USE_REMOTE_ADAPTER, !invokeBackwardsCompatFlow)
+        return bundle
+    }
 
-        // Force a layout pass by changing the size of the view
-        activityScenarioRule.withActivity {
-            session.sessionClient.onResizeRequested(INITIAL_WIDTH - 10, INITIAL_HEIGHT - 10)
+    /**
+     * Creates a [TestSandboxedUiAdapter] and establishes session.
+     *
+     * If [view] is null, then session is opened using the adapter directly. Otherwise, the
+     * created adapter is set on [view] to establish session.
+     */
+    private fun createAdapterAndEstablishSession(
+            hasFailingTestSession: Boolean = false,
+            viewForSession: SandboxedSdkView? = view,
+            testSessionClient: TestSessionClient = TestSessionClient()
+        ): TestSandboxedUiAdapter {
+
+        val adapter = TestSandboxedUiAdapter(hasFailingTestSession)
+        val adapterFromCoreLibInfo = SandboxedUiAdapterFactory.createFromCoreLibInfo(
+            getCoreLibInfoFromAdapter(adapter)
+        )
+        if (viewForSession != null) {
+            viewForSession.setAdapter(adapterFromCoreLibInfo)
+        } else {
+            adapterFromCoreLibInfo.openSession(
+                context,
+                windowInputToken = Binder(),
+                INITIAL_WIDTH,
+                INITIAL_HEIGHT,
+                isZOrderOnTop = true,
+                clientExecutor = Runnable::run,
+                testSessionClient
+            )
         }
-        session.assertViewWasLaidOut()
+
+        assertWithMessage("openSession is called on adapter")
+            .that(adapter.isOpenSessionCalled).isTrue()
+        if (viewForSession == null) {
+            assertWithMessage("onSessionOpened received by SessionClient")
+                .that(testSessionClient.isSessionOpened).isTrue()
+        }
+        return adapter
+    }
+
+    private fun createAdapterAndWaitToBeActive(initialZOrder: Boolean = true):
+        TestSandboxedUiAdapter {
+        view.orderProviderUiAboveClientUi(initialZOrder)
+
+        val adapter = createAdapterAndEstablishSession()
+
+        val activeLatch = CountDownLatch(1)
+        view.addStateChangedListener { state ->
+            if (state is SandboxedSdkUiSessionState.Active) {
+                activeLatch.countDown()
+            }
+        }
+        assertThat(activeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+        return adapter
     }
 
     private fun injectInputEventOnView() {
         activityScenarioRule.withActivity {
             val location = IntArray(2)
             view.getLocationOnScreen(location)
-            InstrumentationRegistry.getInstrumentation()
-                .uiAutomation
-                .injectInputEvent(
-                    MotionEvent.obtain(
-                        SystemClock.uptimeMillis(),
-                        SystemClock.uptimeMillis(),
-                        MotionEvent.ACTION_DOWN,
-                        (location[0] + 1).toFloat(),
-                        (location[1] + 1).toFloat(),
-                        0
-                    ),
-                    false
-                )
+            InstrumentationRegistry.getInstrumentation().uiAutomation.injectInputEvent(
+                MotionEvent.obtain(
+                    SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN,
+                    (location[0] + 1).toFloat(),
+                    (location[1] + 1).toFloat(), 0), false)
         }
     }
 
@@ -380,6 +393,203 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
                 error = state.throwable
                 errorLatch.countDown()
             }
+        }
+    }
+
+    /**
+     *  TestSandboxedUiAdapter provides content from a fake SDK to show on the host's UI.
+     *
+     *  A [SandboxedUiAdapter] is supposed to fetch the content from SandboxedSdk, but we fake the
+     *  source of content in this class.
+     *
+     *  If [hasFailingTestSession] is true, the fake server side logic returns error.
+     */
+    class TestSandboxedUiAdapter(
+        private val hasFailingTestSession: Boolean = false
+    ) : SandboxedUiAdapter {
+
+        private val openSessionLatch: CountDownLatch = CountDownLatch(1)
+
+        val isOpenSessionCalled: Boolean
+            get() = openSessionLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+
+        var initialZOrderOnTop = false
+        var touchedLatch = CountDownLatch(1)
+
+        lateinit var session: SandboxedUiAdapter.Session
+        var initialHeight: Int = -1
+        var initialWidth: Int = -1
+
+        override fun openSession(
+            context: Context,
+            windowInputToken: IBinder,
+            initialWidth: Int,
+            initialHeight: Int,
+            isZOrderOnTop: Boolean,
+            clientExecutor: Executor,
+            client: SandboxedUiAdapter.SessionClient
+        ) {
+            initialZOrderOnTop = isZOrderOnTop
+            this.initialHeight = initialHeight
+            this.initialWidth = initialWidth
+            session = if (hasFailingTestSession) {
+                FailingTestSession(context, client)
+            } else {
+                TestSession(context, client)
+            }
+            client.onSessionOpened(session)
+            openSessionLatch.countDown()
+        }
+
+        /**
+         * A failing session that always sends error notice to the client when content is requested.
+         */
+        inner class FailingTestSession(
+            private val context: Context,
+            private val sessionClient: SandboxedUiAdapter.SessionClient
+        ) : SandboxedUiAdapter.Session {
+            override val view: View
+                get() {
+                    sessionClient.onSessionError(Throwable("Test Session Exception"))
+                    return View(context)
+                }
+
+            override fun notifyResized(width: Int, height: Int) {
+            }
+
+            override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {
+            }
+
+            override fun notifyConfigurationChanged(configuration: Configuration) {
+            }
+
+            override fun close() {
+            }
+        }
+
+        inner class TestSession(
+            private val context: Context,
+            val sessionClient: SandboxedUiAdapter.SessionClient
+        ) : SandboxedUiAdapter.Session {
+
+            private val configLatch = CountDownLatch(1)
+            private val resizeLatch = CountDownLatch(1)
+            private val zOrderLatch = CountDownLatch(1)
+            private val sizeChangedLatch = CountDownLatch(1)
+            private var width = -1
+            private var height = -1
+
+            var config: Configuration? = null
+                get() {
+                    configLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                    return field
+                }
+
+            var zOrderChanged = false
+                get() {
+                    zOrderLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                    return field
+                }
+
+            var resizedWidth = 0
+                get() {
+                    resizeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                    return field
+                }
+
+            var resizedHeight = 0
+                get() {
+                    resizeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                    return field
+                }
+
+            override val view: View
+                get() {
+                    return View(context).also {
+                        it.setOnTouchListener { _, _ ->
+                            touchedLatch.countDown()
+                            true
+                        }
+                        it.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+                            width = right - left
+                            height = bottom - top
+                            // Don't count down for the initial layout. We want to capture the
+                            // layout change for a size change.
+                            if (width != initialWidth || height != initialHeight) {
+                                sizeChangedLatch.countDown()
+                            }
+                        }
+                    }
+                }
+
+            override fun notifyResized(width: Int, height: Int) {
+                resizedWidth = width
+                resizedHeight = height
+                resizeLatch.countDown()
+            }
+
+            override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {
+                zOrderChanged = true
+                zOrderLatch.countDown()
+            }
+
+            override fun notifyConfigurationChanged(configuration: Configuration) {
+                config = configuration
+                configLatch.countDown()
+            }
+
+            override fun close() {
+            }
+
+            internal fun assertResizeOccurred(expectedWidth: Int, expectedHeight: Int) {
+                assertThat(sizeChangedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+                assertThat(width).isEqualTo(expectedWidth)
+                assertThat(height).isEqualTo(expectedHeight)
+            }
+
+            internal fun assertResizeDidNotOccur() {
+                assertThat(sizeChangedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isFalse()
+            }
+        }
+    }
+
+    class TestSessionClient : SandboxedUiAdapter.SessionClient {
+        private val sessionOpenedLatch = CountDownLatch(1)
+        private val resizeRequestedLatch = CountDownLatch(1)
+
+        var session: SandboxedUiAdapter.Session? = null
+            get() {
+                sessionOpenedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                return field
+            }
+
+        val isSessionOpened: Boolean
+            get() = sessionOpenedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+
+        var resizedWidth = 0
+            get() {
+                resizeRequestedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                return field
+            }
+
+        var resizedHeight = 0
+            get() {
+                resizeRequestedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
+                return field
+            }
+
+        override fun onSessionOpened(session: SandboxedUiAdapter.Session) {
+            this.session = session
+            sessionOpenedLatch.countDown()
+        }
+
+        override fun onSessionError(throwable: Throwable) {
+        }
+
+        override fun onResizeRequested(width: Int, height: Int) {
+            resizedWidth = width
+            resizedHeight = height
+            resizeRequestedLatch.countDown()
         }
     }
 }

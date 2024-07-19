@@ -19,176 +19,115 @@ package androidx.core.telecom.internal
 import android.os.Bundle
 import android.os.OutcomeReceiver
 import android.os.ParcelUuid
-import android.telecom.CallControl
-import android.telecom.CallEndpoint
 import android.telecom.CallException
 import android.telecom.DisconnectCause
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.annotation.VisibleForTesting
-import androidx.core.telecom.CallAttributesCompat
 import androidx.core.telecom.CallControlResult
 import androidx.core.telecom.CallControlScope
 import androidx.core.telecom.CallEndpointCompat
+import androidx.core.telecom.CallsManager
+import androidx.core.telecom.extensions.Capability
+import androidx.core.telecom.extensions.voip.VoipExtensionManager
 import androidx.core.telecom.internal.utils.EndpointUtils
-import androidx.core.telecom.internal.utils.EndpointUtils.Companion.getSpeakerEndpoint
-import androidx.core.telecom.internal.utils.EndpointUtils.Companion.isEarpieceEndpoint
-import androidx.core.telecom.internal.utils.EndpointUtils.Companion.isWiredHeadsetOrBtEndpoint
+import androidx.core.telecom.util.ExperimentalAppActions
 import java.util.function.Consumer
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 @RequiresApi(34)
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("ClassVerificationFailure")
 internal class CallSession(
-    val coroutineContext: CoroutineContext,
-    val attributes: CallAttributesCompat,
+    coroutineContext: CoroutineContext,
     val onAnswerCallback: suspend (callType: Int) -> Unit,
     val onDisconnectCallback: suspend (disconnectCause: DisconnectCause) -> Unit,
     val onSetActiveCallback: suspend () -> Unit,
     val onSetInactiveCallback: suspend () -> Unit,
-    private val callChannels: CallChannels,
-    private val onEventCallback: suspend (event: String, extras: Bundle) -> Unit,
     private val blockingSessionExecution: CompletableDeferred<Unit>
-) : android.telecom.CallControlCallback, android.telecom.CallEventCallback {
-    private var mPlatformInterface: CallControl? = null
-    // cache the latest current and available endpoints
-    private var mCurrentCallEndpoint: CallEndpointCompat? = null
-    private var mAvailableEndpoints: List<CallEndpointCompat> = ArrayList()
-    private var mLastClientRequestedEndpoint: CallEndpointCompat? = null
-    // use CompletableDeferred objects to signal when all the endpoint values have initially
-    // been received from the platform.
-    private val mIsCurrentEndpointSet = CompletableDeferred<Unit>()
-    private val mIsAvailableEndpointsSet = CompletableDeferred<Unit>()
-    private val mIsCurrentlyDisplayingVideo = attributes.isVideoCall()
+) {
+    private val mCoroutineContext = coroutineContext
+    private var mPlatformInterface: android.telecom.CallControl? = null
 
-    companion object {
-        private val TAG: String = CallSession::class.java.simpleName
-        private const val SWITCH_TO_SPEAKER_TIMEOUT: Long = 1000L
-    }
-
-    fun getIsCurrentEndpointSet(): CompletableDeferred<Unit> {
-        return mIsCurrentEndpointSet
-    }
-
-    fun getIsAvailableEndpointsSet(): CompletableDeferred<Unit> {
-        return mIsAvailableEndpointsSet
-    }
-
-    override fun onCallEndpointChanged(endpoint: CallEndpoint) {
-        val previousCallEndpoint = mCurrentCallEndpoint
-        mCurrentCallEndpoint = EndpointUtils.Api34PlusImpl.toCallEndpointCompat(endpoint)
-        callChannels.currentEndpointChannel.trySend(mCurrentCallEndpoint!!).getOrThrow()
-        Log.i(TAG, "onCallEndpointChanged: endpoint=[$endpoint]")
-        if (!mIsCurrentEndpointSet.isCompleted) {
-            mIsCurrentEndpointSet.complete(Unit)
-            Log.i(TAG, "onCallEndpointChanged: mCurrentCallEndpoint was set")
+    class CallControlCallbackImpl(private val callSession: CallSession) :
+        android.telecom.CallControlCallback {
+        override fun onSetActive(wasCompleted: Consumer<Boolean>) {
+            callSession.onSetActive(wasCompleted)
         }
-        maybeSwitchToSpeakerOnHeadsetDisconnect(mCurrentCallEndpoint!!, previousCallEndpoint)
-        // clear out the last user requested CallEndpoint. It's only used to determine if the
-        // change in current endpoints was intentional.
-        mLastClientRequestedEndpoint = null
-    }
 
-    override fun onAvailableCallEndpointsChanged(endpoints: List<CallEndpoint>) {
-        mAvailableEndpoints = EndpointUtils.Api34PlusImpl.toCallEndpointsCompat(endpoints)
-        callChannels.availableEndpointChannel.trySend(mAvailableEndpoints).getOrThrow()
-        Log.i(TAG, "onAvailableCallEndpointsChanged: endpoints=[$endpoints]")
-        if (!mIsAvailableEndpointsSet.isCompleted) {
-            mIsAvailableEndpointsSet.complete(Unit)
-            Log.i(TAG, "onAvailableCallEndpointsChanged: mAvailableEndpoints was set")
+        override fun onSetInactive(wasCompleted: Consumer<Boolean>) {
+            callSession.onSetInactive(wasCompleted)
+        }
+
+        override fun onAnswer(videoState: Int, wasCompleted: Consumer<Boolean>) {
+            callSession.onAnswer(videoState, wasCompleted)
+        }
+
+        override fun onDisconnect(
+            disconnectCause: DisconnectCause,
+            wasCompleted: Consumer<Boolean>
+        ) {
+            callSession.onDisconnect(disconnectCause, wasCompleted)
+        }
+
+        override fun onCallStreamingStarted(wasCompleted: Consumer<Boolean>) {
+            TODO("Implement with the CallStreaming code")
         }
     }
 
-    override fun onMuteStateChanged(isMuted: Boolean) {
-        callChannels.isMutedChannel.trySend(isMuted).getOrThrow()
-    }
-
-    override fun onCallStreamingFailed(reason: Int) {
-        TODO("Implement with the CallStreaming code")
-    }
-
-    override fun onEvent(event: String, extras: Bundle) {
-        Log.i(TAG, "onEvent: received $event")
-        CoroutineScope(coroutineContext).launch { onEventCallback(event, extras) }
-    }
-
-    /**
-     * Due to the fact that OEMs may diverge from AOSP telecom platform behavior, Core-Telecom needs
-     * to ensure that video calls start with speaker phone if the earpiece is the initial audio
-     * route.
-     */
-    suspend fun maybeSwitchToSpeakerOnCallStart() {
-        if (!attributes.isVideoCall()) {
-            return
+    class CallEventCallbackImpl(
+        private val callChannels: CallChannels,
+        private val coroutineContext: CoroutineContext,
+        private val voipExtensionManager: VoipExtensionManager
+    ) :
+        android.telecom.CallEventCallback {
+        private val CALL_EVENT_CALLBACK_TAG = CallEventCallbackImpl::class.simpleName
+        /**
+         * Stubbed supported capabilities for v2 connections.
+         */
+        @ExperimentalAppActions
+        private val supportedCapabilities = mutableListOf(Capability())
+        override fun onCallEndpointChanged(
+            endpoint: android.telecom.CallEndpoint
+        ) {
+            callChannels.currentEndpointChannel.trySend(
+                EndpointUtils.Api34PlusImpl.toCallEndpointCompat(endpoint)
+            ).getOrThrow()
         }
-        try {
-            withTimeout(SWITCH_TO_SPEAKER_TIMEOUT) {
-                Log.i(TAG, "maybeSwitchToSpeaker: before awaitAll")
-                awaitAll(mIsCurrentEndpointSet, mIsAvailableEndpointsSet)
-                Log.i(TAG, "maybeSwitchToSpeaker: after awaitAll")
-                val speakerCompat = getSpeakerEndpoint(mAvailableEndpoints)
-                if (isEarpieceEndpoint(mCurrentCallEndpoint) && speakerCompat != null) {
-                    Log.i(
-                        TAG,
-                        "maybeSwitchToSpeaker: detected a video call that started" +
-                            " with the earpiece audio route. requesting switch to speaker."
-                    )
-                    mPlatformInterface?.requestCallEndpointChange(
-                        EndpointUtils.Api34PlusImpl.toCallEndpoint(speakerCompat),
-                        Runnable::run,
-                        {}
-                    )
+
+        override fun onAvailableCallEndpointsChanged(
+            endpoints: List<android.telecom.CallEndpoint>
+        ) {
+            callChannels.availableEndpointChannel.trySend(
+                EndpointUtils.Api34PlusImpl.toCallEndpointsCompat(endpoints)
+            ).getOrThrow()
+        }
+
+        override fun onMuteStateChanged(isMuted: Boolean) {
+            callChannels.isMutedChannel.trySend(isMuted).getOrThrow()
+        }
+
+        override fun onCallStreamingFailed(reason: Int) {
+            TODO("Implement with the CallStreaming code")
+        }
+
+        @ExperimentalAppActions
+        override fun onEvent(event: String, extras: Bundle) {
+            // Call events are sent via Call#sendCallEvent(event, extras). Begin initial capability
+            // exchange procedure once we know that the ICS supports it.
+            if (event == CallsManager.EVENT_JETPACK_CAPABILITY_EXCHANGE) {
+                Log.i(CALL_EVENT_CALLBACK_TAG, "onEvent: EVENT_JETPACK_CAPABILITY_EXCHANGE: " +
+                        "beginning capability exchange.")
+                // Launch a new coroutine from the context of the current coroutine
+                CoroutineScope(coroutineContext).launch {
+                        voipExtensionManager.initiateVoipAppCapabilityExchange(
+                            extras, supportedCapabilities, CALL_EVENT_CALLBACK_TAG)
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "maybeSwitchToSpeaker: hit exception=[$e]")
-        }
-    }
-
-    /**
-     * Due to the fact that OEMs may diverge from AOSP telecom platform behavior, Core-Telecom needs
-     * to ensure that if a video calls headset disconnects, the speakerphone is defaulted instead of
-     * the earpiece route.
-     */
-    @VisibleForTesting
-    fun maybeSwitchToSpeakerOnHeadsetDisconnect(
-        newEndpoint: CallEndpointCompat,
-        previousEndpoint: CallEndpointCompat?
-    ) {
-        try {
-            if (
-                mIsCurrentlyDisplayingVideo &&
-                    /* Only switch if the users headset disconnects & earpiece is defaulted */
-                    isEarpieceEndpoint(newEndpoint) &&
-                    isWiredHeadsetOrBtEndpoint(previousEndpoint) &&
-                    /* Do not switch request a switch to speaker if the client specifically requested
-                     * to switch from the headset from an earpiece */
-                    !isEarpieceEndpoint(mLastClientRequestedEndpoint)
-            ) {
-                val speakerCompat = getSpeakerEndpoint(mAvailableEndpoints)
-                if (speakerCompat != null) {
-                    Log.i(
-                        TAG,
-                        "maybeSwitchToSpeakerOnHeadsetDisconnect: headset disconnected while" +
-                            " in a video call. requesting switch to speaker."
-                    )
-                    mPlatformInterface?.requestCallEndpointChange(
-                        EndpointUtils.Api34PlusImpl.toCallEndpoint(speakerCompat),
-                        Runnable::run,
-                        {}
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "maybeSwitchToSpeakerOnHeadsetDisconnect: exception=[$e]")
         }
     }
 
@@ -196,11 +135,13 @@ internal class CallSession(
      * CallControl is set by CallsManager#addCall when the CallControl object is returned by the
      * platform
      */
-    fun setCallControl(control: CallControl) {
+    fun setCallControl(control: android.telecom.CallControl) {
         mPlatformInterface = control
     }
 
-    /** Custom OutcomeReceiver that handles the Platform responses to a CallControl API call */
+    /**
+     * Custom OutcomeReceiver that handles the Platform responses to a CallControl API call
+     */
     inner class CallControlReceiver(deferred: CompletableDeferred<CallControlResult>) :
         OutcomeReceiver<Void, CallException> {
         private val mResultDeferred: CompletableDeferred<CallControlResult> = deferred
@@ -210,11 +151,8 @@ internal class CallSession(
         }
 
         override fun onError(error: CallException) {
-            mResultDeferred.complete(
-                CallControlResult.Error(
-                    androidx.core.telecom.CallException.fromTelecomCode(error.code)
-                )
-            )
+            mResultDeferred.complete(CallControlResult.Error(
+                androidx.core.telecom.CallException.fromTelecomCode(error.code)))
         }
     }
 
@@ -243,16 +181,11 @@ internal class CallSession(
         return result.getCompleted()
     }
 
-    suspend fun requestEndpointChange(endpoint: CallEndpoint): CallControlResult {
+    suspend fun requestEndpointChange(endpoint: android.telecom.CallEndpoint): CallControlResult {
         val result: CompletableDeferred<CallControlResult> = CompletableDeferred()
-        // cache the last CallEndpoint the user requested to reference in
-        // onCurrentCallEndpointChanged. This is helpful for determining if the user intentionally
-        // requested a CallEndpoint switch or a headset was disconnected ...
-        mLastClientRequestedEndpoint = EndpointUtils.Api34PlusImpl.toCallEndpointCompat(endpoint)
         mPlatformInterface?.requestCallEndpointChange(
             endpoint,
-            Runnable::run,
-            CallControlReceiver(result)
+            Runnable::run, CallControlReceiver(result)
         )
         result.await()
         return result.getCompleted()
@@ -260,14 +193,20 @@ internal class CallSession(
 
     suspend fun disconnect(disconnectCause: DisconnectCause): CallControlResult {
         val result: CompletableDeferred<CallControlResult> = CompletableDeferred()
-        mPlatformInterface?.disconnect(disconnectCause, Runnable::run, CallControlReceiver(result))
+        mPlatformInterface?.disconnect(
+            disconnectCause,
+            Runnable::run,
+            CallControlReceiver(result)
+        )
         result.await()
         return result.getCompleted()
     }
 
-    /** CallControlCallback */
-    override fun onSetActive(wasCompleted: Consumer<Boolean>) {
-        CoroutineScope(coroutineContext).launch {
+    /**
+     * CallControlCallback
+     */
+    fun onSetActive(wasCompleted: Consumer<Boolean>) {
+        CoroutineScope(mCoroutineContext).launch {
             try {
                 onSetActiveCallback()
                 wasCompleted.accept(true)
@@ -277,8 +216,8 @@ internal class CallSession(
         }
     }
 
-    override fun onSetInactive(wasCompleted: Consumer<Boolean>) {
-        CoroutineScope(coroutineContext).launch {
+    fun onSetInactive(wasCompleted: Consumer<Boolean>) {
+        CoroutineScope(mCoroutineContext).launch {
             try {
                 onSetInactiveCallback()
                 wasCompleted.accept(true)
@@ -288,8 +227,8 @@ internal class CallSession(
         }
     }
 
-    override fun onAnswer(videoState: Int, wasCompleted: Consumer<Boolean>) {
-        CoroutineScope(coroutineContext).launch {
+    fun onAnswer(videoState: Int, wasCompleted: Consumer<Boolean>) {
+        CoroutineScope(mCoroutineContext).launch {
             try {
                 onAnswerCallback(videoState)
                 wasCompleted.accept(true)
@@ -299,8 +238,8 @@ internal class CallSession(
         }
     }
 
-    override fun onDisconnect(cause: DisconnectCause, wasCompleted: Consumer<Boolean>) {
-        CoroutineScope(coroutineContext).launch {
+    fun onDisconnect(cause: DisconnectCause, wasCompleted: Consumer<Boolean>) {
+        CoroutineScope(mCoroutineContext).launch {
             try {
                 onDisconnectCallback(cause)
                 wasCompleted.accept(true)
@@ -313,10 +252,6 @@ internal class CallSession(
         }
     }
 
-    override fun onCallStreamingStarted(wasCompleted: Consumer<Boolean>) {
-        TODO("Implement with the CallStreaming code")
-    }
-
     private fun handleCallbackFailure(wasCompleted: Consumer<Boolean>, e: Exception) {
         wasCompleted.accept(false)
         blockingSessionExecution.complete(Unit)
@@ -325,7 +260,7 @@ internal class CallSession(
 
     /**
      * =========================================================================================
-     * Simple implementation of [CallControlScope] with a [CallSession] as the session.
+     *  Simple implementation of [CallControlScope] with a [CallSession] as the session.
      * =========================================================================================
      */
     class CallControlScopeImpl(
@@ -337,7 +272,8 @@ internal class CallSession(
         // handle requests that originate from the client and propagate into platform
         //  return the platforms response which indicates success of the request.
         override fun getCallId(): ParcelUuid {
-            CoroutineScope(session.coroutineContext).launch {}
+            CoroutineScope(session.mCoroutineContext).launch {
+            }
             return session.getCallId()
         }
 
@@ -359,9 +295,8 @@ internal class CallSession(
             return response
         }
 
-        override suspend fun requestEndpointChange(
-            endpoint: CallEndpointCompat
-        ): CallControlResult {
+        override suspend fun requestEndpointChange(endpoint: CallEndpointCompat):
+            CallControlResult {
             return session.requestEndpointChange(
                 EndpointUtils.Api34PlusImpl.toCallEndpoint(endpoint)
             )
@@ -374,6 +309,7 @@ internal class CallSession(
         override val availableEndpoints: Flow<List<CallEndpointCompat>> =
             callChannels.availableEndpointChannel.receiveAsFlow()
 
-        override val isMuted: Flow<Boolean> = callChannels.isMutedChannel.receiveAsFlow()
+        override val isMuted: Flow<Boolean> =
+            callChannels.isMutedChannel.receiveAsFlow()
     }
 }

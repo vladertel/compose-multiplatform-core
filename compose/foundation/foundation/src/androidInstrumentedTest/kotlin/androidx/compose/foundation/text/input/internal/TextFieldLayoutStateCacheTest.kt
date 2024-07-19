@@ -41,6 +41,7 @@ import androidx.test.filters.FlakyTest
 import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -57,15 +58,15 @@ import org.junit.runner.RunWith
 @MediumTest
 class TextFieldLayoutStateCacheTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private var textFieldState = TextFieldState()
-    private var transformedTextFieldState =
-        TransformedTextFieldState(
-            textFieldState,
-            inputTransformation = null,
-            codepointTransformation = null
-        )
+    private var transformedTextFieldState = TransformedTextFieldState(
+        textFieldState,
+        inputTransformation = null,
+        codepointTransformation = null
+    )
     private var textStyle = TextStyle()
     private var singleLine = false
     private var softWrap = false
@@ -80,8 +81,9 @@ class TextFieldLayoutStateCacheTest {
 
     @Before
     fun setUp() {
-        globalWriteObserverHandle =
-            Snapshot.registerGlobalWriteObserver { Snapshot.sendApplyNotifications() }
+        globalWriteObserverHandle = Snapshot.registerGlobalWriteObserver {
+            Snapshot.sendApplyNotifications()
+        }
     }
 
     @After
@@ -117,19 +119,22 @@ class TextFieldLayoutStateCacheTest {
             append("hello")
             placeCursorBeforeCharAt(0)
         }
-        assertInvalidationsOnChange(1) { textFieldState.edit { placeCursorBeforeCharAt(1) } }
+        assertInvalidationsOnChange(1) {
+            textFieldState.edit {
+                placeCursorBeforeCharAt(1)
+            }
+        }
     }
 
     @Test
     fun updateNonMeasureInputs_invalidatesSnapshot_whenCodepointTransformationChanged() {
         assertInvalidationsOnChange(1) {
             val codepointTransformation = CodepointTransformation { _, codepoint -> codepoint }
-            transformedTextFieldState =
-                TransformedTextFieldState(
-                    textFieldState,
-                    inputTransformation = null,
-                    codepointTransformation
-                )
+            transformedTextFieldState = TransformedTextFieldState(
+                textFieldState,
+                inputTransformation = null,
+                codepointTransformation
+            )
             updateNonMeasureInputs()
         }
     }
@@ -217,13 +222,11 @@ class TextFieldLayoutStateCacheTest {
     @Test
     fun updateMeasureInputs_invalidatesSnapshot_whenDensityValueChangedWithSameInstance() {
         var densityValue = 1f
-        density =
-            object : Density {
-                override val density: Float
-                    get() = densityValue
-
-                override val fontScale: Float = 1f
-            }
+        density = object : Density {
+            override val density: Float
+                get() = densityValue
+            override val fontScale: Float = 1f
+        }
         assertInvalidationsOnChange(1) {
             densityValue = 2f
             updateMeasureInputs()
@@ -233,12 +236,11 @@ class TextFieldLayoutStateCacheTest {
     @Test
     fun updateMeasureInputs_invalidatesSnapshot_whenFontScaleChangedWithSameInstance() {
         var fontScale = 1f
-        density =
-            object : Density {
-                override val density: Float = 1f
-                override val fontScale: Float
-                    get() = fontScale
-            }
+        density = object : Density {
+            override val density: Float = 1f
+            override val fontScale: Float
+                get() = fontScale
+        }
         assertInvalidationsOnChange(1) {
             fontScale = 2f
             updateMeasureInputs()
@@ -268,7 +270,9 @@ class TextFieldLayoutStateCacheTest {
     fun updateMeasureInputs_invalidatesSnapshot_whenFontFamilyResolverFontChanged() {
         fontFamilyResolver =
             createFontFamilyResolver(InstrumentationRegistry.getInstrumentation().context)
-        assertInvalidationsOnChange(1) { TODO("b/294443266: make fonts stale") }
+        assertInvalidationsOnChange(1) {
+            TODO("b/294443266: make fonts stale")
+        }
     }
 
     @Test
@@ -305,15 +309,14 @@ class TextFieldLayoutStateCacheTest {
         var transformationInvocations = 0
         val codepointTransformation = CodepointTransformation { _, codepoint ->
             transformationInvocations++
-            @Suppress("UNUSED_EXPRESSION") transformationState
+            @Suppress("UNUSED_EXPRESSION")
+            transformationState
             codepoint + 1
         }
-        transformedTextFieldState =
-            TransformedTextFieldState(
-                textFieldState,
-                inputTransformation = null,
-                codepointTransformation
-            )
+        transformedTextFieldState = TransformedTextFieldState(
+            textFieldState, inputTransformation = null,
+            codepointTransformation
+        )
         // Transformation isn't applied if there's no text. Keep this at 1 char to make the math
         // simpler.
         textFieldState.setTextAndPlaceCursorAtEnd("h")
@@ -335,27 +338,17 @@ class TextFieldLayoutStateCacheTest {
             secondaryObserver.start()
 
             // This will compute the initial layout.
-            primaryObserver.observeReads(
-                Unit,
-                onValueChangedForScope = {
-                    primaryInvalidations++
-                    assertVisualText()
-                }
-            ) {
+            primaryObserver.observeReads(Unit, onValueChangedForScope = {
+                primaryInvalidations++
                 assertVisualText()
-            }
+            }) { assertVisualText() }
             Truth.assertThat(transformationInvocations).isEqualTo(1)
 
             // This should be a full cache hit.
-            secondaryObserver.observeReads(
-                Unit,
-                onValueChangedForScope = {
-                    secondaryInvalidations++
-                    assertVisualText()
-                }
-            ) {
+            secondaryObserver.observeReads(Unit, onValueChangedForScope = {
+                secondaryInvalidations++
                 assertVisualText()
-            }
+            }) { assertVisualText() }
             Truth.assertThat(transformationInvocations).isEqualTo(1)
 
             // Invalidate the transformation.
@@ -380,12 +373,11 @@ class TextFieldLayoutStateCacheTest {
             transformationInvocations++
             codepoint + transformationState
         }
-        transformedTextFieldState =
-            TransformedTextFieldState(
-                textFieldState,
-                inputTransformation = null,
-                codepointTransformation
-            )
+        transformedTextFieldState = TransformedTextFieldState(
+            textFieldState,
+            inputTransformation = null,
+            codepointTransformation
+        )
         // Transformation isn't applied if there's no text. Keep this at 1 char to make the math
         // simpler.
         textFieldState.setTextAndPlaceCursorAtEnd("h")
@@ -407,27 +399,17 @@ class TextFieldLayoutStateCacheTest {
             secondaryObserver.start()
 
             // This will compute the initial layout.
-            primaryObserver.observeReads(
-                Unit,
-                onValueChangedForScope = {
-                    primaryInvalidations++
-                    assertVisualText()
-                }
-            ) {
+            primaryObserver.observeReads(Unit, onValueChangedForScope = {
+                primaryInvalidations++
                 assertVisualText()
-            }
+            }) { assertVisualText() }
             Truth.assertThat(transformationInvocations).isEqualTo(1)
 
             // This should be a full cache hit.
-            secondaryObserver.observeReads(
-                Unit,
-                onValueChangedForScope = {
-                    secondaryInvalidations++
-                    assertVisualText()
-                }
-            ) {
+            secondaryObserver.observeReads(Unit, onValueChangedForScope = {
+                secondaryInvalidations++
                 assertVisualText()
-            }
+            }) { assertVisualText() }
             Truth.assertThat(transformationInvocations).isEqualTo(1)
 
             // Invalidate the transformation.
@@ -472,22 +454,37 @@ class TextFieldLayoutStateCacheTest {
         }
         assertLayoutChange(
             change = {
-                textFieldState.editAsUser(inputTransformation = null) { setComposingRegion(2, 3) }
+                textFieldState.editAsUser(inputTransformation = null) {
+                    setComposingRegion(2, 3)
+                }
             },
         ) { old, new ->
             Truth.assertThat(
-                    old.multiParagraph.intrinsics.annotatedString.spanStyles.any {
-                        it.item.textDecoration == TextDecoration.Underline
-                    }
-                )
-                .isFalse()
+                old.multiParagraph.intrinsics.annotatedString.spanStyles.any {
+                    it.item.textDecoration == TextDecoration.Underline
+                }
+            ).isFalse()
             Truth.assertThat(
-                    new.multiParagraph.intrinsics.annotatedString.spanStyles.any {
-                        it.item.textDecoration == TextDecoration.Underline
-                    }
-                )
-                .isTrue()
+                new.multiParagraph.intrinsics.annotatedString.spanStyles.any {
+                    it.item.textDecoration == TextDecoration.Underline
+                }
+            ).isTrue()
         }
+    }
+
+    @Test
+    fun value_returnsCachedLayout_whenCompositionDoesNotChange() {
+        textFieldState.editAsUser(inputTransformation = null) {
+            replace(0, length, "hello")
+            setSelection(0, 0)
+            setComposition(0, 5)
+        }
+        updateNonMeasureInputs()
+        updateMeasureInputs()
+        val initialLayout = cache.value
+        // this shouldn't cause a recompute
+        val secondLayout = cache.value
+        assertThat(initialLayout).isSameInstanceAs(secondLayout)
     }
 
     @Test
@@ -496,9 +493,13 @@ class TextFieldLayoutStateCacheTest {
             replace(0, length, "hello")
             placeCursorBeforeCharAt(0)
         }
-        assertLayoutChange(change = { textFieldState.edit { placeCursorBeforeCharAt(1) } }) {
-            old,
-            new ->
+        assertLayoutChange(
+            change = {
+                textFieldState.edit {
+                    placeCursorBeforeCharAt(1)
+                }
+            }
+        ) { old, new ->
             Truth.assertThat(new).isSameInstanceAs(old)
         }
     }
@@ -507,21 +508,19 @@ class TextFieldLayoutStateCacheTest {
     fun value_returnsNewLayout_whenCodepointTransformationInstanceChangedWithDifferentOutput() {
         textFieldState.setTextAndPlaceCursorAtEnd("h")
         var codepointTransformation = CodepointTransformation { _, codepoint -> codepoint }
-        transformedTextFieldState =
-            TransformedTextFieldState(
-                textFieldState,
-                inputTransformation = null,
-                codepointTransformation
-            )
+        transformedTextFieldState = TransformedTextFieldState(
+            textFieldState,
+            inputTransformation = null,
+            codepointTransformation
+        )
         assertLayoutChange(
             change = {
                 codepointTransformation = CodepointTransformation { _, codepoint -> codepoint + 1 }
-                transformedTextFieldState =
-                    TransformedTextFieldState(
-                        textFieldState,
-                        inputTransformation = null,
-                        codepointTransformation
-                    )
+                transformedTextFieldState = TransformedTextFieldState(
+                    textFieldState,
+                    inputTransformation = null,
+                    codepointTransformation
+                )
                 updateNonMeasureInputs()
             }
         ) { old, new ->
@@ -534,21 +533,19 @@ class TextFieldLayoutStateCacheTest {
     fun value_returnsCachedLayout_whenCodepointTransformationInstanceChangedWithSameOutput() {
         textFieldState.setTextAndPlaceCursorAtEnd("h")
         var codepointTransformation = CodepointTransformation { _, codepoint -> codepoint }
-        transformedTextFieldState =
-            TransformedTextFieldState(
-                textFieldState,
-                inputTransformation = null,
-                codepointTransformation
-            )
+        transformedTextFieldState = TransformedTextFieldState(
+            textFieldState,
+            inputTransformation = null,
+            codepointTransformation
+        )
         assertLayoutChange(
             change = {
                 codepointTransformation = CodepointTransformation { _, codepoint -> codepoint }
-                transformedTextFieldState =
-                    TransformedTextFieldState(
-                        textFieldState,
-                        inputTransformation = null,
-                        codepointTransformation
-                    )
+                transformedTextFieldState = TransformedTextFieldState(
+                    textFieldState,
+                    inputTransformation = null,
+                    codepointTransformation
+                )
                 updateNonMeasureInputs()
             }
         ) { old, new ->
@@ -615,13 +612,11 @@ class TextFieldLayoutStateCacheTest {
     @Test
     fun value_returnsNewLayout_whenDensityValueChangedWithSameInstance() {
         var densityValue = 1f
-        density =
-            object : Density {
-                override val density: Float
-                    get() = densityValue
-
-                override val fontScale: Float = 1f
-            }
+        density = object : Density {
+            override val density: Float
+                get() = densityValue
+            override val fontScale: Float = 1f
+        }
         assertLayoutChange(
             change = {
                 densityValue = 2f
@@ -635,12 +630,11 @@ class TextFieldLayoutStateCacheTest {
     @Test
     fun value_returnsNewLayout_whenFontScaleChangedWithSameInstance() {
         var fontScale = 1f
-        density =
-            object : Density {
-                override val density: Float = 1f
-                override val fontScale: Float
-                    get() = fontScale
-            }
+        density = object : Density {
+            override val density: Float = 1f
+            override val fontScale: Float
+                get() = fontScale
+        }
         assertLayoutChange(
             change = {
                 fontScale = 2f
@@ -696,7 +690,11 @@ class TextFieldLayoutStateCacheTest {
     fun value_returnsNewLayout_whenFontFamilyResolverFontChanged() {
         fontFamilyResolver =
             createFontFamilyResolver(InstrumentationRegistry.getInstrumentation().context)
-        assertLayoutChange(change = { TODO("b/294443266: make fonts stale") }) { old, new ->
+        assertLayoutChange(
+            change = {
+                TODO("b/294443266: make fonts stale")
+            }
+        ) { old, new ->
             Truth.assertThat(new).isNotSameInstanceAs(old)
         }
     }
@@ -870,8 +868,7 @@ class TextFieldLayoutStateCacheTest {
         }
 
         Truth.assertWithMessage("Expected $expectedInvalidations invalidations")
-            .that(invalidations)
-            .isEqualTo(expectedInvalidations)
+            .that(invalidations).isEqualTo(expectedInvalidations)
     }
 
     private fun updateNonMeasureInputs() {

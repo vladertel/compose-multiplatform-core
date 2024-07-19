@@ -46,7 +46,8 @@ import org.junit.Test
 @MediumTest
 class PositionsTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun testCornersEdgesAndCenter() {
@@ -93,7 +94,9 @@ class PositionsTest {
     fun testDensity() {
         val expectedDensity = Density(0.8238974f, 0.923457f) // random value
         rule.setContent {
-            CompositionLocalProvider(LocalDensity provides expectedDensity) {
+            CompositionLocalProvider(
+                LocalDensity provides expectedDensity
+            ) {
                 ClickableTestBox(width = 3f, height = 100f)
             }
         }

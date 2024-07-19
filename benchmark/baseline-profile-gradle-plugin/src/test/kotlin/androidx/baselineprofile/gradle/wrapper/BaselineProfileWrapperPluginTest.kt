@@ -18,25 +18,18 @@ package androidx.baselineprofile.gradle.wrapper
 
 import androidx.baselineprofile.gradle.utils.BaselineProfileProjectSetupRule
 import androidx.baselineprofile.gradle.utils.Module
-import androidx.baselineprofile.gradle.utils.TestAgpVersion
 import com.google.common.truth.IterableSubject
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
+import org.junit.runners.JUnit4
 
-@RunWith(Parameterized::class)
-class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
-
-    companion object {
-        @Parameterized.Parameters(name = "agpVersion={0}")
-        @JvmStatic
-        fun parameters() = TestAgpVersion.all()
-    }
+@RunWith(JUnit4::class)
+class BaselineProfileWrapperPluginTest {
 
     @get:Rule
-    val projectSetup = BaselineProfileProjectSetupRule(forceAgpVersion = agpVersion.versionString)
+    val projectSetup = BaselineProfileProjectSetupRule()
 
     @Test
     fun testWrapperGeneratingForApplication() {
@@ -50,8 +43,7 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
                 dependencies { baselineProfile(project(":${projectSetup.producer.name}")) }
 
                 $taskPrintPlugins
-            """
-                .trimIndent()
+            """.trimIndent()
         )
         projectSetup.producer.setBuildGradle(
             """
@@ -65,8 +57,7 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
                 }
 
                 $taskPrintPlugins
-            """
-                .trimIndent()
+            """.trimIndent()
         )
 
         projectSetup.consumer.printPluginsAndAssertOutput {
@@ -89,8 +80,7 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
                 android { namespace 'com.example.namespace.test' }
 
                 $taskPrintPlugins
-            """
-                .trimIndent()
+            """.trimIndent()
         )
         projectSetup.consumer.setBuildGradle(
             """
@@ -102,8 +92,7 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
                 dependencies { baselineProfile(project(":${projectSetup.producer.name}")) }
 
                 $taskPrintPlugins
-            """
-                .trimIndent()
+            """.trimIndent()
         )
         projectSetup.producer.setBuildGradle(
             """
@@ -117,8 +106,7 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
                 }
 
                 $taskPrintPlugins
-            """
-                .trimIndent()
+            """.trimIndent()
         )
 
         projectSetup.appTarget.printPluginsAndAssertOutput {
@@ -133,9 +121,14 @@ class BaselineProfileWrapperPluginTest(agpVersion: TestAgpVersion) {
         }
     }
 
-    private fun Module.printPluginsAndAssertOutput(assertBlock: IterableSubject.() -> (Unit)) {
-        val output =
-            gradleRunner.withArguments("printPlugins", "--stacktrace").build().output.lines()
+    private fun Module.printPluginsAndAssertOutput(
+        assertBlock: IterableSubject.() -> (Unit)
+    ) {
+        val output = gradleRunner
+            .withArguments("printPlugins", "--stacktrace")
+            .build()
+            .output
+            .lines()
         assertBlock(assertThat(output))
     }
 }
@@ -147,11 +140,9 @@ private const val CLASS_APP_TARGET_PLUGIN =
 private const val CLASS_PRODUCER_PLUGIN =
     "androidx.baselineprofile.gradle.producer.BaselineProfileProducerPlugin"
 
-private val taskPrintPlugins =
-    """
+private val taskPrintPlugins = """
 tasks.register("printPlugins", PrintTask) { t ->
     def pluginsList = project.plugins.collect { it.class.toString() }.join("\n")
     t.text.set(pluginsList)
 }
-"""
-        .trimIndent()
+""".trimIndent()

@@ -42,7 +42,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun measure_animation() {
@@ -54,12 +55,16 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
             Layout { _, _ ->
                 measures++
                 state
-                layout(1, 1) { placements++ }
+                layout(1, 1) {
+                    placements++
+                }
             }
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -87,7 +92,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -108,13 +115,12 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
         rule.setContent {
             AndroidView(
                 // Animate the constraints of the View.
-                modifier =
-                    Modifier.layout { measurable, _ ->
-                        val placeable = measurable.measure(Constraints.fixed(size, size))
-                        layout(placeable.width, placeable.height) {
-                            placeable.place(IntOffset.Zero)
-                        }
-                    },
+                modifier = Modifier.layout { measurable, _ ->
+                    val placeable = measurable.measure(Constraints.fixed(size, size))
+                    layout(placeable.width, placeable.height) {
+                        placeable.place(IntOffset.Zero)
+                    }
+                },
                 factory = {
                     object : View(it) {
                         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -138,7 +144,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { size++ }
+                    withFrameNanos {
+                        size++
+                    }
                 }
             }
         }
@@ -165,7 +173,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
                             Layout { _, _ ->
                                 nestedMeasures++
                                 state
-                                layout(1, 1) { nestedPlacements++ }
+                                layout(1, 1) {
+                                    nestedPlacements++
+                                }
                             }
                         }
                     }
@@ -174,7 +184,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -212,7 +224,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -231,22 +245,27 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
         var placements = 0
         rule.setContent {
             SubcomposeLayout { constraints ->
-                val measurables =
-                    subcompose(null) {
-                        Layout { _, _ ->
-                            measures++
-                            state
-                            layout(1, 1) { placements++ }
+                val measurables = subcompose(null) {
+                    Layout { _, _ ->
+                        measures++
+                        state
+                        layout(1, 1) {
+                            placements++
                         }
                     }
+                }
                 val placeable = measurables.single().measure(constraints)
 
-                layout(1, 1) { placeable.place(IntOffset.Zero) }
+                layout(1, 1) {
+                    placeable.place(IntOffset.Zero)
+                }
             }
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -265,24 +284,27 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
         var placements = 0
         rule.setContent {
             SubcomposeLayout { constraints ->
-                val measurables =
-                    subcompose(null) {
-                        Layout { _, _ ->
-                            measures++
-                            layout(1, 1) {
-                                placements++
-                                state
-                            }
+                val measurables = subcompose(null) {
+                    Layout { _, _ ->
+                        measures++
+                        layout(1, 1) {
+                            placements++
+                            state
                         }
                     }
+                }
                 val placeable = measurables.single().measure(constraints)
 
-                layout(1, 1) { placeable.place(IntOffset.Zero) }
+                layout(1, 1) {
+                    placeable.place(IntOffset.Zero)
+                }
             }
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -302,14 +324,15 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
         rule.setContent {
             SubcomposeLayout { constraints ->
                 layout(1, 1) {
-                    val measurables =
-                        subcompose(null) {
-                            Layout { _, _ ->
-                                measures++
-                                state
-                                layout(1, 1) { placements++ }
+                    val measurables = subcompose(null) {
+                        Layout { _, _ ->
+                            measures++
+                            state
+                            layout(1, 1) {
+                                placements++
                             }
                         }
+                    }
                     val placeable = measurables.single().measure(constraints)
                     placeable.place(IntOffset.Zero)
                 }
@@ -317,7 +340,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }
@@ -337,16 +362,15 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
         rule.setContent {
             SubcomposeLayout { constraints ->
                 layout(1, 1) {
-                    val measurables =
-                        subcompose(null) {
-                            Layout { _, _ ->
-                                measures++
-                                layout(1, 1) {
-                                    placements++
-                                    state
-                                }
+                    val measurables = subcompose(null) {
+                        Layout { _, _ ->
+                            measures++
+                            layout(1, 1) {
+                                placements++
+                                state
                             }
                         }
+                    }
                     val placeable = measurables.single().measure(constraints)
                     placeable.place(IntOffset.Zero)
                 }
@@ -354,7 +378,9 @@ class TestRuleExecutesLayoutPassesWhenWaitingForIdleTest {
 
             LaunchedEffect(Unit) {
                 for (i in 0 until numUpdates) {
-                    withFrameNanos { state++ }
+                    withFrameNanos {
+                        state++
+                    }
                 }
             }
         }

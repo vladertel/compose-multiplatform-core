@@ -39,7 +39,8 @@ internal enum class LifecycleSource {
 @RunWith(AndroidJUnit4::class)
 class ComponentActivityLifecycleTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     @Throws(Throwable::class)
@@ -67,8 +68,7 @@ class ComponentActivityLifecycleTest {
                 LifecycleSource.ACTIVITY_CALLBACK to Lifecycle.Event.ON_STOP,
                 LifecycleSource.ACTIVITY to Lifecycle.Event.ON_DESTROY,
                 LifecycleSource.ACTIVITY_CALLBACK to Lifecycle.Event.ON_DESTROY
-            )
-            .inOrder()
+            ).inOrder()
     }
 }
 
@@ -80,7 +80,9 @@ class LifecycleComponentActivity : ComponentActivity() {
             events.add(LifecycleSource.CONTEXT_AWARE to Lifecycle.Event.ON_CREATE)
         }
         lifecycle.addObserver(
-            LifecycleEventObserver { _, event -> events.add(LifecycleSource.ACTIVITY to event) }
+            LifecycleEventObserver { _, event ->
+                events.add(LifecycleSource.ACTIVITY to event)
+            }
         )
     }
 

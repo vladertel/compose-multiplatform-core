@@ -20,8 +20,7 @@ package androidx.window.embedding
  * Layout configuration rules for individual activities with split layouts. Take precedence over
  * [SplitPairRule].
  */
-class ActivityRule
-internal constructor(
+class ActivityRule internal constructor(
     tag: String?,
     /**
      * Filters used to choose when to apply this rule. The rule will be applied if any one of the
@@ -55,16 +54,16 @@ internal constructor(
          * @param alwaysExpand whether the activity should always be expanded on launch.
          */
         @SuppressWarnings("MissingGetterMatchingBuilder")
-        fun setAlwaysExpand(alwaysExpand: Boolean): Builder = apply {
-            this.alwaysExpand = alwaysExpand
-        }
+        fun setAlwaysExpand(alwaysExpand: Boolean): Builder =
+            apply { this.alwaysExpand = alwaysExpand }
 
         /**
          * Sets a unique string to identify this [ActivityRule], which defaults to `null`.
          *
          * @param tag unique string to identify this [ActivityRule].
          */
-        fun setTag(tag: String?): Builder = apply { this.tag = tag }
+        fun setTag(tag: String?): Builder =
+            apply { this.tag = tag }
 
         /**
          * Builds an `ActivityRule` instance.
@@ -76,7 +75,6 @@ internal constructor(
 
     /**
      * Creates a new immutable instance by adding a filter to the set.
-     *
      * @see filters
      */
     internal operator fun plus(filter: ActivityFilter): ActivityRule {

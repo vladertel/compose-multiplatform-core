@@ -41,11 +41,14 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{1}")
-        fun initColors() =
-            arrayOf(arrayOf(lightColors(), "Light theme"), arrayOf(darkColors(), "Dark theme"))
+        fun initColors() = arrayOf(
+            arrayOf(lightColors(), "Light theme"),
+            arrayOf(darkColors(), "Dark theme")
+        )
     }
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun noContentAlphaSpecified_contentColorUnmodified_surface() {
@@ -175,12 +178,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.9f, 0.9f, 0.9f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                HighContrastHighContentAlpha
-                            } else {
-                                ReducedContrastHighContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            HighContrastHighContentAlpha
+                        } else {
+                            ReducedContrastHighContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }
@@ -195,12 +197,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.9f, 0.9f, 0.9f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                HighContrastMediumContentAlpha
-                            } else {
-                                ReducedContrastMediumContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            HighContrastMediumContentAlpha
+                        } else {
+                            ReducedContrastMediumContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }
@@ -215,12 +216,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.9f, 0.9f, 0.9f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.disabled) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                HighContrastDisabledContentAlpha
-                            } else {
-                                ReducedContrastDisabledContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            HighContrastDisabledContentAlpha
+                        } else {
+                            ReducedContrastDisabledContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }
@@ -235,12 +235,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.1f, 0.1f, 0.1f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.high) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                ReducedContrastHighContentAlpha
-                            } else {
-                                HighContrastHighContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            ReducedContrastHighContentAlpha
+                        } else {
+                            HighContrastHighContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }
@@ -255,12 +254,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.1f, 0.1f, 0.1f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                ReducedContrastMediumContentAlpha
-                            } else {
-                                HighContrastMediumContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            ReducedContrastMediumContentAlpha
+                        } else {
+                            HighContrastMediumContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }
@@ -275,12 +273,11 @@ class ContentAlphaTest(private val colors: Colors, private val debugParameterNam
                 val contentColor = Color(0.1f, 0.1f, 0.1f)
                 Surface(contentColor = contentColor) {
                     CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.disabled) {
-                        val expectedAlpha =
-                            if (colors.isLight) {
-                                ReducedContrastDisabledContentAlpha
-                            } else {
-                                HighContrastDisabledContentAlpha
-                            }
+                        val expectedAlpha = if (colors.isLight) {
+                            ReducedContrastDisabledContentAlpha
+                        } else {
+                            HighContrastDisabledContentAlpha
+                        }
                         assertThat(LocalContentAlpha.current).isEqualTo(expectedAlpha)
                     }
                 }

@@ -61,7 +61,9 @@ class ExpectWithStackTest {
         }
 
         expectWithTrace.that(true).isFalse()
-        expectWithTrace.that(alwaysFailWithCause()).isEqualTo(5)
+        expectWithTrace
+            .that(alwaysFailWithCause())
+            .isEqualTo(5)
     }
 
     @Test
@@ -72,7 +74,9 @@ class ExpectWithStackTest {
                 .isAtLeast(2)
         }
 
-        expectWithTrace.that(alwaysFailWithCause()).isEqualTo(5)
+        expectWithTrace
+            .that(alwaysFailWithCause())
+            .isEqualTo(5)
     }
 }
 

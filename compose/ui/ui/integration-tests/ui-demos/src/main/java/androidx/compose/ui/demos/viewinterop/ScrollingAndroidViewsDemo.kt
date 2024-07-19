@@ -56,7 +56,10 @@ fun ScrollingAndroidViewsDemo() {
                 Text("Check All")
             }
 
-            Button(onClick = { checkedItems = emptySet() }, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = { checkedItems = emptySet() },
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Uncheck All")
             }
         }
@@ -65,7 +68,8 @@ fun ScrollingAndroidViewsDemo() {
             checkedItems = checkedItems,
             onChangeCheck = { item, checked ->
                 @Suppress("SuspiciousCollectionReassignment")
-                if (checked) checkedItems += item else checkedItems -= item
+                if (checked) checkedItems += item
+                else checkedItems -= item
             }
         )
     }
@@ -95,10 +99,13 @@ private fun RecyclingAndroidViewLazyColumn(
                         }
                 },
                 update = { view ->
-                    view.findViewById<TextView>(R.id.android_view_row_label).text = "Item $index"
+                    view.findViewById<TextView>(R.id.android_view_row_label).text =
+                        "Item $index"
 
                     view.findViewById<CheckBox>(R.id.android_view_row_checkbox).apply {
-                        setOnCheckedChangeListener { _, checked -> onChangeCheck(index, checked) }
+                        setOnCheckedChangeListener { _, checked ->
+                            onChangeCheck(index, checked)
+                        }
 
                         isChecked = index in checkedItems
                         if (view in resetViews) {
@@ -109,8 +116,12 @@ private fun RecyclingAndroidViewLazyColumn(
                         }
                     }
                 },
-                onReset = { view -> resetViews += view },
-                onRelease = { view -> resetViews -= view }
+                onReset = { view ->
+                    resetViews += view
+                },
+                onRelease = { view ->
+                    resetViews -= view
+                }
             )
         }
     }

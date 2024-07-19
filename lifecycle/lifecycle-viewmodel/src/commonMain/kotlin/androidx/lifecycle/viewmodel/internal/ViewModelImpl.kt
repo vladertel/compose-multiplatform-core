@@ -51,10 +51,13 @@ internal class ViewModelImpl {
      */
     private val keyToCloseables = mutableMapOf<String, AutoCloseable>()
 
-    /** @see [keyToCloseables] */
+    /**
+     * @see [keyToCloseables]
+     */
     private val closeables = mutableSetOf<AutoCloseable>()
 
-    @Volatile private var isCleared = false
+    @Volatile
+    private var isCleared = false
 
     constructor()
 
@@ -119,7 +122,8 @@ internal class ViewModelImpl {
 
     /** @see [ViewModel.getCloseable] */
     fun <T : AutoCloseable> getCloseable(key: String): T? =
-        @Suppress("UNCHECKED_CAST") synchronized(lock) { keyToCloseables[key] as T? }
+        @Suppress("UNCHECKED_CAST")
+        synchronized(lock) { keyToCloseables[key] as T? }
 
     private fun closeWithRuntimeException(closeable: AutoCloseable?) {
         try {

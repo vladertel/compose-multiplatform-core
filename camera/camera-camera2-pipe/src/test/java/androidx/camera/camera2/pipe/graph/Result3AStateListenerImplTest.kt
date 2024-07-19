@@ -80,9 +80,10 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN
+                )
             )
 
         listenerForKeys.update(RequestNumber(1), frameMetadata)
@@ -103,10 +104,10 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
         assertThat(listenerForKeys.result.isCompleted).isTrue()
@@ -126,9 +127,9 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_CONVERGED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_CONVERGED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
         assertThat(listenerForKeys.result.isCompleted).isFalse()
@@ -144,7 +145,8 @@ internal class Result3AStateListenerImplTest {
                             CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
                             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
                         ),
-                    CaptureResult.CONTROL_AE_STATE to listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
+                    CaptureResult.CONTROL_AE_STATE to
+                        listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
                 )
             )
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
@@ -152,11 +154,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                        CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
         assertThat(listenerForKeys.result.isCompleted).isTrue()
@@ -172,7 +174,8 @@ internal class Result3AStateListenerImplTest {
                             CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
                             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
                         ),
-                    CaptureResult.CONTROL_AE_STATE to listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
+                    CaptureResult.CONTROL_AE_STATE to
+                        listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
                 )
             )
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
@@ -180,10 +183,10 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
         assertThat(listenerForKeys.result.isCompleted).isFalse()
@@ -199,7 +202,8 @@ internal class Result3AStateListenerImplTest {
                             CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
                             CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
                         ),
-                    CaptureResult.CONTROL_AE_STATE to listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
+                    CaptureResult.CONTROL_AE_STATE to
+                        listOf(CaptureResult.CONTROL_AE_STATE_LOCKED)
                 )
             )
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
@@ -207,10 +211,10 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
         assertThat(listenerForKeys.result.isCompleted).isFalse()
@@ -218,11 +222,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata1 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                        CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata1)
         assertThat(listenerForKeys.result.isCompleted).isTrue()
@@ -233,10 +237,10 @@ internal class Result3AStateListenerImplTest {
         val listenerForKeys =
             Result3AStateListenerImpl(
                 exitConditionForKeys =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            listOf(CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        listOf(CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
+                ),
                 timeLimitNs = 1000000000L
             )
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
@@ -244,11 +248,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata1 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 400000000L
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 400000000L
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata1)
         assertThat(listenerForKeys.result.isCompleted).isFalse()
@@ -256,11 +260,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata2 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 900000000L
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 900000000L
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata2)
         assertThat(listenerForKeys.result.isCompleted).isFalse()
@@ -268,11 +272,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata3 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 1500000000L
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 1500000000L
+                )
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata3)
         val completedDeferred = listenerForKeys.result
@@ -286,10 +290,10 @@ internal class Result3AStateListenerImplTest {
         val listenerForKeys =
             Result3AStateListenerImpl(
                 exitConditionForKeys =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            listOf(CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        listOf(CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED)
+                ),
                 frameLimit = 10
             )
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
@@ -299,11 +303,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata1 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 400000000L
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 400000000L
+                ),
                 frameNumber = FrameNumber(1)
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata1)
@@ -312,11 +316,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata2 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 900000000L
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 900000000L
+                ),
                 frameNumber = FrameNumber(3)
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata2)
@@ -325,11 +329,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata3 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 1500000000L
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 1500000000L
+                ),
                 frameNumber = FrameNumber(10)
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata3)
@@ -338,11 +342,11 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata4 =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                        CaptureResult.SENSOR_TIMESTAMP to 1700000000L
-                    ),
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                    CaptureResult.SENSOR_TIMESTAMP to 1700000000L
+                ),
                 frameNumber = FrameNumber(12)
             )
         listenerForKeys.update(RequestNumber(1), frameMetadata4)
@@ -366,10 +370,10 @@ internal class Result3AStateListenerImplTest {
         val frameMetadata =
             FakeFrameMetadata(
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
+                )
             )
         // The reference request number of not yet set on the listener, so the update will be
         // ignored.
@@ -401,14 +405,12 @@ internal class Result3AStateListenerImplTest {
 
         val listenerForKeys = Result3AStateListenerImpl(exitCondition)
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
-        val frameMetadata =
-            FakeFrameMetadata(
-                resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                    )
+        val frameMetadata = FakeFrameMetadata(
+            resultMetadata = mapOf(
+                CaptureResult.CONTROL_AF_STATE to
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
             )
+        )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
 
         // Assert. Task is completed when receiving the desired value in the FrameMetadata.
@@ -424,11 +426,12 @@ internal class Result3AStateListenerImplTest {
 
         val listenerForKeys = Result3AStateListenerImpl(exitCondition)
         listenerForKeys.onRequestSequenceCreated(RequestNumber(1))
-        val frameMetadata =
-            FakeFrameMetadata(
-                resultMetadata =
-                    mapOf(CaptureResult.CONTROL_AF_STATE to CaptureResult.CONTROL_AF_STATE_INACTIVE)
+        val frameMetadata = FakeFrameMetadata(
+            resultMetadata = mapOf(
+                CaptureResult.CONTROL_AF_STATE to
+                    CaptureResult.CONTROL_AF_STATE_INACTIVE
             )
+        )
         listenerForKeys.update(RequestNumber(1), frameMetadata)
 
         // Assert. Task is completed when receiving the desired value in the FrameMetadata.

@@ -54,7 +54,10 @@ internal fun AppWidgetTemplateHeader(
 ) {
     if (headerIcon == null && header == null) return
 
-    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         headerIcon?.let {
             Image(
                 provider = it.image,
@@ -66,11 +69,15 @@ internal fun AppWidgetTemplateHeader(
             if (headerIcon != null) {
                 Spacer(modifier = GlanceModifier.width(8.dp))
             }
-            val size = textSize(TextType.Title, DisplaySize.fromDpSize(LocalSize.current))
+            val size =
+                textSize(TextType.Title, DisplaySize.fromDpSize(LocalSize.current))
             Text(
                 modifier = GlanceModifier.defaultWeight(),
                 text = header.text,
-                style = TextStyle(fontSize = size, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(
+                    fontSize = size,
+                    color = GlanceTheme.colors.onSurface
+                ),
                 maxLines = 1
             )
         }
@@ -161,19 +168,19 @@ internal fun SingleImageBlockTemplate(
 ) {
     if (imageBlock.images.isNotEmpty()) {
         val mainImage = imageBlock.images[0]
-        val imageSize: Dp =
-            when (imageBlock.size) {
-                ImageSize.Small -> 64.dp
-                ImageSize.Medium -> 96.dp
-                ImageSize.Large -> 128.dp
-                ImageSize.Undefined -> 96.dp
-                else -> 96.dp
-            }
+        val imageSize: Dp = when (imageBlock.size) {
+            ImageSize.Small -> 64.dp
+            ImageSize.Medium -> 96.dp
+            ImageSize.Large -> 128.dp
+            ImageSize.Undefined -> 96.dp
+            else -> 96.dp
+        }
         Image(
             provider = mainImage.image,
             contentDescription = mainImage.description,
-            modifier =
-                if (ImageSize.Undefined == imageBlock.size) modifier else modifier.size(imageSize),
+            modifier = if (ImageSize.Undefined == imageBlock.size) modifier else modifier.size(
+                imageSize
+            ),
             contentScale = ContentScale.Crop
         )
     }
@@ -227,7 +234,7 @@ internal fun ActionBlockTemplate(actionBlock: ActionBlock?) {
  * ordered by priority of the blocks with the default to the [TextBlock] being ahead of the
  * [ImageBlock] if they have the same priority.
  *
- * @param textBlock The [TextBlock] for an entity.
+ * @param textBlock The [TextBlock]  for an entity.
  * @param imageBlock The [ImageBlock] for an entity.
  * @param modifier The modifier for the textBlock in relation to the imageBlock.
  */
@@ -242,7 +249,10 @@ internal fun TextAndImageBlockTemplate(
     } else {
         // Show first block by lower numbered priority
         if (textBlock.priority <= imageBlock.priority) {
-            Column(modifier = modifier, verticalAlignment = Alignment.Vertical.CenterVertically) {
+            Column(
+                modifier = modifier,
+                verticalAlignment = Alignment.Vertical.CenterVertically
+            ) {
                 TextBlockTemplate(textBlock)
             }
             Spacer(modifier = GlanceModifier.width(16.dp))
@@ -250,7 +260,10 @@ internal fun TextAndImageBlockTemplate(
         } else {
             SingleImageBlockTemplate(imageBlock)
             Spacer(modifier = GlanceModifier.width(16.dp))
-            Column(modifier = modifier, verticalAlignment = Alignment.Vertical.CenterVertically) {
+            Column(
+                modifier = modifier,
+                verticalAlignment = Alignment.Vertical.CenterVertically
+            ) {
                 TextBlockTemplate(textBlock)
             }
         }

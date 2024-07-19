@@ -24,6 +24,7 @@ import android.view.Display;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.viewfinder.CameraViewfinder;
 import androidx.camera.viewfinder.internal.transform.TransformationInfo;
 
@@ -37,6 +38,7 @@ import androidx.camera.viewfinder.internal.transform.TransformationInfo;
  *
  * TODO(b/179827713): merge this with {@link androidx.camera.core.internal.utils.ImageUtil}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class TransformUtils {
 
     // Normalized space (-1, -1) - (1, 1).

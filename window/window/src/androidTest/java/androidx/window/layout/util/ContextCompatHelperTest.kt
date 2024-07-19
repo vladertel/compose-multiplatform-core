@@ -27,7 +27,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 
-/** Instrumentation tests for [ContextCompatHelper]. */
+/**
+ * Instrumentation tests for [ContextCompatHelper].
+ */
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class ContextCompatHelperTest {

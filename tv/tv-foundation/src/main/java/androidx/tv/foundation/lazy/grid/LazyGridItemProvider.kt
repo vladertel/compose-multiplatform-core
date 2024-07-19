@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.tv.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.tv.foundation.lazy.layout.NearestRangeKeyIndexMap
 
+@Suppress("IllegalExperimentalApiUsage") // TODO (b/233188423): Address before moving to beta
 @ExperimentalFoundationApi
 internal interface LazyGridItemProvider : LazyLayoutItemProvider {
     val keyIndexMap: LazyLayoutKeyIndexMap
@@ -41,20 +42,18 @@ internal fun rememberLazyGridItemProviderLambda(
 ): () -> LazyGridItemProvider {
     val latestContent = rememberUpdatedState(content)
     return remember(state) {
-        val intervalContentState =
-            derivedStateOf(referentialEqualityPolicy()) {
-                LazyGridIntervalContent(latestContent.value)
-            }
-        val itemProviderState =
-            derivedStateOf(referentialEqualityPolicy()) {
-                val intervalContent = intervalContentState.value
-                val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
-                LazyGridItemProviderImpl(
-                    state = state,
-                    intervalContent = intervalContent,
-                    keyIndexMap = map
-                )
-            }
+        val intervalContentState = derivedStateOf(referentialEqualityPolicy()) {
+            LazyGridIntervalContent(latestContent.value)
+        }
+        val itemProviderState = derivedStateOf(referentialEqualityPolicy()) {
+            val intervalContent = intervalContentState.value
+            val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
+            LazyGridItemProviderImpl(
+                state = state,
+                intervalContent = intervalContent,
+                keyIndexMap = map
+            )
+        }
         itemProviderState::value
     }
 }
@@ -66,8 +65,7 @@ private class LazyGridItemProviderImpl(
     override val keyIndexMap: LazyLayoutKeyIndexMap,
 ) : LazyGridItemProvider {
 
-    override val itemCount: Int
-        get() = intervalContent.itemCount
+    override val itemCount: Int get() = intervalContent.itemCount
 
     override fun getKey(index: Int): Any =
         keyIndexMap.getKey(index) ?: intervalContent.getKey(index)

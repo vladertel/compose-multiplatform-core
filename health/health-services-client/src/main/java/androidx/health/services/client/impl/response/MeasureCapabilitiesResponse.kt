@@ -22,7 +22,10 @@ import androidx.health.services.client.data.MeasureCapabilities
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.ResponsesProto
 
-/** Response containing the [MeasureCapabilities] of the device. */
+/**
+ * Response containing the [MeasureCapabilities] of the device.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class MeasureCapabilitiesResponse(
     /** [MeasureCapabilities] supported by this device. */

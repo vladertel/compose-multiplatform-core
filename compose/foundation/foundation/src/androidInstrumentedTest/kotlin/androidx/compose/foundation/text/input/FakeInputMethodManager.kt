@@ -59,9 +59,8 @@ internal open class FakeInputMethodManager : ComposeInputMethodManager {
         compositionStart: Int,
         compositionEnd: Int
     ) {
-        calls +=
-            "updateSelection($selectionStart, $selectionEnd, " +
-                "$compositionStart, $compositionEnd)"
+        calls += "updateSelection($selectionStart, $selectionEnd, " +
+            "$compositionStart, $compositionEnd)"
     }
 
     override fun updateCursorAnchorInfo(info: CursorAnchorInfo) {

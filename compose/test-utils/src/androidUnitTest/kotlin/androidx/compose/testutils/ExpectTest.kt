@@ -28,17 +28,23 @@ class ExpectTest {
 
     @Test
     fun expectError_gotError() {
-        expectError<TestException> { throw TestException() }
+        expectError<TestException> {
+            throw TestException()
+        }
     }
 
     @Test
     fun expectError_gotErrorWithMessage() {
-        expectError<TestException> { throw TestException("message") }
+        expectError<TestException> {
+            throw TestException("message")
+        }
     }
 
     @Test
     fun expectError_gotErrorWithMultilineMessage() {
-        expectError<TestException> { throw TestException("message\nwith 2 lines") }
+        expectError<TestException> {
+            throw TestException("message\nwith 2 lines")
+        }
     }
 
     @Test
@@ -46,7 +52,8 @@ class ExpectTest {
         expectErrorMessage(
             "Expected that a TestException would be thrown, but nothing was thrown"
         ) {
-            expectError<TestException> {}
+            expectError<TestException> {
+            }
         }
     }
 
@@ -56,13 +63,16 @@ class ExpectTest {
             "Expected that a TestException would be thrown, " +
                 "but a IllegalStateException was thrown:\n=="
         ) {
-            expectError<TestException> { throw IllegalStateException() }
+            expectError<TestException> {
+                throw IllegalStateException()
+            }
         }
     }
 
     @Test
     fun expectNoError_gotNoError() {
-        expectError<TestException>(false) {}
+        expectError<TestException>(false) {
+        }
     }
 
     @Test
@@ -70,7 +80,9 @@ class ExpectTest {
         expectErrorMessage(
             "Expected that nothing would be thrown, but a TestException was thrown:\n=="
         ) {
-            expectError<TestException>(false) { throw TestException() }
+            expectError<TestException>(false) {
+                throw TestException()
+            }
         }
     }
 
@@ -79,13 +91,17 @@ class ExpectTest {
         expectErrorMessage(
             "Expected that nothing would be thrown, but a IllegalStateException was thrown:\n=="
         ) {
-            expectError<TestException>(false) { throw IllegalStateException() }
+            expectError<TestException>(false) {
+                throw IllegalStateException()
+            }
         }
     }
 
     @Test
     fun expectErrorWithMessage_gotErrorWithMessage() {
-        expectError<TestException>(expectedMessage = "message") { throw TestException("message") }
+        expectError<TestException>(expectedMessage = "message") {
+            throw TestException("message")
+        }
     }
 
     @Test

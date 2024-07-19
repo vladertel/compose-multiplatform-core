@@ -17,6 +17,7 @@
 package androidx.camera.testing.impl;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageProxy;
 
 import java.nio.ByteBuffer;
@@ -24,6 +25,7 @@ import java.nio.ByteBuffer;
 /**
  * Utility class to generate image planes and buffer data in image proxy for unit test.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ImageProxyUtil {
 
     private ImageProxyUtil() {

@@ -31,7 +31,11 @@ import org.junit.runner.RunWith
 public class ConfigurationErrorTest {
     @Test
     public fun constructor_valid() {
-        ConfigurationError(id = "ID", summary = "summary", message = "message")
+        ConfigurationError(
+            id = "ID",
+            summary = "summary",
+            message = "message"
+        )
     }
 
     @Test
@@ -69,12 +73,18 @@ public class ConfigurationErrorTest {
     @Test
     public fun checkAndGetSuppressionState_suppressed() {
         // two suppressed errors
-        val suppression =
-            listOf(
-                    ConfigurationError(id = "ID1", summary = "summary1", message = "message1"),
-                    ConfigurationError(id = "ID2", summary = "summary2", message = "message2")
-                )
-                .checkAndGetSuppressionState(setOf("ID1", "ID2"))
+        val suppression = listOf(
+            ConfigurationError(
+                id = "ID1",
+                summary = "summary1",
+                message = "message1"
+            ),
+            ConfigurationError(
+                id = "ID2",
+                summary = "summary2",
+                message = "message2"
+            )
+        ).checkAndGetSuppressionState(setOf("ID1", "ID2"))
 
         assertNotNull(suppression)
         assertEquals("ID1_ID2_", suppression.prefix)
@@ -86,8 +96,7 @@ public class ConfigurationErrorTest {
                 |WARNING: summary2
                 |    message2
 
-            """
-                .trimMargin(),
+            """.trimMargin(),
             suppression.warningMessage
         )
     }
@@ -95,14 +104,20 @@ public class ConfigurationErrorTest {
     @Test
     public fun checkAndGetSuppressionState_unsuppressed() {
         // one unsuppressed error, so throw
-        val exception =
-            assertFailsWith<AssertionError> {
-                listOf(
-                        ConfigurationError(id = "ID1", summary = "summary1", message = "message1"),
-                        ConfigurationError(id = "ID2", summary = "summary2", message = "message2")
-                    )
-                    .checkAndGetSuppressionState(setOf("ID1"))
-            }
+        val exception = assertFailsWith<AssertionError> {
+            listOf(
+                ConfigurationError(
+                    id = "ID1",
+                    summary = "summary1",
+                    message = "message1"
+                ),
+                ConfigurationError(
+                    id = "ID2",
+                    summary = "summary2",
+                    message = "message2"
+                )
+            ).checkAndGetSuppressionState(setOf("ID1"))
+        }
 
         val message = exception.message!!
         assertTrue(message.contains("ERRORS (not suppressed): ID2"))
@@ -114,8 +129,7 @@ public class ConfigurationErrorTest {
                 |ERROR: summary2
                 |    message2
                 |
-            """
-                    .trimMargin()
+            """.trimMargin()
             )
         )
         // suppression warning should contain *both* errors to be suppressed

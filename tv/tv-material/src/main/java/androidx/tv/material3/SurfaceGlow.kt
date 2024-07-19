@@ -33,11 +33,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.debugInspectorInfo
 
 @Composable
+@ExperimentalTvMaterial3Api
 internal fun Modifier.tvSurfaceGlow(
     shape: Shape,
     glow: Glow,
 ): Modifier {
-    val color = surfaceColorAtElevation(color = glow.elevationColor, elevation = glow.elevation)
+    val color = surfaceColorAtElevation(
+        color = glow.elevationColor,
+        elevation = glow.elevation
+    )
     val glowBlurRadiusPx = with(LocalDensity.current) { glow.elevation.toPx() }
 
     return then(
@@ -45,16 +49,16 @@ internal fun Modifier.tvSurfaceGlow(
             shape = shape,
             glowBlurRadiusPx = glowBlurRadiusPx,
             color = color,
-            inspectorInfo =
-                debugInspectorInfo {
-                    name = "tvSurfaceGlow"
-                    properties["shape"] = shape
-                    properties["glow"] = glow
-                }
+            inspectorInfo = debugInspectorInfo {
+                name = "tvSurfaceGlow"
+                properties["shape"] = shape
+                properties["glow"] = glow
+            }
         )
     )
 }
 
+@ExperimentalTvMaterial3Api
 private class SurfaceGlowElement(
     private val shape: Shape,
     private val glowBlurRadiusPx: Float,
@@ -96,6 +100,7 @@ private class SurfaceGlowElement(
     }
 }
 
+@ExperimentalTvMaterial3Api
 private class SurfaceGlowNode(
     private var shape: Shape,
     private var glowBlurRadiusPx: Float,
@@ -130,25 +135,24 @@ private class SurfaceGlowNode(
             }
 
             if (shapeOutlineCache == null) {
-                shapeOutlineCache =
-                    SurfaceShapeOutlineCache(
-                        shape = shape,
-                        size = size,
-                        layoutDirection = layoutDirection,
-                        density = this
-                    )
+                shapeOutlineCache = SurfaceShapeOutlineCache(
+                    shape = shape,
+                    size = size,
+                    layoutDirection = layoutDirection,
+                    density = this
+                )
             }
 
             when (
-                val shapeOutline =
-                    shapeOutlineCache!!.updatedOutline(
-                        shape = shape,
-                        size = size,
-                        layoutDirection = layoutDirection,
-                        density = this
-                    )
+                val shapeOutline = shapeOutlineCache!!.updatedOutline(
+                    shape = shape,
+                    size = size,
+                    layoutDirection = layoutDirection,
+                    density = this
+                )
             ) {
                 is Outline.Rectangle -> canvas.drawRect(shapeOutline.rect, paint!!)
+
                 is Outline.Rounded -> {
                     val shapeCornerRadiusX = shapeOutline.roundRect.topLeftCornerRadius.x
                     val shapeCornerRadiusY = shapeOutline.roundRect.topLeftCornerRadius.y
@@ -163,6 +167,7 @@ private class SurfaceGlowNode(
                         paint = paint!!
                     )
                 }
+
                 is Outline.Generic -> canvas.drawPath(shapeOutline.path, paint!!)
             }
         }

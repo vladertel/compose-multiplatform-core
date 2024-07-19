@@ -66,7 +66,9 @@ public class Device(
         const val TYPE_SMART_DISPLAY = 8
     }
 
-    /** List of supported device types on Health Platform. */
+    /**
+     * List of supported device types on Health Platform.
+     */
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
         value =

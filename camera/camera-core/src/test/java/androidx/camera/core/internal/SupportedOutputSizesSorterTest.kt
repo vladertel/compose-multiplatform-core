@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21)
+
 package androidx.camera.core.internal
 
 import android.graphics.ImageFormat
 import android.os.Build
 import android.util.Pair
 import android.util.Size
+import androidx.annotation.RequiresApi
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.impl.UseCaseConfig
 import androidx.camera.core.impl.UseCaseConfigFactory.CaptureType
@@ -46,53 +49,55 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 
 private const val TARGET_ASPECT_RATIO_NONE = -99
-private val DEFAULT_SUPPORTED_SIZES =
-    listOf(
-        Size(4032, 3024), // 4:3
-        Size(3840, 2160), // 16:9
-        Size(1920, 1440), // 4:3
-        Size(1920, 1080), // 16:9
-        Size(1280, 960), // 4:3
-        Size(1280, 720), // 16:9
-        Size(960, 960), // 1:1
-        Size(960, 544), // a mod16 version of resolution with 16:9 aspect ratio.
-        Size(800, 450), // 16:9
-        Size(640, 480), // 4:3
-        Size(320, 240), // 4:3
-        Size(320, 180), // 16:9
-        Size(256, 144) // 16:9
-    )
-private val HIGH_RESOLUTION_SUPPORTED_SIZES =
-    listOf(
-        Size(8000, 6000),
-        Size(8000, 4500),
-    )
-private val CUSTOM_SUPPORTED_SIZES = listOf(Size(1920, 1080), Size(720, 480), Size(640, 480))
-private val PORTRAIT_SUPPORTED_SIZES =
-    listOf(
-        Size(1440, 1920),
-        Size(1080, 1920),
-        Size(1080, 1440),
-        Size(960, 1280),
-        Size(720, 1280),
-        Size(960, 540),
-        Size(480, 640),
-        Size(640, 480),
-        Size(360, 480)
-    )
+private val DEFAULT_SUPPORTED_SIZES = listOf(
+    Size(4032, 3024), // 4:3
+    Size(3840, 2160), // 16:9
+    Size(1920, 1440), // 4:3
+    Size(1920, 1080), // 16:9
+    Size(1280, 960), // 4:3
+    Size(1280, 720), // 16:9
+    Size(960, 960), // 1:1
+    Size(960, 544), // a mod16 version of resolution with 16:9 aspect ratio.
+    Size(800, 450), // 16:9
+    Size(640, 480), // 4:3
+    Size(320, 240), // 4:3
+    Size(320, 180), // 16:9
+    Size(256, 144) // 16:9
+)
+private val HIGH_RESOLUTION_SUPPORTED_SIZES = listOf(
+    Size(8000, 6000),
+    Size(8000, 4500),
+)
+private val CUSTOM_SUPPORTED_SIZES = listOf(
+    Size(1920, 1080),
+    Size(720, 480),
+    Size(640, 480)
+)
+private val PORTRAIT_SUPPORTED_SIZES = listOf(
+    Size(1440, 1920),
+    Size(1080, 1920),
+    Size(1080, 1440),
+    Size(960, 1280),
+    Size(720, 1280),
+    Size(960, 540),
+    Size(480, 640),
+    Size(640, 480),
+    Size(360, 480)
+)
 private val LANDSCAPE_ACTIVE_ARRAY_SIZE = Size(4032, 3024)
 private val PORTRAIT_ACTIVE_ARRAY_SIZE = Size(1440, 1920)
 
-/** Unit tests for [SupportedOutputSizesSorter]. */
+/**
+ * Unit tests for [SupportedOutputSizesSorter].
+ */
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class SupportedOutputSizesSorterTest {
-    private val cameraInfoInternal =
-        FakeCameraInfoInternal().apply {
-            setSupportedResolutions(ImageFormat.JPEG, DEFAULT_SUPPORTED_SIZES)
-            setSupportedHighResolutions(ImageFormat.JPEG, HIGH_RESOLUTION_SUPPORTED_SIZES)
-        }
+    private val cameraInfoInternal = FakeCameraInfoInternal().apply {
+        setSupportedResolutions(ImageFormat.JPEG, DEFAULT_SUPPORTED_SIZES)
+        setSupportedHighResolutions(ImageFormat.JPEG, HIGH_RESOLUTION_SUPPORTED_SIZES)
+    }
     private val supportedOutputSizesSorter =
         SupportedOutputSizesSorter(cameraInfoInternal, LANDSCAPE_ACTIVE_ARRAY_SIZE)
 
@@ -100,17 +105,16 @@ class SupportedOutputSizesSorterTest {
     fun canSelectCustomOrderedResolutions() {
         // Arrange
         val imageFormat = ImageFormat.JPEG
-        val cameraInfoInternal =
-            FakeCameraInfoInternal().apply {
-                setSupportedResolutions(imageFormat, DEFAULT_SUPPORTED_SIZES)
-            }
+        val cameraInfoInternal = FakeCameraInfoInternal().apply {
+            setSupportedResolutions(imageFormat, DEFAULT_SUPPORTED_SIZES)
+        }
         val supportedOutputSizesSorter =
             SupportedOutputSizesSorter(cameraInfoInternal, LANDSCAPE_ACTIVE_ARRAY_SIZE)
         // Sets up the custom ordered resolutions
         val useCaseConfig =
-            FakeUseCaseConfig.Builder(CaptureType.IMAGE_CAPTURE, imageFormat)
-                .apply { setCustomOrderedResolutions(CUSTOM_SUPPORTED_SIZES) }
-                .useCaseConfig
+            FakeUseCaseConfig.Builder(CaptureType.IMAGE_CAPTURE, imageFormat).apply {
+                setCustomOrderedResolutions(CUSTOM_SUPPORTED_SIZES)
+            }.useCaseConfig
 
         // Act
         val sortedResult = supportedOutputSizesSorter.getSortedSupportedOutputSizes(useCaseConfig)
@@ -123,21 +127,18 @@ class SupportedOutputSizesSorterTest {
     fun canSelectCustomSupportedResolutions() {
         // Arrange
         val imageFormat = ImageFormat.JPEG
-        val cameraInfoInternal =
-            FakeCameraInfoInternal().apply {
-                setSupportedResolutions(imageFormat, DEFAULT_SUPPORTED_SIZES)
-            }
+        val cameraInfoInternal = FakeCameraInfoInternal().apply {
+            setSupportedResolutions(imageFormat, DEFAULT_SUPPORTED_SIZES)
+        }
         val supportedOutputSizesSorter =
             SupportedOutputSizesSorter(cameraInfoInternal, LANDSCAPE_ACTIVE_ARRAY_SIZE)
         // Sets up the custom supported resolutions
         val useCaseConfig =
-            FakeUseCaseConfig.Builder(CaptureType.IMAGE_CAPTURE, imageFormat)
-                .apply {
-                    setSupportedResolutions(
-                        listOf(Pair.create(imageFormat, CUSTOM_SUPPORTED_SIZES.toTypedArray()))
-                    )
-                }
-                .useCaseConfig
+            FakeUseCaseConfig.Builder(CaptureType.IMAGE_CAPTURE, imageFormat).apply {
+                setSupportedResolutions(
+                    listOf(Pair.create(imageFormat, CUSTOM_SUPPORTED_SIZES.toTypedArray()))
+                )
+            }.useCaseConfig
 
         // Act
         val sortedResult = supportedOutputSizesSorter.getSortedSupportedOutputSizes(useCaseConfig)
@@ -151,15 +152,14 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             preferredAspectRatio = AspectRatio.RATIO_4_3,
             aspectRatioFallbackRule = AspectRatioStrategy.FALLBACK_RULE_NONE,
-            expectedList =
-                listOf(
-                    // Only returns preferred AspectRatio matched items, sorted by area size.
-                    Size(4032, 3024),
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                )
+            expectedList = listOf(
+                // Only returns preferred AspectRatio matched items, sorted by area size.
+                Size(4032, 3024),
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+            )
         )
     }
 
@@ -168,24 +168,23 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             preferredAspectRatio = AspectRatio.RATIO_4_3,
             aspectRatioFallbackRule = AspectRatioStrategy.FALLBACK_RULE_AUTO,
-            expectedList =
-                listOf(
-                    // Matched preferred AspectRatio items, sorted by area size.
-                    Size(4032, 3024), // 4:3
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    // Mismatched preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(3840, 2160), // 16:9
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144)
-                )
+            expectedList = listOf(
+                // Matched preferred AspectRatio items, sorted by area size.
+                Size(4032, 3024), // 4:3
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                // Mismatched preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(3840, 2160), // 16:9
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144)
+            )
         )
     }
 
@@ -194,17 +193,16 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             preferredAspectRatio = AspectRatio.RATIO_16_9,
             aspectRatioFallbackRule = AspectRatioStrategy.FALLBACK_RULE_NONE,
-            expectedList =
-                listOf(
-                    // Only returns preferred AspectRatio matched items, sorted by area size.
-                    Size(3840, 2160),
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                )
+            expectedList = listOf(
+                // Only returns preferred AspectRatio matched items, sorted by area size.
+                Size(3840, 2160),
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+            )
         )
     }
 
@@ -213,24 +211,23 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             preferredAspectRatio = AspectRatio.RATIO_16_9,
             aspectRatioFallbackRule = AspectRatioStrategy.FALLBACK_RULE_AUTO,
-            expectedList =
-                listOf(
-                    // Matched preferred AspectRatio items, sorted by area size.
-                    Size(3840, 2160), // 16:9
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                    // Mismatched preferred AspectRatio items, sorted by FOV and area size.
-                    Size(4032, 3024), // 4:3
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    Size(960, 960), // 1:1
-                )
+            expectedList = listOf(
+                // Matched preferred AspectRatio items, sorted by area size.
+                Size(3840, 2160), // 16:9
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+                // Mismatched preferred AspectRatio items, sorted by FOV and area size.
+                Size(4032, 3024), // 4:3
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                Size(960, 960), // 1:1
+            )
         )
     }
 
@@ -262,24 +259,23 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             resolutionStrategy = ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY,
             // The 4:3 default aspect ratio will make sizes of 4/3 have the highest priority
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(4032, 3024),
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(3840, 2160), // 16:9
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(4032, 3024),
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(3840, 2160), // 16:9
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+            )
         )
     }
 
@@ -289,24 +285,23 @@ class SupportedOutputSizesSorterTest {
             boundSize = Size(1920, 1080),
             resolutionFallbackRule = FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
             // The 4:3 default aspect ratio will make sizes of 4/3 have the highest priority
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(1920, 1440), // 4:3 smallest larger size has highest priority
-                    Size(4032, 3024), // the remaining 4:3 larger sizes
-                    Size(1280, 960), // the remaining 4:3 smaller sizes
-                    Size(640, 480),
-                    Size(320, 240),
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(1920, 1080), // 16:9 smallest larger size
-                    Size(3840, 2160), // the remaining 16:9 larger sizes
-                    Size(1280, 720), // the remaining 16:9 smaller sizes
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(1920, 1440), // 4:3 smallest larger size has highest priority
+                Size(4032, 3024), // the remaining 4:3 larger sizes
+                Size(1280, 960), // the remaining 4:3 smaller sizes
+                Size(640, 480),
+                Size(320, 240),
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(1920, 1080), // 16:9 smallest larger size
+                Size(3840, 2160), // the remaining 16:9 larger sizes
+                Size(1280, 720), // the remaining 16:9 smaller sizes
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+            )
         )
     }
 
@@ -316,15 +311,14 @@ class SupportedOutputSizesSorterTest {
             boundSize = Size(1920, 1080),
             resolutionFallbackRule = FALLBACK_RULE_CLOSEST_HIGHER,
             // The 4:3 default aspect ratio will make sizes of 4/3 have the highest priority
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(1920, 1440), // 4:3 smallest larger size has highest priority
-                    Size(4032, 3024), // the remaining 4:3 larger sizes
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(1920, 1080), // 16:9 smallest larger size
-                    Size(3840, 2160), // the remaining 16:9 larger sizes
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(1920, 1440), // 4:3 smallest larger size has highest priority
+                Size(4032, 3024), // the remaining 4:3 larger sizes
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(1920, 1080), // 16:9 smallest larger size
+                Size(3840, 2160), // the remaining 16:9 larger sizes
+            )
         )
     }
 
@@ -334,24 +328,23 @@ class SupportedOutputSizesSorterTest {
             boundSize = Size(1920, 1080),
             resolutionFallbackRule = FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
             // The 4:3 default aspect ratio will make sizes of 4/3 have the highest priority
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(1280, 960), // 4:3 largest smaller size has highest priority
-                    Size(640, 480), // the remaining 4:3 smaller sizes
-                    Size(320, 240),
-                    Size(1920, 1440), // the remaining 4:3 larger sizes
-                    Size(4032, 3024),
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(1920, 1080), // 16:9 largest smaller size
-                    Size(1280, 720), // the remaining 16:9 smaller sizes
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                    Size(3840, 2160), // the remaining 16:9 larger sizes
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(1280, 960), // 4:3 largest smaller size has highest priority
+                Size(640, 480), // the remaining 4:3 smaller sizes
+                Size(320, 240),
+                Size(1920, 1440), // the remaining 4:3 larger sizes
+                Size(4032, 3024),
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(1920, 1080), // 16:9 largest smaller size
+                Size(1280, 720), // the remaining 16:9 smaller sizes
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+                Size(3840, 2160), // the remaining 16:9 larger sizes
+            )
         )
     }
 
@@ -361,49 +354,46 @@ class SupportedOutputSizesSorterTest {
             boundSize = Size(1920, 1080),
             resolutionFallbackRule = FALLBACK_RULE_CLOSEST_LOWER,
             // The 4:3 default aspect ratio will make sizes of 4/3 have the highest priority
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(1280, 960), // 4:3 largest smaller size has highest priority
-                    Size(640, 480), // the remaining 4:3 smaller sizes
-                    Size(320, 240),
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(1920, 1080), // 16:9 largest smaller size
-                    Size(1280, 720), // the remaining 16:9 smaller sizes
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(1280, 960), // 4:3 largest smaller size has highest priority
+                Size(640, 480), // the remaining 4:3 smaller sizes
+                Size(320, 240),
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(1920, 1080), // 16:9 largest smaller size
+                Size(1280, 720), // the remaining 16:9 smaller sizes
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+            )
         )
     }
 
     @Test
     fun getSupportedOutputSizesWithPortraitPixelArraySize_aspectRatio16x9() {
-        val cameraInfoInternal =
-            FakeCameraInfoInternal().apply {
-                setSupportedResolutions(ImageFormat.JPEG, PORTRAIT_SUPPORTED_SIZES)
-            }
+        val cameraInfoInternal = FakeCameraInfoInternal().apply {
+            setSupportedResolutions(ImageFormat.JPEG, PORTRAIT_SUPPORTED_SIZES)
+        }
         val supportedOutputSizesSorter =
             SupportedOutputSizesSorter(cameraInfoInternal, PORTRAIT_ACTIVE_ARRAY_SIZE)
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             outputSizesSorter = supportedOutputSizesSorter,
             preferredAspectRatio = AspectRatio.RATIO_16_9,
-            expectedList =
-                listOf(
-                    // Matched preferred AspectRatio items, sorted by area size.
-                    Size(1080, 1920),
-                    Size(720, 1280),
-                    // Mismatched preferred AspectRatio items, sorted by area size.
-                    Size(1440, 1920),
-                    Size(1080, 1440),
-                    Size(960, 1280),
-                    Size(480, 640),
-                    Size(360, 480),
-                    Size(640, 480),
-                    Size(960, 540)
-                )
+            expectedList = listOf(
+                // Matched preferred AspectRatio items, sorted by area size.
+                Size(1080, 1920),
+                Size(720, 1280),
+                // Mismatched preferred AspectRatio items, sorted by area size.
+                Size(1440, 1920),
+                Size(1080, 1440),
+                Size(960, 1280),
+                Size(480, 640),
+                Size(360, 480),
+                Size(640, 480),
+                Size(960, 540)
+            )
         )
     }
 
@@ -413,26 +403,25 @@ class SupportedOutputSizesSorterTest {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             preferredAspectRatio = AspectRatio.RATIO_16_9,
             allowedResolutionMode = PREFER_HIGHER_RESOLUTION_OVER_CAPTURE_RATE,
-            expectedList =
-                listOf(
-                    // Matched preferred AspectRatio items, sorted by area size.
-                    Size(8000, 4500), // 16:9 high resolution size
-                    Size(3840, 2160),
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                    // Mismatched preferred AspectRatio items, sorted by area size.
-                    Size(8000, 6000), // 4:3 high resolution size
-                    Size(4032, 3024),
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    Size(960, 960), // 1:1
-                )
+            expectedList = listOf(
+                // Matched preferred AspectRatio items, sorted by area size.
+                Size(8000, 4500), // 16:9 high resolution size
+                Size(3840, 2160),
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+                // Mismatched preferred AspectRatio items, sorted by area size.
+                Size(8000, 6000), // 4:3 high resolution size
+                Size(4032, 3024),
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                Size(960, 960), // 1:1
+            )
         )
     }
 
@@ -443,24 +432,23 @@ class SupportedOutputSizesSorterTest {
             preferredAspectRatio = AspectRatio.RATIO_16_9,
             allowedResolutionMode = PREFER_HIGHER_RESOLUTION_OVER_CAPTURE_RATE,
             highResolutionForceDisabled = true,
-            expectedList =
-                listOf(
-                    // Matched preferred AspectRatio items, sorted by area size.
-                    Size(3840, 2160),
-                    Size(1920, 1080),
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                    // Mismatched preferred AspectRatio items, sorted by area size.
-                    Size(4032, 3024), // 4:3
-                    Size(1920, 1440),
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    Size(960, 960), // 1:1
-                )
+            expectedList = listOf(
+                // Matched preferred AspectRatio items, sorted by area size.
+                Size(3840, 2160),
+                Size(1920, 1080),
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+                // Mismatched preferred AspectRatio items, sorted by area size.
+                Size(4032, 3024), // 4:3
+                Size(1920, 1440),
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                Size(960, 960), // 1:1
+            )
         )
     }
 
@@ -473,15 +461,13 @@ class SupportedOutputSizesSorterTest {
         DEFAULT_SUPPORTED_SIZES.forEach { supportedSize ->
             var resolutionFilter: ResolutionFilter? = null
             val preferredAspectRatio =
-                if (
-                    AspectRatioUtil.hasMatchingAspectRatio(
+                if (AspectRatioUtil.hasMatchingAspectRatio(
                         supportedSize,
                         AspectRatioUtil.ASPECT_RATIO_4_3
                     )
                 ) {
                     AspectRatio.RATIO_4_3
-                } else if (
-                    AspectRatioUtil.hasMatchingAspectRatio(
+                } else if (AspectRatioUtil.hasMatchingAspectRatio(
                         supportedSize,
                         AspectRatioUtil.ASPECT_RATIO_16_9
                     )
@@ -498,12 +484,11 @@ class SupportedOutputSizesSorterTest {
                     TARGET_ASPECT_RATIO_NONE
                 }
 
-            val useCaseConfig =
-                createUseCaseConfig(
-                    preferredAspectRatio = preferredAspectRatio,
-                    boundSize = supportedSize,
-                    resolutionFilter = resolutionFilter
-                )
+            val useCaseConfig = createUseCaseConfig(
+                preferredAspectRatio = preferredAspectRatio,
+                boundSize = supportedSize,
+                resolutionFilter = resolutionFilter
+            )
 
             val resultList = supportedOutputSizesSorter.getSortedSupportedOutputSizes(useCaseConfig)
             assertThat(resultList[0]).isEqualTo(supportedSize)
@@ -512,7 +497,11 @@ class SupportedOutputSizesSorterTest {
 
     @Test
     fun getSupportedOutputSizes_withResolutionFilter() {
-        val filteredSizesList = arrayListOf(Size(1280, 720), Size(4032, 3024), Size(960, 960))
+        val filteredSizesList = arrayListOf(
+            Size(1280, 720),
+            Size(4032, 3024),
+            Size(960, 960)
+        )
         val resolutionFilter = ResolutionFilter { _, _ -> filteredSizesList }
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             resolutionFilter = resolutionFilter,
@@ -538,10 +527,9 @@ class SupportedOutputSizesSorterTest {
     fun getSortedSupportedOutputSizesReturns_whenCameraInfoProvidesUnmodifiableList() {
         // Arrange
         val imageFormat = ImageFormat.JPEG
-        val cameraInfoInternal =
-            FakeCameraInfoInternal().apply {
-                setSupportedResolutions(imageFormat, unmodifiableList(DEFAULT_SUPPORTED_SIZES))
-            }
+        val cameraInfoInternal = FakeCameraInfoInternal().apply {
+            setSupportedResolutions(imageFormat, unmodifiableList(DEFAULT_SUPPORTED_SIZES))
+        }
         val supportedOutputSizesSorter =
             SupportedOutputSizesSorter(cameraInfoInternal, LANDSCAPE_ACTIVE_ARRAY_SIZE)
         // Sets up a no-op useCaseConfig
@@ -556,22 +544,21 @@ class SupportedOutputSizesSorterTest {
     fun canKeepFhdResolution_whenMaxResolutionHasShorterEdgeButLargerArea() {
         verifySupportedOutputSizesWithResolutionSelectorSettings(
             maxResolution = Size(2244, 1008),
-            expectedList =
-                listOf(
-                    // Matched default preferred AspectRatio items, sorted by area size.
-                    Size(1280, 960),
-                    Size(640, 480),
-                    Size(320, 240),
-                    // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
-                    Size(960, 960), // 1:1
-                    Size(1920, 1080), // 16:9, this can be kept even the max resolution
-                    // setting has a shorter edge of 1008
-                    Size(1280, 720),
-                    Size(960, 544),
-                    Size(800, 450),
-                    Size(320, 180),
-                    Size(256, 144),
-                )
+            expectedList = listOf(
+                // Matched default preferred AspectRatio items, sorted by area size.
+                Size(1280, 960),
+                Size(640, 480),
+                Size(320, 240),
+                // Mismatched default preferred AspectRatio items, sorted by FOV and area size.
+                Size(960, 960), // 1:1
+                Size(1920, 1080), // 16:9, this can be kept even the max resolution
+                                               // setting has a shorter edge of 1008
+                Size(1280, 720),
+                Size(960, 544),
+                Size(800, 450),
+                Size(320, 180),
+                Size(256, 144),
+            )
         )
     }
 
@@ -589,19 +576,18 @@ class SupportedOutputSizesSorterTest {
         maxResolution: Size? = null,
         expectedList: List<Size> = Collections.emptyList(),
     ) {
-        val useCaseConfig =
-            createUseCaseConfig(
-                captureType,
-                preferredAspectRatio,
-                aspectRatioFallbackRule,
-                resolutionStrategy,
-                boundSize,
-                resolutionFallbackRule,
-                resolutionFilter,
-                allowedResolutionMode,
-                highResolutionForceDisabled,
-                maxResolution,
-            )
+        val useCaseConfig = createUseCaseConfig(
+            captureType,
+            preferredAspectRatio,
+            aspectRatioFallbackRule,
+            resolutionStrategy,
+            boundSize,
+            resolutionFallbackRule,
+            resolutionFilter,
+            allowedResolutionMode,
+            highResolutionForceDisabled,
+            maxResolution,
+        )
         val resultList = outputSizesSorter.getSortedSupportedOutputSizes(useCaseConfig)
         assertThat(resultList).containsExactlyElementsIn(expectedList).inOrder()
     }
@@ -622,12 +608,11 @@ class SupportedOutputSizesSorterTest {
         val resolutionSelectorBuilder = ResolutionSelector.Builder()
 
         // Creates aspect ratio strategy and sets to resolution selector
-        val aspectRatioStrategy =
-            if (preferredAspectRatio != TARGET_ASPECT_RATIO_NONE) {
-                AspectRatioStrategy(preferredAspectRatio, aspectRatioFallbackRule)
-            } else {
-                null
-            }
+        val aspectRatioStrategy = if (preferredAspectRatio != TARGET_ASPECT_RATIO_NONE) {
+            AspectRatioStrategy(preferredAspectRatio, aspectRatioFallbackRule)
+        } else {
+            null
+        }
 
         aspectRatioStrategy?.let { resolutionSelectorBuilder.setAspectRatioStrategy(it) }
 
@@ -637,7 +622,10 @@ class SupportedOutputSizesSorterTest {
         } else {
             boundSize?.let {
                 resolutionSelectorBuilder.setResolutionStrategy(
-                    ResolutionStrategy(boundSize, resolutionFallbackRule)
+                    ResolutionStrategy(
+                        boundSize,
+                        resolutionFallbackRule
+                    )
                 )
             }
         }

@@ -20,14 +20,17 @@ import java.nio.file.Files
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
 
-/** A provider of [Project] object for running tests. */
+/**
+ * A provider of [Project] object for running tests.
+ *
+ */
 class ProjectFactory {
     companion object {
         @JvmStatic
         val project: Project by lazy {
-            ProjectBuilder.builder()
-                .withProjectDir(Files.createTempDirectory("temp").toFile())
-                .build()
+            ProjectBuilder.builder().withProjectDir(
+                Files.createTempDirectory("temp").toFile()
+            ).build()
         }
     }
 }

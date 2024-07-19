@@ -57,11 +57,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalTestApi::class, ExperimentalTvMaterial3Api::class)
+@OptIn(
+    ExperimentalTestApi::class,
+    ExperimentalTvMaterial3Api::class
+)
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ListItemTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun listItem_findByTagAndClick() {
@@ -79,10 +83,12 @@ class ListItemTest {
             }
         }
 
-        rule.onNodeWithTag(ListItemTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
+        rule.onNodeWithTag(ListItemTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(1)
         }
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
     }
 
     @Test
@@ -112,18 +118,18 @@ class ListItemTest {
             }
         }
 
-        rule.onNodeWithTag(openItemTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(openItemTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(openItemClickCounter).isEqualTo(1)
             Truth.assertThat(closeItemClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag(closeItemTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        rule.onNodeWithTag(closeItemTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
 
         rule.runOnIdle {
             Truth.assertThat(openItemClickCounter).isEqualTo(1)
@@ -141,24 +147,26 @@ class ListItemTest {
                 ListItem(
                     modifier = Modifier.testTag(ListItemTag),
                     headlineContent = { Text(text = "Test Text") },
-                    onClick = {},
+                    onClick = { },
                     onLongClick = onLongClick,
                     selected = false
                 )
             }
         }
 
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter)
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(1) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(1)
+        }
 
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             .requestFocus()
             .performLongKeyPress(rule, Key.DirectionCenter, count = 2)
-        rule.runOnIdle { Truth.assertThat(counter).isEqualTo(3) }
+        rule.runOnIdle {
+            Truth.assertThat(counter).isEqualTo(3)
+        }
     }
 
     @Test
@@ -175,10 +183,12 @@ class ListItemTest {
             )
         }
 
-        rule.onNodeWithTag(ListItemTag).requestFocus().performKeyInput {
-            pressKey(Key.DirectionCenter)
+        rule.onNodeWithTag(ListItemTag)
+            .requestFocus()
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.runOnIdle {
+            Truth.assertThat(!checkedState)
         }
-        rule.runOnIdle { Truth.assertThat(!checkedState) }
     }
 
     @Test
@@ -189,7 +199,9 @@ class ListItemTest {
                 headlineContent = {
                     Text(
                         text = "ListItemText",
-                        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -219,10 +231,10 @@ class ListItemTest {
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.fillMaxHeight().testTag(ListItemTextTag).semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .testTag(ListItemTextTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -252,18 +264,19 @@ class ListItemTest {
             ListItem(
                 leadingContent = {
                     Box(
-                        modifier =
-                            Modifier.size(ListItemDefaults.IconSize).testTag(testIconTag).semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .size(ListItemDefaults.IconSize)
+                            .testTag(testIconTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 modifier = Modifier.testTag(ListItemTag),
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.testTag(ListItemTextTag).semantics(mergeDescendants = true) {}
+                        modifier = Modifier
+                            .testTag(ListItemTextTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -304,20 +317,20 @@ class ListItemTest {
             ListItem(
                 trailingContent = {
                     Box(
-                        modifier =
-                            Modifier.size(ListItemDefaults.IconSize)
-                                .testTag(testTrailingContentTag)
-                                .semantics(mergeDescendants = true) {}
+                        modifier = Modifier
+                            .size(ListItemDefaults.IconSize)
+                            .testTag(testTrailingContentTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 modifier = Modifier.testTag(ListItemTag),
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.testTag(ListItemTextTag).fillMaxWidth().semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .testTag(ListItemTextTag)
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -365,8 +378,7 @@ class ListItemTest {
             }
         }
 
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, false))
@@ -384,7 +396,7 @@ class ListItemTest {
             Box {
                 ListItem(
                     modifier = Modifier.testTag(ListItemTag),
-                    onClick = {},
+                    onClick = { },
                     onLongClick = { selected = !selected },
                     headlineContent = { Text(text = "List item") },
                     selected = selected
@@ -392,8 +404,7 @@ class ListItemTest {
             }
         }
 
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             .assertHasClickAction()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Selected))
@@ -419,7 +430,8 @@ class ListItemTest {
             }
         }
 
-        rule.onNodeWithTag(ListItemTag).assertIsNotEnabled()
+        rule.onNodeWithTag(ListItemTag)
+            .assertIsNotEnabled()
     }
 
     @Test
@@ -436,8 +448,7 @@ class ListItemTest {
                 )
             }
         }
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             // Confirm the button starts off enabled, with a click action
             .assertHasClickAction()
             .assertIsEnabled()
@@ -474,8 +485,7 @@ class ListItemTest {
                 selected = false
             )
         }
-        rule
-            .onNodeWithTag(ListItemTag)
+        rule.onNodeWithTag(ListItemTag)
             .assertWidthIsEqualTo(rule.onRoot().getUnclippedBoundsInRoot().width)
     }
 
@@ -487,10 +497,10 @@ class ListItemTest {
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.fillMaxWidth().testTag(DenseListItemTextTag).semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(DenseListItemTextTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -520,10 +530,10 @@ class ListItemTest {
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.fillMaxHeight().testTag(DenseListItemTextTag).semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .testTag(DenseListItemTextTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -553,20 +563,19 @@ class ListItemTest {
             DenseListItem(
                 leadingContent = {
                     Box(
-                        modifier =
-                            Modifier.size(ListItemDefaults.IconSizeDense)
-                                .testTag(testIconTag)
-                                .semantics(mergeDescendants = true) {}
+                        modifier = Modifier
+                            .size(ListItemDefaults.IconSizeDense)
+                            .testTag(testIconTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 modifier = Modifier.testTag(DenseListItemTag),
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.testTag(DenseListItemTextTag).semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .testTag(DenseListItemTextTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -607,20 +616,20 @@ class ListItemTest {
             DenseListItem(
                 trailingContent = {
                     Box(
-                        modifier =
-                            Modifier.size(ListItemDefaults.IconSizeDense)
-                                .testTag(testTrailingContentTag)
-                                .semantics(mergeDescendants = true) {}
+                        modifier = Modifier
+                            .size(ListItemDefaults.IconSizeDense)
+                            .testTag(testTrailingContentTag)
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 modifier = Modifier.testTag(DenseListItemTag),
                 headlineContent = {
                     Text(
                         text = "Test Text",
-                        modifier =
-                            Modifier.testTag(DenseListItemTextTag).fillMaxWidth().semantics(
-                                mergeDescendants = true
-                            ) {}
+                        modifier = Modifier
+                            .testTag(DenseListItemTextTag)
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) {}
                     )
                 },
                 onClick = {},
@@ -680,8 +689,7 @@ class ListItemTest {
                 selected = false
             )
         }
-        rule
-            .onNodeWithTag(DenseListItemTag)
+        rule.onNodeWithTag(DenseListItemTag)
             .assertWidthIsEqualTo(rule.onRoot().getUnclippedBoundsInRoot().width)
     }
 }

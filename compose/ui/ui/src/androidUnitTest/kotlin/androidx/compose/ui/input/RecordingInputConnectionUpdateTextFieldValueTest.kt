@@ -47,12 +47,11 @@ class RecordingInputConnectionUpdateTextFieldValueTest {
     @Before
     fun setup() {
         mCallback = mock()
-        ic =
-            RecordingInputConnection(
-                initState = TextFieldValue("", TextRange.Zero),
-                eventCallback = mCallback,
-                autoCorrect = true
-            )
+        ic = RecordingInputConnection(
+            initState = TextFieldValue("", TextRange.Zero),
+            eventCallback = mCallback,
+            autoCorrect = true
+        )
     }
 
     @Test

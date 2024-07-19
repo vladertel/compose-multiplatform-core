@@ -45,33 +45,47 @@ class PreferencesSerializerTest {
         testFile = testIO.newTempFile()
         fileSystem.createDirectories(testFile.path.parent!!)
     }
-
     fun doTest(test: suspend TestScope.() -> Unit) {
-        runTest(timeout = 10000.milliseconds) { test(this) }
+        runTest(timeout = 10000.milliseconds) {
+            test(this)
+        }
     }
 
     @Test
     fun testWriteAndReadString() = doTest {
         val stringKey = stringPreferencesKey("string_key")
 
-        val prefs = preferencesOf(stringKey to "string1")
+        val prefs = preferencesOf(
+            stringKey to "string1"
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
 
     @Test
     fun testWriteAndReadStringSet() = doTest {
-        val stringSetKey = stringSetPreferencesKey("string_set_key")
+        val stringSetKey =
+            stringSetPreferencesKey("string_set_key")
 
-        val prefs = preferencesOf(stringSetKey to setOf("string1", "string2", "string3"))
+        val prefs = preferencesOf(
+            stringSetKey to setOf("string1", "string2", "string3")
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -80,11 +94,17 @@ class PreferencesSerializerTest {
     fun testWriteAndReadLong() = doTest {
         val longKey = longPreferencesKey("long_key")
 
-        val prefs = preferencesOf(longKey to (1L shr 50))
+        val prefs = preferencesOf(
+            longKey to (1L shr 50)
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -93,11 +113,17 @@ class PreferencesSerializerTest {
     fun testWriteAndReadInt() = doTest {
         val intKey = intPreferencesKey("int_key")
 
-        val prefs = preferencesOf(intKey to 3)
+        val prefs = preferencesOf(
+            intKey to 3
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -106,11 +132,17 @@ class PreferencesSerializerTest {
     fun testWriteAndReadBoolean() = doTest {
         val booleanKey = booleanPreferencesKey("boolean_key")
 
-        val prefs = preferencesOf(booleanKey to true)
+        val prefs = preferencesOf(
+            booleanKey to true
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -119,11 +151,17 @@ class PreferencesSerializerTest {
     fun testWriteAndReadFloat() = doTest {
         val floatKey = floatPreferencesKey("float_key")
 
-        val prefs = preferencesOf(floatKey to 3.0f)
+        val prefs = preferencesOf(
+            floatKey to 3.0f
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -133,11 +171,18 @@ class PreferencesSerializerTest {
         val maxDouble = doublePreferencesKey("max_double_key")
         val minDouble = doublePreferencesKey("min_double_key")
 
-        val prefs = preferencesOf(maxDouble to Double.MAX_VALUE, minDouble to Double.MIN_VALUE)
+        val prefs = preferencesOf(
+            maxDouble to Double.MAX_VALUE,
+            minDouble to Double.MIN_VALUE
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }
@@ -146,11 +191,17 @@ class PreferencesSerializerTest {
     fun testWriteAndReadByteArray() = doTest {
         val byteArrayKey = byteArrayPreferencesKey("byteArray")
 
-        val prefs = preferencesOf(byteArrayKey to byteArrayOf(1, 2, 3, 4))
+        val prefs = preferencesOf(
+            byteArrayKey to byteArrayOf(1, 2, 3, 4)
+        )
 
-        fileSystem.write(testFile.path) { preferencesSerializer.writeTo(prefs, this) }
+        fileSystem.write(testFile.path) {
+            preferencesSerializer.writeTo(prefs, this)
+        }
 
-        val readPrefs = fileSystem.read(testFile.path) { preferencesSerializer.readFrom(this) }
+        val readPrefs = fileSystem.read(testFile.path) {
+            preferencesSerializer.readFrom(this)
+        }
 
         assertEquals(prefs, readPrefs)
     }

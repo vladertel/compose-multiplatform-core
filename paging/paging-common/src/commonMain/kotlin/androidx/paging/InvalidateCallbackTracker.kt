@@ -20,10 +20,14 @@ import androidx.annotation.VisibleForTesting
 import androidx.paging.internal.ReentrantLock
 import androidx.paging.internal.withLock
 
-/** Helper class for thread-safe invalidation callback tracking + triggering on registration. */
+/**
+ * Helper class for thread-safe invalidation callback tracking + triggering on registration.
+ */
 internal class InvalidateCallbackTracker<T>(
     private val callbackInvoker: (T) -> Unit,
-    /** User-provided override of DataSource.isInvalid */
+    /**
+     * User-provided override of DataSource.isInvalid
+     */
     private val invalidGetter: (() -> Boolean)? = null,
 ) {
     private val lock = ReentrantLock()
@@ -31,7 +35,8 @@ internal class InvalidateCallbackTracker<T>(
     internal var invalid = false
         private set
 
-    @VisibleForTesting internal fun callbackCount() = callbacks.size
+    @VisibleForTesting
+    internal fun callbackCount() = callbacks.size
 
     internal fun registerInvalidatedCallback(callback: T) {
         // This isn't sufficient, but is the best we can do in cases where DataSource.isInvalid
@@ -46,15 +51,14 @@ internal class InvalidateCallbackTracker<T>(
             return
         }
 
-        val callImmediately =
-            lock.withLock {
-                if (invalid) {
-                    true // call immediately
-                } else {
-                    callbacks.add(callback)
-                    false // don't call, not invalid yet.
-                }
+        val callImmediately = lock.withLock {
+            if (invalid) {
+                true // call immediately
+            } else {
+                callbacks.add(callback)
+                false // don't call, not invalid yet.
             }
+        }
 
         if (callImmediately) {
             callbackInvoker(callback)
@@ -62,19 +66,22 @@ internal class InvalidateCallbackTracker<T>(
     }
 
     internal fun unregisterInvalidatedCallback(callback: T) {
-        lock.withLock { callbacks.remove(callback) }
+        lock.withLock {
+            callbacks.remove(callback)
+        }
     }
 
     internal fun invalidate(): Boolean {
         if (invalid) return false
 
-        val callbacksToInvoke =
-            lock.withLock {
-                if (invalid) return false
+        val callbacksToInvoke = lock.withLock {
+            if (invalid) return false
 
-                invalid = true
-                callbacks.toList().also { callbacks.clear() }
+            invalid = true
+            callbacks.toList().also {
+                callbacks.clear()
             }
+        }
 
         callbacksToInvoke.forEach(callbackInvoker)
         return true

@@ -18,6 +18,7 @@ package androidx.camera.video.internal.compat.quirk;
 
 import android.os.Build;
 
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.Quirk;
 
 /**
@@ -32,6 +33,7 @@ import androidx.camera.core.impl.Quirk;
  *                  different position can workaround this issue.
  *     Device(s): Twist 2 Pro and Itel w6004
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class MediaStoreVideoCannotWrite implements Quirk {
 
     public static boolean isPositivoTwist2Pro() {

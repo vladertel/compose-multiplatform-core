@@ -53,21 +53,24 @@ class NonLinearFontScalingBenchmark(
 ) {
     companion object {
         @JvmStatic
-        @Parameterized.Parameters(name = "length={0} fontSize={1} isLineHeightSp={2}")
-        fun initParameters(): List<Array<Any?>> =
-            cartesian(
-                arrayOf(512),
-                // font size
-                arrayOf(8, 30),
-                // isLineHeightSp. This helps us verify that the calculation to keep line heights
-                // proportional doesn't affect performance too much. (see b/273326061)
-                arrayOf(false, true)
-            )
+        @Parameterized.Parameters(
+            name = "length={0} fontSize={1} isLineHeightSp={2}"
+        )
+        fun initParameters(): List<Array<Any?>> = cartesian(
+            arrayOf(512),
+            // font size
+            arrayOf(8, 30),
+            // isLineHeightSp. This helps us verify that the calculation to keep line heights
+            // proportional doesn't affect performance too much. (see b/273326061)
+            arrayOf(false, true)
+        )
     }
 
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
-    @get:Rule val textBenchmarkRule = TextBenchmarkTestRule(Alphabet.Latin)
+    @get:Rule
+    val textBenchmarkRule = TextBenchmarkTestRule(Alphabet.Latin)
 
     private lateinit var instrumentationContext: Context
 
@@ -78,19 +81,22 @@ class NonLinearFontScalingBenchmark(
     @Before
     fun setup() {
         instrumentationContext = InstrumentationRegistry.getInstrumentation().context
-        width =
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                textBenchmarkRule.widthDp,
-                instrumentationContext.resources.displayMetrics
-            )
+        width = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            textBenchmarkRule.widthDp,
+            instrumentationContext.resources.displayMetrics
+        )
     }
 
     private fun text(textGenerator: RandomTextGenerator): String {
         return textGenerator.nextParagraph(textLength) + "\n"
     }
 
-    private fun paragraph(text: String, width: Float, density: Density): Paragraph {
+    private fun paragraph(
+        text: String,
+        width: Float,
+        density: Density
+    ): Paragraph {
         return Paragraph(
             paragraphIntrinsics = paragraphIntrinsics(text, density),
             constraints = Constraints(maxWidth = ceil(width).toInt())
@@ -101,22 +107,21 @@ class NonLinearFontScalingBenchmark(
         assertThat(fontSize.isSp).isTrue()
 
         @Suppress("DEPRECATION")
-        val style =
-            if (isLineHeightSp) {
-                TextStyle(
-                    fontSize = fontSize,
-                    lineHeight = fontSize * 2,
-                    lineHeightStyle = LineHeightStyle.Default,
-                    platformStyle = PlatformTextStyle(includeFontPadding = false)
-                )
-            } else {
-                TextStyle(
-                    fontSize = fontSize,
-                    lineHeight = 2.em,
-                    lineHeightStyle = LineHeightStyle.Default,
-                    platformStyle = PlatformTextStyle(includeFontPadding = false)
-                )
-            }
+        val style = if (isLineHeightSp) {
+            TextStyle(
+                fontSize = fontSize,
+                lineHeight = fontSize * 2,
+                lineHeightStyle = LineHeightStyle.Default,
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            )
+        } else {
+            TextStyle(
+                fontSize = fontSize,
+                lineHeight = 2.em,
+                lineHeightStyle = LineHeightStyle.Default,
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            )
+        }
 
         return ParagraphIntrinsics(
             text = text,
@@ -128,8 +133,10 @@ class NonLinearFontScalingBenchmark(
 
     @Test
     fun nonLinearfontScaling1x_construct() {
-        val density =
-            Density(instrumentationContext.resources.displayMetrics.density, fontScale = 1f)
+        val density = Density(
+            instrumentationContext.resources.displayMetrics.density,
+            fontScale = 1f
+        )
 
         textBenchmarkRule.generator { textGenerator ->
             benchmarkRule.measureRepeated {
@@ -146,8 +153,10 @@ class NonLinearFontScalingBenchmark(
 
     @Test
     fun nonLinearfontScaling2x_construct() {
-        val density =
-            Density(instrumentationContext.resources.displayMetrics.density, fontScale = 2f)
+        val density = Density(
+            instrumentationContext.resources.displayMetrics.density,
+            fontScale = 2f
+        )
 
         textBenchmarkRule.generator { textGenerator ->
             benchmarkRule.measureRepeated {

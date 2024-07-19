@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @SmallTest
 class ColorResourcesTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun colorResourceTest() {
@@ -41,7 +42,8 @@ class ColorResourcesTest {
 
         rule.setContent {
             CompositionLocalProvider(LocalContext provides context) {
-                assertThat(colorResource(R.color.color_resource)).isEqualTo(Color(0x12345678))
+                assertThat(colorResource(R.color.color_resource))
+                    .isEqualTo(Color(0x12345678))
             }
         }
     }

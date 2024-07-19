@@ -83,10 +83,9 @@ class BasicMarqueeTest {
         private val BackgroundColor = Color.White
     }
 
-    private val motionDurationScale =
-        object : MotionDurationScale {
-            override var scaleFactor: Float by mutableStateOf(1f)
-        }
+    private val motionDurationScale = object : MotionDurationScale {
+        override var scaleFactor: Float by mutableStateOf(1f)
+    }
 
     @OptIn(ExperimentalTestApi::class)
     @get:Rule
@@ -108,20 +107,30 @@ class BasicMarqueeTest {
 
     @Test
     fun initialState() {
-        rule.setContent { TestMarqueeContent(Modifier.basicMarquee()) }
+        rule.setContent {
+            TestMarqueeContent(Modifier.basicMarquee())
+        }
 
-        rule.onRoot().captureToImage().assertPixels { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels { Color1 }
     }
 
     @Test
     fun doesNotAnimate_whenZeroIterations() {
-        rule.setContent { TestMarqueeContent(Modifier.basicMarqueeWithTestParams(iterations = 0)) }
+        rule.setContent {
+            TestMarqueeContent(
+                Modifier.basicMarqueeWithTestParams(
+                    iterations = 0
+                )
+            )
+        }
 
         // Color2 should never show up.
         repeat(5) {
             rule.mainClock.advanceTimeByFrame()
             rule.waitForIdle()
-            rule.onRoot().captureToImage().assertPixels { Color1 }
+            rule.onRoot().captureToImage()
+                .assertPixels { Color1 }
         }
     }
 
@@ -140,7 +149,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -157,18 +167,22 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -189,7 +203,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -206,18 +221,22 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -231,11 +250,14 @@ class BasicMarqueeTest {
     fun animates_singleIteration_fixedSpace() {
         rule.setContent {
             TestMarqueeContent(
-                Modifier.basicMarqueeWithTestParams(spacing = MarqueeSpacing(10.toDp()))
+                Modifier.basicMarqueeWithTestParams(
+                    spacing = MarqueeSpacing(10.toDp())
+                )
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -255,31 +277,37 @@ class BasicMarqueeTest {
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum == 11 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                     assertThat(edge3).isEqualTo(expectedEdge3)
                 }
+
                 frameNum == 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(expectedEdge3)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -300,7 +328,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -320,31 +349,37 @@ class BasicMarqueeTest {
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum == 11 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                     assertThat(edge3).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                     assertThat(edge3).isEqualTo(expectedEdge3)
                 }
+
                 frameNum == 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                     assertThat(edge3).isEqualTo(expectedEdge3)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -367,7 +402,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First iteration.
         repeat(20) { frameNum ->
@@ -384,14 +420,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -414,14 +453,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -454,7 +496,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         repeat(initialFrameDelay) {
             rule.mainClock.advanceTimeByFrame()
@@ -482,14 +525,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -512,14 +558,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -552,7 +601,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First iteration.
         repeat(20) { frameNum ->
@@ -569,14 +619,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -610,14 +663,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -651,7 +707,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         repeat(initialFrameDelay) {
             rule.mainClock.advanceTimeByFrame()
@@ -679,14 +736,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -720,14 +780,17 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
@@ -757,7 +820,8 @@ class BasicMarqueeTest {
             )
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -774,18 +838,22 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -803,7 +871,8 @@ class BasicMarqueeTest {
             }
         }
 
-        rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color2 }
+        rule.onRoot().captureToImage()
+            .assertPixels(expectedSize = IntSize(100, 100)) { Color2 }
 
         // First stage of animation: show all the content.
         repeat(30) { frameNum ->
@@ -820,18 +889,22 @@ class BasicMarqueeTest {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 10 -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum == 10 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(-1)
                 }
+
                 frameNum < 20 -> {
                     assertThat(edge1).isEqualTo(-1)
                     assertThat(edge2).isEqualTo(expectedEdge2)
                 }
+
                 else -> {
                     // Nothing should happen after the animation finishes.
                     assertThat(edge1).isEqualTo(-1)
@@ -848,7 +921,8 @@ class BasicMarqueeTest {
         rule.setContent {
             focusManager = LocalFocusManager.current
             TestMarqueeContent(
-                Modifier.focusable() // extra focusable for initial focus.
+                Modifier
+                    .focusable() // extra focusable for initial focus.
                     .basicMarqueeWithTestParams(animationMode = WhileFocused)
                     .focusRequester(focusRequester)
                     .focusable()
@@ -858,10 +932,13 @@ class BasicMarqueeTest {
         // Nothing should happen before focusing.
         repeat(10) {
             rule.mainClock.advanceTimeByFrame()
-            rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+            rule.onRoot().captureToImage()
+                .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
         }
 
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Animation should start on next frame.
         repeat(5) { frameNum ->
@@ -875,18 +952,22 @@ class BasicMarqueeTest {
                 0 -> {
                     assertThat(edge1).isEqualTo(-1)
                 }
+
                 else -> {
                     assertThat(edge1).isEqualTo(expectedEdge1)
                 }
             }
         }
 
-        rule.runOnIdle { focusManager.clearFocus() }
+        rule.runOnIdle {
+            focusManager.clearFocus()
+        }
 
         // Losing focus should cancel the animation and reset the offset.
         repeat(5) {
             rule.mainClock.advanceTimeByFrame()
-            rule.onRoot().captureToImage().assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
+            rule.onRoot().captureToImage()
+                .assertPixels(expectedSize = IntSize(100, 100)) { Color1 }
         }
     }
 
@@ -957,8 +1038,12 @@ class BasicMarqueeTest {
         }
 
         // Run the animation for a bit so we can tell when it resets.
-        repeat(3) { rule.mainClock.advanceTimeByFrame() }
-        rule.onRoot().captureToImage().assertContainsColor(Color1).assertContainsColor(Color2)
+        repeat(3) {
+            rule.mainClock.advanceTimeByFrame()
+        }
+        rule.onRoot().captureToImage()
+            .assertContainsColor(Color1)
+            .assertContainsColor(Color2)
 
         velocity += 1f
 
@@ -969,8 +1054,12 @@ class BasicMarqueeTest {
         image.assertDoesNotContainColor(Color2)
 
         // Then ensure the animation is running again.
-        repeat(3) { rule.mainClock.advanceTimeByFrame() }
-        rule.onRoot().captureToImage().assertContainsColor(Color1).assertContainsColor(Color2)
+        repeat(3) {
+            rule.mainClock.advanceTimeByFrame()
+        }
+        rule.onRoot().captureToImage()
+            .assertContainsColor(Color1)
+            .assertContainsColor(Color2)
     }
 
     @Test
@@ -981,14 +1070,16 @@ class BasicMarqueeTest {
 
         rule.setContent {
             Box(Modifier.drawBehind { outerDraws++ }) {
-                TestMarqueeContent(
-                    marqueeModifier =
-                        Modifier.basicMarqueeWithTestParams().drawBehind { innerDraws++ }
+                TestMarqueeContent(marqueeModifier = Modifier
+                    .basicMarqueeWithTestParams()
+                    .drawBehind { innerDraws++ }
                 )
             }
         }
 
-        repeat(iterations) { rule.mainClock.advanceTimeByFrame() }
+        repeat(iterations) {
+            rule.mainClock.advanceTimeByFrame()
+        }
 
         rule.runOnIdle {
             assertThat(outerDraws).isEqualTo(1)
@@ -1002,33 +1093,32 @@ class BasicMarqueeTest {
         val childMaxIntrinsicWidth = 20
         val childMinIntrinsicHeight = 30
         val childMaxIntrinsicHeight = 40
-        val fixedIntrinsicsMeasurePolicy =
-            object : MeasurePolicy {
-                override fun MeasureScope.measure(
-                    measurables: List<Measurable>,
-                    constraints: Constraints
-                ): MeasureResult = layout(0, 0) {}
+        val fixedIntrinsicsMeasurePolicy = object : MeasurePolicy {
+            override fun MeasureScope.measure(
+                measurables: List<Measurable>,
+                constraints: Constraints
+            ): MeasureResult = layout(0, 0) {}
 
-                override fun IntrinsicMeasureScope.minIntrinsicWidth(
-                    measurables: List<IntrinsicMeasurable>,
-                    height: Int
-                ): Int = childMinIntrinsicWidth
+            override fun IntrinsicMeasureScope.minIntrinsicWidth(
+                measurables: List<IntrinsicMeasurable>,
+                height: Int
+            ): Int = childMinIntrinsicWidth
 
-                override fun IntrinsicMeasureScope.maxIntrinsicWidth(
-                    measurables: List<IntrinsicMeasurable>,
-                    height: Int
-                ): Int = childMaxIntrinsicWidth
+            override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+                measurables: List<IntrinsicMeasurable>,
+                height: Int
+            ): Int = childMaxIntrinsicWidth
 
-                override fun IntrinsicMeasureScope.minIntrinsicHeight(
-                    measurables: List<IntrinsicMeasurable>,
-                    width: Int
-                ): Int = childMinIntrinsicHeight
+            override fun IntrinsicMeasureScope.minIntrinsicHeight(
+                measurables: List<IntrinsicMeasurable>,
+                width: Int
+            ): Int = childMinIntrinsicHeight
 
-                override fun IntrinsicMeasureScope.maxIntrinsicHeight(
-                    measurables: List<IntrinsicMeasurable>,
-                    width: Int
-                ): Int = childMaxIntrinsicHeight
-            }
+            override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+                measurables: List<IntrinsicMeasurable>,
+                width: Int
+            ): Int = childMaxIntrinsicHeight
+        }
         var minIntrinsicWidth = -1
         var maxIntrinsicWidth = -1
         var minIntrinsicHeight = -1
@@ -1036,15 +1126,15 @@ class BasicMarqueeTest {
 
         rule.setContent {
             Layout(
-                modifier =
-                    Modifier.layout { measurable, _ ->
-                            minIntrinsicWidth = measurable.minIntrinsicWidth(0)
-                            maxIntrinsicWidth = measurable.maxIntrinsicWidth(0)
-                            minIntrinsicHeight = measurable.minIntrinsicHeight(0)
-                            maxIntrinsicHeight = measurable.maxIntrinsicHeight(0)
-                            layout(0, 0) {}
-                        }
-                        .basicMarqueeWithTestParams(),
+                modifier = Modifier
+                    .layout { measurable, _ ->
+                        minIntrinsicWidth = measurable.minIntrinsicWidth(0)
+                        maxIntrinsicWidth = measurable.maxIntrinsicWidth(0)
+                        minIntrinsicHeight = measurable.minIntrinsicHeight(0)
+                        maxIntrinsicHeight = measurable.maxIntrinsicHeight(0)
+                        layout(0, 0) {}
+                    }
+                    .basicMarqueeWithTestParams(),
                 measurePolicy = fixedIntrinsicsMeasurePolicy
             )
         }
@@ -1064,7 +1154,8 @@ class BasicMarqueeTest {
 
         rule.setContent {
             Box(
-                Modifier.width(10.dp)
+                Modifier
+                    .width(10.dp)
                     .layout { measurable, constraints ->
                         outerMeasures++
 
@@ -1073,7 +1164,9 @@ class BasicMarqueeTest {
                         measurable.maxIntrinsicWidth(0)
 
                         val placeable = measurable.measure(constraints)
-                        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                        layout(placeable.width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
                     }
                     .basicMarqueeWithTestParams(
                         iterations = Int.MAX_VALUE,
@@ -1086,12 +1179,18 @@ class BasicMarqueeTest {
             }
         }
 
-        rule.runOnIdle { assertThat(outerMeasures).isEqualTo(2) }
+        rule.runOnIdle {
+            assertThat(outerMeasures).isEqualTo(2)
+        }
 
         // Let the animation run for a few frames.
-        repeat(10) { rule.mainClock.advanceTimeByFrame() }
+        repeat(10) {
+            rule.mainClock.advanceTimeByFrame()
+        }
 
-        rule.runOnIdle { assertThat(outerMeasures).isEqualTo(2) }
+        rule.runOnIdle {
+            assertThat(outerMeasures).isEqualTo(2)
+        }
     }
 
     private fun testAnimationContinuity(
@@ -1112,11 +1211,17 @@ class BasicMarqueeTest {
         modifierFactory: () -> Modifier,
         onChange: () -> Unit
     ) {
-        rule.setContent { TestMarqueeContent(modifierFactory()) }
+        rule.setContent {
+            TestMarqueeContent(modifierFactory())
+        }
 
         // Run the animation for a bit so we can tell when it resets.
-        repeat(3) { rule.mainClock.advanceTimeByFrame() }
-        rule.onRoot().captureToImage().assertContainsColor(Color1).assertContainsColor(Color2)
+        repeat(3) {
+            rule.mainClock.advanceTimeByFrame()
+        }
+        rule.onRoot().captureToImage()
+            .assertContainsColor(Color1)
+            .assertContainsColor(Color2)
 
         onChange()
 
@@ -1132,9 +1237,22 @@ class BasicMarqueeTest {
 
     @Composable
     private fun TestMarqueeContent(marqueeModifier: Modifier) {
-        Row(Modifier.width(100.toDp()).background(BackgroundColor).then(marqueeModifier)) {
-            Box(Modifier.size(100.toDp()).background(Color1))
-            Box(Modifier.size(100.toDp()).background(Color2))
+        Row(
+            Modifier
+                .width(100.toDp())
+                .background(BackgroundColor)
+                .then(marqueeModifier)
+        ) {
+            Box(
+                Modifier
+                    .size(100.toDp())
+                    .background(Color1)
+            )
+            Box(
+                Modifier
+                    .size(100.toDp())
+                    .background(Color2)
+            )
         }
     }
 
@@ -1145,15 +1263,14 @@ class BasicMarqueeTest {
         initialDelayMillis: Int = 0,
         spacing: MarqueeSpacing = MarqueeSpacing(0.toDp()),
         velocity: Dp = 10.pxPerFrame
-    ) =
-        basicMarquee(
-            iterations = iterations,
-            animationMode = animationMode,
-            repeatDelayMillis = delayMillis,
-            initialDelayMillis = initialDelayMillis,
-            spacing = spacing,
-            velocity = velocity
-        )
+    ) = basicMarquee(
+        iterations = iterations,
+        animationMode = animationMode,
+        repeatDelayMillis = delayMillis,
+        initialDelayMillis = initialDelayMillis,
+        spacing = spacing,
+        velocity = velocity
+    )
 
     /**
      * Finds the x coordinate in the image of the top row of pixels where the color first changes

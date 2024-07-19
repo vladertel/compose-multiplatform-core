@@ -60,20 +60,22 @@ import org.junit.runners.Parameterized
 /** Test toggle buttons in CoreTestApp. */
 @LargeTest
 @RunWith(Parameterized::class)
-class ToggleButtonUITest(private val implName: String, private val cameraConfig: String) {
+class ToggleButtonUITest(
+    private val implName: String,
+    private val cameraConfig: String
+) {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            CameraUtil.PreTestCameraIdList(
-                if (implName == Camera2Config::class.simpleName) {
-                    Camera2Config.defaultConfig()
-                } else {
-                    CameraPipeConfig.defaultConfig()
-                }
-            )
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        CameraUtil.PreTestCameraIdList(
+            if (implName == Camera2Config::class.simpleName) {
+                Camera2Config.defaultConfig()
+            } else {
+                CameraPipeConfig.defaultConfig()
+            }
         )
+    )
 
     @get:Rule
     val permissionRule: GrantPermissionRule =
@@ -83,16 +85,17 @@ class ToggleButtonUITest(private val implName: String, private val cameraConfig:
         )
 
     @get:Rule
-    val cameraPipeConfigTestRule =
-        CameraPipeConfigTestRule(
-            active = implName == CameraPipeConfig::class.simpleName,
-        )
+    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
+        active = implName == CameraPipeConfig::class.simpleName,
+    )
 
-    private val launchIntent =
-        Intent(ApplicationProvider.getApplicationContext(), CameraXActivity::class.java).apply {
-            putExtra(CameraXActivity.INTENT_EXTRA_CAMERA_IMPLEMENTATION, cameraConfig)
-            putExtra(CameraXActivity.INTENT_EXTRA_CAMERA_IMPLEMENTATION_NO_HISTORY, true)
-        }
+    private val launchIntent = Intent(
+        ApplicationProvider.getApplicationContext(),
+        CameraXActivity::class.java
+    ).apply {
+        putExtra(CameraXActivity.INTENT_EXTRA_CAMERA_IMPLEMENTATION, cameraConfig)
+        putExtra(CameraXActivity.INTENT_EXTRA_CAMERA_IMPLEMENTATION_NO_HISTORY, true)
+    }
 
     @Before
     fun setUp() {
@@ -109,20 +112,18 @@ class ToggleButtonUITest(private val implName: String, private val cameraConfig:
     }
 
     @After
-    fun tearDown(): Unit =
-        runBlocking(Dispatchers.Main) {
-            // Returns to Home to restart next test.
-            device.pressHome()
-            device.waitForIdle(IDLE_TIMEOUT_MS)
-            // Unfreeze rotation so the device can choose the orientation via its own policy. Be
-            // nice
-            // to other tests :)
-            device.unfreezeRotation()
+    fun tearDown(): Unit = runBlocking(Dispatchers.Main) {
+        // Returns to Home to restart next test.
+        device.pressHome()
+        device.waitForIdle(IDLE_TIMEOUT_MS)
+        // Unfreeze rotation so the device can choose the orientation via its own policy. Be nice
+        // to other tests :)
+        device.unfreezeRotation()
 
-            val context = ApplicationProvider.getApplicationContext<Context>()
-            val cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
-            cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
-        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
+        cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
+    }
 
     @Test
     fun testFlashToggleButton() {
@@ -186,7 +187,8 @@ class ToggleButtonUITest(private val implName: String, private val cameraConfig:
 
     private fun isButtonEnabled(resource: Int): Boolean {
         return try {
-            onView(withId(resource)).check(ViewAssertions.matches(ViewMatchers.isEnabled()))
+            onView(withId(resource))
+                .check(ViewAssertions.matches(ViewMatchers.isEnabled()))
             // View is in hierarchy
             true
         } catch (e: AssertionFailedError) {
@@ -209,16 +211,15 @@ class ToggleButtonUITest(private val implName: String, private val cameraConfig:
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun data() =
-            listOf(
-                arrayOf(
-                    Camera2Config::class.simpleName,
-                    CameraXViewModel.CAMERA2_IMPLEMENTATION_OPTION
-                ),
-                arrayOf(
-                    CameraPipeConfig::class.simpleName,
-                    CameraXViewModel.CAMERA_PIPE_IMPLEMENTATION_OPTION
-                )
+        fun data() = listOf(
+            arrayOf(
+                Camera2Config::class.simpleName,
+                CameraXViewModel.CAMERA2_IMPLEMENTATION_OPTION
+            ),
+            arrayOf(
+                CameraPipeConfig::class.simpleName,
+                CameraXViewModel.CAMERA_PIPE_IMPLEMENTATION_OPTION
             )
+        )
     }
 }

@@ -22,10 +22,14 @@ import androidx.startup.Initializer
 import androidx.work.Configuration
 import androidx.work.WorkManager
 
-/** A [Initializer] which initializes [WorkManager]. */
+/**
+ * A [Initializer] which initializes [WorkManager].
+ */
 class WorkManagerInitializer : Initializer<WorkManager> {
     override fun create(context: Context): WorkManager {
-        val configuration = Configuration.Builder().setMinimumLoggingLevel(Log.DEBUG).build()
+        val configuration = Configuration.Builder()
+            .setMinimumLoggingLevel(Log.DEBUG)
+            .build()
 
         WorkManager.initialize(context, configuration)
         return WorkManager.getInstance(context)

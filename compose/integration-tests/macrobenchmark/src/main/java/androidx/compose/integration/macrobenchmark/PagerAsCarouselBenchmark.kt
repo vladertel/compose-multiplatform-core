@@ -32,8 +32,11 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class PagerAsCarouselBenchmark(private val compilationMode: CompilationMode) {
-    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+class PagerAsCarouselBenchmark(
+    private val compilationMode: CompilationMode
+) {
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
 
     @Test
     fun scroll() {

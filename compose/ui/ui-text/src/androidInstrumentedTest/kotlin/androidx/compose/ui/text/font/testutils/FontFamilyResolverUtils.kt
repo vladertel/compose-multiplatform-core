@@ -41,16 +41,15 @@ internal fun TypefaceRequestCache.getImmutableResultFor(
     fontSynthesis: FontSynthesis = FontSynthesis.All,
     fontLoader: AndroidFontLoader
 ): Any? {
-    val result =
-        get(
-            TypefaceRequest(
-                fontFamily = fontFamily,
-                fontWeight = fontWeight,
-                fontStyle = fontStyle,
-                fontSynthesis = fontSynthesis,
-                resourceLoaderCacheKey = fontLoader.cacheKey
-            )
+    val result = get(
+        TypefaceRequest(
+            fontFamily = fontFamily,
+            fontWeight = fontWeight,
+            fontStyle = fontStyle,
+            fontSynthesis = fontSynthesis,
+            resourceLoaderCacheKey = fontLoader.cacheKey
         )
+    )
     if (result == null) {
         return result
     }

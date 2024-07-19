@@ -31,7 +31,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ComposeViewTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun composeViewIsTransitionGroup() {
@@ -41,9 +42,10 @@ class ComposeViewTest {
 
     @Test
     fun composeViewInflatesTransitionGroup() {
-        val view =
-            rule.activity.layoutInflater.inflate(R.layout.composeview_transition_group_false, null)
-                as ViewGroup
+        val view = rule.activity.layoutInflater.inflate(
+            R.layout.composeview_transition_group_false,
+            null
+        ) as ViewGroup
         assertFalse("XML overrides ComposeView.isTransitionGroup", view.isTransitionGroup)
     }
 }

@@ -32,7 +32,8 @@ class TestActivity : Activity(), Resettable {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.content_view)
         println("onCreate")
-        @Suppress("Deprecation") overridePendingTransition(0, 0)
+        @Suppress("Deprecation")
+        overridePendingTransition(0, 0)
     }
 
     override fun onResume() {
@@ -48,7 +49,8 @@ class TestActivity : Activity(), Resettable {
         }
 
         super.finish()
-        @Suppress("Deprecation") overridePendingTransition(0, 0)
+        @Suppress("Deprecation")
+        overridePendingTransition(0, 0)
     }
 
     companion object {

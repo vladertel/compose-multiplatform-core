@@ -49,11 +49,23 @@ fun MockViewValidator.contact(contact: Contact) {
 @Suppress("ComposableNaming")
 @Composable
 fun contacts(contacts: Collection<Contact>, selected: Contact?) {
-    Linear { Repeated(of = contacts) { SelectBox(it == selected) { contact(it) } } }
+    Linear {
+        Repeated(of = contacts) {
+            SelectBox(it == selected) {
+                contact(it)
+            }
+        }
+    }
 }
 
 fun MockViewValidator.contacts(contacts: Collection<Contact>, selected: Contact?) {
-    Linear { Repeated(of = contacts) { SelectBox(it == selected) { contact(it) } } }
+    Linear {
+        Repeated(of = contacts) {
+            SelectBox(it == selected) {
+                contact(it)
+            }
+        }
+    }
 }
 
 // <linear>

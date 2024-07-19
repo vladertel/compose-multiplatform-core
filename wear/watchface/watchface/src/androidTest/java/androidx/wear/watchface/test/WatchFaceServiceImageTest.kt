@@ -133,7 +133,8 @@ public class ComplicationTapActivity : Activity() {
 @RequiresApi(Build.VERSION_CODES.O_MR1)
 public class WatchFaceServiceImageTest {
 
-    @get:Rule val mocks = MockitoJUnit.rule()
+    @get:Rule
+    val mocks = MockitoJUnit.rule()
 
     @Mock private lateinit var surfaceHolder: SurfaceHolder
 

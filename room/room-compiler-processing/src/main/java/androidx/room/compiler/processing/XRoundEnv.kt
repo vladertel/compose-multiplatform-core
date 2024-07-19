@@ -29,6 +29,10 @@ import kotlin.reflect.KClass
  * @see javax.annotation.processing.RoundEnvironment
  */
 interface XRoundEnv {
+    /**
+     * The root elements in the round.
+     */
+    val rootElements: Set<XElement>
 
     /**
      * Returns true if no further rounds of processing will be done.
@@ -38,13 +42,17 @@ interface XRoundEnv {
      */
     val isProcessingOver: Boolean
 
-    /** Returns the set of [XElement]s that are annotated with the given annotation [klass]. */
+    /**
+     * Returns the set of [XElement]s that are annotated with the given annotation [klass].
+     */
     fun getElementsAnnotatedWith(klass: KClass<out Annotation>): Set<XElement>
 
     fun getElementsAnnotatedWith(annotationQualifiedName: String): Set<XElement>
 
     companion object {
-        /** Creates an [XRoundEnv] from the given Java processing parameters. */
+        /**
+         * Creates an [XRoundEnv] from the given Java processing parameters.
+         */
         @JvmStatic
         fun create(
             processingEnv: XProcessingEnv,
@@ -57,7 +65,7 @@ interface XRoundEnv {
                     JavacRoundEnv(processingEnv, roundEnvironment)
                 }
                 is KspProcessingEnv -> {
-                    KspRoundEnv(if (isProcessingOver) null else processingEnv)
+                    KspRoundEnv(processingEnv, isProcessingOver)
                 }
                 else -> error("invalid processing environment type: $processingEnv")
             }

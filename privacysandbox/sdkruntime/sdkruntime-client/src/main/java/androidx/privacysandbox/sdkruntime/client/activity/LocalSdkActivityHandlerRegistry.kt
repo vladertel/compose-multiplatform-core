@@ -32,12 +32,17 @@ internal object LocalSdkActivityHandlerRegistry {
     private val mapsLock = Any()
 
     @GuardedBy("mapsLock")
-    private val handlerToHandlerInfo = hashMapOf<SdkSandboxActivityHandlerCompat, HandlerInfo>()
+    private val handlerToHandlerInfo =
+        hashMapOf<SdkSandboxActivityHandlerCompat, HandlerInfo>()
 
     @GuardedBy("mapsLock")
-    private val tokenToHandler = hashMapOf<IBinder, SdkSandboxActivityHandlerCompat>()
+    private val tokenToHandler =
+        hashMapOf<IBinder, SdkSandboxActivityHandlerCompat>()
 
-    fun register(sdkPackageName: String, handler: SdkSandboxActivityHandlerCompat): IBinder =
+    fun register(
+        sdkPackageName: String,
+        handler: SdkSandboxActivityHandlerCompat
+    ): IBinder =
         synchronized(mapsLock) {
             val existingInfo = handlerToHandlerInfo[handler]
             if (existingInfo != null) {
@@ -59,17 +64,16 @@ internal object LocalSdkActivityHandlerRegistry {
             }
         }
 
-    fun unregisterAllActivityHandlersForSdk(sdkPackageName: String) =
-        synchronized(mapsLock) {
-            val it = handlerToHandlerInfo.values.iterator()
-            while (it.hasNext()) {
-                val next = it.next()
-                if (next.sdkPackageName == sdkPackageName) {
-                    it.remove()
-                    tokenToHandler.remove(next.token)
-                }
+    fun unregisterAllActivityHandlersForSdk(sdkPackageName: String) = synchronized(mapsLock) {
+        val it = handlerToHandlerInfo.values.iterator()
+        while (it.hasNext()) {
+            val next = it.next()
+            if (next.sdkPackageName == sdkPackageName) {
+                it.remove()
+                tokenToHandler.remove(next.token)
             }
         }
+    }
 
     fun isRegistered(token: IBinder): Boolean =
         synchronized(mapsLock) {
@@ -82,13 +86,17 @@ internal object LocalSdkActivityHandlerRegistry {
             return tokenToHandler[token]
         }
 
-    fun notifyOnActivityCreation(token: IBinder, activityHolder: ActivityHolder) =
-        synchronized(mapsLock) {
-            val handler =
-                tokenToHandler[token]
-                    ?: throw IllegalStateException("There is no registered handler to notify")
-            handler.onActivityCreated(activityHolder)
-        }
+    fun notifyOnActivityCreation(
+        token: IBinder,
+        activityHolder: ActivityHolder
+    ) = synchronized(mapsLock) {
+        val handler = tokenToHandler[token]
+            ?: throw IllegalStateException("There is no registered handler to notify")
+        handler.onActivityCreated(activityHolder)
+    }
 
-    private data class HandlerInfo(val token: IBinder, val sdkPackageName: String)
+    private data class HandlerInfo(
+        val token: IBinder,
+        val sdkPackageName: String
+    )
 }

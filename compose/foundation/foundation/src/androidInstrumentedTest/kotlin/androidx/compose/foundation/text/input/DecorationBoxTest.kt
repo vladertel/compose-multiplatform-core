@@ -59,7 +59,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DecorationBoxTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val Tag = "BasicTextField"
     private val DecorationTag = "DecorationBox"
@@ -73,10 +74,10 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = { innerTextField ->
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
-                                .testTag(DecorationTag)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
+                            .testTag(DecorationTag)
                     ) {
                         innerTextField()
                     }
@@ -100,10 +101,10 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = { innerTextField ->
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
-                                .testTag(DecorationTag)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
+                            .testTag(DecorationTag)
                     ) {
                         innerTextField()
                     }
@@ -127,10 +128,10 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = { innerTextField ->
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
-                                .testTag(DecorationTag)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
+                            .testTag(DecorationTag)
                     ) {
                         innerTextField()
                     }
@@ -157,9 +158,9 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = {
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
                     )
                 }
             )
@@ -171,7 +172,9 @@ class DecorationBoxTest {
             performTextInput("hello")
         }
 
-        rule.runOnIdle { assertThat(state.text.toString()).isEqualTo("hello") }
+        rule.runOnIdle {
+            assertThat(state.text.toString()).isEqualTo("hello")
+        }
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -184,9 +187,9 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = {
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
                     )
                 }
             )
@@ -204,7 +207,9 @@ class DecorationBoxTest {
             }
         }
 
-        rule.runOnIdle { assertThat(state.text.toString()).isEqualTo("hello") }
+        rule.runOnIdle {
+            assertThat(state.text.toString()).isEqualTo("hello")
+        }
     }
 
     @Test
@@ -226,10 +231,13 @@ class DecorationBoxTest {
 
         rule.waitForIdle()
 
-        assertThat(decorationBoxConstraints?.minWidth).isNotEqualTo(0)
-        assertThat(decorationBoxConstraints?.minWidth).isEqualTo(decorationBoxConstraints?.maxWidth)
+        assertThat(decorationBoxConstraints?.minWidth)
+            .isNotEqualTo(0)
+        assertThat(decorationBoxConstraints?.minWidth)
+            .isEqualTo(decorationBoxConstraints?.maxWidth)
 
-        assertThat(decorationBoxConstraints?.minHeight).isNotEqualTo(0)
+        assertThat(decorationBoxConstraints?.minHeight)
+            .isNotEqualTo(0)
         assertThat(decorationBoxConstraints?.minHeight)
             .isEqualTo(decorationBoxConstraints?.maxHeight)
     }
@@ -244,10 +252,10 @@ class DecorationBoxTest {
                 modifier = Modifier.testTag(Tag),
                 decorator = { innerTextField ->
                     Box(
-                        modifier =
-                            Modifier.border(BorderStroke(2.dp, SolidColor(Color.Red)))
-                                .padding(16.dp)
-                                .testTag(DecorationTag)
+                        modifier = Modifier
+                            .border(BorderStroke(2.dp, SolidColor(Color.Red)))
+                            .padding(16.dp)
+                            .testTag(DecorationTag)
                     ) {
                         innerTextField()
                     }
@@ -262,6 +270,8 @@ class DecorationBoxTest {
         }
 
         // assertThat selection happened
-        rule.runOnIdle { assertThat(state.selection).isEqualTo(TextRange(0, 5)) }
+        rule.runOnIdle {
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
+        }
     }
 }

@@ -18,4 +18,7 @@ package androidx.glance.appwidget.action
 
 import androidx.glance.action.Action
 
-internal class CompoundButtonAction(val innerAction: Action, val checked: Boolean) : Action
+internal class CompoundButtonAction(
+    val innerAction: Action,
+    val checked: Boolean
+) : Action

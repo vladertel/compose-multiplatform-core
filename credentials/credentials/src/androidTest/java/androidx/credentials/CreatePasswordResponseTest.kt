@@ -49,6 +49,7 @@ class CreatePasswordResponseTest {
         val convertedResponse = createFrom(response.type, data)
 
         assertThat(convertedResponse).isInstanceOf(CreatePasswordResponse::class.java)
-        assertThat(convertedResponse.data.getCharSequence(customDataKey)).isEqualTo(customDataValue)
+        assertThat(convertedResponse.data.getCharSequence(customDataKey))
+            .isEqualTo(customDataValue)
     }
 }

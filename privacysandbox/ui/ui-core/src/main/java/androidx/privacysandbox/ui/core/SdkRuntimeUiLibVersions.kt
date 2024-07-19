@@ -20,7 +20,8 @@ import androidx.annotation.RestrictTo
 
 object SdkRuntimeUiLibVersions {
     var clientVersion: Int = -1
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) set
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        set
 
     const val apiVersion: Int = 1
 }

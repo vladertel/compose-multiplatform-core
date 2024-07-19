@@ -47,12 +47,11 @@ interface EntityProcessor : EntityOrViewProcessor {
                 val nameValue = indexAnnotation.name
                 val columns = indexAnnotation.value.asList()
                 val orders = indexAnnotation.orders.asList()
-                val name =
-                    if (nameValue == "") {
-                        createIndexName(columns, tableName)
-                    } else {
-                        nameValue
-                    }
+                val name = if (nameValue == "") {
+                    createIndexName(columns, tableName)
+                } else {
+                    nameValue
+                }
                 IndexInput(name, indexAnnotation.unique, columns, orders)
             }
         }
@@ -62,28 +61,30 @@ interface EntityProcessor : EntityOrViewProcessor {
         }
 
         fun extractForeignKeys(annotation: XAnnotationBox<Entity>): List<ForeignKeyInput> {
-            return annotation.getAsAnnotationBoxArray<ForeignKey>("foreignKeys").mapNotNull {
-                annotationBox ->
-                val foreignKey = annotationBox.value
-                val parent = annotationBox.getAsType("entity")
-                if (parent != null) {
-                    ForeignKeyInput(
-                        parent = parent,
-                        parentColumns = foreignKey.parentColumns.asList(),
-                        childColumns = foreignKey.childColumns.asList(),
-                        onDelete = ForeignKeyAction.fromAnnotationValue(foreignKey.onDelete),
-                        onUpdate = ForeignKeyAction.fromAnnotationValue(foreignKey.onUpdate),
-                        deferred = foreignKey.deferred
-                    )
-                } else {
-                    null
+            return annotation.getAsAnnotationBoxArray<ForeignKey>("foreignKeys")
+                .mapNotNull { annotationBox ->
+                    val foreignKey = annotationBox.value
+                    val parent = annotationBox.getAsType("entity")
+                    if (parent != null) {
+                        ForeignKeyInput(
+                            parent = parent,
+                            parentColumns = foreignKey.parentColumns.asList(),
+                            childColumns = foreignKey.childColumns.asList(),
+                            onDelete = ForeignKeyAction.fromAnnotationValue(foreignKey.onDelete),
+                            onUpdate = ForeignKeyAction.fromAnnotationValue(foreignKey.onUpdate),
+                            deferred = foreignKey.deferred
+                        )
+                    } else {
+                        null
+                    }
                 }
-            }
         }
     }
 }
 
-/** Processed Index annotation output. */
+/**
+ * Processed Index annotation output.
+ */
 data class IndexInput(
     val name: String,
     val unique: Boolean,
@@ -91,7 +92,9 @@ data class IndexInput(
     val orders: List<androidx.room.Index.Order>
 )
 
-/** ForeignKey, before it is processed in the context of a database. */
+/**
+ * ForeignKey, before it is processed in the context of a database.
+ */
 data class ForeignKeyInput(
     val parent: XType,
     val parentColumns: List<String>,

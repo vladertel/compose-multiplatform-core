@@ -25,7 +25,9 @@ import androidx.room.compiler.processing.XProcessingStep
 import androidx.room.compiler.processing.XTypeElement
 import javax.tools.Diagnostic
 
-/** Processing step that generates code enabling assisted injection of Workers using Hilt. */
+/**
+ * Processing step that generates code enabling assisted injection of Workers using Hilt.
+ */
 class WorkerStep : XProcessingStep {
 
     override fun annotations() = setOf(ClassNames.HILT_WORKER.canonicalName())
@@ -64,18 +66,17 @@ class WorkerStep : XProcessingStep {
             valid = false
         }
 
-        val constructors =
-            workerTypeElement.getConstructors().filter {
-                if (it.hasAnnotation(ClassNames.INJECT)) {
-                    env.error(
-                        "Worker constructor should be annotated with @AssistedInject instead of " +
-                            "@Inject.",
-                        it
-                    )
-                    valid = false
-                }
-                it.hasAnnotation(ClassNames.ASSISTED_INJECT)
+        val constructors = workerTypeElement.getConstructors().filter {
+            if (it.hasAnnotation(ClassNames.INJECT)) {
+                env.error(
+                    "Worker constructor should be annotated with @AssistedInject instead of " +
+                        "@Inject.",
+                    it
+                )
+                valid = false
             }
+            it.hasAnnotation(ClassNames.ASSISTED_INJECT)
+        }
         if (constructors.size != 1) {
             env.error(
                 "@HiltWorker annotated class should contain exactly one @AssistedInject " +
@@ -84,12 +85,10 @@ class WorkerStep : XProcessingStep {
             )
             valid = false
         }
-        constructors
-            .filter { it.isPrivate() }
-            .forEach {
-                env.error("@AssistedInject annotated constructors must not be private.", it)
-                valid = false
-            }
+        constructors.filter { it.isPrivate() }.forEach {
+            env.error("@AssistedInject annotated constructors must not be private.", it)
+            valid = false
+        }
 
         if (workerTypeElement.isNested() && !workerTypeElement.isStatic()) {
             env.error(

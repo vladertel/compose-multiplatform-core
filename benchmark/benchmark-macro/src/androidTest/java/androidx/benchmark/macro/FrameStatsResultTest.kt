@@ -63,8 +63,7 @@ class FrameStatsResultTest {
                     // this should be ignored too
                     com.pkg/com.pkg.MyActivity3/android.view.ViewRootImpl@8a8ebbbc (visibility=8)
                     Window: com.pkg/com.pkg.MyActivity3
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
         )
     }

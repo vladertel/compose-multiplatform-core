@@ -23,7 +23,10 @@ import androidx.health.services.client.data.ExerciseInfo
 import androidx.health.services.client.impl.response.ExerciseInfoResponse
 import com.google.common.util.concurrent.SettableFuture
 
-/** A callback for ipc invocations dealing with [ExerciseInfo]. */
+/**
+ * A callback for ipc invocations dealing with [ExerciseInfo].
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class ExerciseInfoCallback(private val resultFuture: SettableFuture<ExerciseInfo>) :
     IExerciseInfoCallback.Stub() {

@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class RequestFocusTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun active_isUnchanged() {
@@ -42,7 +43,8 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             )
@@ -50,10 +52,14 @@ class RequestFocusTest {
         rule.runOnIdle { focusRequester.requestFocus() }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -64,7 +70,8 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             )
@@ -75,10 +82,14 @@ class RequestFocusTest {
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Captured) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Captured)
+        }
     }
 
     @Test
@@ -87,19 +98,23 @@ class RequestFocusTest {
         val focusRequester = FocusRequester()
         lateinit var focusState: FocusState
         rule.setFocusableContent {
-            Box(
-                Modifier.focusRequester(focusRequester)
-                    .focusProperties { canFocus = false }
-                    .onFocusChanged { focusState = it }
-                    .focusTarget()
+            Box(Modifier
+                .focusRequester(focusRequester)
+                .focusProperties { canFocus = false }
+                .onFocusChanged { focusState = it }
+                .focusTarget()
             )
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Inactive) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Inactive)
+        }
     }
 
     @Test
@@ -111,21 +126,25 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
-                    .focusTarget()
-            ) {
+                    .focusTarget()) {
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { childFocusState = it }
-                        .focusTarget()
-                )
+                        .focusTarget())
             }
         }
-        rule.runOnIdle { initialFocus.requestFocus() }
+        rule.runOnIdle {
+            initialFocus.requestFocus()
+        }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -143,22 +162,28 @@ class RequestFocusTest {
         lateinit var childFocusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .focusProperties { canFocus = false }
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { childFocusState = it }
                         .focusTarget()
                 )
             }
         }
-        rule.runOnIdle { initialFocus.requestFocus() }
+        rule.runOnIdle {
+            initialFocus.requestFocus()
+        }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -179,24 +204,34 @@ class RequestFocusTest {
         lateinit var grandChildFocusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .focusProperties { canFocus = false }
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { childFocusState = it }
                         .focusTarget()
                 ) {
-                    Box(Modifier.onFocusChanged { grandChildFocusState = it }.focusTarget())
+                    Box(
+                        Modifier
+                            .onFocusChanged { grandChildFocusState = it }
+                            .focusTarget()
+                    )
                 }
             }
         }
-        rule.runOnIdle { initialFocus.requestFocus() }
+        rule.runOnIdle {
+            initialFocus.requestFocus()
+        }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -213,17 +248,22 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             )
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -234,16 +274,22 @@ class RequestFocusTest {
         lateinit var childFocusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             ) {
-                Box(Modifier.onFocusChanged { childFocusState = it }.focusTarget())
+                Box(
+                    Modifier
+                        .onFocusChanged { childFocusState = it }
+                        .focusTarget())
             }
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -262,23 +308,31 @@ class RequestFocusTest {
         lateinit var parentFocusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(initialFocus)
+                Modifier
+                    .focusRequester(initialFocus)
                     .onFocusChanged { parentFocusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(focusRequester)
+                    Modifier
+                        .focusRequester(focusRequester)
                         .onFocusChanged { focusState = it }
                         .focusTarget()
                 ) {
-                    Box(Modifier.onFocusChanged { childFocusState = it }.focusTarget())
+                    Box(
+                        Modifier
+                            .onFocusChanged { childFocusState = it }
+                            .focusTarget()
+                    )
                 }
             }
         }
         rule.runOnIdle { initialFocus.requestFocus() }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -295,17 +349,21 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
-                    .focusTarget()
-            )
+                    .focusTarget())
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -315,7 +373,8 @@ class RequestFocusTest {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             ) {
@@ -324,10 +383,14 @@ class RequestFocusTest {
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -338,7 +401,8 @@ class RequestFocusTest {
         rule.setFocusableContent {
             Box(Modifier.focusTarget()) {
                 Box(
-                    Modifier.focusRequester(focusRequester)
+                    Modifier
+                        .focusRequester(focusRequester)
                         .onFocusChanged { focusState = it }
                         .focusTarget()
                 ) {
@@ -348,10 +412,14 @@ class RequestFocusTest {
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -361,17 +429,27 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(Modifier.focusTarget()) {
-                Box(Modifier.onFocusChanged { focusState = it }.focusTarget()) {
-                    Box(Modifier.focusRequester(focusRequester).focusTarget())
+                Box(
+                    Modifier
+                        .onFocusChanged { focusState = it }
+                        .focusTarget()) {
+                    Box(
+                        Modifier
+                            .focusRequester(focusRequester)
+                            .focusTarget())
                 }
             }
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(ActiveParent) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(ActiveParent)
+        }
     }
 
     @Test
@@ -383,19 +461,23 @@ class RequestFocusTest {
             Box(Modifier.focusTarget()) {
                 Box(Modifier.focusTarget()) {
                     Box(
-                        Modifier.focusRequester(focusRequester)
+                        Modifier
+                            .focusRequester(focusRequester)
                             .onFocusChanged { focusState = it }
-                            .focusTarget()
-                    )
+                            .focusTarget())
                 }
             }
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -407,12 +489,14 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(initialFocus)
+                Modifier
+                    .focusRequester(initialFocus)
                     .onFocusChanged { parentFocusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(focusRequester)
+                    Modifier
+                        .focusRequester(focusRequester)
                         .onFocusChanged { focusState = it }
                         .focusTarget()
                 )
@@ -421,7 +505,9 @@ class RequestFocusTest {
         rule.runOnIdle { initialFocus.requestFocus() }
 
         // After executing requestFocus, siblingNode will be 'Active'.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -439,21 +525,24 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { parentFocusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { focusState = it }
-                        .focusTarget()
-                )
+                        .focusTarget())
             }
         }
         rule.runOnIdle { initialFocus.requestFocus() }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -471,12 +560,14 @@ class RequestFocusTest {
         lateinit var childFocusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(focusRequester)
+                Modifier
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState = it }
                     .focusTarget()
             ) {
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { childFocusState = it }
                         .focusTarget()
                 )
@@ -488,7 +579,9 @@ class RequestFocusTest {
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -507,14 +600,20 @@ class RequestFocusTest {
         lateinit var siblingFocusState: FocusState
 
         rule.setFocusableContent {
-            Box(Modifier.onFocusChanged { parentFocusState = it }.focusTarget()) {
+            Box(
+                Modifier
+                    .onFocusChanged { parentFocusState = it }
+                    .focusTarget()
+            ) {
                 Box(
-                    Modifier.focusRequester(focusRequester)
+                    Modifier
+                        .focusRequester(focusRequester)
                         .onFocusChanged { focusState = it }
                         .focusTarget()
                 )
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { siblingFocusState = it }
                         .focusTarget()
                 )
@@ -523,7 +622,9 @@ class RequestFocusTest {
         rule.runOnIdle { initialFocus.requestFocus() }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -542,17 +643,21 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         lateinit var siblingFocusState: FocusState
         rule.setFocusableContent {
-            Box(Modifier.onFocusChanged { parentFocusState = it }.focusTarget()) {
+            Box(
+                Modifier
+                    .onFocusChanged { parentFocusState = it }
+                    .focusTarget()
+            ) {
                 Box(
-                    Modifier.focusRequester(focusRequester)
+                    Modifier
+                        .focusRequester(focusRequester)
                         .onFocusChanged { focusState = it }
-                        .focusTarget()
-                )
+                        .focusTarget())
                 Box(
-                    Modifier.focusRequester(initialFocus)
+                    Modifier
+                        .focusRequester(initialFocus)
                         .onFocusChanged { siblingFocusState = it }
-                        .focusTarget()
-                )
+                        .focusTarget())
             }
         }
         rule.runOnIdle {
@@ -561,7 +666,9 @@ class RequestFocusTest {
         }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -581,23 +688,33 @@ class RequestFocusTest {
             Box(Modifier.focusTarget()) {
                 Box(Modifier.focusTarget()) {
                     Box(
-                        Modifier.focusRequester(focusRequester)
+                        Modifier
+                            .focusRequester(focusRequester)
                             .onFocusChanged { focusState = it }
                             .focusTarget()
                     )
                 }
                 Box(Modifier.focusTarget()) {
-                    Box(Modifier.focusRequester(initialFocus).focusTarget())
+                    Box(
+                        Modifier
+                            .focusRequester(initialFocus)
+                            .focusTarget())
                 }
             }
         }
-        rule.runOnIdle { initialFocus.requestFocus() }
+        rule.runOnIdle {
+            initialFocus.requestFocus()
+        }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
-        rule.runOnIdle { assertThat(focusState).isEqualTo(Active) }
+        rule.runOnIdle {
+            assertThat(focusState).isEqualTo(Active)
+        }
     }
 
     @Test
@@ -610,13 +727,19 @@ class RequestFocusTest {
         lateinit var focusState: FocusState
         rule.setFocusableContent {
             Box(
-                Modifier.focusRequester(initialFocus)
+                Modifier
+                    .focusRequester(initialFocus)
                     .onFocusChanged { grandParentFocusState = it }
                     .focusTarget()
             ) {
-                Box(Modifier.onFocusChanged { parentFocusState = it }.focusTarget()) {
+                Box(
+                    Modifier
+                        .onFocusChanged { parentFocusState = it }
+                        .focusTarget()
+                ) {
                     Box(
-                        Modifier.focusRequester(focusRequester)
+                        Modifier
+                            .focusRequester(focusRequester)
                             .onFocusChanged { focusState = it }
                             .focusTarget()
                     )
@@ -626,7 +749,9 @@ class RequestFocusTest {
         rule.runOnIdle { initialFocus.requestFocus() }
 
         // Act.
-        rule.runOnIdle { focusRequester.requestFocus() }
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {

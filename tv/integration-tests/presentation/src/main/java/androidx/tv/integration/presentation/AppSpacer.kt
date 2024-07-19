@@ -24,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 
 @Composable
-fun AppSpacer(width: Dp? = null, height: Dp? = null) {
+fun AppSpacer(
+    width: Dp? = null,
+    height: Dp? = null
+) {
     var modifier: Modifier = Modifier
     if (width != null) {
         modifier = modifier.width(width)

@@ -47,23 +47,24 @@ class ScopesRule : TestWatcher() {
 
     override fun starting(description: Description?) {
         Dispatchers.setMain(mainDispatcher)
-        ArchTaskExecutor.getInstance()
-            .setDelegate(
-                object : TaskExecutor() {
-                    override fun executeOnDiskIO(runnable: Runnable) {
-                        error("unsupported")
-                    }
+        ArchTaskExecutor.getInstance().setDelegate(
+            object : TaskExecutor() {
+                override fun executeOnDiskIO(runnable: Runnable) {
+                    error("unsupported")
+                }
 
-                    override fun postToMainThread(runnable: Runnable) {
-                        mainScope.launch { runnable.run() }
-                    }
-
-                    override fun isMainThread(): Boolean {
-                        // we have only one thread in this test.
-                        return true
+                override fun postToMainThread(runnable: Runnable) {
+                    mainScope.launch {
+                        runnable.run()
                     }
                 }
-            )
+
+                override fun isMainThread(): Boolean {
+                    // we have only one thread in this test.
+                    return true
+                }
+            }
+        )
     }
 
     override fun finished(description: Description?) {
@@ -83,7 +84,9 @@ class ScopesRule : TestWatcher() {
 
     fun <T> runOnMain(block: () -> T): T {
         return runBlocking {
-            val async = mainScope.async { block() }
+            val async = mainScope.async {
+                block()
+            }
             mainScope.testScheduler.runCurrent()
             async.await()
         }
@@ -98,10 +101,11 @@ fun <T> LiveData<T>.addObserver(scopes: ScopesRule): CollectingObserver<T> {
     }
 }
 
-class CollectingObserver<T>(private val liveData: LiveData<T>, private val scopes: ScopesRule) :
-    Observer<T> {
+class CollectingObserver<T>(
+    private val liveData: LiveData<T>,
+    private val scopes: ScopesRule
+) : Observer<T> {
     private var items = mutableListOf<T>()
-
     override fun onChanged(value: T) {
         items.add(value)
     }
@@ -110,5 +114,7 @@ class CollectingObserver<T>(private val liveData: LiveData<T>, private val scope
         Truth.assertThat(items).containsExactly(*expected)
     }
 
-    fun unsubscribe() = scopes.runOnMain { liveData.removeObserver(this) }
+    fun unsubscribe() = scopes.runOnMain {
+        liveData.removeObserver(this)
+    }
 }

@@ -60,7 +60,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class DrawingPrebuiltGraphicsLayerTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val size = 2
     private val sizeDp = with(rule.density) { size.toDp() }
@@ -73,7 +74,9 @@ class DrawingPrebuiltGraphicsLayerTest {
     @After
     fun releaseLayer() {
         rule.runOnUiThread {
-            layer?.let { context!!.releaseGraphicsLayer(it) }
+            layer?.let {
+                context!!.releaseGraphicsLayer(it)
+            }
             layer = null
         }
     }
@@ -88,18 +91,24 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
     fun sizeIsCorrect() {
-        rule.setContent { ColoredBox() }
+        rule.setContent {
+            ColoredBox()
+        }
 
-        rule.runOnIdle { assertThat(layer!!.size).isEqualTo(IntSize(size, size)) }
+        rule.runOnIdle {
+            assertThat(layer!!.size).isEqualTo(IntSize(size, size))
+        }
     }
 
     @Test
@@ -117,9 +126,9 @@ class DrawingPrebuiltGraphicsLayerTest {
             layer!!.alpha = 0.5f
         }
 
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red.copy(alpha = 0.5f).compositeOver(Color.White)
-        }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red.copy(alpha = 0.5f).compositeOver(Color.White) }
     }
 
     @Test
@@ -139,21 +148,27 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(ColoredBoxTag).captureToImage().assertPixels(expectedSize) { Color.Blue }
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Blue
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
 
-        rule.runOnUiThread { color = Color.Green }
+        rule.onNodeWithTag(ColoredBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Blue }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Blue }
 
-        rule.onNodeWithTag(ColoredBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Green
+        rule.runOnUiThread {
+            color = Color.Green
         }
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Green
-        }
+
+        rule.onNodeWithTag(ColoredBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Green }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Green }
     }
 
     @Test
@@ -164,12 +179,13 @@ class DrawingPrebuiltGraphicsLayerTest {
                 if (!drawPrebuiltLayer) {
                     val layer = obtainLayer()
                     Canvas(
-                        Modifier.layout { measurable, _ ->
-                            val placeable = measurable.measure(Constraints.fixed(size, size))
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeWithLayer(0, 0, layer)
+                        Modifier
+                            .layout { measurable, _ ->
+                                val placeable = measurable.measure(Constraints.fixed(size, size))
+                                layout(placeable.width, placeable.height) {
+                                    placeable.placeWithLayer(0, 0, layer)
+                                }
                             }
-                        }
                     ) {
                         drawRect(Color.Red)
                     }
@@ -179,11 +195,13 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -191,7 +209,11 @@ class DrawingPrebuiltGraphicsLayerTest {
         rule.setContent {
             if (!drawPrebuiltLayer) {
                 Box(Modifier.drawIntoLayer()) {
-                    Canvas(Modifier.size(sizeDp).drawIntoLayer(rememberGraphicsLayer())) {
+                    Canvas(
+                        Modifier
+                            .size(sizeDp)
+                            .drawIntoLayer(rememberGraphicsLayer())
+                    ) {
                         drawRect(Color.Red)
                     }
                 }
@@ -200,11 +222,13 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -213,7 +237,11 @@ class DrawingPrebuiltGraphicsLayerTest {
             if (!drawPrebuiltLayer) {
                 Box(Modifier.drawIntoLayer()) {
                     Box(Modifier.drawIntoLayer(rememberGraphicsLayer())) {
-                        Canvas(Modifier.size(sizeDp).drawIntoLayer(rememberGraphicsLayer())) {
+                        Canvas(
+                            Modifier
+                                .size(sizeDp)
+                                .drawIntoLayer(rememberGraphicsLayer())
+                        ) {
                             drawRect(Color.Red)
                         }
                     }
@@ -223,11 +251,13 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -237,8 +267,16 @@ class DrawingPrebuiltGraphicsLayerTest {
         rule.setContent {
             if (!drawPrebuiltLayer) {
                 Box(Modifier.drawIntoLayer()) {
-                    Box(Modifier.graphicsLayer()) {
-                        Canvas(Modifier.size(sizeDp).graphicsLayer()) { drawRect(Color.Red) }
+                    Box(
+                        Modifier.graphicsLayer()
+                    ) {
+                        Canvas(
+                            Modifier
+                                .size(sizeDp)
+                                .graphicsLayer()
+                        ) {
+                            drawRect(Color.Red)
+                        }
                     }
                 }
             } else {
@@ -246,11 +284,13 @@ class DrawingPrebuiltGraphicsLayerTest {
             }
         }
 
-        rule.runOnIdle { drawPrebuiltLayer = true }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -260,7 +300,11 @@ class DrawingPrebuiltGraphicsLayerTest {
         Assume.assumeTrue(Build.VERSION.SDK_INT != Build.VERSION_CODES.P)
         rule.setContent {
             SubcompositionReusableContentHost(active = !drawPrebuiltLayer) {
-                Box(Modifier.drawIntoLayer().graphicsLayer()) {
+                Box(
+                    Modifier
+                        .drawIntoLayer()
+                        .graphicsLayer()
+                ) {
                     Canvas(Modifier.size(sizeDp)) {
                         counter.value
                         drawRect(Color.Red)
@@ -280,9 +324,9 @@ class DrawingPrebuiltGraphicsLayerTest {
             counter.value++
         }
 
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
-        }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -290,12 +334,10 @@ class DrawingPrebuiltGraphicsLayerTest {
         val counter = mutableStateOf(0)
         rule.setContent {
             if (!drawPrebuiltLayer) {
-                ColoredBox(
-                    color = {
-                        counter.value
-                        Color.Red
-                    }
-                )
+                ColoredBox(color = {
+                    counter.value
+                    Color.Red
+                })
             } else {
                 LayerDrawingBox()
             }
@@ -309,9 +351,9 @@ class DrawingPrebuiltGraphicsLayerTest {
             counter.value++
         }
 
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
-        }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Test
@@ -329,11 +371,13 @@ class DrawingPrebuiltGraphicsLayerTest {
             layer!!.alpha = 1f
         }
 
-        rule.runOnIdle { layer!!.alpha = 0.5f }
-
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red.copy(alpha = 0.5f).compositeOver(Color.White)
+        rule.runOnIdle {
+            layer!!.alpha = 0.5f
         }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red.copy(alpha = 0.5f).compositeOver(Color.White) }
     }
 
     @Test
@@ -344,14 +388,15 @@ class DrawingPrebuiltGraphicsLayerTest {
             Column {
                 val layer = obtainLayer()
                 Canvas(
-                    Modifier.layout { measurable, _ ->
-                        val placeable = measurable.measure(Constraints.fixed(size, size))
-                        layout(placeable.width, placeable.height) {
-                            if (shouldPlace) {
-                                placeable.placeWithLayer(0, 0, layer)
+                    Modifier
+                        .layout { measurable, _ ->
+                            val placeable = measurable.measure(Constraints.fixed(size, size))
+                            layout(placeable.width, placeable.height) {
+                                if (shouldPlace) {
+                                    placeable.placeWithLayer(0, 0, layer)
+                                }
                             }
                         }
-                    }
                 ) {
                     drawRect(color)
                 }
@@ -365,14 +410,21 @@ class DrawingPrebuiltGraphicsLayerTest {
             color = Color.Green
         }
 
-        rule.onNodeWithTag(LayerDrawingBoxTag).captureToImage().assertPixels(expectedSize) {
-            Color.Red
-        }
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Composable
     private fun ColoredBox(modifier: Modifier = Modifier, color: () -> Color = { Color.Red }) {
-        Canvas(modifier.size(sizeDp).testTag(ColoredBoxTag).drawIntoLayer()) { drawRect(color()) }
+        Canvas(
+            modifier
+                .size(sizeDp)
+                .testTag(ColoredBoxTag)
+                .drawIntoLayer()
+                ) {
+            drawRect(color())
+        }
     }
 
     @Composable
@@ -382,18 +434,28 @@ class DrawingPrebuiltGraphicsLayerTest {
     }
 
     @Composable
-    private fun Modifier.drawIntoLayer(layer: GraphicsLayer = obtainLayer()): Modifier {
+    private fun Modifier.drawIntoLayer(
+        layer: GraphicsLayer = obtainLayer()
+    ): Modifier {
         return drawWithContent {
-            layer.record { this@drawWithContent.drawContent() }
+            layer.record {
+                this@drawWithContent.drawContent()
+            }
             drawLayer(layer)
         }
     }
 
     @Composable
     private fun LayerDrawingBox() {
-        Canvas(Modifier.size(sizeDp).testTag(LayerDrawingBoxTag)) {
+        Canvas(
+            Modifier
+                .size(sizeDp)
+                .testTag(LayerDrawingBoxTag)
+        ) {
             drawRect(Color.White)
-            layer?.let { drawLayer(it) }
+            layer?.let {
+                drawLayer(it)
+            }
         }
     }
 }

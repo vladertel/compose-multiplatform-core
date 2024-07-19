@@ -158,7 +158,8 @@ class FragmentViewTest {
                 fm.executePendingTransactions()
                 fail("Adding a fragment that is already added should be an error")
             } catch (e: IllegalStateException) {
-                assertThat(e).hasMessageThat().contains("Fragment already added: $fragment1")
+                assertThat(e)
+                    .hasMessageThat().contains("Fragment already added: $fragment1")
             }
         }
     }
@@ -197,7 +198,11 @@ class FragmentViewTest {
         assertChildren(container, fragment1, fragment3)
 
         // Now remove the remaining:
-        fm.beginTransaction().remove(fragment3).remove(fragment1).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .remove(fragment3)
+            .remove(fragment1)
+            .addToBackStack(null)
+            .commit()
         activityRule.executePendingTransactions()
         assertChildren(container)
 
@@ -215,7 +220,10 @@ class FragmentViewTest {
         fm.popBackStack()
         activityRule.executePendingTransactions()
         val replacement4 = fm.findFragmentByTag("4")!!
-        assertChildren(container, replacement1, replacement3, replacement2, replacement4)
+        assertChildren(
+            container, replacement1, replacement3, replacement2,
+            replacement4
+        )
     }
 
     // Removing a hidden fragment should remove the View and popping should bring it back hidden
@@ -252,7 +260,10 @@ class FragmentViewTest {
             activityRule.activity.findViewById<View>(R.id.fragmentContainer) as ViewGroup
         val fm = activityRule.activity.supportFragmentManager
         val fragment1 = StrictViewFragment()
-        fm.beginTransaction().add(R.id.fragmentContainer, fragment1, "1").detach(fragment1).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragment1, "1")
+            .detach(fragment1)
+            .commit()
         activityRule.executePendingTransactions()
         assertChildren(container)
         assertThat(fragment1.isDetached).isTrue()
@@ -311,7 +322,8 @@ class FragmentViewTest {
             FragmentManager.findFragment<Fragment>(view)
             fail("findFragment should throw IllegalStateException if a Fragment was not set")
         } catch (e: IllegalStateException) {
-            assertThat(e).hasMessageThat().contains("View $view does not have a Fragment set")
+            assertThat(e)
+                .hasMessageThat().contains("View $view does not have a Fragment set")
         }
     }
 
@@ -403,7 +415,9 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().hide(fragment).commit()
+        fm.beginTransaction()
+            .hide(fragment)
+            .commit()
         activityRule.executePendingTransactions()
         assertWithMessage("Fragment should not go through lifecycle changes until it is added")
             .that(fragment.lifecycle.currentState)
@@ -450,7 +464,10 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().add(R.id.fragmentContainer, fragment).show(fragment).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragment)
+            .show(fragment)
+            .commit()
         activityRule.executePendingTransactions()
     }
 
@@ -460,7 +477,9 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().show(fragment).commit()
+        fm.beginTransaction()
+            .show(fragment)
+            .commit()
         activityRule.executePendingTransactions()
         assertWithMessage("Fragment should not go through lifecycle changes until it is added")
             .that(fragment.lifecycle.currentState)
@@ -553,7 +572,9 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().detach(fragment).commit()
+        fm.beginTransaction()
+            .detach(fragment)
+            .commit()
         activityRule.executePendingTransactions()
         assertWithMessage("Fragment should not go through lifecycle changes until it is added")
             .that(fragment.lifecycle.currentState)
@@ -634,7 +655,10 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().add(R.id.fragmentContainer, fragment).attach(fragment).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragment)
+            .attach(fragment)
+            .commit()
         activityRule.executePendingTransactions()
     }
 
@@ -644,7 +668,9 @@ class FragmentViewTest {
         activityRule.setContentView(R.layout.simple_container)
         val fm = activityRule.activity.supportFragmentManager
         val fragment = StrictViewFragment()
-        fm.beginTransaction().attach(fragment).commit()
+        fm.beginTransaction()
+            .attach(fragment)
+            .commit()
         activityRule.executePendingTransactions()
         assertWithMessage("Fragment should not go through lifecycle changes until it is added")
             .that(fragment.lifecycle.currentState)
@@ -839,7 +865,10 @@ class FragmentViewTest {
         val fm = activityRule.activity.supportFragmentManager
         val fragmentA = StrictViewFragment(R.layout.text_a)
 
-        fm.beginTransaction().add(R.id.fragmentContainer, fragmentA).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragmentA)
+            .addToBackStack(null)
+            .commit()
         activityRule.executePendingTransactions()
 
         assertThat(findViewById(R.id.textA)).isNotNull()
@@ -847,7 +876,10 @@ class FragmentViewTest {
         assertThat(findViewById(R.id.textC)).isNull()
 
         val fragmentB = StrictViewFragment(R.layout.text_b)
-        fm.beginTransaction().add(R.id.fragmentContainer, fragmentB).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragmentB)
+            .addToBackStack(null)
+            .commit()
         activityRule.executePendingTransactions()
         assertThat(findViewById(R.id.textA)).isNotNull()
         assertThat(findViewById(R.id.textB)).isNotNull()
@@ -895,13 +927,16 @@ class FragmentViewTest {
     // Test that adding a fragment and making its view invisible in onStart is still invisible
     @Test
     fun makeFragmentInvisibleInOnStart() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val container = withActivity { findViewById<View>(R.id.content) as ViewGroup }
 
             val fm = withActivity { supportFragmentManager }
 
             val fragment1 = InvisibleFragment(STARTED)
-            fm.beginTransaction().add(R.id.content, fragment1).addToBackStack(null).commit()
+            fm.beginTransaction()
+                .add(R.id.content, fragment1)
+                .addToBackStack(null)
+                .commit()
             executePendingTransactions()
 
             assertChildren(container, fragment1)
@@ -910,7 +945,10 @@ class FragmentViewTest {
 
             val fragment2 = InvisibleFragment()
             fragment2.visibility = View.GONE
-            fm.beginTransaction().replace(R.id.content, fragment2).addToBackStack(null).commit()
+            fm.beginTransaction()
+                .replace(R.id.content, fragment2)
+                .addToBackStack(null)
+                .commit()
             executePendingTransactions()
             assertChildren(container, fragment2)
 
@@ -993,7 +1031,10 @@ class FragmentViewTest {
 
         val fragment1 = ParentFragment()
 
-        fm.beginTransaction().add(R.id.fragmentContainer, fragment1).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragment1)
+            .addToBackStack(null)
+            .commit()
 
         activityRule.executePendingTransactions()
 
@@ -1014,7 +1055,9 @@ class FragmentViewTest {
 
         val fragment1 = SimpleViewFragment()
 
-        fm.beginTransaction().add(R.id.fragmentContainer, fragment1).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, fragment1)
+            .commit()
 
         activityRule.executePendingTransactions()
 
@@ -1061,7 +1104,10 @@ class FragmentViewTest {
 
         val parent = StrictViewFragment(R.layout.fragment_container_view)
 
-        fm.beginTransaction().add(R.id.fragmentContainer, parent).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .add(R.id.fragmentContainer, parent)
+            .addToBackStack(null)
+            .commit()
 
         activityRule.executePendingTransactions()
 
@@ -1069,8 +1115,7 @@ class FragmentViewTest {
 
         val child = SimpleViewFragment()
 
-        parent.childFragmentManager
-            .beginTransaction()
+        parent.childFragmentManager.beginTransaction()
             .add(R.id.fragment_container_view, child)
             .addToBackStack(null)
             .commit()
@@ -1079,7 +1124,10 @@ class FragmentViewTest {
 
         assertThat(child.wasHiddenChanged).isFalse()
 
-        fm.beginTransaction().hide(parent).addToBackStack(null).commit()
+        fm.beginTransaction()
+            .hide(parent)
+            .addToBackStack(null)
+            .commit()
 
         activityRule.executePendingTransactions()
 
@@ -1118,8 +1166,7 @@ class FragmentViewTest {
         ): View? {
             val fragment2 = StrictViewFragment(R.layout.fragment_a)
 
-            childFragmentManager
-                .beginTransaction()
+            childFragmentManager.beginTransaction()
                 .add(R.id.fragmentContainer1, fragment2, "inner")
                 .addToBackStack(null)
                 .commit()

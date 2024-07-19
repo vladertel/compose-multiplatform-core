@@ -36,7 +36,9 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Tests [SlidingPaneLayout.PanelSlideListener] */
+/**
+ * Tests [SlidingPaneLayout.PanelSlideListener]
+ */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 public class PanelSlideListenerTest {
@@ -62,7 +64,6 @@ public class PanelSlideListenerTest {
                     override fun onPanelSlide(panel: View, slideOffset: Float) {
                         onPanelSlide = true
                     }
-
                     override fun onPanelOpened(panel: View) {
                         onPanelOpened = true
                     }
@@ -71,8 +72,7 @@ public class PanelSlideListenerTest {
                         onPanelClosed = true
                         panelClosedCountDownLatch.countDown()
                     }
-                }
-            )
+                })
             val latch = addWaitForOpenLatch(R.id.sliding_pane_layout)
             onView(withId(R.id.sliding_pane_layout)).perform(openPane())
             assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue()
@@ -108,12 +108,11 @@ public class PanelSlideListenerTest {
                 findViewById<SlidingPaneLayout>(R.id.sliding_pane_layout)
             }
             var onPanelOpened = false
-            val listener =
-                object : SlidingPaneLayout.SimplePanelSlideListener() {
-                    override fun onPanelOpened(panel: View) {
-                        onPanelOpened = true
-                    }
+            val listener = object : SlidingPaneLayout.SimplePanelSlideListener() {
+                override fun onPanelOpened(panel: View) {
+                    onPanelOpened = true
                 }
+            }
             // Add the listener
             slidingPaneLayout.addPanelSlideListener(listener)
             // Now remove the listener before we open the pane

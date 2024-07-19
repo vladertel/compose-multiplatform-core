@@ -38,31 +38,30 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S_V2)
 class OnBackPressedDispatcherInvokerTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun testSimpleInvoker() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
         dispatcher.setOnBackInvokedDispatcher(invoker)
 
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {}
-            }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { }
+        }
 
         dispatcher.addCallback(callback)
 
@@ -77,25 +76,23 @@ class OnBackPressedDispatcherInvokerTest {
     fun testInvokerEnableDisable() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
         dispatcher.setOnBackInvokedDispatcher(invoker)
 
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {}
-            }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { }
+        }
 
         dispatcher.addCallback(callback)
 
@@ -112,12 +109,11 @@ class OnBackPressedDispatcherInvokerTest {
 
     @Test
     fun testCallbackEnabledDisabled() {
-        val callback =
-            object : OnBackPressedCallback(false) {
-                override fun handleOnBackPressed() {
-                    TODO("Not yet implemented")
-                }
+        val callback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                TODO("Not yet implemented")
             }
+        }
 
         callback.isEnabled = true
         callback.isEnabled = false
@@ -127,21 +123,19 @@ class OnBackPressedDispatcherInvokerTest {
     fun testInvokerAddDisabledCallback() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
 
-        val callback =
-            object : OnBackPressedCallback(false) {
-                override fun handleOnBackPressed() {}
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
             }
+        }
+
+        val callback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() { }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
@@ -164,21 +158,19 @@ class OnBackPressedDispatcherInvokerTest {
     fun testInvokerAddEnabledCallbackBeforeSet() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
 
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {}
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
             }
+        }
+
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
         dispatcher.addCallback(callback)
@@ -196,16 +188,15 @@ class OnBackPressedDispatcherInvokerTest {
     fun testSimpleAnimatedCallback() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
@@ -214,22 +205,19 @@ class OnBackPressedDispatcherInvokerTest {
         var startedCount = 0
         var progressedCount = 0
         var cancelledCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {
-                    startedCount++
-                }
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {
-                    progressedCount++
-                }
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {
-                    cancelledCount++
-                }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) {
+                startedCount++
             }
+
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+                progressedCount++
+            }
+            override fun handleOnBackPressed() { }
+            override fun handleOnBackCancelled() {
+                cancelledCount++
+            }
+        }
 
         dispatcher.addCallback(callback)
 
@@ -253,34 +241,29 @@ class OnBackPressedDispatcherInvokerTest {
     fun testSimpleAnimatedCallbackRemovedCancel() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
         dispatcher.setOnBackInvokedDispatcher(invoker)
 
         var cancelledCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {
-                    cancelledCount++
-                }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) { }
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
+            override fun handleOnBackPressed() { }
+            override fun handleOnBackCancelled() {
+                cancelledCount++
             }
+        }
 
         dispatcher.addCallback(callback)
 
@@ -298,36 +281,31 @@ class OnBackPressedDispatcherInvokerTest {
     fun testSimpleAnimatedCallbackRemovedCancelInHandleOnStarted() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
         dispatcher.setOnBackInvokedDispatcher(invoker)
 
         var cancelledCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {
-                    this.remove()
-                }
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {
-                    cancelledCount++
-                }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) {
+                this.remove()
             }
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
+            override fun handleOnBackPressed() { }
+            override fun handleOnBackCancelled() {
+                cancelledCount++
+            }
+        }
 
         dispatcher.addCallback(callback)
 
@@ -341,140 +319,32 @@ class OnBackPressedDispatcherInvokerTest {
     }
 
     @Test
-    fun testSimpleAnimatedCallbackAddedContinue() {
-        var registerCount = 0
-        var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
-            }
-
-        val dispatcher = OnBackPressedDispatcher()
-
-        dispatcher.setOnBackInvokedDispatcher(invoker)
-
-        var completedCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {
-                    completedCount++
-                }
-
-                override fun handleOnBackCancelled() {}
-            }
-
-        dispatcher.addCallback(callback)
-
-        assertThat(registerCount).isEqualTo(1)
-
-        dispatcher.dispatchOnBackStarted(BackEventCompat(0.1F, 0.1F, 0.1F, EDGE_LEFT))
-
-        dispatcher.addCallback(
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {}
-            }
-        )
-
-        dispatcher.onBackPressed()
-
-        assertThat(completedCount).isEqualTo(1)
-    }
-
-    @Test
-    fun testLifecycleAnimatedCallbackAddedContinue() {
-        var registerCount = 0
-        var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
-            }
-
-        val dispatcher = OnBackPressedDispatcher()
-
-        dispatcher.setOnBackInvokedDispatcher(invoker)
-
-        var completedCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {
-                    completedCount++
-                }
-
-                override fun handleOnBackCancelled() {}
-            }
-
-        val lifecycleOwner = TestLifecycleOwner(Lifecycle.State.RESUMED)
-
-        dispatcher.addCallback(lifecycleOwner, callback)
-
-        assertThat(registerCount).isEqualTo(1)
-
-        dispatcher.dispatchOnBackStarted(BackEventCompat(0.1F, 0.1F, 0.1F, EDGE_LEFT))
-
-        lifecycleOwner.currentState = Lifecycle.State.STARTED
-        dispatcher.addCallback(
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {}
-            }
-        )
-
-        dispatcher.onBackPressed()
-
-        assertThat(completedCount).isEqualTo(1)
-    }
-
-    @Test
     fun testSimpleAnimatedLifecycleCallbackRemovedCancel() {
         var registerCount = 0
         var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
+        val invoker = object : OnBackInvokedDispatcher {
+            override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
+                registerCount++
             }
+
+            override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
+                unregisterCount++
+            }
+        }
 
         val dispatcher = OnBackPressedDispatcher()
 
         dispatcher.setOnBackInvokedDispatcher(invoker)
 
         var cancelledCount = 0
-        val callback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {
-                    cancelledCount++
-                }
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) { }
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
+            override fun handleOnBackPressed() { }
+            override fun handleOnBackCancelled() {
+                cancelledCount++
             }
+        }
 
         val lifecycleOwner = TestLifecycleOwner(Lifecycle.State.RESUMED)
 
@@ -488,72 +358,5 @@ class OnBackPressedDispatcherInvokerTest {
         assertThat(cancelledCount).isEqualTo(1)
 
         assertThat(unregisterCount).isEqualTo(1)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    @Test
-    fun testDoubleStartCallbackCausesCancel() {
-        var registerCount = 0
-        var unregisterCount = 0
-        val invoker =
-            object : OnBackInvokedDispatcher {
-                override fun registerOnBackInvokedCallback(p0: Int, p1: OnBackInvokedCallback) {
-                    registerCount++
-                }
-
-                override fun unregisterOnBackInvokedCallback(p0: OnBackInvokedCallback) {
-                    unregisterCount++
-                }
-            }
-
-        val dispatcher = OnBackPressedDispatcher()
-
-        dispatcher.setOnBackInvokedDispatcher(invoker)
-
-        var cancelledCount = 0
-        val callback1 =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {
-                    cancelledCount++
-                }
-            }
-
-        dispatcher.addCallback(callback1)
-
-        assertThat(registerCount).isEqualTo(1)
-
-        dispatcher.dispatchOnBackStarted(BackEventCompat(0.1F, 0.1F, 0.1F, EDGE_LEFT))
-
-        var startedCount2 = 0
-
-        val callback2 =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackStarted(backEvent: BackEventCompat) {
-                    startedCount2++
-                }
-
-                override fun handleOnBackProgressed(backEvent: BackEventCompat) {}
-
-                override fun handleOnBackPressed() {}
-
-                override fun handleOnBackCancelled() {}
-            }
-
-        dispatcher.addCallback(callback2)
-
-        dispatcher.dispatchOnBackStarted(BackEventCompat(0.1F, 0.1F, 0.1F, EDGE_LEFT))
-
-        assertThat(registerCount).isEqualTo(1)
-
-        assertThat(cancelledCount).isEqualTo(1)
-
-        assertThat(startedCount2).isEqualTo(1)
     }
 }

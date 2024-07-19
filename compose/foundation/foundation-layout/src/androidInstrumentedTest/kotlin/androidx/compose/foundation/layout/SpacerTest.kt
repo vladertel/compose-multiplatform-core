@@ -34,7 +34,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SpacerTest : LayoutTest() {
 
-    private val bigConstraints = DpConstraints(maxWidth = 5000.dp, maxHeight = 5000.dp)
+    private val bigConstraints = DpConstraints(
+        maxWidth = 5000.dp,
+        maxHeight = 5000.dp
+    )
 
     @Test
     fun fixedSpacer_Sizes() {
@@ -46,11 +49,11 @@ class SpacerTest : LayoutTest() {
         show {
             Container(constraints = bigConstraints) {
                 Spacer(
-                    Modifier.size(width = width, height = height).onGloballyPositioned {
-                        position: LayoutCoordinates ->
-                        size = position.size
-                        drawLatch.countDown()
-                    }
+                    Modifier.size(width = width, height = height)
+                        .onGloballyPositioned { position: LayoutCoordinates ->
+                            size = position.size
+                            drawLatch.countDown()
+                        }
                 )
             }
         }
@@ -74,15 +77,17 @@ class SpacerTest : LayoutTest() {
         show {
             Box {
                 Container(
-                    constraints =
-                        DpConstraints(maxWidth = containerWidth, maxHeight = containerHeight)
+                    constraints = DpConstraints(
+                        maxWidth = containerWidth,
+                        maxHeight = containerHeight
+                    )
                 ) {
                     Spacer(
-                        Modifier.size(width = width, height = height).onGloballyPositioned {
-                            position: LayoutCoordinates ->
-                            size = position.size
-                            drawLatch.countDown()
-                        }
+                        Modifier.size(width = width, height = height)
+                            .onGloballyPositioned { position: LayoutCoordinates ->
+                                size = position.size
+                                drawLatch.countDown()
+                            }
                     )
                 }
             }
@@ -130,14 +135,17 @@ class SpacerTest : LayoutTest() {
         show {
             Box {
                 Container(
-                    constraints =
-                        DpConstraints(maxWidth = containerWidth, maxHeight = containerHeight)
+                    constraints = DpConstraints(
+                        maxWidth = containerWidth,
+                        maxHeight = containerHeight
+                    )
                 ) {
                     Spacer(
-                        Modifier.width(width).onGloballyPositioned { position: LayoutCoordinates ->
-                            size = position.size
-                            drawLatch.countDown()
-                        }
+                        Modifier.width(width)
+                            .onGloballyPositioned { position: LayoutCoordinates ->
+                                size = position.size
+                                drawLatch.countDown()
+                            }
                     )
                 }
             }
@@ -159,10 +167,11 @@ class SpacerTest : LayoutTest() {
         show {
             Container(constraints = bigConstraints) {
                 Spacer(
-                    Modifier.height(height).onGloballyPositioned { position: LayoutCoordinates ->
-                        size = position.size
-                        drawLatch.countDown()
-                    }
+                    Modifier.height(height)
+                        .onGloballyPositioned { position: LayoutCoordinates ->
+                            size = position.size
+                            drawLatch.countDown()
+                        }
                 )
             }
         }
@@ -185,15 +194,17 @@ class SpacerTest : LayoutTest() {
         show {
             Box {
                 Container(
-                    constraints =
-                        DpConstraints(maxWidth = containerWidth, maxHeight = containerHeight)
+                    constraints = DpConstraints(
+                        maxWidth = containerWidth,
+                        maxHeight = containerHeight
+                    )
                 ) {
                     Spacer(
-                        Modifier.height(height).onGloballyPositioned { position: LayoutCoordinates
-                            ->
-                            size = position.size
-                            drawLatch.countDown()
-                        }
+                        Modifier.height(height)
+                            .onGloballyPositioned { position: LayoutCoordinates ->
+                                size = position.size
+                                drawLatch.countDown()
+                            }
                     )
                 }
             }

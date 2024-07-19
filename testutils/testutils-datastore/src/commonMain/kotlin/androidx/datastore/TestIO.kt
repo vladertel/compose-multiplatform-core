@@ -24,9 +24,15 @@ import kotlin.random.Random
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
 
-abstract class TestIO<F : TestFile<F>, IOE : Throwable>(getTmpDir: () -> F) {
-    private val testRoot: F =
-        getTmpDir().let { createNewRandomChild(parent = it, namePrefix = "datastore-testio-") }
+abstract class TestIO<F : TestFile<F>, IOE : Throwable>(
+    getTmpDir: () -> F
+) {
+    private val testRoot: F = getTmpDir().let {
+        createNewRandomChild(
+            parent = it,
+            namePrefix = "datastore-testio-"
+        )
+    }
 
     init {
         testRoot.mkdirs(mustCreate = true)
@@ -47,11 +53,12 @@ abstract class TestIO<F : TestFile<F>, IOE : Throwable>(getTmpDir: () -> F) {
         futureFile: () -> F = { newTempFile() }
     ): Storage<Byte>
 
-    private fun randomName(prefix: String): String {
-        return prefix +
-            (0 until 15).joinToString(separator = "") {
-                ('a' + Random.nextInt(from = 0, until = 26)).toString()
-            }
+    private fun randomName(
+        prefix: String
+    ): String {
+        return prefix + (0 until 15).joinToString(separator = "") {
+            ('a' + Random.nextInt(from = 0, until = 26)).toString()
+        }
     }
 
     protected fun createNewRandomChild(
@@ -66,11 +73,18 @@ abstract class TestIO<F : TestFile<F>, IOE : Throwable>(getTmpDir: () -> F) {
         }
     }
 
-    /** Returns a new file instance without creating it or its parents. */
-    fun newTempFile(parentFile: F? = null, relativePath: String? = null): F {
+    /**
+     * Returns a new file instance without creating it or its parents.
+     */
+    fun newTempFile(
+        parentFile: F? = null,
+        relativePath: String? = null
+    ): F {
         val parent = parentFile ?: testRoot
         return if (relativePath == null) {
-            createNewRandomChild(parent = parent)
+            createNewRandomChild(
+                parent = parent
+            )
         } else {
             parent.resolve(relativePath)
         }
@@ -82,40 +96,51 @@ abstract class TestIO<F : TestFile<F>, IOE : Throwable>(getTmpDir: () -> F) {
 }
 
 abstract class TestFile<T : TestFile<T>> {
-    /** The name of the file, including the extension */
+    /**
+     * The name of the file, including the extension
+     */
     abstract val name: String
 
-    /** Get the canonical path for the file. */
+    /**
+     * Get the canonical path for the file.
+     */
     abstract fun path(): String
 
     /**
-     * Deletes the file if it exists. Will return `false` if the file does not exist or cannot be
-     * deleted. (similar to File.delete)
+     * Deletes the file if it exists.
+     * Will return `false` if the file does not exist or cannot be deleted. (similar to File.delete)
      */
     abstract fun delete(): Boolean
 
-    /** Returns true if this file/directory exists. */
+    /**
+     * Returns true if this file/directory exists.
+     */
     abstract fun exists(): Boolean
 
     /**
      * Creates a directory from the file.
      *
-     * If it is a regular file, will throw. If [mustCreate] is `true` and directory already exists,
-     * will throw.
+     * If it is a regular file, will throw.
+     * If [mustCreate] is `true` and directory already exists, will throw.
      */
     abstract fun mkdirs(mustCreate: Boolean = false)
 
-    /** Returns `true` if this exists and a regular file on the filesystem. */
+    /**
+     * Returns `true` if this exists and a regular file on the filesystem.
+     */
     abstract fun isRegularFile(): Boolean
 
-    /** Returns `true` if this exists and is a directory on the filesystem. */
+    /**
+     * Returns `true` if this exists and is a directory on the filesystem.
+     */
     abstract fun isDirectory(): Boolean
 
     /**
-     * Resolves the given [relative] relative to `this`. (similar to File.resolve in kotlin stdlib).
+     * Resolves the given [relative] relative to `this`.
+     * (similar to File.resolve in kotlin stdlib).
      *
-     * Note that this path is sanitized to ensure it is not a root path (e.g. does not start with
-     * `/`)
+     * Note that this path is sanitized to ensure it is not a root path
+     * (e.g. does not start with `/`)
      */
     fun resolve(relative: String): T {
         return if (relative.startsWith("/")) {
@@ -125,23 +150,26 @@ abstract class TestFile<T : TestFile<T>> {
         }
     }
 
-    /** Implemented by the subclasses to resolve child from sanitized name. */
+    /**
+     * Implemented by the subclasses to resolve child from sanitized name.
+     */
     abstract fun protectedResolve(relative: String): T
 
-    /** Returns the parent file or null if this has no parent. */
+    /**
+     * Returns the parent file or null if this has no parent.
+     */
     abstract fun parentFile(): T?
 
     /**
-     * Writes the given [body] test into the file using the default encoding (kotlin stdlib's
-     * String.encodeToByteArray)
+     * Writes the given [body] test into the file using the default encoding
+     * (kotlin stdlib's String.encodeToByteArray)
      */
     fun write(body: String) {
         write(body.encodeToByteArray())
     }
-
     /**
-     * Overrides the file with the given contents. If parent directories do not exist, they'll be
-     * created.
+     * Overrides the file with the given contents.
+     * If parent directories do not exist, they'll be created.
      */
     fun write(body: ByteArray) {
         if (isDirectory()) {
@@ -152,23 +180,29 @@ abstract class TestFile<T : TestFile<T>> {
         protectedWrite(body)
     }
 
-    /** Reads the byte contents of the file. */
+    /**
+     * Reads the byte contents of the file.
+     */
     fun readBytes(): ByteArray {
-        check(exists()) { "File does not exist" }
+        check(exists()) {
+            "File does not exist"
+        }
         return protectedReadBytes()
     }
 
     fun readText() = readBytes().decodeToString()
 
     /**
-     * Writes the given [body] into the file. This is called after necessary checks are done so
-     * implementers should only focus on writing the contents.
+     * Writes the given [body] into the file. This is called after
+     * necessary checks are done so implementers should only focus on
+     * writing the contents.
      */
     abstract fun protectedWrite(body: ByteArray)
 
     /**
-     * Reads the byte contents of the file. This is called after necessary checks are done so
-     * implementers should only focus on reading the bytes.
+     * Reads the byte contents of the file. This is called after necessary
+     * checks are done so implementers should only focus on reading the
+     * bytes.
      */
     abstract fun protectedReadBytes(): ByteArray
 }

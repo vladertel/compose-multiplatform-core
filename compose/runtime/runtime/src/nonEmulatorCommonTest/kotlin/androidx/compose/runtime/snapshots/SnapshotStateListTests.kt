@@ -43,7 +43,9 @@ class SnapshotStateListTests {
     @Test
     fun canCreateAStateListOfInts() {
         val list = mutableStateListOf(0, 1, 2, 3, 4)
-        list.forEachIndexed { index, item -> assertEquals(index, item) }
+        list.forEachIndexed { index, item ->
+            assertEquals(index, item)
+        }
     }
 
     @Test
@@ -55,7 +57,9 @@ class SnapshotStateListTests {
     @Test
     fun validateContains() {
         val list = mutableStateListOf(0, 1, 2, 3, 4)
-        (0..4).forEach { assertTrue(list.contains(it)) }
+        (0..4).forEach {
+            assertTrue(list.contains(it))
+        }
         assertFalse(list.contains(5))
     }
 
@@ -116,7 +120,9 @@ class SnapshotStateListTests {
     @Test
     fun validateLastIndexOf() {
         val list = mutableStateListOf(0, 1, 2, 3, 4, 0, 1, 2, 3, 4)
-        (0..4).forEach { assertEquals(it + 5, list.lastIndexOf(it)) }
+        (0..4).forEach {
+            assertEquals(it + 5, list.lastIndexOf(it))
+        }
     }
 
     @Test
@@ -233,7 +239,9 @@ class SnapshotStateListTests {
     fun validate_subList_indexOf() {
         val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
         val subList = list.subList(2, 5)
-        repeat(subList.size) { assertEquals(it, subList.indexOf(it + 2)) }
+        repeat(subList.size) {
+            assertEquals(it, subList.indexOf(it + 2))
+        }
         assertEquals(-1, subList.indexOf(0))
         assertEquals(-1, subList.indexOf(5))
     }
@@ -469,7 +477,9 @@ class SnapshotStateListTests {
         val list = mutableStateListOf(0, 1, 2)
         list.add(3)
         assertEquals(4, list.size)
-        list.forEachIndexed { index, item -> assertEquals(index, item) }
+        list.forEachIndexed { index, item ->
+            assertEquals(index, item)
+        }
     }
 
     @Test
@@ -509,7 +519,7 @@ class SnapshotStateListTests {
 
     @Test
     fun canRetainAllOfAStateList() {
-        val list = SnapshotStateList(7) { it }
+        val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
         val normalList = mutableListOf(0, 1, 2, 3, 4, 5, 6)
         list.retainAll(listOf(2, 4, 6, 8))
         normalList.retainAll(listOf(2, 4, 6, 8))
@@ -518,7 +528,7 @@ class SnapshotStateListTests {
 
     @Test
     fun canSetAnElementOfAStateList() {
-        val list = SnapshotStateList(7) { it }
+        val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
         val normalList = mutableListOf(0, 1, 2, 3, 4, 5, 6)
         list[2] = 100
         normalList[2] = 100
@@ -526,23 +536,18 @@ class SnapshotStateListTests {
     }
 
     @Test
-    fun canCreateViaLambdaExtension() {
-        val expected = mutableStateListOf(0, 1, 2, 3, 4)
-        val actual = SnapshotStateList(expected.size) { it }
-        expected(expected, actual)
-    }
-
-    @Test
     fun stateListsCanBeSnapshot() {
         val original = listOf(0, 1, 2, 3, 4, 5, 6)
         val mutableList = original.toMutableList()
-        val list = SnapshotStateList(7) { it }
+        val list = mutableStateListOf(0, 1, 2, 3, 4, 5, 6)
         val snapshot = Snapshot.takeSnapshot()
         try {
             list[1] = 100
             mutableList[1] = 100
             expected(mutableList, list)
-            snapshot.enter { expected(original, list) }
+            snapshot.enter {
+                expected(original, list)
+            }
         } finally {
             snapshot.dispose()
         }
@@ -555,10 +560,16 @@ class SnapshotStateListTests {
         repeat(100) {
             val list = mutableStateListOf<Int>()
             coroutineScope {
-                repeat(100) { index -> launch(Dispatchers.Default) { list.add(index) } }
+                repeat(100) { index ->
+                    launch(Dispatchers.Default) {
+                        list.add(index)
+                    }
+                }
             }
 
-            repeat(100) { assertTrue(list.contains(it)) }
+            repeat(100) {
+                assertTrue(list.contains(it))
+            }
         }
     }
 
@@ -597,7 +608,9 @@ class SnapshotStateListTests {
                 // Launch mutator
                 launch(Dispatchers.Default) {
                     repeat(100) { index ->
-                        lists.fastForEach { list -> list.add(index) }
+                        lists.fastForEach { list ->
+                            list.add(index)
+                        }
 
                         // Simulate the write observer
                         channel.trySend(Unit)
@@ -607,7 +620,9 @@ class SnapshotStateListTests {
 
                 // Simulate the global snapshot manager
                 launch(Dispatchers.Default) {
-                    channel.consumeEach { Snapshot.notifyObjectsInitialized() }
+                    channel.consumeEach {
+                        Snapshot.notifyObjectsInitialized()
+                    }
                 }
             }
         }
@@ -640,7 +655,9 @@ class SnapshotStateListTests {
 
                 // Simulate the global snapshot manager
                 launch(Dispatchers.Default) {
-                    channel.consumeEach { Snapshot.notifyObjectsInitialized() }
+                    channel.consumeEach {
+                        Snapshot.notifyObjectsInitialized()
+                    }
                 }
             }
         }
@@ -673,7 +690,9 @@ class SnapshotStateListTests {
 
                 // Simulate the global snapshot manager
                 launch(Dispatchers.Default) {
-                    channel.consumeEach { Snapshot.notifyObjectsInitialized() }
+                    channel.consumeEach {
+                        Snapshot.notifyObjectsInitialized()
+                    }
                 }
             }
         }
@@ -683,8 +702,14 @@ class SnapshotStateListTests {
     @Test
     fun modificationAcrossSnapshots() {
         val list = mutableStateListOf<Int>()
-        repeat(100) { Snapshot.withMutableSnapshot { list.add(it) } }
-        repeat(100) { assertEquals(it, list[it]) }
+        repeat(100) {
+            Snapshot.withMutableSnapshot {
+                list.add(it)
+            }
+        }
+        repeat(100) {
+            assertEquals(it, list[it])
+        }
     }
 
     @Test
@@ -700,18 +725,22 @@ class SnapshotStateListTests {
         repeat(100) { index ->
             val current = lists[index]
             assertEquals(index + 1, current.size)
-            current.forEachIndexed { i, value -> assertEquals(i, value) }
+            current.forEachIndexed { i, value ->
+                assertEquals(i, value)
+            }
         }
     }
 
     @Test
     fun canReverseTheList() {
-        validate(SnapshotStateList(100) { it }) { list -> list.reverse() }
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            list.reverse()
+        }
     }
 
     @Test
     fun canReverseUsingIterators() {
-        validate(SnapshotStateList(100) { it }) { list ->
+        validate(List(100) { it }.toMutableStateList()) { list ->
             val forward = list.listIterator()
             val backward = list.listIterator(list.size)
             val count = list.size shr 1
@@ -737,7 +766,7 @@ class SnapshotStateListTests {
 
     @Test
     fun canIterateForwards() {
-        validate(SnapshotStateList(100) { it }) { list ->
+        validate(List(100) { it }.toMutableStateList()) { list ->
             val forward = list.listIterator()
             var expected = 0
             var count = 0
@@ -751,7 +780,7 @@ class SnapshotStateListTests {
 
     @Test
     fun canIterateBackwards() {
-        validate(SnapshotStateList(100) { it }) { list ->
+        validate(List(100) { it }.toMutableStateList()) { list ->
             val backward = list.listIterator(list.size)
             var expected = 99
             var count = 0
@@ -765,14 +794,14 @@ class SnapshotStateListTests {
 
     @Test
     fun canShuffleTheList() {
-        val list = SnapshotStateList(100) { it }
+        val list = List(100) { it }.toMutableStateList()
         list.shuffle()
         assertEquals(100, list.distinct().size)
     }
 
     @Test
     fun canSortTheList() {
-        validate(SnapshotStateList(100) { it }) { list ->
+        validate(List(100) { it }.toMutableStateList()) { list ->
             list.shuffle()
             list.sort()
         }
@@ -781,22 +810,33 @@ class SnapshotStateListTests {
     @Test
     fun toStringOfSnapshotStateListDoesNotTriggerReadObserver() {
         val state = mutableStateListOf<Int>(0)
-        val normalReads = readsOf { state.readable }
+        val normalReads = readsOf {
+            state.readable
+        }
         assertEquals(1, normalReads)
-        val toStringReads = readsOf { state.toString() }
+        val toStringReads = readsOf {
+            state.toString()
+        }
         assertEquals(0, toStringReads)
     }
 
     @Test
     fun testValueOfStateListToString() {
         val state = mutableStateListOf(0, 1, 2)
-        assertEquals("SnapshotStateList(value=[0, 1, 2])@${state.hashCode()}", state.toString())
+        assertEquals(
+            "SnapshotStateList(value=[0, 1, 2])@${state.hashCode()}",
+            state.toString()
+        )
     }
 
     @Test
     fun testWritingTheSameValueDoesNotChangeTheList() {
         val state = mutableStateListOf(0, 1, 2, 3)
-        val modified = observeGlobalChanges { repeat(4) { state[it] = it } }
+        val modified = observeGlobalChanges {
+            repeat(4) {
+                state[it] = it
+            }
+        }
         assertTrue(modified.isEmpty())
     }
 
@@ -809,12 +849,16 @@ class SnapshotStateListTests {
 
     private fun <T> expected(expected: List<T>, actual: List<T>) {
         assertEquals(expected.size, actual.size)
-        expected.indices.forEach { assertEquals(expected[it], actual[it]) }
+        expected.indices.forEach {
+            assertEquals(expected[it], actual[it])
+        }
     }
 
     private fun observeGlobalChanges(block: () -> Unit): Set<Any> {
         val result = mutableSetOf<Any>()
-        val handle = Snapshot.registerApplyObserver { set, _ -> result.addAll(set) }
+        val handle = Snapshot.registerApplyObserver { set, _ ->
+            result.addAll(set)
+        }
         try {
             block()
         } finally {

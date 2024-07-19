@@ -40,7 +40,9 @@ class AllCapsTransformationTest {
         val transformation = InputTransformation.allCaps(Locale("en-US"))
 
         val originalValue = TextFieldCharSequence("")
-        val buffer = TextFieldBuffer(originalValue).apply { append("hello") }
+        val buffer = TextFieldBuffer(originalValue).apply {
+            append("hello")
+        }
 
         with(transformation) { buffer.transformInput() }
 
@@ -52,7 +54,9 @@ class AllCapsTransformationTest {
         val transformation = InputTransformation.allCaps(Locale("en-US"))
 
         val originalValue = TextFieldCharSequence("hello")
-        val buffer = TextFieldBuffer(originalValue).apply { append(" world") }
+        val buffer = TextFieldBuffer(originalValue).apply {
+            append(" world")
+        }
 
         with(transformation) { buffer.transformInput() }
 
@@ -64,7 +68,9 @@ class AllCapsTransformationTest {
         val transformation = InputTransformation.allCaps(Locale("tr"))
 
         val originalValue = TextFieldCharSequence("")
-        val buffer = TextFieldBuffer(originalValue).apply { append("i") }
+        val buffer = TextFieldBuffer(originalValue).apply {
+            append("i")
+        }
 
         with(transformation) { buffer.transformInput() }
 

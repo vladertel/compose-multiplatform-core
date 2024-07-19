@@ -40,7 +40,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Tests if [moveBy] and [movePointerBy] work */
+/**
+ * Tests if [moveBy] and [movePointerBy] work
+ */
 @MediumTest
 class SendMoveByTest {
     companion object {
@@ -50,14 +52,17 @@ class SendMoveByTest {
         private val delta2 = Offset(21f, 21f)
     }
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val recorder = MultiPointerInputRecorder()
 
     @Before
     fun setUp() {
         // Given some content
-        rule.setContent { ClickableTestBox(recorder) }
+        rule.setContent {
+            ClickableTestBox(recorder)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -79,8 +84,7 @@ class SendMoveByTest {
 
                 t += eventPeriodMillis
                 assertThat(events[1].pointerCount).isEqualTo(1)
-                events[1]
-                    .getPointer(0)
+                events[1].getPointer(0)
                     .verify(t, pointerId, true, downPosition1 + delta1, Touch, Move)
             }
         }
@@ -107,18 +111,16 @@ class SendMoveByTest {
 
                 t += eventPeriodMillis
                 assertThat(events[2].pointerCount).isEqualTo(2)
-                events[2]
-                    .getPointer(0)
+                events[2].getPointer(0)
                     .verify(t, pointerId1, true, downPosition1 + delta1, Touch, Move)
-                events[2].getPointer(1).verify(t, pointerId2, true, downPosition2, Touch, Move)
+                events[2].getPointer(1)
+                    .verify(t, pointerId2, true, downPosition2, Touch, Move)
 
                 t += eventPeriodMillis
                 assertThat(events[3].pointerCount).isEqualTo(2)
-                events[3]
-                    .getPointer(0)
+                events[3].getPointer(0)
                     .verify(t, pointerId1, true, downPosition1 + delta1, Touch, Move)
-                events[3]
-                    .getPointer(1)
+                events[3].getPointer(1)
                     .verify(t, pointerId2, true, downPosition2 + delta2, Touch, Move)
             }
         }
@@ -147,11 +149,9 @@ class SendMoveByTest {
 
                 t += eventPeriodMillis
                 assertThat(events[2].pointerCount).isEqualTo(2)
-                events[2]
-                    .getPointer(0)
+                events[2].getPointer(0)
                     .verify(t, pointerId1, true, downPosition1 + delta1, Touch, Move)
-                events[2]
-                    .getPointer(1)
+                events[2].getPointer(1)
                     .verify(t, pointerId2, true, downPosition2 + delta2, Touch, Move)
             }
         }
@@ -160,14 +160,18 @@ class SendMoveByTest {
     @Suppress("DEPRECATION")
     @Test
     fun moveByWithoutDown() {
-        expectError<IllegalStateException> { rule.partialGesture { moveBy(delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { moveBy(delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
     @Test
     fun moveByWrongPointerId() {
         rule.partialGesture { down(1, downPosition1) }
-        expectError<IllegalArgumentException> { rule.partialGesture { moveBy(2, delta1) } }
+        expectError<IllegalArgumentException> {
+            rule.partialGesture { moveBy(2, delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -175,7 +179,9 @@ class SendMoveByTest {
     fun moveByAfterUp() {
         rule.partialGesture { down(downPosition1) }
         rule.partialGesture { up() }
-        expectError<IllegalStateException> { rule.partialGesture { moveBy(delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { moveBy(delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -183,20 +189,26 @@ class SendMoveByTest {
     fun moveByAfterCancel() {
         rule.partialGesture { down(downPosition1) }
         rule.partialGesture { cancel() }
-        expectError<IllegalStateException> { rule.partialGesture { moveBy(delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { moveBy(delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
     @Test
     fun movePointerByWithoutDown() {
-        expectError<IllegalStateException> { rule.partialGesture { movePointerBy(1, delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { movePointerBy(1, delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
     @Test
     fun movePointerByWrongPointerId() {
         rule.partialGesture { down(1, downPosition1) }
-        expectError<IllegalArgumentException> { rule.partialGesture { movePointerBy(2, delta1) } }
+        expectError<IllegalArgumentException> {
+            rule.partialGesture { movePointerBy(2, delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -204,7 +216,9 @@ class SendMoveByTest {
     fun movePointerByAfterUp() {
         rule.partialGesture { down(1, downPosition1) }
         rule.partialGesture { up(1) }
-        expectError<IllegalStateException> { rule.partialGesture { movePointerBy(1, delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { movePointerBy(1, delta1) }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -212,6 +226,8 @@ class SendMoveByTest {
     fun movePointerByAfterCancel() {
         rule.partialGesture { down(1, downPosition1) }
         rule.partialGesture { cancel() }
-        expectError<IllegalStateException> { rule.partialGesture { movePointerBy(1, delta1) } }
+        expectError<IllegalStateException> {
+            rule.partialGesture { movePointerBy(1, delta1) }
+        }
     }
 }

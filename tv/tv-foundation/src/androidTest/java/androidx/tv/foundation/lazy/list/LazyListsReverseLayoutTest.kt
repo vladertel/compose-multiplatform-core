@@ -34,36 +34,36 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.FlakyTest
-import androidx.test.filters.MediumTest
 import androidx.tv.foundation.PivotOffsets
 import androidx.tv.foundation.lazy.grid.keyPress
 import com.google.common.truth.Truth.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 
-@MediumTest
-@RunWith(AndroidJUnit4::class)
 class LazyListsReverseLayoutTest {
 
-    @Suppress("PrivatePropertyName") private val ContainerTag = "ContainerTag"
+    private val ContainerTag = "ContainerTag"
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private var itemSize: Dp = Dp.Infinity
 
     @Before
     fun before() {
-        with(rule.density) { itemSize = 50.toDp() }
+        with(rule.density) {
+            itemSize = 50.toDp()
+        }
     }
 
     @Test
     fun column_emitTwoElementsAsOneItem_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
-            TvLazyColumn(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
+            TvLazyColumn(
+                reverseLayout = true,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
                 item {
                     Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
                     Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
@@ -71,21 +71,32 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
     fun column_emitTwoItems_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
-            TvLazyColumn(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                item { Box(Modifier.requiredSize(itemSize).testTag("0").focusable()) }
-                item { Box(Modifier.requiredSize(itemSize).testTag("1").focusable()) }
+            TvLazyColumn(
+                reverseLayout = true,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
+                item {
+                    Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
+                }
+                item {
+                    Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
+                }
             }
         }
 
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
@@ -134,11 +145,12 @@ class LazyListsReverseLayoutTest {
             assertThat(state.firstVisibleItemIndex).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(itemSize)
     }
 
-    @FlakyTest(bugId = 313465577)
     @Test
     fun column_scrollForwardHalfWay() {
         lateinit var state: TvLazyListState
@@ -155,18 +167,20 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_UP, 1)
+        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_UP, 3)
 
-        val scrolled =
-            rule.runOnIdle {
-                assertThat(state.firstVisibleItemIndex).isEqualTo(0)
-                assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
-                with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
-            }
+        val scrolled = rule.runOnIdle {
+            assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+            assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
+            with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
+        }
 
-        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(-itemSize + scrolled)
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(scrolled)
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize + scrolled)
+        rule.onNodeWithTag("2")
+            .assertTopPositionInRootIsEqualTo(-itemSize + scrolled)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(scrolled)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(itemSize + scrolled)
     }
 
     @Test
@@ -190,21 +204,25 @@ class LazyListsReverseLayoutTest {
 
         rule.runOnIdle {
             with(rule.density) {
-                val realOffset =
-                    state.firstVisibleItemScrollOffset.toDp() +
-                        itemSize * state.firstVisibleItemIndex
+                val realOffset = state.firstVisibleItemScrollOffset.toDp() +
+                    itemSize * state.firstVisibleItemIndex
                 assertThat(realOffset).isEqualTo(itemSize * 2)
             }
         }
 
-        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertTopPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
     fun row_emitTwoElementsAsOneItem_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
-            TvLazyRow(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
+            TvLazyRow(
+                reverseLayout = true,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
                 item {
                     Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
                     Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
@@ -212,21 +230,32 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
     fun row_emitTwoItems_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
-            TvLazyRow(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                item { Box(Modifier.requiredSize(itemSize).testTag("0").focusable()) }
-                item { Box(Modifier.requiredSize(itemSize).testTag("1")) }
+            TvLazyRow(
+                reverseLayout = true,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
+                item {
+                    Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
+                }
+                item {
+                    Box(Modifier.requiredSize(itemSize).testTag("1"))
+                }
             }
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
@@ -275,11 +304,12 @@ class LazyListsReverseLayoutTest {
             assertThat(state.firstVisibleItemIndex).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
     }
 
-    @FlakyTest(bugId = 313465577)
     @Test
     fun row_scrollForwardHalfWay() {
         lateinit var state: TvLazyListState
@@ -296,18 +326,20 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_LEFT, 1)
+        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_LEFT, 3)
 
-        val scrolled =
-            rule.runOnIdle {
-                assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
-                assertThat(state.firstVisibleItemIndex).isEqualTo(0)
-                with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
-            }
+        val scrolled = rule.runOnIdle {
+            assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
+            assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+            with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
+        }
 
-        rule.onNodeWithTag("2").assertLeftPositionInRootIsEqualTo(-itemSize + scrolled)
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(scrolled)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(itemSize + scrolled)
+        rule.onNodeWithTag("2")
+            .assertLeftPositionInRootIsEqualTo(-itemSize + scrolled)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(scrolled)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(itemSize + scrolled)
     }
 
     @Test
@@ -330,22 +362,26 @@ class LazyListsReverseLayoutTest {
         rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_LEFT, 6)
         rule.runOnIdle {
             with(rule.density) {
-                val realOffset =
-                    state.firstVisibleItemScrollOffset.toDp() +
-                        itemSize * state.firstVisibleItemIndex
+                val realOffset = state.firstVisibleItemScrollOffset.toDp() +
+                    itemSize * state.firstVisibleItemIndex
                 assertThat(realOffset).isEqualTo(itemSize * 2)
             }
         }
 
-        rule.onNodeWithTag("3").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("2").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
     fun row_rtl_emitTwoElementsAsOneItem_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                TvLazyRow(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
+                TvLazyRow(
+                    reverseLayout = true,
+                    pivotOffsets = PivotOffsets(parentFraction = 0f)
+                ) {
                     item {
                         Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
                         Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
@@ -354,23 +390,34 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(itemSize)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
     }
 
     @Test
     fun row_rtl_emitTwoItems_positionedReversed() {
         rule.setContentWithTestViewConfiguration {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                TvLazyRow(reverseLayout = true, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
-                    item { Box(Modifier.requiredSize(itemSize).testTag("0").focusable()) }
-                    item { Box(Modifier.requiredSize(itemSize).testTag("1").focusable()) }
+                TvLazyRow(
+                    reverseLayout = true,
+                    pivotOffsets = PivotOffsets(parentFraction = 0f)
+                ) {
+                    item {
+                        Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
+                    }
+                    item {
+                        Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
+                    }
                 }
             }
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(itemSize)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
     }
 
     @Test
@@ -391,18 +438,20 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_RIGHT, 2)
+        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_RIGHT, 3)
 
-        val scrolled =
-            rule.runOnIdle {
-                assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
-                assertThat(state.firstVisibleItemIndex).isEqualTo(0)
-                with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
-            }
+        val scrolled = rule.runOnIdle {
+            assertThat(state.firstVisibleItemScrollOffset).isGreaterThan(0)
+            assertThat(state.firstVisibleItemIndex).isEqualTo(0)
+            with(rule.density) { state.firstVisibleItemScrollOffset.toDp() }
+        }
 
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(-scrolled)
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(itemSize - scrolled)
-        rule.onNodeWithTag("2").assertLeftPositionInRootIsEqualTo(itemSize * 2 - scrolled)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(-scrolled)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(itemSize - scrolled)
+        rule.onNodeWithTag("2")
+            .assertLeftPositionInRootIsEqualTo(itemSize * 2 - scrolled)
     }
 
     @Test
@@ -420,20 +469,29 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.runOnIdle { reverse = false }
+        rule.runOnIdle {
+            reverse = false
+        }
 
-        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0")
+            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertTopPositionInRootIsEqualTo(itemSize)
     }
 
     @Test
     fun row_whenParameterChanges() {
         var reverse by mutableStateOf(true)
         rule.setContentWithTestViewConfiguration {
-            TvLazyRow(reverseLayout = reverse, pivotOffsets = PivotOffsets(parentFraction = 0f)) {
+            TvLazyRow(
+                reverseLayout = reverse,
+                pivotOffsets = PivotOffsets(parentFraction = 0f)
+            ) {
                 item {
                     Box(Modifier.requiredSize(itemSize).testTag("0").focusable())
                     Box(Modifier.requiredSize(itemSize).testTag("1").focusable())
@@ -441,12 +499,18 @@ class LazyListsReverseLayoutTest {
             }
         }
 
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
 
-        rule.runOnIdle { reverse = false }
+        rule.runOnIdle {
+            reverse = false
+        }
 
-        rule.onNodeWithTag("0").assertLeftPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("1").assertLeftPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0")
+            .assertLeftPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertLeftPositionInRootIsEqualTo(itemSize)
     }
 }

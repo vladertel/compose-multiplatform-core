@@ -26,11 +26,16 @@ import androidx.compose.ui.platform.actionmodecallback.FloatingTextActionModeCal
 import androidx.compose.ui.platform.actionmodecallback.PrimaryTextActionModeCallback
 import androidx.compose.ui.platform.actionmodecallback.TextActionModeCallback
 
-/** Android implementation for [TextToolbar]. */
+/**
+ * Android implementation for [TextToolbar].
+ */
 internal class AndroidTextToolbar(private val view: View) : TextToolbar {
     private var actionMode: ActionMode? = null
-    private val textActionModeCallback: TextActionModeCallback =
-        TextActionModeCallback(onActionModeDestroy = { actionMode = null })
+    private val textActionModeCallback: TextActionModeCallback = TextActionModeCallback(
+        onActionModeDestroy = {
+            actionMode = null
+        }
+    )
     override var status: TextToolbarStatus = TextToolbarStatus.Hidden
         private set
 
@@ -48,16 +53,17 @@ internal class AndroidTextToolbar(private val view: View) : TextToolbar {
         textActionModeCallback.onSelectAllRequested = onSelectAllRequested
         if (actionMode == null) {
             status = TextToolbarStatus.Shown
-            actionMode =
-                if (Build.VERSION.SDK_INT >= 23) {
-                    TextToolbarHelperMethods.startActionMode(
-                        view,
-                        FloatingTextActionModeCallback(textActionModeCallback),
-                        ActionMode.TYPE_FLOATING
-                    )
-                } else {
-                    view.startActionMode(PrimaryTextActionModeCallback(textActionModeCallback))
-                }
+            actionMode = if (Build.VERSION.SDK_INT >= 23) {
+                TextToolbarHelperMethods.startActionMode(
+                    view,
+                    FloatingTextActionModeCallback(textActionModeCallback),
+                    ActionMode.TYPE_FLOATING
+                )
+            } else {
+                view.startActionMode(
+                    PrimaryTextActionModeCallback(textActionModeCallback)
+                )
+            }
         } else {
             actionMode?.invalidate()
         }
@@ -71,9 +77,9 @@ internal class AndroidTextToolbar(private val view: View) : TextToolbar {
 }
 
 /**
- * This class is here to ensure that the classes that use this API will get verified and can be AOT
- * compiled. It is expected that this class will soft-fail verification, but the classes which use
- * this method will pass.
+ * This class is here to ensure that the classes that use this API will get verified and can be
+ * AOT compiled. It is expected that this class will soft-fail verification, but the classes
+ * which use this method will pass.
  */
 @RequiresApi(23)
 internal object TextToolbarHelperMethods {
@@ -84,7 +90,10 @@ internal object TextToolbarHelperMethods {
         actionModeCallback: ActionMode.Callback,
         type: Int
     ): ActionMode? {
-        return view.startActionMode(actionModeCallback, type)
+        return view.startActionMode(
+            actionModeCallback,
+            type
+        )
     }
 
     @RequiresApi(23)

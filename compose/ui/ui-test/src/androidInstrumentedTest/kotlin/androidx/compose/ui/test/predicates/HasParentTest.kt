@@ -32,16 +32,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class HasParentTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun findByParent_oneSubtree_oneChild_matches() {
         rule.setContent {
             BoundaryNode(testTag = "Node")
-            BoundaryNode(testTag = "Parent") { BoundaryNode(testTag = "Child") }
+            BoundaryNode(testTag = "Parent") {
+                BoundaryNode(testTag = "Child")
+            }
         }
 
-        rule.onNode(hasParent(hasTestTag("Parent"))).assert(hasTestTag("Child"))
+        rule.onNode(hasParent(hasTestTag("Parent")))
+            .assert(hasTestTag("Child"))
     }
 
     @Test
@@ -54,7 +58,8 @@ class HasParentTest {
             }
         }
 
-        rule.onAllNodes(hasParent(hasTestTag("Parent"))).assertCountEquals(2)
+        rule.onAllNodes(hasParent(hasTestTag("Parent")))
+            .assertCountEquals(2)
     }
 
     @Test
@@ -71,28 +76,38 @@ class HasParentTest {
             }
         }
 
-        rule.onAllNodes(hasParent(hasTestTag("Parent"))).assertCountEquals(4)
+        rule.onAllNodes(hasParent(hasTestTag("Parent")))
+            .assertCountEquals(4)
     }
 
     @Test
     fun findByParent_nothingFound() {
         rule.setContent {
             BoundaryNode(testTag = "Parent") {
-                BoundaryNode(testTag = "ExtraNode") { BoundaryNode(testTag = "Child") }
+                BoundaryNode(testTag = "ExtraNode") {
+                    BoundaryNode(testTag = "Child")
+                }
             }
         }
 
-        rule.onNode(hasParent(hasTestTag("Parent")) and hasTestTag("Child")).assertDoesNotExist()
+        rule.onNode(
+            hasParent(hasTestTag("Parent"))
+                and hasTestTag("Child")
+        )
+            .assertDoesNotExist()
     }
 
     @Test
     fun findByGrandParent_oneFound() {
         rule.setContent {
             BoundaryNode(testTag = "Parent") {
-                BoundaryNode(testTag = "ExtraNode") { BoundaryNode(testTag = "Child") }
+                BoundaryNode(testTag = "ExtraNode") {
+                    BoundaryNode(testTag = "Child")
+                }
             }
         }
 
-        rule.onNode(hasParent(hasParent(hasTestTag("Parent")))).assert(hasTestTag("Child"))
+        rule.onNode(hasParent(hasParent(hasTestTag("Parent"))))
+            .assert(hasTestTag("Child"))
     }
 }

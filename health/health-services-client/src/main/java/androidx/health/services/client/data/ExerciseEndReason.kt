@@ -22,7 +22,10 @@ import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.proto.DataProto
 import kotlin.annotation.AnnotationRetention.SOURCE
 
-/** The reason why an exercise has been ended for [ExerciseState] used in [ExerciseStateInfo]. */
+/**
+ * The reason why an exercise has been ended for [ExerciseState] used in [ExerciseStateInfo].
+ *
+ */
 @Retention(SOURCE)
 @IntDef(
     ExerciseEndReason.UNKNOWN,

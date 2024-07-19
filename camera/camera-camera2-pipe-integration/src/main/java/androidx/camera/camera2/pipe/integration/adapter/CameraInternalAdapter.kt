@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+
 package androidx.camera.camera2.pipe.integration.adapter
 
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.core.Log.debug
@@ -29,22 +32,18 @@ import androidx.camera.core.impl.CameraControlInternal
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.CameraInternal
 import androidx.camera.core.impl.Observable
-import androidx.camera.core.impl.SessionProcessor
 import com.google.common.util.concurrent.ListenableFuture
 import javax.inject.Inject
 import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 internal val cameraAdapterIds = atomic(0)
 
-/** Adapt the [CameraInternal] class to one or more [CameraPipe] based Camera instances. */
+/**
+ * Adapt the [CameraInternal] class to one or more [CameraPipe] based Camera instances.
+ */
 @CameraScope
-class CameraInternalAdapter
-@Inject
-constructor(
+class CameraInternalAdapter @Inject constructor(
     config: CameraConfig,
     private val useCaseManager: UseCaseManager,
     private val cameraInfo: CameraInfoInternal,
@@ -54,9 +53,8 @@ constructor(
 ) : CameraInternal {
     private val cameraId = config.cameraId
     private var coreCameraConfig: androidx.camera.core.impl.CameraConfig =
-        CameraConfigs.defaultConfig()
+        CameraConfigs.emptyConfig()
     private val debugId = cameraAdapterIds.incrementAndGet()
-    private var sessionProcessor: SessionProcessor? = null
 
     init {
         debug { "Created $this for $cameraId" }
@@ -88,14 +86,10 @@ constructor(
     }
 
     override fun release(): ListenableFuture<Void> {
-        return threads.scope
-            .launch { useCaseManager.close() }
-            .asListenableFuture()
-            .apply { addListener({ threads.scope.cancel() }, Dispatchers.Default.asExecutor()) }
+        return threads.scope.launch { useCaseManager.close() }.asListenableFuture()
     }
 
     override fun getCameraInfoInternal(): CameraInfoInternal = cameraInfo
-
     override fun getCameraState(): Observable<CameraInternal.State> =
         cameraStateAdapter.cameraInternalState
 
@@ -132,9 +126,7 @@ constructor(
     }
 
     override fun setExtendedConfig(cameraConfig: androidx.camera.core.impl.CameraConfig?) {
-        coreCameraConfig = cameraConfig ?: CameraConfigs.defaultConfig()
-        sessionProcessor = cameraConfig?.getSessionProcessor(null)
-        useCaseManager.sessionProcessor = sessionProcessor
+        coreCameraConfig = cameraConfig ?: CameraConfigs.emptyConfig()
     }
 
     override fun toString(): String = "CameraInternalAdapter<$cameraId>"

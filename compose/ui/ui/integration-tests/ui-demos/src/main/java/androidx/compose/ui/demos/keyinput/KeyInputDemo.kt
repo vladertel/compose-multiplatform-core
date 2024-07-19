@@ -42,13 +42,23 @@ import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun KeyInputDemo() {
-    Column(verticalArrangement = Arrangement.SpaceEvenly) {
+    Column(
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
         CenteredRow {
-            Text("Click on any item to bring it into focus. \nThen type using a hardware keyboard.")
+            Text(
+                "Click on any item to bring it into focus. \nThen type using a hardware keyboard."
+            )
         }
-        CenteredRow { FocusableText(remember { mutableStateOf("Enter Text Here") }) }
-        CenteredRow { FocusableText(remember { mutableStateOf("Enter Text Here") }) }
-        CenteredRow { FocusableText(remember { mutableStateOf("Enter Text Here") }) }
+        CenteredRow {
+            FocusableText(remember { mutableStateOf("Enter Text Here") })
+        }
+        CenteredRow {
+            FocusableText(remember { mutableStateOf("Enter Text Here") })
+        }
+        CenteredRow {
+            FocusableText(remember { mutableStateOf("Enter Text Here") })
+        }
     }
 }
 
@@ -57,20 +67,21 @@ private fun FocusableText(text: MutableState<String>) {
     var color by remember { mutableStateOf(Color.Black) }
     val focusRequester = remember { FocusRequester() }
     Text(
-        modifier =
-            Modifier.focusRequester(focusRequester)
-                .onFocusChanged { color = if (it.isFocused) Color.Green else Color.Black }
-                .focusTarget()
-                .pointerInput(Unit) { detectTapGestures { focusRequester.requestFocus() } }
-                .onKeyEvent {
-                    if (it.type == KeyDown) {
-                        text.value =
-                            StringBuilder(text.value).appendCodePoint(it.utf16CodePoint).toString()
-                        true
-                    } else {
-                        false
-                    }
-                },
+        modifier = Modifier
+            .focusRequester(focusRequester)
+            .onFocusChanged { color = if (it.isFocused) Color.Green else Color.Black }
+            .focusTarget()
+            .pointerInput(Unit) { detectTapGestures { focusRequester.requestFocus() } }
+            .onKeyEvent {
+                if (it.type == KeyDown) {
+                    text.value = StringBuilder(text.value)
+                        .appendCodePoint(it.utf16CodePoint)
+                        .toString()
+                    true
+                } else {
+                    false
+                }
+            },
         text = text.value,
         color = color
     )

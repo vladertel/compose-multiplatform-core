@@ -63,7 +63,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Unit tests for [DefaultSurfaceProcessor]. */
+/**
+ * Unit tests for [DefaultSurfaceProcessor].
+ */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 @SdkSuppress(minSdkVersion = 21)
@@ -73,8 +75,7 @@ class DefaultSurfaceProcessorTest {
         private const val JPEG_QUALITY = 100
         private const val WIDTH = 640
         private const val HEIGHT = 480
-        private const val CUSTOM_SHADER_FORMAT =
-            """
+        private const val CUSTOM_SHADER_FORMAT = """
         #extension GL_OES_EGL_image_external : require
         precision mediump float;
         uniform samplerExternalOES %s;
@@ -88,9 +89,11 @@ class DefaultSurfaceProcessorTest {
         }
         """
 
-        @JvmStatic lateinit var testCameraRule: CameraUtil.PreTestCamera
+        @JvmStatic
+        lateinit var testCameraRule: CameraUtil.PreTestCamera
 
-        @JvmStatic lateinit var testCameraIdListRule: CameraUtil.PreTestCameraIdList
+        @JvmStatic
+        lateinit var testCameraIdListRule: CameraUtil.PreTestCameraIdList
 
         @BeforeClass
         @JvmStatic
@@ -102,8 +105,7 @@ class DefaultSurfaceProcessorTest {
     }
 
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(testCameraRule, testCameraIdListRule)
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(testCameraRule, testCameraIdListRule)
 
     private lateinit var surfaceProcessor: DefaultSurfaceProcessor
     private lateinit var cameraDeviceHolder: CameraUtil.CameraDeviceHolder
@@ -164,14 +166,14 @@ class DefaultSurfaceProcessorTest {
         createSurfaceProcessor()
         val surfaceRequest = createInputSurfaceRequest()
         surfaceProcessor.onInputSurface(surfaceRequest)
-        val jpegImageReader =
-            ImageReaderProxys.createIsolatedReader(WIDTH, HEIGHT, ImageFormat.JPEG, 2)
-        val surfaceOutput =
-            createSurfaceOutput(
-                surface = jpegImageReader.surface!!,
-                target = CameraEffect.IMAGE_CAPTURE,
-                format = ImageFormat.JPEG
-            )
+        val jpegImageReader = ImageReaderProxys.createIsolatedReader(
+            WIDTH, HEIGHT, ImageFormat.JPEG, 2
+        )
+        val surfaceOutput = createSurfaceOutput(
+            surface = jpegImageReader.surface!!,
+            target = CameraEffect.IMAGE_CAPTURE,
+            format = ImageFormat.JPEG
+        )
         surfaceProcessor.onOutputSurface(surfaceOutput)
         val rotationDegrees = 90
 
@@ -201,21 +203,20 @@ class DefaultSurfaceProcessorTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun ImageReaderProxy.awaitNextImage(): ImageProxy {
         return suspendCancellableCoroutine { continuation ->
-            setOnImageAvailableListener(
-                { reader ->
-                    try {
-                        val image = reader.acquireNextImage()
-                        if (image != null) {
-                            continuation.resume(image, null)
-                        } else {
-                            continuation.resumeWithException(IllegalStateException("Image is null"))
-                        }
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
+            setOnImageAvailableListener({ reader ->
+                try {
+                    val image = reader.acquireNextImage()
+                    if (image != null) {
+                        continuation.resume(image, null)
+                    } else {
+                        continuation.resumeWithException(
+                            IllegalStateException("Image is null")
+                        )
                     }
-                },
-                mainThreadExecutor()
-            )
+                } catch (e: Exception) {
+                    continuation.resumeWithException(e)
+                }
+            }, mainThreadExecutor())
         }
     }
 
@@ -307,11 +308,15 @@ class DefaultSurfaceProcessorTest {
 
     @SdkSuppress(minSdkVersion = 23)
     @Test
-    fun render(): Unit = runBlocking { testRender(OutputType.IMAGE_READER) }
+    fun render(): Unit = runBlocking {
+        testRender(OutputType.IMAGE_READER)
+    }
 
     @SdkSuppress(minSdkVersion = 21, maxSdkVersion = 22)
     @Test
-    fun renderBelowApi23(): Unit = runBlocking { testRender(OutputType.SURFACE_TEXTURE) }
+    fun renderBelowApi23(): Unit = runBlocking {
+        testRender(OutputType.SURFACE_TEXTURE)
+    }
 
     @SdkSuppress(minSdkVersion = 23)
     @Test
@@ -369,10 +374,9 @@ class DefaultSurfaceProcessorTest {
         val inputDeferrableSurface = inputSurfaceRequest.deferrableSurface
         val inputSurface = inputDeferrableSurface.surface.await()
         openCameraAndSetRepeating(inputSurface)
-        cameraDeviceHolder.closedFuture.addListener(
-            { inputDeferrableSurface.close() },
-            CameraXExecutors.directExecutor()
-        )
+        cameraDeviceHolder.closedFuture.addListener({
+            inputDeferrableSurface.close()
+        }, CameraXExecutors.directExecutor())
 
         // Prepare output
         renderOutput = RenderOutput.createRenderOutput(outputType)
@@ -380,25 +384,34 @@ class DefaultSurfaceProcessorTest {
         surfaceProcessor.onOutputSurface(surfaceOutput)
 
         // Assert.
-        assertThat(renderOutput.await(/* imageCount= */ 5, /* timeoutInMs= */ 10_000L)).isTrue()
+        assertThat(renderOutput.await(/*imageCount=*/5, /*timeoutInMs=*/10_000L)).isTrue()
     }
 
     private fun openCameraAndSetRepeating(surface: Surface) {
         cameraDeviceHolder = CameraUtil.getCameraDevice(null)
         val captureSessionHolder = cameraDeviceHolder.createCaptureSession(listOf(surface))
-        captureSessionHolder.startRepeating(TEMPLATE_PREVIEW, listOf(surface), null, null)
+        captureSessionHolder.startRepeating(
+            TEMPLATE_PREVIEW,
+            listOf(surface),
+            null,
+            null
+        )
     }
 
     private fun createSurfaceProcessor(
         dynamicRange: DynamicRange = DynamicRange.SDR,
         shaderProvider: ShaderProvider = ShaderProvider.DEFAULT
     ) {
-        surfaceProcessor = DefaultSurfaceProcessor(dynamicRange, shaderProvider)
+        surfaceProcessor = DefaultSurfaceProcessor(
+            dynamicRange,
+            shaderProvider
+        )
     }
 
     private fun createInputSurfaceRequest(): SurfaceRequest {
-        return SurfaceRequest(Size(WIDTH, HEIGHT), fakeCamera) {}
-            .apply { inputSurfaceRequestsToClose.add(this) }
+        return SurfaceRequest(Size(WIDTH, HEIGHT), fakeCamera) {}.apply {
+            inputSurfaceRequestsToClose.add(this)
+        }
     }
 
     private fun createSurfaceOutput(
@@ -413,8 +426,8 @@ class DefaultSurfaceProcessorTest {
             Size(WIDTH, HEIGHT),
             Size(WIDTH, HEIGHT),
             Rect(0, 0, WIDTH, HEIGHT),
-            /*rotationDegrees=*/ 0,
-            /*mirroring=*/ false,
+            /*rotationDegrees=*/0,
+            /*mirroring=*/false,
             FakeCamera(),
             Matrix()
         )
@@ -424,24 +437,22 @@ class DefaultSurfaceProcessorTest {
         fragCoordsVarName: String? = null,
         shaderString: String? = null,
         exceptionToThrow: Exception? = null,
-    ) =
-        object : ShaderProvider {
-            override fun createFragmentShader(
-                correctSamplerVarName: String,
-                correctFragCoordsVarName: String
-            ): String {
-                exceptionToThrow?.let { throw it }
-                return shaderString
-                    ?: String.format(
-                        Locale.US,
-                        CUSTOM_SHADER_FORMAT,
-                        samplerVarName ?: correctSamplerVarName,
-                        fragCoordsVarName ?: correctFragCoordsVarName,
-                        samplerVarName ?: correctSamplerVarName,
-                        fragCoordsVarName ?: correctFragCoordsVarName
-                    )
-            }
+    ) = object : ShaderProvider {
+        override fun createFragmentShader(
+            correctSamplerVarName: String,
+            correctFragCoordsVarName: String
+        ): String {
+            exceptionToThrow?.let { throw it }
+            return shaderString ?: String.format(
+                Locale.US,
+                CUSTOM_SHADER_FORMAT,
+                samplerVarName ?: correctSamplerVarName,
+                fragCoordsVarName ?: correctFragCoordsVarName,
+                samplerVarName ?: correctSamplerVarName,
+                fragCoordsVarName ?: correctFragCoordsVarName
+            )
         }
+    }
 
     private fun createAutoReleaseSurface(): Surface {
         val surfaceTexture = SurfaceTexture(0)

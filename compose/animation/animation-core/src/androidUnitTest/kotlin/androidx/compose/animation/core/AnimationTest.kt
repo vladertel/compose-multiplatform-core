@@ -100,17 +100,19 @@ class AnimationTest {
         val delay = 120
         val startValue = AnimationVector3D(100f, 200f, 300f)
         val endValue = AnimationVector3D(200f, 100f, 0f)
-        val keyframes =
-            VectorizedKeyframesSpec<AnimationVector3D>(
-                mutableMapOf(
-                    0 to (startValue to LinearEasing),
-                    100 to (startValue to FastOutLinearInEasing)
-                ),
-                200,
-                delay
-            )
+        val keyframes = VectorizedKeyframesSpec<AnimationVector3D>(
+            mutableMapOf(
+                0 to (startValue to LinearEasing),
+                100 to (startValue to FastOutLinearInEasing)
+            ),
+            200,
+            delay
+        )
 
-        assertEquals(startValue, keyframes.getValueFromMillis(0L, startValue, endValue, startValue))
+        assertEquals(
+            startValue,
+            keyframes.getValueFromMillis(0L, startValue, endValue, startValue)
+        )
         assertEquals(
             startValue,
             keyframes.getValueFromMillis(delay.toLong(), startValue, endValue, startValue)
@@ -122,20 +124,25 @@ class AnimationTest {
             } else {
                 fraction = FastOutLinearInEasing.transform((i - 100) / 100f)
             }
-            val animValue =
-                AnimationVector(
-                    lerp(startValue.v1, endValue.v1, fraction),
-                    lerp(startValue.v2, endValue.v2, fraction),
-                    lerp(startValue.v3, endValue.v3, fraction)
-                )
+            val animValue = AnimationVector(
+                lerp(startValue.v1, endValue.v1, fraction),
+                lerp(startValue.v2, endValue.v2, fraction),
+                lerp(startValue.v3, endValue.v3, fraction)
+            )
             assertEquals(
                 animValue,
-                keyframes.getValueFromMillis(delay + i.toLong(), startValue, endValue, startValue)
+                keyframes.getValueFromMillis(
+                    delay + i.toLong(),
+                    startValue, endValue, startValue
+                )
             )
         }
 
         // Test playtime > duration + delay
-        assertEquals(endValue, keyframes.getValueFromMillis(500L, startValue, endValue, startValue))
+        assertEquals(
+            endValue,
+            keyframes.getValueFromMillis(500L, startValue, endValue, startValue)
+        )
     }
 
     @Test
@@ -158,14 +165,12 @@ class AnimationTest {
             start1D,
             tween1D.getValueFromMillis(tween1D.delayMillis.toLong(), start1D, end1D, start1D)
         )
-        val animValue1D =
-            AnimationVector(
-                lerp(
-                    start1D.value,
-                    end1D.value,
-                    FastOutSlowInEasing.transform(100f / tween1D.durationMillis)
-                )
+        val animValue1D = AnimationVector(
+            lerp(
+                start1D.value, end1D.value,
+                FastOutSlowInEasing.transform(100f / tween1D.durationMillis)
             )
+        )
         assertEquals(
             animValue1D,
             tween1D.getValueFromMillis(tween1D.delayMillis + 100L, start1D, end1D, start1D)
@@ -183,11 +188,10 @@ class AnimationTest {
             start2D,
             tween2D.getValueFromMillis(tween2D.delayMillis.toLong(), start2D, end2D, start2D)
         )
-        val animValue2D =
-            AnimationVector(
-                lerp(start2D.v1, end2D.v1, 100f / tween2D.durationMillis),
-                lerp(start2D.v2, end2D.v2, 100f / tween2D.durationMillis)
-            )
+        val animValue2D = AnimationVector(
+            lerp(start2D.v1, end2D.v1, 100f / tween2D.durationMillis),
+            lerp(start2D.v2, end2D.v2, 100f / tween2D.durationMillis)
+        )
         assertEquals(
             animValue2D,
             tween2D.getValueFromMillis(tween2D.delayMillis + 100L, start2D, end2D, start2D)
@@ -205,24 +209,23 @@ class AnimationTest {
             start3D,
             tween3D.getValueFromMillis(tween3D.delayMillis.toLong(), start3D, end3D, start3D)
         )
-        val animValue3D =
-            AnimationVector(
-                lerp(
-                    start3D.v1,
-                    end3D.v1,
-                    FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
-                ),
-                lerp(
-                    start3D.v2,
-                    end3D.v2,
-                    FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
-                ),
-                lerp(
-                    start3D.v3,
-                    end3D.v3,
-                    FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
-                )
+        val animValue3D = AnimationVector(
+            lerp(
+                start3D.v1,
+                end3D.v1,
+                FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
+            ),
+            lerp(
+                start3D.v2,
+                end3D.v2,
+                FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
+            ),
+            lerp(
+                start3D.v3,
+                end3D.v3,
+                FastOutLinearInEasing.transform(100f / tween3D.durationMillis)
             )
+        )
         assertEquals(
             animValue3D,
             tween3D.getValueFromMillis(tween3D.delayMillis + 100L, start3D, end3D, start3D)
@@ -240,29 +243,24 @@ class AnimationTest {
             start4D,
             tween4D.getValueFromMillis(tween4D.delayMillis.toLong(), start4D, end4D, start4D)
         )
-        val animValue4D =
-            AnimationVector(
-                lerp(
-                    start4D.v1,
-                    end4D.v1,
-                    FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
-                ),
-                lerp(
-                    start4D.v2,
-                    end4D.v2,
-                    FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
-                ),
-                lerp(
-                    start4D.v3,
-                    end4D.v3,
-                    FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
-                ),
-                lerp(
-                    start4D.v4,
-                    end4D.v4,
-                    FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
-                )
-            )
+        val animValue4D = AnimationVector(
+            lerp(
+                start4D.v1,
+                end4D.v1,
+                FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
+            ),
+            lerp(
+                start4D.v2,
+                end4D.v2,
+                FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
+            ),
+            lerp(
+                start4D.v3,
+                end4D.v3,
+                FastOutSlowInEasing.transform(100f / tween4D.durationMillis)
+            ),
+            lerp(start4D.v4, end4D.v4, FastOutSlowInEasing.transform(100f / tween4D.durationMillis))
+        )
         assertEquals(
             animValue4D,
             tween4D.getValueFromMillis(tween4D.delayMillis + 100L, start4D, end4D, start4D)
@@ -271,26 +269,26 @@ class AnimationTest {
 
     @Test
     fun testSpringAnimation() {
-        val anim3D =
-            VectorizedSpringSpec<AnimationVector3D>(
-                Spring.DampingRatioHighBouncy,
-                Spring.StiffnessMedium,
-                null
-            )
-        val floatAnim = FloatSpringSpec(Spring.DampingRatioHighBouncy, Spring.StiffnessMedium)
+        val anim3D = VectorizedSpringSpec<AnimationVector3D>(
+            Spring.DampingRatioHighBouncy,
+            Spring.StiffnessMedium, null
+        )
+        val floatAnim = FloatSpringSpec(
+            Spring.DampingRatioHighBouncy,
+            Spring.StiffnessMedium
+        )
 
         val start = AnimationVector(75f, 1000f, -256f)
         val end = AnimationVector(1296f, -357f, 500f)
         val startVelocity = AnimationVector(0f, 75f, 5f)
 
-        val duration =
+        val duration = max(
+            floatAnim.getDurationMillis(start.v1, end.v1, startVelocity.v1),
             max(
-                floatAnim.getDurationMillis(start.v1, end.v1, startVelocity.v1),
-                max(
-                    floatAnim.getDurationMillis(start.v2, end.v2, startVelocity.v2),
-                    floatAnim.getDurationMillis(start.v3, end.v3, startVelocity.v3)
-                )
+                floatAnim.getDurationMillis(start.v2, end.v2, startVelocity.v2),
+                floatAnim.getDurationMillis(start.v3, end.v3, startVelocity.v3)
             )
+        )
         assertEquals(duration, anim3D.getDurationMillis(start, end, startVelocity))
 
         for (i in 0..duration step 100) {
@@ -313,39 +311,36 @@ class AnimationTest {
 
         verifyAnimation(
             VectorizedSpringSpec(
-                Spring.DampingRatioLowBouncy,
-                Spring.StiffnessLow,
+                Spring.DampingRatioLowBouncy, Spring.StiffnessLow,
                 AnimationVector(5f, 4f, 0.1f, 20f)
             ),
-            start,
-            end,
-            startVelocity
+            start, end, startVelocity
         )
 
         verifyAnimation(
             VectorizedTweenSpec(1000, easing = FastOutLinearInEasing),
-            start,
-            end,
-            startVelocity
+            start, end, startVelocity
         )
 
         verifyAnimation(VectorizedSnapSpec(200), start, end, startVelocity)
 
         verifyAnimation(
-            VectorizedKeyframesSpec(mutableMapOf(200 to (start to LinearEasing)), 800),
-            start,
-            end,
-            startVelocity
+            VectorizedKeyframesSpec(
+                mutableMapOf(
+                    200 to (start to LinearEasing)
+                ),
+                800
+            ),
+            start, end, startVelocity
         )
     }
 
     @Test
     fun testVectorizedInfiniteRepeatableSpec_velocityOnRepetitions() {
-        val repeatableSpec =
-            VectorizedInfiniteRepeatableSpec(
-                animation = VectorizedAverageVelocitySpec(durationMillis = 1000),
-                repeatMode = RepeatMode.Restart,
-            )
+        val repeatableSpec = VectorizedInfiniteRepeatableSpec(
+            animation = VectorizedAverageVelocitySpec(durationMillis = 1000),
+            repeatMode = RepeatMode.Restart,
+        )
         val playTimeNanosA = 0L
         val playTimeNanosB = 1_000L * 1_000_000 - 1
         val playTimeNanosC = 1_000L * 1_000_000 + 1
@@ -354,29 +349,26 @@ class AnimationTest {
         val vectorEnd = AnimationVector(3f)
         val vectorV0 = AnimationVector(0f)
 
-        val velocityAtA =
-            repeatableSpec.getVelocityFromNanos(
-                playTimeNanos = playTimeNanosA,
-                initialValue = vectorStart,
-                targetValue = vectorEnd,
-                initialVelocity = vectorV0
-            )
+        val velocityAtA = repeatableSpec.getVelocityFromNanos(
+            playTimeNanos = playTimeNanosA,
+            initialValue = vectorStart,
+            targetValue = vectorEnd,
+            initialVelocity = vectorV0
+        )
 
-        val velocityAtB =
-            repeatableSpec.getVelocityFromNanos(
-                playTimeNanos = playTimeNanosB,
-                initialValue = vectorStart,
-                targetValue = vectorEnd,
-                initialVelocity = vectorV0
-            )
+        val velocityAtB = repeatableSpec.getVelocityFromNanos(
+            playTimeNanos = playTimeNanosB,
+            initialValue = vectorStart,
+            targetValue = vectorEnd,
+            initialVelocity = vectorV0
+        )
 
-        val velocityAC =
-            repeatableSpec.getVelocityFromNanos(
-                playTimeNanos = playTimeNanosC,
-                initialValue = vectorStart,
-                targetValue = vectorEnd,
-                initialVelocity = vectorV0
-            )
+        val velocityAC = repeatableSpec.getVelocityFromNanos(
+            playTimeNanos = playTimeNanosC,
+            initialValue = vectorStart,
+            targetValue = vectorEnd,
+            initialVelocity = vectorV0
+        )
 
         assertEquals(vectorV0, velocityAtA)
 
@@ -396,8 +388,13 @@ class AnimationTest {
         end: AnimationVector4D,
         startVelocity: AnimationVector4D
     ) {
-        val fixedAnim =
-            TargetBasedAnimation(anim, TwoWayConverter({ it }, { it }), start, end, startVelocity)
+        val fixedAnim = TargetBasedAnimation(
+            anim,
+            TwoWayConverter({ it }, { it }),
+            start,
+            end,
+            startVelocity
+        )
         for (playtime in 0..fixedAnim.durationMillis step 100) {
             assertEquals(
                 anim.getValueFromMillis(playtime, start, end, startVelocity),
@@ -409,7 +406,10 @@ class AnimationTest {
                 fixedAnim.getVelocityFromMillis(playtime)
             )
         }
-        assertEquals(anim.getDurationMillis(start, end, startVelocity), fixedAnim.durationMillis)
+        assertEquals(
+            anim.getDurationMillis(start, end, startVelocity),
+            fixedAnim.durationMillis
+        )
     }
 
     /**
@@ -431,13 +431,12 @@ class AnimationTest {
             initialVelocity: V
         ): V {
             val playTimeSeconds = (playTimeNanos / 1_000_000).toFloat() / 1_000
-            val velocity =
-                getVelocityFromNanos(
-                    playTimeNanos = playTimeNanos,
-                    initialValue = initialValue,
-                    targetValue = targetValue,
-                    initialVelocity = initialVelocity
-                )
+            val velocity = getVelocityFromNanos(
+                playTimeNanos = playTimeNanos,
+                initialValue = initialValue,
+                targetValue = targetValue,
+                initialVelocity = initialVelocity
+            )
             val valueVector = initialValue.newInstance()
             for (i in 0 until velocity.size) {
                 valueVector[i] = velocity[i] * playTimeSeconds
@@ -463,12 +462,11 @@ class AnimationTest {
             val velocityVector = initialVelocity.newInstance()
 
             for (i in 0 until averageVelocity.size) {
-                velocityVector[i] =
-                    lerp(
-                        start = initialVelocity[i],
-                        stop = finalVelocity[i],
-                        fraction = playTimeSeconds / durationSeconds
-                    )
+                velocityVector[i] = lerp(
+                    start = initialVelocity[i],
+                    stop = finalVelocity[i],
+                    fraction = playTimeSeconds / durationSeconds
+                )
             }
             return velocityVector
         }

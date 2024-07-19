@@ -72,7 +72,10 @@ fun BasicTextFieldMinMaxDemo() {
         }
         item {
             TagLine("minLines > line count")
-            TextFieldWithMinMaxLines(createMultilineText(4), minLines = 5)
+            TextFieldWithMinMaxLines(
+                createMultilineText(4),
+                minLines = 5
+            )
         }
         item {
             TagLine("minLines < line count")
@@ -80,18 +83,28 @@ fun BasicTextFieldMinMaxDemo() {
         }
         item {
             TagLine("minLines < maxLines")
-            TextFieldWithMinMaxLines(createMultilineText(4), minLines = 2, maxLines = 3)
+            TextFieldWithMinMaxLines(
+                createMultilineText(4),
+                minLines = 2,
+                maxLines = 3
+            )
         }
         item {
             TagLine("minLines == maxLines")
-            TextFieldWithMinMaxLines(createMultilineText(2), minLines = 3, maxLines = 3)
+            TextFieldWithMinMaxLines(
+                createMultilineText(2),
+                minLines = 3,
+                maxLines = 3
+            )
         }
         item {
             TagLine("maxLines=4 with different line heights")
             TextFieldWithMinMaxLines(
                 createMultilineText(5),
                 maxLines = 4,
-                spanStyles = listOf(AnnotatedString.Range(SpanStyle(fontSize = 40.sp), 14, 21))
+                spanStyles = listOf(
+                    AnnotatedString.Range(SpanStyle(fontSize = 40.sp), 14, 21)
+                )
             )
         }
         item {
@@ -99,7 +112,9 @@ fun BasicTextFieldMinMaxDemo() {
             TextFieldWithMinMaxLines(
                 createMultilineText(4),
                 minLines = 5,
-                spanStyles = listOf(AnnotatedString.Range(SpanStyle(fontSize = 40.sp), 14, 21))
+                spanStyles = listOf(
+                    AnnotatedString.Range(SpanStyle(fontSize = 40.sp), 14, 21)
+                )
             )
         }
     }
@@ -121,7 +136,10 @@ private fun TextFieldWithMinMaxLines(
         } else {
             VisualTransformation { annotatedString ->
                 TransformedText(
-                    AnnotatedString(annotatedString.text, spanStyles = spanStyles),
+                    AnnotatedString(
+                        annotatedString.text,
+                        spanStyles = spanStyles
+                    ),
                     OffsetMapping.Identity
                 )
             }
@@ -139,4 +157,5 @@ private fun TextFieldWithMinMaxLines(
     )
 }
 
-private fun createMultilineText(lineCount: Int) = (1..lineCount).joinToString("\n") { "Line $it" }
+private fun createMultilineText(lineCount: Int) =
+    (1..lineCount).joinToString("\n") { "Line $it" }

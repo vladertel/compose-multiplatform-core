@@ -31,7 +31,9 @@ import androidx.camera.integration.antelope.TestType
 import androidx.camera.integration.antelope.setAutoFlash
 import java.util.Arrays
 
-/** Callbacks that track the state of a preview capture session. */
+/**
+ * Callbacks that track the state of a preview capture session.
+ */
 class Camera2PreviewSessionStateCallback(
     internal val activity: MainActivity,
     internal val params: CameraParams,
@@ -41,6 +43,7 @@ class Camera2PreviewSessionStateCallback(
     /**
      * Preview session is open and frames are coming through. If the test is preview only, record
      * results and close the camera, if a switch or image capture test, proceed to the next step.
+     *
      */
     override fun onActive(session: CameraCaptureSession) {
         if (!params.isOpen || params.state == CameraState.IMAGE_REQUESTED) {
@@ -55,8 +58,8 @@ class Camera2PreviewSessionStateCallback(
                 testConfig.testFinished = true
                 closePreviewAndCamera(activity, params, testConfig)
             }
-            TestType.SWITCH_CAMERA,
-            TestType.MULTI_SWITCH -> {
+
+            TestType.SWITCH_CAMERA, TestType.MULTI_SWITCH -> {
                 if (testConfig.switchTestCurrentCamera == testConfig.switchTestCameras.get(0)) {
                     if (testConfig.testFinished) {
                         params.timer.switchToFirstEnd = System.currentTimeMillis()
@@ -74,6 +77,7 @@ class Camera2PreviewSessionStateCallback(
                     closePreviewAndCamera(activity, params, testConfig)
                 }
             }
+
             else -> {
                 initializeStillCapture(activity, params, testConfig)
             }
@@ -124,8 +128,7 @@ class Camera2PreviewSessionStateCallback(
             // Request that the camera preview begins
             cameraCaptureSession.setRepeatingRequest(
                 params.captureRequestBuilder?.build()!!,
-                params.camera2CaptureSessionCallback,
-                params.backgroundHandler
+                params.camera2CaptureSessionCallback, params.backgroundHandler
             )
         } catch (e: CameraAccessException) {
             MainActivity.logd("Create Capture Session error: " + params.id)
@@ -133,13 +136,14 @@ class Camera2PreviewSessionStateCallback(
         } catch (e: IllegalStateException) {
             MainActivity.logd(
                 "createCameraPreviewSession onConfigured, IllegalStateException," +
-                    " aborting: " +
-                    e
+                    " aborting: " + e
             )
         }
     }
 
-    /** Configuration of the preview stream failed, try again. */
+    /**
+     * Configuration of the preview stream failed, try again.
+     */
     override fun onConfigureFailed(cameraCaptureSession: CameraCaptureSession) {
         if (!params.isOpen) {
             return
@@ -149,7 +153,9 @@ class Camera2PreviewSessionStateCallback(
         createCameraPreviewSession(activity, params, testConfig)
     }
 
-    /** Preview session has been closed. Record close timing and proceed to close camera. */
+    /**
+     * Preview session has been closed. Record close timing and proceed to close camera.
+     */
     override fun onClosed(session: CameraCaptureSession) {
         params.timer.previewCloseEnd = System.currentTimeMillis()
         params.isPreviewing = false
@@ -182,11 +188,9 @@ class Camera2PreviewSessionStateCallback(
                     override fun onConfigured(session: CameraCaptureSession) {
                         session.close()
                     }
-
                     override fun onConfigureFailed(session: CameraCaptureSession) {
                         session.close()
                     }
-
                     /** No-op preview session created and closed, now proceed to close camera */
                     override fun onClosed(session: CameraCaptureSession) {
                         surfaceTexture.release()

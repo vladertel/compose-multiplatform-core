@@ -220,7 +220,7 @@ public abstract class CarAppService extends Service {
             synchronized (mBinders) {
                 CarAppBinder binder = mBinders.remove(sessionInfo);
                 if (binder != null) {
-                    binder.destroy();
+                    binder.onDestroyLifecycle();
                 }
             }
         });
@@ -315,7 +315,7 @@ public abstract class CarAppService extends Service {
     public final void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter writer,
             @Nullable String[] args) {
         super.dump(fd, writer, args);
-        if (args == null) return;
+
         for (String arg : args) {
             if (AUTO_DRIVE.equals(arg)) {
                 runOnMain(() -> {

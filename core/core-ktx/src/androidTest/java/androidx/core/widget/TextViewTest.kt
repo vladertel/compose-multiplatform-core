@@ -35,8 +35,7 @@ class TextViewTest {
     private val view = TextView(context)
 
     @UiThreadTest
-    @Test
-    fun doBeforeTextChanged() {
+    @Test fun doBeforeTextChanged() {
         view.text = "before"
 
         val called = AtomicBoolean()
@@ -54,8 +53,7 @@ class TextViewTest {
     }
 
     @UiThreadTest
-    @Test
-    fun doOnTextChanged() {
+    @Test fun doOnTextChanged() {
         view.text = "before"
 
         val called = AtomicBoolean()
@@ -73,8 +71,7 @@ class TextViewTest {
     }
 
     @UiThreadTest
-    @Test
-    fun doAfterTextChanged() {
+    @Test fun doAfterTextChanged() {
         val called = AtomicBoolean()
         view.doAfterTextChanged { text ->
             assertEquals("text", text.toString())

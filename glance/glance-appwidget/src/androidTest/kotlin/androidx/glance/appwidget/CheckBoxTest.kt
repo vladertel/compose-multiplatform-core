@@ -40,16 +40,21 @@ import org.junit.Test
 @MediumTest
 class CheckBoxTest {
 
-    @get:Rule val mHostRule = AppWidgetHostRule()
+    @get:Rule
+    val mHostRule = AppWidgetHostRule()
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     private val checkedCheckBox: @Composable () -> Unit = {
-        Box { CheckBox(checked = true, onCheckedChange = null, text = "Hello world") }
+        Box {
+            CheckBox(checked = true, onCheckedChange = null, text = "Hello world")
+        }
     }
 
     private val uncheckedCheckBox: @Composable () -> Unit = {
-        Box { CheckBox(checked = false, onCheckedChange = null, text = "Hola mundo") }
+        Box {
+            CheckBox(checked = false, onCheckedChange = null, text = "Hola mundo")
+        }
     }
 
     @SdkSuppress(minSdkVersion = 31)
@@ -126,8 +131,7 @@ class CheckBoxTest {
                 CheckBox(
                     checked = true,
                     onCheckedChange = null,
-                    modifier = GlanceModifier.padding(5.dp, 6.dp, 7.dp, 8.dp)
-                )
+                    modifier = GlanceModifier.padding(5.dp, 6.dp, 7.dp, 8.dp))
             }
         }
 

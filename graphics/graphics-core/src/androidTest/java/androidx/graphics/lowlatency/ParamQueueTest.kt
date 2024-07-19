@@ -32,7 +32,9 @@ internal class ParamQueueTest {
     fun testAdd() {
         val queue = ParamQueue<Int>()
         queue.add(1)
-        queue.next { assertEquals(1, it) }
+        queue.next {
+            assertEquals(1, it)
+        }
     }
 
     @Test

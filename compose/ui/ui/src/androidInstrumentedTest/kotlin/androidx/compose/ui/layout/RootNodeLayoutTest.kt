@@ -114,7 +114,12 @@ class RootNodeLayoutTest {
             )
             activity.setContentView(parent)
             child.setContent {
-                Layout({}, Modifier.onGloballyPositioned { latch.countDown() }) { _, _ ->
+                Layout(
+                    {},
+                    Modifier.onGloballyPositioned {
+                        latch.countDown()
+                    }
+                ) { _, _ ->
                     layout(10, 15) {}
                 }
             }
@@ -140,8 +145,12 @@ class RootNodeLayoutTest {
             )
             activity.setContentView(parent)
             child.setContent {
-                Layout({}, Modifier.fillMaxSize().onGloballyPositioned { latch.countDown() }) { _, _
-                    ->
+                Layout(
+                    {},
+                    Modifier.fillMaxSize().onGloballyPositioned {
+                        latch.countDown()
+                    }
+                ) { _, _ ->
                     layout(10, 15) {}
                 }
             }

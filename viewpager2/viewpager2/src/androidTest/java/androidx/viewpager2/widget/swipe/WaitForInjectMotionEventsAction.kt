@@ -67,7 +67,8 @@ class WaitForInjectMotionEventsAction : ViewAction {
                 if (uiController.injectMotionEvent(event)) {
                     injectionSucceeded = true
                 }
-            } catch (e: InjectEventSecurityException) {}
+            } catch (e: InjectEventSecurityException) {
+            }
             event.recycle()
 
             if (injectionSucceeded) {

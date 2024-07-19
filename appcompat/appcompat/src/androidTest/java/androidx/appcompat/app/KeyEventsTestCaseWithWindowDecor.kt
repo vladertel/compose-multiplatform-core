@@ -32,8 +32,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class KeyEventsTestCaseWithWindowDecor :
-    BaseKeyEventsTestCase<WindowDecorAppCompatActivity>(WindowDecorAppCompatActivity::class.java) {
+class KeyEventsTestCaseWithWindowDecor : BaseKeyEventsTestCase<WindowDecorAppCompatActivity>(
+    WindowDecorAppCompatActivity::class.java
+) {
     @Test
     @LargeTest
     @Throws(Throwable::class)
@@ -43,8 +44,7 @@ class KeyEventsTestCaseWithWindowDecor :
             val mockView1: View = withActivity { HandlerView(this) }
             val mockView2 = withActivity { HandlerView(this) }
 
-            // Validity check: should work before any unhandled stuff is used. This just needs to
-            // run
+            // Validity check: should work before any unhandled stuff is used. This just needs to run
             // without causing a crash
             withActivity {
                 val container = findViewById<ViewGroup>(R.id.test_content)
@@ -101,7 +101,9 @@ class KeyEventsTestCaseWithWindowDecor :
             listener.reset()
 
             // If removed, it should not receive fallbacks anymore
-            withActivity { ViewCompat.removeOnUnhandledKeyEventListener(mockView1, listener) }
+            withActivity {
+                ViewCompat.removeOnUnhandledKeyEventListener(mockView1, listener)
+            }
             onView(isRoot()).perform(pressKey(KeyEvent.KEYCODE_B))
             assertFalse(listener.fired())
         }
@@ -111,7 +113,6 @@ class KeyEventsTestCaseWithWindowDecor :
         var mLastView: View? = null
         var mGotUp = false
         var mReturnVal = false
-
         override fun onUnhandledKeyEvent(v: View, event: KeyEvent): Boolean {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 mLastView = v
@@ -131,12 +132,13 @@ class KeyEventsTestCaseWithWindowDecor :
         }
     }
 
-    /** A View which can be set to consume or not consume key events. */
+    /**
+     * A View which can be set to consume or not consume key events.
+     */
     private class HandlerView(ctx: Context?) : View(ctx) {
         var respondToDown = false
         var respondToUp = false
         var gotDown = false
-
         fun reset() {
             gotDown = false
             respondToDown = gotDown

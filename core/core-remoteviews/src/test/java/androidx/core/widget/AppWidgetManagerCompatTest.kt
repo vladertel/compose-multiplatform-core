@@ -30,6 +30,7 @@ import android.os.Bundle
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.core.remoteviews.test.R
 import androidx.core.util.SizeFCompat
 import androidx.core.util.component1
@@ -47,7 +48,7 @@ import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
-@Config(sdk = [21])
+@Config(sdk = [19])
 class AppWidgetManagerCompatTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
@@ -61,10 +62,11 @@ class AppWidgetManagerCompatTest {
     fun exact_oneSize_shouldUpdateRemoteViewsWithoutLandPort() {
         setWidgetSize(100 x 200)
 
-        val rv =
-            createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         assertThat(rv.landscape).isNull()
         assertThat(rv.portrait).isNull()
@@ -74,10 +76,11 @@ class AppWidgetManagerCompatTest {
     fun exact_multipleSizes_shouldUpdateRemoteViewsWithLandPort() {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
-        val rv =
-            createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         assertThat(rv.landscape).isNotNull()
         assertThat(rv.portrait).isNotNull()
@@ -87,10 +90,11 @@ class AppWidgetManagerCompatTest {
     fun exact_multipleSizes_shouldUseLandscapeSizeForLandscapeView() {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
-        val rv =
-            createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         val view = rv.apply(landscapeContext, FrameLayout(landscapeContext))
         assertThat(view.findViewById<TextView>(R.id.text).text.toString())
@@ -101,10 +105,11 @@ class AppWidgetManagerCompatTest {
     fun exact_multipleSizes_shouldUsePortraitSizeForPortraitView() {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
-        val rv =
-            createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         val view = rv.apply(portraitContext, FrameLayout(portraitContext))
         assertThat(view.findViewById<TextView>(R.id.text).text.toString())
@@ -115,7 +120,9 @@ class AppWidgetManagerCompatTest {
     fun exact_invalidWidget_shouldThrow() {
         assertFailsWith<IllegalArgumentException> {
             createExactSizeAppWidget(appWidgetManager, appWidgetId) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+                remoteViews {
+                    setTextViewText(R.id.text, "$width x $height")
+                }
             }
         }
     }
@@ -124,33 +131,36 @@ class AppWidgetManagerCompatTest {
     fun responsive_singleSizeFromLauncher_shouldChooseBestFitAsSingleRemoteViews() {
         setWidgetSize(100 x 200)
 
-        val rv =
-            createResponsiveSizeAppWidget(
-                appWidgetManager,
-                appWidgetId,
-                listOf(50 x 50, 75 x 75, 120 x 140)
-            ) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createResponsiveSizeAppWidget(
+            appWidgetManager,
+            appWidgetId,
+            listOf(50 x 50, 75 x 75, 120 x 140)
+        ) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         assertThat(rv.landscape).isNull()
         assertThat(rv.portrait).isNull()
         val view = rv.apply(context, FrameLayout(context))
-        assertThat(view.findViewById<TextView>(R.id.text).text.toString()).isEqualTo("75.0 x 75.0")
+        assertThat(view.findViewById<TextView>(R.id.text).text.toString())
+            .isEqualTo("75.0 x 75.0")
     }
 
     @Test
     fun responsive_multipleSizesFromLauncher_bestFitIsSameForBoth_shouldChooseBestFitAsSingle() {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
-        val rv =
-            createResponsiveSizeAppWidget(
-                appWidgetManager,
-                appWidgetId,
-                listOf(50 x 50, 75 x 75, 120 x 140)
-            ) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createResponsiveSizeAppWidget(
+            appWidgetManager,
+            appWidgetId,
+            listOf(50 x 50, 75 x 75, 120 x 140)
+        ) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         assertThat(rv.landscape).isNull()
         assertThat(rv.portrait).isNull()
@@ -162,14 +172,15 @@ class AppWidgetManagerCompatTest {
     fun responsive_multipleSizesFromLauncher_bestFitIsDifferent_shouldChooseBestFitsAsLandPort() {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
-        val rv =
-            createResponsiveSizeAppWidget(
-                appWidgetManager,
-                appWidgetId,
-                listOf(50 x 50, 75 x 75, 120 x 100)
-            ) { (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+        val rv = createResponsiveSizeAppWidget(
+            appWidgetManager,
+            appWidgetId,
+            listOf(50 x 50, 75 x 75, 120 x 100)
+        ) { (width, height) ->
+            remoteViews {
+                setTextViewText(R.id.text, "$width x $height")
             }
+        }
 
         assertThat(rv.landscape).isNotNull()
         assertThat(rv.portrait).isNotNull()
@@ -186,9 +197,14 @@ class AppWidgetManagerCompatTest {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
         assertFailsWith<IllegalArgumentException> {
-            createResponsiveSizeAppWidget(appWidgetManager, appWidgetId, emptyList()) {
-                (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+            createResponsiveSizeAppWidget(
+                appWidgetManager,
+                appWidgetId,
+                emptyList()
+            ) { (width, height) ->
+                remoteViews {
+                    setTextViewText(R.id.text, "$width x $height")
+                }
             }
         }
     }
@@ -198,9 +214,14 @@ class AppWidgetManagerCompatTest {
         setWidgetSize(landscape = 200 x 100, portrait = 110 x 190)
 
         assertFailsWith<IllegalArgumentException> {
-            createResponsiveSizeAppWidget(appWidgetManager, appWidgetId, (1..17).map { it x it }) {
-                (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+            createResponsiveSizeAppWidget(
+                appWidgetManager,
+                appWidgetId,
+                (1..17).map { it x it }
+            ) { (width, height) ->
+                remoteViews {
+                    setTextViewText(R.id.text, "$width x $height")
+                }
             }
         }
     }
@@ -208,9 +229,14 @@ class AppWidgetManagerCompatTest {
     @Test
     fun responsive_invalidWidget_shouldThrow() {
         assertFailsWith<IllegalArgumentException> {
-            createResponsiveSizeAppWidget(appWidgetManager, appWidgetId, listOf(100 x 100)) {
-                (width, height) ->
-                remoteViews { setTextViewText(R.id.text, "$width x $height") }
+            createResponsiveSizeAppWidget(
+                appWidgetManager,
+                appWidgetId,
+                listOf(100 x 100)
+            ) { (width, height) ->
+                remoteViews {
+                    setTextViewText(R.id.text, "$width x $height")
+                }
             }
         }
     }
@@ -247,6 +273,7 @@ class AppWidgetManagerCompatTest {
     private val RemoteViews.portrait: RemoteViews?
         get() = ReflectionHelpers.getField(this, "mPortrait")
 
+    @RequiresApi(17)
     private fun configurationContext(modifier: Configuration.() -> Unit): Context {
         val configuration = Configuration()
         configuration.apply(modifier)

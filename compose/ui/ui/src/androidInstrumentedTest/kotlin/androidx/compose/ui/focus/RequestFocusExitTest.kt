@@ -31,7 +31,8 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class RequestFocusExitTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun redirectingFocusExitFromChild1ToChild2_focusExitIsCalled() {
@@ -40,9 +41,14 @@ class RequestFocusExitTest {
         var exitCount = 0
         rule.setFocusableContent {
             Box(Modifier.focusTarget()) {
-                Box(Modifier.focusRequester(destination).focusTarget())
                 Box(
-                    Modifier.focusProperties {
+                    Modifier
+                        .focusRequester(destination)
+                        .focusTarget()
+                )
+                Box(
+                    Modifier
+                        .focusProperties {
                             exit = {
                                 exitCount++
                                 child2
@@ -50,8 +56,16 @@ class RequestFocusExitTest {
                         }
                         .focusTarget()
                 ) {
-                    Box(Modifier.focusRequester(child1).focusTarget())
-                    Box(Modifier.focusRequester(child2).focusTarget())
+                    Box(
+                        Modifier
+                            .focusRequester(child1)
+                            .focusTarget()
+                    )
+                    Box(
+                        Modifier
+                            .focusRequester(child2)
+                            .focusTarget()
+                    )
                 }
             }
         }

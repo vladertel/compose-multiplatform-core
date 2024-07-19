@@ -24,14 +24,12 @@ import com.android.tools.lint.detector.api.Issue
 class RoomIssueRegistry : IssueRegistry() {
     override val minApi = CURRENT_API
     override val api = 14
-    override val issues: List<Issue> =
-        listOf(
-            CursorKotlinUseIssueDetector.ISSUE,
-        )
-    override val vendor =
-        Vendor(
-            feedbackUrl = "https://issuetracker.google.com/issues/new?component=413107",
-            identifier = "androidx.room",
-            vendorName = "Android Open Source Project",
-        )
+    override val issues: List<Issue> = listOf(
+        CursorKotlinUseIssueDetector.ISSUE,
+    )
+    override val vendor = Vendor(
+        feedbackUrl = "https://issuetracker.google.com/issues/new?component=413107",
+        identifier = "androidx.room",
+        vendorName = "Android Open Source Project",
+    )
 }

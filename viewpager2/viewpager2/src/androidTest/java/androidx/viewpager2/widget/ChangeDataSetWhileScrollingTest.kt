@@ -40,7 +40,9 @@ class ChangeDataSetWhileScrollingTest : BaseTest() {
             setAdapterSync(adapterProvider.provider(items))
             assertBasicState(0, items[0])
 
-            viewPager.post { viewPager.setCurrentItem(1, true) }
+            viewPager.post {
+                viewPager.setCurrentItem(1, true)
+            }
 
             viewPager.post {
                 items.remove("51")
@@ -111,9 +113,8 @@ class ChangeDataSetWhileScrollingTest : BaseTest() {
         }
 
     private val View.locationOnScreenX: Int
-        get() =
-            IntArray(2).let { result ->
-                getLocationOnScreen(result)
-                result[0]
-            }
+        get() = IntArray(2).let { result ->
+            getLocationOnScreen(result)
+            result[0]
+        }
 }

@@ -46,7 +46,8 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
     protected abstract val textContent: MutableState<String>
     protected abstract var asserter: TextSelectionAsserter
 
-    @Composable abstract fun TextContent()
+    @Composable
+    abstract fun TextContent()
 
     @Composable
     override fun Content() {
@@ -63,7 +64,9 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
 
     @Test
     fun whenTouch_withLongPress_selectsSingleWord() {
-        performTouchGesture { longClick(characterPosition(26, isRtl = false)) }
+        performTouchGesture {
+            longClick(characterPosition(26, isRtl = false))
+        }
 
         asserter.applyAndAssert {
             selection = 24 to 29
@@ -153,7 +156,9 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
         backwardSelection: TextRange?,
         backwardEndDirection: ResolvedTextDirection,
     ) {
-        performTouchGesture { longPress(characterPosition(26, isRtl = false)) }
+        performTouchGesture {
+            longPress(characterPosition(26, isRtl = false))
+        }
 
         asserter.applyAndAssert {
             selection = 24 to 29
@@ -178,7 +183,9 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
             if (forwardSelection != backwardSelection) hapticsCount++
         }
 
-        performTouchGesture { up() }
+        performTouchGesture {
+            up()
+        }
 
         asserter.applyAndAssert {
             textToolbarShown = true
@@ -188,9 +195,13 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
 
     @Test
     fun whenMouse_withSingleClick_collapsedSelectionAtClick() {
-        performMouseGesture { click(characterPosition(26, isRtl = false)) }
+        performMouseGesture {
+            click(characterPosition(26, isRtl = false))
+        }
 
-        asserter.applyAndAssert { selection = 26.collapsed }
+        asserter.applyAndAssert {
+            selection = 26.collapsed
+        }
     }
 
     @Test
@@ -200,9 +211,13 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
             press()
         }
 
-        asserter.applyAndAssert { selection = 26.collapsed }
+        asserter.applyAndAssert {
+            selection = 26.collapsed
+        }
 
-        performMouseGesture { release() }
+        performMouseGesture {
+            release()
+        }
 
         asserter.assert()
     }
@@ -239,7 +254,10 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
         )
     }
 
-    private fun mouseSingleClickThenDragTest(endOffset: Offset, endSelection: TextRange?) {
+    private fun mouseSingleClickThenDragTest(
+        endOffset: Offset,
+        endSelection: TextRange?
+    ) {
         mouseClicksThenDragTest(
             numClicks = 1,
             firstOffset = characterPosition(26, isRtl = false),
@@ -254,9 +272,13 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
 
     @Test
     fun whenMouse_withDoubleClick_selectsWord() {
-        performMouseGesture { repeat(2) { click(characterPosition(26, isRtl = false)) } }
+        performMouseGesture {
+            repeat(2) { click(characterPosition(26, isRtl = false)) }
+        }
 
-        asserter.applyAndAssert { selection = 24 to 29 }
+        asserter.applyAndAssert {
+            selection = 24 to 29
+        }
     }
 
     @Test
@@ -314,7 +336,9 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
 
     @Test
     fun whenMouse_withTripleClick_selectsParagraph() {
-        performMouseGesture { repeat(3) { click(characterPosition(26, isRtl = false)) } }
+        performMouseGesture {
+            repeat(3) { click(characterPosition(26, isRtl = false)) }
+        }
 
         asserter.applyAndAssert {
             selection = 18 to 35
@@ -411,7 +435,9 @@ internal abstract class TextSelectionGesturesBidiTest : AbstractSelectionGesture
             endLayoutDirection = secondEndDirection
         }
 
-        performMouseGesture { release() }
+        performMouseGesture {
+            release()
+        }
 
         asserter.assert()
     }

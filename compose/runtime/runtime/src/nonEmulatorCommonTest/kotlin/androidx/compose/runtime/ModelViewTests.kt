@@ -38,25 +38,38 @@ class ModelViewTests {
 
     @Test
     fun testModelView_Simple() = compositionTest {
-        compose { Text("Hello world!") }
+        compose {
+            Text("Hello world!")
+        }
 
-        validate { Text("Hello world!") }
+        validate {
+            Text("Hello world!")
+        }
     }
 
     @Test
     fun testModelView_Simple_Recompose() = compositionTest {
-        compose { Text(value = "Hello world!") }
+        compose {
+            Text(value = "Hello world!")
+        }
 
-        validate { Text(value = "Hello world!") }
+        validate {
+            Text(value = "Hello world!")
+        }
 
         expectNoChanges()
 
-        validate { Text(value = "Hello world!") }
+        validate {
+            Text(value = "Hello world!")
+        }
     }
 
     @Test
     fun testModelView_PersonModel() = compositionTest {
-        val president = Person(PRESIDENT_NAME_1, PRESIDENT_AGE_1)
+        val president = Person(
+            PRESIDENT_NAME_1,
+            PRESIDENT_AGE_1
+        )
 
         compose {
             Text(president.name)
@@ -80,13 +93,18 @@ class ModelViewTests {
 
     @Test
     fun testModelView_RecomposeScopeCleanup() = compositionTest {
-        val washington = Person(PRESIDENT_NAME_1, PRESIDENT_AGE_1)
-        val lincoln = Person(PRESIDENT_NAME_16, PRESIDENT_AGE_16)
+        val washington = Person(
+            PRESIDENT_NAME_1,
+            PRESIDENT_AGE_1
+        )
+        val lincoln = Person(
+            PRESIDENT_NAME_16,
+            PRESIDENT_AGE_16
+        )
 
         val displayLincoln = mutableStateOf(true)
 
-        @Composable
-        fun Display(person: Person) {
+        @Composable fun Display(person: Person) {
             Text(person.name)
             Text(person.age.toString())
         }
@@ -122,10 +140,12 @@ class ModelViewTests {
     // b/122548164
     @Test
     fun testObserverEntering() = compositionTest {
-        val president = Person(PRESIDENT_NAME_1, PRESIDENT_AGE_1)
+        val president = Person(
+            PRESIDENT_NAME_1,
+            PRESIDENT_AGE_1
+        )
 
-        @Composable
-        fun Display(person: Person) {
+        @Composable fun Display(person: Person) {
             Text(person.name)
             Text("${person.age}")
             if (person.name == PRESIDENT_NAME_16) {
@@ -143,10 +163,14 @@ class ModelViewTests {
             }
         }
 
-        compose { Display(president) }
+        compose {
+            Display(president)
+        }
 
         fun validate() {
-            validate { this.Display(president) }
+            validate {
+                this.Display(president)
+            }
         }
         validate()
 
@@ -157,10 +181,12 @@ class ModelViewTests {
 
     @Test
     fun testModelUpdatesNextFrameVisibility() = compositionTest {
-        val president = Person(PRESIDENT_NAME_1, PRESIDENT_AGE_1)
+        val president = Person(
+            PRESIDENT_NAME_1,
+            PRESIDENT_AGE_1
+        )
 
-        @Composable
-        fun Display(person: Person) {
+        @Composable fun Display(person: Person) {
             Text(person.name)
             Text("${person.age}")
             if (person.name == PRESIDENT_NAME_16) {
@@ -179,10 +205,14 @@ class ModelViewTests {
             }
         }
 
-        compose { Display(president) }
+        compose {
+            Display(president)
+        }
 
         fun validate(nameOverride: String? = null) {
-            validate { this.Display(president, nameOverride) }
+            validate {
+                this.Display(president, nameOverride)
+            }
         }
         validate()
 

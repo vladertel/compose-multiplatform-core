@@ -26,7 +26,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
-@RunWith(RobolectricTestRunner::class)
+@RunWith(
+    RobolectricTestRunner::class
+)
 @DoNotInstrument
 class UseCaseConfigTest {
     @Test

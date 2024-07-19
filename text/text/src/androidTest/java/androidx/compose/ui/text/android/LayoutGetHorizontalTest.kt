@@ -30,6 +30,7 @@ import org.junit.runner.RunWith
 
 /**
  * In this test cases, use following notations:
+ *
  * - L1-LF shows an example strong LTR character.
  * - R1-RF shows an example strong RTL character
  */
@@ -38,24 +39,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LayoutGetHorizontalTest {
 
-    private val sampleTypeface =
-        ResourcesCompat.getFont(
-            InstrumentationRegistry.getInstrumentation().targetContext,
-            R.font.sample_font
-        )
+    private val sampleTypeface = ResourcesCompat.getFont(
+        InstrumentationRegistry.getInstrumentation().targetContext,
+        R.font.sample_font
+    )
 
     private val LTR = TextDirectionHeuristics.LTR
     private val RTL = TextDirectionHeuristics.RTL
 
     private fun LayoutHelper.getUpstreamPrimaryHorizontalPosition(offset: Int) =
         getHorizontalPosition(offset = offset, usePrimaryDirection = true, upstream = true)
-
     private fun LayoutHelper.getDownstreamPrimaryHorizontalPosition(offset: Int) =
         getHorizontalPosition(offset = offset, usePrimaryDirection = true, upstream = false)
-
     private fun LayoutHelper.getUpstreamSecondaryHorizontalPosition(offset: Int) =
         getHorizontalPosition(offset = offset, usePrimaryDirection = false, upstream = true)
-
     private fun LayoutHelper.getDownstreamSecondaryHorizontalPosition(offset: Int) =
         getHorizontalPosition(offset = offset, usePrimaryDirection = false, upstream = false)
 
@@ -65,13 +62,16 @@ class LayoutGetHorizontalTest {
         width: Int,
         dir: TextDirectionHeuristic
     ): LayoutHelper {
-        val paint =
-            TextPaint().apply {
-                textSize = fontSize.toFloat()
-                typeface = sampleTypeface
-            }
-        val layout =
-            StaticLayoutFactory.create(text = text, paint = paint, width = width, textDir = dir)
+        val paint = TextPaint().apply {
+            textSize = fontSize.toFloat()
+            typeface = sampleTypeface
+        }
+        val layout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width,
+            textDir = dir
+        )
         return LayoutHelper(layout)
     }
 
@@ -85,13 +85,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |LB LC         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 0 // Before L1
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(0)
@@ -110,13 +109,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |LB LC         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 5 // before L6
         // If insert LX to first line, it will be |L1 L2 L3 L4 L5 LX|
@@ -139,13 +137,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |LB LC         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = layout.layout.text.length // after LC
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(20)
@@ -164,13 +161,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |LB LC         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 7 // before L8
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(20)
@@ -189,13 +185,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |         LB LC|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 0 // before L1
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(50)
@@ -214,13 +209,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |         LB LC|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 5 // before L6 == after L5
         // If insert RX to the first line, it will be |RX L1 L2 L3 L4 L5|
@@ -243,13 +237,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |         LB LC|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = layout.layout.text.length // after LC
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(30)
@@ -268,13 +261,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 L8 L9 LA|
         // |         LB LC|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 7 // before L8
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(20)
@@ -293,13 +285,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |         RC RB|
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 0 // before R1
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(50)
@@ -318,13 +309,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |         RC RB|
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 5 // before R6 == after R5
         // If insert RX to the first line, it will be |RX R5 R4 R3 R2 R1|
@@ -347,13 +337,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |         RC RB|
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = layout.layout.text.length // after RC
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(30)
@@ -372,13 +361,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |         RC RB|
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 7 // before R8
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(30)
@@ -397,13 +385,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |RC RB         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 0 // before R1
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(0)
@@ -422,13 +409,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |RC RB         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 5 // befroe R6 == after R5
         // If insert LX to the first line, it will be |R5 R4 R3 R2 R1 LX|
@@ -451,13 +437,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |RC RB         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = layout.layout.text.length // after RB
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(20)
@@ -476,13 +461,12 @@ class LayoutGetHorizontalTest {
         // |RA R9 R8 R7 R6|
         // |RC RB         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05D9\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 7 // before R8
         assertThat(layout.getUpstreamPrimaryHorizontalPosition(offset)).isEqualTo(30)
@@ -501,13 +485,12 @@ class LayoutGetHorizontalTest {
         // |L3 L4 L5 L6 L7|
         // |L8 L9         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u05D1\u05D2\u05D3\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u05D1\u05D2\u05D3\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 1 // before R1
         // If insert LX to first line, it will be |L1 LX R3 R2 R1 L2|
@@ -530,13 +513,12 @@ class LayoutGetHorizontalTest {
         // |L3 L4 L5 L6 L7|
         // |         L8 L9|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u05D1\u05D2\u05D3\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u05D1\u05D2\u05D3\u0065\u0066\u0067\u0068\u0069\u006A\u006B\u006C",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 1 // before R1
         // If insert RX to first line, it will be |L2 R3 R2 R1 RX L1|
@@ -559,13 +541,12 @@ class LayoutGetHorizontalTest {
         // |R7 R6 R5 R4 R3|
         // |         R9 R8|
         //
-        val layout =
-            getLayout(
-                text = "\u05D0\u0061\u0062\u0063\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D0\u0061\u0062\u0063\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 1 // before L1
         // If insert RX to first line, it will be |R2 L1 L2 L3 RX R1|
@@ -588,13 +569,12 @@ class LayoutGetHorizontalTest {
         // |R7 R6 R5 R4 R3|
         // |R9 R8         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D0\u0061\u0062\u0063\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D0\u0061\u0062\u0063\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 1 // before L1
         // If insert LX to first line, it will be |R2 LX L1 L2 L3 R1|
@@ -617,13 +597,12 @@ class LayoutGetHorizontalTest {
         // |R5 R4 R3 R2 R1|
         // |R7 R6         |
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 5 // before R1 == after L5
         // If insert LX to first line, it will be |L1 L2 L3 L4 L5 LX|
@@ -646,13 +625,12 @@ class LayoutGetHorizontalTest {
         // |R5 R4 R3 R2 R1|
         // |         R7 R6|
         //
-        val layout =
-            getLayout(
-                text = "\u0061\u0062\u0063\u0064\u0065\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u0061\u0062\u0063\u0064\u0065\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB\u05DC",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 5 // before R1 == after L5
         // If insert RX to first line, it will be |RX L1 L2 L3 L4 L5|
@@ -675,13 +653,12 @@ class LayoutGetHorizontalTest {
         // |L1 L2 L3 L4 L5|
         // |         L6 L7|
         //
-        val layout =
-            getLayout(
-                text = "\u05D0\u05D1\u05D2\u05D3\u05D4\u0061\u0062\u0063\u0064\u0065\u0066\u0067",
-                fontSize = 10,
-                width = 50,
-                dir = RTL
-            )
+        val layout = getLayout(
+            text = "\u05D0\u05D1\u05D2\u05D3\u05D4\u0061\u0062\u0063\u0064\u0065\u0066\u0067",
+            fontSize = 10,
+            width = 50,
+            dir = RTL
+        )
 
         val offset = 5 // before L1 == after R5
         // If insert RX to first line, it will be |RX R5 R4 R3 R2 R1|
@@ -704,13 +681,12 @@ class LayoutGetHorizontalTest {
         // |L1 L2 L3 L4 L5|
         // |L6 L7         |
         //
-        val layout =
-            getLayout(
-                text = "\u05D0\u05D1\u05D2\u05D3\u05D4\u0061\u0062\u0063\u0064\u0065\u0066\u0067",
-                fontSize = 10,
-                width = 50,
-                dir = LTR
-            )
+        val layout = getLayout(
+            text = "\u05D0\u05D1\u05D2\u05D3\u05D4\u0061\u0062\u0063\u0064\u0065\u0066\u0067",
+            fontSize = 10,
+            width = 50,
+            dir = LTR
+        )
 
         val offset = 5 // before L1 == after R5
         // If insert LX to first line, it will be |R5 R4 R3 R2 R1 LX|
@@ -733,13 +709,12 @@ class LayoutGetHorizontalTest {
         // |R8 R7 R6 R5 R4|
         // |RA R9         |
         //
-        val layout =
-            getLayout(
-                "\u0061\u0062\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u0061\u0062\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA\u05DB",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 5 // before R4 == after R3
         // If insert LX to first line, it will be |L1 L2 R3 R2 R1 LX|
@@ -762,13 +737,12 @@ class LayoutGetHorizontalTest {
         // |R8 R7 R6 R5 R4|
         // |         RA R9|
         //
-        val layout =
-            getLayout(
-                "\u0061\u0062\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA",
-                10,
-                50,
-                RTL
-            )
+        val layout = getLayout(
+            "\u0061\u0062\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u05D7\u05D8\u05DA",
+            10,
+            50,
+            RTL
+        )
 
         val offset = 5 // before R4 == after R3
         // If insert RX to first line, it will be |RX R3 R2 R1 L1 L2|
@@ -791,13 +765,12 @@ class LayoutGetHorizontalTest {
         // |L4 L5 L6 L7 L8|
         // |L9 RA         |
         //
-        val layout =
-            getLayout(
-                "\u05D0\u05D1\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 5 // before L4 == after L3
         // If insert LX to first line, it will be |R2 R1 L1 L2 L3 LX|
@@ -820,13 +793,12 @@ class LayoutGetHorizontalTest {
         // |L4 L5 L6 L7 L8|
         // |         L9 RA|
         //
-        val layout =
-            getLayout(
-                "\u05D0\u05D1\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A",
-                10,
-                50,
-                RTL
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006A",
+            10,
+            50,
+            RTL
+        )
 
         val offset = 5 // before L4 == after L3
         // If insert RX to first line, it will be |RX L1 L2 L3 R2 R1|
@@ -849,13 +821,12 @@ class LayoutGetHorizontalTest {
         // |L6 L7 R3 R2 R1|
         // |R5 R4         |
         //
-        val layout =
-            getLayout(
-                "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u05D0\u05D1\u05D2\u05D3\u05D4",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u05D0\u05D1\u05D2\u05D3\u05D4",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 5 // before L6 == after L5
         // If insert LX to first line, it will be |L1 L2 L3 L4 L5 LX|
@@ -878,13 +849,12 @@ class LayoutGetHorizontalTest {
         // |R3 R2 R1 L6 L7|
         // |         R5 R4|
         //
-        val layout =
-            getLayout(
-                "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u05D0\u05D1\u05D2\u05D3\u05D4",
-                10,
-                50,
-                RTL
-            )
+        val layout = getLayout(
+            "\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u05D0\u05D1\u05D2\u05D3\u05D4",
+            10,
+            50,
+            RTL
+        )
 
         val offset = 5 // before L6 == after L5
         // If insert RX to first line, it will be |RX L1 L2 L3 L4 L5|
@@ -907,13 +877,12 @@ class LayoutGetHorizontalTest {
         // |R7 R6 L1 L2 L3|
         // |L4 L5         |
         //
-        val layout =
-            getLayout(
-                "\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u0061\u0062\u0063\u0064\u0065",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u0061\u0062\u0063\u0064\u0065",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 5 // before R6 == after R5
         // If insert LX to first line, it will be |R5 R4 R3 R2 R1 LX|
@@ -936,13 +905,12 @@ class LayoutGetHorizontalTest {
         // |L1 L2 L3 R7 R6|
         // |         L4 L5|
         //
-        val layout =
-            getLayout(
-                "\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u0061\u0062\u0063\u0064\u0065",
-                10,
-                50,
-                RTL
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1\u05D2\u05D3\u05D4\u05D5\u05D6\u0061\u0062\u0063\u0064\u0065",
+            10,
+            50,
+            RTL
+        )
 
         val offset = 5 // before R6 == after R5
         // If insert RX to first line, it will be |RX R5 R4 R3 R2 R1|
@@ -964,13 +932,12 @@ class LayoutGetHorizontalTest {
         // |R4 R3 SP R2 R1| (SP)
         // |L1 L2 SP L3 L4| (SP)
         // |L5 L6         |
-        val layout =
-            getLayout(
-                "\u05D0\u05D1 \u05D2\u05D3 \u0061\u0062 \u0063\u0064 \u0065\u0066",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1 \u05D2\u05D3 \u0061\u0062 \u0063\u0064 \u0065\u0066",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 6 // before L1 == after SP
         // If insert LX to first line, it will be |R4 R3 SP R2 R1 SP LX|
@@ -992,13 +959,12 @@ class LayoutGetHorizontalTest {
         // |L1 L2 SP R2 R1| (SP)
         // |L3 L4 SP R4 R3| (SP)
         // |L5 L6         |
-        val layout =
-            getLayout(
-                "\u05D0\u05D1 \u0061\u0062 \u0063\u0064 \u05D3\u05D4 \u0065\u0066",
-                10,
-                50,
-                LTR
-            )
+        val layout = getLayout(
+            "\u05D0\u05D1 \u0061\u0062 \u0063\u0064 \u05D3\u05D4 \u0065\u0066",
+            10,
+            50,
+            LTR
+        )
 
         val offset = 6 // before L3 == after SP
         // If insert LX to first line, it will be |L1 L2 SP R2 R1 SP LX|

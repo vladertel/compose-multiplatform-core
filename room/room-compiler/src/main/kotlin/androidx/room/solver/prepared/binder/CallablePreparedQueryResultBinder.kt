@@ -31,11 +31,12 @@ import androidx.room.solver.prepared.result.PreparedQueryResultAdapter
  * [PreparedQueryResultAdapter]. Usage of the Callable impl is then delegate to the [addStmntBlock]
  * function.
  */
-class CallablePreparedQueryResultBinder
-private constructor(
+class CallablePreparedQueryResultBinder private constructor(
     val returnType: XType,
-    val addStmntBlock:
-        XCodeBlock.Builder.(callableImpl: XTypeSpec, dbProperty: XPropertySpec) -> Unit,
+    val addStmntBlock: XCodeBlock.Builder.(
+        callableImpl: XTypeSpec,
+        dbProperty: XPropertySpec
+    ) -> Unit,
     adapter: PreparedQueryResultAdapter?
 ) : PreparedQueryResultBinder(adapter) {
 
@@ -43,8 +44,10 @@ private constructor(
         fun createPreparedBinder(
             returnType: XType,
             adapter: PreparedQueryResultAdapter?,
-            addCodeBlock:
-                XCodeBlock.Builder.(callableImpl: XTypeSpec, dbProperty: XPropertySpec) -> Unit
+            addCodeBlock: XCodeBlock.Builder.(
+                callableImpl: XTypeSpec,
+                dbProperty: XPropertySpec
+            ) -> Unit
         ) = CallablePreparedQueryResultBinder(returnType, addCodeBlock, adapter)
     }
 
@@ -55,18 +58,18 @@ private constructor(
         scope: CodeGenScope
     ) {
         val binderScope = scope.fork()
-        val callableImpl =
-            CallableTypeSpecBuilder(scope.language, returnType.asTypeName()) {
-                    adapter?.executeAndReturn(
-                        binderScope.prepareQueryStmtBlock(),
-                        preparedStmtProperty,
-                        dbProperty,
-                        binderScope
-                    )
-                    addCode(binderScope.generate())
-                }
-                .build()
+        val callableImpl = CallableTypeSpecBuilder(scope.language, returnType.asTypeName()) {
+            adapter?.executeAndReturn(
+                binderScope.prepareQueryStmtBlock(),
+                preparedStmtProperty,
+                dbProperty,
+                binderScope
+            )
+            addCode(binderScope.generate())
+        }.build()
 
-        scope.builder.apply { addStmntBlock(callableImpl, dbProperty) }
+        scope.builder.apply {
+            addStmntBlock(callableImpl, dbProperty)
+        }
     }
 }

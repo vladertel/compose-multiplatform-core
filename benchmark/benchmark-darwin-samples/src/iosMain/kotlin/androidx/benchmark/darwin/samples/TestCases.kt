@@ -18,9 +18,13 @@ package androidx.benchmark.darwin.samples
 
 import androidx.benchmark.darwin.TestCase
 
-/** Returns a [List] of [TestCase]s to run for benchmarks. */
+/**
+ * Returns a [List] of [TestCase]s to run for benchmarks.
+ */
 object TestCases {
     fun benchmarkTests(): List<TestCase> {
-        return listOf(ArrayListAllocationBenchmark())
+        return listOf(
+            ArrayListAllocationBenchmark()
+        )
     }
 }

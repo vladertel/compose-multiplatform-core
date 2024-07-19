@@ -43,7 +43,9 @@ class ComposeCameraActivity : ComponentActivity() {
         setContent {
             PermissionsUI(
                 permissions = REQUIRED_PERMISSIONS,
-                checkAllPermissionGranted = { checkAllPermissionsGranted(it) }
+                checkAllPermissionGranted = {
+                    checkAllPermissionsGranted(it)
+                }
             ) {
                 ComposeCameraApp(onStreamStateChange = this::onStreamStateChange)
             }
@@ -99,13 +101,13 @@ class ComposeCameraActivity : ComponentActivity() {
     companion object {
         private const val TAG = "ComposeCameraActivity"
         private const val LATCH_TIMEOUT: Long = 5000
-        val REQUIRED_PERMISSIONS =
-            mutableListOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
-                .apply {
-                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    }
-                }
-                .toTypedArray()
+        val REQUIRED_PERMISSIONS = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        ).apply {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }.toTypedArray()
     }
 }

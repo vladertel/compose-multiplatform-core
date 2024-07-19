@@ -48,14 +48,16 @@ import org.junit.runners.Parameterized
 // Profile the ImageProcessing performance to convert the input image from CameraX.
 @LargeTest
 @RunWith(Parameterized::class)
-class ImageProcessingLatencyTest(private val targetResolution: Size) {
+class ImageProcessingLatencyTest(
+    private val targetResolution: Size
+) {
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
-        )
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
+    )
 
-    @get:Rule val labTest: LabTestRule = LabTestRule()
+    @get:Rule
+    val labTest: LabTestRule = LabTestRule()
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private lateinit var camera: CameraUseCaseAdapter
@@ -66,8 +68,9 @@ class ImageProcessingLatencyTest(private val targetResolution: Size) {
         private const val TAG = "ImageProcessingLatencyTest"
         private val size480p = Size(480, 640)
         private val size1080p = Size(1080, 1920)
-
-        @JvmStatic @Parameterized.Parameters fun data() = listOf(size480p, size1080p)
+        @JvmStatic
+        @Parameterized.Parameters
+        fun data() = listOf(size480p, size1080p)
     }
 
     @Before
@@ -84,7 +87,9 @@ class ImageProcessingLatencyTest(private val targetResolution: Size) {
     @After
     fun tearDown(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
-            withContext(Dispatchers.Main) { cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS] }
+            withContext(Dispatchers.Main) {
+                cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
+            }
         }
     }
 
@@ -111,17 +116,17 @@ class ImageProcessingLatencyTest(private val targetResolution: Size) {
         )
         // Profile the YubToRgbConverter performance with the first 200 frames.
         val countDownLatch = CountDownLatch(200)
-        val imageAnalyzer =
-            ImageAnalysis.Builder()
-                .setOutputImageFormat(OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                .setTargetResolution(targetResolution)
-                .build()
-                .also {
-                    it.setAnalyzer(Dispatchers.Main.asExecutor()) { image ->
-                        countDownLatch.countDown()
-                        image.close()
-                    }
+        val imageAnalyzer = ImageAnalysis.Builder()
+            .setOutputImageFormat(OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .setTargetResolution(targetResolution)
+            .build().also {
+                it.setAnalyzer(
+                    Dispatchers.Main.asExecutor()
+                ) { image ->
+                    countDownLatch.countDown()
+                    image.close()
                 }
+            }
 
         withContext(Dispatchers.Main) {
             cameraProvider.bindToLifecycle(

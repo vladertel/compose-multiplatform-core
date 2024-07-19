@@ -33,6 +33,9 @@ class FakeProviderFactory(
     }
 
     companion object {
-        @JvmStatic val factory: ProviderFactory by lazy { ProjectFactory.project.providers }
+        @JvmStatic
+        val factory: ProviderFactory by lazy {
+            ProjectFactory.project.providers
+        }
     }
 }

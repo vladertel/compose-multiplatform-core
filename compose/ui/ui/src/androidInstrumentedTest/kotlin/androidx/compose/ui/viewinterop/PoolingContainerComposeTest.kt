@@ -37,7 +37,9 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class PoolingContainerComposeTest {
-    @Rule @JvmField var activityRule = ActivityScenarioRule(ComponentActivity::class.java)
+    @Rule
+    @JvmField
+    var activityRule = ActivityScenarioRule(ComponentActivity::class.java)
 
     @Test
     fun addToLifecycleContainer_removeFromLifecycleContainer_addToOtherContainer_thenRemove() {
@@ -139,14 +141,12 @@ class PoolingContainerComposeTest {
             activity.setContentView(R.layout.pooling_container_compose_test)
             val lifecycleContainer: ViewGroup = activity.findViewById(R.id.lifecycleContainer)
             val composeView = DisposalCountingComposeView(activity)
-            composeView.setViewCompositionStrategy(
-                object : ViewCompositionStrategy {
-                    override fun installFor(view: AbstractComposeView): () -> Unit {
-                        // do nothing
-                        return {}
-                    }
+            composeView.setViewCompositionStrategy(object : ViewCompositionStrategy {
+                override fun installFor(view: AbstractComposeView): () -> Unit {
+                    // do nothing
+                    return {}
                 }
-            )
+            })
 
             lifecycleContainer.isPoolingContainer = true
 
@@ -175,7 +175,9 @@ class PoolingContainerComposeTest {
         override fun Content() {
             DisposableEffect(true) {
                 compositions++
-                onDispose { disposals++ }
+                onDispose {
+                    disposals++
+                }
             }
         }
     }

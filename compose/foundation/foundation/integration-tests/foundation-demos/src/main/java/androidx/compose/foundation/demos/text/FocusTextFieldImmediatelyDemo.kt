@@ -54,12 +54,16 @@ fun FocusTextFieldImmediatelyDemo() {
 
         if (launchedEffect) {
             val focusRequester = remember { FocusRequester() }
-            LaunchedEffect(focusRequester) { focusRequester.requestFocus() }
+            LaunchedEffect(focusRequester) {
+                focusRequester.requestFocus()
+            }
 
             TextField(
                 value,
                 onValueChange = { value = it },
-                modifier = Modifier.wrapContentSize().focusRequester(focusRequester)
+                modifier = Modifier
+                    .wrapContentSize()
+                    .focusRequester(focusRequester)
             )
         } else {
             val focusRequester = remember { FocusRequester() }
@@ -71,7 +75,9 @@ fun FocusTextFieldImmediatelyDemo() {
             TextField(
                 value,
                 onValueChange = { value = it },
-                modifier = Modifier.wrapContentSize().focusRequester(focusRequester)
+                modifier = Modifier
+                    .wrapContentSize()
+                    .focusRequester(focusRequester)
             )
         }
     }

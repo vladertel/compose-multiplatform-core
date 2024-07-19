@@ -20,6 +20,7 @@ import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.XCodeBlock
 import androidx.room.compiler.codegen.XPropertySpec
 import androidx.room.compiler.codegen.XTypeName
+import androidx.room.compiler.codegen.XTypeSpec
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.isInt
 import androidx.room.compiler.processing.isKotlinUnit
@@ -32,8 +33,10 @@ import androidx.room.ext.isNotVoidObject
 import androidx.room.solver.CodeGenScope
 import androidx.room.vo.ShortcutQueryParameter
 
-/** Class that knows how to generate a delete or update method body. */
-class DeleteOrUpdateMethodAdapter private constructor(val returnType: XType) {
+/**
+ * Class that knows how to generate a delete or update method body.
+ */
+class DeleteOrUpdateMethodAdapter private constructor(private val returnType: XType) {
     companion object {
         fun create(returnType: XType): DeleteOrUpdateMethodAdapter? {
             if (isDeleteOrUpdateValid(returnType)) {
@@ -50,77 +53,17 @@ class DeleteOrUpdateMethodAdapter private constructor(val returnType: XType) {
         }
     }
 
-    fun generateMethodBody(
-        scope: CodeGenScope,
+    fun createDeleteOrUpdateMethodBody(
         parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, Any>>,
-        connectionVar: String
-    ) {
-        scope.builder.apply {
-            val hasReturnValue =
-                returnType.isNotVoid() &&
-                    returnType.isNotVoidObject() &&
-                    returnType.isNotKotlinUnit()
-            val resultVar =
-                if (hasReturnValue) {
-                    scope.getTmpVar("_result")
-                } else {
-                    null
-                }
-            if (resultVar != null) {
-                addLocalVariable(
-                    name = resultVar,
-                    typeName = XTypeName.PRIMITIVE_INT,
-                    isMutable = true,
-                    assignExpr = XCodeBlock.of(language, "0")
-                )
-            }
-            parameters.forEach { param ->
-                val adapter = adapters.getValue(param.name).first
-                addStatement(
-                    "%L%L.%L(%L, %L)",
-                    if (resultVar == null) "" else "$resultVar += ",
-                    adapter.name,
-                    param.handleMethodName,
-                    connectionVar,
-                    param.name
-                )
-            }
-            when (scope.language) {
-                CodeLanguage.KOTLIN ->
-                    if (resultVar != null) {
-                        addStatement("%L", resultVar)
-                    } else if (returnType.isVoidObject()) {
-                        addStatement("null")
-                    }
-                CodeLanguage.JAVA ->
-                    if (resultVar != null) {
-                        addStatement("return %L", resultVar)
-                    } else if (returnType.isVoidObject() || returnType.isVoid()) {
-                        addStatement("return null")
-                    } else {
-                        addStatement("return %T.INSTANCE", KotlinTypeNames.UNIT)
-                    }
-            }
-        }
-    }
-
-    fun generateMethodBodyCompat(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, Any>>,
+        adapters: Map<String, Pair<XPropertySpec, XTypeSpec>>,
         dbProperty: XPropertySpec,
         scope: CodeGenScope
     ) {
-        val resultVar =
-            if (
-                returnType.isNotVoid() &&
-                    returnType.isNotVoidObject() &&
-                    returnType.isNotKotlinUnit()
-            ) {
-                scope.getTmpVar("_total")
-            } else {
-                null
-            }
+        val resultVar = if (hasResultValue(returnType)) {
+            scope.getTmpVar("_total")
+        } else {
+            null
+        }
         scope.builder.apply {
             if (resultVar != null) {
                 addLocalVariable(
@@ -138,7 +81,7 @@ class DeleteOrUpdateMethodAdapter private constructor(val returnType: XType) {
                         "%L%L.%L(%L)",
                         if (resultVar == null) "" else "$resultVar += ",
                         adapter.name,
-                        param.handleMethodName,
+                        param.handleMethodName(),
                         param.name
                     )
                 }
@@ -151,8 +94,16 @@ class DeleteOrUpdateMethodAdapter private constructor(val returnType: XType) {
                     addStatement("return %T.INSTANCE", KotlinTypeNames.UNIT)
                 }
             }
-            nextControlFlow("finally").apply { addStatement("%N.endTransaction()", dbProperty) }
+            nextControlFlow("finally").apply {
+                addStatement("%N.endTransaction()", dbProperty)
+            }
             endControlFlow()
         }
+    }
+
+    private fun hasResultValue(returnType: XType): Boolean {
+        return returnType.isNotVoid() &&
+            returnType.isNotVoidObject() &&
+            returnType.isNotKotlinUnit()
     }
 }

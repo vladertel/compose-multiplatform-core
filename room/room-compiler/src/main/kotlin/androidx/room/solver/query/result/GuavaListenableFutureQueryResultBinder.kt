@@ -17,11 +17,13 @@
 package androidx.room.solver.query.result
 
 import androidx.room.compiler.codegen.XCodeBlock
+import androidx.room.compiler.codegen.XMemberName.Companion.packageMember
 import androidx.room.compiler.codegen.XPropertySpec
 import androidx.room.compiler.processing.XType
 import androidx.room.ext.AndroidTypeNames
 import androidx.room.ext.CallableTypeSpecBuilder
 import androidx.room.ext.RoomGuavaTypeNames
+import androidx.room.ext.RoomTypeNames
 import androidx.room.solver.CodeGenScope
 
 /**
@@ -29,8 +31,10 @@ import androidx.room.solver.CodeGenScope
  *
  * <p>The Future runs on the background thread Executor.
  */
-class GuavaListenableFutureQueryResultBinder(val typeArg: XType, adapter: QueryResultAdapter?) :
-    BaseObservableQueryResultBinder(adapter) {
+class GuavaListenableFutureQueryResultBinder(
+    val typeArg: XType,
+    adapter: QueryResultAdapter?
+) : BaseObservableQueryResultBinder(adapter) {
 
     override fun convertAndReturn(
         roomSQLiteQueryVar: String,
@@ -43,34 +47,30 @@ class GuavaListenableFutureQueryResultBinder(val typeArg: XType, adapter: QueryR
         scope.builder.apply {
             addLocalVariable(
                 name = cancellationSignalVar,
-                typeName = AndroidTypeNames.CANCELLATION_SIGNAL,
-                assignExpr =
-                    XCodeBlock.ofNewInstance(
-                        language,
-                        AndroidTypeNames.CANCELLATION_SIGNAL,
-                    )
+                typeName = AndroidTypeNames.CANCELLATION_SIGNAL.copy(nullable = true),
+                assignExpr = XCodeBlock.of(
+                    language,
+                    "%M()",
+                    RoomTypeNames.DB_UTIL.packageMember("createCancellationSignal")
+                )
             )
         }
 
         // Callable<T> // Note that this callable does not release the query object.
-        val callableImpl =
-            CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
-                    addCode(
-                        XCodeBlock.builder(language)
-                            .apply {
-                                createRunQueryAndReturnStatements(
-                                    builder = this,
-                                    roomSQLiteQueryVar = roomSQLiteQueryVar,
-                                    dbProperty = dbProperty,
-                                    inTransaction = inTransaction,
-                                    scope = scope,
-                                    cancellationSignalVar = cancellationSignalVar
-                                )
-                            }
-                            .build()
+        val callableImpl = CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
+            addCode(
+                XCodeBlock.builder(language).apply {
+                    createRunQueryAndReturnStatements(
+                        builder = this,
+                        roomSQLiteQueryVar = roomSQLiteQueryVar,
+                        dbProperty = dbProperty,
+                        inTransaction = inTransaction,
+                        scope = scope,
+                        cancellationSignalVar = cancellationSignalVar
                     )
-                }
-                .build()
+                }.build()
+            )
+        }.build()
 
         scope.builder.apply {
             addStatement(

@@ -35,12 +35,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Benchmark for Wear Compose Card. */
+/**
+ * Benchmark for Wear Compose Card.
+ */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class CardChipBenchmark {
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val cardCaseFactory = { CardTestCase() }
 
@@ -86,8 +89,12 @@ internal class CardTestCase : LayeredComposeTestCase() {
     override fun MeasuredContent() {
         TitleCard(
             onClick = {},
-            time = { Text("now") },
-            title = { Text("TitleCard") },
+            time = {
+                Text("now")
+            },
+            title = {
+                Text("TitleCard")
+            },
         ) {
             Text("body")
         }
@@ -95,6 +102,8 @@ internal class CardTestCase : LayeredComposeTestCase() {
 
     @Composable
     override fun ContentWrappers(content: @Composable () -> Unit) {
-        MaterialTheme { content() }
+        MaterialTheme {
+            content()
+        }
     }
 }

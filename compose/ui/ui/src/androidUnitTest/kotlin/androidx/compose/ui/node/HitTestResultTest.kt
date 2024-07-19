@@ -28,7 +28,9 @@ class HitTestResultTest {
     fun testHit() {
         val hitTestResult = HitTestResult()
         hitTestResult.hit("Hello", true) {
-            hitTestResult.hit("World", true) { assertThat(hitTestResult.hasHit()).isFalse() }
+            hitTestResult.hit("World", true) {
+                assertThat(hitTestResult.hasHit()).isFalse()
+            }
             assertThat(hitTestResult.hasHit()).isTrue()
         }
         assertThat(hitTestResult.hasHit()).isTrue()
@@ -49,7 +51,9 @@ class HitTestResultTest {
     fun testHitClipped() {
         val hitTestResult = HitTestResult()
         hitTestResult.hit("Hello", false) {
-            hitTestResult.hit("World", false) { assertThat(hitTestResult.hasHit()).isFalse() }
+            hitTestResult.hit("World", false) {
+                assertThat(hitTestResult.hasHit()).isFalse()
+            }
             assertThat(hitTestResult.hasHit()).isFalse()
         }
         assertThat(hitTestResult.hasHit()).isFalse()
@@ -70,7 +74,7 @@ class HitTestResultTest {
     fun testHitInMinimumTouchTarget() {
         val hitTestResult = HitTestResult()
         hitTestResult.hitInMinimumTouchTarget("Hello", 1f, true) {
-            hitTestResult.hitInMinimumTouchTarget("World", 2f, false) {}
+            hitTestResult.hitInMinimumTouchTarget("World", 2f, false) { }
             assertThat(hitTestResult.hasHit()).isFalse()
             assertThat(hitTestResult.isHitInMinimumTouchTargetBetter(1.5f, false)).isTrue()
             assertThat(hitTestResult.isHitInMinimumTouchTargetBetter(2.5f, false)).isFalse()
@@ -84,7 +88,7 @@ class HitTestResultTest {
         assertThat(hitTestResult[0]).isEqualTo(SNode("Hello"))
         assertThat(hitTestResult[1]).isEqualTo(SNode("World"))
 
-        hitTestResult.hitInMinimumTouchTarget("Baz", 0.5f, false) {}
+        hitTestResult.hitInMinimumTouchTarget("Baz", 0.5f, false) { }
         assertThat(hitTestResult.hasHit()).isFalse()
         assertThat(hitTestResult).hasSize(1)
         assertThat(hitTestResult[0]).isEqualTo(SNode("Baz"))
@@ -94,7 +98,9 @@ class HitTestResultTest {
     fun testHasHit() {
         val hitTestResult = HitTestResult()
         hitTestResult.hitInMinimumTouchTarget("Hello", 1f, true) {
-            hitTestResult.hit("World", true) { assertThat(hitTestResult.hasHit()).isFalse() }
+            hitTestResult.hit("World", true) {
+                assertThat(hitTestResult.hasHit()).isFalse()
+            }
             assertThat(hitTestResult.hasHit()).isTrue()
         }
         assertThat(hitTestResult.hasHit()).isTrue()
@@ -103,7 +109,8 @@ class HitTestResultTest {
     @Test
     fun testEasySpeculativeHit() {
         val hitTestResult = HitTestResult()
-        hitTestResult.speculativeHit("Hello", 1f, true) {}
+        hitTestResult.speculativeHit("Hello", 1f, true) {
+        }
         assertThat(hitTestResult).hasSize(0)
 
         hitTestResult.speculativeHit("Hello", 1f, true) {
@@ -122,9 +129,10 @@ class HitTestResultTest {
     @Test
     fun testSpeculativeHitWithMove() {
         val hitTestResult = HitTestResult()
-        hitTestResult.hitInMinimumTouchTarget("Foo", 1.5f, true) {}
+        hitTestResult.hitInMinimumTouchTarget("Foo", 1.5f, true) { }
 
-        hitTestResult.speculativeHit("Hello", 1f, true) {}
+        hitTestResult.speculativeHit("Hello", 1f, true) {
+        }
 
         assertThat(hitTestResult).hasSize(1)
         assertThat(hitTestResult[0]).isEqualTo(SNode("Foo"))
@@ -145,7 +153,7 @@ class HitTestResultTest {
     @Test
     fun testSpeculateHitWithDeepHit() {
         val hitTestResult = HitTestResult()
-        hitTestResult.hitInMinimumTouchTarget("Foo", 1.5f, true) {}
+        hitTestResult.hitInMinimumTouchTarget("Foo", 1.5f, true) { }
 
         hitTestResult.speculativeHit("Hello", 2f, true) {
             hitTestResult.hitInMinimumTouchTarget("World", 1f, true) {}
@@ -227,8 +235,9 @@ class HitTestResultTest {
     @Test
     fun testIterator() {
         val hitTestResult = fillHitTestResult()
-        assertThat(hitTestResult.toList())
-            .isEqualTo(nodeListOf("Hello", "World", "this", "is", "great"))
+        assertThat(hitTestResult.toList()).isEqualTo(
+            nodeListOf("Hello", "World", "this", "is", "great")
+        )
     }
 
     @Test
@@ -338,17 +347,28 @@ class HitTestResultTest {
 
         hitTestResult.siblingHits {
             hitTestResult.hit("Hello", true) {
-                hitTestResult.siblingHits { hitTestResult.hit("World", true) {} }
+                hitTestResult.siblingHits {
+                    hitTestResult.hit("World", true) {}
+                }
             }
             hitTestResult.acceptHits()
             hitTestResult.hit("this", true) {
-                hitTestResult.siblingHits { hitTestResult.hit("is", true) {} }
+                hitTestResult.siblingHits {
+                    hitTestResult.hit("is", true) {}
+                }
             }
             hitTestResult.acceptHits()
             hitTestResult.hit("great", true) {}
         }
-        assertThat(hitTestResult.toList())
-            .isEqualTo(nodeListOf("Hello", "World", "this", "is", "great"))
+        assertThat(hitTestResult.toList()).isEqualTo(
+            nodeListOf(
+                "Hello",
+                "World",
+                "this",
+                "is",
+                "great"
+            )
+        )
     }
 
     private fun fillHitTestResult(last: String? = null): HitTestResult {
@@ -358,7 +378,9 @@ class HitTestResultTest {
                 hitTestResult.hit("this", true) {
                     hitTestResult.hit("is", true) {
                         hitTestResult.hit("great", true) {
-                            last?.let { hitTestResult.hit(it, true) {} }
+                            last?.let {
+                                hitTestResult.hit(it, true) {}
+                            }
                         }
                     }
                 }
@@ -369,7 +391,6 @@ class HitTestResultTest {
 }
 
 internal fun nodeListOf(vararg strings: String) = strings.map { SNode(it) }
-
 internal fun HitTestResult.hit(string: String, isInLayer: Boolean, childHitTest: () -> Unit) {
     hit(SNode(string), isInLayer, childHitTest)
 }
@@ -389,9 +410,6 @@ internal fun HitTestResult.speculativeHit(
 ) = speculativeHit(SNode(string), distanceFromEdge, isInLayer, childHitTest)
 
 internal fun HitTestResult.contains(string: String) = contains(SNode(string))
-
 internal fun HitTestResult.indexOf(string: String) = indexOf(SNode(string))
-
 internal fun HitTestResult.lastIndexOf(string: String) = lastIndexOf(SNode(string))
-
 internal data class SNode(val string: String) : Modifier.Node()

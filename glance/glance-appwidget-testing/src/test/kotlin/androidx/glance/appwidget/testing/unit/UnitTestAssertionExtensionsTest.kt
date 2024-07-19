@@ -40,15 +40,16 @@ import org.junit.Test
 class UnitTestAssertionExtensionsTest {
     @Test
     fun assertIsChecked_checkboxChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableCheckBox(CHECKBOX_COLORS).apply {
-                        checked = true
-                        modifier = GlanceModifier.semantics { testTag = "checkbox" }
-                    },
-                onNodeMatcher = hasTestTag("checkbox")
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableCheckBox(CHECKBOX_COLORS)
+                .apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "checkbox" }
+                },
+            onNodeMatcher = hasTestTag(
+                "checkbox"
             )
+        )
 
         nodeAssertion.assertIsChecked()
         // no error
@@ -56,22 +57,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_checkboxUnchecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableCheckBox(CHECKBOX_COLORS).apply {
-                                checked = false
-                                modifier = GlanceModifier.semantics { testTag = "checkbox" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("checkbox")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableCheckBox(CHECKBOX_COLORS).apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "checkbox" }
+                })
+            },
+            onNodeMatcher = hasTestTag("checkbox")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -80,15 +78,14 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_switchChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableSwitch(SWITCH_COLORS).apply {
-                        checked = true
-                        modifier = GlanceModifier.semantics { testTag = "switch" }
-                    },
-                onNodeMatcher = hasTestTag("switch")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableSwitch(SWITCH_COLORS)
+                .apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "switch" }
+                },
+            onNodeMatcher = hasTestTag("switch")
+        )
 
         nodeAssertion.assertIsChecked()
         // no error
@@ -96,18 +93,18 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_switchUnchecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableSwitch(SWITCH_COLORS).apply {
-                        checked = false
-                        modifier = GlanceModifier.semantics { testTag = "switch" }
-                    },
-                onNodeMatcher = hasTestTag("switch")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableSwitch(SWITCH_COLORS)
+                .apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "switch" }
+                },
+            onNodeMatcher = hasTestTag("switch")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -116,15 +113,14 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_radioChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableRadioButton(RADIO_BUTTON_COLORS).apply {
-                        checked = true
-                        modifier = GlanceModifier.semantics { testTag = "radio" }
-                    },
-                onNodeMatcher = hasTestTag("radio")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableRadioButton(RADIO_BUTTON_COLORS)
+                .apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "radio" }
+                },
+            onNodeMatcher = hasTestTag("radio")
+        )
 
         nodeAssertion.assertIsChecked()
         // no error
@@ -132,18 +128,18 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_radioUnchecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableRadioButton(RADIO_BUTTON_COLORS).apply {
-                        checked = false
-                        modifier = GlanceModifier.semantics { testTag = "radio" }
-                    },
-                onNodeMatcher = hasTestTag("radio")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableRadioButton(RADIO_BUTTON_COLORS)
+                .apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "radio" }
+                },
+            onNodeMatcher = hasTestTag("radio")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -152,22 +148,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsChecked_nonCheckableElement_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -176,15 +169,16 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_checkboxUnChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableCheckBox(CHECKBOX_COLORS).apply {
-                        checked = false
-                        modifier = GlanceModifier.semantics { testTag = "checkbox" }
-                    },
-                onNodeMatcher = hasTestTag("checkbox")
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableCheckBox(CHECKBOX_COLORS)
+                .apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "checkbox" }
+                },
+            onNodeMatcher = hasTestTag(
+                "checkbox"
             )
+        )
 
         nodeAssertion.assertIsNotChecked()
         // no error
@@ -192,22 +186,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_checkboxChecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableCheckBox(CHECKBOX_COLORS).apply {
-                                checked = true
-                                modifier = GlanceModifier.semantics { testTag = "checkbox" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("checkbox")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableCheckBox(CHECKBOX_COLORS).apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "checkbox" }
+                })
+            },
+            onNodeMatcher = hasTestTag("checkbox")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsNotChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsNotChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -216,15 +207,14 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_switchUnChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableSwitch(SWITCH_COLORS).apply {
-                        checked = false
-                        modifier = GlanceModifier.semantics { testTag = "switch" }
-                    },
-                onNodeMatcher = hasTestTag("switch")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableSwitch(SWITCH_COLORS)
+                .apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "switch" }
+                },
+            onNodeMatcher = hasTestTag("switch")
+        )
 
         nodeAssertion.assertIsNotChecked()
         // no error
@@ -232,18 +222,18 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_switchChecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableSwitch(SWITCH_COLORS).apply {
-                        checked = true
-                        modifier = GlanceModifier.semantics { testTag = "switch" }
-                    },
-                onNodeMatcher = hasTestTag("switch")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableSwitch(SWITCH_COLORS)
+                .apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "switch" }
+                },
+            onNodeMatcher = hasTestTag("switch")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsNotChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsNotChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -252,15 +242,14 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_radioUnChecked() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableRadioButton(RADIO_BUTTON_COLORS).apply {
-                        checked = false
-                        modifier = GlanceModifier.semantics { testTag = "radio" }
-                    },
-                onNodeMatcher = hasTestTag("radio")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableRadioButton(RADIO_BUTTON_COLORS)
+                .apply {
+                    checked = false
+                    modifier = GlanceModifier.semantics { testTag = "radio" }
+                },
+            onNodeMatcher = hasTestTag("radio")
+        )
 
         nodeAssertion.assertIsNotChecked()
         // no error
@@ -268,18 +257,18 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_radioChecked_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableRadioButton(RADIO_BUTTON_COLORS).apply {
-                        checked = true
-                        modifier = GlanceModifier.semantics { testTag = "radio" }
-                    },
-                onNodeMatcher = hasTestTag("radio")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableRadioButton(RADIO_BUTTON_COLORS)
+                .apply {
+                    checked = true
+                    modifier = GlanceModifier.semantics { testTag = "radio" }
+                },
+            onNodeMatcher = hasTestTag("radio")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsNotChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsNotChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -288,22 +277,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertIsNotChecked_nonCheckableElement_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertIsNotChecked() }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertIsNotChecked()
+        }
 
         assertThat(assertionError)
             .hasMessageThat()

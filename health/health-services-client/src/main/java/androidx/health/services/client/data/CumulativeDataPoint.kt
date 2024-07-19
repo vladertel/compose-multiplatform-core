@@ -43,8 +43,7 @@ class CumulativeDataPoint<T : Number>(
                     .setStartTimeEpochMs(start.toEpochMilli())
                     .setEndTimeEpochMs(end.toEpochMilli())
                     .setTotal(dataType.toProtoFromValue(total))
-            )
-            .build()
+            ).build()
 
     internal companion object {
         @Suppress("UNCHECKED_CAST")

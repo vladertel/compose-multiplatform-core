@@ -27,7 +27,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SimpleActivity : ComponentActivity() {
 
-    @Inject lateinit var workManager: WorkManager
+    @Inject
+    lateinit var workManager: WorkManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

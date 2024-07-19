@@ -37,14 +37,15 @@ class BackPressedDispatcherCallbackDetectorTest : LintDetectorTest() {
         mutableListOf(UnsafeFragmentLifecycleObserverDetector.BACK_PRESSED_ISSUE)
 
     private fun check(vararg files: TestFile): TestLintResult {
-        return lint().files(*files, *BACK_CALLBACK_STUBS).run()
+        return lint().files(*files, *BACK_CALLBACK_STUBS)
+            .run()
     }
 
     @Test
     fun pass() {
         check(
-                kotlin(
-                    """
+            kotlin(
+                """
 package com.example
 
 import androidx.fragment.app.Fragment
@@ -73,9 +74,9 @@ class TestFragment : Fragment {
     }
 }
             """
-                ),
-                kotlin(
-                    """
+            ),
+            kotlin(
+                """
 package com.example.test
 
 import androidx.fragment.app.Fragment
@@ -92,16 +93,16 @@ class Foo {
     fun callback(fragment: Fragment) {}
 }
             """
-                )
             )
+        )
             .expectClean()
     }
 
     @Test
     fun inMethodFails() {
         check(
-                kotlin(
-                    """
+            kotlin(
+                """
 package com.example
 
 import androidx.fragment.app.Fragment
@@ -116,8 +117,8 @@ class TestFragment : Fragment {
     }
 }
             """
-                )
             )
+        )
             .expect(
                 """
 src/com/example/TestFragment.kt:12: Error: Use viewLifecycleOwner as the LifecycleOwner. [FragmentBackPressedCallback]
@@ -151,8 +152,8 @@ class TestFragment : Fragment {
     @Test
     fun helperMethodFails() {
         check(
-                kotlin(
-                    """
+            kotlin(
+                """
 package com.example
 
 import androidx.fragment.app.Fragment
@@ -171,8 +172,8 @@ class TestFragment : Fragment {
     }
 }
             """
-                )
             )
+        )
             .expect(
                 """
 src/com/example/TestFragment.kt:16: Error: Use viewLifecycleOwner as the LifecycleOwner. [FragmentBackPressedCallback]
@@ -210,8 +211,8 @@ class TestFragment : Fragment {
     @Test
     fun externalCallFails() {
         check(
-                kotlin(
-                    """
+            kotlin(
+                """
 package com.example
 
 import androidx.fragment.app.Fragment
@@ -229,9 +230,9 @@ class TestFragment : Fragment {
     }
 }
             """
-                ),
-                kotlin(
-                    """
+            ),
+            kotlin(
+                """
 package com.example.test
 
 import androidx.fragment.app.Fragment
@@ -245,8 +246,8 @@ class Foo {
     }
 }
             """
-                )
             )
+        )
             .expect(
                 """
 src/com/example/test/Foo.kt:11: Error: Unsafe call to addCallback with Fragment instance as LifecycleOwner from TestFragment.onCreateView. [FragmentBackPressedCallback]
@@ -260,8 +261,8 @@ src/com/example/test/Foo.kt:11: Error: Unsafe call to addCallback with Fragment 
     @Test
     fun externalHelperMethodFails() {
         check(
-                kotlin(
-                    """
+            kotlin(
+                """
 package com.example
 
 import androidx.fragment.app.Fragment
@@ -279,9 +280,9 @@ class TestFragment : Fragment {
     }
 }
             """
-                ),
-                kotlin(
-                    """
+            ),
+            kotlin(
+                """
 package com.example.test
 
 import androidx.fragment.app.Fragment
@@ -302,8 +303,8 @@ class Foo {
     }
 }
             """
-                )
             )
+        )
             .expect(
                 """
 src/com/example/test/Foo.kt:18: Error: Unsafe call to addCallback with Fragment instance as LifecycleOwner from TestFragment.onCreateView. [FragmentBackPressedCallback]

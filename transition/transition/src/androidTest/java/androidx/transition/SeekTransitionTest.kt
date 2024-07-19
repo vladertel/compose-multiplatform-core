@@ -31,8 +31,6 @@ import androidx.testutils.PollingCheck
 import androidx.transition.Transition.TransitionListener
 import androidx.transition.test.R
 import com.google.common.truth.Truth.assertThat
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
@@ -49,7 +47,8 @@ import org.mockito.Mockito.verify
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @MediumTest
 class SeekTransitionTest : BaseTest() {
-    @get:Rule val animationDurationScaleRule = createForAllTests(1f)
+    @get:Rule
+    val animationDurationScaleRule = createForAllTests(1f)
 
     lateinit var view: View
     lateinit var root: LinearLayout
@@ -60,7 +59,9 @@ class SeekTransitionTest : BaseTest() {
     fun setUp() {
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         root = rule.activity.findViewById<View>(R.id.root) as LinearLayout
-        transition = Fade().also { it.interpolator = LinearInterpolator() }
+        transition = Fade().also {
+            it.interpolator = LinearInterpolator()
+        }
         view = View(root.context)
         view.setBackgroundColor(Color.BLUE)
         root.addView(view, ViewGroup.LayoutParams(100, 100))
@@ -319,7 +320,9 @@ class SeekTransitionTest : BaseTest() {
             view.visibility = View.GONE
         }
 
-        rule.runOnUiThread { assertThat(seekController1.isReady).isTrue() }
+        rule.runOnUiThread {
+            assertThat(seekController1.isReady).isTrue()
+        }
 
         val stateListener2 = spy(TransitionListenerAdapter())
         val transition2 = Fade()
@@ -432,7 +435,9 @@ class SeekTransitionTest : BaseTest() {
 
         rule.runOnUiThread {
             seekController.currentPlayTimeMillis = 150
-            seekController.animateToStart { view.visibility = View.VISIBLE }
+            seekController.animateToStart {
+                view.visibility = View.VISIBLE
+            }
         }
 
         verify(listener, timeout(3000)).onTransitionEnd(any())
@@ -468,7 +473,7 @@ class SeekTransitionTest : BaseTest() {
 
         rule.runOnUiThread {
             seekController.currentPlayTimeMillis = 150
-            seekController.animateToStart {}
+            seekController.animateToStart { }
         }
 
         verify(listener, timeout(3000)).onTransitionEnd(any())
@@ -495,7 +500,11 @@ class SeekTransitionTest : BaseTest() {
             seekController.animateToEnd()
         }
 
-        rule.runOnUiThread { seekController.animateToStart { view.visibility = View.VISIBLE } }
+        rule.runOnUiThread {
+            seekController.animateToStart {
+                view.visibility = View.VISIBLE
+            }
+        }
 
         verify(listener, timeout(3000)).onTransitionEnd(any(), eq(true))
 
@@ -519,10 +528,14 @@ class SeekTransitionTest : BaseTest() {
 
         rule.runOnUiThread {
             seekController.currentPlayTimeMillis = 150
-            seekController.animateToStart { view.visibility = View.VISIBLE }
+            seekController.animateToStart {
+                view.visibility = View.VISIBLE
+            }
         }
 
-        rule.runOnUiThread { seekController.animateToEnd() }
+        rule.runOnUiThread {
+            seekController.animateToEnd()
+        }
 
         verify(listener, timeout(3000)).onTransitionEnd(any())
 
@@ -547,7 +560,9 @@ class SeekTransitionTest : BaseTest() {
             seekController.animateToEnd()
         }
 
-        rule.runOnUiThread { seekController.currentPlayTimeMillis = 120 }
+        rule.runOnUiThread {
+            seekController.currentPlayTimeMillis = 120
+        }
     }
 
     @Test(expected = IllegalStateException::class)
@@ -565,16 +580,18 @@ class SeekTransitionTest : BaseTest() {
             seekController.animateToEnd()
         }
 
-        rule.runOnUiThread { seekController.currentFraction = 0.2f }
+        rule.runOnUiThread {
+            seekController.currentFraction = 0.2f
+        }
     }
 
     @Test
     fun seekTransitionSet() {
-        transition =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-            }
+        transition = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+        }
         val view2 = View(root.context)
         view2.setBackgroundColor(Color.GREEN)
 
@@ -639,11 +656,11 @@ class SeekTransitionTest : BaseTest() {
 
     @Test
     fun animateToEndTransitionSet() {
-        transition =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-            }
+        transition = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+        }
         val listener = spy(TransitionListenerAdapter())
         transition.addListener(listener)
 
@@ -688,11 +705,11 @@ class SeekTransitionTest : BaseTest() {
 
     @Test
     fun animateToStartTransitionSet() {
-        transition =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-            }
+        transition = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+        }
         val listener = spy(TransitionListenerAdapter())
         transition.addListener(listener)
 
@@ -729,12 +746,12 @@ class SeekTransitionTest : BaseTest() {
         verify(listener, never()).onTransitionEnd(any(), eq(false))
         verify(listener, times(1)).onTransitionEnd(any(), eq(true))
 
-        val transition2 =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-                it.duration = 0
-            }
+        val transition2 = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+            it.duration = 0
+        }
 
         val listener2 = spy(TransitionListenerAdapter())
         transition2.addListener(listener2)
@@ -756,11 +773,11 @@ class SeekTransitionTest : BaseTest() {
 
     @Test
     fun cancelPartOfTransitionSet() {
-        transition =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-            }
+        transition = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+        }
         val listener = spy(TransitionListenerAdapter())
         transition.addListener(listener)
 
@@ -784,11 +801,11 @@ class SeekTransitionTest : BaseTest() {
             view.visibility = View.GONE
         }
 
-        val transition2 =
-            TransitionSet().also {
-                it.addTransition(Fade(Fade.MODE_OUT)).addTransition(Fade(Fade.MODE_IN)).ordering =
-                    TransitionSet.ORDERING_SEQUENTIAL
-            }
+        val transition2 = TransitionSet().also {
+            it.addTransition(Fade(Fade.MODE_OUT))
+                .addTransition(Fade(Fade.MODE_IN))
+                .ordering = TransitionSet.ORDERING_SEQUENTIAL
+        }
 
         val listener2 = spy(TransitionListenerAdapter())
         transition2.addListener(listener2)
@@ -943,41 +960,33 @@ class SeekTransitionTest : BaseTest() {
         var resumeCount = 0
         var setPauseCount = 0
         var setResumeCount = 0
-        val set =
-            TransitionSet().also {
-                it.addTransition(
-                    Fade().apply {
-                        addListener(
-                            object : TransitionListenerAdapter() {
-                                override fun onTransitionPause(transition: Transition) {
-                                    pauseCount++
-                                }
-
-                                override fun onTransitionResume(transition: Transition) {
-                                    resumeCount++
-                                }
-                            }
-                        )
+        val set = TransitionSet().also {
+            it.addTransition(Fade().apply {
+                addListener(object : TransitionListenerAdapter() {
+                    override fun onTransitionPause(transition: Transition) {
+                        pauseCount++
                     }
-                )
-                it.addListener(
-                    object : TransitionListenerAdapter() {
-                        override fun onTransitionPause(transition: Transition) {
-                            setPauseCount++
-                        }
 
-                        override fun onTransitionResume(transition: Transition) {
-                            setResumeCount++
-                        }
+                    override fun onTransitionResume(transition: Transition) {
+                        resumeCount++
                     }
-                )
-            }
-        transition =
-            TransitionSet().also {
-                it.addTransition(AlwaysTransition("before"))
-                it.addTransition(set)
-                it.setOrdering(TransitionSet.ORDERING_SEQUENTIAL)
-            }
+                })
+            })
+            it.addListener(object : TransitionListenerAdapter() {
+                override fun onTransitionPause(transition: Transition) {
+                    setPauseCount++
+                }
+
+                override fun onTransitionResume(transition: Transition) {
+                    setResumeCount++
+                }
+            })
+        }
+        transition = TransitionSet().also {
+            it.addTransition(AlwaysTransition("before"))
+            it.addTransition(set)
+            it.setOrdering(TransitionSet.ORDERING_SEQUENTIAL)
+        }
 
         lateinit var seekController: TransitionSeekController
         lateinit var view: View
@@ -1032,7 +1041,9 @@ class SeekTransitionTest : BaseTest() {
             seekController.animateToEnd()
         }
 
-        PollingCheck.waitFor { animatedFraction == 1f }
+        PollingCheck.waitFor {
+            animatedFraction == 1f
+        }
     }
 
     @Test
@@ -1045,18 +1056,16 @@ class SeekTransitionTest : BaseTest() {
 
         var animatedFraction = -1f
         var animatedMillis = -1L
-        val removeListener =
-            object : Consumer<TransitionSeekController> {
-                override fun accept(value: TransitionSeekController) {
-                    seekController.removeOnProgressChangedListener(this)
-                }
+        val removeListener = object : Consumer<TransitionSeekController> {
+            override fun accept(t: TransitionSeekController?) {
+                seekController.removeOnProgressChangedListener(this)
             }
+        }
         seekController.addOnProgressChangedListener(removeListener)
-        val changeListener =
-            Consumer<TransitionSeekController> {
-                animatedFraction = it.currentFraction
-                animatedMillis = it.currentPlayTimeMillis
-            }
+        val changeListener = Consumer<TransitionSeekController> {
+            animatedFraction = it.currentFraction
+            animatedMillis = it.currentPlayTimeMillis
+        }
         seekController.addOnProgressChangedListener(changeListener)
 
         rule.runOnUiThread {
@@ -1075,7 +1084,9 @@ class SeekTransitionTest : BaseTest() {
         val scene1 = Scene(root, view)
         val view2 = View(view.context)
         val scene2 = Scene(root, view2)
-        rule.runOnUiThread { TransitionManager.go(scene1) }
+        rule.runOnUiThread {
+            TransitionManager.go(scene1)
+        }
 
         rule.runOnUiThread {
             val controller = TransitionManager.createSeekController(scene2, Fade())
@@ -1109,9 +1120,13 @@ class SeekTransitionTest : BaseTest() {
         val scene1 = Scene(root, view)
         val view2 = View(view.context)
         val scene2 = Scene(root, view2)
-        rule.runOnUiThread { TransitionManager.go(scene1) }
+        rule.runOnUiThread {
+            TransitionManager.go(scene1)
+        }
 
-        rule.runOnUiThread { TransitionManager.createSeekController(scene2, NoSeekingTransition()) }
+        rule.runOnUiThread {
+            TransitionManager.createSeekController(scene2, NoSeekingTransition())
+        }
     }
 
     @Test
@@ -1119,64 +1134,13 @@ class SeekTransitionTest : BaseTest() {
         val scene1 = Scene(root, view)
         val view2 = View(view.context)
         val scene2 = Scene(root, view2)
-        rule.runOnUiThread { TransitionManager.go(scene1) }
+        rule.runOnUiThread {
+            TransitionManager.go(scene1)
+        }
 
         rule.runOnUiThread {
             TransitionManager.go(scene2, Fade())
             assertThat(TransitionManager.createSeekController(scene1, Fade())).isNull()
-        }
-    }
-
-    // onTransitionEnd() listeners should be called after the animateToStart() lambda has
-    // executed.
-    @Test
-    fun animateToStartTransitionEndListener() {
-        lateinit var seekController: TransitionSeekController
-        val callOrder = mutableListOf<String>()
-        val latch = CountDownLatch(1)
-
-        transition.addListener(
-            object : TransitionListenerAdapter() {
-                override fun onTransitionEnd(transition: Transition, isReverse: Boolean) {
-                    callOrder += "onTransitionEnd($isReverse)"
-                    super.onTransitionEnd(transition, isReverse)
-                }
-
-                override fun onTransitionEnd(transition: Transition) {
-                    callOrder += "onTransitionEnd()"
-                    super.onTransitionEnd(transition)
-                }
-            }
-        )
-
-        rule.runOnUiThread {
-            val controller = TransitionManager.controlDelayedTransition(root, transition)
-            assertThat(controller).isNotNull()
-            seekController = controller!!
-            view.visibility = View.GONE
-        }
-
-        rule.runOnUiThread { seekController.currentFraction = 0.5f }
-
-        rule.runOnUiThread {
-            seekController.animateToStart {
-                view.visibility = View.VISIBLE
-                callOrder += "animateToStartLambda"
-                latch.countDown()
-            }
-        }
-
-        assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue()
-        rule.runOnUiThread {
-            assertThat(callOrder).hasSize(3)
-            assertThat(callOrder)
-                .isEqualTo(
-                    mutableListOf(
-                        "animateToStartLambda",
-                        "onTransitionEnd(true)",
-                        "onTransitionEnd()"
-                    )
-                )
         }
     }
 }

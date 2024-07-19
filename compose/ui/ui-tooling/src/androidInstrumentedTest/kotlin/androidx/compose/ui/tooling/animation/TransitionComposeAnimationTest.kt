@@ -29,7 +29,8 @@ import org.junit.Test
 
 class TransitionComposeAnimationTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun parseIntComposeAnimation() {

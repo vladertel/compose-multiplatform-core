@@ -33,6 +33,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 import androidx.camera.testing.impl.activity.ForegroundTestActivity;
 import androidx.test.espresso.Espresso;
@@ -45,9 +46,8 @@ import org.junit.AssumptionViolatedException;
 import java.io.IOException;
 
 /** Utility functions of tests on CoreTestApp. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class CoreAppTestUtil {
-
-    private static final String TAG = "CoreAppTestUtil";
 
     /** ADB shell input key code for dismissing keyguard for device with API level <= 22. */
     private static final int DISMISS_LOCK_SCREEN_CODE = 82;
@@ -153,11 +153,8 @@ public final class CoreAppTestUtil {
         }
 
         device.pressHome();
-        try {
-            device.waitForIdle(MAX_TIMEOUT_MS);
-        } catch (IllegalStateException e) {
-            Logger.d(TAG, "Fail to waitForIdle", e);
-        }
+        device.waitForIdle(MAX_TIMEOUT_MS);
+
         // Close system dialogs first to avoid interrupt.
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
             instrumentation.getTargetContext().sendBroadcast(
@@ -208,7 +205,7 @@ public final class CoreAppTestUtil {
             instrumentation.waitForIdleSync();
 
             if (activityRef == null) {
-                Logger.d(TAG, String.format("Activity %s, failed to launch",
+                Logger.d("CoreAppTestUtil", String.format("Activity %s, failed to launch",
                         startIntent.getComponent()) + ", ignore the foreground checking");
                 return;
             }
@@ -219,7 +216,7 @@ public final class CoreAppTestUtil {
             Espresso.onIdle();
             return;
         } catch (Exception e) {
-            Logger.d(TAG, "Fail to get foreground", e);
+            Logger.d("CoreAppTestUtil", "Fail to get foreground", e);
         } finally {
             if (activityRef != null) {
                 IdlingRegistry.getInstance().unregister(activityRef.getViewReadyIdlingResource());

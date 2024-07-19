@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 
+@Suppress("IllegalExperimentalApiUsage") // TODO (b/233188423): Address before moving to beta
 @OptIn(ExperimentalFoundationApi::class)
 internal object TvLazyGridItemScopeImpl : TvLazyGridItemScope {
     @ExperimentalFoundationApi
@@ -33,8 +34,9 @@ internal object TvLazyGridItemScopeImpl : TvLazyGridItemScope {
         this then AnimateItemPlacementElement(animationSpec)
 }
 
-private class AnimateItemPlacementElement(val animationSpec: FiniteAnimationSpec<IntOffset>) :
-    ModifierNodeElement<AnimateItemPlacementNode>() {
+private class AnimateItemPlacementElement(
+    val animationSpec: FiniteAnimationSpec<IntOffset>
+) : ModifierNodeElement<AnimateItemPlacementNode>() {
 
     override fun create(): AnimateItemPlacementNode = AnimateItemPlacementNode(animationSpec)
 
@@ -58,8 +60,9 @@ private class AnimateItemPlacementElement(val animationSpec: FiniteAnimationSpec
     }
 }
 
-private class AnimateItemPlacementNode(animationSpec: FiniteAnimationSpec<IntOffset>) :
-    DelegatingNode(), ParentDataModifierNode {
+private class AnimateItemPlacementNode(
+    animationSpec: FiniteAnimationSpec<IntOffset>
+) : DelegatingNode(), ParentDataModifierNode {
 
     val delegatingNode = delegate(LazyLayoutAnimateItemModifierNode(animationSpec))
 

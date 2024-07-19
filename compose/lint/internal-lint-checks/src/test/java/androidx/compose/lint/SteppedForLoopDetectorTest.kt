@@ -26,18 +26,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+/* ktlint-disable max-line-length */
 @RunWith(JUnit4::class)
 class SteppedForLoopDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = SteppedForLoopDetector()
 
-    override fun getIssues(): MutableList<Issue> = mutableListOf(SteppedForLoopDetector.ISSUE)
+    override fun getIssues(): MutableList<Issue> = mutableListOf(
+        SteppedForLoopDetector.ISSUE
+    )
 
     @Test
     fun skippedOnRegularLoops() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: Int, b: Int) {
@@ -52,18 +54,17 @@ class SteppedForLoopDetectorTest : LintDetectorTest() {
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun skippedOnInclusiveSteppedLoops() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: Int, b: Int) {
@@ -75,8 +76,8 @@ class SteppedForLoopDetectorTest : LintDetectorTest() {
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expectClean()
     }
@@ -84,10 +85,9 @@ class SteppedForLoopDetectorTest : LintDetectorTest() {
     @Ignore("b/289814619")
     @Test
     fun calledOnSteppedLoop() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: Int, b: Int) {
@@ -99,8 +99,8 @@ class SteppedForLoopDetectorTest : LintDetectorTest() {
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -118,10 +118,9 @@ src/test/test.kt:8: Error: stepping the integer range by 2. [SteppedForLoop]
     @Ignore("b/289814619")
     @Test
     fun calledOnConstantSteppedLoop() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test() {
@@ -133,8 +132,8 @@ src/test/test.kt:8: Error: stepping the integer range by 2. [SteppedForLoop]
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -152,10 +151,9 @@ src/test/test.kt:8: Error: stepping the integer range by 2. [SteppedForLoop]
     @Ignore("b/289814619")
     @Test
     fun calledOnUnitSteppedLoop() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: Int, b: Int) {
@@ -167,8 +165,8 @@ src/test/test.kt:8: Error: stepping the integer range by 2. [SteppedForLoop]
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -186,10 +184,9 @@ src/test/test.kt:8: Error: stepping the integer range by 1. [SteppedForLoop]
     @Ignore("b/289814619")
     @Test
     fun calledOnExpressionSteppedLoop() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: Int, b: Int, c: Int) {
@@ -201,8 +198,8 @@ src/test/test.kt:8: Error: stepping the integer range by 1. [SteppedForLoop]
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -219,10 +216,9 @@ src/test/test.kt:8: Error: stepping the integer range by (c / 2). [SteppedForLoo
 
     @Test
     fun calledOnNonIntSteppedLoop() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package test
 
                 fun test(a: UInt, b: UInt) {
@@ -246,8 +242,8 @@ src/test/test.kt:8: Error: stepping the integer range by (c / 2). [SteppedForLoo
                     }
                 }
             """
-                )
             )
+        )
             .run()
             .expect(
                 """
@@ -268,3 +264,4 @@ src/test/test.kt:20: Error: stepping the integer range by 2L. [SteppedForLoop]
             )
     }
 }
+/* ktlint-enable max-line-length */

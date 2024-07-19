@@ -26,16 +26,27 @@ import org.junit.Test
 class DebugFlagsTest {
     @Test
     fun testFlags() {
-        assertEquals(DebugFlags.None, DebugFlags())
         assertEquals(
             DebugFlags.None,
-            DebugFlags(showBounds = false, showPaths = false, showKeyPositions = false)
+            DebugFlags()
+        )
+        assertEquals(
+            DebugFlags.None,
+            DebugFlags(
+                showBounds = false,
+                showPaths = false,
+                showKeyPositions = false
+            )
         )
 
         // Not equals because All includes potential future flags
         assertNotEquals(
             DebugFlags.All,
-            DebugFlags(showBounds = true, showPaths = true, showKeyPositions = true)
+            DebugFlags(
+                showBounds = true,
+                showPaths = true,
+                showKeyPositions = true
+            )
         )
 
         var flags = DebugFlags.All

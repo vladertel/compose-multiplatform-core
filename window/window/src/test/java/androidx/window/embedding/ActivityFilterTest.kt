@@ -30,7 +30,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
-/** The unit tests for [ActivityFilter]. */
+/**
+ * The unit tests for [ActivityFilter].
+ */
 @RunWith(RobolectricTestRunner::class) // Used for initializing ComponentName
 class ActivityFilterTest {
 

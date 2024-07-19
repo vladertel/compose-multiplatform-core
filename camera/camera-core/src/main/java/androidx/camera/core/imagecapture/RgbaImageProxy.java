@@ -28,10 +28,12 @@ import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.media.Image;
+import android.os.Build;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageInfo;
@@ -50,6 +52,7 @@ import java.nio.ByteBuffer;
  *
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public final class RgbaImageProxy implements ImageProxy {
 
     private final Object mLock = new Object();

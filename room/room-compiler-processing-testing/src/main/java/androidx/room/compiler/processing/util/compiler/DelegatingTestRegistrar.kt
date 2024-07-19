@@ -42,7 +42,11 @@ internal class DelegatingTestRegistrar :
         project: MockProject,
         configuration: CompilerConfiguration
     ) {
-        delegates.get()?.let { it.forEach { it.registerProjectComponents(project, configuration) } }
+        delegates.get()?.let {
+            it.forEach {
+                it.registerProjectComponents(project, configuration)
+            }
+        }
     }
 
     companion object {
@@ -50,10 +54,7 @@ internal class DelegatingTestRegistrar :
             "META-INF/services/org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar"
 
         private val resourcePathForSelfClassLoader by lazy {
-            this::class
-                .java
-                .classLoader
-                .getResources(REGISTRAR_CLASSPATH)
+            this::class.java.classLoader.getResources(REGISTRAR_CLASSPATH)
                 .asSequence()
                 .mapNotNull { url ->
                     val uri = URI.create(url.toString().removeSuffix("/$REGISTRAR_CLASSPATH"))
@@ -65,27 +66,23 @@ internal class DelegatingTestRegistrar :
                 }
                 .find { resourcesPath ->
                     ServiceLoaderLite.findImplementations(
-                            @Suppress("DEPRECATION")
-                            org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar::class.java,
-                            listOf(resourcesPath.toFile())
-                        )
-                        .any { implementation ->
-                            implementation == DelegatingTestRegistrar::class.java.name
-                        }
-                }
-                ?.toString()
+                        @Suppress("DEPRECATION")
+                        org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar::class.java,
+                        listOf(resourcesPath.toFile())
+                    ).any { implementation ->
+                        implementation == DelegatingTestRegistrar::class.java.name
+                    }
+                }?.toString()
                 ?: throw AssertionError(
                     """
                     Could not find the ComponentRegistrar class loader that should load
                     ${DelegatingTestRegistrar::class.qualifiedName}
-                    """
-                        .trimIndent()
+                    """.trimIndent()
                 )
         }
         @Suppress("DEPRECATION")
         private val delegates =
             ThreadLocal<List<org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar>>()
-
         fun runCompilation(
             compiler: K2JVMCompiler,
             messageCollector: MessageCollector,

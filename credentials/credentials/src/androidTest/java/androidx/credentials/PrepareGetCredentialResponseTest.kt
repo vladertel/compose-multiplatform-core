@@ -35,19 +35,21 @@ class PrepareGetCredentialResponseTest {
             "Expected null pointer when missing input",
             NullPointerException::class.java
         ) {
-            PrepareGetCredentialResponse.Builder().setFrameworkResponse(null).build()
+            PrepareGetCredentialResponse.Builder()
+                .setFrameworkResponse(null)
+                .build()
         }
     }
 
     @Test
     fun test_hasCredentialResults() {
         // Construct the test class.
-        val response =
-            PrepareGetCredentialResponse.TestBuilder()
-                .setCredentialTypeDelegate { option ->
-                    option.equals("password") || option.equals("otherValid")
-                }
-                .build()
+        val response = PrepareGetCredentialResponse.TestBuilder()
+            .setCredentialTypeDelegate { option ->
+                option.equals("password") ||
+                option.equals("otherValid")
+            }
+            .build()
 
         // Verify the response.
         assertThat(response.hasCredentialResults("password")).isTrue()
@@ -60,8 +62,11 @@ class PrepareGetCredentialResponseTest {
     @Test
     fun test_hasAuthenticationResults() {
         // Construct the test class.
-        val response =
-            PrepareGetCredentialResponse.TestBuilder().setHasAuthResultsDelegate { true }.build()
+        val response = PrepareGetCredentialResponse.TestBuilder()
+            .setHasAuthResultsDelegate {
+                true
+            }
+            .build()
 
         // Verify the response.
         assertThat(response.hasCredentialResults("password")).isFalse()
@@ -74,8 +79,11 @@ class PrepareGetCredentialResponseTest {
     @Test
     fun test_hasRemoteResults() {
         // Construct the test class.
-        val response =
-            PrepareGetCredentialResponse.TestBuilder().setHasRemoteResultsDelegate { true }.build()
+        val response = PrepareGetCredentialResponse.TestBuilder()
+            .setHasRemoteResultsDelegate {
+                true
+            }
+            .build()
 
         // Verify the response.
         assertThat(response.hasCredentialResults("password")).isFalse()

@@ -31,9 +31,13 @@ private const val SLPoints = 100
 
 @Composable
 fun Points(points: Iterable<Point>) {
-    Repeated(of = points) { Point(it) }
+    Repeated(of = points) {
+        Point(it)
+    }
 }
 
 fun MockViewValidator.Points(points: Iterable<Point>) {
-    Repeated(of = points) { Point(it) }
+    Repeated(of = points) {
+        Point(it)
+    }
 }

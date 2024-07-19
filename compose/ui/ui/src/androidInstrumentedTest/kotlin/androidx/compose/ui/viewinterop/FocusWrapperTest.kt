@@ -37,7 +37,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FocusWrapperTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun hostViewIsNotFocused_whenViewIsFocused() {
@@ -54,7 +55,9 @@ class FocusWrapperTest {
         }
 
         // Act.
-        rule.runOnIdle { view.requestFocus() }
+        rule.runOnIdle {
+            view.requestFocus()
+        }
 
         // Assert.
         rule.runOnIdle {

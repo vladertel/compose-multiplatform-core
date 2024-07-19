@@ -41,20 +41,25 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Tests for Fragment registerForActivityResult */
+/**
+ * Tests for Fragment registerForActivityResult
+ */
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class FragmentActivityResultTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun registerActivityResultInOnAttach() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = RegisterInLifecycleCallbackFragment(Fragment.ATTACHED)
 
-                supportFragmentManager.beginTransaction().add(R.id.content, fragment).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(R.id.content, fragment)
+                    .commitNow()
 
                 assertThat(fragment.launchedCounter).isEqualTo(1)
             }
@@ -63,11 +68,13 @@ class FragmentActivityResultTest {
 
     @Test
     fun registerActivityResultInOnCreate() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = RegisterInLifecycleCallbackFragment(Fragment.CREATED)
 
-                supportFragmentManager.beginTransaction().add(R.id.content, fragment).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(R.id.content, fragment)
+                    .commitNow()
 
                 assertThat(fragment.launchedCounter).isEqualTo(1)
             }
@@ -76,25 +83,22 @@ class FragmentActivityResultTest {
 
     @Test
     fun registerActivityResultInOnStart() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = RegisterInLifecycleCallbackFragment(Fragment.STARTED)
 
                 try {
-                    supportFragmentManager
-                        .beginTransaction()
+                    supportFragmentManager.beginTransaction()
                         .add(R.id.content, fragment)
                         .commitNow()
                     fail("Registering for activity result after onCreate() should fail")
                 } catch (e: IllegalStateException) {
-                    assertThat(e)
-                        .hasMessageThat()
-                        .contains(
-                            "Fragment $fragment is attempting to " +
-                                "registerForActivityResult after being created. Fragments must call " +
-                                "registerForActivityResult() before they are created (i.e. " +
-                                "initialization, onAttach(), or onCreate())."
-                        )
+                    assertThat(e).hasMessageThat().contains(
+                        "Fragment $fragment is attempting to " +
+                            "registerForActivityResult after being created. Fragments must call " +
+                            "registerForActivityResult() before they are created (i.e. " +
+                            "initialization, onAttach(), or onCreate())."
+                    )
                 }
             }
         }
@@ -102,22 +106,26 @@ class FragmentActivityResultTest {
 
     @Test
     fun launchActivityResultInOnCreate() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = ActivityResultFragment()
 
-                supportFragmentManager.beginTransaction().add(R.id.content, fragment).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(R.id.content, fragment)
+                    .commitNow()
             }
         }
     }
 
     @Test
     fun launchTwoActivityResult() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             withActivity {
                 val fragment = DoubleActivityResultFragment()
 
-                supportFragmentManager.beginTransaction().add(R.id.content, fragment).commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(R.id.content, fragment)
+                    .commitNow()
 
                 assertThat(fragment.launchedCounter).isEqualTo(2)
             }
@@ -130,7 +138,9 @@ class FragmentActivityResultTest {
             val fragment = LaunchMultipleActivitiesFragment()
             val fm = withActivity { supportFragmentManager }
 
-            fm.beginTransaction().add(R.id.content, fragment).commit()
+            fm.beginTransaction()
+                .add(R.id.content, fragment)
+                .commit()
             executePendingTransactions()
 
             @Suppress("DEPRECATION")
@@ -149,31 +159,43 @@ class FragmentActivityResultTest {
                 )
             }
 
-            assertThat(fragment.onActivityResultCountDownLatch.await(1000, TimeUnit.MILLISECONDS))
-                .isTrue()
+            assertThat(
+                fragment.onActivityResultCountDownLatch.await(1000, TimeUnit.MILLISECONDS)
+            ).isTrue()
 
             assertThat(fragment.launcherInfoMap)
-                .containsEntry(ResultActivity1.REQUEST_CODE, ResultActivity1.RESULT_KEY)
+                .containsEntry(
+                    ResultActivity1.REQUEST_CODE,
+                    ResultActivity1.RESULT_KEY
+                )
             assertThat(fragment.launcherInfoMap)
-                .containsEntry(ResultActivity2.REQUEST_CODE, ResultActivity2.RESULT_KEY)
+                .containsEntry(
+                    ResultActivity2.REQUEST_CODE,
+                    ResultActivity2.RESULT_KEY
+                )
             assertThat(fragment.launcherInfoMap)
-                .containsEntry(ResultActivity3.REQUEST_CODE, ResultActivity3.RESULT_KEY)
+                .containsEntry(
+                    ResultActivity3.REQUEST_CODE,
+                    ResultActivity3.RESULT_KEY
+                )
         }
     }
 }
 
 class ActivityResultFragment : Fragment() {
-    private val registry =
-        object : ActivityResultRegistry() {
-            override fun <I : Any?, O : Any?> onLaunch(
-                requestCode: Int,
-                contract: ActivityResultContract<I, O>,
-                input: I,
-                options: ActivityOptionsCompat?
-            ) {}
-        }
+    private val registry = object : ActivityResultRegistry() {
+        override fun <I : Any?, O : Any?> onLaunch(
+            requestCode: Int,
+            contract: ActivityResultContract<I, O>,
+            input: I,
+            options: ActivityOptionsCompat?
+        ) { }
+    }
 
-    val launcher = registerForActivityResult(StartActivityForResult(), registry) {}
+    val launcher = registerForActivityResult(
+        StartActivityForResult(),
+        registry
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -182,25 +204,26 @@ class ActivityResultFragment : Fragment() {
 }
 
 class DoubleActivityResultFragment : Fragment() {
-    private val registry =
-        object : ActivityResultRegistry() {
-            override fun <I : Any?, O : Any?> onLaunch(
-                requestCode: Int,
-                contract: ActivityResultContract<I, O>,
-                input: I,
-                options: ActivityOptionsCompat?
-            ) {
-                dispatchResult(requestCode, Activity.RESULT_OK, Intent())
-            }
-        }
+    private val registry = object : ActivityResultRegistry() {
+        override fun <I : Any?, O : Any?> onLaunch(
+            requestCode: Int,
+            contract: ActivityResultContract<I, O>,
+            input: I,
+            options: ActivityOptionsCompat?
+        ) { dispatchResult(requestCode, Activity.RESULT_OK, Intent()) }
+    }
 
     var launchedCounter = 0
 
-    val launcher1 =
-        registerForActivityResult(StartActivityForResult(), registry) { launchedCounter++ }
+    val launcher1 = registerForActivityResult(
+        StartActivityForResult(),
+        registry
+    ) { launchedCounter++ }
 
-    val launcher2 =
-        registerForActivityResult(StartActivityForResult(), registry) { launchedCounter++ }
+    val launcher2 = registerForActivityResult(
+        StartActivityForResult(),
+        registry
+    ) { launchedCounter++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -210,17 +233,14 @@ class DoubleActivityResultFragment : Fragment() {
 }
 
 class RegisterInLifecycleCallbackFragment(val state: Int) : Fragment() {
-    private val registry =
-        object : ActivityResultRegistry() {
-            override fun <I : Any?, O : Any?> onLaunch(
-                requestCode: Int,
-                contract: ActivityResultContract<I, O>,
-                input: I,
-                options: ActivityOptionsCompat?
-            ) {
-                dispatchResult(requestCode, Activity.RESULT_OK, Intent())
-            }
-        }
+    private val registry = object : ActivityResultRegistry() {
+        override fun <I : Any?, O : Any?> onLaunch(
+            requestCode: Int,
+            contract: ActivityResultContract<I, O>,
+            input: I,
+            options: ActivityOptionsCompat?
+        ) { dispatchResult(requestCode, Activity.RESULT_OK, Intent()) }
+    }
 
     lateinit var launcher: ActivityResultLauncher<Intent>
 
@@ -229,24 +249,30 @@ class RegisterInLifecycleCallbackFragment(val state: Int) : Fragment() {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (state == ATTACHED) {
-            launcher =
-                registerForActivityResult(StartActivityForResult(), registry) { launchedCounter++ }
+            launcher = registerForActivityResult(
+                StartActivityForResult(),
+                registry
+            ) { launchedCounter++ }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (state == CREATED) {
-            launcher =
-                registerForActivityResult(StartActivityForResult(), registry) { launchedCounter++ }
+            launcher = registerForActivityResult(
+                StartActivityForResult(),
+                registry
+            ) { launchedCounter++ }
         }
     }
 
     override fun onStart() {
         super.onStart()
         if (state == STARTED) {
-            launcher =
-                registerForActivityResult(StartActivityForResult(), registry) { launchedCounter++ }
+            launcher = registerForActivityResult(
+                StartActivityForResult(),
+                registry
+            ) { launchedCounter++ }
         }
         launcher.launch(Intent())
     }
@@ -256,7 +282,6 @@ class RegisterInLifecycleCallbackFragment(val state: Int) : Fragment() {
 class LaunchMultipleActivitiesFragment : Fragment() {
     val launcherInfoMap: MutableMap<Int, String> = mutableMapOf()
     val onActivityResultCountDownLatch = CountDownLatch(3)
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 

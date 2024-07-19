@@ -97,7 +97,9 @@ class AndroidTextPaintTest {
     fun setTextDecoration_withLineThroughAndUnderline() {
         val textPaint = defaultTextPaint
         textPaint.setTextDecoration(
-            TextDecoration.combine(listOf(TextDecoration.LineThrough, TextDecoration.Underline))
+            TextDecoration.combine(
+                listOf(TextDecoration.LineThrough, TextDecoration.Underline)
+            )
         )
         assertThat(textPaint.isUnderlineText).isTrue()
         assertThat(textPaint.isStrikeThruText).isTrue()
@@ -107,7 +109,9 @@ class AndroidTextPaintTest {
     fun setTextDecoration_changeDecorationToNone() {
         val textPaint = defaultTextPaint
         textPaint.setTextDecoration(
-            TextDecoration.combine(listOf(TextDecoration.LineThrough, TextDecoration.Underline))
+            TextDecoration.combine(
+                listOf(TextDecoration.LineThrough, TextDecoration.Underline)
+            )
         )
         assertThat(textPaint.isUnderlineText).isTrue()
         assertThat(textPaint.isStrikeThruText).isTrue()
@@ -121,7 +125,9 @@ class AndroidTextPaintTest {
     fun setTextDecoration_changeDecorationToNull() {
         val textPaint = defaultTextPaint
         textPaint.setTextDecoration(
-            TextDecoration.combine(listOf(TextDecoration.LineThrough, TextDecoration.Underline))
+            TextDecoration.combine(
+                listOf(TextDecoration.LineThrough, TextDecoration.Underline)
+            )
         )
         assertThat(textPaint.isUnderlineText).isTrue()
         assertThat(textPaint.isStrikeThruText).isTrue()
@@ -169,15 +175,13 @@ class AndroidTextPaintTest {
     @Test
     fun setShaderBrush_with_specified_size() {
         var calls = 0
-        val brush =
-            object : ShaderBrush() {
-                val brush = linearGradient(listOf(Color.Red, Color.Blue))
-
-                override fun createShader(size: Size): Shader {
-                    calls++
-                    return (brush as ShaderBrush).createShader(size)
-                }
+        val brush = object : ShaderBrush() {
+            val brush = linearGradient(listOf(Color.Red, Color.Blue))
+            override fun createShader(size: Size): Shader {
+                calls++
+                return (brush as ShaderBrush).createShader(size)
             }
+        }
 
         val size = Size(10f, 10f)
         val textPaint = defaultTextPaint
@@ -466,7 +470,12 @@ class AndroidTextPaintTest {
     fun setDrawStyle_withStrokeThenFill() {
         val textPaint = defaultTextPaint
         textPaint.setDrawStyle(
-            Stroke(width = 4f, miter = 2f, join = StrokeJoin.Bevel, cap = StrokeCap.Square)
+            Stroke(
+                width = 4f,
+                miter = 2f,
+                join = StrokeJoin.Bevel,
+                cap = StrokeCap.Square
+            )
         )
         textPaint.setDrawStyle(Fill)
         assertThat(textPaint.style).isEqualTo(Paint.Style.FILL)
@@ -476,7 +485,12 @@ class AndroidTextPaintTest {
     fun setDrawStyle_changeDrawStyleToNull() {
         val textPaint = defaultTextPaint
         textPaint.setDrawStyle(
-            Stroke(width = 4f, miter = 2f, join = StrokeJoin.Bevel, cap = StrokeCap.Square)
+            Stroke(
+                width = 4f,
+                miter = 2f,
+                join = StrokeJoin.Bevel,
+                cap = StrokeCap.Square
+            )
         )
         assertThat(textPaint.style).isEqualTo(Paint.Style.STROKE)
 
@@ -497,6 +511,5 @@ class AndroidTextPaintTest {
         assertThat(textPaint.blendMode).isEqualTo(BlendMode.DstOver)
     }
 
-    private val defaultTextPaint
-        get() = AndroidTextPaint(flags = 0, density = 1.0f)
+    private val defaultTextPaint get() = AndroidTextPaint(flags = 0, density = 1.0f)
 }

@@ -22,8 +22,7 @@ import androidx.compose.ui.node.InternalCoreApi
 import androidx.compose.ui.util.fastFirstOrNull
 
 @OptIn(InternalCoreApi::class)
-internal actual class InternalPointerEvent
-actual constructor(
+internal actual class InternalPointerEvent actual constructor(
     actual val changes: LongSparseArray<PointerInputChange>,
     val pointerInputEvent: PointerInputEvent
 ) {
@@ -31,7 +30,9 @@ actual constructor(
         get() = pointerInputEvent.motionEvent
 
     actual fun activeHoverEvent(pointerId: PointerId): Boolean =
-        pointerInputEvent.pointers.fastFirstOrNull { it.id == pointerId }?.activeHover ?: false
+        pointerInputEvent.pointers.fastFirstOrNull {
+            it.id == pointerId
+        }?.activeHover ?: false
 
     actual var suppressMovementConsumption: Boolean = false
 }

@@ -29,7 +29,9 @@ class LoremIpsumTest {
                 "laoreet",
             LoremIpsum(10).values.single()
         )
-        assertEquals(2000, LoremIpsum(2000).values.single().split(" ").size)
+        assertEquals(
+            2000, LoremIpsum(2000).values.single().split(" ").size
+        )
         assertTrue(LoremIpsum().values.single().startsWith("Lorem ipsum dolor sit amet"))
     }
 }

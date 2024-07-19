@@ -22,8 +22,12 @@ fun lambdaFunction(lambda: () -> Unit) {
     lambda()
 }
 
-/** This function uses an unnecessary lambda and should trigger UnnecessaryLambdaCreationDetector */
+/**
+ * This function uses an unnecessary lambda and should trigger UnnecessaryLambdaCreationDetector
+ */
 fun confirmCustomComposeLintChecksRun() {
     val lambda = {}
-    lambdaFunction { lambda() }
+    lambdaFunction {
+        lambda()
+    }
 }

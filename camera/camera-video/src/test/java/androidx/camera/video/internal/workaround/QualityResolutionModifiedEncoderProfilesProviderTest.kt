@@ -43,15 +43,14 @@ import org.robolectric.annotation.internal.DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class QualityResolutionModifiedEncoderProfilesProviderTest {
 
-    private val defaultProvider =
-        createFakeEncoderProfilesProvider(
-            mapOf(
-                QUALITY_2160P to PROFILES_2160P,
-                QUALITY_1080P to PROFILES_1080P,
-                QUALITY_720P to PROFILES_720P,
-                QUALITY_480P to PROFILES_480P
-            )
+    private val defaultProvider = createFakeEncoderProfilesProvider(
+        mapOf(
+            QUALITY_2160P to PROFILES_2160P,
+            QUALITY_1080P to PROFILES_1080P,
+            QUALITY_720P to PROFILES_720P,
+            QUALITY_480P to PROFILES_480P
         )
+    )
 
     @Test
     fun hasNoProfile_canNotGetProfiles() {
@@ -71,7 +70,9 @@ class QualityResolutionModifiedEncoderProfilesProviderTest {
 
     @Test
     fun hasQuirk_canReplaceResolution() {
-        val quirks = createFakeQuirks(resolutionMap = mapOf(QUALITY_720P to Size(960, 720)))
+        val quirks = createFakeQuirks(
+            resolutionMap = mapOf(QUALITY_720P to Size(960, 720))
+        )
         val provider = QualityResolutionModifiedEncoderProfilesProvider(defaultProvider, quirks)
 
         assertThat(provider.hasProfile(QUALITY_2160P)).isTrue()
@@ -92,13 +93,11 @@ class QualityResolutionModifiedEncoderProfilesProviderTest {
     private fun createFakeEncoderProfilesProvider(
         qualityToProfilesMap: Map<Int, EncoderProfilesProxy> = emptyMap()
     ): EncoderProfilesProvider {
-        return FakeEncoderProfilesProvider.Builder()
-            .also { builder ->
-                for ((quality, profiles) in qualityToProfilesMap) {
-                    builder.add(quality, profiles)
-                }
+        return FakeEncoderProfilesProvider.Builder().also { builder ->
+            for ((quality, profiles) in qualityToProfilesMap) {
+                builder.add(quality, profiles)
             }
-            .build()
+        }.build()
     }
 
     private fun createFakeQuirks(resolutionMap: Map<Int, Size> = emptyMap()): Quirks {

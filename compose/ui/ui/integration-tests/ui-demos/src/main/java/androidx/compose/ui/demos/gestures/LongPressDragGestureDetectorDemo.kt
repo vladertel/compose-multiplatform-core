@@ -35,7 +35,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
-/** Simple [detectDragGesturesAfterLongPress] demo. */
+/**
+ * Simple [detectDragGesturesAfterLongPress] demo.
+ */
 @Composable
 fun LongPressDragGestureFilterDemo() {
 

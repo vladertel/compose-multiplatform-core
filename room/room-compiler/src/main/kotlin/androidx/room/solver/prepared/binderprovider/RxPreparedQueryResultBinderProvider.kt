@@ -24,9 +24,10 @@ import androidx.room.solver.RxType
 import androidx.room.solver.prepared.binder.CallablePreparedQueryResultBinder.Companion.createPreparedBinder
 import androidx.room.solver.prepared.binder.PreparedQueryResultBinder
 
-open class RxPreparedQueryResultBinderProvider
-internal constructor(val context: Context, private val rxType: RxType) :
-    PreparedQueryResultBinderProvider {
+open class RxPreparedQueryResultBinderProvider internal constructor(
+    val context: Context,
+    private val rxType: RxType
+) : PreparedQueryResultBinderProvider {
 
     private val hasRxJavaArtifact by lazy {
         context.processingEnv.findTypeElement(rxType.version.rxRoomClassName.canonicalName) != null
@@ -55,20 +56,21 @@ internal constructor(val context: Context, private val rxType: RxType) :
     open fun extractTypeArg(declared: XType): XType = declared.typeArguments.first()
 
     companion object {
-        fun getAll(context: Context) =
-            listOf(
-                RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX2_SINGLE),
-                RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX2_MAYBE),
-                RxCompletablePreparedQueryResultBinderProvider(context, RxType.RX2_COMPLETABLE),
-                RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX3_SINGLE),
-                RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX3_MAYBE),
-                RxCompletablePreparedQueryResultBinderProvider(context, RxType.RX3_COMPLETABLE)
-            )
+        fun getAll(context: Context) = listOf(
+            RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX2_SINGLE),
+            RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX2_MAYBE),
+            RxCompletablePreparedQueryResultBinderProvider(context, RxType.RX2_COMPLETABLE),
+            RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX3_SINGLE),
+            RxSingleOrMaybePreparedQueryResultBinderProvider(context, RxType.RX3_MAYBE),
+            RxCompletablePreparedQueryResultBinderProvider(context, RxType.RX3_COMPLETABLE)
+        )
     }
 }
 
-private class RxCompletablePreparedQueryResultBinderProvider(context: Context, rxType: RxType) :
-    RxPreparedQueryResultBinderProvider(context, rxType) {
+private class RxCompletablePreparedQueryResultBinderProvider(
+    context: Context,
+    rxType: RxType
+) : RxPreparedQueryResultBinderProvider(context, rxType) {
 
     private val completableType: XRawType? by lazy {
         context.processingEnv.findType(rxType.className.canonicalName)?.rawType
@@ -82,16 +84,21 @@ private class RxCompletablePreparedQueryResultBinderProvider(context: Context, r
     }
 
     /**
-     * Since Completable is not a generic, the supported return type should be Void (nullable). Like
-     * this, the generated Callable.call method will return Void.
+     * Since Completable is not a generic, the supported return type should be Void (nullable).
+     * Like this, the generated Callable.call method will return Void.
      */
-    override fun extractTypeArg(declared: XType): XType = context.COMMON_TYPES.VOID.makeNullable()
+    override fun extractTypeArg(declared: XType): XType =
+        context.COMMON_TYPES.VOID.makeNullable()
 }
 
-private class RxSingleOrMaybePreparedQueryResultBinderProvider(context: Context, rxType: RxType) :
-    RxPreparedQueryResultBinderProvider(context, rxType) {
+private class RxSingleOrMaybePreparedQueryResultBinderProvider(
+    context: Context,
+    rxType: RxType
+) : RxPreparedQueryResultBinderProvider(context, rxType) {
 
-    /** Since Maybe can have null values, the Callable returned must allow for null values. */
+    /**
+     * Since Maybe can have null values, the Callable returned must allow for null values.
+     */
     override fun extractTypeArg(declared: XType): XType =
         declared.typeArguments.first().makeNullable()
 }

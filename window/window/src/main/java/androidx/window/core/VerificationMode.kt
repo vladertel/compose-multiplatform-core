@@ -16,7 +16,9 @@
 
 package androidx.window.core
 
-/** An enum to specify which [VerificationMode] should be used with the [SpecificationComputer] */
+/**
+ * An enum to specify which [VerificationMode] should be used with the [SpecificationComputer]
+ */
 internal enum class VerificationMode {
     STRICT,
     LOG,

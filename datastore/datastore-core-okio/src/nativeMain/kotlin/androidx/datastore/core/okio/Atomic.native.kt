@@ -29,11 +29,9 @@ internal actual class AtomicInt actual constructor(initialValue: Int) {
     actual fun getAndIncrement(): Int {
         return delegate.getAndIncrement()
     }
-
     actual fun decrementAndGet(): Int {
         return delegate.decrementAndGet()
     }
-
     actual fun get(): Int = property
 
     actual fun incrementAndGet(): Int {
@@ -54,13 +52,12 @@ internal actual class AtomicBoolean actual constructor(initialValue: Boolean) {
 
 internal actual class Synchronizer {
     /**
-     * This is public to allow inlining withLock. Since we use it from common, for all intents and
-     * purposes, delegate is not visible. So it is cheaper to do this instead of forcing an object
-     * creation to call withLock.
+     * This is public to allow inlining withLock. Since we use it from common, for all
+     * intents and purposes, delegate is not visible. So it is cheaper to do this instead
+     * of forcing an object creation to call withLock.
      */
     val delegate = SynchronizedObject()
-
-    actual inline fun <T> withLock(crossinline block: () -> T): T {
+    actual inline fun<T> withLock(crossinline block: () -> T): T {
         return synchronized(delegate, block)
     }
 }

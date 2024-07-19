@@ -16,7 +16,9 @@
 
 package androidx.compose.ui.node
 
-/** Value holder general purpose class. */
+/**
+ * Value holder general purpose class.
+ */
 class Ref<T> {
     var value: T? = null
 }

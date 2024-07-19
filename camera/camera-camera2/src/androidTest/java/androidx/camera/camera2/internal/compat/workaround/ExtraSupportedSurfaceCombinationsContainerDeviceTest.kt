@@ -33,8 +33,13 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.impl.CameraConfig
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.CameraThreadConfig
+import androidx.camera.core.impl.Config
+import androidx.camera.core.impl.Identifier
+import androidx.camera.core.impl.MutableOptionsBundle
+import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.SurfaceCombination
 import androidx.camera.core.impl.SurfaceConfig
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
@@ -43,7 +48,6 @@ import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
 import androidx.camera.testing.impl.CameraXUtil
 import androidx.camera.testing.impl.SurfaceTextureProvider
-import androidx.camera.testing.impl.fakes.FakeCameraConfig
 import androidx.camera.testing.impl.fakes.FakeSessionProcessor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.LargeTest
@@ -72,10 +76,9 @@ private const val CAPTURE_TIMEOUT = 10_000.toLong() //  10 seconds
 class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String) {
 
     @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            PreTestCameraIdList(Camera2Config.defaultConfig())
-        )
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        PreTestCameraIdList(Camera2Config.defaultConfig())
+    )
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -85,16 +88,14 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         fun initParameters(): MutableSet<String> = getCameraIds()
 
         private fun getCameraIds(): MutableSet<String> {
-            val camera2CameraFactory =
-                Camera2CameraFactory(
-                    ApplicationProvider.getApplicationContext(),
-                    CameraThreadConfig.create(
-                        CameraXExecutors.mainThreadExecutor(),
-                        Handler(Looper.getMainLooper())
-                    ),
-                    null,
-                    -1L
-                )
+            val camera2CameraFactory = Camera2CameraFactory(
+                ApplicationProvider.getApplicationContext(),
+                CameraThreadConfig.create(
+                    CameraXExecutors.mainThreadExecutor(),
+                    Handler(Looper.getMainLooper())
+                ),
+                null,
+                -1L)
             return camera2CameraFactory.availableCameraIds
         }
     }
@@ -106,7 +107,10 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
     @Before
     fun setUp() {
         assumeTrue(CameraUtil.deviceHasCamera())
-        CameraXUtil.initialize(context, Camera2Config.defaultConfig()).get()
+        CameraXUtil.initialize(
+            context,
+            Camera2Config.defaultConfig()
+        ).get()
 
         // Only runs the test when the ExtraSupportedSurfaceCombinationsQuirk is applied for the
         // device.
@@ -122,27 +126,16 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
     @Test
     fun successCaptureImage_whenExtraYuvPrivYuvConfigurationSupported() = runBlocking {
         var cameraSelector = createCameraSelectorById(cameraId)
-        val fakeCameraConfig =
-            FakeCameraConfig(
-                sessionProcessor =
-                    FakeSessionProcessor(
-                        inputFormatPreview = null,
-                        inputFormatCapture = ImageFormat.YUV_420_888
-                    )
-            )
-        cameraUseCaseAdapter =
-            CameraUtil.createCameraUseCaseAdapter(context, cameraSelector, fakeCameraConfig)
+        cameraUseCaseAdapter = CameraUtil.createCameraUseCaseAdapter(context, cameraSelector)
         var camera2CameraInfo = Camera2CameraInfo.from(cameraUseCaseAdapter.cameraInfo)
 
-        var hardwareLevel: Int? =
-            camera2CameraInfo.getCameraCharacteristic(
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
-            )
+        var hardwareLevel: Int? = camera2CameraInfo.getCameraCharacteristic(
+            CameraCharacteristics
+                .INFO_SUPPORTED_HARDWARE_LEVEL
+        )
 
-        val capabilities =
-            camera2CameraInfo.getCameraCharacteristic(
-                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
-            )
+        val capabilities = camera2CameraInfo
+            .getCameraCharacteristic(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
 
         assumeTrue(
             capabilities != null &&
@@ -154,7 +147,10 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         // Only runs the test when the YUV + PRIV + YUV configuration is included in the extra
         // supported configurations list.
         assumeTrue(
-            supportExtraFullYuvPrivYuvConfiguration(camera2CameraInfo.cameraId, hardwareLevel!!)
+            supportExtraFullYuvPrivYuvConfiguration(
+                camera2CameraInfo.cameraId,
+                hardwareLevel!!
+            )
         )
 
         // Image analysis use a YUV stream by default
@@ -163,6 +159,11 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         var preview = Preview.Builder().build()
         var imageCapture = ImageCapture.Builder().build()
         // This will force ImageCapture to use YUV_420_888 to configure capture session.
+        val fakeSessionProcessor = FakeSessionProcessor(
+            inputFormatPreview = null,
+            inputFormatCapture = ImageFormat.YUV_420_888
+        )
+        enableSessionProcessor(cameraUseCaseAdapter, fakeSessionProcessor)
         withContext(Dispatchers.Main) {
             preview.setSurfaceProvider(getSurfaceProvider())
             cameraUseCaseAdapter.addUseCases(Arrays.asList(imageAnalysis, preview, imageCapture))
@@ -184,28 +185,16 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
     @Test
     fun successCaptureImage_whenExtraYuvYuvYuvConfigurationSupported() = runBlocking {
         var cameraSelector = createCameraSelectorById(cameraId)
-        // This will force ImageCapture / Preview to use YUV_420_888 to configure capture session.
-        val fakeCameraConfig =
-            FakeCameraConfig(
-                sessionProcessor =
-                    FakeSessionProcessor(
-                        inputFormatPreview = ImageFormat.YUV_420_888,
-                        inputFormatCapture = ImageFormat.YUV_420_888
-                    )
-            )
-        cameraUseCaseAdapter =
-            CameraUtil.createCameraUseCaseAdapter(context, cameraSelector, fakeCameraConfig)
+        cameraUseCaseAdapter = CameraUtil.createCameraUseCaseAdapter(context, cameraSelector)
         var camera2CameraInfo = Camera2CameraInfo.from(cameraUseCaseAdapter.cameraInfo)
 
-        var hardwareLevel: Int? =
-            camera2CameraInfo.getCameraCharacteristic(
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
-            )
+        var hardwareLevel: Int? = camera2CameraInfo.getCameraCharacteristic(
+            CameraCharacteristics
+                .INFO_SUPPORTED_HARDWARE_LEVEL
+        )
 
-        val capabilities =
-            camera2CameraInfo.getCameraCharacteristic(
-                CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES
-            )
+        val capabilities = camera2CameraInfo
+            .getCameraCharacteristic(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
 
         assumeTrue(
             capabilities != null &&
@@ -217,13 +206,23 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         // Only runs the test when the YUV + YUV + YUV configuration is included in the extra
         // supported configurations list.
         assumeTrue(
-            supportExtraFullYuvYuvYuvConfiguration(camera2CameraInfo.cameraId, hardwareLevel!!)
+            supportExtraFullYuvYuvYuvConfiguration(
+                camera2CameraInfo.cameraId,
+                hardwareLevel!!
+            )
         )
 
         // Image analysis use a YUV stream by default
         var imageAnalysis = ImageAnalysis.Builder().build()
         var preview = Preview.Builder().build()
         var imageCapture = ImageCapture.Builder().build()
+
+        // This will force ImageCapture / Preview to use YUV_420_888 to configure capture session.
+        val fakeSessionProcessor = FakeSessionProcessor(
+            inputFormatPreview = ImageFormat.YUV_420_888,
+            inputFormatCapture = ImageFormat.YUV_420_888
+        )
+        enableSessionProcessor(cameraUseCaseAdapter, fakeSessionProcessor)
         withContext(Dispatchers.Main) {
             preview.setSurfaceProvider(getSurfaceProvider())
             cameraUseCaseAdapter.addUseCases(Arrays.asList(imageAnalysis, preview, imageCapture))
@@ -239,6 +238,31 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         withContext(Dispatchers.Main) {
             cameraUseCaseAdapter.removeUseCases(cameraUseCaseAdapter.useCases)
         }
+    }
+
+    private fun enableSessionProcessor(
+        cameraUseCaseAdapter: CameraUseCaseAdapter,
+        sessionProcessor: SessionProcessor
+    ) {
+        cameraUseCaseAdapter.setExtendedConfig(object : CameraConfig {
+            override fun getConfig(): Config {
+                return MutableOptionsBundle.create()
+            }
+
+            override fun getCompatibilityId(): Identifier {
+                return Identifier.create(0)
+            }
+
+            override fun getSessionProcessor(
+                valueIfMissing: SessionProcessor?
+            ): SessionProcessor? {
+                return sessionProcessor
+            }
+
+            override fun getSessionProcessor(): SessionProcessor {
+                return sessionProcessor
+            }
+        })
     }
 
     private fun createCameraSelectorById(id: String): CameraSelector {
@@ -274,20 +298,29 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         // (YUV, ANALYSIS) + (PRIV, PREVIEW) + (YUV, MAXIMUM)
         val surfaceCombinationYuvPrivYuv = SurfaceCombination()
         surfaceCombinationYuvPrivYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.YUV, SurfaceConfig.ConfigSize.VGA)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.YUV,
+                SurfaceConfig.ConfigSize.VGA
+            )
         )
         surfaceCombinationYuvPrivYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.PRIV, SurfaceConfig.ConfigSize.PREVIEW)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.PRIV,
+                SurfaceConfig.ConfigSize.PREVIEW
+            )
         )
         surfaceCombinationYuvPrivYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.YUV, SurfaceConfig.ConfigSize.MAXIMUM)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.YUV,
+                SurfaceConfig.ConfigSize.MAXIMUM
+            )
         )
 
         extraConfigurationQuirk.get(cameraId, hardwareLevel).forEach { surfaceCombination ->
-            if (
-                surfaceCombination.getOrderedSupportedSurfaceConfigList(
+            if (surfaceCombination.getOrderedSupportedSurfaceConfigList(
                     surfaceCombinationYuvPrivYuv.surfaceConfigList
-                ) != null
+                )
+                != null
             ) {
                 return true
             }
@@ -304,18 +337,26 @@ class ExtraSupportedSurfaceCombinationsContainerDeviceTest(val cameraId: String)
         // (YUV, ANALYSIS) + (YUV, PREVIEW) + (YUV, MAXIMUM)
         val surfaceCombinationYuvYuvYuv = SurfaceCombination()
         surfaceCombinationYuvYuvYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.YUV, SurfaceConfig.ConfigSize.VGA)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.YUV,
+                SurfaceConfig.ConfigSize.VGA
+            )
         )
         surfaceCombinationYuvYuvYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.YUV, SurfaceConfig.ConfigSize.PREVIEW)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.YUV,
+                SurfaceConfig.ConfigSize.PREVIEW
+            )
         )
         surfaceCombinationYuvYuvYuv.addSurfaceConfig(
-            SurfaceConfig.create(SurfaceConfig.ConfigType.YUV, SurfaceConfig.ConfigSize.MAXIMUM)
+            SurfaceConfig.create(
+                SurfaceConfig.ConfigType.YUV,
+                SurfaceConfig.ConfigSize.MAXIMUM
+            )
         )
 
         extraConfigurationQuirk.get(cameraId, hardwareLevel).forEach { surfaceCombination ->
-            if (
-                surfaceCombination.getOrderedSupportedSurfaceConfigList(
+            if (surfaceCombination.getOrderedSupportedSurfaceConfigList(
                     surfaceCombinationYuvYuvYuv.surfaceConfigList
                 ) != null
             ) {

@@ -25,15 +25,18 @@ import androidx.credentials.provider.utils.BeginCreateCredentialUtil
 /**
  * Response to [BeginCreateCredentialRequest].
  *
- * Credential providers must add a list of [CreateEntry], and an optional [RemoteEntry] to this
- * response.
+ * Credential providers must add a list of [CreateEntry], and an
+ * optional [RemoteEntry] to this response.
  *
- * Each [CreateEntry] is displayed to the user on the account selector, as an account option where
- * the given credential can be stored. A [RemoteEntry] is an entry on the selector, through which
- * user can choose to create the credential on a remote device.
+ * Each [CreateEntry] is displayed to the user on the account selector,
+ * as an account option where the given credential can be stored.
+ * A [RemoteEntry] is an entry on the selector, through which user can choose
+ * to create the credential on a remote device.
  */
-class BeginCreateCredentialResponse
-constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: RemoteEntry? = null) {
+class BeginCreateCredentialResponse constructor(
+    val createEntries: List<CreateEntry> = listOf(),
+    val remoteEntry: RemoteEntry? = null
+) {
 
     /** Builder for [BeginCreateCredentialResponse]. */
     class Builder {
@@ -44,7 +47,8 @@ constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: Re
          * Sets the list of create entries to be shown on the UI.
          *
          * @throws IllegalArgumentException If [createEntries] is empty.
-         * @throws NullPointerException If [createEntries] is null, or any of its elements are null.
+         * @throws NullPointerException If [createEntries] is null, or any of its elements
+         * are null.
          */
         fun setCreateEntries(createEntries: List<CreateEntry>): Builder {
             this.createEntries = createEntries.toMutableList()
@@ -65,24 +69,24 @@ constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: Re
          * Sets a remote create entry to be shown on the UI. Provider must set this entry if they
          * wish to create the credential on a different device.
          *
-         * <p> When constructing the {@link CreateEntry] object, the pending intent must be set such
-         * that it leads to an activity that can provide UI to fulfill the request on a remote
-         * device. When user selects this [remoteEntry], the system will invoke the pending intent
-         * set on the [CreateEntry].
+         * <p> When constructing the {@link CreateEntry] object, the pending intent must be
+         * set such that it leads to an activity that can provide UI to fulfill the request on
+         * a remote device. When user selects this [remoteEntry], the system will
+         * invoke the pending intent set on the [CreateEntry].
          *
-         * <p> Once the remote credential flow is complete, the [android.app.Activity] result should
-         * be set to [android.app.Activity#RESULT_OK] and an extra with the
-         * [CredentialProviderService#EXTRA_CREATE_CREDENTIAL_RESPONSE] key should be populated with
-         * a [android.credentials.CreateCredentialResponse] object.
+         * <p> Once the remote credential flow is complete, the [android.app.Activity]
+         * result should be set to [android.app.Activity#RESULT_OK] and an extra with the
+         * [CredentialProviderService#EXTRA_CREATE_CREDENTIAL_RESPONSE] key should be populated
+         * with a [android.credentials.CreateCredentialResponse] object.
          *
          * <p> Note that as a provider service you will only be able to set a remote entry if :
-         * - Provider service possesses the [android.Manifest.permission.PROVIDE_REMOTE_CREDENTIALS]
-         *   permission.
+         * - Provider service possesses the
+         * [android.Manifest.permission.PROVIDE_REMOTE_CREDENTIALS] permission.
          * - Provider service is configured as the provider that can provide remote entries.
          *
-         * If the above conditions are not met, setting back [BeginCreateCredentialResponse] on the
-         * callback from [CredentialProviderService#onBeginCreateCredential] will throw a
-         * [SecurityException].
+         * If the above conditions are not met, setting back [BeginCreateCredentialResponse]
+         * on the callback from [CredentialProviderService#onBeginCreateCredential]
+         * will throw a [SecurityException].
          */
         fun setRemoteEntry(remoteEntry: RemoteEntry?): Builder {
             this.remoteEntry = remoteEntry
@@ -116,11 +120,10 @@ constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: Re
         @JvmStatic
         @DoNotInline
         fun fromBundle(bundle: Bundle): BeginCreateCredentialResponse? {
-            val frameworkResponse =
-                bundle.getParcelable(
-                    REQUEST_KEY,
-                    android.service.credentials.BeginCreateCredentialResponse::class.java
-                )
+            val frameworkResponse = bundle.getParcelable(
+                REQUEST_KEY,
+                android.service.credentials.BeginCreateCredentialResponse::class.java
+            )
             if (frameworkResponse != null) {
                 return BeginCreateCredentialUtil.convertToJetpackResponse(frameworkResponse)
             }
@@ -130,9 +133,9 @@ constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: Re
 
     companion object {
         /**
-         * Helper method to convert the class to a parcelable [Bundle], in case the class instance
-         * needs to be sent across a process. Consumers of this method should use [fromBundle] to
-         * reconstruct the class instance back from the bundle returned here.
+         * Helper method to convert the class to a parcelable [Bundle], in case the class
+         * instance needs to be sent across a process. Consumers of this method should use
+         * [fromBundle] to reconstruct the class instance back from the bundle returned here.
          */
         @JvmStatic
         fun asBundle(response: BeginCreateCredentialResponse): Bundle {
@@ -144,8 +147,8 @@ constructor(val createEntries: List<CreateEntry> = listOf(), val remoteEntry: Re
         }
 
         /**
-         * Helper method to convert a [Bundle] retrieved through [asBundle], back to an instance of
-         * [BeginGetCredentialResponse].
+         * Helper method to convert a [Bundle] retrieved through [asBundle], back
+         * to an instance of [BeginGetCredentialResponse].
          */
         @JvmStatic
         fun fromBundle(bundle: Bundle): BeginCreateCredentialResponse? {

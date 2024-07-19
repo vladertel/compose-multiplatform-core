@@ -23,5 +23,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 @Composable
 internal fun isRoundDevice(): Boolean {
     val configuration = LocalConfiguration.current
-    return remember(configuration) { configuration.isScreenRound }
+    return remember(configuration) {
+        configuration.isScreenRound
+    }
 }

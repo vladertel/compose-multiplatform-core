@@ -16,35 +16,48 @@
 
 package androidx.lifecycle.compose
 
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.runComposeUiTest
-import androidx.kruth.assertThat
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.testing.TestLifecycleOwner
-import kotlin.test.Test
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.MediumTest
+import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
 
-@OptIn(ExperimentalTestApi::class)
+@MediumTest
+@RunWith(AndroidJUnit4::class)
 class LifecycleExtTest {
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val lifecycleOwner =
-        TestLifecycleOwner(Lifecycle.State.INITIALIZED, UnconfinedTestDispatcher())
+    private val lifecycleOwner = TestLifecycleOwner(
+        Lifecycle.State.INITIALIZED,
+        UnconfinedTestDispatcher()
+    )
+
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
-    fun lifecycleCollectAsState() = runComposeUiTest {
+    fun lifecycleCollectAsState() {
         val lifecycle = lifecycleOwner.lifecycle
         assertThat(lifecycle.currentStateFlow.value).isEqualTo(Lifecycle.State.INITIALIZED)
 
         var realStateValue: Lifecycle.State? = null
-        setContent { realStateValue = lifecycle.currentStateAsState().value }
+        rule.setContent {
+            realStateValue = lifecycle.currentStateAsState().value
+        }
 
-        runOnIdle { assertThat(realStateValue).isEqualTo(Lifecycle.State.INITIALIZED) }
+        rule.runOnIdle {
+            assertThat(realStateValue).isEqualTo(Lifecycle.State.INITIALIZED)
+        }
 
         // TODO(b/280362188): commenting this portion out until bug is fixed
         /*
         lifecycleOwner.currentState = Lifecycle.State.RESUMED
-        runOnIdle {
+        rule.runOnIdle {
             assertThat(realStateValue).isEqualTo(Lifecycle.State.RESUMED)
         }
         */

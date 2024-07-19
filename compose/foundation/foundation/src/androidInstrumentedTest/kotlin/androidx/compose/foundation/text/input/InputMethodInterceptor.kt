@@ -71,8 +71,7 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
     fun assertSessionActive() {
         runOnIdle {
             assertWithMessage("Expected a text input session to be active")
-                .that(currentRequest)
-                .isNotNull()
+                .that(currentRequest).isNotNull()
         }
     }
 
@@ -84,8 +83,7 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
     fun assertNoSessionActive() {
         runOnIdle {
             assertWithMessage("Expected no text input session to be active")
-                .that(currentRequest)
-                .isNull()
+                .that(currentRequest).isNull()
         }
     }
 
@@ -96,8 +94,8 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
     fun assertThatSessionCount(): IntegerSubject = assertThat(runOnIdle { sessionCount })
 
     /**
-     * Runs [block] on the main thread and passes it the [PlatformTextInputMethodRequest] for the
-     * current input session.
+     * Runs [block] on the main thread and passes it the [PlatformTextInputMethodRequest]
+     * for the current input session.
      *
      * @throws AssertionError if no session is active.
      */
@@ -108,8 +106,8 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
     }
 
     /**
-     * Runs [block] on the main thread and passes it the [PlatformTextInputMethodRequest] for the
-     * current input session.
+     * Runs [block] on the main thread and passes it the [PlatformTextInputMethodRequest]
+     * for the current input session.
      *
      * @throws AssertionError if no session is active.
      */
@@ -121,7 +119,8 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
             val currentRequest =
                 assertNotNull(currentRequest, "Expected a text input session to be active")
             assertThat(currentRequest).isInstanceOf(asClass.java)
-            @Suppress("UNCHECKED_CAST") block(currentRequest as T)
+            @Suppress("UNCHECKED_CAST")
+            block(currentRequest as T)
         }
     }
 
@@ -134,8 +133,7 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
     fun withEditorInfo(block: EditorInfo.() -> Unit) {
         runOnIdle {
             assertWithMessage("Expected a text input session to be active")
-                .that(currentRequest)
-                .isNotNull()
+                .that(currentRequest).isNotNull()
             block(editorInfo)
         }
     }
@@ -148,10 +146,9 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
      */
     fun withInputConnection(block: InputConnection.() -> Unit) {
         runOnIdle {
-            val inputConnection =
-                checkNotNull(inputConnection) {
-                    "Tried to read inputConnection while no session was active"
-                }
+            val inputConnection = checkNotNull(inputConnection) {
+                "Tried to read inputConnection while no session was active"
+            }
             block(inputConnection)
         }
     }
@@ -163,7 +160,9 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
      * [Content] method yourself.
      */
     fun setContent(content: @Composable () -> Unit) {
-        rule.setContent { Content(content) }
+        rule.setContent {
+            Content(content)
+        }
     }
 
     /**

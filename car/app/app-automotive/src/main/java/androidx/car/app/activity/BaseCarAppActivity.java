@@ -478,15 +478,9 @@ public abstract class BaseCarAppActivity extends FragmentActivity {
 
     @Override
     protected void onDestroy() {
-        if (mHostUpdateReceiver != null) {
-            mHostUpdateReceiver.unregister(this);
-        }
-        if (mSurfaceHolderListener != null) {
-            mSurfaceHolderListener.setSurfaceListener(null);
-        }
-        if (mViewModel != null) {
-            mViewModel.setActivity(null);
-        }
+        requireNonNull(mHostUpdateReceiver).unregister(this);
+        requireNonNull(mSurfaceHolderListener).setSurfaceListener(null);
+        requireNonNull(mViewModel).setActivity(null);
         super.onDestroy();
     }
 

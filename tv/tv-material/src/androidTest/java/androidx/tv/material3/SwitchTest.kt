@@ -61,7 +61,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class, ExperimentalTvMaterial3Api::class)
 class SwitchTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val defaultSwitchTag = "switch"
 
@@ -69,7 +70,10 @@ class SwitchTest {
     fun switch_defaultSemantics() {
         rule.setMaterialContent(lightColorScheme()) {
             Column {
-                Switch(modifier = Modifier.testTag("checked"), checked = true, onCheckedChange = {})
+                Switch(
+                    modifier = Modifier.testTag("checked"),
+                    checked = true,
+                    onCheckedChange = {})
                 Switch(
                     modifier = Modifier.testTag("unchecked"),
                     checked = false,
@@ -78,13 +82,11 @@ class SwitchTest {
             }
         }
 
-        rule
-            .onNodeWithTag("checked")
+        rule.onNodeWithTag("checked")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
             .assertIsEnabled()
             .assertIsOn()
-        rule
-            .onNodeWithTag("unchecked")
+        rule.onNodeWithTag("unchecked")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
             .assertIsEnabled()
             .assertIsOff()
@@ -105,7 +107,10 @@ class SwitchTest {
             }
         }
 
-        rule.onNodeWithTag(defaultSwitchTag).assertIsOff().performClick().assertIsOn()
+        rule.onNodeWithTag(defaultSwitchTag)
+            .assertIsOff()
+            .performClick()
+            .assertIsOn()
     }
 
     @Test
@@ -123,8 +128,7 @@ class SwitchTest {
             }
         }
 
-        rule
-            .onNodeWithTag(defaultSwitchTag)
+        rule.onNodeWithTag(defaultSwitchTag)
             .assertIsOff()
             .performClick()
             .assertIsOn()
@@ -144,7 +148,8 @@ class SwitchTest {
             )
         }
 
-        rule.onNodeWithTag(defaultSwitchTag).assertHasClickAction()
+        rule.onNodeWithTag(defaultSwitchTag)
+            .assertHasClickAction()
     }
 
     @Test
@@ -152,33 +157,46 @@ class SwitchTest {
         val parentTag = "parent"
         rule.setMaterialContent(lightColorScheme()) {
             val (checked, _) = remember { mutableStateOf(false) }
-            Box(Modifier.semantics(mergeDescendants = true) {}.testTag(parentTag)) {
+            Box(
+                Modifier
+                    .semantics(mergeDescendants = true) {}
+                    .testTag(parentTag)) {
                 Switch(
                     checked,
                     {},
                     enabled = false,
-                    modifier = Modifier.testTag(defaultSwitchTag).semantics { focused = true }
+                    modifier = Modifier
+                        .testTag(defaultSwitchTag)
+                        .semantics { focused = true }
                 )
             }
         }
 
-        rule.onNodeWithTag(defaultSwitchTag).assertHasClickAction()
+        rule.onNodeWithTag(defaultSwitchTag)
+            .assertHasClickAction()
 
         // Check not merged into parent
-        rule.onNodeWithTag(parentTag).assert(isNotFocusable())
+        rule.onNodeWithTag(parentTag)
+            .assert(isNotFocusable())
     }
 
     @Test
     fun switch_untoggleableAndMergeable_whenNullLambda() {
         rule.setMaterialContent(lightColorScheme()) {
             val (checked, _) = remember { mutableStateOf(false) }
-            Box(Modifier.semantics(mergeDescendants = true) {}.testTag(defaultSwitchTag)) {
-                Switch(checked, null, modifier = Modifier.semantics { focused = true })
+            Box(
+                Modifier
+                    .semantics(mergeDescendants = true) {}
+                    .testTag(defaultSwitchTag)) {
+                Switch(
+                    checked,
+                    null,
+                    modifier = Modifier.semantics { focused = true }
+                )
             }
         }
 
-        rule
-            .onNodeWithTag(defaultSwitchTag)
+        rule.onNodeWithTag(defaultSwitchTag)
             .assertHasNoClickAction()
             .assert(isFocusable()) // Check merged into parent
     }
@@ -187,7 +205,13 @@ class SwitchTest {
     fun switch_stateChange_movesThumb() {
         var checked by mutableStateOf(false)
         rule.setMaterialContent(lightColorScheme()) {
-            val spacer = @Composable { Spacer(Modifier.size(16.dp).testTag("spacer")) }
+            val spacer = @Composable {
+                Spacer(
+                    Modifier
+                        .size(16.dp)
+                        .testTag("spacer")
+                )
+            }
             Switch(
                 modifier = Modifier.testTag(defaultSwitchTag),
                 checked = checked,
@@ -196,23 +220,30 @@ class SwitchTest {
             )
         }
 
-        rule.onNodeWithTag("spacer", useUnmergedTree = true).assertLeftPositionInRootIsEqualTo(4.dp)
+        rule.onNodeWithTag("spacer", useUnmergedTree = true)
+            .assertLeftPositionInRootIsEqualTo(4.dp)
 
         rule.runOnIdle { checked = true }
 
-        rule
-            .onNodeWithTag("spacer", useUnmergedTree = true)
+        rule.onNodeWithTag("spacer", useUnmergedTree = true)
             .assertLeftPositionInRootIsEqualTo(20.dp)
 
         rule.runOnIdle { checked = false }
 
-        rule.onNodeWithTag("spacer", useUnmergedTree = true).assertLeftPositionInRootIsEqualTo(4.dp)
+        rule.onNodeWithTag("spacer", useUnmergedTree = true)
+            .assertLeftPositionInRootIsEqualTo(4.dp)
     }
 
     @Test
     fun switch_constantState_doesNotAnimate() {
         rule.setMaterialContent(lightColorScheme()) {
-            val spacer = @Composable { Spacer(Modifier.size(16.dp).testTag("spacer")) }
+            val spacer = @Composable {
+                Spacer(
+                    Modifier
+                        .size(16.dp)
+                        .testTag("spacer")
+                )
+            }
             Switch(
                 modifier = Modifier.testTag(defaultSwitchTag),
                 checked = false,
@@ -221,9 +252,13 @@ class SwitchTest {
             )
         }
 
-        rule.onNodeWithTag(defaultSwitchTag).performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.onNodeWithTag(defaultSwitchTag)
+            .performKeyInput {
+                pressKey(Key.DirectionCenter)
+            }
 
-        rule.onNodeWithTag("spacer", useUnmergedTree = true).assertLeftPositionInRootIsEqualTo(4.dp)
+        rule.onNodeWithTag("spacer", useUnmergedTree = true)
+            .assertLeftPositionInRootIsEqualTo(4.dp)
     }
 
     // regression test for b/191375128
@@ -233,7 +268,9 @@ class SwitchTest {
         var items by mutableStateOf(listOf(1 to false, 2 to true))
         rule.setMaterialContent(lightColorScheme()) {
             Column {
-                Button(onClick = { screenTwo.value = !screenTwo.value }) { Text("switch screen") }
+                Button(onClick = { screenTwo.value = !screenTwo.value }) {
+                    Text("switch screen")
+                }
                 val holder = rememberSaveableStateHolder()
                 holder.SaveableStateProvider(screenTwo.value) {
                     if (screenTwo.value) {
@@ -249,10 +286,9 @@ class SwitchTest {
                                         modifier = Modifier.testTag(item.first.toString()),
                                         checked = item.second,
                                         onCheckedChange = {
-                                            items =
-                                                items.toMutableList().also {
-                                                    it[index] = item.first to !item.second
-                                                }
+                                            items = items.toMutableList().also {
+                                                it[index] = item.first to !item.second
+                                            }
                                         }
                                     )
                                 }
@@ -265,15 +301,18 @@ class SwitchTest {
 
         rule.onNodeWithTag("1").assertIsOff()
         rule.onNodeWithTag("2").assertIsOn()
-        rule.runOnIdle { screenTwo.value = true }
         rule.runOnIdle {
-            items =
-                items.toMutableList().also {
-                    it[0] = items[0].first to !items[0].second
-                    it[1] = items[1].first to !items[1].second
-                }
+            screenTwo.value = true
         }
-        rule.runOnIdle { screenTwo.value = false }
+        rule.runOnIdle {
+            items = items.toMutableList().also {
+                it[0] = items[0].first to !items[0].second
+                it[1] = items[1].first to !items[1].second
+            }
+        }
+        rule.runOnIdle {
+            screenTwo.value = false
+        }
         rule.onNodeWithTag("1").assertIsOn()
         rule.onNodeWithTag("2").assertIsOff()
     }

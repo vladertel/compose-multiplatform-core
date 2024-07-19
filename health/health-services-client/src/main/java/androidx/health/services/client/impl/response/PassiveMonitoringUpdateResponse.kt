@@ -22,7 +22,10 @@ import androidx.health.services.client.data.PassiveMonitoringUpdate
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.ResponsesProto
 
-/** Response containing [PassiveMonitoringUpdate]. */
+/**
+ * Response containing [PassiveMonitoringUpdate].
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class PassiveMonitoringUpdateResponse(
     public val passiveMonitoringUpdate: PassiveMonitoringUpdate

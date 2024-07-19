@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.AutoCenteringParams
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.InlineSlider
 import androidx.wear.compose.material.InlineSliderColors
@@ -49,10 +48,12 @@ fun InlineSliderDemo() {
     var valueWithSegments by remember { mutableFloatStateOf(2f) }
     var enabled by remember { mutableStateOf(true) }
 
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement =
-            Arrangement.spacedBy(space = 4.dp, alignment = Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(
+            space = 4.dp,
+            alignment = Alignment.CenterVertically
+        ),
         modifier = Modifier.fillMaxSize(),
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {
@@ -63,8 +64,7 @@ fun InlineSliderDemo() {
                 enabled = enabled,
                 valueRange = 1f..100f,
                 steps = 98,
-                onValueChange = { valueWithoutSegments = it }
-            )
+                onValueChange = { valueWithoutSegments = it })
         }
         item { Text("With segments, value = $valueWithSegments") }
         item {
@@ -85,10 +85,9 @@ fun InlineSliderDemo() {
                 // For Switch  toggle controls the Wear Material UX guidance is to set the
                 // unselected toggle control color to ToggleChipDefaults.switchUncheckedIconColor()
                 // rather than the default.
-                colors =
-                    ToggleChipDefaults.toggleChipColors(
-                        uncheckedToggleControlColor = ToggleChipDefaults.SwitchUncheckedIconColor
-                    ),
+                colors = ToggleChipDefaults.toggleChipColors(
+                    uncheckedToggleControlColor = ToggleChipDefaults.SwitchUncheckedIconColor
+                ),
                 toggleControl = {
                     Icon(
                         imageVector = ToggleChipDefaults.switchIcon(checked = enabled),
@@ -105,10 +104,12 @@ fun InlineSliderWithIntegersDemo() {
     var valueWithoutSegments by remember { mutableIntStateOf(5) }
     var valueWithSegments by remember { mutableIntStateOf(2) }
 
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement =
-            Arrangement.spacedBy(space = 4.dp, alignment = Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(
+            space = 4.dp,
+            alignment = Alignment.CenterVertically
+        ),
         modifier = Modifier.fillMaxSize(),
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {
@@ -118,8 +119,7 @@ fun InlineSliderWithIntegersDemo() {
                 value = valueWithoutSegments,
                 valueProgression = IntProgression.fromClosedRange(0, 15, 3),
                 segmented = false,
-                onValueChange = { valueWithoutSegments = it }
-            )
+                onValueChange = { valueWithoutSegments = it })
         }
         item { Text("With segments, value = $valueWithSegments") }
         item {
@@ -143,17 +143,19 @@ fun InlineSliderRTLDemo() {
 @Composable
 fun InlineSliderCustomColorsDemo() {
     var value by remember { mutableFloatStateOf(4.5f) }
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
         DefaultInlineSlider(
             value = value,
             onValueChange = { value = it },
             valueRange = 3f..6f,
             steps = 5,
             segmented = false,
-            colors =
-                InlineSliderDefaults.colors(
-                    selectedBarColor = AlternatePrimaryColor1,
-                ),
+            colors = InlineSliderDefaults.colors(
+                selectedBarColor = AlternatePrimaryColor1,
+            ),
             modifier = Modifier.padding(horizontal = 10.dp)
         )
     }
@@ -164,10 +166,12 @@ fun InlineSliderSegmented() {
     var numberOfSegments by remember { mutableFloatStateOf(5f) }
     var progress by remember { mutableFloatStateOf(10f) }
 
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement =
-            Arrangement.spacedBy(space = 4.dp, alignment = Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(
+            space = 4.dp,
+            alignment = Alignment.CenterVertically
+        ),
         modifier = Modifier.fillMaxSize(),
         autoCentering = AutoCenteringParams(itemIndex = 0)
     ) {

@@ -37,11 +37,14 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Tests for the Grid Helper (Row / Column) */
+/**
+ * Tests for the Grid Helper (Row / Column)
+ */
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class RowColumnDslTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Before
     fun setup() {
@@ -267,14 +270,13 @@ class RowColumnDslTest {
                     elem.add(createRefFor(ids[i]))
                 }
 
-                val g1 =
-                    createColumn(
-                        elements = elem.toTypedArray(),
-                        skips = gridSkips,
-                        spans = gridSpans,
-                        verticalGap = vGap.dp,
-                        rowWeights = gridRowWeights,
-                    )
+                val g1 = createColumn(
+                    elements = elem.toTypedArray(),
+                    skips = gridSkips,
+                    spans = gridSpans,
+                    verticalGap = vGap.dp,
+                    rowWeights = gridRowWeights,
+                )
                 constrain(g1) {
                     width = Dimension.matchParent
                     height = Dimension.matchParent
@@ -284,7 +286,13 @@ class RowColumnDslTest {
         ) {
             val ids = (0 until boxesCount).map { "box$it" }.toTypedArray()
             ids.forEach { id ->
-                Box(Modifier.layoutId(id).background(Color.Red).testTag(id).size(10.dp))
+                Box(
+                    Modifier
+                        .layoutId(id)
+                        .background(Color.Red)
+                        .testTag(id)
+                        .size(10.dp)
+                )
             }
         }
     }
@@ -306,14 +314,13 @@ class RowColumnDslTest {
                     elem.add(createRefFor(ids[i]))
                 }
 
-                val g1 =
-                    createRow(
-                        elements = elem.toTypedArray(),
-                        horizontalGap = hGap.dp,
-                        skips = gridSkips,
-                        spans = gridSpans,
-                        columnWeights = gridColumnWeights,
-                    )
+                val g1 = createRow(
+                    elements = elem.toTypedArray(),
+                    horizontalGap = hGap.dp,
+                    skips = gridSkips,
+                    spans = gridSpans,
+                    columnWeights = gridColumnWeights,
+                )
                 constrain(g1) {
                     width = Dimension.matchParent
                     height = Dimension.matchParent
@@ -323,7 +330,13 @@ class RowColumnDslTest {
         ) {
             val ids = (0 until boxesCount).map { "box$it" }.toTypedArray()
             ids.forEach { id ->
-                Box(Modifier.layoutId(id).background(Color.Red).testTag(id).size(10.dp))
+                Box(
+                    Modifier
+                        .layoutId(id)
+                        .background(Color.Red)
+                        .testTag(id)
+                        .size(10.dp)
+                )
             }
         }
     }

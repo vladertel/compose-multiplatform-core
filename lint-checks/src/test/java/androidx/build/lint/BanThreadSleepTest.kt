@@ -23,47 +23,44 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
-class BanThreadSleepTest :
-    AbstractLintDetectorTest(
-        useDetector = BanThreadSleep(),
-        useIssues = listOf(BanThreadSleep.ISSUE),
-        stubs = arrayOf(Stubs.Keep),
-    ) {
+class BanThreadSleepTest : AbstractLintDetectorTest(
+    useDetector = BanThreadSleep(),
+    useIssues = listOf(BanThreadSleep.ISSUE),
+    stubs = arrayOf(Stubs.Keep),
+) {
 
     @Test
     fun `Detection of Thread#sleep in Java sources`() {
-        val input =
-            arrayOf(
-                javaSample("androidx.ThreadSleepUsageJava"),
-            )
+        val input = arrayOf(
+            javaSample("androidx.ThreadSleepUsageJava"),
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/androidx/ThreadSleepUsageJava.java:21: Error: Uses Thread.sleep() [BanThreadSleep]
         Thread.sleep(1000);
                ~~~~~
 1 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }
 
     @Test
     fun `Detection of Thread#sleep in Kotlin sources`() {
-        val input =
-            arrayOf(
-                ktSample("androidx.ThreadSleepUsageKotlin"),
-            )
+        val input = arrayOf(
+            ktSample("androidx.ThreadSleepUsageKotlin"),
+        )
 
-        val expected =
-            """
+        /* ktlint-disable max-line-length */
+        val expected = """
 src/androidx/ThreadSleepUsageKotlin.kt:21: Error: Uses Thread.sleep() [BanThreadSleep]
         Thread.sleep(1000)
                ~~~~~
 1 errors, 0 warnings
-        """
-                .trimIndent()
+        """.trimIndent()
+        /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
     }

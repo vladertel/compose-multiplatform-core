@@ -49,7 +49,10 @@ internal class BufferTransformHintResolverTest() {
         val transform = BufferTransformHintResolver()
         assertEquals(
             UNKNOWN_TRANSFORM,
-            transform.getBufferTransformHintFromInstallOrientation("ORIENTATION_45", ROTATION_0)
+            transform.getBufferTransformHintFromInstallOrientation(
+                "ORIENTATION_45",
+                ROTATION_0
+            )
         )
     }
 

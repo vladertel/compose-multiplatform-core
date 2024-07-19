@@ -54,11 +54,10 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterialApi::class)
 fun ModalBottomSheetSample() {
     var skipHalfExpanded by remember { mutableStateOf(false) }
-    val state =
-        rememberModalBottomSheetState(
-            initialValue = ModalBottomSheetValue.Hidden,
-            skipHalfExpanded = skipHalfExpanded
-        )
+    val state = rememberModalBottomSheetState(
+        initialValue = ModalBottomSheetValue.Hidden,
+        skipHalfExpanded = skipHalfExpanded
+    )
     val scope = rememberCoroutineScope()
     ModalBottomSheetLayout(
         sheetState = state,
@@ -94,7 +93,9 @@ fun ModalBottomSheetSample() {
                 Text("Skip Half Expanded State")
             }
             Spacer(Modifier.height(20.dp))
-            Button(onClick = { scope.launch { state.show() } }) { Text("Click to show sheet") }
+            Button(onClick = { scope.launch { state.show() } }) {
+                Text("Click to show sheet")
+            }
         }
     }
 }

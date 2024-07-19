@@ -36,8 +36,8 @@ internal object MigrationUtils {
     private const val LOG_TAG = "LocalSdkMigrationUtils"
 
     /**
-     * Try to migrate all files from source to target that match requested prefix. Skip failed
-     * files.
+     * Try to migrate all files from source to target that match requested prefix.
+     * Skip failed files.
      *
      * @return true if all files moved, or false if some fails happened.
      */
@@ -46,7 +46,8 @@ internal object MigrationUtils {
             return true
         }
 
-        val sourceFiles = srcDir.listFiles { _, name -> name.startsWith(prefix) } ?: emptyArray()
+        val sourceFiles = srcDir.listFiles { _, name -> name.startsWith(prefix) }
+            ?: emptyArray()
 
         var hadFails = false
         for (sourceFile in sourceFiles) {
@@ -97,6 +98,8 @@ internal object MigrationUtils {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private object Api29 {
-        @DoNotInline fun copy(from: InputStream, to: OutputStream): Long = FileUtils.copy(from, to)
+        @DoNotInline
+        fun copy(from: InputStream, to: OutputStream): Long =
+            FileUtils.copy(from, to)
     }
 }

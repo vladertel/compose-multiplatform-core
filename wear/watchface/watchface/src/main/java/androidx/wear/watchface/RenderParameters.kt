@@ -254,7 +254,8 @@ constructor(
         },
         wireFormat.idAndTapEventWireFormat?.associate {
             Pair(it.id, TapEvent(it.x, it.y, Instant.ofEpochMilli(it.calendarTapTimeMillis)))
-        } ?: emptyMap()
+        }
+            ?: emptyMap()
     )
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)

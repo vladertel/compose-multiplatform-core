@@ -22,7 +22,9 @@ import androidx.room.solver.shortcut.binder.InsertOrUpsertMethodBinder
 import androidx.room.solver.shortcut.binder.InstantInsertMethodBinder
 import androidx.room.vo.ShortcutQueryParameter
 
-/** Provider for instant (blocking) insert method binder. */
+/**
+ * Provider for instant (blocking) insert method binder.
+ */
 class InstantInsertMethodBinderProvider(private val context: Context) :
     InsertOrUpsertMethodBinderProvider {
 

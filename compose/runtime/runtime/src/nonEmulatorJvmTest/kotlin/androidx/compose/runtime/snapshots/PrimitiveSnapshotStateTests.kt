@@ -66,9 +66,8 @@ class PrimitiveSnapshotStateTests<S, T>(
         val value = implementation.valueProperty.get(mutableState)
 
         assertEquals(
-            message =
-                "The $implementation's value did not contain the expected value after " +
-                    "being instantiated with value $initialValue",
+            message = "The $implementation's value did not contain the expected value after " +
+                "being instantiated with value $initialValue",
             expected = initialValue,
             actual = value
         )
@@ -85,9 +84,8 @@ class PrimitiveSnapshotStateTests<S, T>(
         implementation.valueProperty.set(mutableState, nextValue)
 
         assertEquals(
-            message =
-                "The $implementation's value did not contain the expected value after " +
-                    "being reassigned from $initialValue to $nextValue",
+            message = "The $implementation's value did not contain the expected value after " +
+                "being reassigned from $initialValue to $nextValue",
             expected = nextValue,
             actual = implementation.valueProperty.get(mutableState)
         )
@@ -96,41 +94,40 @@ class PrimitiveSnapshotStateTests<S, T>(
     companion object {
         @JvmStatic
         @Parameters(name = "{1}")
-        fun initParameters() =
+        fun initParameters() = arrayOf(
             arrayOf(
-                arrayOf(
-                    PrimitiveSnapshotStateImplementation(
-                        clazz = MutableIntState::class.java,
-                        creator = ::mutableIntStateOf,
-                        valueProperty = MutableIntState::intValue,
-                        sampleValues = generateSequence(1) { it + 1 }
-                    )
-                ),
-                arrayOf(
-                    PrimitiveSnapshotStateImplementation(
-                        clazz = MutableLongState::class.java,
-                        creator = ::mutableLongStateOf,
-                        valueProperty = MutableLongState::longValue,
-                        sampleValues = generateSequence(1) { it + 1 }
-                    )
-                ),
-                arrayOf(
-                    PrimitiveSnapshotStateImplementation(
-                        clazz = MutableFloatState::class.java,
-                        creator = ::mutableFloatStateOf,
-                        valueProperty = MutableFloatState::floatValue,
-                        sampleValues = generateSequence(1f) { it + 1 }
-                    )
-                ),
-                arrayOf(
-                    PrimitiveSnapshotStateImplementation(
-                        clazz = MutableDoubleState::class.java,
-                        creator = ::mutableDoubleStateOf,
-                        valueProperty = MutableDoubleState::value,
-                        sampleValues = generateSequence(1.0) { it + 1 }
-                    )
+                PrimitiveSnapshotStateImplementation(
+                clazz = MutableIntState::class.java,
+                creator = ::mutableIntStateOf,
+                valueProperty = MutableIntState::intValue,
+                sampleValues = generateSequence(1) { it + 1 }
+                )
+            ),
+            arrayOf(
+                PrimitiveSnapshotStateImplementation(
+                clazz = MutableLongState::class.java,
+                creator = ::mutableLongStateOf,
+                valueProperty = MutableLongState::longValue,
+                sampleValues = generateSequence(1) { it + 1 }
+                )
+            ),
+            arrayOf(
+                PrimitiveSnapshotStateImplementation(
+                clazz = MutableFloatState::class.java,
+                creator = ::mutableFloatStateOf,
+                valueProperty = MutableFloatState::floatValue,
+                sampleValues = generateSequence(1f) { it + 1 }
+                )
+            ),
+            arrayOf(
+                PrimitiveSnapshotStateImplementation(
+                clazz = MutableDoubleState::class.java,
+                creator = ::mutableDoubleStateOf,
+                valueProperty = MutableDoubleState::value,
+                sampleValues = generateSequence(1.0) { it + 1 }
                 )
             )
+        )
 
         data class PrimitiveSnapshotStateImplementation<S, T>(
             val clazz: Class<S>,

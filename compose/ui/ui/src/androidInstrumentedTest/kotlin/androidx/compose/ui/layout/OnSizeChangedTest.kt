@@ -114,8 +114,7 @@ class OnSizeChangedTest {
                             .onSizeChanged {
                                 changedSize = it
                                 latch.countDown()
-                            }
-                            .padding(sizePx.toDp())
+                            }.padding(sizePx.toDp())
                     ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
@@ -191,7 +190,9 @@ class OnSizeChangedTest {
                             Modifier.layout { measurable, _ ->
                                 val placeable =
                                     measurable.measure(Constraints.fixed(sizePx, sizePx))
-                                layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                                layout(placeable.width, placeable.height) {
+                                    placeable.place(0, 0)
+                                }
                             }
                         )
                     }
@@ -227,30 +228,17 @@ class OnSizeChangedTest {
             activity.setContent {
                 with(LocalDensity.current) {
                     // Remember lambdas to avoid triggering a node update when the lambda changes
-                    val mod =
-                        if (addModifier)
-                            Modifier.onSizeChanged(
-                                remember {
-                                    {
-                                        changedSize2 = it
-                                        latch2.countDown()
-                                    }
-                                }
-                            )
-                        else Modifier
+                    val mod = if (addModifier) Modifier.onSizeChanged(remember { {
+                        changedSize2 = it
+                        latch2.countDown()
+                    } }) else Modifier
                     Box(
                         // Remember lambdas to avoid triggering a node update when the lambda
                         // changes
-                        Modifier.padding(10.toDp())
-                            .onSizeChanged(
-                                remember {
-                                    {
-                                        changedSize1 = it
-                                        latch1.countDown()
-                                    }
-                                }
-                            )
-                            .then(mod)
+                        Modifier.padding(10.toDp()).onSizeChanged(remember { {
+                            changedSize1 = it
+                            latch1.countDown()
+                        } }).then(mod)
                     ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
@@ -284,35 +272,33 @@ class OnSizeChangedTest {
         var changedSize2 = IntSize.Zero
         var addModifier by mutableStateOf(false)
 
-        val node =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize1 = size
-                    sizeLatch1.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    placedLatch1.countDown()
-                }
+        val node = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize1 = size
+                sizeLatch1.countDown()
             }
-
-        val node2 =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize2 = size
-                    sizeLatch2.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    placedLatch2.countDown()
-                }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                placedLatch1.countDown()
             }
+        }
+
+        val node2 = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize2 = size
+                sizeLatch2.countDown()
+            }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                placedLatch2.countDown()
+            }
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
                     val mod = if (addModifier) Modifier.elementFor(node2) else Modifier
-                    Box(Modifier.padding(10.toDp()).elementFor(node).then(mod)) {
+                    Box(
+                        Modifier.padding(10.toDp()).elementFor(node).then(mod)
+                    ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
                 }
@@ -354,30 +340,17 @@ class OnSizeChangedTest {
             activity.setContent {
                 with(LocalDensity.current) {
                     // Remember lambdas to avoid triggering a node update when the lambda changes
-                    val mod =
-                        if (addModifier)
-                            Modifier.onSizeChanged(
-                                remember {
-                                    {
-                                        changedSize2 = it
-                                        latch2.countDown()
-                                    }
-                                }
-                            )
-                        else Modifier
+                    val mod = if (addModifier) Modifier.onSizeChanged(remember { {
+                        changedSize2 = it
+                        latch2.countDown()
+                    } }) else Modifier
                     Box(
                         // Remember lambdas to avoid triggering a node update when the lambda
                         // changes
-                        Modifier.padding(10.toDp())
-                            .onSizeChanged(
-                                remember {
-                                    {
-                                        changedSize1 = it
-                                        latch1.countDown()
-                                    }
-                                }
-                            )
-                            .then(mod)
+                        Modifier.padding(10.toDp()).onSizeChanged(remember { {
+                            changedSize1 = it
+                            latch1.countDown()
+                        } }).then(mod)
                     ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
@@ -412,35 +385,33 @@ class OnSizeChangedTest {
         var changedSize2 = IntSize.Zero
         var addModifier by mutableStateOf(true)
 
-        val node =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize1 = size
-                    latch1.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    latch1.countDown()
-                }
+        val node = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize1 = size
+                latch1.countDown()
             }
-
-        val node2 =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize2 = size
-                    latch2.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    latch2.countDown()
-                }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                latch1.countDown()
             }
+        }
+
+        val node2 = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize2 = size
+                latch2.countDown()
+            }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                latch2.countDown()
+            }
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
                     val mod = if (addModifier) Modifier.elementFor(node2) else Modifier
-                    Box(Modifier.padding(10.toDp()).elementFor(node).then(mod)) {
+                    Box(
+                        Modifier.padding(10.toDp()).elementFor(node).then(mod)
+                    ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
                 }
@@ -473,11 +444,10 @@ class OnSizeChangedTest {
         var changedSize1 = IntSize.Zero
         var changedSize2 = IntSize.Zero
 
-        var lambda1: (IntSize) -> Unit by
-            mutableStateOf({
-                changedSize1 = it
-                latch1.countDown()
-            })
+        var lambda1: (IntSize) -> Unit by mutableStateOf({
+            changedSize1 = it
+            latch1.countDown()
+        })
 
         // Stable lambda so that this one won't change while we change lambda1
         val lambda2: (IntSize) -> Unit = {
@@ -488,7 +458,11 @@ class OnSizeChangedTest {
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
-                    Box(Modifier.padding(10.toDp()).onSizeChanged(lambda1).onSizeChanged(lambda2)) {
+                    Box(
+                        Modifier.padding(10.toDp())
+                            .onSizeChanged(lambda1)
+                            .onSizeChanged(lambda2)
+                    ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
                 }
@@ -526,13 +500,14 @@ class OnSizeChangedTest {
         var changedSize1 = IntSize.Zero
         var changedSize2 = IntSize.Zero
 
-        var onRemeasuredLambda: (IntSize) -> Unit by
-            mutableStateOf({
-                changedSize1 = it
-                latch1.countDown()
-            })
+        var onRemeasuredLambda: (IntSize) -> Unit by mutableStateOf({
+            changedSize1 = it
+            latch1.countDown()
+        })
 
-        var onPlacedLambda: (LayoutCoordinates) -> Unit by mutableStateOf({ latch1.countDown() })
+        var onPlacedLambda: (LayoutCoordinates) -> Unit by mutableStateOf({
+            latch1.countDown()
+        })
 
         class Node1(
             var onRemeasuredLambda: (IntSize) -> Unit,
@@ -544,7 +519,6 @@ class OnSizeChangedTest {
             override fun onRemeasured(size: IntSize) {
                 onRemeasuredLambda(size)
             }
-
             override fun onPlaced(coordinates: LayoutCoordinates) {
                 onPlacedLambda(coordinates)
             }
@@ -580,17 +554,15 @@ class OnSizeChangedTest {
             }
         }
 
-        val node2 =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize2 = size
-                    latch2.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    latch2.countDown()
-                }
+        val node2 = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize2 = size
+                latch2.countDown()
             }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                latch2.countDown()
+            }
+        }
 
         rule.runOnUiThread {
             activity.setContent {
@@ -621,7 +593,9 @@ class OnSizeChangedTest {
             changedSize1 = it
             newLatch.countDown()
         }
-        onPlacedLambda = { newLatch.countDown() }
+        onPlacedLambda = {
+            newLatch.countDown()
+        }
 
         // We updated the lambda on the first item, so the new lambda should be called
         assertTrue(newLatch.await(1, TimeUnit.SECONDS))
@@ -645,41 +619,41 @@ class OnSizeChangedTest {
         var changedSize1 = IntSize.Zero
         var changedSize2 = IntSize.Zero
 
-        val node =
-            object : LayoutAwareModifierNode, Modifier.Node() {
-                override fun onRemeasured(size: IntSize) {
-                    changedSize1 = size
-                    sizeLatch1.countDown()
-                }
-
-                override fun onPlaced(coordinates: LayoutCoordinates) {
-                    placedLatch1.countDown()
-                }
+        val node = object : LayoutAwareModifierNode, Modifier.Node() {
+            override fun onRemeasured(size: IntSize) {
+                changedSize1 = size
+                sizeLatch1.countDown()
             }
 
-        val node2 =
-            object : DelegatingNode() {
-                fun addDelegate() {
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onRemeasured(size: IntSize) {
-                                changedSize2 = size
-                                sizeLatch2.countDown()
-                            }
+            override fun onPlaced(coordinates: LayoutCoordinates) {
+                placedLatch1.countDown()
+            }
+        }
 
-                            override fun onPlaced(coordinates: LayoutCoordinates) {
-                                placedLatch2.countDown()
-                            }
+        val node2 = object : DelegatingNode() {
+            fun addDelegate() {
+                delegate(
+                    object : LayoutAwareModifierNode, Modifier.Node() {
+                        override fun onRemeasured(size: IntSize) {
+                            changedSize2 = size
+                            sizeLatch2.countDown()
                         }
-                    )
-                }
+
+                        override fun onPlaced(coordinates: LayoutCoordinates) {
+                            placedLatch2.countDown()
+                        }
+                    }
+                )
             }
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
                     val mod = Modifier.elementFor(node2)
-                    Box(Modifier.padding(10.toDp()).elementFor(node).then(mod)) {
+                    Box(
+                        Modifier.padding(10.toDp()).elementFor(node).then(mod)
+                    ) {
                         Box(Modifier.requiredSize(10.toDp()))
                     }
                 }
@@ -692,7 +666,9 @@ class OnSizeChangedTest {
         assertEquals(10, changedSize1.height)
         assertEquals(10, changedSize1.width)
 
-        rule.runOnUiThread { node2.addDelegate() }
+        rule.runOnUiThread {
+            node2.addDelegate()
+        }
 
         // We've delegated to a node, so it must trigger onRemeasured and onPlaced on the new node
         assertTrue(sizeLatch2.await(1, TimeUnit.SECONDS))
@@ -704,15 +680,19 @@ class OnSizeChangedTest {
     @Test
     @SmallTest
     fun modifierIsReturningEqualObjectForTheSameLambda() {
-        val lambda: (IntSize) -> Unit = {}
+        val lambda: (IntSize) -> Unit = { }
         assertEquals(Modifier.onSizeChanged(lambda), Modifier.onSizeChanged(lambda))
     }
 
     @Test
     @SmallTest
     fun modifierIsReturningNotEqualObjectForDifferentLambdas() {
-        val lambda1: (IntSize) -> Unit = { it.height }
-        val lambda2: (IntSize) -> Unit = { it.width }
+        val lambda1: (IntSize) -> Unit = {
+            it.height
+        }
+        val lambda2: (IntSize) -> Unit = {
+            it.width
+        }
         assertNotEquals(Modifier.onSizeChanged(lambda1), Modifier.onSizeChanged(lambda2))
     }
 
@@ -722,23 +702,23 @@ class OnSizeChangedTest {
         var latch = CountDownLatch(1)
         var changedSize = IntSize.Zero
         var sizePx by mutableStateOf(10)
-        val node =
-            object : DelegatingNode() {
-                val osc =
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onRemeasured(size: IntSize) {
-                                changedSize = size
-                                latch.countDown()
-                            }
-                        }
-                    )
-            }
+        val node = object : DelegatingNode() {
+            val osc = delegate(
+                object : LayoutAwareModifierNode, Modifier.Node() {
+                    override fun onRemeasured(size: IntSize) {
+                        changedSize = size
+                        latch.countDown()
+                    }
+                }
+            )
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
-                    Box(Modifier.padding(10.toDp()).elementFor(node)) {
+                    Box(
+                        Modifier.padding(10.toDp()).elementFor(node)
+                    ) {
                         Box(Modifier.requiredSize(sizePx.toDp()))
                     }
                 }
@@ -766,32 +746,31 @@ class OnSizeChangedTest {
         var changedSize1 = IntSize.Zero
         var changedSize2 = IntSize.Zero
         var sizePx by mutableStateOf(10)
-        val node =
-            object : DelegatingNode() {
-                val a =
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onRemeasured(size: IntSize) {
-                                changedSize1 = size
-                                latch.countDown()
-                            }
-                        }
-                    )
-                val b =
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onRemeasured(size: IntSize) {
-                                changedSize2 = size
-                                latch.countDown()
-                            }
-                        }
-                    )
-            }
+        val node = object : DelegatingNode() {
+            val a = delegate(
+                object : LayoutAwareModifierNode, Modifier.Node() {
+                    override fun onRemeasured(size: IntSize) {
+                        changedSize1 = size
+                        latch.countDown()
+                    }
+                }
+            )
+            val b = delegate(
+                object : LayoutAwareModifierNode, Modifier.Node() {
+                    override fun onRemeasured(size: IntSize) {
+                        changedSize2 = size
+                        latch.countDown()
+                    }
+                }
+            )
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
-                    Box(Modifier.padding(10.toDp()).elementFor(node)) {
+                    Box(
+                        Modifier.padding(10.toDp()).elementFor(node)
+                    ) {
                         Box(Modifier.requiredSize(sizePx.toDp()))
                     }
                 }
@@ -821,30 +800,29 @@ class OnSizeChangedTest {
     fun multipleDelegatedOnPlaced() {
         var latch = CountDownLatch(2)
         var paddingDp by mutableStateOf(10)
-        val node =
-            object : DelegatingNode() {
-                val a =
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onPlaced(coordinates: LayoutCoordinates) {
-                                latch.countDown()
-                            }
-                        }
-                    )
-                val b =
-                    delegate(
-                        object : LayoutAwareModifierNode, Modifier.Node() {
-                            override fun onPlaced(coordinates: LayoutCoordinates) {
-                                latch.countDown()
-                            }
-                        }
-                    )
-            }
+        val node = object : DelegatingNode() {
+            val a = delegate(
+                object : LayoutAwareModifierNode, Modifier.Node() {
+                    override fun onPlaced(coordinates: LayoutCoordinates) {
+                        latch.countDown()
+                    }
+                }
+            )
+            val b = delegate(
+                object : LayoutAwareModifierNode, Modifier.Node() {
+                    override fun onPlaced(coordinates: LayoutCoordinates) {
+                        latch.countDown()
+                    }
+                }
+            )
+        }
 
         rule.runOnUiThread {
             activity.setContent {
                 with(LocalDensity.current) {
-                    Box(Modifier.padding(paddingDp.toDp()).elementFor(node)) {
+                    Box(
+                        Modifier.padding(paddingDp.toDp()).elementFor(node)
+                    ) {
                         Box(Modifier.requiredSize(10.dp))
                     }
                 }

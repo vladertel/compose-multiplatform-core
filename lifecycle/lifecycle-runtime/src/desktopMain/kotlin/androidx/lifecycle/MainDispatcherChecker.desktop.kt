@@ -20,7 +20,8 @@ import kotlinx.coroutines.runBlocking
 
 internal object MainDispatcherChecker {
     private var isMainDispatcherAvailable: Boolean = true
-    @Volatile private var mainDispatcherThread: Thread? = null
+    @Volatile
+    private var mainDispatcherThread: Thread? = null
 
     private fun updateMainDispatcherThread() {
         try {

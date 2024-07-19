@@ -35,12 +35,11 @@ class ConstraintsTest {
         val constraints2 = Constraints()
         assertEquals(constraints1, constraints2)
 
-        val constraints3 =
-            Constraints(
-                NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                    .build()
-            )
+        val constraints3 = Constraints(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                .build()
+        )
         assertNotEquals(constraints2, constraints3)
     }
 
@@ -50,12 +49,11 @@ class ConstraintsTest {
         val constraints2 = Constraints(getDefaultNetworkRequest())
         assertEquals(constraints1, constraints2)
 
-        val constraints3 =
-            Constraints(
-                NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                    .build()
-            )
+        val constraints3 = Constraints(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                .build()
+        )
         assertNotEquals(constraints2, constraints3)
     }
 
@@ -65,18 +63,17 @@ class ConstraintsTest {
         val constraints2 = Constraints.copyFrom(constraints1)
         assertEquals(constraints1, constraints2)
 
-        val constraints3 =
-            Constraints(
-                NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                    .build()
-            )
+        val constraints3 = Constraints(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                .build()
+        )
         assertNotEquals(constraints2, constraints3)
     }
 
     private fun getDefaultNetworkRequest(): NetworkRequest {
         return NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
     }
 }

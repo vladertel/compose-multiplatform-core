@@ -16,4 +16,6 @@
 
 package androidx.datastore
 
-class FileIOTest : TestIOTestBase(FileTestIO())
+class FileIOTest : TestIOTestBase(
+    FileTestIO()
+)

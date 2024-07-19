@@ -17,7 +17,6 @@
 package androidx.camera.core.impl;
 
 import static androidx.camera.core.impl.Config.OptionPriority.ALWAYS_OVERRIDE;
-import static androidx.camera.core.impl.Config.OptionPriority.HIGH_PRIORITY_REQUIRED;
 import static androidx.camera.core.impl.Config.OptionPriority.OPTIONAL;
 import static androidx.camera.core.impl.Config.OptionPriority.REQUIRED;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_RESOLUTION_SELECTOR;
@@ -36,6 +35,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.internal.DoNotInstrument;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 @RunWith(RobolectricTestRunner.class)
 @DoNotInstrument
@@ -62,9 +65,27 @@ public class ConfigTest {
 
     @Test
     public void optionPriorityIsDeclaredCorrectly() {
-        assertThat(ALWAYS_OVERRIDE).isLessThan(HIGH_PRIORITY_REQUIRED);
-        assertThat(HIGH_PRIORITY_REQUIRED).isLessThan(REQUIRED);
-        assertThat(REQUIRED).isLessThan(OPTIONAL);
+        Set<Config.OptionPriority> set = new HashSet<>();
+        set.add(ALWAYS_OVERRIDE);
+        set.add(OPTIONAL);
+        set.add(REQUIRED);
+
+        assertThat(Collections.min(set)).isEqualTo(ALWAYS_OVERRIDE);
+
+        set.clear();
+        set.add(ALWAYS_OVERRIDE);
+        set.add(REQUIRED);
+        assertThat(Collections.min(set)).isEqualTo(ALWAYS_OVERRIDE);
+
+        set.clear();
+        set.add(OPTIONAL);
+        set.add(REQUIRED);
+        assertThat(Collections.min(set)).isEqualTo(REQUIRED);
+
+        set.clear();
+        set.add(OPTIONAL);
+        set.add(ALWAYS_OVERRIDE);
+        assertThat(Collections.min(set)).isEqualTo(ALWAYS_OVERRIDE);
     }
 
     @Test
@@ -110,26 +131,6 @@ public class ConfigTest {
     @Test
     public void noConflict_whenTwoValueAreALWAYSOVERRIDE_REQUIRED() {
         assertThat(Config.hasConflict(ALWAYS_OVERRIDE, REQUIRED)).isFalse();
-    }
-
-    @Test
-    public void noConflict_whenTwoValueAreHIGHPRIORITY() {
-        assertThat(Config.hasConflict(HIGH_PRIORITY_REQUIRED, HIGH_PRIORITY_REQUIRED)).isFalse();
-    }
-
-    @Test
-    public void noConflict_whenTwoValueAreHIGHPRIORITY_REQUIRED() {
-        assertThat(Config.hasConflict(HIGH_PRIORITY_REQUIRED, REQUIRED)).isFalse();
-    }
-
-    @Test
-    public void noConflict_whenTwoValueAreHIGHPRIORITY_OPTIONAL() {
-        assertThat(Config.hasConflict(HIGH_PRIORITY_REQUIRED, OPTIONAL)).isFalse();
-    }
-
-    @Test
-    public void noConflict_whenTwoValueAreHIGHPRIORITY_ALWAYSOVERRIDE() {
-        assertThat(Config.hasConflict(HIGH_PRIORITY_REQUIRED, ALWAYS_OVERRIDE)).isFalse();
     }
 
     @Test

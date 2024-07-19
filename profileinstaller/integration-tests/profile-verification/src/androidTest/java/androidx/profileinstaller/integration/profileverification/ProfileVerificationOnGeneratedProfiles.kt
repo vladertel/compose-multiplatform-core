@@ -17,44 +17,58 @@
 package androidx.profileinstaller.integration.profileverification
 
 import androidx.profileinstaller.ProfileVerifier.CompilationStatus.RESULT_CODE_COMPILED_WITH_PROFILE
-import androidx.profileinstaller.ProfileVerifier.CompilationStatus.RESULT_CODE_ERROR_NO_PROFILE_EMBEDDED
 import androidx.profileinstaller.ProfileVerifier.CompilationStatus.RESULT_CODE_PROFILE_ENQUEUED_FOR_COMPILATION
+import androidx.profileinstaller.ProfileVersion
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
 @LargeTest
-@SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.P)
-class ProfileVerificationOnGeneratedProfiles {
+@SdkSuppress(
+    minSdkVersion = android.os.Build.VERSION_CODES.P,
+    maxSdkVersion = ProfileVersion.MAX_SUPPORTED_SDK
+)
+@RunWith(Parameterized::class)
+class ProfileVerificationOnGeneratedProfiles(
+    private val apk: String,
+    private val packageName: String
+) {
 
     companion object {
-        const val APK_DEBUG_BASELINE_PROFILE_CONSUMER = "baselineprofile-consumer-debug.apk"
-        const val APK_RELEASE_BASELINE_PROFILE_CONSUMER = "baselineprofile-consumer-release.apk"
-        const val PACKAGE_NAME = "androidx.benchmark.integration.baselineprofile.consumer"
-        const val ACTIVITY_NAME = ".EmptyActivity"
+        private const val ACTIVITY_NAME = ".EmptyActivity"
+
+        @Parameterized.Parameters(name = "apk={0},packageName={1}")
+        @JvmStatic
+        fun parameters(): List<Array<Any>> = listOf(
+            arrayOf(
+                "baselineprofile-consumer-release.apk",
+                "androidx.benchmark.integration.baselineprofile.consumer"
+            )
+        )
     }
 
     @Before
     fun setUp() {
         // Note that this test fails on emulator api 30 (b/251540646)
         Assume.assumeTrue(!isApi30)
-        withPackageName(PACKAGE_NAME) { uninstall() }
+        withPackageName(packageName) { uninstall() }
     }
 
     @After
     fun tearDown() {
-        withPackageName(PACKAGE_NAME) { uninstall() }
+        withPackageName(packageName) { uninstall() }
     }
 
     @Test
-    fun releaseProfileInstallerInstallation() =
-        withPackageName(PACKAGE_NAME) {
+    fun profileInstallerInstallation() = withPackageName(packageName) {
 
             // Installs the apk
-            install(apkName = APK_RELEASE_BASELINE_PROFILE_CONSUMER, withProfile = false)
+            install(apkName = apk, withProfile = false)
 
             // Check that a profile exists and it's enqueued for compilation
             start(ACTIVITY_NAME)
@@ -62,7 +76,6 @@ class ProfileVerificationOnGeneratedProfiles {
                 profileInstalled(RESULT_CODE_PROFILE_ENQUEUED_FOR_COMPILATION)
                 hasReferenceProfile(false)
                 hasCurrentProfile(true)
-                hasEmbeddedProfile(true)
             }
             stop()
 
@@ -75,39 +88,19 @@ class ProfileVerificationOnGeneratedProfiles {
                 profileInstalled(RESULT_CODE_COMPILED_WITH_PROFILE)
                 hasReferenceProfile(true)
                 hasCurrentProfile(false)
-                hasEmbeddedProfile(true)
             }
         }
 
     @Test
-    fun releasePackageManagerInstallation() =
-        withPackageName(PACKAGE_NAME) {
+    fun packageManagerInstallation() = withPackageName(packageName) {
 
-            // Install with reference profile.
-            install(apkName = APK_RELEASE_BASELINE_PROFILE_CONSUMER, withProfile = true)
-            start(ACTIVITY_NAME)
-            evaluateUI {
-                profileInstalled(RESULT_CODE_COMPILED_WITH_PROFILE)
-                hasReferenceProfile(true)
-                hasCurrentProfile(true)
-                hasEmbeddedProfile(true)
-            }
+        // Install with reference profile.
+        install(apkName = apk, withProfile = true)
+        start(ACTIVITY_NAME)
+        evaluateUI {
+            hasReferenceProfile(true)
+            hasCurrentProfile(true)
+            profileInstalled(RESULT_CODE_COMPILED_WITH_PROFILE)
         }
-
-    @Test
-    fun debugShouldNotHaveEmbeddedProfile() =
-        withPackageName(PACKAGE_NAME) {
-
-            // Installs the apk
-            install(apkName = APK_DEBUG_BASELINE_PROFILE_CONSUMER, withProfile = false)
-
-            // Check that a profile exists and it's enqueued for compilation
-            start(ACTIVITY_NAME)
-            evaluateUI {
-                profileInstalled(RESULT_CODE_ERROR_NO_PROFILE_EMBEDDED)
-                hasReferenceProfile(false)
-                hasCurrentProfile(false)
-                hasEmbeddedProfile(false)
-            }
-        }
+    }
 }

@@ -24,15 +24,21 @@ import androidx.compose.ui.util.fastForEach
 
 actual typealias NativeCanvas = android.graphics.Canvas
 
-/** Create a new Canvas instance that targets its drawing commands to the provided [ImageBitmap] */
+/**
+ * Create a new Canvas instance that targets its drawing commands
+ * to the provided [ImageBitmap]
+ */
 internal actual fun ActualCanvas(image: ImageBitmap): Canvas =
-    AndroidCanvas().apply { internalCanvas = android.graphics.Canvas(image.asAndroidBitmap()) }
+    AndroidCanvas().apply {
+        internalCanvas = android.graphics.Canvas(image.asAndroidBitmap())
+    }
 
-fun Canvas(c: android.graphics.Canvas): Canvas = AndroidCanvas().apply { internalCanvas = c }
+fun Canvas(c: android.graphics.Canvas): Canvas =
+    AndroidCanvas().apply { internalCanvas = c }
 
 /**
- * Holder class that is used to issue scoped calls to a [Canvas] from the framework equivalent
- * canvas without having to allocate an object on each draw call
+ * Holder class that is used to issue scoped calls to a [Canvas] from the framework
+ * equivalent canvas without having to allocate an object on each draw call
  */
 class CanvasHolder {
     @PublishedApi internal val androidCanvas = AndroidCanvas()
@@ -45,7 +51,9 @@ class CanvasHolder {
     }
 }
 
-/** Return an instance of the native primitive that implements the Canvas interface */
+/**
+ * Return an instance of the native primitive that implements the Canvas interface
+ */
 actual val Canvas.nativeCanvas: NativeCanvas
     get() = (this as AndroidCanvas).internalCanvas
 
@@ -53,8 +61,7 @@ actual val Canvas.nativeCanvas: NativeCanvas
 // scoped usage and prevent unnecessary byte code null checks from being generated
 private val EmptyCanvas = android.graphics.Canvas()
 
-@PublishedApi
-internal class AndroidCanvas() : Canvas {
+@PublishedApi internal class AndroidCanvas() : Canvas {
 
     // Keep the internal canvas as a var prevent having to allocate an AndroidCanvas
     // instance on each draw call
@@ -64,17 +71,23 @@ internal class AndroidCanvas() : Canvas {
 
     private var dstRect: android.graphics.Rect? = null
 
-    /** @see Canvas.save */
+    /**
+     * @see Canvas.save
+     */
     override fun save() {
         internalCanvas.save()
     }
 
-    /** @see Canvas.restore */
+    /**
+     * @see Canvas.restore
+     */
     override fun restore() {
         internalCanvas.restore()
     }
 
-    /** @see Canvas.saveLayer */
+    /**
+     * @see Canvas.saveLayer
+     */
     @SuppressWarnings("deprecation")
     override fun saveLayer(bounds: Rect, paint: Paint) {
         @Suppress("DEPRECATION")
@@ -88,27 +101,37 @@ internal class AndroidCanvas() : Canvas {
         )
     }
 
-    /** @see Canvas.translate */
+    /**
+     * @see Canvas.translate
+     */
     override fun translate(dx: Float, dy: Float) {
         internalCanvas.translate(dx, dy)
     }
 
-    /** @see Canvas.scale */
+    /**
+     * @see Canvas.scale
+     */
     override fun scale(sx: Float, sy: Float) {
         internalCanvas.scale(sx, sy)
     }
 
-    /** @see Canvas.rotate */
+    /**
+     * @see Canvas.rotate
+     */
     override fun rotate(degrees: Float) {
         internalCanvas.rotate(degrees)
     }
 
-    /** @see Canvas.skew */
+    /**
+     * @see Canvas.skew
+     */
     override fun skew(sx: Float, sy: Float) {
         internalCanvas.skew(sx, sy)
     }
 
-    /** @throws IllegalStateException if an arbitrary transform is provided */
+    /**
+     * @throws IllegalStateException if an arbitrary transform is provided
+     */
     override fun concat(matrix: Matrix) {
         if (!matrix.isIdentity()) {
             val frameworkMatrix = android.graphics.Matrix()
@@ -123,9 +146,12 @@ internal class AndroidCanvas() : Canvas {
         internalCanvas.clipRect(left, top, right, bottom, clipOp.toRegionOp())
     }
 
-    /** @see Canvas.clipPath */
+    /**
+     * @see Canvas.clipPath
+     */
     override fun clipPath(path: Path, clipOp: ClipOp) {
-        @Suppress("DEPRECATION") internalCanvas.clipPath(path.asAndroidPath(), clipOp.toRegionOp())
+        @Suppress("DEPRECATION")
+        internalCanvas.clipPath(path.asAndroidPath(), clipOp.toRegionOp())
     }
 
     fun ClipOp.toRegionOp(): android.graphics.Region.Op =
@@ -134,9 +160,17 @@ internal class AndroidCanvas() : Canvas {
             else -> android.graphics.Region.Op.INTERSECT
         }
 
-    /** @see Canvas.drawLine */
+    /**
+     * @see Canvas.drawLine
+     */
     override fun drawLine(p1: Offset, p2: Offset, paint: Paint) {
-        internalCanvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint.asFrameworkPaint())
+        internalCanvas.drawLine(
+            p1.x,
+            p1.y,
+            p2.x,
+            p2.y,
+            paint.asFrameworkPaint()
+        )
     }
 
     override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
@@ -167,9 +201,16 @@ internal class AndroidCanvas() : Canvas {
         internalCanvas.drawOval(left, top, right, bottom, paint.asFrameworkPaint())
     }
 
-    /** @see Canvas.drawCircle */
+    /**
+     * @see Canvas.drawCircle
+     */
     override fun drawCircle(center: Offset, radius: Float, paint: Paint) {
-        internalCanvas.drawCircle(center.x, center.y, radius, paint.asFrameworkPaint())
+        internalCanvas.drawCircle(
+            center.x,
+            center.y,
+            radius,
+            paint.asFrameworkPaint()
+        )
     }
 
     override fun drawArc(
@@ -194,12 +235,16 @@ internal class AndroidCanvas() : Canvas {
         )
     }
 
-    /** @see Canvas.drawPath */
+    /**
+     * @see Canvas.drawPath
+     */
     override fun drawPath(path: Path, paint: Paint) {
         internalCanvas.drawPath(path.asAndroidPath(), paint.asFrameworkPaint())
     }
 
-    /** @see Canvas.drawImage */
+    /**
+     * @see Canvas.drawImage
+     */
     override fun drawImage(image: ImageBitmap, topLeftOffset: Offset, paint: Paint) {
         internalCanvas.drawBitmap(
             image.asAndroidBitmap(),
@@ -209,7 +254,9 @@ internal class AndroidCanvas() : Canvas {
         )
     }
 
-    /** @See Canvas.drawImageRect */
+    /**
+     * @See Canvas.drawImageRect
+     */
     override fun drawImageRect(
         image: ImageBitmap,
         srcOffset: IntOffset,
@@ -243,7 +290,9 @@ internal class AndroidCanvas() : Canvas {
         )
     }
 
-    /** @see Canvas.drawPoints */
+    /**
+     * @see Canvas.drawPoints
+     */
     override fun drawPoints(pointMode: PointMode, points: List<Offset>, paint: Paint) {
         when (pointMode) {
             // Draw a line between each pair of points, each point has at most one line
@@ -268,18 +317,23 @@ internal class AndroidCanvas() : Canvas {
 
     private fun drawPoints(points: List<Offset>, paint: Paint) {
         points.fastForEach { point ->
-            internalCanvas.drawPoint(point.x, point.y, paint.asFrameworkPaint())
+            internalCanvas.drawPoint(
+                point.x,
+                point.y,
+                paint.asFrameworkPaint()
+            )
         }
     }
 
     /**
      * Draw lines connecting points based on the corresponding step.
      *
-     * ex. 3 points with a step of 1 would draw 2 lines between the first and second points and
-     * another between the second and third
+     * ex. 3 points with a step of 1 would draw 2 lines between the first and second points
+     * and another between the second and third
      *
      * ex. 4 points with a step of 2 would draw 2 lines between the first and second and another
-     * between the third and fourth. If there is an odd number of points, the last point is ignored
+     * between the third and fourth. If there is an odd number of points, the last point is
+     * ignored
      *
      * @see drawRawLines
      */
@@ -290,13 +344,21 @@ internal class AndroidCanvas() : Canvas {
             while (i < points.size - 1) {
                 val p1 = points[i]
                 val p2 = points[i + 1]
-                internalCanvas.drawLine(p1.x, p1.y, p2.x, p2.y, frameworkPaint)
+                internalCanvas.drawLine(
+                    p1.x,
+                    p1.y,
+                    p2.x,
+                    p2.y,
+                    frameworkPaint
+                )
                 i += stepBy
             }
         }
     }
 
-    /** @throws IllegalArgumentException if a non even number of points is provided */
+    /**
+     * @throws IllegalArgumentException if a non even number of points is provided
+     */
     override fun drawRawPoints(pointMode: PointMode, points: FloatArray, paint: Paint) {
         if (points.size % 2 != 0) {
             throw IllegalArgumentException("points must have an even number of values")
@@ -322,14 +384,15 @@ internal class AndroidCanvas() : Canvas {
     }
 
     /**
-     * Draw lines connecting points based on the corresponding step. The points are interpreted as
-     * x, y coordinate pairs in alternating index positions
+     * Draw lines connecting points based on the corresponding step. The points are interpreted
+     * as x, y coordinate pairs in alternating index positions
      *
-     * ex. 3 points with a step of 1 would draw 2 lines between the first and second points and
-     * another between the second and third
+     * ex. 3 points with a step of 1 would draw 2 lines between the first and second points
+     * and another between the second and third
      *
      * ex. 4 points with a step of 2 would draw 2 lines between the first and second and another
-     * between the third and fourth. If there is an odd number of points, the last point is ignored
+     * between the third and fourth. If there is an odd number of points, the last point is
+     * ignored
      *
      * @see drawLines
      */

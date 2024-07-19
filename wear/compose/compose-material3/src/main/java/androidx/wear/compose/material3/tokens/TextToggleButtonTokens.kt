@@ -24,14 +24,14 @@ internal object TextToggleButtonTokens {
     val CheckedContentColor = ColorSchemeKeyTokens.OnPrimary
     val ContainerShape = ShapeKeyTokens.CornerFull
     val ContentFont = TypographyKeyTokens.LabelMedium
-    val DisabledCheckedContainerColor = ColorSchemeKeyTokens.OnSurface
-    val DisabledCheckedContainerOpacity = 0.12f
-    val DisabledCheckedContentColor = ColorSchemeKeyTokens.OnSurface
+    val DisabledCheckedContainerColor = ColorSchemeKeyTokens.Primary
+    val DisabledCheckedContainerOpacity = 0.38f
+    val DisabledCheckedContentColor = ColorSchemeKeyTokens.OnPrimary
     val DisabledCheckedContentOpacity = 0.38f
-    val DisabledUncheckedContainerColor = ColorSchemeKeyTokens.OnSurface
-    val DisabledUncheckedContainerOpacity = 0.12f
-    val DisabledUncheckedContentColor = ColorSchemeKeyTokens.OnSurface
+    val DisabledUncheckedContainerColor = ColorSchemeKeyTokens.Surface
+    val DisabledUncheckedContainerOpacity = 0.38f
+    val DisabledUncheckedContentColor = ColorSchemeKeyTokens.OnSurfaceVariant
     val DisabledUncheckedContentOpacity = 0.38f
-    val UncheckedContainerColor = ColorSchemeKeyTokens.SurfaceContainer
+    val UncheckedContainerColor = ColorSchemeKeyTokens.Surface
     val UncheckedContentColor = ColorSchemeKeyTokens.OnSurfaceVariant
 }

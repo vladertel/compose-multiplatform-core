@@ -35,8 +35,8 @@ class IncrementalAnnotationProcessingTest {
         private const val MAIN_DIR = "app/src/main"
         private const val BUILD_DIR = "app/build"
         private const val SOURCE_DIR = "$MAIN_DIR/java/androidx/lifecycle/incap"
-        private const val GENERATED_SOURCE_DIR =
-            BUILD_DIR + "/generated/ap_generated_sources/debug/out/androidx/lifecycle/incap"
+        private const val GENERATED_SOURCE_DIR = BUILD_DIR +
+            "/generated/ap_generated_sources/debug/out/androidx/lifecycle/incap"
         private const val COMPILE_TASK_NAME = "compileDebugJavaWithJavac"
         private const val CLASSES_DIR =
             "$BUILD_DIR/intermediates/javac/debug/$COMPILE_TASK_NAME/classes"
@@ -44,7 +44,8 @@ class IncrementalAnnotationProcessingTest {
         private const val APP_CLASS_DIR = "$CLASSES_DIR/androidx/lifecycle/incap"
     }
 
-    @get:Rule val projectSetup = ProjectSetupRule()
+    @get:Rule
+    val projectSetup = ProjectSetupRule()
 
     private lateinit var projectRoot: File
     private lateinit var fooObserver: File
@@ -63,20 +64,38 @@ class IncrementalAnnotationProcessingTest {
         projectRoot = projectSetup.rootDir
         fooObserver = File(projectRoot, "$SOURCE_DIR/FooObserver.java")
         barObserver = File(projectRoot, "$SOURCE_DIR/BarObserver.java")
-        genFooAdapter =
-            File(projectRoot, GENERATED_SOURCE_DIR + "/FooObserver_LifecycleAdapter.java")
-        genBarAdapter =
-            File(projectRoot, GENERATED_SOURCE_DIR + "/BarObserver_LifecycleAdapter.java")
-        genFooProguard =
-            File(projectRoot, GENERATED_PROGUARD_DIR + "/androidx.lifecycle.incap.FooObserver.pro")
-        genBarProguard =
-            File(projectRoot, GENERATED_PROGUARD_DIR + "/androidx.lifecycle.incap.BarObserver.pro")
+        genFooAdapter = File(
+            projectRoot,
+            GENERATED_SOURCE_DIR +
+                "/FooObserver_LifecycleAdapter.java"
+        )
+        genBarAdapter = File(
+            projectRoot,
+            GENERATED_SOURCE_DIR +
+                "/BarObserver_LifecycleAdapter.java"
+        )
+        genFooProguard = File(
+            projectRoot,
+            GENERATED_PROGUARD_DIR +
+                "/androidx.lifecycle.incap.FooObserver.pro"
+        )
+        genBarProguard = File(
+            projectRoot,
+            GENERATED_PROGUARD_DIR +
+                "/androidx.lifecycle.incap.BarObserver.pro"
+        )
         fooObserverClass = File(projectRoot, "$APP_CLASS_DIR/FooObserver.class")
         barObserverClass = File(projectRoot, "$APP_CLASS_DIR/BarObserver.class")
-        genFooAdapterClass =
-            File(projectRoot, APP_CLASS_DIR + "/FooObserver_LifecycleAdapter.class")
-        genBarAdapterClass =
-            File(projectRoot, APP_CLASS_DIR + "/BarObserver_LifecycleAdapter.class")
+        genFooAdapterClass = File(
+            projectRoot,
+            APP_CLASS_DIR +
+                "/FooObserver_LifecycleAdapter.class"
+        )
+        genBarAdapterClass = File(
+            projectRoot,
+            APP_CLASS_DIR +
+                "/BarObserver_LifecycleAdapter.class"
+        )
         projectRoot.mkdirs()
         setupProjectBuildGradle()
         setupAppBuildGradle()
@@ -86,12 +105,15 @@ class IncrementalAnnotationProcessingTest {
     }
 
     fun gradleRunner(): GradleRunner {
-        return GradleRunner.create().withProjectDir(projectRoot)
+        return GradleRunner.create()
+            .withProjectDir(projectRoot)
     }
 
     @Test
     fun checkModifySource() {
-        gradleRunner().withArguments("clean", COMPILE_TASK_NAME).build()
+        gradleRunner()
+            .withArguments("clean", COMPILE_TASK_NAME)
+            .build()
 
         val fooAdapterFirstBuild = Files.getLastModifiedTime(genFooAdapter.toPath()).toMillis()
         val barAdapterFirstBuild = Files.getLastModifiedTime(genBarAdapter.toPath()).toMillis()
@@ -108,7 +130,9 @@ class IncrementalAnnotationProcessingTest {
 
         searchAndReplace(fooObserver.toPath(), "FooObserver_Log", "Modified_FooObserver_Log")
 
-        gradleRunner().withArguments(COMPILE_TASK_NAME).build()
+        gradleRunner()
+            .withArguments(COMPILE_TASK_NAME)
+            .build()
 
         val fooAdapterSecondBuild = Files.getLastModifiedTime(genFooAdapter.toPath()).toMillis()
         val barAdapterSecondBuild = Files.getLastModifiedTime(genBarAdapter.toPath()).toMillis()
@@ -139,7 +163,9 @@ class IncrementalAnnotationProcessingTest {
 
     @Test
     fun checkDeleteOneSource() {
-        gradleRunner().withArguments("clean", COMPILE_TASK_NAME).build()
+        gradleRunner()
+            .withArguments("clean", COMPILE_TASK_NAME)
+            .build()
         val barAdapterFirstBuild = Files.getLastModifiedTime(genBarAdapter.toPath()).toMillis()
         val barProguardFirstBuild = Files.getLastModifiedTime(genBarProguard.toPath()).toMillis()
         val barObserverClassFirstBuild =
@@ -152,7 +178,9 @@ class IncrementalAnnotationProcessingTest {
 
         fooObserver.delete()
 
-        gradleRunner().withArguments(COMPILE_TASK_NAME).build()
+        gradleRunner()
+            .withArguments(COMPILE_TASK_NAME)
+            .build()
 
         val barAdapterSecondBuild = Files.getLastModifiedTime(genBarAdapter.toPath()).toMillis()
         val barProguardSecondBuild = Files.getLastModifiedTime(genBarProguard.toPath()).toMillis()
@@ -175,7 +203,9 @@ class IncrementalAnnotationProcessingTest {
     private fun setupProjectBuildGradle() {
         val repositoriesBlock = buildString {
             appendLine("repositories {")
-            projectSetup.allRepositoryPaths.forEach { appendLine("""maven { url "$it" }""") }
+            projectSetup.allRepositoryPaths.forEach {
+                appendLine("""maven { url "$it" }""")
+            }
             appendLine("}")
         }
         addFileWithContent(
@@ -195,8 +225,7 @@ class IncrementalAnnotationProcessingTest {
             task clean(type: Delete) {
                 delete rootProject.buildDir
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         )
     }
 
@@ -228,8 +257,7 @@ class IncrementalAnnotationProcessingTest {
                 // Use the latest version to test lifecycle-compiler artifact built from tip of tree
                 annotationProcessor "androidx.lifecycle:lifecycle-compiler:+"
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         )
     }
 
@@ -238,8 +266,7 @@ class IncrementalAnnotationProcessingTest {
             "settings.gradle",
             """
             include ':app'
-            """
-                .trimIndent()
+            """.trimIndent()
         )
     }
 
@@ -248,8 +275,7 @@ class IncrementalAnnotationProcessingTest {
             "$MAIN_DIR/AndroidManifest.xml",
             """
             <manifest/>
-            """
-                .trimIndent()
+            """.trimIndent()
         )
     }
 
@@ -273,8 +299,7 @@ class IncrementalAnnotationProcessingTest {
                     Log.i(mLog, "onResume");
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         )
 
         addFileWithContent(
@@ -296,8 +321,7 @@ class IncrementalAnnotationProcessingTest {
                     Log.i(mLog, "onResume");
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         )
     }
 

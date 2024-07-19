@@ -61,7 +61,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NestedScrollInteropConnectionTest {
 
-    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<ComponentActivity>()
     private val deltaCollectorNestedScrollConnection = InspectableNestedScrollConnection()
 
     private val nestedScrollParentView by lazy {
@@ -86,7 +87,9 @@ class NestedScrollInteropConnectionTest {
         createViewComposeActivity { TestListWithNestedScroll(items) }
 
         // act: scroll compose side
-        rule.onNodeWithTag(MainListTestTag).performTouchInput { swipeUp() }
+        rule.onNodeWithTag(MainListTestTag).performTouchInput {
+            swipeUp()
+        }
 
         // assert: compose list is scrolled
         rule.onNodeWithTag(topItemTag).assertDoesNotExist()
@@ -116,12 +119,11 @@ class NestedScrollInteropConnectionTest {
         // assert: check delta on view side
         rule.runOnIdle {
             assertThat(
-                    abs(
-                        nestedScrollParentView.offeredToParentOffset.y -
-                            deltaCollectorNestedScrollConnection.offeredFromChild.y
-                    )
+                abs(
+                    nestedScrollParentView.offeredToParentOffset.y -
+                        deltaCollectorNestedScrollConnection.offeredFromChild.y
                 )
-                .isAtMost(ScrollRoundingErrorTolerance)
+            ).isAtMost(ScrollRoundingErrorTolerance)
 
             assertThat(deltaCollectorNestedScrollConnection.consumedDownChain)
                 .isEqualTo(Offset.Zero)
@@ -133,10 +135,16 @@ class NestedScrollInteropConnectionTest {
     fun swipeNoOpComposeScrollable_insideNestedScrollingParentView_shouldNotScrollView() {
         // arrange
 
-        createViewComposeActivity { TestListWithNestedScroll(items, Modifier) }
+        createViewComposeActivity {
+            TestListWithNestedScroll(
+                items, Modifier
+            )
+        }
 
         // act: scroll compose side
-        rule.onNodeWithTag(MainListTestTag).performTouchInput { swipeUp() }
+        rule.onNodeWithTag(MainListTestTag).performTouchInput {
+            swipeUp()
+        }
 
         // assert: compose list is scrolled
         rule.onNodeWithTag(topItemTag).assertDoesNotExist()
@@ -148,7 +156,9 @@ class NestedScrollInteropConnectionTest {
         createViewComposeActivity(enableInterop = false) { TestListWithNestedScroll(items) }
 
         // act: scroll compose side
-        rule.onNodeWithTag(MainListTestTag).performTouchInput { swipeUp() }
+        rule.onNodeWithTag(MainListTestTag).performTouchInput {
+            swipeUp()
+        }
 
         // assert: compose list is scrolled
         rule.onNodeWithTag(topItemTag).assertDoesNotExist()
@@ -230,8 +240,8 @@ class NestedScrollInteropConnectionTest {
         rule.runOnIdle {
             val appBarScrollDeltaPixels = appBarScrollDelta.value * rule.density.density * -1
             val offeredToParent = nestedScrollParentView.offeredToParentOffset.y
-            val availableToParent =
-                deltaCollectorNestedScrollConnection.offeredFromChild.y + appBarScrollDeltaPixels
+            val availableToParent = deltaCollectorNestedScrollConnection.offeredFromChild.y +
+                appBarScrollDeltaPixels
             assertThat(offeredToParent - availableToParent).isAtMost(ScrollRoundingErrorTolerance)
         }
     }
@@ -288,8 +298,9 @@ class NestedScrollInteropConnectionTest {
         val velocityAvailableInCompose =
             abs(deltaCollectorNestedScrollConnection.velocityOfferedFromChild.y)
         rule.runOnIdle {
-            assertThat(velocityOfferedInView - velocityAvailableInCompose)
-                .isEqualTo(VelocityRoundingErrorTolerance)
+            assertThat(velocityOfferedInView - velocityAvailableInCompose).isEqualTo(
+                VelocityRoundingErrorTolerance
+            )
         }
     }
 
@@ -317,8 +328,9 @@ class NestedScrollInteropConnectionTest {
         val velocityConsumedByChildren =
             abs(deltaCollectorNestedScrollConnection.velocityConsumedDownChain.y)
         rule.runOnIdle {
-            assertThat(abs(velocityUnconsumedOffset - velocityConsumedByChildren))
-                .isAtMost(VelocityRoundingErrorTolerance)
+            assertThat(abs(velocityUnconsumedOffset - velocityConsumedByChildren)).isAtMost(
+                VelocityRoundingErrorTolerance
+            )
         }
     }
 
@@ -327,11 +339,14 @@ class NestedScrollInteropConnectionTest {
         enableInterop: Boolean = true,
         content: @Composable () -> Unit
     ) {
-        rule.activityRule.scenario.createActivityWithComposeContent(
-            layout = R.layout.test_nested_scroll_coordinator_layout,
-            enableInterop = enableInterop,
-            content = content
-        )
+        rule
+            .activityRule
+            .scenario
+            .createActivityWithComposeContent(
+                layout = R.layout.test_nested_scroll_coordinator_layout,
+                enableInterop = enableInterop,
+                content = content
+            )
     }
 }
 
@@ -342,15 +357,20 @@ private const val MainListTestTag = "MainListTestTag"
 @Composable
 private fun TestListWithNestedScroll(items: List<String>, modifier: Modifier = Modifier) {
     Box(modifier) {
-        LazyColumn(Modifier.testTag(MainListTestTag)) { items(items) { TestItem(it) } }
+        LazyColumn(Modifier.testTag(MainListTestTag)) {
+            items(items) { TestItem(it) }
+        }
     }
 }
 
 @Composable
 private fun TestItem(item: String) {
     Box(
-        modifier = Modifier.padding(16.dp).height(56.dp).fillMaxWidth().testTag(item),
-        contentAlignment = Alignment.Center
+        modifier = Modifier
+            .padding(16.dp)
+            .height(56.dp)
+            .fillMaxWidth()
+            .testTag(item), contentAlignment = Alignment.Center
     ) {
         BasicText(item)
     }

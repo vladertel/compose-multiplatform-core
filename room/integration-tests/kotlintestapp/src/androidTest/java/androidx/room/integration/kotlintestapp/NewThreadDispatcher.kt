@@ -23,10 +23,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Runnable
 
-/** A CoroutineDispatcher that dispatches every block into a new thread */
+/**
+ * A CoroutineDispatcher that dispatches every block into a new thread
+ */
 class NewThreadDispatcher : CoroutineDispatcher() {
     private val idCounter = AtomicInteger(0)
-
     @InternalCoroutinesApi
     override fun dispatchYield(context: CoroutineContext, block: Runnable) {
         super.dispatchYield(context, block)
@@ -35,6 +36,10 @@ class NewThreadDispatcher : CoroutineDispatcher() {
     override fun isDispatchNeeded(context: CoroutineContext) = true
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
-        thread(name = "NewThreadDispatcher[${idCounter.incrementAndGet()}]") { block.run() }
+        thread(
+            name = "NewThreadDispatcher[${idCounter.incrementAndGet()}]"
+        ) {
+            block.run()
+        }
     }
 }

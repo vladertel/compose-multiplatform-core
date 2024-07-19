@@ -49,22 +49,19 @@ class FlowAsLiveDataIntegrationTest {
     fun startStopImmediately() {
         runBlocking {
             val stopChannelFlow = CompletableDeferred<Unit>()
-            val (mediator, liveData) =
-                withContext(Dispatchers.Main) {
-                    val mediator = MediatorLiveData<Int>()
-                    val liveData =
-                        channelFlow {
-                                send(1)
-                                // prevent block from ending
-                                stopChannelFlow.await()
-                            }
-                            .asLiveData()
-                    mediator.addSource(liveData) {
-                        mediator.removeSource(liveData)
-                        mediator.value = -it
-                    }
-                    mediator to liveData
+            val (mediator, liveData) = withContext(Dispatchers.Main) {
+                val mediator = MediatorLiveData<Int>()
+                val liveData = channelFlow {
+                    send(1)
+                    // prevent block from ending
+                    stopChannelFlow.await()
+                }.asLiveData()
+                mediator.addSource(liveData) {
+                    mediator.removeSource(liveData)
+                    mediator.value = -it
                 }
+                mediator to liveData
+            }
             val read = mediator.asFlow().first()
             assertThat(read).isEqualTo(-1)
             assertThat(liveData.hasObservers()).isFalse()
@@ -78,7 +75,9 @@ class FlowAsLiveDataIntegrationTest {
     @MediumTest
     fun asLiveData_preserveStateFlowInitialValue() {
         val value = "init"
-        val result = MutableStateFlow(value).asLiveData().value
+        val result = MutableStateFlow(value)
+            .asLiveData()
+            .value
         assertThat(result).isNotNull()
         assertThat(result).isEqualTo(value)
     }

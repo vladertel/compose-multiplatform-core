@@ -24,8 +24,8 @@ internal expect fun timeNowMillis(): Long
 
 /**
  * It keeps last snapshots of [TextFieldValue]. The total number of kept snapshots is limited but
- * total number of characters in them and should not be more than [maxStoredCharacters] We add a new
- * [TextFieldValue] to the chain in one of three conditions:
+ * total number of characters in them and should not be more than [maxStoredCharacters]
+ * We add a new [TextFieldValue] to the chain in one of three conditions:
  * 1. Keyboard command was executed (something was pasted, word was deleted etc.)
  * 2. Before undo
  * 3. If the last "snapshot" is older than [SNAPSHOTS_INTERVAL_MILLIS]
@@ -34,8 +34,13 @@ internal expect fun timeNowMillis(): Long
  * but selection is changed we are not adding a new entry to the chain but update the selection for
  * the last one.
  */
-internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
-    private class Entry(var next: Entry? = null, var value: TextFieldValue)
+internal class UndoManager(
+    val maxStoredCharacters: Int = 100_000
+) {
+    private class Entry(
+        var next: Entry? = null,
+        var value: TextFieldValue
+    )
 
     private var undoStack: Entry? = null
     private var redoStack: Entry? = null
@@ -44,9 +49,9 @@ internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
     private var forceNextSnapshot = false
 
     /**
-     * It gives an undo manager a chance to save a snapshot if needed because either it's time for
-     * periodic snapshotting or snapshot was previously forced via [forceNextSnapshot]. It can be
-     * called during every TextField recomposition.
+     * It gives an undo manager a chance to save a snapshot if needed because either it's time
+     * for periodic snapshotting or snapshot was previously forced via [forceNextSnapshot]. It
+     * can be called during every TextField recomposition.
      */
     fun snapshotIfNeeded(value: TextFieldValue, now: Long = timeNowMillis()) {
         if (forceNextSnapshot || now > (lastSnapshot ?: 0) + SNAPSHOTS_INTERVAL_MILLIS) {
@@ -55,12 +60,16 @@ internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
         }
     }
 
-    /** It forces making a snapshot during the next [snapshotIfNeeded] call */
+    /**
+     * It forces making a snapshot during the next [snapshotIfNeeded] call
+     */
     fun forceNextSnapshot() {
         forceNextSnapshot = true
     }
 
-    /** Unconditionally makes a new snapshot (if a value differs from the last one) */
+    /**
+     * Unconditionally makes a new snapshot (if a value differs from the last one)
+     */
     fun makeSnapshot(value: TextFieldValue) {
         forceNextSnapshot = false
         if (value == undoStack?.value) {
@@ -71,7 +80,10 @@ internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
             undoStack?.value = value
             return
         }
-        undoStack = Entry(value = value, next = undoStack)
+        undoStack = Entry(
+            value = value,
+            next = undoStack
+        )
         redoStack = null
         storedCharacters += value.text.length
 
@@ -94,7 +106,10 @@ internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
             undoEntry.next?.let { nextEntry ->
                 undoStack = nextEntry
                 storedCharacters -= undoEntry.value.text.length
-                redoStack = Entry(value = undoEntry.value, next = redoStack)
+                redoStack = Entry(
+                    value = undoEntry.value,
+                    next = redoStack
+                )
                 nextEntry.value
             }
         }
@@ -103,7 +118,10 @@ internal class UndoManager(val maxStoredCharacters: Int = 100_000) {
     fun redo(): TextFieldValue? {
         return redoStack?.let { redoEntry ->
             redoStack = redoEntry.next
-            undoStack = Entry(value = redoEntry.value, next = undoStack)
+            undoStack = Entry(
+                value = redoEntry.value,
+                next = undoStack
+            )
             storedCharacters += redoEntry.value.text.length
             redoEntry.value
         }

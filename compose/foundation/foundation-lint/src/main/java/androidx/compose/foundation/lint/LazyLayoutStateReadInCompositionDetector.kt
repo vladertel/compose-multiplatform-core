@@ -76,10 +76,9 @@ class LazyLayoutStateReadInCompositionDetector : Detector(), SourceCodeScanner {
                     return
                 }
 
-                val receiverClsFqName =
-                    (node.tryResolveUDeclaration() as? UMethod)
-                        ?.getContainingUClass()
-                        ?.qualifiedName
+                val receiverClsFqName = (node.tryResolveUDeclaration() as? UMethod)
+                    ?.getContainingUClass()
+                    ?.qualifiedName
 
                 if (receiverClsFqName !in LazyStateFqNames) {
                     return
@@ -121,13 +120,12 @@ class LazyLayoutStateReadInCompositionDetector : Detector(), SourceCodeScanner {
     }
 
     private fun JavaContext.snapshotFlowLintFix(node: UElement): LintFix {
-        val receiverText =
-            when (node) {
-                is UQualifiedReferenceExpression -> {
-                    node.receiver.sourcePsi?.text
-                }
-                else -> "this"
+        val receiverText = when (node) {
+            is UQualifiedReferenceExpression -> {
+                node.receiver.sourcePsi?.text
             }
+            else -> "this"
+        }
         val expressionText = node.sourcePsi?.text
         return LintFix.create()
             .replace()
@@ -138,8 +136,7 @@ class LazyLayoutStateReadInCompositionDetector : Detector(), SourceCodeScanner {
                 """androidx.compose.runtime.LaunchedEffect($receiverText) {
                     androidx.compose.runtime.snapshotFlow { $expressionText }
                         .collect { TODO("Collect the state") }
-                }"""
-                    .trimIndent()
+                }""".trimIndent()
             )
             .shortenNames()
             .reformat(true)
@@ -147,36 +144,39 @@ class LazyLayoutStateReadInCompositionDetector : Detector(), SourceCodeScanner {
     }
 
     companion object {
-        val LazyStateFqNames =
-            listOf(
-                FoundationNames.Lazy.LazyListState.javaFqn,
-                FoundationNames.Lazy.Grid.LazyGridState.javaFqn,
+        val LazyStateFqNames = listOf(
+            FoundationNames.Lazy.LazyListState.javaFqn,
+            FoundationNames.Lazy.Grid.LazyGridState.javaFqn,
+        )
+        val ObservableGetterNames = listOf(
+            "getFirstVisibleItemIndex",
+            "getFirstVisibleItemScrollOffset",
+            "getLayoutInfo"
+        )
+        val ObservablePropertyNames = listOf(
+            "firstVisibleItemIndex",
+            "firstVisibleItemScrollOffset",
+            "layoutInfo"
+        )
+        val FrequentlyChangedStateReadInComposition = Issue.create(
+            id = "FrequentlyChangedStateReadInComposition",
+            briefDescription =
+                "Frequently changing state should not " +
+                    " be directly read in composable function",
+            explanation =
+                "This property is observable and is updated after every scroll or remeasure. " +
+                "If you use it in the composable function directly, " +
+                "it will be recomposed on every change, causing potential performance issues " +
+                "including infinity recomposition loops. " +
+                "Prefer wrapping it with derivedStateOf to use calculation based on this " +
+                "property in composition or collect changes inside LaunchedEffect instead.",
+            category = Category.PERFORMANCE,
+            priority = 3,
+            severity = Severity.WARNING,
+            implementation = Implementation(
+                LazyLayoutStateReadInCompositionDetector::class.java,
+                EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES)
             )
-        val ObservableGetterNames =
-            listOf("getFirstVisibleItemIndex", "getFirstVisibleItemScrollOffset", "getLayoutInfo")
-        val ObservablePropertyNames =
-            listOf("firstVisibleItemIndex", "firstVisibleItemScrollOffset", "layoutInfo")
-        val FrequentlyChangedStateReadInComposition =
-            Issue.create(
-                id = "FrequentlyChangedStateReadInComposition",
-                briefDescription =
-                    "Frequently changing state should not " +
-                        " be directly read in composable function",
-                explanation =
-                    "This property is observable and is updated after every scroll or remeasure. " +
-                        "If you use it in the composable function directly, " +
-                        "it will be recomposed on every change, causing potential performance issues " +
-                        "including infinity recomposition loops. " +
-                        "Prefer wrapping it with derivedStateOf to use calculation based on this " +
-                        "property in composition or collect changes inside LaunchedEffect instead.",
-                category = Category.PERFORMANCE,
-                priority = 3,
-                severity = Severity.WARNING,
-                implementation =
-                    Implementation(
-                        LazyLayoutStateReadInCompositionDetector::class.java,
-                        EnumSet.of(Scope.JAVA_FILE, Scope.TEST_SOURCES)
-                    )
-            )
+        )
     }
 }

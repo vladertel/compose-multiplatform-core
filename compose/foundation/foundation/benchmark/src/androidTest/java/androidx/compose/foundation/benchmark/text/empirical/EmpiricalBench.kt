@@ -33,7 +33,8 @@ import org.junit.Test
 
 abstract class EmpiricalBench<S> where S : ToggleableTestCase, S : LayeredComposeTestCase {
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     abstract val caseFactory: () -> S
 

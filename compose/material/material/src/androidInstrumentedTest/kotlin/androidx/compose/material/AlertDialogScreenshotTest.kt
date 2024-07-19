@@ -42,9 +42,11 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalComposeUiApi::class)
 class AlertDialogScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     @Test
     fun sideBySideButtons() {
@@ -53,14 +55,21 @@ class AlertDialogScreenshotTest {
                 onDismissRequest = {},
                 title = { Text("Title") },
                 text = { Text("Some content") },
-                confirmButton = { TextButton(onClick = {}) { Text("Confirm") } },
-                dismissButton = { TextButton(onClick = {}) { Text("Dismiss") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Confirm")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {}) {
+                        Text("Dismiss")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_sideBySideButtons")
     }
@@ -72,14 +81,21 @@ class AlertDialogScreenshotTest {
                 onDismissRequest = {},
                 title = { Text("Title") },
                 text = { Text("Some content") },
-                confirmButton = { TextButton(onClick = {}) { Text("Very long confirm button") } },
-                dismissButton = { TextButton(onClick = {}) { Text("Very long dismiss button") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Very long confirm button")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {}) {
+                        Text("Very long dismiss button")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_stackedButtons")
     }
@@ -90,13 +106,16 @@ class AlertDialogScreenshotTest {
             AlertDialog(
                 onDismissRequest = {},
                 title = { Text("Title") },
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_onlyTitle")
     }
@@ -107,13 +126,16 @@ class AlertDialogScreenshotTest {
             AlertDialog(
                 onDismissRequest = {},
                 text = { Text("Text") },
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_onlyText")
     }
@@ -123,13 +145,16 @@ class AlertDialogScreenshotTest {
         rule.setContent {
             AlertDialog(
                 onDismissRequest = {},
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_noTitleOrText")
     }
@@ -145,13 +170,16 @@ class AlertDialogScreenshotTest {
                     )
                 },
                 text = { Text("Text") },
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_titleWithoutTextBaseline")
     }
@@ -168,13 +196,16 @@ class AlertDialogScreenshotTest {
                             .background(MaterialTheme.colors.primary)
                     )
                 },
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_textWithoutTextBaseline")
     }
@@ -186,7 +217,8 @@ class AlertDialogScreenshotTest {
                 onDismissRequest = {},
                 title = {
                     Box(
-                        Modifier.requiredSize(75.dp, 25.dp).background(MaterialTheme.colors.primary)
+                        Modifier.requiredSize(75.dp, 25.dp)
+                            .background(MaterialTheme.colors.primary)
                     )
                 },
                 text = {
@@ -195,13 +227,16 @@ class AlertDialogScreenshotTest {
                             .background(MaterialTheme.colors.primary)
                     )
                 },
-                confirmButton = { TextButton(onClick = {}) { Text("Ok") } },
+                confirmButton = {
+                    TextButton(onClick = {}) {
+                        Text("Ok")
+                    }
+                },
                 properties = DialogProperties(usePlatformDefaultWidth = true)
             )
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialog_titleAndTextWithoutTextBaselines")
     }

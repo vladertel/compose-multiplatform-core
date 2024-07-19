@@ -31,36 +31,32 @@ class GradleConfigurationDetectorTest : LintDetectorTest() {
 
     @Test
     fun expectPass() {
-        lint()
-            .files(
-                gradle(
-                        "build.gradle",
-                        """
+        lint().files(
+            gradle(
+                "build.gradle",
+                """
                 dependencies {
                     debugImplementation("androidx.fragment:fragment-testing:1.2.0-beta02")
                 }
             """
-                    )
-                    .indented()
-            )
+            ).indented()
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun expectFail() {
-        lint()
-            .files(
-                gradle(
-                        "build.gradle",
-                        """
+        lint().files(
+            gradle(
+                "build.gradle",
+                """
                 dependencies {
                     androidTestImplementation("androidx.fragment:fragment-testing:1.2.0-beta02")
                 }
             """
-                    )
-                    .indented()
-            )
+            ).indented()
+        )
             .run()
             .expect(
                 """
@@ -68,19 +64,17 @@ class GradleConfigurationDetectorTest : LintDetectorTest() {
                     androidTestImplementation("androidx.fragment:fragment-testing:1.2.0-beta02")
                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 1 errors, 0 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
             .checkFix(
                 null,
                 gradle(
-                        """
+                    """
                 dependencies {
                     debugImplementation("androidx.fragment:fragment-testing:1.2.0-beta02")
                 }
             """
-                    )
-                    .indented()
+                ).indented()
             )
     }
 }

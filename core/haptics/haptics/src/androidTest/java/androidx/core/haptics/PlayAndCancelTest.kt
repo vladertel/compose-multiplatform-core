@@ -52,16 +52,14 @@ class PlayAndCancelTest {
         )
         hapticManager.cancel()
 
-        assertThat(fakeVibrator)
-            .requestedExactly(
-                cancelRequest(),
-                playRequest(vibration(timings = longArrayOf(10), amplitudes = intArrayOf(-1))),
-                cancelRequest(),
-                cancelRequest(),
-                playRequest(vibration(timings = longArrayOf(20), amplitudes = intArrayOf(-1))),
-                cancelRequest(),
-            )
-            .inOrder()
+        assertThat(fakeVibrator).requestedExactly(
+            cancelRequest(),
+            playRequest(vibration(timings = longArrayOf(10), amplitudes = intArrayOf(-1))),
+            cancelRequest(),
+            cancelRequest(),
+            playRequest(vibration(timings = longArrayOf(20), amplitudes = intArrayOf(-1))),
+            cancelRequest(),
+        ).inOrder()
     }
 
     @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.N_MR1)
@@ -80,15 +78,13 @@ class PlayAndCancelTest {
         )
         hapticManager.cancel()
 
-        assertThat(fakeVibrator)
-            .requestedExactly(
-                cancelRequest(),
-                playRequest(vibration(pattern = longArrayOf(0, 10))),
-                cancelRequest(),
-                cancelRequest(),
-                playRequest(vibration(pattern = longArrayOf(0, 20))),
-                cancelRequest(),
-            )
-            .inOrder()
+        assertThat(fakeVibrator).requestedExactly(
+            cancelRequest(),
+            playRequest(vibration(pattern = longArrayOf(0, 10))),
+            cancelRequest(),
+            cancelRequest(),
+            playRequest(vibration(pattern = longArrayOf(0, 20))),
+            cancelRequest(),
+        ).inOrder()
     }
 }

@@ -26,8 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 
 /**
- * Method used to verify the Composable -> Source Code mapping. If the line numbers in this file
- * change, the ComposeViewAdapter#lineNumberMapping test will break!!!
+ * Method used to verify the Composable -> Source Code mapping.
+ * If the line numbers in this file change, the ComposeViewAdapter#lineNumberMapping test will
+ * break!!!
  */
 @Preview
 @Composable

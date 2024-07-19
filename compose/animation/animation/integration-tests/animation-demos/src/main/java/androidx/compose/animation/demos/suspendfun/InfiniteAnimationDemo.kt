@@ -45,8 +45,10 @@ fun InfiniteAnimationDemo() {
         animate(
             initialValue = 1f,
             targetValue = 0f,
-            animationSpec =
-                infiniteRepeatable(animation = tween(1000), repeatMode = RepeatMode.Reverse)
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse
+            )
         ) { value, _ ->
             alpha = value
         }
@@ -55,9 +57,12 @@ fun InfiniteAnimationDemo() {
         Icon(
             Icons.Filled.Favorite,
             contentDescription = null,
-            modifier =
-                Modifier.align(Alignment.Center)
-                    .graphicsLayer(scaleX = 3.0f, scaleY = 3.0f, alpha = alpha),
+            modifier = Modifier.align(Alignment.Center)
+                .graphicsLayer(
+                    scaleX = 3.0f,
+                    scaleY = 3.0f,
+                    alpha = alpha
+                ),
             tint = Color.Red
         )
     }

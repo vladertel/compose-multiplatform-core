@@ -391,10 +391,8 @@ public class VersionedParcelProcessor extends AbstractProcessor {
     }
 
     private String getMethod(TypeMirror typeMirror) {
-        // Get an annotation-free version of the type string through TypeName
-        String typeString = TypeName.get(typeMirror).toString();
         for (Pattern p: mMethodLookup.keySet()) {
-            if (p.matcher(typeString).find()) {
+            if (p.matcher(typeMirror.toString()).find()) {
                 return mMethodLookup.get(p);
             }
         }

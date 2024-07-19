@@ -23,7 +23,9 @@ import androidx.annotation.RestrictTo
 import androidx.work.Logger
 import androidx.work.impl.utils.taskexecutor.TaskExecutor
 
-/** Tracks whether or not the device's battery level is low. */
+/**
+ * Tracks whether or not the device's battery level is low.
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class BatteryNotLowTracker(context: Context, taskExecutor: TaskExecutor) :
     BroadcastReceiverConstraintTracker<Boolean>(context, taskExecutor) {
@@ -31,26 +33,25 @@ class BatteryNotLowTracker(context: Context, taskExecutor: TaskExecutor) :
      * Based on BatteryService#shouldSendBatteryLowLocked(), but this ignores the previous plugged
      * state - cannot guarantee the last plugged state because this isn't always tracking.
      *
-     * {@see
-     * https://android.googlesource.com/platform/frameworks/base/+/oreo-release/services/core/java/com/android/server/BatteryService.java#268}
+     * {@see https://android.googlesource.com/platform/frameworks/base/+/oreo-release/services/core/java/com/android/server/BatteryService.java#268}
      */
     override fun readSystemState(): Boolean {
-        val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val intent = appContext.registerReceiver(null, intentFilter)
-        if (intent == null) {
-            Logger.get().error(TAG, "getInitialState - null intent received")
-            return false
-        }
-        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-        val batteryPercentage = level / scale.toFloat()
+            val intentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            val intent = appContext.registerReceiver(null, intentFilter)
+            if (intent == null) {
+                Logger.get().error(TAG, "getInitialState - null intent received")
+                return false
+            }
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val batteryPercentage = level / scale.toFloat()
 
-        // BATTERY_STATUS_UNKNOWN typically refers to devices without a battery.
-        // So those kinds of devices must be allowed.
-        return status == BatteryManager.BATTERY_STATUS_UNKNOWN ||
-            batteryPercentage > BATTERY_LOW_THRESHOLD
-    }
+            // BATTERY_STATUS_UNKNOWN typically refers to devices without a battery.
+            // So those kinds of devices must be allowed.
+            return status == BatteryManager.BATTERY_STATUS_UNKNOWN ||
+                batteryPercentage > BATTERY_LOW_THRESHOLD
+        }
 
     override val intentFilter: IntentFilter
         get() {
@@ -75,7 +76,6 @@ class BatteryNotLowTracker(context: Context, taskExecutor: TaskExecutor) :
 private val TAG = Logger.tagWithPrefix("BatteryNotLowTracker")
 
 /**
- * {@see
- * https://android.googlesource.com/platform/frameworks/base/+/oreo-release/core/res/res/values/config.xml#986}
+ * {@see https://android.googlesource.com/platform/frameworks/base/+/oreo-release/core/res/res/values/config.xml#986}
  */
 internal const val BATTERY_LOW_THRESHOLD = 0.15f

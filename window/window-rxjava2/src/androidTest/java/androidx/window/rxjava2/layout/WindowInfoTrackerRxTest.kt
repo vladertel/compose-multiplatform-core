@@ -27,7 +27,9 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-/** Tests for the RxJava 2 adapters. */
+/**
+ * Tests for the RxJava 2 adapters.
+ */
 @OptIn(ExperimentalWindowApi::class)
 class WindowInfoTrackerRxTest {
 
@@ -56,7 +58,6 @@ class WindowInfoTrackerRxTest {
 
         testSubscriber.assertValue(expected)
     }
-
     @Test
     fun testWindowLayoutInfoObservable_context() {
         val activity = mock<Context>()

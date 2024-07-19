@@ -21,6 +21,7 @@ import android.content.Context;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraX;
 import androidx.camera.core.CameraXConfig;
 import androidx.camera.core.InitializationException;
@@ -46,6 +47,7 @@ import java.util.concurrent.ExecutionException;
  * {@link #initialize} or {@link #getOrCreateInstance} to create a new one with the desired
  * settings.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class CameraXUtil {
     private static final String TAG = "CameraXUtil";
     private static final CameraXUtil sInstance = new CameraXUtil();

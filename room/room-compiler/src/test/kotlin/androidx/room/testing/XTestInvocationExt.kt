@@ -20,4 +20,6 @@ import androidx.room.compiler.processing.util.XTestInvocation
 import androidx.room.processor.Context
 
 val XTestInvocation.context
-    get() = getOrPutUserData(Context::class) { Context(processingEnv) }
+    get() = getOrPutUserData(Context::class) {
+        Context(processingEnv)
+    }

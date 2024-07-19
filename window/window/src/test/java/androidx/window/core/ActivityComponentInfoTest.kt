@@ -19,7 +19,9 @@ package androidx.window.core
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Unit test for [ActivityComponentInfo] to check [Object.equals] and [Object.hashCode]. */
+/**
+ * Unit test for [ActivityComponentInfo] to check [Object.equals] and [Object.hashCode].
+ */
 class ActivityComponentInfoTest {
 
     @Test

@@ -25,5 +25,6 @@ import androidx.annotation.RestrictTo
  */
 internal interface CompatLegacyPagingSource {
 
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) public fun setPageSize(pageSize: Int)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public fun setPageSize(pageSize: Int)
 }

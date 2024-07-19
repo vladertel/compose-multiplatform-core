@@ -17,6 +17,7 @@
 package androidx.webkit;
 
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -25,6 +26,7 @@ import androidx.annotation.NonNull;
 import androidx.concurrent.futures.ResolvableFuture;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.webkit.WebMessagePortCompat.WebMessageCallbackCompat;
 
 import org.junit.After;
@@ -38,6 +40,7 @@ import java.util.concurrent.BlockingQueue;
 
 @LargeTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.LOLLIPOP)
 public class PostMessageTest {
     public static final long TIMEOUT = 6000L;
 

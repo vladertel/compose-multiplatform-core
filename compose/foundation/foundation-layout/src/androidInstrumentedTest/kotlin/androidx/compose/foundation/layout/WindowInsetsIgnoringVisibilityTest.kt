@@ -42,7 +42,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R)
 class WindowInsetsIgnoringVisibilityTest {
-    @get:Rule val rule = createAndroidComposeRule<WindowInsetsActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<WindowInsetsActivity>()
 
     private lateinit var insetsView: InsetsView
 
@@ -54,7 +55,9 @@ class WindowInsetsIgnoringVisibilityTest {
     @After
     fun teardown() {
         WindowInsetsHolder.setUseTestInsets(false)
-        rule.runOnUiThread { rule.activity.finish() }
+        rule.runOnUiThread {
+            rule.activity.finish()
+        }
     }
 
     @Test
@@ -67,11 +70,15 @@ class WindowInsetsIgnoringVisibilityTest {
             isVisible = WindowInsets.isCaptionBarVisible
         }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     @Test
@@ -80,13 +87,19 @@ class WindowInsetsIgnoringVisibilityTest {
         val type = WindowInsetsCompat.Type.ime()
         var isVisible = false
 
-        setContent(createInsets(type, insets, true)) { isVisible = WindowInsets.isImeVisible }
+        setContent(createInsets(type, insets, true)) {
+            isVisible = WindowInsets.isImeVisible
+        }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     @Test
@@ -99,11 +112,15 @@ class WindowInsetsIgnoringVisibilityTest {
             isVisible = WindowInsets.areStatusBarsVisible
         }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     @Test
@@ -116,11 +133,15 @@ class WindowInsetsIgnoringVisibilityTest {
             isVisible = WindowInsets.areNavigationBarsVisible
         }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     @Test
@@ -133,11 +154,15 @@ class WindowInsetsIgnoringVisibilityTest {
             isVisible = WindowInsets.areSystemBarsVisible
         }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     @Test
@@ -150,18 +175,21 @@ class WindowInsetsIgnoringVisibilityTest {
             isVisible = WindowInsets.isTappableElementVisible
         }
 
-        rule.runOnIdle { assertThat(isVisible).isTrue() }
+        rule.runOnIdle {
+            assertThat(isVisible).isTrue()
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { assertThat(isVisible).isFalse() }
+        rule.runOnIdle {
+            assertThat(isVisible).isFalse()
+        }
     }
 
     private fun createInsets(type: Int, insets: Insets, isVisible: Boolean): WindowInsetsCompat {
-        val builder =
-            WindowInsetsCompat.Builder()
-                .setInsets(type, if (isVisible) insets else Insets.of(0, 0, 0, 0))
-                .setVisible(type, isVisible)
+        val builder = WindowInsetsCompat.Builder()
+            .setInsets(type, if (isVisible) insets else Insets.of(0, 0, 0, 0))
+            .setVisible(type, isVisible)
         if (type != WindowInsetsCompat.Type.ime()) {
             builder.setInsetsIgnoringVisibility(type, insets)
         }
@@ -178,11 +206,15 @@ class WindowInsetsIgnoringVisibilityTest {
             ignoringVisibility = WindowInsets.captionBarIgnoringVisibility
         }
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
     }
 
     @Test
@@ -195,11 +227,15 @@ class WindowInsetsIgnoringVisibilityTest {
             ignoringVisibility = WindowInsets.navigationBarsIgnoringVisibility
         }
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
     }
 
     @Test
@@ -212,11 +248,15 @@ class WindowInsetsIgnoringVisibilityTest {
             ignoringVisibility = WindowInsets.statusBarsIgnoringVisibility
         }
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
     }
 
     @Test
@@ -229,11 +269,15 @@ class WindowInsetsIgnoringVisibilityTest {
             ignoringVisibility = WindowInsets.systemBarsIgnoringVisibility
         }
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
     }
 
     @Test
@@ -246,11 +290,15 @@ class WindowInsetsIgnoringVisibilityTest {
             ignoringVisibility = WindowInsets.tappableElementIgnoringVisibility
         }
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
 
         dispatchApplyWindowInsets(createInsets(type, insets, false))
 
-        rule.runOnIdle { ignoringVisibility.assertSameAs(10, 11, 12, 13) }
+        rule.runOnIdle {
+            ignoringVisibility.assertSameAs(10, 11, 12, 13)
+        }
     }
 
     fun WindowInsets.assertSameAs(left: Int, top: Int, right: Int, bottom: Int) {
@@ -277,24 +325,22 @@ class WindowInsetsIgnoringVisibilityTest {
         content: @Composable () -> Unit
     ) {
         rule.setContent {
-            AndroidView(
-                factory = { context ->
-                    val view =
-                        InsetsView(context).also { it.myInsets = initialInsets?.toWindowInsets() }
-                    insetsView = view
-                    val composeView = ComposeView(rule.activity)
-                    view.addView(
-                        composeView,
-                        ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                        )
+            AndroidView(factory = { context ->
+                val view = InsetsView(context).also {
+                    it.myInsets = initialInsets?.toWindowInsets()
+                }
+                insetsView = view
+                val composeView = ComposeView(rule.activity)
+                view.addView(
+                    composeView,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    composeView.setContent(content)
-                    view
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                )
+                composeView.setContent(content)
+                view
+            }, modifier = Modifier.fillMaxSize())
         }
     }
 }

@@ -37,8 +37,16 @@ fun stateSample() {
 
         fun login() = Api.login(username, password)
 
-        BasicTextField(value = username, onValueChange = { username = it })
-        BasicTextField(value = password, onValueChange = { password = it })
-        Button(onClick = { login() }) { Text("Login") }
+        BasicTextField(
+            value = username,
+            onValueChange = { username = it }
+        )
+        BasicTextField(
+            value = password,
+            onValueChange = { password = it }
+        )
+        Button(onClick = { login() }) {
+            Text("Login")
+        }
     }
 }

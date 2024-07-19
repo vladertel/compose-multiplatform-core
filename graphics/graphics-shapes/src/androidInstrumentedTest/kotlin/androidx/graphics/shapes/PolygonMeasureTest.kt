@@ -23,41 +23,50 @@ import org.junit.Test
 
 @SmallTest
 class PolygonMeasureTest {
-    @Test fun triangleAngleMeasure() = polygonAngleMeasure(3)
-
-    @Test fun pentagonAngleMeasure() = polygonAngleMeasure(5)
-
-    @Test fun dodecagonAngleMeasure() = polygonAngleMeasure(12)
+    @Test
+    fun triangleAngleMeasure() = polygonAngleMeasure(3)
 
     @Test
-    fun irregularTriangleAngleMeasure() =
-        irregularPolygonAngleMeasure(
-            RoundedPolygon(
-                vertices = floatArrayOf(0f, -1f, 1f, 1f, 0f, 0.5f, -1f, 1f),
-                perVertexRounding =
-                    listOf(
-                        CornerRounding(0.2f, 0.5f),
-                        CornerRounding(0.2f, 0.5f),
-                        CornerRounding(0.4f, 0f),
-                        CornerRounding(0.2f, 0.5f),
-                    )
-            )
-        )
+    fun pentagonAngleMeasure() = polygonAngleMeasure(5)
 
     @Test
-    fun quarterAngleMeasure() =
-        irregularPolygonAngleMeasure(
-            RoundedPolygon(
-                vertices = floatArrayOf(-1f, -1f, 1f, -1f, 1f, 1f, -1f, 1f),
-                perVertexRounding =
-                    listOf(
-                        CornerRounding.Unrounded,
-                        CornerRounding.Unrounded,
-                        CornerRounding(0.5f, 0.5f),
-                        CornerRounding.Unrounded,
-                    )
+    fun dodecagonAngleMeasure() = polygonAngleMeasure(12)
+
+    @Test
+    fun irregularTriangleAngleMeasure() = irregularPolygonAngleMeasure(
+        RoundedPolygon(
+            vertices = floatArrayOf(
+                0f, -1f,
+                1f, 1f,
+                0f, 0.5f,
+                -1f, 1f
+            ),
+            perVertexRounding = listOf(
+                CornerRounding(0.2f, 0.5f),
+                CornerRounding(0.2f, 0.5f),
+                CornerRounding(0.4f, 0f),
+                CornerRounding(0.2f, 0.5f),
             )
         )
+    )
+
+    @Test
+    fun quarterAngleMeasure() = irregularPolygonAngleMeasure(
+        RoundedPolygon(
+            vertices = floatArrayOf(
+                -1f, -1f,
+                1f, -1f,
+                1f, 1f,
+                -1f, 1f
+            ),
+            perVertexRounding = listOf(
+                CornerRounding.Unrounded,
+                CornerRounding.Unrounded,
+                CornerRounding(0.5f, 0.5f),
+                CornerRounding.Unrounded,
+            )
+        )
+    )
 
     private fun polygonAngleMeasure(sides: Int) {
         val polygon = RoundedPolygon(sides)

@@ -28,16 +28,15 @@ class IntermenstrualBleedingRecordTest {
     @Test
     fun validRecord_equals() {
         assertThat(
-                IntermenstrualBleedingRecord(
-                    time = Instant.ofEpochMilli(1234L),
-                    zoneOffset = null,
-                )
+            IntermenstrualBleedingRecord(
+                time = Instant.ofEpochMilli(1234L),
+                zoneOffset = null,
             )
-            .isEqualTo(
-                IntermenstrualBleedingRecord(
-                    time = Instant.ofEpochMilli(1234L),
-                    zoneOffset = null,
-                )
+        ).isEqualTo(
+            IntermenstrualBleedingRecord(
+                time = Instant.ofEpochMilli(1234L),
+                zoneOffset = null,
             )
+        )
     }
 }

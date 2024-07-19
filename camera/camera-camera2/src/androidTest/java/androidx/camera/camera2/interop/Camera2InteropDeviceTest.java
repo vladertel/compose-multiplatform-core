@@ -81,7 +81,7 @@ public final class Camera2InteropDeviceTest {
     private CameraUseCaseAdapter mCamera;
 
     @Rule
-    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest(
             new CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
     );
 

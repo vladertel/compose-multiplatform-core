@@ -43,7 +43,9 @@ internal fun ConstantVibrationAtom.getAmplitudeInt(): Int =
         (amplitude * VIBRATION_MAX_AMPLITUDE).roundToInt()
     }
 
-/** Helper class to convert haptic signals to platform types based on SDK support available. */
+/**
+ * Helper class to convert haptic signals to platform types based on SDK support available.
+ */
 internal object HapticSignalConverter {
 
     internal fun toVibration(effect: PredefinedEffectSignal): VibrationWrapper? =
@@ -110,9 +112,11 @@ internal object HapticSignalConverter {
                         platformComposition.addPrimitive(atom.type, atom.amplitudeScale, delayMs)
                         delayMs = 0
                     }
+
                     is OffAtom -> {
                         delayMs += atom.durationMillis.toInt()
                     }
+
                     else -> {
                         // Unsupported composition atom
                         return@createComposition null
@@ -147,10 +151,8 @@ internal object HapticSignalConverter {
             initialWaveform: WaveformSignal? = null,
             repeatingWaveform: WaveformSignal? = null,
         ): VibrationEffectWrapper? {
-            if (
-                initialWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true ||
-                    repeatingWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true
-            ) {
+            if (initialWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true ||
+                repeatingWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true) {
                 // Unsupported waveform atoms
                 return null
             }
@@ -191,7 +193,8 @@ internal object HapticSignalConverter {
                     PatternVibrationWrapper(longArrayOf(0, 30), repeatIndex = -1)
                 PredefinedEffectSignal.DOUBLE_CLICK ->
                     PatternVibrationWrapper(longArrayOf(0, 30, 100, 30), repeatIndex = -1)
-                else -> null
+                else ->
+                    null
             }
 
         @JvmStatic
@@ -199,27 +202,20 @@ internal object HapticSignalConverter {
             initialWaveform: WaveformSignal? = null,
             repeatingWaveform: WaveformSignal? = null,
         ): PatternVibrationWrapper? {
-            if (
-                initialWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true ||
-                    repeatingWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true
-            ) {
+            if (initialWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true ||
+                repeatingWaveform?.atoms?.any { it !is ConstantVibrationAtom } == true) {
                 // Unsupported waveform entries
                 return null
             }
 
             val initialAtoms =
-                initialWaveform
-                    ?.atoms
-                    ?.filterIsInstance<ConstantVibrationAtom>()
-                    .orEmpty()
+                initialWaveform?.atoms?.filterIsInstance<ConstantVibrationAtom>().orEmpty()
                     .toMutableList()
             val repeatingAtoms =
                 repeatingWaveform?.atoms?.filterIsInstance<ConstantVibrationAtom>().orEmpty()
 
-            if (
-                !initialAtoms.all { it.hasPatternAmplitude() } ||
-                    !repeatingAtoms.all { it.hasPatternAmplitude() }
-            ) {
+            if (!initialAtoms.all { it.hasPatternAmplitude() } ||
+                !repeatingAtoms.all { it.hasPatternAmplitude() }) {
                 // Not possible to represent all amplitudes by an on-off pattern.
                 return null
             }

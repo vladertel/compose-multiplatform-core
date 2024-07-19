@@ -22,7 +22,7 @@ import kotlin.test.Test
 
 class ViewModelTest {
 
-    // region constructor
+    //region constructor
     @Test
     fun constructor_withCloseables_doesNotClose() {
         val resource1 = CloseableResource()
@@ -55,10 +55,9 @@ class ViewModelTest {
 
         assertThat(resource.isClosed).isTrue()
     }
+    //endregion
 
-    // endregion
-
-    // region addCloseable without keys
+    //region addCloseable without keys
     @Test
     fun addCloseable_doesNotClose() {
         val viewModel = TestViewModel()
@@ -90,10 +89,9 @@ class ViewModelTest {
 
         assertThat(resource.isClosed).isTrue()
     }
+    //endregion
 
-    // endregion
-
-    // region addCloseable with keys
+    //region addCloseable with keys
     @Test
     fun addCloseable_withKey_doesNotClose() {
         val viewModel = TestViewModel()
@@ -154,8 +152,7 @@ class ViewModelTest {
         assertThat(resource1.isClosed).isTrue()
         assertThat(resource2.isClosed).isFalse()
     }
-
-    // endregion
+    //endregion
 
     @Test
     fun clear_closesResources_inCleaningSequenceOrder() {
@@ -175,24 +172,23 @@ class ViewModelTest {
         viewModel.clear()
 
         // The clearing order is:
-        val expectedCloseables =
-            listOf(
-                // 1. Resources added **with** a key via `addCloseable`.
-                closeableWithKey1,
-                closeableWithKey2,
+        val expectedCloseables = listOf(
+            // 1. Resources added **with** a key via `addCloseable`.
+            closeableWithKey1,
+            closeableWithKey2,
 
-                // 2. Resources added **without** a key via `constructor`.
-                closeableInConstructor1,
-                closeableInConstructor2,
+            // 2. Resources added **without** a key via `constructor`.
+            closeableInConstructor1,
+            closeableInConstructor2,
 
-                // 3. Resources added **without** a key via `addCloseable`.
-                closeableWithoutKey1,
-                closeableWithoutKey2,
-            )
+            // 3. Resources added **without** a key via `addCloseable`.
+            closeableWithoutKey1,
+            closeableWithoutKey2,
+        )
         assertThat(clearedInOrderCloseables).isEqualTo(expectedCloseables)
     }
 
-    // region test helpers
+    //region test helpers
     private class TestViewModel(vararg closeables: AutoCloseable) : ViewModel(*closeables)
 
     private class CloseableResource(
@@ -204,5 +200,5 @@ class ViewModelTest {
             onClose(this)
         }
     }
-    // endregion
+    //endregion
 }

@@ -55,16 +55,17 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
 
     @Test
     fun initiallyEmitAllTableNames(): Unit = runBlocking {
-        val result = database.invalidationTrackerFlow("author", "publisher", "book").first()
+        val result = database.invalidationTrackerFlow("author", "publisher", "book")
+            .first()
         assertThat(result).containsExactly("author", "publisher", "book")
     }
 
     @Test
     fun initiallyEmitNothingWhenLazy(): Unit = runBlocking {
-        val channel =
-            database
-                .invalidationTrackerFlow("author", "publisher", "book", emitInitialState = true)
-                .produceIn(this)
+        val channel = database.invalidationTrackerFlow(
+            "author", "publisher", "book",
+            emitInitialState = true
+        ).produceIn(this)
 
         drain()
         yield()
@@ -81,8 +82,8 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        val channel =
-            database.invalidationTrackerFlow("author", "publisher", "book").produceIn(this)
+        val channel = database.invalidationTrackerFlow("author", "publisher", "book")
+            .produceIn(this)
 
         assertThat(channel.receive()).isEqualTo(setOf("author", "publisher", "book"))
 
@@ -90,9 +91,10 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         drain() // drain async invalidate
         yield()
 
-        assertThat(channel.receive()).containsExactly("book")
+        assertThat(channel.receive())
+            .containsExactly("book")
 
-        booksDao.addPublisher(TestUtil.PUBLISHER2)
+        booksDao.addPublisherSuspend(TestUtil.PUBLISHER2)
         drain() // drain async invalidate
         yield()
 
@@ -108,13 +110,12 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
     fun emitOnceForMultipleTablesInTransaction(): Unit = runBlocking {
         val results = mutableListOf<Set<String>>()
         val latch = CountDownLatch(1)
-        val job =
-            async(Dispatchers.IO) {
-                database.invalidationTrackerFlow("author", "publisher", "book").collect {
-                    results.add(it)
-                    latch.countDown()
-                }
+        val job = async(Dispatchers.IO) {
+            database.invalidationTrackerFlow("author", "publisher", "book").collect {
+                results.add(it)
+                latch.countDown()
             }
+        }
 
         database.withTransaction {
             booksDao.addAuthors(TestUtil.AUTHOR_1)
@@ -130,11 +131,9 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
 
     @Test
     fun dropInvalidationUsingConflated() = runBlocking {
-        val channel =
-            database
-                .invalidationTrackerFlow("author", "publisher", "book")
-                .buffer(Channel.CONFLATED)
-                .produceIn(this)
+        val channel = database.invalidationTrackerFlow("author", "publisher", "book")
+            .buffer(Channel.CONFLATED)
+            .produceIn(this)
 
         booksDao.addAuthors(TestUtil.AUTHOR_1)
         drain() // drain async invalidate
@@ -169,8 +168,9 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        val channel =
-            database.invalidationTrackerFlow("book").map { booksDao.getAllBooks() }.produceIn(this)
+        val channel = database.invalidationTrackerFlow("book")
+            .map { booksDao.getAllBooks() }
+            .produceIn(this)
 
         assertThat(channel.receive()).containsExactly(TestUtil.BOOK_1)
 
@@ -190,11 +190,9 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        val channel =
-            database
-                .invalidationTrackerFlow("book")
-                .map { booksDao.getBooksSuspend() }
-                .produceIn(this)
+        val channel = database.invalidationTrackerFlow("book")
+            .map { booksDao.getBooksSuspend() }
+            .produceIn(this)
 
         assertThat(channel.receive()).containsExactly(TestUtil.BOOK_1)
 
@@ -213,11 +211,9 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        val channel =
-            database
-                .invalidationTrackerFlow("book")
-                .map { booksDao.getBooksFlow().first() }
-                .produceIn(this)
+        val channel = database.invalidationTrackerFlow("book")
+            .map { booksDao.getBooksFlow().first() }
+            .produceIn(this)
 
         assertThat(channel.receive()).containsExactly(TestUtil.BOOK_1)
 
@@ -237,11 +233,13 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         booksDao.addPublishers(TestUtil.PUBLISHER)
         booksDao.addBooks(TestUtil.BOOK_1)
 
-        val channel =
-            database
-                .invalidationTrackerFlow("book")
-                .map { database.withTransaction { booksDao.getBooksSuspend() } }
-                .produceIn(this)
+        val channel = database.invalidationTrackerFlow("book")
+            .map {
+                database.withTransaction {
+                    booksDao.getBooksSuspend()
+                }
+            }
+            .produceIn(this)
 
         assertThat(channel.receive()).containsExactly(TestUtil.BOOK_1)
 
@@ -262,35 +260,31 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         val results = mutableListOf<List<String>>()
         val firstResultLatch = CountDownLatch(1)
         val secondResultLatch = CountDownLatch(1)
-        val job =
-            async(Dispatchers.IO) {
-                database
-                    .invalidationTrackerFlow("author", "publisher")
-                    .map {
-                        val (books, publishers) =
-                            database.withTransaction {
-                                booksDao.getBooksSuspend() to booksDao.getPublishersSuspend()
-                            }
-                        books.map { book ->
-                            val publisherName =
-                                publishers.first { it.publisherId == book.bookPublisherId }.name
-                            "${book.title} from $publisherName"
-                        }
+        val job = async(Dispatchers.IO) {
+            database.invalidationTrackerFlow("author", "publisher")
+                .map {
+                    val (books, publishers) = database.withTransaction {
+                        booksDao.getBooksSuspend() to booksDao.getPublishersSuspend()
                     }
-                    .collect {
-                        when (results.size) {
-                            0 -> {
-                                results.add(it)
-                                firstResultLatch.countDown()
-                            }
-                            1 -> {
-                                results.add(it)
-                                secondResultLatch.countDown()
-                            }
-                            else -> fail("Should have only collected 2 results.")
-                        }
+                    books.map { book ->
+                        val publisherName =
+                            publishers.first { it.publisherId == book.bookPublisherId }.name
+                        "${book.title} from $publisherName"
                     }
-            }
+                }.collect {
+                    when (results.size) {
+                        0 -> {
+                            results.add(it)
+                            firstResultLatch.countDown()
+                        }
+                        1 -> {
+                            results.add(it)
+                            secondResultLatch.countDown()
+                        }
+                        else -> fail("Should have only collected 2 results.")
+                    }
+                }
+        }
 
         firstResultLatch.await()
         database.withTransaction {
@@ -300,9 +294,13 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
 
         secondResultLatch.await()
         assertThat(results.size).isEqualTo(2)
-        assertThat(results[0]).containsExactly("book title 1 from publisher 1")
-        assertThat(results[1])
-            .containsExactly("book title 1 from publisher 1", "book title 2 from publisher 1")
+        assertThat(results[0]).containsExactly(
+            "book title 1 from publisher 1"
+        )
+        assertThat(results[1]).containsExactly(
+            "book title 1 from publisher 1",
+            "book title 2 from publisher 1"
+        )
 
         job.cancelAndJoin()
     }

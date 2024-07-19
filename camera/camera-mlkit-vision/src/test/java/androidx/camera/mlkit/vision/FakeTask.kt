@@ -24,7 +24,9 @@ import com.google.android.gms.tasks.Task
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Executor
 
-/** Fake GmsCore [Task] that returns immediately. */
+/**
+ * Fake GmsCore [Task] that returns immediately.
+ */
 class FakeTask<T>(
     private val result: T?,
     private val exception: Exception? = null,
@@ -88,11 +90,17 @@ class FakeTask<T>(
         TODO("Not yet implemented")
     }
 
-    override fun addOnFailureListener(executor: Executor, listener: OnFailureListener): Task<T> {
+    override fun addOnFailureListener(
+        executor: Executor,
+        listener: OnFailureListener
+    ): Task<T> {
         TODO("Not yet implemented")
     }
 
-    override fun addOnFailureListener(activity: Activity, listener: OnFailureListener): Task<T> {
+    override fun addOnFailureListener(
+        activity: Activity,
+        listener: OnFailureListener
+    ): Task<T> {
         TODO("Not yet implemented")
     }
 }

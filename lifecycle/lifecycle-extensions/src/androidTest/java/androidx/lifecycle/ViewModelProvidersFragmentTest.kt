@@ -44,7 +44,9 @@ class ViewModelProvidersFragmentTest {
         with(ActivityScenario.launch(EmptyActivity::class.java)) {
             val fragmentModel = withActivity {
                 val fragment = Fragment()
-                supportFragmentManager.beginTransaction().add(fragment, "tag").commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(fragment, "tag")
+                    .commitNow()
                 ViewModelProviders.of(fragment).get(TestViewModel::class.java)
             }
             assertThat(fragmentModel).isNotNull()
@@ -69,7 +71,9 @@ class ViewModelProvidersFragmentTest {
         with(ActivityScenario.launch(EmptyActivity::class.java)) {
             val fragmentModel = withActivity {
                 val fragment = Fragment()
-                supportFragmentManager.beginTransaction().add(fragment, "tag").commitNow()
+                supportFragmentManager.beginTransaction()
+                    .add(fragment, "tag")
+                    .commitNow()
                 ViewModelProviders.of(fragment, factory).get(TestViewModel::class.java)
             }
             assertThat(fragmentModel).isNotNull()

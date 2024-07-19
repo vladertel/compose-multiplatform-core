@@ -31,24 +31,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-val PagerStateInteractions =
-    listOf(
-        ComposableDemo("Moving Pages Programmatically") { StateDrivenPage() },
-        ComposableDemo("Observing Page Changes - Full Size Page") { StateMonitoringPager() },
-        ComposableDemo("Observing Page Changes - Custom Page Size") {
-            StateMonitoringCustomPageSize()
-        },
-        ComposableDemo("Moving Pages Programmatically and Observing Changes") {
-            StateDrivenPageWithMonitor()
-        }
-    )
+val PagerStateInteractions = listOf(
+    ComposableDemo("Moving Pages Programmatically") { StateDrivenPage() },
+    ComposableDemo("Observing Page Changes - Full Size Page") { StateMonitoringPager() },
+    ComposableDemo("Observing Page Changes - Custom Page Size") {
+        StateMonitoringCustomPageSize()
+    },
+    ComposableDemo("Moving Pages Programmatically and Observing Changes") {
+        StateDrivenPageWithMonitor()
+    }
+)
 
 @Composable
 private fun StateDrivenPage() {
     val pagerState = rememberPagerState { PagesCount }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(modifier = Modifier.weight(0.9f), state = pagerState) { PagerItem(it) }
+        HorizontalPager(
+            modifier = Modifier.weight(0.9f),
+            state = pagerState
+        ) {
+            PagerItem(it)
+        }
         PagerControls(Modifier.weight(0.1f), pagerState)
     }
 }
@@ -58,7 +62,12 @@ private fun StateDrivenPageWithMonitor() {
     val pagerState = rememberPagerState { PagesCount }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(modifier = Modifier.weight(0.8f), state = pagerState) { PagerItem(it) }
+        HorizontalPager(
+            modifier = Modifier.weight(0.8f),
+            state = pagerState
+        ) {
+            PagerItem(it)
+        }
         PagerControls(Modifier.weight(0.1f), pagerState)
         PageMonitor(Modifier.weight(0.1f), pagerState = pagerState)
     }
@@ -68,7 +77,12 @@ private fun StateDrivenPageWithMonitor() {
 private fun StateMonitoringPager() {
     val pagerState = rememberPagerState { PagesCount }
     Column(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(modifier = Modifier.weight(0.8f), state = pagerState) { PagerItem(it) }
+        HorizontalPager(
+            modifier = Modifier.weight(0.8f),
+            state = pagerState
+        ) {
+            PagerItem(it)
+        }
         PageMonitor(Modifier.weight(0.2f), pagerState)
     }
 }
@@ -89,7 +103,9 @@ private fun PageMonitor(modifier: Modifier, pagerState: PagerState) {
 private fun StateMonitoringCustomPageSize() {
     val pagerState = rememberPagerState { PagesCount }
 
-    val fling = PagerDefaults.flingBehavior(state = pagerState, PagerSnapDistance.atMost(3))
+    val fling = PagerDefaults.flingBehavior(
+        state = pagerState, PagerSnapDistance.atMost(3)
+    )
 
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalPager(

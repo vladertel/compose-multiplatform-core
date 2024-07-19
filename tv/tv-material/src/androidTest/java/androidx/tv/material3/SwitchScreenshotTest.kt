@@ -57,18 +57,23 @@ import org.junit.runners.Parameterized
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 @OptIn(ExperimentalTestApi::class, ExperimentalTvMaterial3Api::class)
 class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
     private val wrapperTestTag = "switchWrapper"
 
-    private val wrapperModifier =
-        Modifier.wrapContentSize(Alignment.TopStart).testTag(wrapperTestTag)
+    private val wrapperModifier = Modifier
+        .wrapContentSize(Alignment.TopStart)
+        .testTag(wrapperTestTag)
 
     @Test
     fun switchTest_checked() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperModifier) { Switch(checked = true, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = true, onCheckedChange = { })
+            }
         }
 
         assertToggeableAgainstGolden("switch_${scheme.name}_checked")
@@ -79,7 +84,7 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperModifier) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Switch(checked = true, onCheckedChange = {})
+                    Switch(checked = true, onCheckedChange = { })
                 }
             }
         }
@@ -93,7 +98,7 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
             Box(wrapperModifier) {
                 Switch(
                     checked = true,
-                    onCheckedChange = {},
+                    onCheckedChange = { },
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.Green)
                 )
             }
@@ -105,7 +110,9 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun switchTest_unchecked() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperModifier) { Switch(checked = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = false, onCheckedChange = { })
+            }
         }
 
         assertToggeableAgainstGolden("switch_${scheme.name}_unchecked")
@@ -116,7 +123,7 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperModifier) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Switch(checked = false, onCheckedChange = {})
+                    Switch(checked = false, onCheckedChange = { })
                 }
             }
         }
@@ -127,7 +134,9 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun switchTest_disabled_checked() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperModifier) { Switch(checked = true, enabled = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = true, enabled = false, onCheckedChange = { })
+            }
         }
 
         assertToggeableAgainstGolden("switch_${scheme.name}_disabled_checked")
@@ -136,7 +145,9 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun switchTest_disabled_unchecked() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperModifier) { Switch(checked = false, enabled = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = false, enabled = false, onCheckedChange = { })
+            }
         }
 
         assertToggeableAgainstGolden("switch_${scheme.name}_disabled_unchecked")
@@ -145,10 +156,16 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun switchTest_hover() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperModifier) { Switch(checked = true, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(
+                    checked = true,
+                    onCheckedChange = { }
+                )
+            }
         }
 
-        rule.onNode(isToggleable()).performMouseInput { enter(center) }
+        rule.onNode(isToggleable())
+            .performMouseInput { enter(center) }
 
         rule.waitForIdle()
 
@@ -165,8 +182,10 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
             Box(wrapperModifier) {
                 Switch(
                     checked = true,
-                    onCheckedChange = {},
-                    modifier = Modifier.testTag("switch").focusRequester(focusRequester)
+                    onCheckedChange = { },
+                    modifier = Modifier
+                        .testTag("switch")
+                        .focusRequester(focusRequester)
                 )
             }
         }
@@ -193,7 +212,11 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
                 )
             }
             Box(wrapperModifier) {
-                Switch(checked = true, onCheckedChange = {}, thumbContent = icon)
+                Switch(
+                    checked = true,
+                    onCheckedChange = { },
+                    thumbContent = icon
+                )
             }
         }
 
@@ -211,7 +234,11 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
                 )
             }
             Box(wrapperModifier) {
-                Switch(checked = false, onCheckedChange = {}, thumbContent = icon)
+                Switch(
+                    checked = false,
+                    onCheckedChange = { },
+                    thumbContent = icon
+                )
             }
         }
 
@@ -219,8 +246,7 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
     }
 
     private fun assertToggeableAgainstGolden(goldenName: String) {
-        rule
-            .onNodeWithTag(wrapperTestTag)
+        rule.onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
@@ -232,11 +258,10 @@ class SwitchScreenshotTest(private val scheme: ColorSchemeWrapper) {
         @OptIn(ExperimentalTvMaterial3Api::class)
         @Parameterized.Parameters(name = "{0}")
         @JvmStatic
-        fun parameters() =
-            arrayOf(
-                ColorSchemeWrapper("lightTheme", lightColorScheme()),
-                ColorSchemeWrapper("darkTheme", darkColorScheme()),
-            )
+        fun parameters() = arrayOf(
+            ColorSchemeWrapper("lightTheme", lightColorScheme()),
+            ColorSchemeWrapper("darkTheme", darkColorScheme()),
+        )
     }
 
     @OptIn(ExperimentalTvMaterial3Api::class)

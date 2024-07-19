@@ -25,7 +25,5 @@ import androidx.annotation.RestrictTo
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 @SuppressLint("NewApi", "ClassVerificationFailure")
 @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
-class MeasurementManagerApi33Ext5Impl(context: Context) :
-    MeasurementManagerImplCommon(
-        context.getSystemService(android.adservices.measurement.MeasurementManager::class.java)
-    )
+class MeasurementManagerApi33Ext5Impl(context: Context) : MeasurementManagerImplCommon(
+    context.getSystemService(android.adservices.measurement.MeasurementManager::class.java))

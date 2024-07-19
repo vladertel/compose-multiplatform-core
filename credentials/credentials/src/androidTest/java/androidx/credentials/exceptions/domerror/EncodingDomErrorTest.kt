@@ -34,7 +34,8 @@ class EncodingDomErrorTest {
     @Test
     fun getter_success() {
         val error = EncodingError()
-        val expectedType = EncodingError.TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_ENCODING_ERROR
+        val expectedType =
+            EncodingError.TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_ENCODING_ERROR
         assertThat(error.type).isEqualTo(expectedType)
     }
 }

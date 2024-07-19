@@ -71,7 +71,8 @@ fun CraneDemo() {
     val avatar = remember {
         movableContentWithReceiverOf<SceneScope> {
             Box(
-                Modifier.sharedElementBasedOnProgress(progressProvider)
+                Modifier
+                    .sharedElementBasedOnProgress(progressProvider)
                     .background(Color(0xffff6f69), RoundedCornerShape(20))
                     .fillMaxSize()
             )
@@ -81,9 +82,9 @@ fun CraneDemo() {
     val parent = remember {
         movableContentWithReceiverOf<SceneScope, @Composable () -> Unit> { child ->
             Surface(
-                modifier =
-                    Modifier.sharedElementBasedOnProgress(progressProvider)
-                        .background(Color(0xfffdedac)),
+                modifier = Modifier
+                    .sharedElementBasedOnProgress(progressProvider)
+                    .background(Color(0xfffdedac)),
                 color = Color(0xfffdedac),
                 shape = RoundedCornerShape(10.dp)
             ) {
@@ -92,12 +93,22 @@ fun CraneDemo() {
         }
     }
 
-    Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
+    ) {
         SceneHost(Modifier.fillMaxSize()) {
             if (progressProvider.targetState) {
                 Box(Modifier.offset(100.dp, 150.dp)) {
                     parent {
-                        Box(Modifier.padding(10.dp).wrapContentSize(Alignment.Center).size(50.dp)) {
+                        Box(
+                            Modifier
+                                .padding(10.dp)
+                                .wrapContentSize(Alignment.Center)
+                                .size(50.dp)
+                        ) {
                             avatar()
                         }
                     }
@@ -105,36 +116,42 @@ fun CraneDemo() {
             } else {
                 parent {
                     Column(Modifier.fillMaxSize()) {
-                        val alpha =
-                            produceState(0f) {
-                                animate(0f, 1f, animationSpec = tween(2000)) { value, _ ->
-                                    this.value = value
-                                }
+                        val alpha = produceState(0f) {
+                            animate(0f, 1f, animationSpec = tween(2000)) { value, _ ->
+                                this.value = value
                             }
+                        }
                         Box(
-                            Modifier.fillMaxWidth()
+                            Modifier
+                                .fillMaxWidth()
                                 .height(300.dp)
-                                .graphicsLayer { this.alpha = alpha.value }
+                                .graphicsLayer {
+                                    this.alpha = alpha.value
+                                }
                                 .background(Color.DarkGray)
-                                .animateContentSize()
-                        )
-                        Box(Modifier.padding(10.dp).size(60.dp)) { avatar() }
+                                .animateContentSize())
+                        Box(
+                            Modifier
+                                .padding(10.dp)
+                                .size(60.dp)
+                        ) {
+                            avatar()
+                        }
                     }
                 }
             }
         }
         Box(
-            Modifier.fillMaxHeight()
+            Modifier
+                .fillMaxHeight()
                 .width(96.dp)
                 .background(Color(0x88CCCCCC))
                 .align(Alignment.CenterEnd)
                 .draggable(
-                    rememberDraggableState(
-                        onDelta = {
-                            progressProvider.progress =
-                                (-it / 300f + progressProvider.progress).coerceIn(0f, 1f)
-                        }
-                    ),
+                    rememberDraggableState(onDelta = {
+                        progressProvider.progress =
+                            (-it / 300f + progressProvider.progress).coerceIn(0f, 1f)
+                    }),
                     onDragStarted = {
                         progressProvider.targetState = !progressProvider.targetState
                         progressProvider.progress = 0f
@@ -173,28 +190,28 @@ context(LookaheadScope)
 fun <T> Modifier.sharedElementBasedOnProgress(provider: ProgressProvider<T>) = composed {
     val sizeMap = remember { mutableMapOf<T, IntSize>() }
     val offsetMap = remember { mutableMapOf<T, Offset>() }
-    val calculateSize: (IntSize) -> IntSize = {
-        sizeMap[provider.targetState] = it
-        val (width, height) =
-            lerp(
+    val calculateSize: (IntSize) -> IntSize =
+        {
+            sizeMap[provider.targetState] = it
+            val (width, height) = lerp(
                 sizeMap[provider.initialState]!!.toSize(),
-                sizeMap[provider.targetState]!!.toSize(),
-                provider.progress
+                sizeMap[provider.targetState]!!.toSize(), provider.progress
             )
-        IntSize(width.roundToInt(), height.roundToInt())
-    }
+            IntSize(width.roundToInt(), height.roundToInt())
+        }
 
     val calculateOffset: Placeable.PlacementScope.(ApproachMeasureScope) -> IntOffset = {
         with(it) {
             coordinates?.let {
                 offsetMap[provider.targetState] =
-                    lookaheadScopeCoordinates.localLookaheadPositionOf(it)
-                val lerpedOffset =
-                    lerp(
-                        offsetMap[provider.initialState]!!,
-                        offsetMap[provider.targetState]!!,
-                        provider.progress
+                    lookaheadScopeCoordinates.localLookaheadPositionOf(
+                        it
                     )
+                val lerpedOffset = lerp(
+                    offsetMap[provider.initialState]!!,
+                    offsetMap[provider.targetState]!!,
+                    provider.progress
+                )
                 val currentOffset = lookaheadScopeCoordinates.localPositionOf(it, Offset.Zero)
                 (lerpedOffset - currentOffset).round()
             } ?: IntOffset(0, 0)

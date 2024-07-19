@@ -29,8 +29,8 @@ import androidx.window.embedding.SplitInfo
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
-class SplitAttributesTogglePrimaryActivity :
-    SplitAttributesToggleMainActivity(), View.OnClickListener {
+class SplitAttributesTogglePrimaryActivity : SplitAttributesToggleMainActivity(),
+    View.OnClickListener {
 
     private lateinit var secondaryActivityIntent: Intent
     private var activityStacks: Set<ActivityStack> = emptySet()
@@ -40,7 +40,10 @@ class SplitAttributesTogglePrimaryActivity :
 
         viewBinding.rootSplitActivityLayout.setBackgroundColor(Color.parseColor("#e8f5e9"))
 
-        secondaryActivityIntent = Intent(this, SplitAttributesToggleSecondaryActivity::class.java)
+        secondaryActivityIntent = Intent(
+            this,
+            SplitAttributesToggleSecondaryActivity::class.java
+        )
 
         if (intent.getBooleanExtra(EXTRA_LAUNCH_SECONDARY, false)) {
             startActivity(secondaryActivityIntent)
@@ -61,12 +64,11 @@ class SplitAttributesTogglePrimaryActivity :
                     .splitInfoList(this@SplitAttributesTogglePrimaryActivity)
                     .onEach { updateUiFromRules() }
                     .collect { splitInfoList ->
-                        activityStacks =
-                            splitInfoList.mapTo(mutableSetOf()) { splitInfo ->
-                                splitInfo.getTheOtherActivityStack(
-                                    this@SplitAttributesTogglePrimaryActivity
-                                )
-                            }
+                        activityStacks = splitInfoList.mapTo(mutableSetOf()) { splitInfo ->
+                            splitInfo.getTheOtherActivityStack(
+                                this@SplitAttributesTogglePrimaryActivity
+                            )
+                        }
                     }
             }
         }

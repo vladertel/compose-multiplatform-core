@@ -33,19 +33,25 @@ import androidx.compose.ui.Modifier
 @Sampled
 @Composable
 fun ButtonSample() {
-    Button(onClick = { /* Do something! */ }) { Text("Button") }
+    Button(onClick = { /* Do something! */ }) {
+        Text("Button")
+    }
 }
 
 @Sampled
 @Composable
 fun OutlinedButtonSample() {
-    OutlinedButton(onClick = { /* Do something! */ }) { Text("Outlined Button") }
+    OutlinedButton(onClick = { /* Do something! */ }) {
+        Text("Outlined Button")
+    }
 }
 
 @Sampled
 @Composable
 fun TextButtonSample() {
-    TextButton(onClick = { /* Do something! */ }) { Text("Text Button") }
+    TextButton(onClick = { /* Do something! */ }) {
+        Text("Text Button")
+    }
 }
 
 @Sampled

@@ -26,8 +26,10 @@ import androidx.room.solver.TypeAdapterExtras
 import androidx.room.solver.query.result.QueryResultBinder
 import androidx.room.solver.query.result.RxCallableQueryResultBinder
 
-class RxCallableQueryResultBinderProvider
-private constructor(val context: Context, private val rxType: RxType) : QueryResultBinderProvider {
+class RxCallableQueryResultBinderProvider private constructor(
+    val context: Context,
+    private val rxType: RxType
+) : QueryResultBinderProvider {
     override fun provide(
         declared: XType,
         query: ParsedQuery,
@@ -60,14 +62,17 @@ private constructor(val context: Context, private val rxType: RxType) : QueryRes
     }
 
     companion object {
-        fun getAll(context: Context) =
-            listOf(RxType.RX2_SINGLE, RxType.RX2_MAYBE, RxType.RX3_SINGLE, RxType.RX3_MAYBE).map {
-                RxCallableQueryResultBinderProvider(context, it)
-                    .requireArtifact(
-                        context = context,
-                        requiredType = it.version.rxRoomClassName,
-                        missingArtifactErrorMsg = it.version.missingArtifactMessage
-                    )
-            }
+        fun getAll(context: Context) = listOf(
+            RxType.RX2_SINGLE,
+            RxType.RX2_MAYBE,
+            RxType.RX3_SINGLE,
+            RxType.RX3_MAYBE
+        ).map {
+            RxCallableQueryResultBinderProvider(context, it).requireArtifact(
+                context = context,
+                requiredType = it.version.rxRoomClassName,
+                missingArtifactErrorMsg = it.version.missingArtifactMessage
+            )
+        }
     }
 }

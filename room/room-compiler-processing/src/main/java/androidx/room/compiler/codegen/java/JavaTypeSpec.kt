@@ -27,8 +27,10 @@ import androidx.room.compiler.codegen.XTypeSpec
 import com.squareup.kotlinpoet.javapoet.JTypeSpec
 import javax.lang.model.element.Modifier
 
-internal class JavaTypeSpec(private val _className: XClassName?, internal val actual: JTypeSpec) :
-    JavaLang(), XTypeSpec {
+internal class JavaTypeSpec(
+    private val _className: XClassName?,
+    internal val actual: JTypeSpec
+) : JavaLang(), XTypeSpec {
     override fun toString() = actual.toString()
 
     override val className: XClassName
@@ -41,7 +43,9 @@ internal class JavaTypeSpec(private val _className: XClassName?, internal val ac
         private val className: XClassName?,
         internal val actual: JTypeSpecBuilder
     ) : JavaLang(), XTypeSpec.Builder {
-        override fun superclass(typeName: XTypeName) = apply { actual.superclass(typeName.java) }
+        override fun superclass(typeName: XTypeName) = apply {
+            actual.superclass(typeName.java)
+        }
 
         override fun addSuperinterface(typeName: XTypeName) = apply {
             actual.addSuperinterface(typeName.java)

@@ -67,7 +67,7 @@ import org.junit.runners.Parameterized
 class Camera2ExtensionsPreviewStabilizationTest(private val cameraId: String) {
     @get:Rule
     val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+        CameraUtil.grantCameraPermissionAndPreTest(
             CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
         )
 
@@ -92,15 +92,11 @@ class Camera2ExtensionsPreviewStabilizationTest(private val cameraId: String) {
         assumeCameraExtensionSupported(extensionMode, extensionsCharacteristics)
 
         val cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId)
-        val availableVideoStabilizationModes =
-            cameraCharacteristics.get(
-                CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
-            )
-        assumeTrue(
-            availableVideoStabilizationModes?.contains(
-                CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
-            ) == true
+        val availableVideoStabilizationModes = cameraCharacteristics.get(
+            CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES
         )
+        assumeTrue(availableVideoStabilizationModes?.contains(
+            CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION) == true)
     }
 
     @Test
@@ -109,29 +105,23 @@ class Camera2ExtensionsPreviewStabilizationTest(private val cameraId: String) {
 
         // Preview surface
         val cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId)
-        val configs =
-            cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
-        val previewSize =
-            configs.getOutputSizes(SurfaceTexture::class.java).maxBy { it.width * it.height }
+        val configs = cameraCharacteristics.get(
+            CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
+        val previewSize = configs.getOutputSizes(SurfaceTexture::class.java)
+            .maxBy { it.width * it.height }
         val deferredPreviewFrame = CompletableDeferred<SurfaceTexture>()
 
         val executorForGL = Executors.newSingleThreadExecutor()
         // Some OEM requires frames drain (updateTexImage being invoked) in SurfaceTexture,
         // otherwise it might cause still capture to fail.
-        val surfaceTextureHolder =
-            SurfaceTextureProvider.createAutoDrainingSurfaceTextureAsync(
-                    executorForGL,
-                    previewSize.width,
-                    previewSize.height,
-                    {
-                        if (!deferredPreviewFrame.isCompleted) {
-                            deferredPreviewFrame.complete(it)
-                        }
-                    }
-                ) {
-                    executorForGL.shutdown()
+        val surfaceTextureHolder = SurfaceTextureProvider.createAutoDrainingSurfaceTextureAsync(
+            executorForGL,
+            previewSize.width,
+            previewSize.height, {
+                if (!deferredPreviewFrame.isCompleted) {
+                    deferredPreviewFrame.complete(it)
                 }
-                .await()
+            }) { executorForGL.shutdown() }.await()
         val previewSurface = Surface(surfaceTextureHolder.surfaceTexture)
 
         val cameraDevice = openCameraDevice(cameraManager, cameraId)
@@ -197,21 +187,19 @@ class Camera2ExtensionsPreviewStabilizationTest(private val cameraId: String) {
     ): CameraCaptureSession {
         val deferred = CompletableDeferred<CameraCaptureSession>()
 
-        val sessionConfiguration =
-            SessionConfiguration(
-                SessionConfiguration.SESSION_REGULAR,
-                outputConfigs,
-                CameraXExecutors.ioExecutor(),
-                object : CameraCaptureSession.StateCallback() {
-                    override fun onConfigured(session: CameraCaptureSession) {
-                        deferred.complete(session)
-                    }
-
-                    override fun onConfigureFailed(session: CameraCaptureSession) {
-                        deferred.completeExceptionally(RuntimeException("onConfigurationFailed"))
-                    }
+        val sessionConfiguration = SessionConfiguration(
+            SessionConfiguration.SESSION_REGULAR,
+            outputConfigs,
+            CameraXExecutors.ioExecutor(),
+            object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    deferred.complete(session)
                 }
-            )
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    deferred.completeExceptionally(RuntimeException("onConfigurationFailed"))
+                }
+            })
 
         cameraDevice.createCaptureSession(sessionConfiguration)
         return deferred.await()

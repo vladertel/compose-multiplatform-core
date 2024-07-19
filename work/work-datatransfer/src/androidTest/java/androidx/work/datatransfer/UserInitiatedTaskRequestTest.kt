@@ -39,41 +39,33 @@ class UserInitiatedTaskRequestTest {
     @Test
     fun testDefaultNetworkConstraints() {
         val request = UserInitiatedTaskRequest(MyTask::class.java)
-        val networkRequest =
-            NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
+        val networkRequest = NetworkRequest.Builder()
+                                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                                .build()
         assertEquals(request.constraints.networkRequest, networkRequest)
 
-        val networkRequest2 =
-            NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                .build()
+        val networkRequest2 = NetworkRequest.Builder()
+                                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                                .build()
         assertNotEquals(request.constraints.networkRequest, networkRequest2)
     }
 
     @Test
     fun testCustomNetworkConstraints() {
-        val request =
-            UserInitiatedTaskRequest(
-                MyTask::class.java,
-                _constraints =
-                    Constraints(
-                        NetworkRequest.Builder()
-                            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                            .build()
-                    )
-            )
-        val networkRequest =
-            NetworkRequest.Builder()
+        val request = UserInitiatedTaskRequest(MyTask::class.java,
+            _constraints = Constraints(NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
                 .build()
+            )
+        )
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            .build()
         assertEquals(request.constraints.networkRequest, networkRequest)
 
-        val networkRequest2 =
-            NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
+        val networkRequest2 = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
         assertNotEquals(request.constraints.networkRequest, networkRequest2)
     }
 
@@ -84,12 +76,13 @@ class UserInitiatedTaskRequestTest {
         assertEquals(1, request.tags.size)
         assertEquals(taskClassName, request.tags.get(0))
 
-        request = UserInitiatedTaskRequest(MyTask::class.java, _tags = mutableListOf("test"))
+        request = UserInitiatedTaskRequest(MyTask::class.java,
+                                           _tags = mutableListOf("test"))
         assertEquals(2, request.tags.size)
         assertTrue(request.tags.contains("test"))
 
-        request =
-            UserInitiatedTaskRequest(MyTask::class.java, _tags = mutableListOf("test", "test2"))
+        request = UserInitiatedTaskRequest(MyTask::class.java,
+                                           _tags = mutableListOf("test", "test2"))
         assertEquals(3, request.tags.size)
         assertTrue(request.tags.contains(taskClassName))
         assertTrue(request.tags.contains("test2"))
@@ -104,25 +97,19 @@ class UserInitiatedTaskRequestTest {
 
     @Test
     fun testCustomTransferInfo() {
-        var request =
-            UserInitiatedTaskRequest(
-                MyTask::class.java,
-                _transferInfo = TransferInfo(estimatedDownloadBytes = 1000L)
-            )
+        var request = UserInitiatedTaskRequest(MyTask::class.java,
+            _transferInfo = TransferInfo(estimatedDownloadBytes = 1000L))
         val transferInfo = TransferInfo(0L, 1000L)
         assertEquals(request.transferInfo, transferInfo)
 
-        request =
-            UserInitiatedTaskRequest(
-                MyTask::class.java,
-                _transferInfo = TransferInfo(estimatedUploadBytes = 1000L)
-            )
+        request = UserInitiatedTaskRequest(MyTask::class.java,
+            _transferInfo = TransferInfo(estimatedUploadBytes = 1000L))
         val transferInfo2 = TransferInfo(1000L, 0L)
         assertEquals(request.transferInfo, transferInfo2)
         assertNotEquals(request.transferInfo, transferInfo)
 
-        request =
-            UserInitiatedTaskRequest(MyTask::class.java, _transferInfo = TransferInfo(2000L, 20L))
+        request = UserInitiatedTaskRequest(MyTask::class.java,
+            _transferInfo = TransferInfo(2000L, 20L))
         val transferInfo3 = TransferInfo(2000L, 20L)
         assertEquals(request.transferInfo, transferInfo3)
     }
@@ -136,12 +123,8 @@ class UserInitiatedTaskRequestTest {
 
     @Test
     fun testCustomFallbackPolicy(): Unit = runBlocking {
-        val request =
-            UserInitiatedTaskRequest(
-                MyTask::class.java,
-                fallbackPolicy =
-                    UserInitiatedTaskRequest.FallbackPolicy.FALLBACK_TO_FOREGROUND_SERVICE
-            )
+        val request = UserInitiatedTaskRequest(MyTask::class.java,
+            fallbackPolicy = UserInitiatedTaskRequest.FallbackPolicy.FALLBACK_TO_FOREGROUND_SERVICE)
         try {
             request.enqueue(ApplicationProvider.getApplicationContext())
             fail("Expected enqueue to fail without setting a foreground service")
@@ -149,15 +132,15 @@ class UserInitiatedTaskRequestTest {
             // expected
         }
 
-        request.setForegroundService(
-            MyFgs::class.java,
-            UserInitiatedTaskRequest.ForegroundServiceOnTaskFinishPolicy.FOREGROUND_SERVICE_DETACH
-        )
+        request.setForegroundService(MyFgs::class.java,
+            UserInitiatedTaskRequest.ForegroundServiceOnTaskFinishPolicy.FOREGROUND_SERVICE_DETACH)
         request.enqueue(ApplicationProvider.getApplicationContext())
     }
 
-    private class MyTask :
-        UserInitiatedTask("test_task", ApplicationProvider.getApplicationContext()) {
+    private class MyTask : UserInitiatedTask(
+        "test_task",
+        ApplicationProvider.getApplicationContext()
+    ) {
         override suspend fun performTask() {
             // test stub
         }

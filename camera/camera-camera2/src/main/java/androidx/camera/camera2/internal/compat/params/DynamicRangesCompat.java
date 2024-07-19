@@ -32,6 +32,7 @@ import java.util.Set;
 /**
  * Helper for accessing features in DynamicRangeProfiles in a backwards compatible fashion.
  */
+@RequiresApi(21)
 public final class DynamicRangesCompat {
 
     private final DynamicRangeProfilesCompatImpl mImpl;

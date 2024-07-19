@@ -75,21 +75,18 @@ fun TextAnimationDemo() {
         }
     }
 }
-
 @Composable
 fun TextColorAnimation() {
     val anim = rememberInfiniteTransition("slow animation")
-    val color: State<Color> =
-        anim.animateColor(
-            initialValue = Color.Black,
-            targetValue = Color.Gray,
-            animationSpec =
-                InfiniteRepeatableSpec(
-                    tween(5_000, 50, CubicBezierEasing(0.2f, 0.0f, 0.5f, 0.6f)),
-                    repeatMode = RepeatMode.Reverse
-                ),
-            label = "slow gray"
-        )
+    val color: State<Color> = anim.animateColor(
+        initialValue = Color.Black,
+        targetValue = Color.Gray,
+        animationSpec = InfiniteRepeatableSpec(
+            tween(5_000, 50, CubicBezierEasing(0.2f, 0.0f, 0.5f, 0.6f)),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "slow gray"
+    )
     Box(contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             BasicText(
@@ -100,7 +97,9 @@ fun TextColorAnimation() {
             BasicText(
                 buildAnnotatedString {
                     append("So does ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Black)) { append("this") }
+                    withStyle(SpanStyle(fontWeight = FontWeight.Black)) {
+                        append("this")
+                    }
                 },
                 style = TextStyle.Default.copy(fontSize = 30.sp, textAlign = TextAlign.Center),
                 color = { color.value },
@@ -126,7 +125,9 @@ class TextMotionState(initialTextStyle: TextStyle) {
     fun TextMotionPanel() {
         Row(Modifier.fillMaxSize()) {
             Row(
-                Modifier.weight(1f).clickable { isStatic = true },
+                Modifier
+                    .weight(1f)
+                    .clickable { isStatic = true },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(selected = isStatic, onClick = { isStatic = true })
@@ -134,7 +135,9 @@ class TextMotionState(initialTextStyle: TextStyle) {
             }
 
             Row(
-                Modifier.weight(1f).clickable { isStatic = false },
+                Modifier
+                    .weight(1f)
+                    .clickable { isStatic = false },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(selected = !isStatic, onClick = { isStatic = false })
@@ -156,23 +159,26 @@ fun TextScaleAnimation() {
 
     textMotionState.TextMotionPanel()
 
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
         val infiniteTransition = rememberInfiniteTransition()
-        val scale by
-            infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 2.5f,
-                animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
-            )
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 2.5f,
+            animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
+        )
         Text(
             text = "Lorem Ipsum\ndolor sit amet",
             fontSize = 24.sp,
             style = textMotionState.textStyle,
-            modifier =
-                Modifier.graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
+            modifier = Modifier.graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
         )
     }
 }
@@ -183,23 +189,26 @@ fun TextTranslationAnimation() {
 
     textMotionState.TextMotionPanel()
 
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
         val infiniteTransition = rememberInfiniteTransition()
-        val translation by
-            infiniteTransition.animateFloat(
-                initialValue = -100f,
-                targetValue = 100f,
-                animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
-            )
+        val translation by infiniteTransition.animateFloat(
+            initialValue = -100f,
+            targetValue = 100f,
+            animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
+        )
         Text(
             text = "Lorem Ipsum\ndolor sit amet",
             fontSize = 24.sp,
             style = textMotionState.textStyle,
-            modifier =
-                Modifier.graphicsLayer {
-                    translationX = translation
-                    translationY = translation
-                }
+            modifier = Modifier.graphicsLayer {
+                translationX = translation
+                translationY = translation
+            }
         )
     }
 }
@@ -209,15 +218,19 @@ fun TextRotationAnimation() {
     val textMotionState = rememberTextMotionState()
 
     val infiniteTransition = rememberInfiniteTransition()
-    val rotation by
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
-        )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(3500), RepeatMode.Reverse)
+    )
     textMotionState.TextMotionPanel()
 
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Text(
             text = "Lorem Ipsum\ndolor sit amet",
             fontSize = 24.sp,
@@ -225,7 +238,12 @@ fun TextRotationAnimation() {
             modifier = Modifier.graphicsLayer { rotationX = rotation }
         )
     }
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Text(
             text = "Lorem Ipsum\ndolor sit amet",
             fontSize = 24.sp,
@@ -233,7 +251,13 @@ fun TextRotationAnimation() {
             modifier = Modifier.graphicsLayer { rotationY = rotation }
         )
     }
-    Box(modifier = Modifier.fillMaxSize().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+
         Text(
             text = "Lorem Ipsum\ndolor sit amet",
             fontSize = 24.sp,

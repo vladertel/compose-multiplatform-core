@@ -44,7 +44,8 @@ import org.junit.Test
 @MediumTest
 // @RunWith(Parameterized::class)
 class LazyScrollTest { // (private val orientation: Orientation)
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val vertical: Boolean
         get() = true // orientation == Orientation.Vertical
@@ -80,7 +81,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun scrollToItem() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(2) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(2)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(2)
         assertThat(state.firstVisibleItemScrollOffset).isEqualTo(0)
         withContext(Dispatchers.Main + AutoTestFrameClock()) {
@@ -93,14 +96,18 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun scrollToItemWithOffset() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(6, 10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(6, 10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(6)
         assertThat(state.firstVisibleItemScrollOffset).isEqualTo(10)
     }
 
     @Test
     fun scrollToItemWithNegativeOffset() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(6, -10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(6, -10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(4)
         val item6Offset = state.layoutInfo.visibleItemsInfo.first { it.index == 6 }.offset.y
         assertThat(item6Offset).isEqualTo(10)
@@ -126,7 +133,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun scrollToItemWithIndexLargerThanItemsCount() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(itemsCount + 4) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(itemsCount + 4)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(itemsCount - 6)
     }
 
@@ -147,21 +156,27 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun animateScrollToItem() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.animateScrollToItem(10, 10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.animateScrollToItem(10, 10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(10)
         assertThat(state.firstVisibleItemScrollOffset).isEqualTo(10)
     }
 
     @Test
     fun animateScrollToItemWithOffset() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.animateScrollToItem(6, 10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.animateScrollToItem(6, 10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(6)
         assertThat(state.firstVisibleItemScrollOffset).isEqualTo(10)
     }
 
     @Test
     fun animateScrollToItemWithNegativeOffset() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.animateScrollToItem(6, -10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.animateScrollToItem(6, -10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(4)
         val item6Offset = state.layoutInfo.visibleItemsInfo.first { it.index == 6 }.offset.y
         assertThat(item6Offset).isEqualTo(10)
@@ -256,7 +271,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun canScrollBackward() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(itemsCount) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(itemsCount)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(itemsCount - 6)
         assertThat(state.canScrollForward).isFalse()
         assertThat(state.canScrollBackward).isTrue()
@@ -264,7 +281,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Test
     fun canScrollForwardAndBackward() = runBlocking {
-        withContext(Dispatchers.Main + AutoTestFrameClock()) { state.scrollToItem(10) }
+        withContext(Dispatchers.Main + AutoTestFrameClock()) {
+            state.scrollToItem(10)
+        }
         assertThat(state.firstVisibleItemIndex).isEqualTo(10)
         assertThat(state.canScrollForward).isTrue()
         assertThat(state.canScrollBackward).isTrue()
@@ -277,7 +296,11 @@ class LazyScrollTest { // (private val orientation: Orientation)
         fromOffset: Int = 0
     ) {
         if (fromIndex != 0 || fromOffset != 0) {
-            rule.runOnIdle { runBlocking { state.scrollToItem(fromIndex, fromOffset) } }
+            rule.runOnIdle {
+                runBlocking {
+                    state.scrollToItem(fromIndex, fromOffset)
+                }
+            }
         }
         rule.waitForIdle()
 
@@ -286,7 +309,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
         rule.mainClock.autoAdvance = false
 
-        scope.launch { state.animateScrollToItem(toIndex, toOffset) }
+        scope.launch {
+            state.animateScrollToItem(toIndex, toOffset)
+        }
 
         while (!state.isScrollInProgress) {
             Thread.sleep(5)
@@ -302,15 +327,14 @@ class LazyScrollTest { // (private val orientation: Orientation)
         var expectedTime = rule.mainClock.currentTime
         for (i in 0..duration step FrameDuration) {
             val nanosTime = TimeUnit.MILLISECONDS.toNanos(i)
-            val expectedValue = spec.getValueFromNanos(nanosTime, startOffset, endOffset, 0f)
+            val expectedValue =
+                spec.getValueFromNanos(nanosTime, startOffset, endOffset, 0f)
             val actualValue =
                 (state.firstVisibleItemIndex / 2 * itemSizePx + state.firstVisibleItemScrollOffset)
             assertWithMessage(
-                    "On animation frame at $i index=${state.firstVisibleItemIndex} " +
-                        "offset=${state.firstVisibleItemScrollOffset} expectedValue=$expectedValue"
-                )
-                .that(actualValue)
-                .isEqualTo(expectedValue.roundToInt(), tolerance = 1)
+                "On animation frame at $i index=${state.firstVisibleItemIndex} " +
+                    "offset=${state.firstVisibleItemScrollOffset} expectedValue=$expectedValue"
+            ).that(actualValue).isEqualTo(expectedValue.roundToInt(), tolerance = 1)
 
             rule.mainClock.advanceTimeBy(FrameDuration)
             expectedTime += FrameDuration
@@ -325,7 +349,9 @@ class LazyScrollTest { // (private val orientation: Orientation)
     private fun TestContent() {
         if (vertical) {
             TvLazyVerticalGrid(TvGridCells.Fixed(2), Modifier.height(containerSizeDp), state) {
-                items(itemsCount) { ItemContent() }
+                items(itemsCount) {
+                    ItemContent()
+                }
             }
         } else {
             // LazyRow(Modifier.width(300.dp), state) {
@@ -338,12 +364,11 @@ class LazyScrollTest { // (private val orientation: Orientation)
 
     @Composable
     private fun ItemContent() {
-        val modifier =
-            if (vertical) {
-                Modifier.height(itemSizeDp)
-            } else {
-                Modifier.width(itemSizeDp)
-            }
+        val modifier = if (vertical) {
+            Modifier.height(itemSizeDp)
+        } else {
+            Modifier.width(itemSizeDp)
+        }
         Spacer(modifier)
     }
 

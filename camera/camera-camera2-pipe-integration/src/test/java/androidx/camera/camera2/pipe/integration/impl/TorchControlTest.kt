@@ -67,35 +67,36 @@ class TorchControlTest {
             val dispatcher = executor.asCoroutineDispatcher()
             val cameraScope = CoroutineScope(Job() + dispatcher)
 
-            UseCaseThreads(cameraScope, executor, dispatcher)
+            UseCaseThreads(
+                cameraScope,
+                executor,
+                dispatcher
+            )
         }
     }
 
-    private val metadata =
-        FakeCameraMetadata(
-            mapOf(
-                CameraCharacteristics.FLASH_INFO_AVAILABLE to true,
-            ),
-        )
+    private val metadata = FakeCameraMetadata(
+        mapOf(
+            CameraCharacteristics.FLASH_INFO_AVAILABLE to true,
+        ),
+    )
 
-    private val neverCompleteTorchRequestControl =
-        FakeUseCaseCameraRequestControl().apply {
-            // Set a CompletableDeferred without set it to completed.
-            setTorchResult = CompletableDeferred()
-        }
-    private val aeFpsRange =
-        AeFpsRange(
-            CameraQuirks(
-                FakeCameraMetadata(),
-                StreamConfigurationMapCompat(
-                    StreamConfigurationMapBuilder.newBuilder().build(),
-                    OutputSizesCorrector(
-                        FakeCameraMetadata(),
-                        StreamConfigurationMapBuilder.newBuilder().build()
-                    )
+    private val neverCompleteTorchRequestControl = FakeUseCaseCameraRequestControl().apply {
+        // Set a CompletableDeferred without set it to completed.
+        setTorchResult = CompletableDeferred()
+    }
+    private val aeFpsRange = AeFpsRange(
+        CameraQuirks(
+            FakeCameraMetadata(),
+            StreamConfigurationMapCompat(
+                StreamConfigurationMapBuilder.newBuilder().build(),
+                OutputSizesCorrector(
+                    FakeCameraMetadata(),
+                    StreamConfigurationMapBuilder.newBuilder().build()
                 )
             )
         )
+    )
 
     private lateinit var torchControl: TorchControl
 
@@ -103,17 +104,17 @@ class TorchControlTest {
     fun setUp() {
         val fakeUseCaseCamera = FakeUseCaseCamera()
         val fakeCameraProperties = FakeCameraProperties(metadata)
-        torchControl =
-            TorchControl(
+        torchControl = TorchControl(
+            fakeCameraProperties,
+            State3AControl(
                 fakeCameraProperties,
-                State3AControl(
-                        fakeCameraProperties,
-                        NoOpAutoFlashAEModeDisabler,
-                        aeFpsRange,
-                    )
-                    .apply { useCaseCamera = fakeUseCaseCamera },
-                fakeUseCaseThreads,
-            )
+                NoOpAutoFlashAEModeDisabler,
+                aeFpsRange
+            ).apply {
+                useCaseCamera = fakeUseCaseCamera
+            },
+            fakeUseCaseThreads,
+        )
         torchControl.useCaseCamera = fakeUseCaseCamera
     }
 
@@ -125,18 +126,18 @@ class TorchControlTest {
 
             // Without a flash unit, this Job will complete immediately with a IllegalStateException
             TorchControl(
+                fakeCameraProperties,
+                State3AControl(
                     fakeCameraProperties,
-                    State3AControl(
-                            fakeCameraProperties,
-                            NoOpAutoFlashAEModeDisabler,
-                            aeFpsRange,
-                        )
-                        .apply { useCaseCamera = fakeUseCaseCamera },
-                    fakeUseCaseThreads,
-                )
-                .also { it.useCaseCamera = fakeUseCaseCamera }
-                .setTorchAsync(true)
-                .await()
+                    NoOpAutoFlashAEModeDisabler,
+                    aeFpsRange
+                ).apply {
+                    useCaseCamera = fakeUseCaseCamera
+                },
+                fakeUseCaseThreads,
+            ).also {
+                it.useCaseCamera = fakeUseCaseCamera
+            }.setTorchAsync(true).await()
         }
     }
 
@@ -145,20 +146,20 @@ class TorchControlTest {
         val fakeUseCaseCamera = FakeUseCaseCamera()
         val fakeCameraProperties = FakeCameraProperties()
 
-        val torchState =
-            TorchControl(
-                    fakeCameraProperties,
-                    State3AControl(
-                            fakeCameraProperties,
-                            NoOpAutoFlashAEModeDisabler,
-                            aeFpsRange,
-                        )
-                        .apply { useCaseCamera = fakeUseCaseCamera },
-                    fakeUseCaseThreads,
-                )
-                .also { it.useCaseCamera = fakeUseCaseCamera }
-                .torchStateLiveData
-                .value
+        val torchState = TorchControl(
+            fakeCameraProperties,
+            State3AControl(
+                fakeCameraProperties,
+                NoOpAutoFlashAEModeDisabler,
+                aeFpsRange
+            ).apply {
+
+                useCaseCamera = fakeUseCaseCamera
+            },
+            fakeUseCaseThreads,
+        ).also {
+            it.useCaseCamera = fakeUseCaseCamera
+        }.torchStateLiveData.value
 
         Truth.assertThat(torchState).isEqualTo(TorchState.OFF)
     }
@@ -170,17 +171,16 @@ class TorchControlTest {
             val fakeCameraProperties = FakeCameraProperties(metadata)
 
             TorchControl(
+                fakeCameraProperties,
+                State3AControl(
                     fakeCameraProperties,
-                    State3AControl(
-                            fakeCameraProperties,
-                            NoOpAutoFlashAEModeDisabler,
-                            aeFpsRange,
-                        )
-                        .apply { useCaseCamera = fakeUseCaseCamera },
-                    fakeUseCaseThreads,
-                )
-                .setTorchAsync(true)
-                .await()
+                    NoOpAutoFlashAEModeDisabler,
+                    aeFpsRange
+                ).apply {
+                    useCaseCamera = fakeUseCaseCamera
+                },
+                fakeUseCaseThreads,
+            ).setTorchAsync(true).await()
         }
     }
 
@@ -193,31 +193,6 @@ class TorchControlTest {
     @Test
     fun enableTorch_torchStateOn(): Unit = runBlocking {
         torchControl.setTorchAsync(true)
-        // LiveData is updated synchronously. Don't need to wait for the result of the setTorchAsync
-        Truth.assertThat(torchControl.torchStateLiveData.value).isEqualTo(TorchState.ON)
-    }
-
-    @Test
-    fun enableTorch_torchStateOn_whenNoFlashUnit_butFlashUnitAvailabilityIsIgnored() = runBlocking {
-        val fakeUseCaseCamera = FakeUseCaseCamera()
-        val fakeCameraProperties = FakeCameraProperties()
-
-        val torchControl =
-            TorchControl(
-                    fakeCameraProperties,
-                    State3AControl(
-                            fakeCameraProperties,
-                            NoOpAutoFlashAEModeDisabler,
-                            aeFpsRange,
-                        )
-                        .apply { useCaseCamera = fakeUseCaseCamera },
-                    fakeUseCaseThreads,
-                )
-                .also {
-                    it.useCaseCamera = fakeUseCaseCamera
-                    it.setTorchAsync(torch = true, ignoreFlashUnitAvailability = true)
-                }
-
         // LiveData is updated synchronously. Don't need to wait for the result of the setTorchAsync
         Truth.assertThat(torchControl.torchStateLiveData.value).isEqualTo(TorchState.ON)
     }
@@ -245,33 +220,29 @@ class TorchControlTest {
 
     @Test
     fun enableTorchTwice_cancelPreviousFuture(): Unit = runBlocking {
-        val deferred =
-            torchControl
-                .also {
-                    it.useCaseCamera =
-                        FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
-                }
-                .setTorchAsync(true)
+        val deferred = torchControl.also {
+            it.useCaseCamera = FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
+        }.setTorchAsync(true)
 
         torchControl.setTorchAsync(true)
 
-        assertThrows<CameraControl.OperationCanceledException> { deferred.await() }
+        assertThrows<CameraControl.OperationCanceledException> {
+            deferred.await()
+        }
     }
 
     @Test
     fun setInActive_cancelPreviousFuture(): Unit = runBlocking {
-        val deferred =
-            torchControl
-                .also {
-                    it.useCaseCamera =
-                        FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
-                }
-                .setTorchAsync(true)
+        val deferred = torchControl.also {
+            it.useCaseCamera = FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
+        }.setTorchAsync(true)
 
         // reset() will be called after all the UseCases are detached.
         torchControl.reset()
 
-        assertThrows<CameraControl.OperationCanceledException> { deferred.await() }
+        assertThrows<CameraControl.OperationCanceledException> {
+            deferred.await()
+        }
     }
 
     @Test
@@ -292,18 +263,18 @@ class TorchControlTest {
         val receivedTorchState = mutableListOf<Int?>()
         // The observer should be notified of initial state
         torchControl.torchStateLiveData.observe(
-            TestLifecycleOwner(Lifecycle.State.STARTED, UnconfinedTestDispatcher()),
-            object : Observer<Int?> {
+            TestLifecycleOwner(
+                Lifecycle.State.STARTED,
+                UnconfinedTestDispatcher()
+            ), object : Observer<Int?> {
                 private var mValue: Int? = null
-
                 override fun onChanged(value: Int?) {
                     if (mValue != value) {
                         mValue = value
                         receivedTorchState.add(value)
                     }
                 }
-            }
-        )
+            })
         torchControl.setTorchAsync(true)
         torchControl.setTorchAsync(false)
         Truth.assertThat(receivedTorchState[0]).isEqualTo(TorchState.OFF) // initial state
@@ -318,10 +289,9 @@ class TorchControlTest {
             FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
 
         val deferred = torchControl.setTorchAsync(true)
-        val fakeRequestControl =
-            FakeUseCaseCameraRequestControl().apply {
-                setTorchResult = CompletableDeferred<Result3A>()
-            }
+        val fakeRequestControl = FakeUseCaseCameraRequestControl().apply {
+            setTorchResult = CompletableDeferred<Result3A>()
+        }
         val fakeUseCaseCamera = FakeUseCaseCamera(requestControl = fakeRequestControl)
 
         // Act. Simulate the UseCaseCamera is recreated.
@@ -341,8 +311,9 @@ class TorchControlTest {
             FakeUseCaseCamera(requestControl = neverCompleteTorchRequestControl)
 
         val deferred = torchControl.setTorchAsync(true)
-        val fakeRequestControl =
-            FakeUseCaseCameraRequestControl().apply { setTorchResult = CompletableDeferred() }
+        val fakeRequestControl = FakeUseCaseCameraRequestControl().apply {
+            setTorchResult = CompletableDeferred()
+        }
         val fakeUseCaseCamera = FakeUseCaseCamera(requestControl = fakeRequestControl)
 
         // Act. Simulate the UseCaseCamera is recreated.
@@ -353,12 +324,16 @@ class TorchControlTest {
         fakeRequestControl.setTorchResult.complete(Result3A(status = Result3A.Status.OK))
 
         // Assert. The previous setTorch task should be cancelled
-        assertThrows<CameraControl.OperationCanceledException> { deferred.awaitWithTimeout() }
+        assertThrows<CameraControl.OperationCanceledException> {
+            deferred.awaitWithTimeout()
+        }
         // Assert. The latest setTorch task should be completed.
         Truth.assertThat(deferred2.awaitWithTimeout()).isNotNull()
     }
 
     private suspend fun <T> Deferred<T>.awaitWithTimeout(
         timeMillis: Long = TimeUnit.SECONDS.toMillis(5)
-    ) = withTimeout(timeMillis) { await() }
+    ) = withTimeout(timeMillis) {
+        await()
+    }
 }

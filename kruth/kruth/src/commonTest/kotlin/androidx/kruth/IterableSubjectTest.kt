@@ -35,12 +35,16 @@ class IterableSubjectTest {
 
     @Test
     fun hasSizeFails() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).hasSize(4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).hasSize(4)
+        }
     }
 
     @Test
     fun hasSizeNegative() {
-        assertFailsWith<IllegalArgumentException> { assertThat(listOf(1, 2, 3)).hasSize(-1) }
+        assertFailsWith<IllegalArgumentException> {
+            assertThat(listOf(1, 2, 3)).hasSize(-1)
+        }
     }
 
     @Test
@@ -55,17 +59,23 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsFailsWithSameToString() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L, 3L, 2L)).contains(2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L, 3L, 2L)).contains(2)
+        }
     }
 
     @Test
     fun iterableContainsFailsWithSameToStringAndNull() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, "null")).contains(null) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, "null")).contains(null)
+        }
     }
 
     @Test
     fun iterableContainsFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).contains(5) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).contains(5)
+        }
     }
 
     @Test
@@ -80,7 +90,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableDoesNotContainFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).doesNotContain(2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).doesNotContain(2)
+        }
     }
 
     @Test
@@ -95,7 +107,9 @@ class IterableSubjectTest {
 
     @Test
     fun doesNotContainDuplicatesFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 2, 3)).containsNoDuplicates() }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 2, 3)).containsNoDuplicates()
+        }
     }
 
     @Test
@@ -115,17 +129,23 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsAnyOfFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsAnyOf(5, 6, 0) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsAnyOf(5, 6, 0)
+        }
     }
 
     @Test
     fun iterableContainsAnyOfFailsWithSameToStringAndHomogeneousList() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L, 3L)).containsAnyOf(5, 6, 0) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L, 3L)).containsAnyOf(5, 6, 0)
+        }
     }
 
     @Test
     fun iterableContainsAnyOfFailsWithSameToStringAndHomogeneousListWithDuplicates() {
-        assertFailsWith<AssertionError> { assertThat(listOf(3L, 3L)).containsAnyOf(2, 3, 3) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(3L, 3L)).containsAnyOf(2, 3, 3)
+        }
     }
 
     @Test
@@ -225,7 +245,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsAtLeastFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsAtLeast(1, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsAtLeast(1, 2, 4)
+        }
     }
 
     @Test
@@ -255,7 +277,9 @@ class IterableSubjectTest {
      */
     @Test
     fun iterableContainsAtLeastWithDuplicateMissingElements() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2)).containsAtLeast(4, 4, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2)).containsAtLeast(4, 4, 4)
+        }
     }
 
     @Test
@@ -267,12 +291,16 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsAtLeastFailsWithSameToStringAndHomogeneousList() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L)).containsAtLeast(1, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L)).containsAtLeast(1, 2)
+        }
     }
 
     @Test
     fun iterableContainsAtLeastFailsWithSameToStringAndHomogeneousListWithDuplicates() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L, 2L)).containsAtLeast(1, 1, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L, 2L)).containsAtLeast(1, 1, 2)
+        }
     }
 
     @Test
@@ -291,7 +319,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsAtLeastFailsWithEmptyString() {
-        assertFailsWith<AssertionError> { assertThat(listOf("a", null)).containsAtLeast("", null) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("a", null)).containsAtLeast("", null)
+        }
     }
 
     @Test
@@ -395,22 +425,30 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsNoneOfFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsNoneOf(1, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsNoneOf(1, 2, 4)
+        }
     }
 
     @Test
     fun iterableContainsNoneOfFailureWithDuplicateInSubject() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 2, 3)).containsNoneOf(1, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 2, 3)).containsNoneOf(1, 2, 4)
+        }
     }
 
     @Test
     fun iterableContainsNoneOfFailureWithDuplicateInExpected() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsNoneOf(1, 2, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsNoneOf(1, 2, 2, 4)
+        }
     }
 
     @Test
     fun iterableContainsNoneOfFailureWithEmptyString() {
-        assertFailsWith<AssertionError> { assertThat(listOf("")).containsNoneOf("", null) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("")).containsNoneOf("", null)
+        }
     }
 
     @Test
@@ -429,7 +467,7 @@ class IterableSubjectTest {
         }
     }
 
-    @Test
+        @Test
     fun iterableContainsExactlyArray() {
         val stringArray = arrayOf("a", "b")
         val iterable = listOf(stringArray)
@@ -514,33 +552,45 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsExactlyWithEmptyString() {
-        assertFailsWith<AssertionError> { assertThat(listOf<Any?>()).containsExactly("") }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf<Any?>()).containsExactly("")
+        }
     }
 
     @Test
     fun iterableContainsExactlyWithEmptyStringAndUnexpectedItem() {
-        assertFailsWith<AssertionError> { assertThat(listOf("a", null)).containsExactly("") }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("a", null)).containsExactly("")
+        }
     }
 
     @Test
     fun iterableContainsExactlyWithEmptyStringAndMissingItem() {
-        assertFailsWith<AssertionError> { assertThat(listOf("")).containsExactly("a", null) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("")).containsExactly("a", null)
+        }
     }
 
     @Test
     fun iterableContainsExactlyWithEmptyStringAmongMissingItems() {
-        assertFailsWith<AssertionError> { assertThat(listOf("a")).containsExactly("", "b") }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("a")).containsExactly("", "b")
+        }
     }
 
     @Test
     fun iterableContainsExactlySingleElement() {
         assertThat(listOf(1)).containsExactly(1)
-        assertFailsWith<AssertionError> { assertThat(listOf(1)).containsExactly(2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1)).containsExactly(2)
+        }
     }
 
     @Test
     fun iterableContainsExactlySingleElementNoEqualsMagic() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1)).containsExactly(1L) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1)).containsExactly(1L)
+        }
     }
 
     @Test
@@ -557,14 +607,18 @@ class IterableSubjectTest {
     fun iterableContainsExactlyWithElementsThatThrowWhenYouCallHashCodeFailureTooMany() {
         val one = HashCodeThrower()
         val two = HashCodeThrower()
-        assertFailsWith<AssertionError> { assertThat(listOf(one, two)).containsExactly(one) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(one, two)).containsExactly(one)
+        }
     }
 
     @Test
     fun iterableContainsExactlyWithElementsThatThrowWhenYouCallHashCodeOneMismatch() {
         val one = HashCodeThrower()
         val two = HashCodeThrower()
-        assertFailsWith<AssertionError> { assertThat(listOf(one, one)).containsExactly(one, two) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(one, one)).containsExactly(one, two)
+        }
     }
 
     @Test
@@ -588,12 +642,16 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsExactlyMissingItemFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2)).containsExactly(1, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2)).containsExactly(1, 2, 4)
+        }
     }
 
     @Test
     fun iterableContainsExactlyUnexpectedItemFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsExactly(1, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsExactly(1, 2)
+        }
     }
 
     @Test
@@ -633,12 +691,14 @@ class IterableSubjectTest {
     }
 
     /*
-     * Slightly subtle test to ensure that if multiple equal elements are found
-     * to be missing we only reference it once in the output message.
-     */
+   * Slightly subtle test to ensure that if multiple equal elements are found
+   * to be missing we only reference it once in the output message.
+   */
     @Test
     fun iterableContainsExactlyWithDuplicateMissingElements() {
-        assertFailsWith<AssertionError> { assertThat(listOf<Any?>()).containsExactly(4, 4, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf<Any?>()).containsExactly(4, 4, 4)
+        }
     }
 
     @Test
@@ -650,7 +710,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsExactlyWithMissingAndExtraElements() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3)).containsExactly(1, 2, 4) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3)).containsExactly(1, 2, 4)
+        }
     }
 
     @Test
@@ -662,27 +724,37 @@ class IterableSubjectTest {
 
     @Test
     fun iterableContainsExactlyWithCommaSeparatedVsIndividual() {
-        assertFailsWith<AssertionError> { assertThat(listOf("a, b")).containsExactly("a", "b") }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf("a, b")).containsExactly("a", "b")
+        }
     }
 
     @Test
     fun iterableContainsExactlyFailsWithSameToStringAndHomogeneousList() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L)).containsExactly(1, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L)).containsExactly(1, 2)
+        }
     }
 
     @Test
     fun iterableContainsExactlyFailsWithSameToStringAndListWithNull() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L)).containsExactly(null, 1, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L)).containsExactly(null, 1, 2)
+        }
     }
 
     @Test
     fun iterableContainsExactlyFailsWithSameToStringAndHeterogeneousList() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2)).containsExactly(1, null, 2L) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2)).containsExactly(1, null, 2L)
+        }
     }
 
     @Test
     fun iterableContainsExactlyFailsWithSameToStringAndHomogeneousListWithDuplicates() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1L, 2L)).containsExactly(1, 2, 2) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1L, 2L)).containsExactly(1, 2, 2)
+        }
     }
 
     @Test
@@ -709,13 +781,18 @@ class IterableSubjectTest {
     @Test
     fun iterableContainsExactlyWithTwoIterableDoesNotGivesWarning() {
         assertFailsWith<AssertionError> {
-            assertThat(listOf(1, 2, 3, 4)).containsExactly(listOf(1, 2), listOf(3, 4))
+            assertThat(listOf(1, 2, 3, 4)).containsExactly(
+                listOf(1, 2),
+                listOf(3, 4)
+            )
         }
     }
 
     @Test
     fun iterableContainsExactlyWithOneNonIterableDoesNotGiveWarning() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 3, 4)).containsExactly(1) }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 3, 4)).containsExactly(1)
+        }
     }
 
     @Test
@@ -738,22 +815,19 @@ class IterableSubjectTest {
     @Test
     fun iterableContainsExactlyInOrderWithOneShotIterable() {
         val iterator = listOf(1 as Any, null, 3).iterator()
-        val iterable =
-            object : Iterable<Any?> {
-                override fun iterator(): Iterator<Any?> = iterator
-            }
+        val iterable = object : Iterable<Any?> {
+            override fun iterator(): Iterator<Any?> = iterator
+        }
         assertThat(iterable).containsExactly(1, null, 3).inOrder()
     }
 
     @Test
     fun iterableContainsExactlyInOrderWithOneShotIterableWrongOrder() {
         val iterator = listOf(1 as Any, null, 3).iterator()
-        val iterable =
-            object : Iterable<Any?> {
-                override fun iterator(): Iterator<Any?> = iterator
-
-                override fun toString(): String = "BadIterable"
-            }
+        val iterable = object : Iterable<Any?> {
+            override fun iterator(): Iterator<Any?> = iterator
+            override fun toString(): String = "BadIterable"
+        }
         assertFailsWith<AssertionError> {
             assertThat(iterable).containsExactly(1, 3, null).inOrder()
         }
@@ -761,11 +835,12 @@ class IterableSubjectTest {
 
     @Test
     fun iterableWithNoToStringOverride() {
-        val iterable =
-            object : Iterable<Int?> {
-                override fun iterator(): Iterator<Int> = listOf(1, 2, 3).iterator()
-            }
-        assertFailsWith<AssertionError> { assertThat(iterable).containsExactly(1, 2).inOrder() }
+        val iterable = object : Iterable<Int?> {
+            override fun iterator(): Iterator<Int> = listOf(1, 2, 3).iterator()
+        }
+        assertFailsWith<AssertionError> {
+            assertThat(iterable).containsExactly(1, 2).inOrder()
+        }
     }
 
     @Test
@@ -800,37 +875,41 @@ class IterableSubjectTest {
 
     @Test
     fun somethingEqualToNull() {
-        assertFailsWith<AssertionError> { assertThat(emptyList<Any>()).isEqualTo(null) }
+        assertFailsWith<AssertionError> {
+            assertThat(emptyList<Any>()).isEqualTo(null)
+        }
     }
 
     @Test
     fun somethingEqualToSomething() {
-        assertFailsWith<AssertionError> { assertThat(emptyList<Any>()).isEqualTo(listOf("a")) }
+        assertFailsWith<AssertionError> {
+            assertThat(emptyList<Any>()).isEqualTo(listOf("a"))
+        }
     }
 
-    //    @Test
-    //    fun isEqualToNotConsistentWithEquals() {
-    //        val actual: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
-    //        val expected: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
-    //        actual.add("one")
-    //        expected.add("ONE")
-    //        /*
-    //     * Our contract doesn't guarantee that the following test will pass. It *currently* does,
-    //     * though, and if we change that behavior, we want this test to let us know.
-    //     */assertThat(actual).isEqualTo(expected)
-    //    }
-    //
-    //    @Test
-    //    fun isEqualToNotConsistentWithEquals_failure() {
-    //        val actual: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
-    //        val expected: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
-    //        actual.add("one")
-    //        expected.add("ONE")
-    //        actual.add("two")
-    //        expectFailureWhenTestingThat(actual).isEqualTo(expected)
-    //        // The exact message generated is unspecified.
-    //    }
-    //
+//    @Test
+//    fun isEqualToNotConsistentWithEquals() {
+//        val actual: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
+//        val expected: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
+//        actual.add("one")
+//        expected.add("ONE")
+//        /*
+//     * Our contract doesn't guarantee that the following test will pass. It *currently* does,
+//     * though, and if we change that behavior, we want this test to let us know.
+//     */assertThat(actual).isEqualTo(expected)
+//    }
+//
+//    @Test
+//    fun isEqualToNotConsistentWithEquals_failure() {
+//        val actual: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
+//        val expected: TreeSet<String> = TreeSet(java.lang.String.CASE_INSENSITIVE_ORDER)
+//        actual.add("one")
+//        expected.add("ONE")
+//        actual.add("two")
+//        expectFailureWhenTestingThat(actual).isEqualTo(expected)
+//        // The exact message generated is unspecified.
+//    }
+//
     @Test
     fun iterableIsEmpty() {
         assertThat(emptyList<Any>()).isEmpty()
@@ -838,7 +917,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableIsEmptyWithFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, null, 3)).isEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, null, 3)).isEmpty()
+        }
     }
 
     @Test
@@ -848,7 +929,9 @@ class IterableSubjectTest {
 
     @Test
     fun iterableIsNotEmptyWithFailure() {
-        assertFailsWith<AssertionError> { assertThat(emptyList<Any>()).isNotEmpty() }
+        assertFailsWith<AssertionError> {
+            assertThat(emptyList<Any>()).isNotEmpty()
+        }
     }
 
     @Test
@@ -860,7 +943,9 @@ class IterableSubjectTest {
 
     @Test
     fun isInStrictOrderFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 2, 2, 4)).isInStrictOrder() }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 2, 2, 4)).isInStrictOrder()
+        }
     }
 
     @Test
@@ -872,12 +957,16 @@ class IterableSubjectTest {
 
     @Test
     fun isInOrderFailure() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 3, 2, 4)).isInOrder() }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 3, 2, 4)).isInOrder()
+        }
     }
 
     @Test
     fun isInOrderMultipleFailures() {
-        assertFailsWith<AssertionError> { assertThat(listOf(1, 3, 2, 4, 0)).isInOrder() }
+        assertFailsWith<AssertionError> {
+            assertThat(listOf(1, 3, 2, 4, 0)).isInOrder()
+        }
     }
 
     @Test
@@ -934,7 +1023,9 @@ class IterableSubjectTest {
         val actual = listOf("a")
         assertThat(actual).isNotIn(listOf(listOf("b"), listOf("c")))
 
-        assertFailsWith<AssertionError> { assertThat(actual).isNotIn(listOf("a", "b")) }
+        assertFailsWith<AssertionError> {
+            assertThat(actual).isNotIn(listOf("a", "b"))
+        }
     }
 
     @Test
@@ -951,13 +1042,14 @@ class IterableSubjectTest {
         val actual = listOf("a")
         assertThat(actual).isNoneOf(listOf("b"), listOf("c"))
 
-        assertFailsWith<AssertionError> { assertThat(actual).isNoneOf("a", "b") }
+        assertFailsWith<AssertionError> {
+            assertThat(actual).isNoneOf("a", "b")
+        }
     }
 
     private companion object {
-        private val COMPARE_AS_DECIMAL: Comparator<String?> = Comparator { a, b ->
-            a!!.toInt().compareTo(b!!.toInt())
-        }
+        private val COMPARE_AS_DECIMAL: Comparator<String?> =
+            Comparator { a, b -> a!!.toInt().compareTo(b!!.toInt()) }
     }
 
     private class CountsToStringCalls {

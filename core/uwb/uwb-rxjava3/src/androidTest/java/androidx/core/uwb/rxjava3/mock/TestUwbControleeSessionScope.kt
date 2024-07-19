@@ -30,7 +30,6 @@ class TestUwbControleeSessionScope(
 ) : UwbControleeSessionScope {
     private val uwbClientSessionScope =
         TestUwbClientSessionScope(uwbClient, rangingCapabilities, localAddress)
-
     override fun prepareSession(parameters: RangingParameters): Flow<RangingResult> {
         return uwbClientSessionScope.prepareSession(parameters)
     }
@@ -41,9 +40,6 @@ class TestUwbControleeSessionScope(
         proximityFar: Int
     ) {
         return uwbClientSessionScope.reconfigureRangeDataNtf(
-            configType,
-            proximityNear,
-            proximityFar
-        )
+            configType, proximityNear, proximityFar)
     }
 }

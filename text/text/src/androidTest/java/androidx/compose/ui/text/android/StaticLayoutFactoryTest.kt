@@ -48,8 +48,11 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withText_returnsGiven() {
         val text = "hello"
-        val staticLayout =
-            StaticLayoutFactory.create(text = text, paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayout.text).isEqualTo(text)
     }
@@ -57,8 +60,11 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withDefaultStartAndEnd_returnsWholeText() {
         val text = "ABCDEF"
-        val staticLayout =
-            StaticLayoutFactory.create(text = text, paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         // width Int.MAX_VALUE therefore should be only one line
         // getLineStart/End will return the index relative to the input text.
@@ -71,14 +77,13 @@ class StaticLayoutFactoryTest {
         val text = "ABCDEF"
         val start = 2
         val end = 5
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = TextPaint(),
-                width = Int.MAX_VALUE,
-                start = start,
-                end = end
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = TextPaint(),
+            width = Int.MAX_VALUE,
+            start = start,
+            end = end
+        )
 
         // width Int.MAX_VALUE therefore should be only one line
         // getLineStart/End will return the index relative to the input text.
@@ -89,8 +94,11 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withPaint_returnsGiven() {
         val paint = TextPaint().apply { color = 0xFF00FF00.toInt() }
-        val staticLayout =
-            StaticLayoutFactory.create(text = "", paint = paint, width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = paint,
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayout.paint).isEqualTo(paint)
     }
@@ -98,7 +106,11 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withWidth_returnsGiven() {
         val width = 200
-        val staticLayout = StaticLayoutFactory.create(text = "", paint = TextPaint(), width = width)
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = width
+        )
 
         assertThat(staticLayout.width).isEqualTo(width)
     }
@@ -106,26 +118,32 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withTextDirection_returnsGiven() {
         val textDir = TextDirectionHeuristics.RTL
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = "",
-                paint = TextPaint(),
-                width = Int.MAX_VALUE,
-                textDir = textDir
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE,
+            textDir = textDir
+        )
 
         assertThat(staticLayout.getParagraphDirection(0)).isEqualTo(Layout.DIR_RIGHT_TO_LEFT)
     }
 
     @Test
     fun create_defaultTextDirection_isFirstStrongLTR() {
-        val staticLayoutEmpty =
-            StaticLayoutFactory.create(text = "", paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayoutEmpty = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
-        assertThat(staticLayoutEmpty.getParagraphDirection(0)).isEqualTo(Layout.DIR_LEFT_TO_RIGHT)
+        assertThat(staticLayoutEmpty.getParagraphDirection(0))
+            .isEqualTo(Layout.DIR_LEFT_TO_RIGHT)
 
-        val staticLayoutFirstRTL =
-            StaticLayoutFactory.create(text = "\u05D0", paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayoutFirstRTL = StaticLayoutFactory.create(
+            text = "\u05D0",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayoutFirstRTL.getParagraphDirection(0))
             .isEqualTo(Layout.DIR_RIGHT_TO_LEFT)
@@ -134,21 +152,23 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withAlign_returnsGiven() {
         val align = Layout.Alignment.ALIGN_OPPOSITE
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = "",
-                paint = TextPaint(),
-                width = Int.MAX_VALUE,
-                alignment = align
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE,
+            alignment = align
+        )
 
         assertThat(staticLayout.alignment).isEqualTo(align)
     }
 
     @Test
     fun create_defaultAlign_isAlignNormal() {
-        val staticLayout =
-            StaticLayoutFactory.create(text = "", paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayout.alignment).isEqualTo(Layout.Alignment.ALIGN_NORMAL)
     }
@@ -161,14 +181,13 @@ class StaticLayoutFactoryTest {
 
         val width = floor(charWidth * text.length).toInt() + 10
         val ellipsizedWidth = width
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width,
-                ellipsize = TextUtils.TruncateAt.END,
-                ellipsizedWidth = ellipsizedWidth
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width,
+            ellipsize = TextUtils.TruncateAt.END,
+            ellipsizedWidth = ellipsizedWidth
+        )
 
         // Ellipsized char in the first line should be zero
         assertThat(staticLayout.getEllipsisCount(0)).isEqualTo(0)
@@ -183,15 +202,14 @@ class StaticLayoutFactoryTest {
         val width = floor(charWidth * text.length).toInt()
         val ellipsizedWidth = width - 1
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width,
-                maxLines = 1,
-                ellipsize = TextUtils.TruncateAt.END,
-                ellipsizedWidth = ellipsizedWidth
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width,
+            maxLines = 1,
+            ellipsize = TextUtils.TruncateAt.END,
+            ellipsizedWidth = ellipsizedWidth
+        )
 
         assertThat(staticLayout.getEllipsisCount(0)).isGreaterThan(0)
     }
@@ -199,21 +217,23 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withLineSpacingMultiplier_returnsGiven() {
         val lineSpacingMultiplier = 1.5f
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = "",
-                paint = TextPaint(),
-                width = Int.MAX_VALUE,
-                lineSpacingMultiplier = lineSpacingMultiplier
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE,
+            lineSpacingMultiplier = lineSpacingMultiplier
+        )
 
         assertThat(staticLayout.spacingMultiplier).isEqualTo(lineSpacingMultiplier)
     }
 
     @Test
     fun create_defaultLineSpacingMultiplier_isOne() {
-        val staticLayout =
-            StaticLayoutFactory.create(text = "", paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayout.spacingMultiplier).isEqualTo(1f)
     }
@@ -221,21 +241,23 @@ class StaticLayoutFactoryTest {
     @Test
     fun create_withLineSpacingExtra_returnsGiven() {
         val lineSpacingExtra = 10f
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = "",
-                paint = TextPaint(),
-                width = Int.MAX_VALUE,
-                lineSpacingExtra = lineSpacingExtra
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE,
+            lineSpacingExtra = lineSpacingExtra
+        )
 
         assertThat(staticLayout.spacingAdd).isEqualTo(lineSpacingExtra)
     }
 
     @Test
     fun create_defaultLineSpacingExtra_isZero() {
-        val staticLayout =
-            StaticLayoutFactory.create(text = "", paint = TextPaint(), width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = "",
+            paint = TextPaint(),
+            width = Int.MAX_VALUE
+        )
 
         assertThat(staticLayout.spacingAdd).isZero()
     }
@@ -249,13 +271,12 @@ class StaticLayoutFactoryTest {
         val extra = charWidth / 2
         val width = floor("a b".length * charWidth + extra).toInt()
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width,
-                justificationMode = Layout.JUSTIFICATION_MODE_NONE
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width,
+            justificationMode = Layout.JUSTIFICATION_MODE_NONE
+        )
 
         // Last line won't be justified, need two lines.
         assertThat(staticLayout.getLineCount()).isGreaterThan(1)
@@ -273,13 +294,12 @@ class StaticLayoutFactoryTest {
         val extra = charWidth / 2
         val width = floor("a b".length * charWidth + extra).toInt()
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width,
-                justificationMode = Layout.JUSTIFICATION_MODE_INTER_WORD
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width,
+            justificationMode = Layout.JUSTIFICATION_MODE_INTER_WORD
+        )
 
         // Last line won't be justified, need two lines.
         assertThat(staticLayout.getLineCount()).isGreaterThan(1)
@@ -302,7 +322,11 @@ class StaticLayoutFactoryTest {
         val extra = charWidth / 2
         val width = floor("a b".length * charWidth + extra).toInt()
 
-        val staticLayout = StaticLayoutFactory.create(text = text, paint = paint, width = width)
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width
+        )
 
         // Last line won't be justified, need two lines.
         assertThat(staticLayout.getLineCount()).isGreaterThan(1)
@@ -316,13 +340,12 @@ class StaticLayoutFactoryTest {
         val charWidth = 20f
         val paint = getPaintWithCharWidth(charWidth)
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = Int.MAX_VALUE,
-                includePadding = true
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = Int.MAX_VALUE,
+            includePadding = true
+        )
 
         val fontMetrics = paint.fontMetricsInt
         assertThat(staticLayout.height).isEqualTo(fontMetrics.bottom - fontMetrics.top)
@@ -334,13 +357,12 @@ class StaticLayoutFactoryTest {
         val charWidth = 20f
         val paint = getPaintWithCharWidth(charWidth)
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = Int.MAX_VALUE,
-                includePadding = false
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = Int.MAX_VALUE,
+            includePadding = false
+        )
 
         val fontMetrics = paint.fontMetricsInt
         assertThat(staticLayout.height).isEqualTo(fontMetrics.descent - fontMetrics.ascent)
@@ -352,8 +374,11 @@ class StaticLayoutFactoryTest {
         val charWidth = 20f
         val paint = getPaintWithCharWidth(charWidth)
 
-        val staticLayout =
-            StaticLayoutFactory.create(text = text, paint = paint, width = Int.MAX_VALUE)
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = Int.MAX_VALUE
+        )
 
         val fontMetrics = paint.fontMetricsInt
         assertThat(staticLayout.height).isEqualTo(fontMetrics.bottom - fontMetrics.top)
@@ -399,13 +424,12 @@ class StaticLayoutFactoryTest {
 
         val width = ("writ".length + 2) * charWidth
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width.toInt(),
-                hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width.toInt(),
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NONE
+        )
 
         assertThat(staticLayout.getLineCount()).isEqualTo(2)
         // If hyphenation is off, "writing" will become "writin" + "\n" +"g".
@@ -422,13 +446,12 @@ class StaticLayoutFactoryTest {
 
         val width = ("writ".length + 2) * charWidth
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width.toInt(),
-                hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width.toInt(),
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+        )
 
         assertThat(staticLayout.getLineCount()).isEqualTo(2)
         // If hyphenation is on, "writing" will become "writ-" + "\n" + "ing".
@@ -445,13 +468,12 @@ class StaticLayoutFactoryTest {
 
         val width = ("writ".length + 2) * charWidth
 
-        val staticLayout =
-            StaticLayoutFactory.create(
-                text = text,
-                paint = paint,
-                width = width.toInt(),
-                hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_FULL
-            )
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width.toInt(),
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_FULL
+        )
 
         assertThat(staticLayout.getLineCount()).isEqualTo(2)
         // If hyphenation is on, "writing" will become "writ-" + "\n" + "ing".
@@ -468,8 +490,11 @@ class StaticLayoutFactoryTest {
 
         val width = ("writ".length + 2) * charWidth
 
-        val staticLayout =
-            StaticLayoutFactory.create(text = text, paint = paint, width = width.toInt())
+        val staticLayout = StaticLayoutFactory.create(
+            text = text,
+            paint = paint,
+            width = width.toInt()
+        )
 
         assertThat(staticLayout.getLineCount()).isEqualTo(2)
         // If hyphenation is off, "writing" will become "writin" + "\n" +"g".
@@ -540,7 +565,11 @@ class StaticLayoutFactoryTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun create_withWidthNegative_throwsIAE() {
-        StaticLayoutFactory.create(text = "abc", paint = TextPaint(), width = -1)
+        StaticLayoutFactory.create(
+            text = "abc",
+            paint = TextPaint(),
+            width = -1
+        )
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -573,9 +602,8 @@ class StaticLayoutFactoryTest {
         )
     }
 
-    fun getPaintWithCharWidth(width: Float) =
-        TextPaint().apply {
-            textSize = width
-            typeface = sampleFont
-        }
+    fun getPaintWithCharWidth(width: Float) = TextPaint().apply {
+        textSize = width
+        typeface = sampleFont
+    }
 }

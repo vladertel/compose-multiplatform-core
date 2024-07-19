@@ -28,9 +28,9 @@ import androidx.annotation.RestrictTo
 /**
  * [CameraExtensionMetadata] is a compatibility wrapper around [CameraExtensionCharacteristics].
  *
- * Applications should, in most situations, prefer using this interface to unwrapping and using the
- * underlying [CameraExtensionCharacteristics] object directly. Implementation(s) of this interface
- * provide compatibility guarantees and performance improvements over using
+ * Applications should, in most situations, prefer using this interface to unwrapping and
+ * using the underlying [CameraExtensionCharacteristics] object directly. Implementation(s) of this
+ * interface provide compatibility guarantees and performance improvements over using
  * [CameraExtensionCharacteristics] directly. This allows code to get reasonable behavior for all
  * properties across all OS levels and makes behavior that depends on [CameraExtensionMetadata]
  * easier to test and reason about.
@@ -40,14 +40,10 @@ interface CameraExtensionMetadata : Metadata, UnsafeWrapper {
     val camera: CameraId
     val isRedacted: Boolean
     val cameraExtension: Int
-    val isPostviewSupported: Boolean
 
     val requestKeys: Set<CaptureRequest.Key<*>>
     val resultKeys: Set<CaptureResult.Key<*>>
 
     fun getOutputSizes(imageFormat: Int): Set<Size>
-
     fun getOutputSizes(klass: Class<*>): Set<Size>
-
-    fun getPostviewSizes(captureSize: Size, format: Int): Set<Size>
 }

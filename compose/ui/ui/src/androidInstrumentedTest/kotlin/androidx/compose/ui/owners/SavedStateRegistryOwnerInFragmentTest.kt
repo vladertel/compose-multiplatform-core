@@ -42,7 +42,9 @@ import org.junit.runner.RunWith
 class SavedStateRegistryOwnerInFragmentTest {
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule = androidx.test.rule.ActivityTestRule(FragmentActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule(
+        FragmentActivity::class.java
+    )
     private lateinit var activity: FragmentActivity
 
     @Before
@@ -58,7 +60,9 @@ class SavedStateRegistryOwnerInFragmentTest {
             val view = FragmentContainerView(activity)
             view.id = 100
             activity.setContentView(view)
-            activity.supportFragmentManager.beginTransaction().replace(100, fragment).commit()
+            activity.supportFragmentManager.beginTransaction()
+                .replace(100, fragment)
+                .commit()
         }
         assertTrue(fragment.latch.await(1, TimeUnit.SECONDS))
         assertEquals(fragment.requireView().findViewTreeSavedStateRegistryOwner(), fragment.owner)
@@ -73,12 +77,11 @@ class SavedStateRegistryOwnerInFragmentTest {
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
-        ) =
-            ComposeView(requireContext()).apply {
-                setContent {
-                    owner = LocalSavedStateRegistryOwner.current
-                    latch.countDown()
-                }
+        ) = ComposeView(requireContext()).apply {
+            setContent {
+                owner = LocalSavedStateRegistryOwner.current
+                latch.countDown()
             }
+        }
     }
 }

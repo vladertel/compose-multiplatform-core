@@ -24,12 +24,14 @@ import androidx.compose.ui.unit.IntSize
  *
  * Use [ScalingLazyListState.layoutInfo] to retrieve this
  */
-@Deprecated(
-    "Was moved to androidx.wear.compose.foundation.lazy package. " + "Please use it instead"
-)
+@Deprecated("Was moved to androidx.wear.compose.foundation.lazy package. " +
+    "Please use it instead")
 public sealed interface ScalingLazyListLayoutInfo {
-    /** The list of [ScalingLazyListItemInfo] representing all the currently visible items. */
-    @Suppress("DEPRECATION") val visibleItemsInfo: List<ScalingLazyListItemInfo>
+    /**
+     * The list of [ScalingLazyListItemInfo] representing all the currently visible items.
+     */
+    @Suppress("DEPRECATION")
+    val visibleItemsInfo: List<ScalingLazyListItemInfo>
 
     /**
      * The start offset of the layout's viewport in pixels. You can think of it as a minimum offset
@@ -50,7 +52,9 @@ public sealed interface ScalingLazyListLayoutInfo {
      */
     val viewportEndOffset: Int
 
-    /** The total count of items passed to [ScalingLazyColumn]. */
+    /**
+     * The total count of items passed to [ScalingLazyColumn].
+     */
     val totalItemsCount: Int
 
     /**
@@ -59,10 +63,14 @@ public sealed interface ScalingLazyListLayoutInfo {
      */
     val viewportSize: IntSize
 
-    /** The orientation of the scaling lazy list. */
+    /**
+     * The orientation of the scaling lazy list.
+     */
     val orientation: Orientation
 
-    /** True if the direction of scrolling and layout is reversed. */
+    /**
+     * True if the direction of scrolling and layout is reversed.
+     */
     val reverseLayout: Boolean
 
     /**
@@ -73,8 +81,9 @@ public sealed interface ScalingLazyListLayoutInfo {
     val beforeContentPadding: Int
 
     /**
-     * The content padding in pixels applied after the last item in the direction of scrolling. For
-     * example it is a bottom content padding for ScalingLazyColumn with reverseLayout set to false.
+     * The content padding in pixels applied after the last item in the direction of scrolling.
+     * For example it is a bottom content padding for ScalingLazyColumn with reverseLayout set to
+     * false.
      */
     val afterContentPadding: Int
 

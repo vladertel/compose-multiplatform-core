@@ -30,16 +30,21 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class ModifierNodeChildTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun noChildren() {
         // Arrange.
         val node = object : Modifier.Node() {}
-        rule.setContent { Box(Modifier.elementOf(node)) }
+        rule.setContent {
+            Box(Modifier.elementOf(node))
+        }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result.toString()).isEqualTo("<tail>")
@@ -50,11 +55,17 @@ class ModifierNodeChildTest {
         // Arrange.
         val (node, localChild1, localChild2) = List(3) { object : Modifier.Node() {} }
         rule.setContent {
-            Box(Modifier.elementOf(node).elementOf(localChild1).elementOf(localChild2))
+            Box(
+                Modifier.elementOf(node)
+                    .elementOf(localChild1)
+                    .elementOf(localChild2)
+            )
         }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result).isEqualTo(localChild1)
@@ -64,10 +75,18 @@ class ModifierNodeChildTest {
     fun nonContiguousChild() {
         // Arrange.
         val (node, localChild) = List(2) { object : Modifier.Node() {} }
-        rule.setContent { Box(Modifier.elementOf(node).otherModifier().elementOf(localChild)) }
+        rule.setContent {
+            Box(
+                Modifier.elementOf(node)
+                    .otherModifier()
+                    .elementOf(localChild)
+            )
+        }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result).isEqualTo(localChild)
@@ -78,11 +97,19 @@ class ModifierNodeChildTest {
         // Arrange.
         val (node, child1, child2) = List(3) { object : Modifier.Node() {} }
         rule.setContent {
-            Box(Modifier.elementOf(node)) { Box(Modifier.elementOf(child1).elementOf(child2)) }
+            Box(Modifier.elementOf(node)) {
+                Box(
+                    Modifier
+                        .elementOf(child1)
+                        .elementOf(child2)
+                )
+            }
         }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result.toString()).isEqualTo("<tail>")
@@ -93,12 +120,18 @@ class ModifierNodeChildTest {
         val (node, child) = List(2) { object : Modifier.Node() {} }
         rule.setContent {
             Box(Modifier.elementOf(node)) {
-                Box { Box(Modifier.otherModifier()) { Box(Modifier.elementOf(child)) } }
+                Box {
+                    Box(Modifier.otherModifier()) {
+                        Box(Modifier.elementOf(child))
+                    }
+                }
             }
         }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result).isEqualTo(child)
@@ -109,11 +142,22 @@ class ModifierNodeChildTest {
     fun withinCurrentLayoutNode_skipsUnAttachedChild() {
         // Arrange.
         val (node, child1, child2) = List(3) { object : Modifier.Node() {} }
-        rule.setContent { Box(Modifier.elementOf(node).elementOf(child1).elementOf(child2)) }
-        rule.runOnIdle { child1.markAsDetached() }
+        rule.setContent {
+            Box(
+                Modifier
+                    .elementOf(node)
+                    .elementOf(child1)
+                    .elementOf(child2)
+            )
+        }
+        rule.runOnIdle {
+            child1.markAsDetached()
+        }
 
         // Act.
-        val result = rule.runOnIdle { node.child }
+        val result = rule.runOnIdle {
+            node.child
+        }
 
         // Assert.
         assertThat(result).isEqualTo(child2)

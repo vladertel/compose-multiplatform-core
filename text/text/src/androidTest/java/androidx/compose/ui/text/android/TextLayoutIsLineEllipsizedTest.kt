@@ -31,11 +31,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class TextLayoutIsLineEllipsizedTest {
-    private val sampleTypeface =
-        ResourcesCompat.getFont(
-            InstrumentationRegistry.getInstrumentation().context,
-            R.font.sample_font
-        )!!
+    private val sampleTypeface = ResourcesCompat.getFont(
+        InstrumentationRegistry.getInstrumentation().context, R.font.sample_font
+    )!!
     private val fontSize = 10f
     private val maxLines = 5
     private val charsInline = 10
@@ -112,11 +110,10 @@ class TextLayoutIsLineEllipsizedTest {
         truncateAt: TruncateAt?,
         maxLines: Int = this.maxLines
     ): TextLayout {
-        val textPaint =
-            TextPaint().apply {
-                this.typeface = sampleTypeface
-                this.textSize = fontSize
-            }
+        val textPaint = TextPaint().apply {
+            this.typeface = sampleTypeface
+            this.textSize = fontSize
+        }
 
         return TextLayout(
             charSequence = text,

@@ -27,14 +27,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
+/* ktlint-disable max-line-length */
 @RunWith(JUnit4::class)
 
 /**
  * Test for [ColorsDetector].
  *
- * Tests for when Colors.kt is available as source (during global / IDE analysis), and for when it
- * is available as bytecode (during partial / CLI analysis). Since we cannot resolve default values
- * when it is only available as bytecode, is it expected that we throw less errors in that mode.
+ * Tests for when Colors.kt is available as source (during global / IDE analysis), and for when
+ * it is available as bytecode (during partial / CLI analysis). Since we cannot resolve default
+ * values when it is only available as bytecode, is it expected that we throw less errors in that
+ * mode.
  */
 class ColorsDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = ColorsDetector()
@@ -42,12 +44,11 @@ class ColorsDetectorTest : LintDetectorTest() {
     override fun getIssues(): MutableList<Issue> = mutableListOf(ColorsDetector.ConflictingOnColor)
 
     // Simplified Colors.kt stubs
-    private val ColorsStub =
-        kotlinAndBytecodeStub(
-            filename = "Colors.kt",
-            filepath = "androidx/compose/material",
-            checksum = 0x73db7d2,
-            """
+    private val ColorsStub = kotlinAndBytecodeStub(
+        filename = "Colors.kt",
+        filepath = "androidx/compose/material",
+        checksum = 0x73db7d2,
+        """
             package androidx.compose.material
 
             import androidx.compose.ui.graphics.*
@@ -126,13 +127,13 @@ class ColorsDetectorTest : LintDetectorTest() {
                 false
             )
         """,
-            """
+"""
         META-INF/main.kotlin_module:
         H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgUuWSTMxLKcrPTKnQS87PLcgvTtXL
         TSxJLcpMzBHicM7PyS8q9i7hUueSxalMLy0/X4gtJLW4BKxQBkNhaaZeelFi
         QUZmcrEQO9hI7xIlBi0GAPW9qnSRAAAA
         """,
-            """
+        """
         androidx/compose/material/Colors.class:
         H4sIAAAAAAAA/5WUT28TRxjGn1n/2Xhtx3aMNzbp8jdAkrbZkPYGQippKwWZ
         tmpQDuSAJuslmdg7E82sI3rLJ+CGxJlvkBNSD1XEBYkPhXh3vFmoeqiwrHl+
@@ -153,7 +154,7 @@ class ColorsDetectorTest : LintDetectorTest() {
         fQ+lbdzYxs1tLOMWIW5v4w5W9sAMVrG2hwWDusG3Bg2D7wzmDVqG/mLQMVmo
         a3DJoGfgGywa9A0GNnnpExMAv0xQBQAA
         """,
-            """
+        """
         androidx/compose/material/ColorsKt.class:
         H4sIAAAAAAAA/81WS1McVRT+7jDMDMMwNJOZzkBeGIgBExjCJBBDQgjkNbyi
         ISEP1NjMNKRh6MbuHipJWRZaZdSFGxdW6cIqdeHChSm1lDKWRWGVCzfuXORH
@@ -189,14 +190,13 @@ class ColorsDetectorTest : LintDetectorTest() {
         whULVy3ELYxb/OOJOgsJy7EnLaQsyBZ2WkhbqLfQYKHXQsjCNQuV/wJPDAsN
         AgwAAA==
         """
-        )
+    )
 
     @Test
     fun constructorErrors_source() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -254,10 +254,10 @@ class ColorsDetectorTest : LintDetectorTest() {
                     false
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.kotlin
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.kotlin
+        )
             .run()
             .expect(
                 """
@@ -304,10 +304,9 @@ src/androidx/compose/material/foo/test.kt:55: Error: Conflicting 'on' color for 
 
     @Test
     fun lightColorsErrors_source() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -330,10 +329,10 @@ src/androidx/compose/material/foo/test.kt:55: Error: Conflicting 'on' color for 
                     onBackground = Color.Green,
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.kotlin
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.kotlin
+        )
             .run()
             .expect(
                 """
@@ -353,10 +352,9 @@ src/androidx/compose/material/foo/test.kt:21: Error: Conflicting 'on' color for 
 
     @Test
     fun darkColorsErrors_source() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -380,10 +378,10 @@ src/androidx/compose/material/foo/test.kt:21: Error: Conflicting 'on' color for 
                     onBackground = Color.Green,
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.kotlin
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.kotlin
+        )
             .run()
             .expect(
                 """
@@ -403,10 +401,9 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
 
     @Test
     fun trackVariableAssignment_source() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -442,20 +439,19 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
                     )
                 }
             """
-                ),
-                Stubs.Color,
-                ColorsStub.kotlin
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.kotlin
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun noErrors_source() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -516,20 +512,19 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
                 )
 
             """
-                ),
-                Stubs.Color,
-                ColorsStub.kotlin
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.kotlin
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun constructorErrors_compiled() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -587,10 +582,10 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
                     false
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.bytecode
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.bytecode
+        )
             .run()
             // TODO: b/184856104 currently the constructor call to Colors cannot be resolved when
             // it is available as bytecode, so we don't see any errors.
@@ -599,10 +594,9 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
 
     @Test
     fun lightColorsErrors_compiled() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -619,10 +613,10 @@ src/androidx/compose/material/foo/test.kt:22: Error: Conflicting 'on' color for 
                     onBackground = Color.Green,
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.bytecode
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.bytecode
+        )
             .run()
             .expect(
                 """
@@ -639,10 +633,9 @@ src/androidx/compose/material/foo/test.kt:15: Error: Conflicting 'on' color for 
 
     @Test
     fun darkColorsErrors_compiled() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -659,10 +652,10 @@ src/androidx/compose/material/foo/test.kt:15: Error: Conflicting 'on' color for 
                     onBackground = Color.Green,
                 )
             """
-                ),
-                Stubs.Color,
-                ColorsStub.bytecode
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.bytecode
+        )
             .run()
             .expect(
                 """
@@ -679,10 +672,9 @@ src/androidx/compose/material/foo/test.kt:15: Error: Conflicting 'on' color for 
 
     @Test
     fun trackVariableAssignment_compiled() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -718,20 +710,19 @@ src/androidx/compose/material/foo/test.kt:15: Error: Conflicting 'on' color for 
                     )
                 }
             """
-                ),
-                Stubs.Color,
-                ColorsStub.bytecode
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.bytecode
+        )
             .run()
             .expectClean()
     }
 
     @Test
     fun noErrors_compiled() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                 package androidx.compose.material.foo
 
                 import androidx.compose.material.*
@@ -792,11 +783,12 @@ src/androidx/compose/material/foo/test.kt:15: Error: Conflicting 'on' color for 
                 )
 
             """
-                ),
-                Stubs.Color,
-                ColorsStub.bytecode
-            )
+            ),
+            Stubs.Color,
+            ColorsStub.bytecode
+        )
             .run()
             .expectClean()
     }
 }
+/* ktlint-enable max-line-length */

@@ -42,12 +42,16 @@ public class LiveDataObservableTest {
     public fun uninitializedFetch_throwsISE(): Unit = runBlocking {
         val uninitializedObservable = LiveDataObservable<Int>()
 
-        assertThrows<IllegalStateException> { uninitializedObservable.fetchData().await() }
+        assertThrows<IllegalStateException> {
+            uninitializedObservable.fetchData().await()
+        }
     }
 
     @Test
     public fun canSetAndFetchValue(): Unit = runBlocking {
-        val observable = LiveDataObservable<Int>().apply { postValue(MAGIC_VALUE) }
+        val observable = LiveDataObservable<Int>().apply {
+            postValue(MAGIC_VALUE)
+        }
 
         val fetched = observable.fetchData().await()
         assertThat(fetched).isEqualTo(MAGIC_VALUE)
@@ -55,19 +59,22 @@ public class LiveDataObservableTest {
 
     @Test
     public fun canSetAndFetchValue_onMainThread(): Unit = runBlocking {
-        val fetched =
-            withContext(Dispatchers.Main) {
-                val observable = LiveDataObservable<Int>().apply { postValue(MAGIC_VALUE) }
-
-                observable.fetchData().await()
+        val fetched = withContext(Dispatchers.Main) {
+            val observable = LiveDataObservable<Int>().apply {
+                postValue(MAGIC_VALUE)
             }
+
+            observable.fetchData().await()
+        }
 
         assertThat(fetched).isEqualTo(MAGIC_VALUE)
     }
 
     @Test
     public fun canSetAndReceiveError(): Unit = runBlocking {
-        val observable = LiveDataObservable<Int>().apply { postError(TEST_ERROR) }
+        val observable = LiveDataObservable<Int>().apply {
+            postError(TEST_ERROR)
+        }
 
         assertThrows<TestError> { observable.fetchData().await() }
     }
@@ -104,7 +111,9 @@ public class LiveDataObservableTest {
 
         val flow = observable.asFlow() // Sets observer
         observable.postError(TEST_ERROR)
-        assertThrows<TestError> { flow.first() }
+        assertThrows<TestError> {
+            flow.first()
+        }
     }
 }
 

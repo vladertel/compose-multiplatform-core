@@ -38,7 +38,10 @@ fun SpecificationItem(
     specification: Specification,
     onClick: (specification: Specification) -> Unit
 ) {
-    OutlinedCard(onClick = { onClick(specification) }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        onClick = { onClick(specification) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier.padding(SpecificationItemPadding),
             horizontalArrangement = Arrangement.spacedBy(SpecificationItemPadding),
@@ -48,7 +51,10 @@ fun SpecificationItem(
                 modifier = Modifier.weight(1f, fill = true),
                 verticalArrangement = Arrangement.spacedBy(SpecificationItemTextPadding)
             ) {
-                Text(text = specification.name, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = specification.name,
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Text(
                     text = specification.artifact,
                     style = MaterialTheme.typography.bodySmall,

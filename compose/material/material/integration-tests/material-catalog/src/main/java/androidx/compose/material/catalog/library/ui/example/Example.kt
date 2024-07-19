@@ -46,7 +46,9 @@ fun Example(
         onBackClick = onBackClick
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
             example.content()

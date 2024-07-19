@@ -34,7 +34,7 @@ import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.material.ripple
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -66,7 +66,11 @@ fun ComposeCameraScreenTabRow(
     onTabSelected: (ComposeCameraScreen) -> Unit,
     currentScreen: ComposeCameraScreen
 ) {
-    Surface(Modifier.height(TabHeight).fillMaxWidth()) {
+    Surface(
+        Modifier
+            .height(TabHeight)
+            .fillMaxWidth()
+    ) {
         Row(Modifier.selectableGroup()) {
             allScreens.forEach { screen ->
                 ComposeCameraTab(
@@ -98,26 +102,28 @@ private fun ComposeCameraTab(
         )
     }
 
-    val tabTintColor by
-        animateColorAsState(
-            targetValue = if (selected) color else color.copy(alpha = InactiveTabOpacity),
-            animationSpec = animSpec
-        )
+    val tabTintColor by animateColorAsState(
+        targetValue = if (selected) color else color.copy(alpha = InactiveTabOpacity),
+        animationSpec = animSpec
+    )
 
     Row(
-        modifier =
-            Modifier.padding(TabPadding)
-                .animateContentSize()
-                .height(TabHeight)
-                .selectable(
-                    selected = selected,
-                    onClick = onSelected,
-                    role = Role.Tab,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication =
-                        ripple(bounded = false, radius = Dp.Unspecified, color = Color.Unspecified)
+        modifier = Modifier
+            .padding(TabPadding)
+            .animateContentSize()
+            .height(TabHeight)
+            .selectable(
+                selected = selected,
+                onClick = onSelected,
+                role = Role.Tab,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(
+                    bounded = false,
+                    radius = Dp.Unspecified,
+                    color = Color.Unspecified
                 )
-                .clearAndSetSemantics { contentDescription = text }
+            )
+            .clearAndSetSemantics { contentDescription = text }
     ) {
         Icon(imageVector = icon, contentDescription = text, tint = tabTintColor)
         if (selected) {

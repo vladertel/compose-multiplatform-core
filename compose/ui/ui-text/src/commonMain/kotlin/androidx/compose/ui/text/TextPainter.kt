@@ -50,9 +50,8 @@ object TextPainter {
      * @param textLayoutResult a result of text layout
      */
     fun paint(canvas: Canvas, textLayoutResult: TextLayoutResult) {
-        val needClipping =
-            textLayoutResult.hasVisualOverflow &&
-                textLayoutResult.layoutInput.overflow != TextOverflow.Visible
+        val needClipping = textLayoutResult.hasVisualOverflow &&
+            textLayoutResult.layoutInput.overflow != TextOverflow.Visible
         if (needClipping) {
             val width = textLayoutResult.size.width.toFloat()
             val height = textLayoutResult.size.height.toFloat()
@@ -69,12 +68,11 @@ object TextPainter {
         try {
             val brush = style.brush
             if (brush != null) {
-                val alpha =
-                    if (style.textForegroundStyle !== Unspecified) {
-                        style.textForegroundStyle.alpha
-                    } else {
-                        1.0f
-                    }
+                val alpha = if (style.textForegroundStyle !== Unspecified) {
+                    style.textForegroundStyle.alpha
+                } else {
+                    1.0f
+                }
                 textLayoutResult.multiParagraph.paint(
                     canvas = canvas,
                     brush = brush,
@@ -84,12 +82,11 @@ object TextPainter {
                     drawStyle = drawStyle
                 )
             } else {
-                val color =
-                    if (style.textForegroundStyle !== Unspecified) {
-                        style.textForegroundStyle.color
-                    } else {
-                        Color.Black
-                    }
+                val color = if (style.textForegroundStyle !== Unspecified) {
+                    style.textForegroundStyle.color
+                } else {
+                    Color.Black
+                }
                 textLayoutResult.multiParagraph.paint(
                     canvas = canvas,
                     color = color,
@@ -111,32 +108,34 @@ object TextPainter {
  *
  * This draw function supports multi-styling and async font loading.
  *
- * TextMeasurer carries an internal cache to optimize text layout measurement for repeated calls in
- * draw phase. If layout affecting attributes like font size, font weight, overflow, softWrap, etc.
- * are changed in consecutive calls to this method, TextMeasurer and its internal cache that holds
- * layout results may not offer any benefits. Check out [TextMeasurer] and drawText overloads that
- * take [TextLayoutResult] to learn more about text layout and draw phase optimizations.
+ * TextMeasurer carries an internal cache to optimize text layout measurement for repeated calls
+ * in draw phase. If layout affecting attributes like font size, font weight, overflow, softWrap,
+ * etc. are changed in consecutive calls to this method, TextMeasurer and its internal cache that
+ * holds layout results may not offer any benefits. Check out [TextMeasurer] and drawText
+ * overloads that take [TextLayoutResult] to learn more about text layout and draw phase
+ * optimizations.
  *
  * @param textMeasurer Measures and lays out the text
  * @param text Text to be drawn
  * @param topLeft Offsets the text from top left point of the current coordinate system.
  * @param style the [TextStyle] to be applied to the text
  * @param overflow How visual overflow should be handled.
- * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in the
- *   text will be positioned as if there was unlimited horizontal space. If [softWrap] is false,
- *   [overflow] and TextAlign may have unexpected effects.
- * @param maxLines An optional maximum number of lines for the text to span, wrapping if necessary.
- *   If the text exceeds the given number of lines, it will be truncated according to [overflow] and
- *   [softWrap]. If it is not null, then it must be greater than zero.
- * @param placeholders a list of [Placeholder]s that specify ranges of text which will be skipped
- *   during layout and replaced with [Placeholder]. It's required that the range of each
- *   [Placeholder] doesn't cross paragraph boundary, otherwise [IllegalArgumentException] is thrown.
+ * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in
+ * the text will be positioned as if there was unlimited horizontal space. If [softWrap] is
+ * false, [overflow] and TextAlign may have unexpected effects.
+ * @param maxLines An optional maximum number of lines for the text to span, wrapping if
+ * necessary. If the text exceeds the given number of lines, it will be truncated according to
+ * [overflow] and [softWrap]. If it is not null, then it must be greater than zero.
+ * @param placeholders a list of [Placeholder]s that specify ranges of text which will be
+ * skipped during layout and replaced with [Placeholder]. It's required that the range of each
+ * [Placeholder] doesn't cross paragraph boundary, otherwise [IllegalArgumentException] is
+ * thrown.
  * @param size how wide and tall the text should be. If left [Size.Unspecified] as its default
- *   value, text will be forced to fit inside the total drawing area from where it's placed. If size
- *   is specified, [Size.width] will define the width of the text. [Size.height] helps defining the
- *   number of lines that fit if [softWrap] is enabled and [overflow] is [TextOverflow.Ellipsis].
- *   Otherwise, [Size.height] either defines where the text is clipped ([TextOverflow.Clip]) or
- *   becomes no-op.
+ * value, text will be forced to fit inside the total drawing area from where it's placed.
+ * If size is specified, [Size.width] will define the width of the text. [Size.height] helps
+ * defining the number of lines that fit if [softWrap] is enabled and [overflow] is
+ * [TextOverflow.Ellipsis]. Otherwise, [Size.height] either defines where the text is clipped
+ * ([TextOverflow.Clip]) or becomes no-op.
  * @param blendMode Blending algorithm to be applied to the text
  *
  * @sample androidx.compose.ui.text.samples.DrawTextAnnotatedStringSample
@@ -153,24 +152,26 @@ fun DrawScope.drawText(
     size: Size = Size.Unspecified,
     blendMode: BlendMode = DrawScope.DefaultBlendMode
 ) {
-    val textLayoutResult =
-        textMeasurer.measure(
-            text = text,
-            style = style,
-            overflow = overflow,
-            softWrap = softWrap,
-            maxLines = maxLines,
-            placeholders = placeholders,
-            constraints = textLayoutConstraints(size, topLeft),
-            layoutDirection = layoutDirection,
-            density = this
-        )
+    val textLayoutResult = textMeasurer.measure(
+        text = text,
+        style = style,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        placeholders = placeholders,
+        constraints = textLayoutConstraints(size, topLeft),
+        layoutDirection = layoutDirection,
+        density = this
+    )
 
     withTransform({
         translate(topLeft.x, topLeft.y)
         clip(textLayoutResult)
     }) {
-        textLayoutResult.multiParagraph.paint(canvas = drawContext.canvas, blendMode = blendMode)
+        textLayoutResult.multiParagraph.paint(
+            canvas = drawContext.canvas,
+            blendMode = blendMode
+        )
     }
 }
 
@@ -179,33 +180,32 @@ fun DrawScope.drawText(
  *
  * This draw function supports only one text style, and async font loading.
  *
- * TextMeasurer carries an internal cache to optimize text layout measurement for repeated calls in
- * draw phase. If layout affecting attributes like font size, font weight, overflow, softWrap, etc.
- * are changed in consecutive calls to this method, TextMeasurer and its internal cache that holds
- * layout results may not offer any benefits. Check out [TextMeasurer] and drawText overloads that
- * take [TextLayoutResult] to learn more about text layout and draw phase optimizations.
+ * TextMeasurer carries an internal cache to optimize text layout measurement for repeated calls
+ * in draw phase. If layout affecting attributes like font size, font weight, overflow, softWrap,
+ * etc. are changed in consecutive calls to this method, TextMeasurer and its internal cache that
+ * holds layout results may not offer any benefits. Check out [TextMeasurer] and drawText overloads that take [TextLayoutResult] to learn
+ * more about text layout and draw phase optimizations.
  *
  * @param textMeasurer Measures and lays out the text
  * @param text Text to be drawn
  * @param topLeft Offsets the text from top left point of the current coordinate system.
  * @param style the [TextStyle] to be applied to the text
  * @param overflow How visual overflow should be handled.
- * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in the
- *   text will be positioned as if there was unlimited horizontal space. If [softWrap] is false,
- *   [overflow] and TextAlign may have unexpected effects.
- * @param maxLines An optional maximum number of lines for the text to span, wrapping if necessary.
- *   If the text exceeds the given number of lines, it will be truncated according to [overflow] and
- *   [softWrap]. If it is not null, then it must be greater than zero.
+ * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in
+ * the text will be positioned as if there was unlimited horizontal space. If [softWrap] is
+ * false, [overflow] and TextAlign may have unexpected effects.
+ * @param maxLines An optional maximum number of lines for the text to span, wrapping if
+ * necessary. If the text exceeds the given number of lines, it will be truncated according to
+ * [overflow] and [softWrap]. If it is not null, then it must be greater than zero.
  * @param size how wide and tall the text should be. If left [Size.Unspecified] as its default
- *   value, text will be forced to fit inside the total drawing area from where it's placed. If size
- *   is specified, [Size.width] will define the width of the text. [Size.height] helps defining the
- *   number of lines that fit if [softWrap] is enabled and [overflow] is [TextOverflow.Ellipsis].
- *   Otherwise, [Size.height] either defines where the text is clipped ([TextOverflow.Clip]) or
- *   becomes no-op.
+ * value, text will be forced to fit inside the total drawing area from where it's placed.
+ * If size is specified, [Size.width] will define the width of the text. [Size.height] helps
+ * defining the number of lines that fit if [softWrap] is enabled and [overflow] is
+ * [TextOverflow.Ellipsis]. Otherwise, [Size.height] either defines where the text is clipped
+ * ([TextOverflow.Clip]) or becomes no-op.
  * @param blendMode Blending algorithm to be applied to the text
  *
  * @sample androidx.compose.ui.text.samples.DrawTextSample
- *
  * @sample androidx.compose.ui.text.samples.DrawTextStyledSample
  */
 fun DrawScope.drawText(
@@ -219,23 +219,25 @@ fun DrawScope.drawText(
     size: Size = Size.Unspecified,
     blendMode: BlendMode = DrawScope.DefaultBlendMode
 ) {
-    val textLayoutResult =
-        textMeasurer.measure(
-            text = AnnotatedString(text),
-            style = style,
-            overflow = overflow,
-            softWrap = softWrap,
-            maxLines = maxLines,
-            constraints = textLayoutConstraints(size, topLeft),
-            layoutDirection = layoutDirection,
-            density = this
-        )
+    val textLayoutResult = textMeasurer.measure(
+        text = AnnotatedString(text),
+        style = style,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        constraints = textLayoutConstraints(size, topLeft),
+        layoutDirection = layoutDirection,
+        density = this
+    )
 
     withTransform({
         translate(topLeft.x, topLeft.y)
         clip(textLayoutResult)
     }) {
-        textLayoutResult.multiParagraph.paint(canvas = drawContext.canvas, blendMode = blendMode)
+        textLayoutResult.multiParagraph.paint(
+            canvas = drawContext.canvas,
+            blendMode = blendMode
+        )
     }
 }
 
@@ -249,14 +251,13 @@ fun DrawScope.drawText(
  * @param color Text color to use
  * @param topLeft Offsets the text from top left point of the current coordinate system.
  * @param alpha opacity to be applied to the [color] from 0.0f to 1.0f representing fully
- *   transparent to fully opaque respectively
+ * transparent to fully opaque respectively
  * @param shadow The shadow effect applied on the text.
  * @param textDecoration The decorations to paint on the text (e.g., an underline).
  * @param drawStyle Whether or not the text is stroked or filled in.
  * @param blendMode Blending algorithm to be applied to the text
  *
  * @sample androidx.compose.ui.text.samples.DrawTextMeasureInLayoutSample
- *
  * @sample androidx.compose.ui.text.samples.DrawTextDrawWithCacheSample
  */
 fun DrawScope.drawText(
@@ -312,8 +313,8 @@ fun DrawScope.drawText(
  * @param textLayoutResult Text Layout to be drawn
  * @param brush The brush to use when drawing the text.
  * @param topLeft Offsets the text from top left point of the current coordinate system.
- * @param alpha Opacity to be applied to [brush] from 0.0f to 1.0f representing fully transparent to
- *   fully opaque respectively.
+ * @param alpha Opacity to be applied to [brush] from 0.0f to 1.0f representing fully
+ * transparent to fully opaque respectively.
  * @param shadow The shadow effect applied on the text.
  * @param textDecoration The decorations to paint on the text (e.g., an underline).
  * @param drawStyle Whether or not the text is stroked or filled in.
@@ -350,9 +351,8 @@ fun DrawScope.drawText(
 }
 
 private fun DrawTransform.clip(textLayoutResult: TextLayoutResult) {
-    if (
-        textLayoutResult.hasVisualOverflow &&
-            textLayoutResult.layoutInput.overflow != TextOverflow.Visible
+    if (textLayoutResult.hasVisualOverflow &&
+        textLayoutResult.layoutInput.overflow != TextOverflow.Visible
     ) {
         clipRect(
             left = 0f,
@@ -363,8 +363,13 @@ private fun DrawTransform.clip(textLayoutResult: TextLayoutResult) {
     }
 }
 
-/** Converts given size and placement preferences to Constraints for measuring text layout. */
-private fun DrawScope.textLayoutConstraints(size: Size, topLeft: Offset): Constraints {
+/**
+ * Converts given size and placement preferences to Constraints for measuring text layout.
+ */
+private fun DrawScope.textLayoutConstraints(
+    size: Size,
+    topLeft: Offset
+): Constraints {
     val minWidth: Int
     val maxWidth: Int
     val isWidthNaN = size.isUnspecified || size.width.isNaN()

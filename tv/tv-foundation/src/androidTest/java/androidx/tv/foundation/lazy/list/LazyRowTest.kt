@@ -46,9 +46,10 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class LazyRowTest {
-    @Suppress("PrivatePropertyName") private val LazyListTag = "LazyListTag"
+    private val LazyListTag = "LazyListTag"
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val firstItemTag = "firstItemTag"
     private val secondItemTag = "secondItemTag"
@@ -70,11 +71,14 @@ class LazyRowTest {
             }
         }
 
-        rule.onNodeWithTag(firstItemTag).assertIsDisplayed()
+        rule.onNodeWithTag(firstItemTag)
+            .assertIsDisplayed()
 
-        rule.onNodeWithTag(secondItemTag).assertIsDisplayed()
+        rule.onNodeWithTag(secondItemTag)
+            .assertIsDisplayed()
 
-        val lazyRowBounds = rule.onNodeWithTag(LazyListTag).getUnclippedBoundsInRoot()
+        val lazyRowBounds = rule.onNodeWithTag(LazyListTag)
+            .getUnclippedBoundsInRoot()
 
         with(rule.density) {
             // Verify the height of the row
@@ -87,27 +91,33 @@ class LazyRowTest {
     fun lazyRowAlignmentCenterVertically() {
         prepareLazyRowForAlignment(Alignment.CenterVertically)
 
-        rule.onNodeWithTag(firstItemTag).assertPositionInRootIsEqualTo(0.dp, 25.dp)
+        rule.onNodeWithTag(firstItemTag)
+            .assertPositionInRootIsEqualTo(0.dp, 25.dp)
 
-        rule.onNodeWithTag(secondItemTag).assertPositionInRootIsEqualTo(50.dp, 15.dp)
+        rule.onNodeWithTag(secondItemTag)
+            .assertPositionInRootIsEqualTo(50.dp, 15.dp)
     }
 
     @Test
     fun lazyRowAlignmentTop() {
         prepareLazyRowForAlignment(Alignment.Top)
 
-        rule.onNodeWithTag(firstItemTag).assertPositionInRootIsEqualTo(0.dp, 0.dp)
+        rule.onNodeWithTag(firstItemTag)
+            .assertPositionInRootIsEqualTo(0.dp, 0.dp)
 
-        rule.onNodeWithTag(secondItemTag).assertPositionInRootIsEqualTo(50.dp, 0.dp)
+        rule.onNodeWithTag(secondItemTag)
+            .assertPositionInRootIsEqualTo(50.dp, 0.dp)
     }
 
     @Test
     fun lazyRowAlignmentBottom() {
         prepareLazyRowForAlignment(Alignment.Bottom)
 
-        rule.onNodeWithTag(firstItemTag).assertPositionInRootIsEqualTo(0.dp, 50.dp)
+        rule.onNodeWithTag(firstItemTag)
+            .assertPositionInRootIsEqualTo(0.dp, 50.dp)
 
-        rule.onNodeWithTag(secondItemTag).assertPositionInRootIsEqualTo(50.dp, 30.dp)
+        rule.onNodeWithTag(secondItemTag)
+            .assertPositionInRootIsEqualTo(50.dp, 30.dp)
     }
 
     @Test
@@ -120,13 +130,12 @@ class LazyRowTest {
                     TvLazyRow(
                         Modifier.testTag(LazyListTag),
                         state,
-                        pivotOffsets = PivotOffsets(parentFraction = 0f)
+                        pivotOffsets =
+                        PivotOffsets(parentFraction = 0f)
                     ) {
                         items(4) {
                             Box(
-                                Modifier.width(101.dp)
-                                    .fillParentMaxHeight()
-                                    .testTag("$it")
+                                Modifier.width(101.dp).fillParentMaxHeight().testTag("$it")
                                     .focusable()
                             )
                         }
@@ -135,7 +144,7 @@ class LazyRowTest {
             }
         }
 
-        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_LEFT, 2)
+        rule.keyPress(NativeKeyEvent.KEYCODE_DPAD_LEFT, 3)
 
         rule.runOnIdle {
             assertThat(state.firstVisibleItemIndex).isEqualTo(1)

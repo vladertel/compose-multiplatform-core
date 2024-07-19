@@ -49,21 +49,19 @@ internal fun Modifier.lazyLayoutBeyondBoundsModifier(
     layoutDirection: LayoutDirection,
     orientation: Orientation,
     enabled: Boolean
-): Modifier =
-    if (!enabled) {
-        this
-    } else {
-        this then
-            remember(state, beyondBoundsInfo, reverseLayout, layoutDirection, orientation) {
-                LazyLayoutBeyondBoundsModifierLocal(
-                    state,
-                    beyondBoundsInfo,
-                    reverseLayout,
-                    layoutDirection,
-                    orientation
-                )
-            }
+): Modifier = if (!enabled) {
+    this
+} else {
+    this then remember(state, beyondBoundsInfo, reverseLayout, layoutDirection, orientation) {
+        LazyLayoutBeyondBoundsModifierLocal(
+            state,
+            beyondBoundsInfo,
+            reverseLayout,
+            layoutDirection,
+            orientation
+        )
     }
+}
 
 internal class LazyLayoutBeyondBoundsModifierLocal(
     private val state: LazyLayoutBeyondBoundsState,
@@ -74,15 +72,13 @@ internal class LazyLayoutBeyondBoundsModifierLocal(
 ) : ModifierLocalProvider<BeyondBoundsLayout?>, BeyondBoundsLayout {
     override val key: ProvidableModifierLocal<BeyondBoundsLayout?>
         get() = ModifierLocalBeyondBoundsLayout
-
     override val value: BeyondBoundsLayout
         get() = this
 
     companion object {
-        private val emptyBeyondBoundsScope =
-            object : BeyondBoundsScope {
-                override val hasMoreContent = false
-            }
+        private val emptyBeyondBoundsScope = object : BeyondBoundsScope {
+            override val hasMoreContent = false
+        }
     }
 
     override fun <T> layout(
@@ -96,31 +92,28 @@ internal class LazyLayoutBeyondBoundsModifierLocal(
         }
 
         // We use a new interval each time because this function is re-entrant.
-        val startIndex =
-            if (direction.isForward()) {
-                state.lastPlacedIndex
-            } else {
-                state.firstPlacedIndex
-            }
+        val startIndex = if (direction.isForward()) {
+            state.lastPlacedIndex
+        } else {
+            state.firstPlacedIndex
+        }
         var interval = beyondBoundsInfo.addInterval(startIndex, startIndex)
         var found: T? = null
         while (found == null && interval.hasMoreContent(direction)) {
 
             // Add one extra beyond bounds item.
-            interval =
-                addNextInterval(interval, direction).also {
-                    beyondBoundsInfo.removeInterval(interval)
-                }
+            interval = addNextInterval(interval, direction).also {
+                beyondBoundsInfo.removeInterval(interval)
+            }
             state.remeasure()
 
             // When we invoke this block, the beyond bounds items are present.
-            found =
-                block.invoke(
-                    object : BeyondBoundsScope {
-                        override val hasMoreContent: Boolean
-                            get() = interval.hasMoreContent(direction)
-                    }
-                )
+            found = block.invoke(
+                object : BeyondBoundsScope {
+                    override val hasMoreContent: Boolean
+                        get() = interval.hasMoreContent(direction)
+                }
+            )
         }
 
         // Dispose the items that are beyond the visible bounds.
@@ -135,16 +128,16 @@ internal class LazyLayoutBeyondBoundsModifierLocal(
             After -> true
             Above -> reverseLayout
             Below -> !reverseLayout
-            Left ->
-                when (layoutDirection) {
-                    Ltr -> reverseLayout
-                    Rtl -> !reverseLayout
-                }
-            Right ->
-                when (layoutDirection) {
-                    Ltr -> !reverseLayout
-                    Rtl -> reverseLayout
-                }
+            Left -> when (layoutDirection) {
+                Ltr -> reverseLayout
+                Rtl -> !reverseLayout
+            }
+
+            Right -> when (layoutDirection) {
+                Ltr -> !reverseLayout
+                Rtl -> reverseLayout
+            }
+
             else -> unsupportedDirection()
         }
 
@@ -169,16 +162,14 @@ internal class LazyLayoutBeyondBoundsModifierLocal(
 
     private fun BeyondBoundsLayout.LayoutDirection.isOppositeToOrientation(): Boolean {
         return when (this) {
-            Above,
-            Below -> orientation == Orientation.Horizontal
-            Left,
-            Right -> orientation == Orientation.Vertical
-            Before,
-            After -> false
+            Above, Below -> orientation == Orientation.Horizontal
+            Left, Right -> orientation == Orientation.Vertical
+            Before, After -> false
             else -> unsupportedDirection()
         }
     }
 }
 
-private fun unsupportedDirection(): Nothing =
-    error("Lazy list does not support beyond bounds layout for the specified direction")
+private fun unsupportedDirection(): Nothing = error(
+    "Lazy list does not support beyond bounds layout for the specified direction"
+)

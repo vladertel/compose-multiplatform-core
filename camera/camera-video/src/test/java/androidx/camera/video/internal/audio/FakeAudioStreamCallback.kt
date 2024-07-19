@@ -16,10 +16,12 @@
 
 package androidx.camera.video.internal.audio
 
+import androidx.annotation.RequiresApi
 import androidx.camera.testing.impl.mocks.MockConsumer
 import androidx.camera.testing.impl.mocks.helpers.CallTimes
 import androidx.camera.testing.impl.mocks.verifyAcceptCallExt
 
+@RequiresApi(21)
 class FakeAudioStreamCallback : AudioStream.AudioStreamCallback {
     private val onSilencedCallbacks = MockConsumer<Boolean>()
 
@@ -32,12 +34,11 @@ class FakeAudioStreamCallback : AudioStream.AudioStreamCallback {
         timeoutMs: Long = MockConsumer.NO_TIMEOUT,
         inOrder: Boolean = false,
         onSilenceStateChanged: ((List<Boolean>) -> Unit)? = null,
-    ) =
-        onSilencedCallbacks.verifyAcceptCallExt(
-            java.lang.Boolean::class.java,
-            inOrder,
-            timeoutMs,
-            callTimes,
-            onSilenceStateChanged,
-        )
+    ) = onSilencedCallbacks.verifyAcceptCallExt(
+        java.lang.Boolean::class.java,
+        inOrder,
+        timeoutMs,
+        callTimes,
+        onSilenceStateChanged,
+    )
 }

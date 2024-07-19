@@ -16,10 +16,12 @@
 
 package androidx.camera.testing.impl.fakes;
 
+import android.os.Build;
 import android.util.Size;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 
@@ -28,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 /**
  * Fake {@link DeferrableSurface} for testing.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class FakeDeferrableSurface extends DeferrableSurface {
 
     @NonNull

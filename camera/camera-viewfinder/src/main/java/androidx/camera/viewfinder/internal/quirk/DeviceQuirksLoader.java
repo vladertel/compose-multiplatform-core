@@ -17,6 +17,7 @@
 package androidx.camera.viewfinder.internal.quirk;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.List;
 /**
  * Loads all device specific quirks required for the current device
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class DeviceQuirksLoader {
 
     private DeviceQuirksLoader() {

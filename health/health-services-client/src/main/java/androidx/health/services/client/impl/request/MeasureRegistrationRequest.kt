@@ -22,7 +22,10 @@ import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.ProtoParcelable
 import androidx.health.services.client.proto.RequestsProto
 
-/** Request for measure registration. */
+/**
+ * Request for measure registration.
+ *
+ */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class MeasureRegistrationRequest(
     public val packageName: String,

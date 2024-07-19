@@ -50,7 +50,8 @@ import org.junit.Test
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
 @RequiresApi(Build.VERSION_CODES.S)
 class StrictModeTest {
-    @get:Rule val mHostRule = AppWidgetHostRule()
+    @get:Rule
+    val mHostRule = AppWidgetHostRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext!!
     private val executor = Executors.newSingleThreadExecutor()
@@ -65,15 +66,11 @@ class StrictModeTest {
                 .penaltyListener(executor) {
                     Log.e("StrictModeTest", "Logging violation:")
                     Log.e("StrictModeTest", "$it")
-                    Log.e(
-                        "StrictModeTest",
-                        "Stack trace: ${Arrays.toString(it.stackTrace)}",
-                        it.cause
-                    )
+                    Log.e("StrictModeTest", "Stack trace: ${Arrays.toString(it.stackTrace)}",
+                        it.cause)
                     Log.e("StrictModeTest", "${it.cause}", it.cause)
                     fail("Received violation: $it")
-                }
-                .build()
+                }.build()
         )
     }
 
@@ -89,21 +86,19 @@ class StrictModeTest {
             Column {
                 Text(
                     "text1",
-                    modifier =
-                        GlanceModifier.clickable(
-                            actionRunCallback<CallbackTest>(
-                                actionParametersOf(CallbackTest.key to 1)
-                            )
+                    modifier = GlanceModifier.clickable(
+                        actionRunCallback<CallbackTest>(
+                            actionParametersOf(CallbackTest.key to 1)
                         )
+                    )
                 )
                 Text(
                     "text2",
-                    modifier =
-                        GlanceModifier.clickable(
-                            actionRunCallback<CallbackTest>(
-                                actionParametersOf(CallbackTest.key to 2)
-                            )
+                    modifier = GlanceModifier.clickable(
+                        actionRunCallback<CallbackTest>(
+                            actionParametersOf(CallbackTest.key to 2)
                         )
+                    )
                 )
             }
         }
@@ -114,12 +109,12 @@ class StrictModeTest {
         CallbackTest.latch = CountDownLatch(2)
         mHostRule.onHostView { root ->
             checkNotNull(
-                    root.findChild<TextView> { it.text.toString() == "text1" }?.parent as? View
-                )
+                root.findChild<TextView> { it.text.toString() == "text1" }?.parent as? View
+            )
                 .performClick()
             checkNotNull(
-                    root.findChild<TextView> { it.text.toString() == "text2" }?.parent as? View
-                )
+                root.findChild<TextView> { it.text.toString() == "text2" }?.parent as? View
+            )
                 .performClick()
         }
         Truth.assertThat(CallbackTest.latch.await(5, TimeUnit.SECONDS)).isTrue()
@@ -137,19 +132,18 @@ class StrictModeTest {
                 item {
                     Text(
                         "Text",
-                        modifier =
-                            GlanceModifier.clickable(
-                                actionRunCallback<CallbackTest>(
-                                    actionParametersOf(CallbackTest.key to 1)
-                                )
+                        modifier = GlanceModifier.clickable(
+                            actionRunCallback<CallbackTest>(
+                                actionParametersOf(CallbackTest.key to 1)
                             )
+                        )
                     )
                     Button(
                         "Button",
-                        onClick =
-                            actionRunCallback<CallbackTest>(
-                                actionParametersOf(CallbackTest.key to 2)
-                            )
+                        onClick = actionRunCallback<CallbackTest>(
+                            actionParametersOf(CallbackTest.key to 2)
+                        )
+
                     )
                 }
             }

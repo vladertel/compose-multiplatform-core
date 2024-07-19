@@ -66,9 +66,9 @@ public final class ProxyConfig {
     private static final String BYPASS_RULE_SIMPLE_NAMES = "<local>";
     private static final String BYPASS_RULE_REMOVE_IMPLICIT = "<-loopback>";
 
-    private final List<ProxyRule> mProxyRules;
-    private final List<String> mBypassRules;
-    private final boolean mReverseBypass;
+    private List<ProxyRule> mProxyRules;
+    private List<String> mBypassRules;
+    private boolean mReverseBypass;
 
     /**
      */
@@ -124,8 +124,8 @@ public final class ProxyConfig {
      * Class that holds a scheme filter and a proxy URL.
      */
     public static final class ProxyRule {
-        private final String mSchemeFilter;
-        private final String mUrl;
+        private String mSchemeFilter;
+        private String mUrl;
 
         /**
          */
@@ -173,8 +173,8 @@ public final class ProxyConfig {
      * connections to be made directly.
      */
     public static final class Builder {
-        private final List<ProxyRule> mProxyRules;
-        private final List<String> mBypassRules;
+        private List<ProxyRule> mProxyRules;
+        private List<String> mBypassRules;
         private boolean mReverseBypass = false;
 
         /**

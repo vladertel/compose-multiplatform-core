@@ -43,7 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 @Composable
-fun CatalogTheme(theme: Theme, content: @Composable () -> Unit) {
+fun CatalogTheme(
+    theme: Theme,
+    content: @Composable () -> Unit
+) {
     val darkTheme = isSystemInDarkTheme()
     val themePrimaryColor = theme.primaryColor.getColor(darkTheme)
     val themeSecondaryColor = theme.secondaryColor.getColor(darkTheme)
@@ -56,25 +59,24 @@ fun CatalogTheme(theme: Theme, content: @Composable () -> Unit) {
     val smallShapeSize = animateDpAsState(theme.smallShapeCornerSize.dp)
     val mediumShapeSize = animateDpAsState(theme.mediumShapeCornerSize.dp)
     val largeShapeSize = animateDpAsState(theme.largeShapeCornerSize.dp)
-    val colors =
-        if (!darkTheme) {
-            lightColors(
-                primary = primaryColor.value,
-                primaryVariant = primaryVariantColor.value,
-                onPrimary = onPrimaryColor.value,
-                secondary = secondaryColor.value,
-                secondaryVariant = secondaryVariantColor.value,
-                onSecondary = onSecondaryColor.value
-            )
-        } else {
-            darkColors(
-                primary = primaryColor.value,
-                primaryVariant = primaryVariantColor.value,
-                onPrimary = onPrimaryColor.value,
-                secondary = secondaryColor.value,
-                onSecondary = onSecondaryColor.value
-            )
-        }
+    val colors = if (!darkTheme) {
+        lightColors(
+            primary = primaryColor.value,
+            primaryVariant = primaryVariantColor.value,
+            onPrimary = onPrimaryColor.value,
+            secondary = secondaryColor.value,
+            secondaryVariant = secondaryVariantColor.value,
+            onSecondary = onSecondaryColor.value
+        )
+    } else {
+        darkColors(
+            primary = primaryColor.value,
+            primaryVariant = primaryVariantColor.value,
+            onPrimary = onPrimaryColor.value,
+            secondary = secondaryColor.value,
+            onSecondary = onSecondaryColor.value
+        )
+    }
     val view = LocalView.current
     val context = LocalContext.current
     SideEffect {
@@ -84,12 +86,11 @@ fun CatalogTheme(theme: Theme, content: @Composable () -> Unit) {
     MaterialTheme(
         colors = colors,
         typography = Typography(defaultFontFamily = theme.fontFamily.getFontFamily()),
-        shapes =
-            Shapes(
-                small = theme.shapeCornerFamily.getShape(size = smallShapeSize.value),
-                medium = theme.shapeCornerFamily.getShape(size = mediumShapeSize.value),
-                large = theme.shapeCornerFamily.getShape(size = largeShapeSize.value),
-            ),
+        shapes = Shapes(
+            small = theme.shapeCornerFamily.getShape(size = smallShapeSize.value),
+            medium = theme.shapeCornerFamily.getShape(size = mediumShapeSize.value),
+            large = theme.shapeCornerFamily.getShape(size = largeShapeSize.value),
+        ),
         content = content
     )
 }

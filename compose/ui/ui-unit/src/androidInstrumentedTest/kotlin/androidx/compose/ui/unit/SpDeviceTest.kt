@@ -31,8 +31,9 @@ import org.junit.runner.RunWith
 class SpDeviceTest {
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule =
-        androidx.test.rule.ActivityTestRule<TestActivity>(TestActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule<TestActivity>(
+        TestActivity::class.java
+    )
 
     private lateinit var activity: Activity
 

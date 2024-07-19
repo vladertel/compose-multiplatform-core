@@ -29,7 +29,9 @@ import kotlin.reflect.cast
  * API signatures after library desugaring. See b/203472665
  */
 @SuppressLint("BanUncheckedReflection")
-internal class PredicateAdapter(private val loader: ClassLoader) {
+internal class PredicateAdapter(
+    private val loader: ClassLoader
+) {
     internal fun predicateClassOrNull(): Class<*>? {
         return try {
             predicateClassOrThrow()
@@ -43,7 +45,10 @@ internal class PredicateAdapter(private val loader: ClassLoader) {
     }
 
     fun <T : Any> buildPredicate(clazz: KClass<T>, predicate: (T) -> Boolean): Any {
-        val predicateHandler = PredicateStubHandler(clazz, predicate)
+        val predicateHandler = PredicateStubHandler(
+            clazz,
+            predicate
+        )
         return Proxy.newProxyInstance(loader, arrayOf(predicateClassOrThrow()), predicateHandler)
     }
 
@@ -52,7 +57,11 @@ internal class PredicateAdapter(private val loader: ClassLoader) {
         secondClazz: KClass<U>,
         predicate: (T, U) -> Boolean
     ): Any {
-        val predicateHandler = PairPredicateStubHandler(firstClazz, secondClazz, predicate)
+        val predicateHandler = PairPredicateStubHandler(
+            firstClazz,
+            secondClazz,
+            predicate
+        )
 
         return Proxy.newProxyInstance(loader, arrayOf(predicateClassOrThrow()), predicateHandler)
     }

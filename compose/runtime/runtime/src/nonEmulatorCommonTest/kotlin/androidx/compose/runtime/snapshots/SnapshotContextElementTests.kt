@@ -31,17 +31,16 @@ import kotlinx.coroutines.withContext
 class SnapshotContextElementTests {
     @Test
     @IgnoreJsAndNative
-    fun coroutineEntersExpectedSnapshot() =
-        runTest(UnconfinedTestDispatcher()) {
-            val snapshot = Snapshot.takeSnapshot()
-            try {
-                withContext(snapshot.asContextElement()) {
-                    assertSame(snapshot, Snapshot.current, "expected snapshot")
-                }
-            } finally {
-                snapshot.dispose()
+    fun coroutineEntersExpectedSnapshot() = runTest(UnconfinedTestDispatcher()) {
+        val snapshot = Snapshot.takeSnapshot()
+        try {
+            withContext(snapshot.asContextElement()) {
+                assertSame(snapshot, Snapshot.current, "expected snapshot")
             }
+        } finally {
+            snapshot.dispose()
         }
+    }
 
     @Test
     @IgnoreJsAndNative
@@ -51,12 +50,11 @@ class SnapshotContextElementTests {
         try {
             runTest(UnconfinedTestDispatcher()) {
                 val stopA = Job()
-                val jobA =
-                    launch(snapshotOne.asContextElement()) {
-                        assertSame(snapshotOne, Snapshot.current, "expected snapshotOne, A")
-                        stopA.join()
-                        assertSame(snapshotOne, Snapshot.current, "expected snapshotOne, B")
-                    }
+                val jobA = launch(snapshotOne.asContextElement()) {
+                    assertSame(snapshotOne, Snapshot.current, "expected snapshotOne, A")
+                    stopA.join()
+                    assertSame(snapshotOne, Snapshot.current, "expected snapshotOne, B")
+                }
                 launch(snapshotTwo.asContextElement()) {
                     assertSame(snapshotTwo, Snapshot.current, "expected snapshotTwo, A")
                     stopA.complete()

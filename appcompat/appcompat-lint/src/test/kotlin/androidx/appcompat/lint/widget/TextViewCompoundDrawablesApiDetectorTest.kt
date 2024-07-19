@@ -25,10 +25,9 @@ import org.junit.Test
 class TextViewCompoundDrawablesApiDetectorTest {
     @Test
     fun testSetCompoundDrawableTintList() {
-        val customActivity =
-            kotlin(
-                    "com/example/CustomActivity.kt",
-                    """
+        val customActivity = kotlin(
+            "com/example/CustomActivity.kt",
+            """
             package com.example
 
             import android.os.Bundle
@@ -43,16 +42,15 @@ class TextViewCompoundDrawablesApiDetectorTest {
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
         // We expect the call to TextView.setCompoundDrawableTintList to be flagged to use
         // TextViewCompat loading
-
-        lint()
-            .files(Stubs.APPCOMPAT_ACTIVITY, customActivity)
-            .issues(TextViewCompoundDrawablesApiDetector.NOT_USING_COMPAT_TEXT_VIEW_DRAWABLE_APIS)
+        /* ktlint-disable max-line-length */
+        lint().files(
+            Stubs.APPCOMPAT_ACTIVITY,
+            customActivity
+        ).issues(TextViewCompoundDrawablesApiDetector.NOT_USING_COMPAT_TEXT_VIEW_DRAWABLE_APIS)
             .run()
             .expect(
                 """
@@ -60,17 +58,16 @@ src/com/example/CustomActivity.kt:11: Warning: Use TextViewCompat.setCompoundDra
         textView.setCompoundDrawableTintList(csl)
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 
     @Test
     fun testSetCompoundDrawableTintMode() {
-        val customActivity =
-            kotlin(
-                    "com/example/CustomActivity.kt",
-                    """
+        val customActivity = kotlin(
+            "com/example/CustomActivity.kt",
+            """
             package com.example
 
             import android.graphics.PorterDuff
@@ -85,16 +82,15 @@ src/com/example/CustomActivity.kt:11: Warning: Use TextViewCompat.setCompoundDra
                 }
             }
             """
-                )
-                .indented()
-                .within("src")
+        ).indented().within("src")
 
         // We expect the call to TextView.setCompoundDrawableTintMode to be flagged to use
         // TextViewCompat loading
-
-        lint()
-            .files(Stubs.APPCOMPAT_ACTIVITY, customActivity)
-            .issues(TextViewCompoundDrawablesApiDetector.NOT_USING_COMPAT_TEXT_VIEW_DRAWABLE_APIS)
+        /* ktlint-disable max-line-length */
+        lint().files(
+            Stubs.APPCOMPAT_ACTIVITY,
+            customActivity
+        ).issues(TextViewCompoundDrawablesApiDetector.NOT_USING_COMPAT_TEXT_VIEW_DRAWABLE_APIS)
             .run()
             .expect(
                 """
@@ -102,8 +98,8 @@ src/com/example/CustomActivity.kt:11: Warning: Use TextViewCompat.setCompoundDra
         textView.setCompoundDrawableTintMode(PorterDuff.Mode.DST)
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0 errors, 1 warnings
-                """
-                    .trimIndent()
+                """.trimIndent()
             )
+        /* ktlint-enable max-line-length */
     }
 }

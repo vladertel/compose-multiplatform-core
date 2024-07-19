@@ -29,19 +29,18 @@ class ExerciseLapTest {
     @Test
     fun validLap_equals() {
         assertThat(
-                ExerciseLap(
-                    startTime = Instant.ofEpochMilli(1234L),
-                    endTime = Instant.ofEpochMilli(5678L),
-                    length = 1.meters
-                )
+            ExerciseLap(
+                startTime = Instant.ofEpochMilli(1234L),
+                endTime = Instant.ofEpochMilli(5678L),
+                length = 1.meters
             )
-            .isEqualTo(
-                ExerciseLap(
-                    startTime = Instant.ofEpochMilli(1234L),
-                    endTime = Instant.ofEpochMilli(5678L),
-                    length = 1.meters
-                )
+        ).isEqualTo(
+            ExerciseLap(
+                startTime = Instant.ofEpochMilli(1234L),
+                endTime = Instant.ofEpochMilli(5678L),
+                length = 1.meters
             )
+        )
     }
 
     @Test

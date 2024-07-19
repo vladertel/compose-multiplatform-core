@@ -102,5 +102,6 @@ private fun generateFakeResults(warmupNeededNs: Long, idealDurationNs: Long): Se
     }
 
     // warmup until warmupNeededNs, then just return idealDurationNs
-    return generateSequence(1) { it + 1 }.map { if (it < list.size) list[it] else idealDurationNs }
+    return generateSequence(1) { it + 1 }
+        .map { if (it < list.size) list[it] else idealDurationNs }
 }

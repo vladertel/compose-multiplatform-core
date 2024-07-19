@@ -20,7 +20,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
-/** The Data Access Object for [Dependency]. */
+/**
+ * The Data Access Object for [Dependency].
+ */
 @Dao
 interface DependencyDao {
     /**
@@ -28,7 +30,8 @@ interface DependencyDao {
      *
      * @param dependency The [Dependency]s to insert
      */
-    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertDependency(dependency: Dependency)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertDependency(dependency: Dependency)
 
     /**
      * Determines if a [WorkSpec] has completed all prerequisites.
@@ -39,8 +42,7 @@ interface DependencyDao {
     @Query(
         "SELECT COUNT(*)=0 FROM dependency WHERE work_spec_id=:id AND prerequisite_id IN " +
             "(SELECT id FROM workspec WHERE state!=" +
-            WorkTypeConverters.StateIds.SUCCEEDED +
-            ")"
+            WorkTypeConverters.StateIds.SUCCEEDED + ")"
     )
     fun hasCompletedAllPrerequisites(id: String): Boolean
 

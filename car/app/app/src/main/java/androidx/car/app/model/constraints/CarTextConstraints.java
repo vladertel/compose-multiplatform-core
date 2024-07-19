@@ -42,17 +42,7 @@ public final class CarTextConstraints {
     public static final CarTextConstraints CONSERVATIVE =
             new CarTextConstraints(Collections.emptyList());
 
-    /**
-     * Allow all {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     *     <li>{@link ForegroundCarColorSpan}
-     *     <li>{@link CarIconSpan}
-     *     <li>{@link ClickableSpan}
-     * </ul>
-     */
+    /** Allow all {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints UNCONSTRAINED =
             new CarTextConstraints(Arrays.asList(
@@ -62,15 +52,7 @@ public final class CarTextConstraints {
                     DurationSpan.class,
                     ForegroundCarColorSpan.class));
 
-    /**
-     * Allow clickable text-only {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     *     <li>{@link ClickableSpan}
-     * </ul>
-     */
+    /** Allow clickable text-only {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints CLICKABLE_TEXT_ONLY =
             new CarTextConstraints(Arrays.asList(
@@ -78,40 +60,19 @@ public final class CarTextConstraints {
                     DistanceSpan.class,
                     DurationSpan.class));
 
-    /**
-     * Allow color-only {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link ForegroundCarColorSpan}
-     * </ul>
-     */
+    /** Allow color-only {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints COLOR_ONLY =
             new CarTextConstraints(Arrays.asList(ForegroundCarColorSpan.class));
 
-    /**
-     * Allow text-only {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     * </ul>
-     */
+    /** Allow text-only {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints TEXT_ONLY =
             new CarTextConstraints(Arrays.asList(
                     DistanceSpan.class,
                     DurationSpan.class));
 
-    /**
-     * Allow text and icon {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     *     <li>{@link CarIconSpan}
-     * </ul>
-     */
+    /** Allow text and icon {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints TEXT_AND_ICON =
             new CarTextConstraints(Arrays.asList(
@@ -119,15 +80,7 @@ public final class CarTextConstraints {
                     DurationSpan.class,
                     CarIconSpan.class));
 
-    /**
-     * Allow text and color {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     *     <li>{@link ForegroundCarColorSpan}
-     * </ul>
-     */
+    /** Allow text and color {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints TEXT_WITH_COLORS =
             new CarTextConstraints(Arrays.asList(
@@ -135,16 +88,7 @@ public final class CarTextConstraints {
                     DurationSpan.class,
                     ForegroundCarColorSpan.class));
 
-    /**
-     * Allow text with color and icon {@link CarSpan}s:
-     *
-     * <ul>
-     *     <li>{@link DistanceSpan}
-     *     <li>{@link DurationSpan}
-     *     <li>{@link ForegroundCarColorSpan}
-     *     <li>{@link CarIconSpan}
-     * </ul>
-     */
+    /** Allow text with color and icon {@link CarSpan}s. */
     @NonNull
     public static final CarTextConstraints TEXT_WITH_COLORS_AND_ICON =
             new CarTextConstraints(Arrays.asList(

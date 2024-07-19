@@ -25,7 +25,8 @@ import androidx.work.WorkerParameters
 public open class StopAwareForegroundWorker(
     private val context: Context,
     private val parameters: WorkerParameters
-) : Worker(context, parameters) {
+) :
+    Worker(context, parameters) {
 
     override fun doWork(): Result {
         while (!isStopped) {
@@ -39,12 +40,11 @@ public open class StopAwareForegroundWorker(
     }
 
     private fun getNotification(): ForegroundInfo {
-        val notification =
-            NotificationCompat.Builder(context, ChannelId)
-                .setOngoing(true)
-                .setTicker(Ticker)
-                .setContentText(Content)
-                .build()
+        val notification = NotificationCompat.Builder(context, ChannelId)
+            .setOngoing(true)
+            .setTicker(Ticker)
+            .setContentText(Content)
+            .build()
 
         return ForegroundInfo(NotificationId, notification)
     }

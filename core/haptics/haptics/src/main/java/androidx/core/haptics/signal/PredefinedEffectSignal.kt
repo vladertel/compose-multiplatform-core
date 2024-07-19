@@ -32,14 +32,18 @@ import androidx.core.haptics.impl.HapticSignalConverter
  *
  * @sample androidx.core.haptics.samples.PlaySystemStandardClick
  */
-class PredefinedEffectSignal
-private constructor(
+class PredefinedEffectSignal private constructor(
 
-    /** The type of haptic effect to be played. */
+    /**
+     * The type of haptic effect to be played.
+     */
     @Type internal val type: Int,
 
-    /** The minimum SDK level where this effect type is available in the platform. */
+    /**
+     * The minimum SDK level where this effect type is available in the platform.
+     */
     private val minSdk: Int,
+
 ) : FiniteSignal() {
 
     /** Typedef for the [type] attribute. */
@@ -64,12 +68,15 @@ private constructor(
         private val HeavyClick = PredefinedEffectSignal(HEAVY_CLICK, Build.VERSION_CODES.Q)
         private val DoubleClick = PredefinedEffectSignal(DOUBLE_CLICK, Build.VERSION_CODES.Q)
 
-        internal val ALL_EFFECTS = listOf(Tick, Click, HeavyClick, DoubleClick)
+        internal val ALL_EFFECTS =
+            listOf(Tick, Click, HeavyClick, DoubleClick)
 
         /** Returns all [PredefinedEffectSignal] types available at the current SDK level. */
         @JvmStatic
         internal fun getSdkAvailableEffects(): List<PredefinedEffectSignal> =
-            ALL_EFFECTS.filter { it.minSdk <= Build.VERSION.SDK_INT }.toList()
+            ALL_EFFECTS.filter {
+                it.minSdk <= Build.VERSION.SDK_INT
+            }.toList()
 
         @JvmStatic
         internal fun typeToString(@Type type: Int): String {
@@ -87,24 +94,30 @@ private constructor(
          *
          * This effect is less strong than the [predefinedClick].
          */
-        @JvmStatic fun predefinedTick() = Tick
+        @JvmStatic
+        fun predefinedTick() = Tick
 
         /**
          * A standard click effect.
          *
          * Use this effect as a baseline, as it's the most common type of click effect.
          */
-        @JvmStatic fun predefinedClick() = Click
+        @JvmStatic
+        fun predefinedClick() = Click
 
         /**
          * A heavy click effect.
          *
          * This effect is stronger than the [predefinedClick].
          */
-        @JvmStatic fun predefinedHeavyClick() = HeavyClick
+        @JvmStatic
+        fun predefinedHeavyClick() = HeavyClick
 
-        /** A double-click effect. */
-        @JvmStatic fun predefinedDoubleClick() = DoubleClick
+        /**
+         * A double-click effect.
+         */
+        @JvmStatic
+        fun predefinedDoubleClick() = DoubleClick
     }
 
     override fun equals(other: Any?): Boolean {
@@ -122,7 +135,9 @@ private constructor(
         return "PredefinedEffectSignal(type=${typeToString(type)})"
     }
 
-    /** Returns the minimum SDK level required by the effect type. */
+    /**
+     * Returns the minimum SDK level required by the effect type.
+     */
     internal fun minSdk(): Int = minSdk
 
     override fun toVibration(): VibrationWrapper? = HapticSignalConverter.toVibration(this)

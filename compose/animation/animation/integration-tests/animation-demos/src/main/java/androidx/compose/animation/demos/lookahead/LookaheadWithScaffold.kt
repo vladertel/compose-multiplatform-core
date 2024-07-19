@@ -75,29 +75,33 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val colors =
-    listOf(Color(0xffff6f69), Color(0xffffcc5c), Color(0xff264653), Color(0xff2a9d84))
+private val colors = listOf(
+    Color(0xffff6f69), Color(0xffffcc5c), Color(0xff264653), Color(0xff2a9d84)
+)
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Preview
 @Composable
 fun LookaheadWithScaffold() {
-    val hasPadding by
-        produceState(initialValue = true) {
-            while (true) {
-                delay(3000)
-                value = !value
-            }
+    val hasPadding by produceState(initialValue = true) {
+        while (true) {
+            delay(3000)
+            value = !value
         }
+    }
     LookaheadScope {
         Box(
-            Modifier.fillMaxHeight()
+            Modifier
+                .fillMaxHeight()
                 .background(Color.Gray)
-                .animateBounds(if (hasPadding) Modifier.padding(bottom = 300.dp) else Modifier)
+                .animateBounds(
+                    if (hasPadding) Modifier.padding(bottom = 300.dp) else Modifier
+                )
         ) {
             var state by remember { mutableIntStateOf(0) }
-            val titles =
-                listOf("SimpleScaffold", "W/Cutout", "SimpleSnackbar", "CustomSnackbar", "Backdrop")
+            val titles = listOf(
+                "SimpleScaffold", "W/Cutout", "SimpleSnackbar", "CustomSnackbar", "Backdrop"
+            )
             Column {
                 ScrollableTabRow(
                     selectedTabIndex = state,
@@ -134,7 +138,11 @@ fun SimpleScaffoldWithTopBar() {
             TopAppBar(
                 title = { Text("Simple Scaffold Screen") },
                 navigationIcon = {
-                    IconButton(onClick = { scope.launch { scaffoldState.drawerState.open() } }) {
+                    IconButton(
+                        onClick = {
+                            scope.launch { scaffoldState.drawerState.open() }
+                        }
+                    ) {
                         Icon(Icons.Filled.Menu, contentDescription = "Localized description")
                     }
                 }
@@ -148,10 +156,19 @@ fun SimpleScaffoldWithTopBar() {
             )
         },
         content = { innerPadding ->
-            Box(Modifier.fillMaxSize().background(Color.White))
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+            )
             LazyColumn(contentPadding = innerPadding) {
                 items(count = 20) {
-                    Box(Modifier.fillMaxWidth().height(150.dp).background(colors[it % colors.size]))
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .background(colors[it % colors.size])
+                    )
                 }
             }
         }
@@ -174,14 +191,13 @@ fun ScaffoldWithBottomBarAndCutout() {
 
     // When progress is 0, there is no modification to the edges so we are just drawing a rectangle.
     // This allows for a smooth transition between cut corners and round corners.
-    val fabShape =
-        if (progress < 0) {
-            CutCornerShape(abs(progress))
-        } else if (progress == roundEdgePercent.toInt()) {
-            CircleShape
-        } else {
-            RoundedCornerShape(progress)
-        }
+    val fabShape = if (progress < 0) {
+        CutCornerShape(abs(progress))
+    } else if (progress == roundEdgePercent.toInt()) {
+        CircleShape
+    } else {
+        RoundedCornerShape(progress)
+    }
     // lambda to call to trigger shape animation
     val changeShape: () -> Unit = {
         val target = animatedProgress.targetValue
@@ -201,7 +217,9 @@ fun ScaffoldWithBottomBarAndCutout() {
         bottomBar = {
             BottomAppBar(cutoutShape = fabShape) {
                 IconButton(
-                    onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }
+                    onClick = {
+                        coroutineScope.launch { scaffoldState.drawerState.open() }
+                    }
                 ) {
                     Icon(Icons.Filled.Menu, contentDescription = "Localized description")
                 }
@@ -219,7 +237,12 @@ fun ScaffoldWithBottomBarAndCutout() {
         content = { innerPadding ->
             LazyColumn(contentPadding = innerPadding) {
                 items(count = 100) {
-                    Box(Modifier.fillMaxWidth().height(50.dp).background(colors[it % colors.size]))
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .background(colors[it % colors.size])
+                    )
                 }
             }
         }
@@ -247,7 +270,10 @@ fun ScaffoldWithSimpleSnackbar() {
         content = { innerPadding ->
             Text(
                 text = "Body content",
-                modifier = Modifier.padding(innerPadding).fillMaxSize().wrapContentSize()
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .wrapContentSize()
             )
         }
     )
@@ -283,7 +309,10 @@ fun ScaffoldWithCustomSnackbar() {
         content = { innerPadding ->
             Text(
                 text = "Custom Snackbar Demo",
-                modifier = Modifier.padding(innerPadding).fillMaxSize().wrapContentSize()
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .wrapContentSize()
             )
         }
     )
@@ -296,7 +325,9 @@ fun BackdropScaffoldSample() {
     val scope = rememberCoroutineScope()
     var selection by remember { mutableIntStateOf(1) }
     val scaffoldState = rememberBackdropScaffoldState(BackdropValue.Concealed)
-    LaunchedEffect(scaffoldState) { scaffoldState.reveal() }
+    LaunchedEffect(scaffoldState) {
+        scaffoldState.reveal()
+    }
     BackdropScaffold(
         scaffoldState = scaffoldState,
         appBar = {
@@ -319,9 +350,8 @@ fun BackdropScaffoldSample() {
                         onClick = {
                             // show snackbar as a suspend function
                             scope.launch {
-                                scaffoldState.snackbarHostState.showSnackbar(
-                                    "Snackbar #${++clickCount}"
-                                )
+                                scaffoldState.snackbarHostState
+                                    .showSnackbar("Snackbar #${++clickCount}")
                             }
                         }
                     ) {

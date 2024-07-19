@@ -44,24 +44,26 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class DialogScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_UI)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_UI)
 
     @Test
     fun dialogWithNoElevation() {
         rule.setContent {
             Dialog(onDismissRequest = {}) {
                 Box(
-                    Modifier.graphicsLayer(shape = RoundedCornerShape(percent = 15), clip = true)
+                    Modifier
+                        .graphicsLayer(shape = RoundedCornerShape(percent = 15), clip = true)
                         .size(200.dp)
                         .background(Color(0xFFA896B0))
                 )
             }
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "dialogWithNoElevation")
     }
@@ -72,7 +74,8 @@ class DialogScreenshotTest {
             Dialog(onDismissRequest = {}) {
                 val elevation = with(LocalDensity.current) { 8.dp.toPx() }
                 Box(
-                    Modifier.graphicsLayer(
+                    Modifier
+                        .graphicsLayer(
                             shadowElevation = elevation,
                             shape = RoundedCornerShape(percent = 15),
                             clip = true
@@ -83,8 +86,7 @@ class DialogScreenshotTest {
             }
         }
 
-        rule
-            .onNode(isDialog())
+        rule.onNode(isDialog())
             .captureToImage()
             .assertAgainstGolden(
                 screenshotRule,

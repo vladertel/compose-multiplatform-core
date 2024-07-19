@@ -43,11 +43,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LazyListFocusMoveCompositionCountTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val composedItems = mutableSetOf<Int>()
 
-    private val state = LazyListState().also { it.prefetchingEnabled = false }
+    private val state = LazyListState().also {
+        it.prefetchingEnabled = false
+    }
 
     @Test
     fun moveFocus() {
@@ -58,7 +61,12 @@ class LazyListFocusMoveCompositionCountTest {
             focusManager = LocalFocusManager.current
             LazyRow(Modifier.size(rowSize), state) {
                 items(100) { index ->
-                    Box(Modifier.size(itemSize).testTag("$index").focusable())
+                    Box(
+                        Modifier
+                            .size(itemSize)
+                            .testTag("$index")
+                            .focusable()
+                    )
                     SideEffect { composedItems.add(index) }
                 }
             }

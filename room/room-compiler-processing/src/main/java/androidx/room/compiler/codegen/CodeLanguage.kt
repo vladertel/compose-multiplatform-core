@@ -21,6 +21,5 @@ interface TargetLanguage {
 }
 
 enum class CodeLanguage {
-    JAVA,
-    KOTLIN
+    JAVA, KOTLIN
 }

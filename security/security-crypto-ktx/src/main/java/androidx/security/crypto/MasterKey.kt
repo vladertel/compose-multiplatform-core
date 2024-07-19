@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:Suppress("deprecation")
-
 package androidx.security.crypto
 
 import android.content.Context
@@ -27,12 +25,11 @@ import android.content.Context
  * @param keyAlias The alias to use for the `MasterKey`.
  * @param keyScheme The [MasterKey.KeyScheme] to have the `MasterKey` use.
  * @param authenticationRequired `true` if the user must authenticate for the `MasterKey` to be
- *   used.
+ * used.
  * @param userAuthenticationValidityDurationSeconds Duration in seconds that the `MasterKey` is
- *   valid for after the user has authenticated. Must be a value > 0.
+ * valid for after the user has authenticated. Must be a value > 0.
  * @param requestStrongBoxBacked `true` if the key should be stored in Strong Box, if possible.
  */
-@Deprecated("Use Android Keystore directly instead")
 public fun MasterKey(
     context: Context,
     keyAlias: String = MasterKey.DEFAULT_MASTER_KEY_ALIAS,
@@ -41,12 +38,11 @@ public fun MasterKey(
     userAuthenticationValidityDurationSeconds: Int =
         MasterKey.getDefaultAuthenticationValidityDurationSeconds(),
     requestStrongBoxBacked: Boolean = false
-): MasterKey =
-    MasterKey.Builder(context, keyAlias)
-        .setKeyScheme(keyScheme)
-        .setUserAuthenticationRequired(
-            authenticationRequired,
-            userAuthenticationValidityDurationSeconds
-        )
-        .setRequestStrongBoxBacked(requestStrongBoxBacked)
-        .build()
+): MasterKey = MasterKey.Builder(context, keyAlias)
+    .setKeyScheme(keyScheme)
+    .setUserAuthenticationRequired(
+        authenticationRequired,
+        userAuthenticationValidityDurationSeconds
+    )
+    .setRequestStrongBoxBacked(requestStrongBoxBacked)
+    .build()

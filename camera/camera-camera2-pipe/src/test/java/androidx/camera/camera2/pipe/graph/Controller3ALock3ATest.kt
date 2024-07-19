@@ -74,15 +74,21 @@ internal class Controller3ALock3ATest {
         val graphProcessor2 = FakeGraphProcessor()
         val controller3A =
             Controller3A(graphProcessor2, fakeMetadata, graphProcessor2.graphState3A, listener3A)
-        val result =
-            controller3A.lock3A(
-                afLockBehavior = Lock3ABehavior.IMMEDIATE,
-                aeRegions = listOf(MeteringRectangle(0, 0, 100, 200, 10))
-            )
+        val result = controller3A.lock3A(
+            afLockBehavior = Lock3ABehavior.IMMEDIATE,
+            aeRegions = listOf(MeteringRectangle(0, 0, 100, 200, 10))
+        )
         assertThat(result.await().status).isEqualTo(Result3A.Status.SUBMIT_FAILED)
         assertThat(graphProcessor2.graphState3A.aeRegions).isNotNull()
-        assertThat(graphProcessor2.graphState3A.aeRegions)
-            .containsExactly(MeteringRectangle(0, 0, 100, 200, 10))
+        assertThat(graphProcessor2.graphState3A.aeRegions).containsExactly(
+            MeteringRectangle(
+                0,
+                0,
+                100,
+                200,
+                10
+            )
+        )
     }
 
     @Test
@@ -108,11 +114,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -132,11 +139,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -181,12 +189,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -214,11 +222,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -258,12 +267,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -288,11 +297,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -337,12 +347,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -362,11 +372,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -412,12 +423,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -437,11 +448,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -492,12 +504,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -517,11 +529,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -581,12 +594,12 @@ internal class Controller3ALock3ATest {
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(101L),
                         resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                                CaptureResult.CONTROL_AE_STATE to
-                                    CaptureResult.CONTROL_AE_STATE_CONVERGED
-                            )
+                        mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                            CaptureResult.CONTROL_AE_STATE to
+                                CaptureResult.CONTROL_AE_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -606,11 +619,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -666,11 +680,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -690,11 +705,12 @@ internal class Controller3ALock3ATest {
                 FakeFrameMetadata(
                     frameNumber = FrameNumber(101L),
                     resultMetadata =
-                        mapOf(
-                            CaptureResult.CONTROL_AF_STATE to
-                                CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AE_STATE to CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
+                    mapOf(
+                        CaptureResult.CONTROL_AF_STATE to
+                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                        CaptureResult.CONTROL_AE_STATE to
+                            CaptureResult.CONTROL_AE_STATE_LOCKED
+                    )
                 )
             )
         }
@@ -742,57 +758,47 @@ internal class Controller3ALock3ATest {
     fun testCustomizedExitConditionForEmptyAeState_newScanLock3A() = runTest {
         // Arrange, set up exit conditions which allow 3A state to be empty.
         val convergeCondition: (FrameMetadata) -> Boolean = convergeCondition@{ frameMetadata ->
-            val aeUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AE_STATE]?.let {
-                    listOf(
-                            CaptureResult.CONTROL_AE_STATE_CONVERGED,
-                            CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED,
-                            CaptureResult.CONTROL_AE_STATE_LOCKED
-                        )
-                        .contains(it)
-                } ?: true
+            val aeUnlocked = frameMetadata[CaptureResult.CONTROL_AE_STATE]?.let {
+                listOf(
+                    CaptureResult.CONTROL_AE_STATE_CONVERGED,
+                    CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED,
+                    CaptureResult.CONTROL_AE_STATE_LOCKED
+                ).contains(it)
+            } ?: true
 
-            val afUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AF_STATE]?.let {
-                    listOf(
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                            CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED,
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
-                        )
-                        .contains(it)
-                } ?: true
+            val afUnlocked = frameMetadata[CaptureResult.CONTROL_AF_STATE]?.let {
+                listOf(
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED,
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                ).contains(it)
+            } ?: true
 
-            val awbUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AWB_STATE]?.let {
-                    listOf(
-                            CaptureResult.CONTROL_AWB_STATE_CONVERGED,
-                            CaptureResult.CONTROL_AWB_STATE_LOCKED
-                        )
-                        .contains(it)
-                } ?: true
+            val awbUnlocked = frameMetadata[CaptureResult.CONTROL_AWB_STATE]?.let {
+                listOf(
+                    CaptureResult.CONTROL_AWB_STATE_CONVERGED,
+                    CaptureResult.CONTROL_AWB_STATE_LOCKED
+                ).contains(it)
+            } ?: true
 
             return@convergeCondition aeUnlocked && afUnlocked && awbUnlocked
         }
         val lockCondition: (FrameMetadata) -> Boolean = lockCondition@{ frameMetadata ->
-            val aeUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AE_STATE]?.let {
-                    listOf(CaptureResult.CONTROL_AE_STATE_LOCKED).contains(it)
-                } ?: true
+            val aeUnlocked = frameMetadata[CaptureResult.CONTROL_AE_STATE]?.let {
+                listOf(CaptureResult.CONTROL_AE_STATE_LOCKED).contains(it)
+            } ?: true
 
-            val afUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AF_STATE]?.let {
-                    listOf(
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                            CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
-                        )
-                        .contains(it)
-                } ?: true
+            val afUnlocked = frameMetadata[CaptureResult.CONTROL_AF_STATE]?.let {
+                listOf(
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                ).contains(it)
+            } ?: true
 
-            val awbUnlocked =
-                frameMetadata[CaptureResult.CONTROL_AWB_STATE]?.let {
-                    listOf(CaptureResult.CONTROL_AWB_STATE_LOCKED).contains(it)
-                } ?: true
+            val awbUnlocked = frameMetadata[CaptureResult.CONTROL_AWB_STATE]?.let {
+                listOf(CaptureResult.CONTROL_AWB_STATE_LOCKED).contains(it)
+            } ?: true
 
             return@lockCondition aeUnlocked && afUnlocked && awbUnlocked
         }
@@ -820,13 +826,12 @@ internal class Controller3ALock3ATest {
                     FrameNumber(frameNumber),
                     FakeFrameMetadata(
                         frameNumber = FrameNumber(frameNumber++),
-                        resultMetadata =
-                            mapOf(
-                                CaptureResult.CONTROL_AF_STATE to
-                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
-                                CaptureResult.CONTROL_AWB_STATE to
-                                    CaptureResult.CONTROL_AWB_STATE_CONVERGED
-                            )
+                        resultMetadata = mapOf(
+                            CaptureResult.CONTROL_AF_STATE to
+                                CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                            CaptureResult.CONTROL_AWB_STATE to
+                                CaptureResult.CONTROL_AWB_STATE_CONVERGED
+                        )
                     )
                 )
                 delay(FRAME_RATE_MS)
@@ -837,18 +842,21 @@ internal class Controller3ALock3ATest {
         assertThat(deferredResult.isCompleted).isFalse()
 
         // Simulate locked AF, AWB invoke without AE locked info.
-        listener3A.onRequestSequenceCreated(FakeRequestMetadata(requestNumber = RequestNumber(1)))
+        listener3A.onRequestSequenceCreated(
+            FakeRequestMetadata(requestNumber = RequestNumber(1))
+        )
         listener3A.onPartialCaptureResult(
             FakeRequestMetadata(requestNumber = RequestNumber(1)),
             FrameNumber(120L),
             FakeFrameMetadata(
                 frameNumber = FrameNumber(120L),
                 resultMetadata =
-                    mapOf(
-                        CaptureResult.CONTROL_AF_STATE to
-                            CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                        CaptureResult.CONTROL_AWB_STATE to CaptureResult.CONTROL_AWB_STATE_LOCKED
-                    )
+                mapOf(
+                    CaptureResult.CONTROL_AF_STATE to
+                        CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    CaptureResult.CONTROL_AWB_STATE to
+                        CaptureResult.CONTROL_AWB_STATE_LOCKED
+                )
             )
         )
 

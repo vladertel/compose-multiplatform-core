@@ -51,9 +51,15 @@ fun LazyVerticalStaggeredGridSample() {
 
     val itemModifier = Modifier.border(1.dp, Color.Blue).wrapContentSize()
 
-    LazyVerticalStaggeredGrid(columns = StaggeredGridCells.Fixed(3)) {
-        items(itemsList) { Text("Item is $it", itemModifier.height(80.dp)) }
-        item { Text("Single item", itemModifier.height(100.dp)) }
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(3)
+    ) {
+        items(itemsList) {
+            Text("Item is $it", itemModifier.height(80.dp))
+        }
+        item {
+            Text("Single item", itemModifier.height(100.dp))
+        }
         itemsIndexed(itemsIndexedList) { index, item ->
             Text("Item at index $index is $item", itemModifier.height(60.dp))
         }
@@ -82,7 +88,10 @@ fun LazyVerticalStaggeredGridSpanSample() {
                 // not required as it is the default
                 span = { StaggeredGridItemSpan.SingleLane }
             ) {
-                Text("Item $it", Modifier.border(1.dp, Color.Blue).height(80.dp).wrapContentSize())
+                Text(
+                    "Item $it",
+                    Modifier.border(1.dp, Color.Blue).height(80.dp).wrapContentSize()
+                )
             }
         }
     }
@@ -97,9 +106,15 @@ fun LazyHorizontalStaggeredGridSample() {
 
     val itemModifier = Modifier.border(1.dp, Color.Blue).padding(16.dp).wrapContentSize()
 
-    LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.Fixed(3)) {
-        items(itemsList) { Text("Item is $it", itemModifier) }
-        item { Text("Single item", itemModifier) }
+    LazyHorizontalStaggeredGrid(
+        rows = StaggeredGridCells.Fixed(3)
+    ) {
+        items(itemsList) {
+            Text("Item is $it", itemModifier)
+        }
+        item {
+            Text("Single item", itemModifier)
+        }
         itemsIndexed(itemsIndexedList) { index, item ->
             Text("Item at index $index is $item", itemModifier)
         }
@@ -128,7 +143,10 @@ fun LazyHorizontalStaggeredGridSpanSample() {
                 // not required as it is the default
                 span = { StaggeredGridItemSpan.SingleLane }
             ) {
-                Text("Item $it", Modifier.border(1.dp, Color.Blue).width(80.dp).wrapContentSize())
+                Text(
+                    "Item $it",
+                    Modifier.border(1.dp, Color.Blue).width(80.dp).wrapContentSize()
+                )
             }
         }
     }
@@ -139,10 +157,16 @@ fun LazyHorizontalStaggeredGridSpanSample() {
 fun StaggeredGridAnimateItemSample() {
     var list by remember { mutableStateOf(listOf("A", "B", "C")) }
     Column {
-        Button(onClick = { list = list + "D" }) { Text("Add new item") }
-        Button(onClick = { list = list.shuffled() }) { Text("Shuffle") }
+        Button(onClick = { list = list + "D" }) {
+            Text("Add new item")
+        }
+        Button(onClick = { list = list.shuffled() }) {
+            Text("Shuffle")
+        }
         LazyVerticalStaggeredGrid(columns = StaggeredGridCells.Fixed(1)) {
-            items(list, key = { it }) { Text("Item $it", Modifier.animateItem()) }
+            items(list, key = { it }) {
+                Text("Item $it", Modifier.animateItem())
+            }
         }
     }
 }

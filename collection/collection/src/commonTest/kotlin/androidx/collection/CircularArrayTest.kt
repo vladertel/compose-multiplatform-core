@@ -29,12 +29,16 @@ public class CircularArrayTest {
 
     @Test
     public fun creatingWithZeroCapacity() {
-        assertFailsWith<IllegalArgumentException> { CircularArray<String>(0) }
+        assertFailsWith<IllegalArgumentException> {
+            CircularArray<String>(0)
+        }
     }
 
     @Test
     public fun creatingWithOverCapacity() {
-        assertFailsWith<IllegalArgumentException> { CircularArray<String>(Int.MAX_VALUE) }
+        assertFailsWith<IllegalArgumentException> {
+            CircularArray<String>(Int.MAX_VALUE)
+        }
     }
 
     @Test
@@ -64,7 +68,9 @@ public class CircularArrayTest {
         val array = CircularArray<String>()
         array.addFirst(ELEMENT_X)
         array.popFirst()
-        assertFailsWith<IndexOutOfBoundsException> { array.popFirst() }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.popFirst()
+        }
     }
 
     @Test
@@ -73,7 +79,9 @@ public class CircularArrayTest {
         val array = CircularArray<String>()
         array.addFirst(ELEMENT_X)
         array.popLast()
-        assertFailsWith<IndexOutOfBoundsException> { array.popLast() }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.popLast()
+        }
     }
 
     @Test
@@ -102,7 +110,9 @@ public class CircularArrayTest {
         array.addFirst(ELEMENT_X)
         array.addFirst(ELEMENT_Y)
         array.addLast(ELEMENT_Z)
-        assertFailsWith<IndexOutOfBoundsException> { array.removeFromStart(4) }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.removeFromStart(4)
+        }
     }
 
     @Test
@@ -112,14 +122,18 @@ public class CircularArrayTest {
         array.addFirst(ELEMENT_X)
         array.addFirst(ELEMENT_Y)
         array.addLast(ELEMENT_Z)
-        assertFailsWith<IndexOutOfBoundsException> { array.removeFromEnd(4) }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.removeFromEnd(4)
+        }
     }
 
     @Test
     public fun grow() {
         val array = CircularArray<String>(1)
         val expectedSize = 32768
-        repeat(expectedSize) { array.addFirst("String $it") }
+        repeat(expectedSize) {
+            array.addFirst("String $it")
+        }
         assertEquals(expectedSize, array.size())
     }
 
@@ -133,6 +147,8 @@ public class CircularArrayTest {
         assertNull(array.popLast())
 
         // Collection is empty so this should throw.
-        assertFailsWith<IndexOutOfBoundsException> { array.popLast() }
+        assertFailsWith<IndexOutOfBoundsException> {
+            array.popLast()
+        }
     }
 }

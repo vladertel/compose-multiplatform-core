@@ -27,7 +27,6 @@ import kotlinx.coroutines.rx3.rxSingle
 
 /**
  * Returns a [Single] of [UwbClientSessionScope].
- *
  * @see UwbManager.clientSessionScope
  */
 @Suppress("DEPRECATION")
@@ -38,7 +37,6 @@ fun UwbManager.clientSessionScopeSingle(): Single<UwbClientSessionScope> {
 
 /**
  * Returns a [Single] of [UwbControleeSessionScope].
- *
  * @see UwbManager.controleeSessionScope
  */
 fun UwbManager.controleeSessionScopeSingle(): Single<UwbControleeSessionScope> {
@@ -47,7 +45,6 @@ fun UwbManager.controleeSessionScopeSingle(): Single<UwbControleeSessionScope> {
 
 /**
  * Returns a [Single] of [UwbControllerSessionScope].
- *
  * @see UwbManager.controllerSessionScope
  */
 fun UwbManager.controllerSessionScopeSingle(): Single<UwbControllerSessionScope> {

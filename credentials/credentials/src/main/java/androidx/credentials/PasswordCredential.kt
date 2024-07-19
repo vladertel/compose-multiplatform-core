@@ -25,8 +25,7 @@ import androidx.credentials.internal.FrameworkClassParsingException
  * @property id the user id associated with the password
  * @property password the password
  */
-class PasswordCredential
-private constructor(
+class PasswordCredential private constructor(
     val id: String,
     val password: String,
     data: Bundle,

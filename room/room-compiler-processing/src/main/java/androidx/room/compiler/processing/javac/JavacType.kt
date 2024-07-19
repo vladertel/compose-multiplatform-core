@@ -45,7 +45,9 @@ internal abstract class JavacType(
     // Kotlin type information about the type if this type is driven from Kotlin code.
     abstract val kotlinType: KmBaseTypeContainer?
 
-    override val rawType: XRawType by lazy { JavacRawType(env, this) }
+    override val rawType: XRawType by lazy {
+        JavacRawType(env, this)
+    }
 
     override val superTypes by lazy {
         val superTypes = env.typeUtils.directSupertypes(typeMirror)
@@ -60,12 +62,13 @@ internal abstract class JavacType(
     }
 
     override val typeElement by lazy {
-        env.delegate.typeUtils.asElement(typeMirror)?.let {
-            if (MoreElements.isType(it)) {
-                env.wrapTypeElement(MoreElements.asType(it))
-            } else {
-                null
-            }
+        val element = try {
+            MoreTypes.asTypeElement(typeMirror)
+        } catch (notAnElement: IllegalArgumentException) {
+            null
+        }
+        element?.let {
+            env.wrapTypeElement(it)
         }
     }
 
@@ -75,7 +78,9 @@ internal abstract class JavacType(
             (kotlinType != null && asTypeName().java == ERROR_JTYPE_NAME)
     }
 
-    override val typeName by lazy { xTypeName.java }
+    override val typeName by lazy {
+        xTypeName.java
+    }
 
     private val xTypeName: XTypeName by lazy {
         XTypeName(
@@ -103,22 +108,12 @@ internal abstract class JavacType(
     }
 
     override fun getAllAnnotations(): List<XAnnotation> {
-        return (kotlinType as? KmTypeContainer)?.annotations?.map { JavacKmAnnotation(env, it) }
-            ?: typeMirror.annotationMirrors
-                .map { mirror -> JavacAnnotation(env, mirror) }
-                .flatMap { annotation ->
-                    // TODO(b/313473892): Checking if an annotation needs to be unwrapped can be
-                    //  expensive with the XProcessing API, especially if we don't really care about
-                    //  annotation values, so do a quick check on the AnnotationMirror first to
-                    // decide
-                    //  if its repeatable. Remove this once we've optimized the general solution in
-                    //  unwrapRepeatedAnnotationsFromContainer()
-                    if (annotation.mirror.isRepeatable()) {
-                        annotation.unwrapRepeatedAnnotationsFromContainer() ?: listOf(annotation)
-                    } else {
-                        listOf(annotation)
-                    }
-                }
+        return (kotlinType as? KmTypeContainer)?.annotations?.map {
+            JavacKmAnnotation(env, it)
+        } ?: typeMirror.annotationMirrors.map { mirror -> JavacAnnotation(env, mirror) }
+            .flatMap { annotation ->
+                annotation.unwrapRepeatedAnnotationsFromContainer() ?: listOf(annotation)
+            }
     }
 
     override fun hasAnnotationWithPackage(pkg: String): Boolean {
@@ -139,10 +134,7 @@ internal abstract class JavacType(
     override fun defaultValue(): String {
         return when (typeMirror.kind) {
             TypeKind.BOOLEAN -> "false"
-            TypeKind.BYTE,
-            TypeKind.SHORT,
-            TypeKind.INT,
-            TypeKind.CHAR -> "0"
+            TypeKind.BYTE, TypeKind.SHORT, TypeKind.INT, TypeKind.CHAR -> "0"
             TypeKind.LONG -> "0L"
             TypeKind.FLOAT -> "0f"
             TypeKind.DOUBLE -> "0.0"
@@ -171,12 +163,18 @@ internal abstract class JavacType(
     }
 
     override fun isAssignableFrom(other: XType): Boolean {
-        return other is JavacType && env.typeUtils.isAssignable(other.typeMirror, typeMirror)
+        return other is JavacType && env.typeUtils.isAssignable(
+            other.typeMirror,
+            typeMirror
+        )
     }
 
     override fun isTypeOf(other: KClass<*>): Boolean {
         return try {
-            MoreTypes.isTypeOf(other.java, typeMirror)
+            MoreTypes.isTypeOf(
+                other.java,
+                typeMirror
+            )
         } catch (notAType: IllegalArgumentException) {
             // `MoreTypes.isTypeOf` might throw if the current TypeMirror is not a type.
             // for Room, a `false` response is good enough.
@@ -189,8 +187,9 @@ internal abstract class JavacType(
     }
 
     /**
-     * Create a copy of this type with the given nullability. This method is not called if the
-     * nullability of the type is already equal to the given nullability.
+     * Create a copy of this type with the given nullability.
+     * This method is not called if the nullability of the type is already equal to the given
+     * nullability.
      */
     protected abstract fun copyWithNullability(nullability: XNullability): JavacType
 
@@ -213,13 +212,11 @@ internal abstract class JavacType(
         return copyWithNullability(XNullability.NONNULL)
     }
 
-    override val nullability: XNullability
-        get() {
-            return maybeNullability
-                ?: error(
-                    "XType#nullibility cannot be called from this type because it is missing nullability " +
-                        "information. Was this type derived from a type created with " +
-                        "TypeMirror#toXProcessing(XProcessingEnv)?"
-                )
-        }
+    override val nullability: XNullability get() {
+        return maybeNullability ?: error(
+            "XType#nullibility cannot be called from this type because it is missing nullability " +
+                "information. Was this type derived from a type created with " +
+                "TypeMirror#toXProcessing(XProcessingEnv)?"
+        )
+    }
 }

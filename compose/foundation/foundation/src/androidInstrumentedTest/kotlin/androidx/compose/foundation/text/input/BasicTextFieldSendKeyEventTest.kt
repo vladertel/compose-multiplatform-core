@@ -38,9 +38,11 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 internal class BasicTextFieldSendKeyEventTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val immRule = ComposeInputMethodManagerTestRule()
+    @get:Rule
+    val immRule = ComposeInputMethodManagerTestRule()
 
     private val inputMethodInterceptor = InputMethodInterceptor(rule)
 
@@ -51,21 +53,22 @@ internal class BasicTextFieldSendKeyEventTest {
         lateinit var imm: FakeInputMethodManager
         lateinit var originalFactory: ((View) -> ComposeInputMethodManager)
 
-        originalFactory =
-            immRule.setFactory {
-                val actualImm = originalFactory(it)
-                imm =
-                    object : FakeInputMethodManager() {
-                        override fun sendKeyEvent(event: KeyEvent) {
-                            actualImm.sendKeyEvent(event)
-                        }
-                    }
-                imm
+        originalFactory = immRule.setFactory {
+            val actualImm = originalFactory(it)
+            imm = object : FakeInputMethodManager() {
+                override fun sendKeyEvent(event: KeyEvent) {
+                    actualImm.sendKeyEvent(event)
+                }
             }
+            imm
+        }
 
         val state = TextFieldState()
         inputMethodInterceptor.setContent {
-            BasicTextField(state = state, modifier = Modifier.testTag(Tag))
+            BasicTextField(
+                state = state,
+                modifier = Modifier.testTag(Tag)
+            )
         }
         requestFocus()
 
@@ -87,21 +90,22 @@ internal class BasicTextFieldSendKeyEventTest {
         lateinit var imm: FakeInputMethodManager
         lateinit var originalFactory: ((View) -> ComposeInputMethodManager)
 
-        originalFactory =
-            immRule.setFactory {
-                val actualImm = originalFactory(it)
-                imm =
-                    object : FakeInputMethodManager() {
-                        override fun sendKeyEvent(event: KeyEvent) {
-                            actualImm.sendKeyEvent(event)
-                        }
-                    }
-                imm
+        originalFactory = immRule.setFactory {
+            val actualImm = originalFactory(it)
+            imm = object : FakeInputMethodManager() {
+                override fun sendKeyEvent(event: KeyEvent) {
+                    actualImm.sendKeyEvent(event)
+                }
             }
+            imm
+        }
 
         val state = TextFieldState("abc")
         inputMethodInterceptor.setContent {
-            BasicTextField(state = state, modifier = Modifier.testTag(Tag))
+            BasicTextField(
+                state = state,
+                modifier = Modifier.testTag(Tag)
+            )
         }
         requestFocus()
 
@@ -121,23 +125,18 @@ internal class BasicTextFieldSendKeyEventTest {
     private fun requestFocus() = rule.onNodeWithTag(Tag).requestFocus()
 }
 
-/** Creates a native [KeyEvent] instance that originates from IME. */
+/**
+ * Creates a native [KeyEvent] instance that originates from IME.
+ */
 private fun softKeyEvent(keyCode: Int, keyEventType: KeyEventType): KeyEvent {
-    val action =
-        when (keyEventType) {
-            KeyEventType.KeyDown -> KeyEvent.ACTION_DOWN
-            KeyEventType.KeyUp -> KeyEvent.ACTION_UP
-            else -> error("Unknown key event type")
-        }
+    val action = when (keyEventType) {
+        KeyEventType.KeyDown -> KeyEvent.ACTION_DOWN
+        KeyEventType.KeyUp -> KeyEvent.ACTION_UP
+        else -> error("Unknown key event type")
+    }
     return KeyEvent(
-        0L,
-        0L,
-        action,
-        keyCode,
-        0,
-        0,
-        KeyCharacterMap.VIRTUAL_KEYBOARD,
-        0,
+        0L, 0L, action, keyCode, 0, 0,
+        KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
         KeyEvent.FLAG_SOFT_KEYBOARD or KeyEvent.FLAG_KEEP_TOUCH_MODE
     )
 }

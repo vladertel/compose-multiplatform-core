@@ -26,9 +26,10 @@ import com.google.common.truth.Subject
 import com.google.common.truth.Subject.Factory
 import com.google.common.truth.Truth.assertAbout
 
-/** Truth extension for a single [AttributedVibration]. */
-internal class AttributedVibrationSubject
-private constructor(
+/**
+ * Truth extension for a single [AttributedVibration].
+ */
+internal class AttributedVibrationSubject private constructor(
     metadata: FailureMetadata?,
     private val actual: AttributedVibration,
 ) : Subject(metadata, actual) {
@@ -36,7 +37,10 @@ private constructor(
     companion object {
         private val SUBJECT_FACTORY: Factory<AttributedVibrationSubject?, AttributedVibration> =
             Factory { failureMetadata, subject ->
-                AttributedVibrationSubject(failureMetadata, subject)
+                AttributedVibrationSubject(
+                    failureMetadata,
+                    subject
+                )
             }
 
         internal fun assertThat(vibration: AttributedVibration): AttributedVibrationSubject =
@@ -45,8 +49,7 @@ private constructor(
 
     /** Checks the vibration was requested with a [PatternVibrationWrapper] or fails. */
     fun hasPatternVibration(): Unit =
-        check("vibration()")
-            .that(actual.vibration)
+        check("vibration()").that(actual.vibration)
             .isInstanceOf(PatternVibrationWrapper::class.java)
 
     /** Returns a [Subject] for the requested [android.os.VibrationEffect]. */

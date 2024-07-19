@@ -41,14 +41,12 @@ class InteractiveFrameClockTest {
         private const val MIN_INTERACTIVE_PERIOD = NANOSECONDS_PER_SECOND / INTERACTIVE_HZ
         private const val INTERACTIVE_TIMEOUT = 5_000L
     }
-
     @Test
     fun sendFramesAtBaselineHz() = runTest {
         advanceTimeBy(System.currentTimeMillis())
-        clock =
-            InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
-                currentTime * NANOSECONDS_PER_MILLISECOND
-            }
+        clock = InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
+            currentTime * NANOSECONDS_PER_MILLISECOND
+        }
         // awaiter1 will be sent immediately, awaiter2 & awaiter3 will be sent together at least
         // 1/5th of a second later.
         val awaiter1 = async { clock.withFrameNanos { it } }
@@ -67,10 +65,9 @@ class InteractiveFrameClockTest {
     @Test
     fun sendFramesAtInteractiveHz() = runTest {
         advanceTimeBy(System.currentTimeMillis())
-        clock =
-            InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
-                currentTime * NANOSECONDS_PER_MILLISECOND
-            }
+        clock = InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
+            currentTime * NANOSECONDS_PER_MILLISECOND
+        }
         launch { clock.startInteractive() }
         // awaiter1 will be sent immediately, awaiter2 & awaiter3 will be sent together at least
         // 1/20th of a second later.
@@ -90,10 +87,9 @@ class InteractiveFrameClockTest {
     @Test
     fun interactiveModeTimeout() = runTest {
         advanceTimeBy(System.currentTimeMillis())
-        clock =
-            InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
-                currentTime * NANOSECONDS_PER_MILLISECOND
-            }
+        clock = InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
+            currentTime * NANOSECONDS_PER_MILLISECOND
+        }
         launch { clock.startInteractive() }
         yield()
         assertThat(clock.currentHz()).isEqualTo(INTERACTIVE_HZ)
@@ -106,10 +102,9 @@ class InteractiveFrameClockTest {
     @Test
     fun stopInteractive() = runTest {
         advanceTimeBy(System.currentTimeMillis())
-        clock =
-            InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
-                currentTime * NANOSECONDS_PER_MILLISECOND
-            }
+        clock = InteractiveFrameClock(this, BASELINE_HZ, INTERACTIVE_HZ, INTERACTIVE_TIMEOUT) {
+            currentTime * NANOSECONDS_PER_MILLISECOND
+        }
         val interactiveJob = launch { clock.startInteractive() }
         yield()
         assertThat(clock.currentHz()).isEqualTo(INTERACTIVE_HZ)

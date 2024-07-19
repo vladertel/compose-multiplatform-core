@@ -208,9 +208,9 @@ public class HostDispatcherTest {
         mHostDispatcher.resetHosts();
 
         mHostDispatcher.setCarHost(mMockCarHost);
-        doThrow(new RemoteException()).when(mMockCarHost).getHost(any());
+        doThrow(new IllegalStateException()).when(mMockCarHost).getHost(any());
 
-        assertThrows(RemoteException.class, () -> mHostDispatcher.getHost(CarContext.APP_SERVICE));
+        assertThrows(HostException.class, () -> mHostDispatcher.getHost(CarContext.APP_SERVICE));
     }
 
     @Test
@@ -235,10 +235,10 @@ public class HostDispatcherTest {
     }
 
     @Test
-    public void getHost_appHost_hostThrowsRuntimeException_returnsNull()
+    public void getHost_appHost_hostThrowsRuntimeException_throwsHostException()
             throws RemoteException {
         when(mMockCarHost.getHost(any())).thenThrow(new IllegalStateException());
-        assertThat(mHostDispatcher.getHost(CarContext.APP_SERVICE)).isEqualTo(null);
+        assertThrows(HostException.class, () -> mHostDispatcher.getHost(CarContext.APP_SERVICE));
     }
 
     @Test
@@ -255,12 +255,14 @@ public class HostDispatcherTest {
     }
 
     @Test
-    public void getHost_suggestionHost_hostThrowsRuntimeException_returnsNull()
+    public void getHost_suggestionHost_hostThrowsRuntimeException_throwsHostException()
             throws RemoteException {
         when(mMockCarHost.getHost(any())).thenThrow(new IllegalStateException());
-        assertThat(mHostDispatcher.getHost(CarContext.SUGGESTION_SERVICE)).isEqualTo(null);
+        assertThrows(HostException.class,
+                () -> mHostDispatcher.getHost(CarContext.SUGGESTION_SERVICE));
     }
 
+    //
     @Test
     public void getHost_suggestionHost_returnsProperHostService() throws RemoteException {
         assertThat(mHostDispatcher.getHost(CarContext.SUGGESTION_SERVICE)).isEqualTo(
@@ -275,11 +277,11 @@ public class HostDispatcherTest {
     }
 
     @Test
-    public void getHost_navigationHost_hostThrowsRuntimeException_returnsNull()
+    public void getHost_navigationHost_hostThrowsRuntimeException_throwsHostException()
             throws RemoteException {
         when(mMockCarHost.getHost(any())).thenThrow(new IllegalStateException());
-        assertThat(mHostDispatcher.getHost(CarContext.NAVIGATION_SERVICE)).isEqualTo(null);
-
+        assertThrows(HostException.class,
+                () -> mHostDispatcher.getHost(CarContext.NAVIGATION_SERVICE));
     }
 
     @Test

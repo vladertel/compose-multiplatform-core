@@ -77,33 +77,30 @@ internal class TextFieldValueSubject(
     override fun actualCustomStringRepresentation(): String = subject.customToString()
 
     private fun TextFieldValue.customToString(): String {
-        val selectionString =
-            text
-                .map { if (it == '\n') '\n' else '.' }
-                .joinToString("")
-                .let {
-                    if (selection.collapsed) {
-                        if (selection.start == text.length) {
-                            // edge case of selection being at end of text,
-                            // so append the marker instead of replacing
-                            "$it|"
-                        } else if (it[selection.start] == '\n') {
-                            // edge case of selection being at end of a line,
-                            // so append the marker to the EOL and then add the new line
-                            it.replaceRange(selection.start..selection.start, "|\n")
-                        } else {
-                            it.replaceRange(selection.start..selection.start, "|")
-                        }
+        val selectionString = text
+            .map { if (it == '\n') '\n' else '.' }
+            .joinToString("")
+            .let {
+                if (selection.collapsed) {
+                    if (selection.start == text.length) {
+                        // edge case of selection being at end of text,
+                        // so append the marker instead of replacing
+                        "$it|"
+                    } else if (it[selection.start] == '\n') {
+                        // edge case of selection being at end of a line,
+                        // so append the marker to the EOL and then add the new line
+                        it.replaceRange(selection.start..selection.start, "|\n")
                     } else {
-                        it.replaceRange(selection.min until selection.max, getSelectedText().text)
+                        it.replaceRange(selection.start..selection.start, "|")
                     }
+                } else {
+                    it.replaceRange(selection.min until selection.max, getSelectedText().text)
                 }
+            }
         return """
                 /Selection = ${selection.start} to ${selection.end}
                 /$selectionString
-            """
-            .trimMargin(marginPrefix = "/")
-            .trim()
+            """.trimMargin(marginPrefix = "/").trim()
     }
 }
 
@@ -113,14 +110,13 @@ internal class TextField1SelectionAsserter(
     textToolbar: TextToolbar,
     hapticFeedback: FakeHapticFeedback,
     getActual: () -> TextFieldValue,
-) :
-    TextFieldSelectionAsserter<TextFieldValue>(
-        textContent,
-        rule,
-        textToolbar,
-        hapticFeedback,
-        getActual
-    ) {
+) : TextFieldSelectionAsserter<TextFieldValue>(
+    textContent,
+    rule,
+    textToolbar,
+    hapticFeedback,
+    getActual
+) {
     override fun subAssert() {
         Truth.assertAbout(TextFieldValueSubject.withContent(textContent))
             .that(getActual())
@@ -154,34 +150,31 @@ internal class TextFieldStateSubject(
     override fun actualCustomStringRepresentation(): String = subject.customToString()
 
     private fun TextFieldState.customToString(): String {
-        val selectionString =
-            text
-                .map { if (it == '\n') '\n' else '.' }
-                .joinToString("")
-                .let {
-                    if (selection.collapsed) {
-                        if (selection.start == text.length) {
-                            // edge case of selection being at end of text,
-                            // so append the marker instead of replacing
-                            "$it|"
-                        } else if (it[selection.start] == '\n') {
-                            // edge case of selection being at end of a line,
-                            // so append the marker to the EOL and then add the new line
-                            it.replaceRange(selection.start..selection.start, "|\n")
-                        } else {
-                            it.replaceRange(selection.start..selection.start, "|")
-                        }
+        val selectionString = text
+            .map { if (it == '\n') '\n' else '.' }
+            .joinToString("")
+            .let {
+                if (selection.collapsed) {
+                    if (selection.start == text.length) {
+                        // edge case of selection being at end of text,
+                        // so append the marker instead of replacing
+                        "$it|"
+                    } else if (it[selection.start] == '\n') {
+                        // edge case of selection being at end of a line,
+                        // so append the marker to the EOL and then add the new line
+                        it.replaceRange(selection.start..selection.start, "|\n")
                     } else {
-                        val selectedText = text.subSequence(selection.min, selection.max)
-                        it.replaceRange(selection.min until selection.max, selectedText)
+                        it.replaceRange(selection.start..selection.start, "|")
                     }
+                } else {
+                    val selectedText = text.subSequence(selection.min, selection.max)
+                    it.replaceRange(selection.min until selection.max, selectedText)
                 }
+            }
         return """
                 /Selection = ${selection.start} to ${selection.end}
                 /$selectionString
-            """
-            .trimMargin(marginPrefix = "/")
-            .trim()
+            """.trimMargin(marginPrefix = "/").trim()
     }
 }
 
@@ -191,14 +184,13 @@ internal class TextField2SelectionAsserter(
     textToolbar: TextToolbar,
     hapticFeedback: FakeHapticFeedback,
     getActual: () -> TextFieldState,
-) :
-    TextFieldSelectionAsserter<TextFieldState>(
-        textContent,
-        rule,
-        textToolbar,
-        hapticFeedback,
-        getActual
-    ) {
+) : TextFieldSelectionAsserter<TextFieldState>(
+    textContent,
+    rule,
+    textToolbar,
+    hapticFeedback,
+    getActual
+) {
     override fun subAssert() {
         Truth.assertAbout(TextFieldStateSubject.withContent(textContent))
             .that(getActual())

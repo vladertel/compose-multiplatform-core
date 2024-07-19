@@ -20,4 +20,5 @@ package androidx.collection.internal
 
 // Ideally we would just reach for kotlin.fromBits(bits) and bypass the companion
 // object like we do in the JVM modules, but alas...
-@PublishedApi internal actual inline fun floatFromBits(bits: Int): Float = Float.fromBits(bits)
+@PublishedApi
+internal actual inline fun floatFromBits(bits: Int): Float = Float.fromBits(bits)

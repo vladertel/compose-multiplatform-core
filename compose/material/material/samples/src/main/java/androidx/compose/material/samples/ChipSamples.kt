@@ -49,7 +49,9 @@ import androidx.compose.ui.unit.dp
 @Sampled
 @Composable
 fun ChipSample() {
-    Chip(onClick = { /* Do something! */ }) { Text("Action Chip") }
+    Chip(onClick = { /* Do something! */ }) {
+        Text("Action Chip")
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -60,7 +62,12 @@ fun OutlinedChipWithIconSample() {
         onClick = { /* Do something! */ },
         border = ChipDefaults.outlinedBorder,
         colors = ChipDefaults.outlinedChipColors(),
-        leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = "Localized description") }
+        leadingIcon = {
+            Icon(
+                Icons.Filled.Settings,
+                contentDescription = "Localized description"
+            )
+        }
     ) {
         Text("Change settings")
     }
@@ -80,8 +87,7 @@ fun FilterChipSample() {
                 contentDescription = "Localized Description",
                 modifier = Modifier.requiredSize(ChipDefaults.SelectedIconSize)
             )
-        }
-    ) {
+        }) {
         Text("Filter chip")
     }
 }
@@ -102,8 +108,7 @@ fun OutlinedFilterChipSample() {
                 contentDescription = "Localized Description",
                 modifier = Modifier.requiredSize(ChipDefaults.SelectedIconSize)
             )
-        }
-    ) {
+        }) {
         Text("Filter chip")
     }
 }
@@ -144,8 +149,7 @@ fun ChipGroupSingleLineSample() {
             repeat(9) { index ->
                 Chip(
                     modifier = Modifier.padding(horizontal = 4.dp),
-                    onClick = { /* do something*/ }
-                ) {
+                    onClick = { /* do something*/ }) {
                     Text("Chip $index")
                 }
             }
@@ -159,16 +163,17 @@ fun ChipGroupSingleLineSample() {
 fun ChipGroupReflowSample() {
     Column {
         FlowRow(
-            Modifier.fillMaxWidth(1f).wrapContentHeight(align = Alignment.Top),
+            Modifier
+                .fillMaxWidth(1f)
+                .wrapContentHeight(align = Alignment.Top),
             horizontalArrangement = Arrangement.Start,
         ) {
             repeat(10) { index ->
                 Chip(
-                    modifier =
-                        Modifier.padding(horizontal = 4.dp)
-                            .align(alignment = Alignment.CenterVertically),
-                    onClick = { /* do something*/ }
-                ) {
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .align(alignment = Alignment.CenterVertically),
+                    onClick = { /* do something*/ }) {
                     Text("Chip $index")
                 }
             }

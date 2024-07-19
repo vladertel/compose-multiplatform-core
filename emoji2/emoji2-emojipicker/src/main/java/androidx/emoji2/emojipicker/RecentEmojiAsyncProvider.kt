@@ -29,7 +29,9 @@ interface RecentEmojiAsyncProvider {
     fun getRecentEmojiListAsync(): ListenableFuture<List<String>>
 }
 
-/** An adapter for the [RecentEmojiAsyncProvider]. */
+/**
+ * An adapter for the [RecentEmojiAsyncProvider].
+ */
 class RecentEmojiProviderAdapter(private val recentEmojiAsyncProvider: RecentEmojiAsyncProvider) :
     RecentEmojiProvider {
     override fun recordSelection(emoji: String) {

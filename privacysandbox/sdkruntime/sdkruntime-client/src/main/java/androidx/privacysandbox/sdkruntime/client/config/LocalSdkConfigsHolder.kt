@@ -18,9 +18,13 @@ package androidx.privacysandbox.sdkruntime.client.config
 import android.content.Context
 import java.io.FileNotFoundException
 
-/** Holds information about all SDKs bundled with App. */
-internal class LocalSdkConfigsHolder
-private constructor(private val configs: Map<String, LocalSdkConfig>) {
+/**
+ * Holds information about all SDKs bundled with App.
+ *
+ */
+internal class LocalSdkConfigsHolder private constructor(
+    private val configs: Map<String, LocalSdkConfig>
+) {
 
     fun getSdkConfig(sdkName: String): LocalSdkConfig? {
         return configs[sdkName]
@@ -38,8 +42,11 @@ private constructor(private val configs: Map<String, LocalSdkConfig>) {
             val data = buildMap {
                 for ((packageName, versionMajor, configPath) in sdkTable) {
                     context.assets.open(configPath).use { sdkConfigAsset ->
-                        val sdkInfo =
-                            LocalSdkConfigParser.parse(sdkConfigAsset, packageName, versionMajor)
+                        val sdkInfo = LocalSdkConfigParser.parse(
+                            sdkConfigAsset,
+                            packageName,
+                            versionMajor
+                        )
                         put(packageName, sdkInfo)
                     }
                 }

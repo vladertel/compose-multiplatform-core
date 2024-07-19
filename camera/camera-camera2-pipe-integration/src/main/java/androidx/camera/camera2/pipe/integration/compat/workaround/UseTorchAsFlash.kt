@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+
 package androidx.camera.camera2.pipe.integration.compat.workaround
 
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
 import androidx.camera.camera2.pipe.integration.compat.quirk.UseTorchAsFlashQuirk
 import dagger.Module
@@ -36,7 +39,8 @@ interface UseTorchAsFlash {
             fun provideUseTorchAsFlash(cameraQuirks: CameraQuirks): UseTorchAsFlash =
                 if (cameraQuirks.quirks.contains(UseTorchAsFlashQuirk::class.java))
                     UseTorchAsFlashImpl
-                else NotUseTorchAsFlash
+                else
+                    NotUseTorchAsFlash
         }
     }
 }

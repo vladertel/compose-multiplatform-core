@@ -20,8 +20,9 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 
-internal class PrimaryTextActionModeCallback(private val callback: TextActionModeCallback) :
-    ActionMode.Callback {
+internal class PrimaryTextActionModeCallback(
+    private val callback: TextActionModeCallback
+) : ActionMode.Callback {
     override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
         return callback.onActionItemClicked(mode, item)
     }

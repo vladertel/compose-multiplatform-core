@@ -29,7 +29,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FreeFocusTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun active_freeFocus_retainFocusAsActive() {
@@ -38,7 +39,8 @@ class FreeFocusTest {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                Modifier.onFocusChanged { focusState = it }
+                Modifier
+                    .onFocusChanged { focusState = it }
                     .focusRequester(focusRequester)
                     .focusTarget()
             )
@@ -63,11 +65,15 @@ class FreeFocusTest {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                Modifier.onFocusChanged { focusState = it }
+                Modifier
+                    .onFocusChanged { focusState = it }
                     .focusRequester(focusRequester)
                     .focusTarget()
             ) {
-                Box(Modifier.focusRequester(initialFocus).focusTarget())
+                Box(
+                    Modifier
+                        .focusRequester(initialFocus)
+                        .focusTarget())
             }
         }
         rule.runOnIdle { initialFocus.requestFocus() }
@@ -89,7 +95,8 @@ class FreeFocusTest {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                Modifier.onFocusChanged { focusState = it }
+                Modifier
+                    .onFocusChanged { focusState = it }
                     .focusRequester(focusRequester)
                     .focusTarget()
             )
@@ -102,7 +109,9 @@ class FreeFocusTest {
         }
 
         // Act.
-        val success = rule.runOnIdle { focusRequester.freeFocus() }
+        val success = rule.runOnIdle {
+            focusRequester.freeFocus()
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -119,14 +128,17 @@ class FreeFocusTest {
         val focusRequester = FocusRequester()
         rule.setFocusableContent {
             Box(
-                Modifier.onFocusChanged { focusState = it }
+                Modifier
+                    .onFocusChanged { focusState = it }
                     .focusRequester(focusRequester)
                     .focusTarget()
             )
         }
 
         // Act.
-        val success = rule.runOnIdle { focusRequester.freeFocus() }
+        val success = rule.runOnIdle {
+            focusRequester.freeFocus()
+        }
 
         // Assert.
         rule.runOnIdle {

@@ -48,7 +48,13 @@ class SavedStateHandleParcelingTest {
         val newHandle: SavedStateHandle = createHandle(newBundle, null)
         assertThat<String>(newHandle["livedata"], `is`("para"))
         assertThat<Int>(newHandle["notlive"], `is`(261))
-        assertThat(equals(newHandle["array"], intArrayOf(2, 3, 9)), `is`(true))
+        assertThat(
+            equals(
+                newHandle["array"],
+                intArrayOf(2, 3, 9)
+            ),
+            `is`(true)
+        )
     }
 
     @UiThreadTest
@@ -56,20 +62,27 @@ class SavedStateHandleParcelingTest {
     fun testParcelable() {
         val handle = SavedStateHandle()
         handle["custom"] = CustomTestParcelable("test")
-        handle["customArray"] = arrayOf(CustomTestParcelable("test"), CustomTestParcelable("test2"))
+        handle["customArray"] = arrayOf(
+            CustomTestParcelable("test"),
+            CustomTestParcelable("test2")
+        )
         val savedState = handle.savedStateProvider().saveState()
         val parcel = obtain()
         savedState.writeToParcel(parcel, 0)
         parcel.setDataPosition(0)
         val newBundle = CREATOR.createFromParcel(parcel)
         val newHandle: SavedStateHandle = createHandle(newBundle, null)
-        assertThat<CustomTestParcelable>(newHandle["custom"], `is`(CustomTestParcelable("test")))
+        assertThat<CustomTestParcelable>(
+            newHandle["custom"],
+            `is`(CustomTestParcelable("test"))
+        )
         assertThat(
-            newHandle
-                .get<Array<Parcelable>>("customArray")
-                .contentEquals(
-                    arrayOf(CustomTestParcelable("test"), CustomTestParcelable("test2"))
-                ),
+            newHandle.get<Array<Parcelable>>("customArray").contentEquals(
+                arrayOf(
+                    CustomTestParcelable("test"),
+                    CustomTestParcelable("test2")
+                )
+            ),
             `is`(true)
         )
     }
@@ -89,7 +102,9 @@ class SavedStateHandleParcelingTest {
     }
 }
 
-/** [CustomTestParcelable] that helps testing bundled custom parcels */
+/**
+ * [CustomTestParcelable] that helps testing bundled custom parcels
+ */
 data class CustomTestParcelable(val name: String?) : Parcelable {
     constructor(parcel: Parcel) : this(parcel.readString())
 

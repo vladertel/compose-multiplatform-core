@@ -23,7 +23,9 @@ import androidx.room.integration.kotlintestapp.vo.User
 
 @Dao
 interface UsersDao {
-    @Insert fun insertUser(user: User)
+    @Insert
+    fun insertUser(user: User)
 
-    @Query("SELECT * FROM user") fun getUsers(): List<User>
+    @Query("SELECT * FROM user")
+    fun getUsers(): List<User>
 }

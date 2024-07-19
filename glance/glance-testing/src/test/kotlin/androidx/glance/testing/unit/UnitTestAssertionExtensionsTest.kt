@@ -31,62 +31,49 @@ import org.junit.Test
 class UnitTestAssertionExtensionsTest {
     @Test
     fun assertHasTextEqualTo_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasTextEqualTo("test text")
     }
 
     @Test
     fun assertHasTextEqualTo_ignoreCase_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasTextEqualTo(text = "TEST TEXT", ignoreCase = true)
     }
 
     @Test
     fun assertHasTextEqualTo_notMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasTextEqualTo("non-existing text")
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasTextEqualTo("non-existing text")
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -98,24 +85,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasTextEqualTo_ignoreCaseAndNotMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasTextEqualTo("NON-EXISTING TEXT", ignoreCase = true)
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasTextEqualTo("NON-EXISTING TEXT", ignoreCase = true)
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -127,60 +109,49 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasText_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasText(text = "text")
     }
 
     @Test
     fun assertHasText_ignoreCase_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasText(text = "TEXT", ignoreCase = true)
     }
 
     @Test
     fun assertHasText_notMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) { nodeAssertion.assertHasText("non-existing") }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasText("non-existing")
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -192,24 +163,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasText_ignoreCaseAndNotMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasText(text = "NON-EXISTING", ignoreCase = true)
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasText(text = "NON-EXISTING", ignoreCase = true)
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -221,44 +187,34 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasTestTag_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasText("test text")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasText("test text")
+        )
 
         nodeAssertion.assertHasTestTag("test-tag")
     }
 
     @Test
     fun assertHasTestTag_notMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics { testTag = "existing-test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasText("test text")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "existing-test-tag" }
+                })
+            },
+            onNodeMatcher = hasText("test text")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasTestTag("non-existing-tag")
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasTestTag("non-existing-tag")
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -267,46 +223,36 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasContentDescriptionEqualTo_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "test text description"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "test text description"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasContentDescriptionEqualTo("test text description")
     }
 
     @Test
     fun assertHasContentDescriptionEqualTo_ignoreCaseMatching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "test text description"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "test text description"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasContentDescriptionEqualTo(
             value = "TEST TEXT DESCRIPTION",
@@ -316,24 +262,19 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasContentDescriptionEqualTo_notMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasContentDescriptionEqualTo("text description")
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasContentDescriptionEqualTo("text description")
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -345,31 +286,25 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasContentDescriptionEqualTo_ignoreCaseAndNotMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "test text description"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "test text description"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasContentDescriptionEqualTo(
-                    value = "TEST DESCRIPTION",
-                    ignoreCase = true
-                )
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasContentDescriptionEqualTo(
+                value = "TEST DESCRIPTION",
+                ignoreCase = true
+            )
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -381,70 +316,58 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasContentDescription_matching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "test text description"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "test text description"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
         nodeAssertion.assertHasContentDescription("text")
     }
 
     @Test
     fun assertHasContentDescription_ignoreCaseMatching() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "test text description"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "test text description"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        nodeAssertion.assertHasContentDescription(value = "TEXT", ignoreCase = true)
+        nodeAssertion.assertHasContentDescription(
+            value = "TEXT",
+            ignoreCase = true
+        )
     }
 
     @Test
     fun assertHasContentDescription_notMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier = GlanceModifier.semantics { testTag = "test-tag" }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics { testTag = "test-tag" }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasContentDescription("test text description")
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasContentDescription("test text description")
+        }
 
         assertThat(assertionError)
             .hasMessageThat()
@@ -457,31 +380,25 @@ class UnitTestAssertionExtensionsTest {
 
     @Test
     fun assertHasContentDescription_ignoreCaseAndNotMatching_assertionError() {
-        val nodeAssertion =
-            getGlanceNodeAssertionFor(
-                emittable =
-                    EmittableColumn().apply {
-                        children.add(
-                            EmittableText().apply {
-                                text = "test text"
-                                modifier =
-                                    GlanceModifier.semantics {
-                                        testTag = "test-tag"
-                                        contentDescription = "text"
-                                    }
-                            }
-                        )
-                    },
-                onNodeMatcher = hasTestTag("test-tag")
-            )
+        val nodeAssertion = getGlanceNodeAssertionFor(
+            emittable = EmittableColumn().apply {
+                children.add(EmittableText().apply {
+                    text = "test text"
+                    modifier = GlanceModifier.semantics {
+                        testTag = "test-tag"
+                        contentDescription = "text"
+                    }
+                })
+            },
+            onNodeMatcher = hasTestTag("test-tag")
+        )
 
-        val assertionError =
-            assertThrows(AssertionError::class.java) {
-                nodeAssertion.assertHasContentDescription(
-                    value = "TEXT DESCRIPTION",
-                    ignoreCase = true
-                )
-            }
+        val assertionError = assertThrows(AssertionError::class.java) {
+            nodeAssertion.assertHasContentDescription(
+                value = "TEXT DESCRIPTION",
+                ignoreCase = true
+            )
+        }
 
         assertThat(assertionError)
             .hasMessageThat()

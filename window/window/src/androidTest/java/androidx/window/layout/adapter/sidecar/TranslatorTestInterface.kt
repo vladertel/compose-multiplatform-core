@@ -21,10 +21,7 @@ package androidx.window.layout.adapter.sidecar
  */
 internal interface TranslatorTestInterface {
     fun testTranslate_validFeature()
-
     fun testTranslateWindowLayoutInfo_filterRemovesHingeFeatureNotSpanningFullDimension()
-
     fun testTranslateWindowLayoutInfo_filterRemovesFoldFeatureNotSpanningFullDimension()
-
     fun testTranslateWindowLayoutInfo_filterRemovesUnknownFeature()
 }

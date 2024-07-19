@@ -48,7 +48,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PlatformTextInputViewIntegrationTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private lateinit var hostView: AndroidComposeView
     private lateinit var coroutineScope: CoroutineScope
@@ -57,7 +58,6 @@ class PlatformTextInputViewIntegrationTest {
 
     // Used for ordering tests.
     private var expected = 0
-
     private fun expect(value: Int) {
         assertThat(expected).isEqualTo(value)
         expected++
@@ -90,16 +90,24 @@ class PlatformTextInputViewIntegrationTest {
     @Test
     fun checkIsTextEditor_returnsFalse_whenNoSessionActive() {
         setupContent()
-        rule.runOnIdle { assertThat(hostView.onCheckIsTextEditor()).isFalse() }
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isFalse()
+        }
     }
 
     @Test
     fun checkIsTextEditor_returnsFalse_whenNoInnerSessionActive() {
         setupContent()
 
-        coroutineScope.launch { node1.establishTextInputSession { awaitCancellation() } }
+        coroutineScope.launch {
+            node1.establishTextInputSession {
+                awaitCancellation()
+            }
+        }
 
-        rule.runOnIdle { assertThat(hostView.onCheckIsTextEditor()).isFalse() }
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isFalse()
+        }
     }
 
     @Test
@@ -107,37 +115,52 @@ class PlatformTextInputViewIntegrationTest {
         setupContent()
 
         coroutineScope.launch {
-            node1.establishTextInputSession { startInputMethod(TestInputMethodRequest(view)) }
+            node1.establishTextInputSession {
+                startInputMethod(TestInputMethodRequest(view))
+            }
         }
 
-        rule.runOnIdle { assertThat(hostView.onCheckIsTextEditor()).isTrue() }
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isTrue()
+        }
 
         // Handoff session to another node.
-        val sessionJob =
-            coroutineScope.launch {
-                node2.establishTextInputSession { startInputMethod(TestInputMethodRequest(view)) }
+        val sessionJob = coroutineScope.launch {
+            node2.establishTextInputSession {
+                startInputMethod(TestInputMethodRequest(view))
             }
+        }
 
         rule.runOnIdle {
             assertThat(hostView.onCheckIsTextEditor()).isTrue()
             sessionJob.cancel()
         }
 
-        rule.runOnIdle { assertThat(hostView.onCheckIsTextEditor()).isFalse() }
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isFalse()
+        }
     }
 
     @Test
     fun createInputConnection_returnsNull_whenNoSessionActive() {
         setupContent()
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull()
+        }
     }
 
     @Test
     fun createInputConnection_returnsNull_whenNoInnerSessionActive() {
         setupContent()
-        coroutineScope.launch { node1.establishTextInputSession { awaitCancellation() } }
+        coroutineScope.launch {
+            node1.establishTextInputSession {
+                awaitCancellation()
+            }
+        }
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull()
+        }
     }
 
     @Test
@@ -148,17 +171,12 @@ class PlatformTextInputViewIntegrationTest {
         val request2Texts = mutableListOf<String>()
         coroutineScope.launch {
             node2.establishTextInputSession {
-                startInputMethod(
-                    object : TestInputMethodRequest(view) {
-                        override fun commitText(
-                            text: CharSequence?,
-                            newCursorPosition: Int
-                        ): Boolean {
-                            request1Texts += text.toString()
-                            return true
-                        }
+                startInputMethod(object : TestInputMethodRequest(view) {
+                    override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                        request1Texts += text.toString()
+                        return true
                     }
-                )
+                })
             }
         }
 
@@ -166,37 +184,36 @@ class PlatformTextInputViewIntegrationTest {
             val connection1 = hostView.onCreateInputConnection(editorInfo)
             assertNotNull(connection1)
             connection1.commitText("hello", 1)
-            assertThat(request1Texts).containsExactly("hello").inOrder()
+            assertThat(request1Texts).containsExactly("hello")
+                .inOrder()
             assertThat(request2Texts).isEmpty()
         }
 
-        val sessionJob =
-            coroutineScope.launch {
-                node1.establishTextInputSession {
-                    startInputMethod(
-                        object : TestInputMethodRequest(view) {
-                            override fun commitText(
-                                text: CharSequence?,
-                                newCursorPosition: Int
-                            ): Boolean {
-                                request2Texts += text.toString()
-                                return true
-                            }
-                        }
-                    )
-                }
+        val sessionJob = coroutineScope.launch {
+            node1.establishTextInputSession {
+                startInputMethod(object : TestInputMethodRequest(view) {
+                    override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                        request2Texts += text.toString()
+                        return true
+                    }
+                })
             }
+        }
         rule.runOnIdle {
             val connection2 = hostView.onCreateInputConnection(editorInfo)
             assertNotNull(connection2)
             connection2.commitText("world", 1)
-            assertThat(request1Texts).containsExactly("hello").inOrder()
-            assertThat(request2Texts).containsExactly("world").inOrder()
+            assertThat(request1Texts).containsExactly("hello")
+                .inOrder()
+            assertThat(request2Texts).containsExactly("world")
+                .inOrder()
 
             sessionJob.cancel()
         }
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(editorInfo)).isNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(editorInfo)).isNull()
+        }
     }
 
     @Test
@@ -208,16 +225,14 @@ class PlatformTextInputViewIntegrationTest {
                 node1.establishTextInputSession {
                     expect(1)
                     try {
-                        startInputMethod(
-                            object : TestInputMethodRequest(view) {
-                                override fun createInputConnection(
-                                    outAttributes: EditorInfo
-                                ): InputConnection {
-                                    expect(2)
-                                    return super.createInputConnection(outAttributes)
-                                }
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun createInputConnection(
+                                outAttributes: EditorInfo
+                            ): InputConnection {
+                                expect(2)
+                                return super.createInputConnection(outAttributes)
                             }
-                        )
+                        })
                     } catch (e: CancellationException) {
                         expect(4)
                         throw e
@@ -229,7 +244,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull()
+        }
 
         coroutineScope.launch {
             expect(3)
@@ -239,7 +256,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { expect(7) }
+        rule.runOnIdle {
+            expect(7)
+        }
     }
 
     // closeConnection is only supported on API 24+
@@ -247,31 +266,30 @@ class PlatformTextInputViewIntegrationTest {
     @Test
     fun connectionClosed_whenOuterSessionCanceled() {
         setupContent()
-        val sessionJob =
-            coroutineScope.launch {
-                try {
-                    node1.establishTextInputSession {
-                        try {
-                            startInputMethod(
-                                object : TestInputMethodRequest(view) {
-                                    override fun closeConnection() {
-                                        expect(1)
-                                    }
-                                }
-                            )
-                        } catch (e: CancellationException) {
-                            expect(2)
-                            throw e
-                        }
+        val sessionJob = coroutineScope.launch {
+            try {
+                node1.establishTextInputSession {
+                    try {
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun closeConnection() {
+                                expect(1)
+                            }
+                        })
+                    } catch (e: CancellationException) {
+                        expect(2)
+                        throw e
                     }
-                } catch (e: CancellationException) {
-                    expect(3)
-                    throw e
                 }
+            } catch (e: CancellationException) {
+                expect(3)
+                throw e
             }
+        }
         expect(0)
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull()
+        }
 
         rule.runOnIdle {
             sessionJob.cancel()
@@ -290,20 +308,18 @@ class PlatformTextInputViewIntegrationTest {
                 node1.establishTextInputSession {
                     expect(1)
                     try {
-                        startInputMethod(
-                            object : TestInputMethodRequest(view) {
-                                override fun createInputConnection(
-                                    outAttributes: EditorInfo
-                                ): InputConnection {
-                                    expect(2)
-                                    return super.createInputConnection(outAttributes)
-                                }
-
-                                override fun closeConnection() {
-                                    expect(4)
-                                }
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun createInputConnection(
+                                outAttributes: EditorInfo
+                            ): InputConnection {
+                                expect(2)
+                                return super.createInputConnection(outAttributes)
                             }
-                        )
+
+                            override fun closeConnection() {
+                                expect(4)
+                            }
+                        })
                     } catch (e: CancellationException) {
                         expect(5)
                         throw e
@@ -315,7 +331,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull()
+        }
 
         coroutineScope.launch {
             expect(3)
@@ -325,7 +343,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { expect(8) }
+        rule.runOnIdle {
+            expect(8)
+        }
     }
 
     @Test
@@ -338,16 +358,14 @@ class PlatformTextInputViewIntegrationTest {
                 launch(start = CoroutineStart.UNDISPATCHED) {
                     expect(2)
                     try {
-                        startInputMethod(
-                            object : TestInputMethodRequest(view) {
-                                override fun createInputConnection(
-                                    outAttributes: EditorInfo
-                                ): InputConnection {
-                                    expect(3)
-                                    return super.createInputConnection(outAttributes)
-                                }
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun createInputConnection(
+                                outAttributes: EditorInfo
+                            ): InputConnection {
+                                expect(3)
+                                return super.createInputConnection(outAttributes)
                             }
-                        )
+                        })
                     } catch (e: CancellationException) {
                         expect(5)
                         throw e
@@ -365,7 +383,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { expect(6) }
+        rule.runOnIdle {
+            expect(6)
+        }
     }
 
     // closeConnection is only supported on API 24+
@@ -378,13 +398,11 @@ class PlatformTextInputViewIntegrationTest {
             node1.establishTextInputSession {
                 sessionJob = launch {
                     try {
-                        startInputMethod(
-                            object : TestInputMethodRequest(view) {
-                                override fun closeConnection() {
-                                    expect(1)
-                                }
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun closeConnection() {
+                                expect(1)
                             }
-                        )
+                        })
                     } catch (e: CancellationException) {
                         expect(2)
                         throw e
@@ -395,7 +413,9 @@ class PlatformTextInputViewIntegrationTest {
         }
         expect(0)
 
-        rule.runOnIdle { assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull() }
+        rule.runOnIdle {
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNotNull()
+        }
 
         rule.runOnIdle {
             sessionJob.cancel()
@@ -415,20 +435,18 @@ class PlatformTextInputViewIntegrationTest {
                 launch(start = CoroutineStart.UNDISPATCHED) {
                     expect(2)
                     try {
-                        startInputMethod(
-                            object : TestInputMethodRequest(view) {
-                                override fun createInputConnection(
-                                    outAttributes: EditorInfo
-                                ): InputConnection {
-                                    expect(3)
-                                    return super.createInputConnection(outAttributes)
-                                }
-
-                                override fun closeConnection() {
-                                    expect(5)
-                                }
+                        startInputMethod(object : TestInputMethodRequest(view) {
+                            override fun createInputConnection(
+                                outAttributes: EditorInfo
+                            ): InputConnection {
+                                expect(3)
+                                return super.createInputConnection(outAttributes)
                             }
-                        )
+
+                            override fun closeConnection() {
+                                expect(5)
+                            }
+                        })
                     } catch (e: CancellationException) {
                         expect(6)
                         throw e
@@ -446,16 +464,17 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { expect(7) }
+        rule.runOnIdle {
+            expect(7)
+        }
     }
 
     // closeConnection is only supported on API 24+
     @SdkSuppress(minSdkVersion = 24)
     @Test
-    fun connectionClosed_whenCreateConnectionCalledAgain() {
+    fun connectionNotClosed_whenCreateConnectionCalledAgain() {
         class TestConnection(view: View) : BaseInputConnection(view, true) {
             var closeCalls = 0
-
             override fun closeConnection() {
                 closeCalls++
                 super.closeConnection()
@@ -464,12 +483,13 @@ class PlatformTextInputViewIntegrationTest {
 
         setupContent()
         val connections = mutableListOf<TestConnection>()
-        val sessionJob =
-            coroutineScope.launch {
-                node1.establishTextInputSession {
-                    startInputMethod { TestConnection(view).also { connections += it } }
+        val sessionJob = coroutineScope.launch {
+            node1.establishTextInputSession {
+                startInputMethod {
+                    TestConnection(view).also { connections += it }
                 }
             }
+        }
 
         rule.runOnIdle {
             assertThat(connections).isEmpty()
@@ -484,33 +504,36 @@ class PlatformTextInputViewIntegrationTest {
 
             assertThat(connections).hasSize(2)
             val connection2 = connections.last()
-            assertThat(connection1.closeCalls).isEqualTo(1)
+            assertThat(connection1.closeCalls).isEqualTo(0)
             assertThat(connection2.closeCalls).isEqualTo(0)
 
             hostView.onCreateInputConnection(EditorInfo())
 
             assertThat(connections).hasSize(3)
             val connection3 = connections.last()
-            assertThat(connection1.closeCalls).isEqualTo(1)
-            assertThat(connection2.closeCalls).isEqualTo(1)
+            assertThat(connection1.closeCalls).isEqualTo(0)
+            assertThat(connection2.closeCalls).isEqualTo(0)
             assertThat(connection3.closeCalls).isEqualTo(0)
         }
 
-        rule.runOnIdle { assertThat(sessionJob.isActive).isTrue() }
+        rule.runOnIdle {
+            assertThat(sessionJob.isActive).isTrue()
+        }
     }
 
     @SdkSuppress(minSdkVersion = 24)
     @Test
-    fun innerSessionCanceled_whenIsolatedFromOuterSession_whenConnectionClosed() {
+    fun innerSessionNotCanceled_whenIsolatedFromOuterSession_whenConnectionClosed() {
         setupContent()
         lateinit var innerJob: Job
-        val outerJob =
-            coroutineScope.launch {
-                node1.establishTextInputSession {
-                    innerJob = launch { startInputMethod(TestInputMethodRequest(view)) }
-                    awaitCancellation()
+        val outerJob = coroutineScope.launch {
+            node1.establishTextInputSession {
+                innerJob = launch {
+                    startInputMethod(TestInputMethodRequest(view))
                 }
+                awaitCancellation()
             }
+        }
 
         rule.runOnIdle {
             val connection = checkNotNull(hostView.onCreateInputConnection(EditorInfo()))
@@ -520,20 +543,20 @@ class PlatformTextInputViewIntegrationTest {
         }
 
         rule.runOnIdle {
-            // Outer job isn't canceled, only the inner one.
             assertThat(outerJob.isActive).isTrue()
-            assertThat(innerJob.isActive).isFalse()
+            assertThat(innerJob.isActive).isTrue()
         }
     }
 
     @SdkSuppress(minSdkVersion = 24)
     @Test
-    fun cancellationPropagates_whenConnectionClosed() {
+    fun cancellationDoesNotPropagate_whenConnectionClosed() {
         setupContent()
-        val sessionJob =
-            coroutineScope.launch {
-                node1.establishTextInputSession { startInputMethod(TestInputMethodRequest(view)) }
+        val sessionJob = coroutineScope.launch {
+            node1.establishTextInputSession {
+                startInputMethod(TestInputMethodRequest(view))
             }
+        }
 
         rule.runOnIdle {
             val connection = checkNotNull(hostView.onCreateInputConnection(EditorInfo()))
@@ -541,7 +564,7 @@ class PlatformTextInputViewIntegrationTest {
             connection.closeConnection()
         }
 
-        rule.runOnIdle { assertThat(sessionJob.isActive).isFalse() }
+        rule.runOnIdle { assertThat(sessionJob.isActive).isTrue() }
     }
 
     @Test
@@ -550,32 +573,28 @@ class PlatformTextInputViewIntegrationTest {
         coroutineScope.launch {
             node1.establishTextInputSession {
                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    startInputMethod(
-                        object : TestInputMethodRequest(view) {
-                            override fun createInputConnection(
-                                outAttributes: EditorInfo
-                            ): InputConnection {
-                                expect(1)
-                                return super.createInputConnection(outAttributes)
-                            }
+                    startInputMethod(object : TestInputMethodRequest(view) {
+                        override fun createInputConnection(
+                            outAttributes: EditorInfo
+                        ): InputConnection {
+                            expect(1)
+                            return super.createInputConnection(outAttributes)
                         }
-                    )
+                    })
                 }
 
                 expect(0)
                 val connection1 = hostView.onCreateInputConnection(EditorInfo())
 
                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    startInputMethod(
-                        object : TestInputMethodRequest(view) {
-                            override fun createInputConnection(
-                                outAttributes: EditorInfo
-                            ): InputConnection {
-                                expect(3)
-                                return super.createInputConnection(outAttributes)
-                            }
+                    startInputMethod(object : TestInputMethodRequest(view) {
+                        override fun createInputConnection(
+                            outAttributes: EditorInfo
+                        ): InputConnection {
+                            expect(3)
+                            return super.createInputConnection(outAttributes)
                         }
-                    )
+                    })
                 }
 
                 expect(2)
@@ -586,7 +605,9 @@ class PlatformTextInputViewIntegrationTest {
             }
         }
 
-        rule.runOnIdle { expect(4) }
+        rule.runOnIdle {
+            expect(4)
+        }
     }
 
     @Test
@@ -595,13 +616,11 @@ class PlatformTextInputViewIntegrationTest {
         coroutineScope.launch {
             node1.establishTextInputSession {
                 launch {
-                    startInputMethod(
-                        object : TestInputMethodRequest(view) {
-                            override fun createInputConnection(
-                                outAttributes: EditorInfo
-                            ): InputConnection = BaseInputConnection(view, true)
-                        }
-                    )
+                    startInputMethod(object : TestInputMethodRequest(view) {
+                        override fun createInputConnection(
+                            outAttributes: EditorInfo
+                        ): InputConnection = BaseInputConnection(view, true)
+                    })
                 }
                 awaitCancellation()
             }
@@ -624,17 +643,18 @@ class PlatformTextInputViewIntegrationTest {
         }
     }
 
-    private data class TestElement(val onNode: (PlatformTextInputModifierNode) -> Unit) :
-        ModifierNodeElement<TestNode>() {
+    private data class TestElement(
+        val onNode: (PlatformTextInputModifierNode) -> Unit
+    ) : ModifierNodeElement<TestNode>() {
         override fun create(): TestNode = TestNode(onNode)
-
         override fun update(node: TestNode) {
             node.onNode = onNode
         }
     }
 
-    private class TestNode(var onNode: (PlatformTextInputModifierNode) -> Unit) :
-        Modifier.Node(), PlatformTextInputModifierNode {
+    private class TestNode(
+        var onNode: (PlatformTextInputModifierNode) -> Unit
+    ) : Modifier.Node(), PlatformTextInputModifierNode {
 
         override fun onAttach() {
             onNode(this)

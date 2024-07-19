@@ -17,76 +17,84 @@
 package androidx.work
 
 import android.content.Context
-import androidx.concurrent.futures.await
+import androidx.work.impl.utils.futures.SettableFuture
 import com.google.common.util.concurrent.ListenableFuture
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.Runnable
+import kotlinx.coroutines.launch
 
 /**
- * A [ListenableWorker] implementation that provides interop with Kotlin Coroutines. Override the
- * [doWork] function to do your suspending work.
- *
- * By default, CoroutineWorker runs on [Dispatchers.Default] if neither
- * [Configuration.Builder.setExecutor] or [Configuration.Builder.setWorkerCoroutineContext] were
- * set.
- *
+ * A [ListenableWorker] implementation that provides interop with Kotlin Coroutines.  Override
+ * the [doWork] function to do your suspending work.
+ * <p>
+ * By default, CoroutineWorker runs on [Dispatchers.Default]; this can be modified by
+ * overriding [coroutineContext].
  * <p>
  * A CoroutineWorker is given a maximum of ten minutes to finish its execution and return a
- * [ListenableWorker.Result]. After this time has expired, the worker will be signalled to stop.
+ * [ListenableWorker.Result].  After this time has expired, the worker will be signalled to stop.
  */
-public abstract class CoroutineWorker(appContext: Context, private val params: WorkerParameters) :
-    ListenableWorker(appContext, params) {
+public abstract class CoroutineWorker(
+    appContext: Context,
+    params: WorkerParameters
+) : ListenableWorker(appContext, params) {
+
+    internal val job = Job()
+    internal val future: SettableFuture<Result> = SettableFuture.create()
+
+    init {
+        future.addListener(
+            Runnable {
+                if (future.isCancelled) {
+                    job.cancel()
+                }
+            },
+            taskExecutor.serialTaskExecutor
+        )
+    }
 
     /**
-     * The coroutine context on which [doWork] will run.
-     *
-     * If this property is overridden then it takes precedent over [Configuration.executor] or
-     * [Configuration.workerCoroutineContext].
-     *
-     * By default, this is a dispatcher delegating to [Dispatchers.Default]
+     * The coroutine context on which [doWork] will run. By default, this is [Dispatchers.Default].
      */
     @Deprecated(message = "use withContext(...) inside doWork() instead.")
-    public open val coroutineContext: CoroutineDispatcher = DeprecatedDispatcher
+    public open val coroutineContext: CoroutineDispatcher = Dispatchers.Default
 
     @Suppress("DEPRECATION")
     public final override fun startWork(): ListenableFuture<Result> {
-        // if a developer didn't override coroutineContext property, then
-        // we use Dispatchers.Default directly.
-        // We can't fully implement delegating CoroutineDispatcher, because CoroutineDispatcher
-        // has experimental and internal apis.
-        val coroutineContext =
-            if (coroutineContext != DeprecatedDispatcher) {
-                coroutineContext
-            } else {
-                params.workerContext
+        val coroutineScope = CoroutineScope(coroutineContext + job)
+        coroutineScope.launch {
+            try {
+                val result = doWork()
+                future.set(result)
+            } catch (t: Throwable) {
+                future.setException(t)
             }
-
-        return launchFuture(coroutineContext + Job()) { doWork() }
+        }
+        return future
     }
 
     /**
      * A suspending method to do your work.
-     *
      * <p>
-     * To specify which [CoroutineDispatcher] your work should run on, use `withContext()` within
-     * `doWork()`. If there is no other dispatcher declared, [Dispatchers.Default] will be used.
-     *
+     * To specify which [CoroutineDispatcher] your work should run on, use `withContext()`
+     * within `doWork()`.
+     * If there is no other dispatcher declared, [Dispatchers.Default] will be used.
      * <p>
      * A CoroutineWorker is given a maximum of ten minutes to finish its execution and return a
-     * [ListenableWorker.Result]. After this time has expired, the worker will be signalled to stop.
+     * [ListenableWorker.Result].  After this time has expired, the worker will be signalled to
+     * stop.
      *
      * @return The [ListenableWorker.Result] of the result of the background work; note that
-     *   dependent work will not execute if you return [ListenableWorker.Result.failure]
+     * dependent work will not execute if you return [ListenableWorker.Result.failure]
      */
     public abstract suspend fun doWork(): Result
 
     /**
      * @return The [ForegroundInfo] instance if the [WorkRequest] is marked as expedited.
+     *
      * @throws [IllegalStateException] when not overridden. Override this method when the
-     *   corresponding [WorkRequest] is marked expedited.
+     * corresponding [WorkRequest] is marked expedited.
      */
     public open suspend fun getForegroundInfo(): ForegroundInfo {
         throw IllegalStateException("Not implemented")
@@ -103,12 +111,13 @@ public abstract class CoroutineWorker(appContext: Context, private val params: W
     }
 
     /**
-     * Makes the [CoroutineWorker] run in the context of a foreground [android.app.Service]. This is
-     * a suspending function unlike the [setForegroundAsync] API which returns a [ListenableFuture].
+     * Makes the [CoroutineWorker] run in the context of a foreground [android.app.Service]. This
+     * is a suspending function unlike the [setForegroundAsync] API which returns a
+     * [ListenableFuture].
      *
      * Calling [setForeground] will throw an [IllegalStateException] if the process is subject to
-     * foreground service restrictions. Consider using [WorkRequest.Builder.setExpedited] and
-     * [getForegroundInfo] instead.
+     * foreground service restrictions. Consider using  [WorkRequest.Builder.setExpedited]
+     * and [getForegroundInfo] instead.
      *
      * @param foregroundInfo The [ForegroundInfo]
      */
@@ -118,22 +127,17 @@ public abstract class CoroutineWorker(appContext: Context, private val params: W
 
     @Suppress("DEPRECATION")
     public final override fun getForegroundInfoAsync(): ListenableFuture<ForegroundInfo> {
-        return launchFuture(coroutineContext + Job()) { getForegroundInfo() }
+        val job = Job()
+        val scope = CoroutineScope(coroutineContext + job)
+        val jobFuture = JobListenableFuture<ForegroundInfo>(job)
+        scope.launch {
+            jobFuture.complete(getForegroundInfo())
+        }
+        return jobFuture
     }
 
     public final override fun onStopped() {
         super.onStopped()
-    }
-
-    private object DeprecatedDispatcher : CoroutineDispatcher() {
-        val dispatcher = Dispatchers.Default
-
-        override fun dispatch(context: CoroutineContext, block: Runnable) {
-            dispatcher.dispatch(context, block)
-        }
-
-        override fun isDispatchNeeded(context: CoroutineContext): Boolean {
-            return dispatcher.isDispatchNeeded(context)
-        }
+        future.cancel(false)
     }
 }

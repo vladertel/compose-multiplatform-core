@@ -35,9 +35,15 @@ class FragmentResultOwnerTest {
         with(ActivityScenario.launch(TestActivity::class.java)) {
             val fragment1 = ResultFragment()
 
-            val fm = withActivity { supportFragmentManager }
+            val fm = withActivity {
+                supportFragmentManager
+            }
 
-            withActivity { fm.commitNow { add(fragment1, null) } }
+            withActivity {
+                fm.commitNow {
+                    add(fragment1, null)
+                }
+            }
 
             val expectedResult = "resultGood"
             val resultBundle = bundleOf("bundleKey" to expectedResult)
@@ -55,7 +61,9 @@ class FragmentResultOwnerTest {
         with(ActivityScenario.launch(TestActivity::class.java)) {
             val fragment1 = ResultFragment()
 
-            val fm = withActivity { supportFragmentManager }
+            val fm = withActivity {
+                supportFragmentManager
+            }
 
             val expectedResult = "resultGood"
             val resultBundle = bundleOf("bundleKey" to expectedResult)
@@ -63,9 +71,15 @@ class FragmentResultOwnerTest {
             fm.setFragmentResult("requestKey", resultBundle)
             fm.clearFragmentResult("requestKey")
 
-            withActivity { fm.commitNow { add(fragment1, null) } }
+            withActivity {
+                fm.commitNow {
+                    add(fragment1, null)
+                }
+            }
 
-            assertWithMessage("The result should be null").that(fragment1.actualResult).isNull()
+            assertWithMessage("The result should be null")
+                .that(fragment1.actualResult)
+                .isNull()
         }
     }
 
@@ -74,9 +88,15 @@ class FragmentResultOwnerTest {
         with(ActivityScenario.launch(TestActivity::class.java)) {
             val fragment1 = ResultFragment()
 
-            val fm = withActivity { supportFragmentManager }
+            val fm = withActivity {
+                supportFragmentManager
+            }
 
-            withActivity { fm.commitNow { add(fragment1, null) } }
+            withActivity {
+                fm.commitNow {
+                    add(fragment1, null)
+                }
+            }
 
             val expectedResult = "resultGood"
             val resultBundle = bundleOf("bundleKey" to expectedResult)

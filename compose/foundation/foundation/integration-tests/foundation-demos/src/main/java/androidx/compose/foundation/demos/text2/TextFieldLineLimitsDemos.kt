@@ -42,7 +42,12 @@ import kotlin.math.roundToInt
 
 @Composable
 fun TextFieldLineLimitsDemos() {
-    Column(Modifier.imePadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
+    Column(
+        Modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
         TagLine(tag = "Default")
         DefaultLineLimits()
 
@@ -92,7 +97,9 @@ fun MultiLineLimits() {
         Text("Min: $minLines")
         Slider(
             value = minLines.toFloat(),
-            onValueChange = { minLines = it.roundToInt() },
+            onValueChange = {
+                minLines = it.roundToInt()
+            },
             valueRange = 1f..10f,
             steps = 9
         )
@@ -102,7 +109,9 @@ fun MultiLineLimits() {
         Text("Max: $maxLines")
         Slider(
             value = maxLines.toFloat(),
-            onValueChange = { maxLines = it.roundToInt() },
+            onValueChange = {
+                maxLines = it.roundToInt()
+            },
             valueRange = 1f..10f,
             steps = 9
         )
@@ -112,8 +121,10 @@ fun MultiLineLimits() {
 
     BasicTextField(
         state = rememberTextFieldState(),
-        lineLimits =
-            TextFieldLineLimits.MultiLine(minHeightInLines = minLines, maxHeightInLines = maxLines),
+        lineLimits = TextFieldLineLimits.MultiLine(
+            minHeightInLines = minLines,
+            maxHeightInLines = maxLines
+        ),
         textStyle = LocalTextStyle.current,
         modifier = demoTextFieldModifiers
     )

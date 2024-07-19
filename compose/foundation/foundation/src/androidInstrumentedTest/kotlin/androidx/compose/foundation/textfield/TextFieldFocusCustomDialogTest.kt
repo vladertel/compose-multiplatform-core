@@ -56,7 +56,8 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class TextFieldFocusCustomDialogTest {
-    @get:Rule val rule = createAndroidComposeRule<FragmentActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<FragmentActivity>()
 
     data class FocusTestData(val focusRequester: FocusRequester, var focused: Boolean = false)
 
@@ -67,8 +68,14 @@ class TextFieldFocusCustomDialogTest {
     @FlakyTest(bugId = 298465647)
     fun keyboardShown_forFieldInAndroidDialog_whenFocusRequestedImmediately_fromLaunchedEffect() {
         keyboardIsShown_whenFocusRequestedImmediately_fromEffect(
-            runEffect = { LaunchedEffect(Unit) { it() } },
-            wrapContent = { CustomDialog(content = it) }
+            runEffect = {
+                LaunchedEffect(Unit) {
+                    it()
+                }
+            },
+            wrapContent = {
+                CustomDialog(content = it)
+            }
         )
     }
 
@@ -85,7 +92,9 @@ class TextFieldFocusCustomDialogTest {
                     onDispose {}
                 }
             },
-            wrapContent = { CustomDialog(content = it) }
+            wrapContent = {
+                CustomDialog(content = it)
+            }
         )
     }
 
@@ -142,23 +151,21 @@ class TextFieldFocusCustomDialogTest {
         }
     }
 
-    private tailrec fun Context.findActivity(): FragmentActivity =
-        when (this) {
-            is FragmentActivity -> this
-            is ContextWrapper -> baseContext.findActivity()
-            else -> error("No FragmentActivity found")
-        }
+    private tailrec fun Context.findActivity(): FragmentActivity = when (this) {
+        is FragmentActivity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> error("No FragmentActivity found")
+    }
 
     class CustomDialogFragment(private val content: @Composable () -> Unit) : DialogFragment() {
         override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
-        ): View =
-            ComposeView(requireContext()).also {
-                it.setViewTreeLifecycleOwner(this)
-                it.setViewTreeSavedStateRegistryOwner(this)
-                it.setContent(content)
-            }
+        ): View = ComposeView(requireContext()).also {
+            it.setViewTreeLifecycleOwner(this)
+            it.setViewTreeSavedStateRegistryOwner(this)
+            it.setContent(content)
+        }
     }
 }

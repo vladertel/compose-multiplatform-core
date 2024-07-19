@@ -18,6 +18,7 @@ package androidx.camera.camera2.pipe.compat
 
 import android.hardware.camera2.CameraManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraStatusMonitor
 import androidx.camera.camera2.pipe.CameraStatusMonitor.CameraStatus
@@ -30,26 +31,30 @@ import kotlinx.coroutines.channels.onFailure
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.callbackFlow
 
-internal class Camera2CameraStatusMonitor
-@Inject
-constructor(cameraManager: Provider<CameraManager>, threads: Threads) : CameraStatusMonitor {
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
+internal class Camera2CameraStatusMonitor @Inject constructor(
+    cameraManager: Provider<CameraManager>,
+    threads: Threads
+) : CameraStatusMonitor {
     override val cameraStatus = callbackFlow {
         val manager = cameraManager.get()
-        val availabilityCallback =
-            object : CameraManager.AvailabilityCallback() {
-                override fun onCameraAccessPrioritiesChanged() {
-                    Log.debug { "Camera access priorities have changed" }
-                    trySendBlocking(CameraStatus.CameraPrioritiesChanged).onFailure {
+        val availabilityCallback = object : CameraManager.AvailabilityCallback() {
+            override fun onCameraAccessPrioritiesChanged() {
+                Log.debug { "Camera access priorities have changed" }
+                trySendBlocking(CameraStatus.CameraPrioritiesChanged)
+                    .onFailure {
                         Log.warn { "Failed to emit CameraPrioritiesChanged" }
                     }
-                }
-
-                override fun onCameraAvailable(cameraId: String) {
-                    Log.debug { "Camera $cameraId has become available" }
-                    trySendBlocking(CameraStatus.CameraAvailable(CameraId.fromCamera2Id(cameraId)))
-                        .onFailure { Log.warn { "Failed to emit CameraAvailable($cameraId)" } }
-                }
             }
+
+            override fun onCameraAvailable(cameraId: String) {
+                Log.debug { "Camera $cameraId has become available" }
+                trySendBlocking(CameraStatus.CameraAvailable(CameraId.fromCamera2Id(cameraId)))
+                    .onFailure {
+                        Log.warn { "Failed to emit CameraAvailable($cameraId)" }
+                    }
+            }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             Api28Compat.registerAvailabilityCallback(
                 manager,
@@ -57,7 +62,10 @@ constructor(cameraManager: Provider<CameraManager>, threads: Threads) : CameraSt
                 availabilityCallback
             )
         } else {
-            manager.registerAvailabilityCallback(availabilityCallback, threads.camera2Handler)
+            manager.registerAvailabilityCallback(
+                availabilityCallback,
+                threads.camera2Handler
+            )
         }
 
         awaitClose { manager.unregisterAvailabilityCallback(availabilityCallback) }

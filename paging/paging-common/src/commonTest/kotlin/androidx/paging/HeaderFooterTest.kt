@@ -26,200 +26,208 @@ import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 
-/** Prepend and append are both Done, so that headers will appear */
-private val fullLoadStates = loadStates(prepend = NotLoading.Complete, append = NotLoading.Complete)
+/**
+ * Prepend and append are both Done, so that headers will appear
+ */
+private val fullLoadStates = loadStates(
+    prepend = NotLoading.Complete,
+    append = NotLoading.Complete
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HeaderFooterTest {
 
-    private fun <T : Any> PageEvent<T>.toPagingData() =
-        PagingData(flowOf(this), PagingData.NOOP_UI_RECEIVER, PagingData.NOOP_HINT_RECEIVER)
+    private fun <T : Any> PageEvent<T>.toPagingData() = PagingData(
+        flowOf(this),
+        PagingData.NOOP_UI_RECEIVER,
+        PagingData.NOOP_HINT_RECEIVER
+    )
 
-    private suspend fun <T : Any> PageEvent<T>.insertHeaderItem(item: T) =
-        toPagingData().insertHeaderItem(item = item).flow.single()
+    private suspend fun <T : Any> PageEvent<T>.insertHeaderItem(item: T) = toPagingData()
+        .insertHeaderItem(item = item)
+        .flow
+        .single()
 
-    private suspend fun <T : Any> PageEvent<T>.insertFooterItem(item: T) =
-        toPagingData().insertFooterItem(item = item).flow.single()
-
-    @Test
-    fun insertHeader_prepend() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localPrepend(
-                        pages =
-                            listOf(TransformablePage(data = listOf(0), originalPageOffset = -1)),
-                        source = fullLoadStates
-                    )
-                    .insertHeaderItem(-1)
-
-            val expected =
-                localPrepend(
-                    pages =
-                        listOf(
-                            TransformablePage(
-                                data = listOf(-1),
-                                originalPageOffsets = intArrayOf(-1),
-                                hintOriginalPageOffset = -1,
-                                hintOriginalIndices = listOf(0)
-                            ),
-                            TransformablePage(data = listOf(0), originalPageOffset = -1)
-                        ),
-                    source = fullLoadStates
-                )
-
-            assertThat(actual).isEqualTo(expected)
-        }
+    private suspend fun <T : Any> PageEvent<T>.insertFooterItem(item: T) = toPagingData()
+        .insertFooterItem(item = item)
+        .flow
+        .single()
 
     @Test
-    fun insertHeader_refresh() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localRefresh(
-                        pages =
-                            listOf(TransformablePage(data = listOf("a"), originalPageOffset = 0)),
-                        source = fullLoadStates
-                    )
-                    .insertHeaderItem("HEADER")
-
-            val expected =
-                localRefresh(
-                    pages =
-                        listOf(
-                            TransformablePage(
-                                data = listOf("HEADER"),
-                                originalPageOffsets = intArrayOf(0),
-                                hintOriginalPageOffset = 0,
-                                hintOriginalIndices = listOf(0)
-                            ),
-                            TransformablePage(data = listOf("a"), originalPageOffset = 0)
-                        ),
-                    source = fullLoadStates
+    fun insertHeader_prepend() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localPrepend(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf(0),
+                    originalPageOffset = -1
                 )
+            ),
+            source = fullLoadStates
+        ).insertHeaderItem(-1)
 
-            assertThat(actual).isEqualTo(expected)
-        }
+        val expected = localPrepend(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf(-1),
+                    originalPageOffsets = intArrayOf(-1),
+                    hintOriginalPageOffset = -1,
+                    hintOriginalIndices = listOf(0)
+                ),
+                TransformablePage(
+                    data = listOf(0),
+                    originalPageOffset = -1
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertThat(actual).isEqualTo(expected)
+    }
 
     @Test
-    fun insertHeader_empty() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localRefresh(
-                        pages =
-                            listOf(
-                                TransformablePage(
-                                    data = emptyList<String>(),
-                                    originalPageOffset = 0
-                                )
-                            ),
-                        source = fullLoadStates
-                    )
-                    .insertHeaderItem("HEADER")
-
-            val expected =
-                localRefresh(
-                    pages =
-                        listOf(
-                            TransformablePage(
-                                data = listOf("HEADER"),
-                                originalPageOffsets = intArrayOf(0),
-                                hintOriginalPageOffset = 0,
-                                hintOriginalIndices = listOf(0)
-                            )
-                        ),
-                    source = fullLoadStates
+    fun insertHeader_refresh() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("a"),
+                    originalPageOffset = 0
                 )
+            ),
+            source = fullLoadStates
+        ).insertHeaderItem("HEADER")
 
-            assertEquals(expected, actual)
-        }
+        val expected = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("HEADER"),
+                    originalPageOffsets = intArrayOf(0),
+                    hintOriginalPageOffset = 0,
+                    hintOriginalIndices = listOf(0)
+                ),
+                TransformablePage(
+                    data = listOf("a"),
+                    originalPageOffset = 0
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertThat(actual).isEqualTo(expected)
+    }
 
     @Test
-    fun insertFooter_append() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localAppend(
-                        pages =
-                            listOf(TransformablePage(data = listOf("b"), originalPageOffset = 0)),
-                        source = fullLoadStates
-                    )
-                    .insertFooterItem("FOOTER")
-
-            val expected =
-                localAppend(
-                    pages =
-                        listOf(
-                            TransformablePage(data = listOf("b"), originalPageOffset = 0),
-                            TransformablePage(
-                                data = listOf("FOOTER"),
-                                originalPageOffsets = intArrayOf(0),
-                                hintOriginalPageOffset = 0,
-                                hintOriginalIndices = listOf(0)
-                            )
-                        ),
-                    source = fullLoadStates
+    fun insertHeader_empty() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = emptyList<String>(),
+                    originalPageOffset = 0
                 )
+            ),
+            source = fullLoadStates
+        ).insertHeaderItem("HEADER")
 
-            assertEquals(expected, actual)
-        }
+        val expected = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("HEADER"),
+                    originalPageOffsets = intArrayOf(0),
+                    hintOriginalPageOffset = 0,
+                    hintOriginalIndices = listOf(0)
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertEquals(expected, actual)
+    }
 
     @Test
-    fun insertFooter_refresh() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localRefresh(
-                        pages =
-                            listOf(TransformablePage(data = listOf("a"), originalPageOffset = 0)),
-                        source = fullLoadStates
-                    )
-                    .insertFooterItem("FOOTER")
-
-            val expected =
-                localRefresh(
-                    pages =
-                        listOf(
-                            TransformablePage(data = listOf("a"), originalPageOffset = 0),
-                            TransformablePage(
-                                data = listOf("FOOTER"),
-                                originalPageOffsets = intArrayOf(0),
-                                hintOriginalPageOffset = 0,
-                                hintOriginalIndices = listOf(0)
-                            )
-                        ),
-                    source = fullLoadStates
+    fun insertFooter_append() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localAppend(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("b"),
+                    originalPageOffset = 0
                 )
+            ),
+            source = fullLoadStates
+        ).insertFooterItem("FOOTER")
 
-            assertThat(actual).isEqualTo(expected)
-        }
+        val expected = localAppend(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("b"),
+                    originalPageOffset = 0
+                ),
+                TransformablePage(
+                    data = listOf("FOOTER"),
+                    originalPageOffsets = intArrayOf(0),
+                    hintOriginalPageOffset = 0,
+                    hintOriginalIndices = listOf(0)
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertEquals(expected, actual)
+    }
 
     @Test
-    fun insertFooter_empty() =
-        runTest(UnconfinedTestDispatcher()) {
-            val actual =
-                localRefresh(
-                        pages =
-                            listOf(
-                                TransformablePage(
-                                    data = emptyList<String>(),
-                                    originalPageOffset = 0
-                                )
-                            ),
-                        source = fullLoadStates
-                    )
-                    .insertFooterItem("FOOTER")
-
-            val expected =
-                localRefresh(
-                    pages =
-                        listOf(
-                            TransformablePage(
-                                data = listOf("FOOTER"),
-                                originalPageOffsets = intArrayOf(0),
-                                hintOriginalPageOffset = 0,
-                                hintOriginalIndices = listOf(0)
-                            )
-                        ),
-                    source = fullLoadStates
+    fun insertFooter_refresh() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("a"),
+                    originalPageOffset = 0
                 )
+            ),
+            source = fullLoadStates
+        ).insertFooterItem("FOOTER")
 
-            assertThat(actual).isEqualTo(expected)
-        }
+        val expected = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("a"),
+                    originalPageOffset = 0
+                ),
+                TransformablePage(
+                    data = listOf("FOOTER"),
+                    originalPageOffsets = intArrayOf(0),
+                    hintOriginalPageOffset = 0,
+                    hintOriginalIndices = listOf(0)
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertThat(actual).isEqualTo(expected)
+    }
+
+    @Test
+    fun insertFooter_empty() = runTest(UnconfinedTestDispatcher()) {
+        val actual = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = emptyList<String>(),
+                    originalPageOffset = 0
+                )
+            ),
+            source = fullLoadStates
+        ).insertFooterItem("FOOTER")
+
+        val expected = localRefresh(
+            pages = listOf(
+                TransformablePage(
+                    data = listOf("FOOTER"),
+                    originalPageOffsets = intArrayOf(0),
+                    hintOriginalPageOffset = 0,
+                    hintOriginalIndices = listOf(0)
+                )
+            ),
+            source = fullLoadStates
+        )
+
+        assertThat(actual).isEqualTo(expected)
+    }
 }

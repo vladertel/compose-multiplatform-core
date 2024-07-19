@@ -31,10 +31,10 @@ import android.graphics.Matrix;
 import android.hardware.camera2.CaptureResult;
 import android.os.Build;
 import android.util.Range;
-import android.util.Rational;
 import android.util.Size;
 import android.view.Window;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.FloatRange;
 import androidx.annotation.IntDef;
 import androidx.annotation.MainThread;
@@ -58,7 +58,7 @@ import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCapture.ScreenFlash;
+import androidx.camera.core.ImageCapture.ScreenFlashUiControl;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.InitializationException;
 import androidx.camera.core.Logger;
@@ -73,12 +73,9 @@ import androidx.camera.core.ViewPort;
 import androidx.camera.core.ZoomState;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.StreamSpec;
-import androidx.camera.core.impl.utils.CameraOrientationUtil;
-import androidx.camera.core.impl.utils.ContextUtil;
 import androidx.camera.core.impl.utils.Threads;
 import androidx.camera.core.impl.utils.futures.FutureCallback;
 import androidx.camera.core.impl.utils.futures.Futures;
-import androidx.camera.core.resolutionselector.AspectRatioStrategy;
 import androidx.camera.core.resolutionselector.ResolutionSelector;
 import androidx.camera.core.resolutionselector.ResolutionStrategy;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -133,6 +130,7 @@ import java.util.concurrent.Executor;
  * {@link UseCase}s freezes the preview for a short period of time. To avoid the glitch, the
  * {@link UseCase}s need to be enabled/disabled before the controller is set on {@link PreviewView}.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public abstract class CameraController {
 
     private static final String TAG = "CameraController";
@@ -164,9 +162,7 @@ public abstract class CameraController {
      * camera-core directly.
      *
      * @see ImageAnalysis.Analyzer
-     * @deprecated Use {@link ImageAnalysis#COORDINATE_SYSTEM_VIEW_REFERENCED} instead.
      */
-    @Deprecated
     public static final int COORDINATE_SYSTEM_VIEW_REFERENCED = 1;
 
     /**
@@ -224,16 +220,16 @@ public abstract class CameraController {
      */
     public static final int VIDEO_CAPTURE = 1 << 2;
 
-    private static final ScreenFlash NO_OP_SCREEN_FLASH =
-            new ScreenFlash() {
+    private static final ScreenFlashUiControl NO_OP_SCREEN_FLASH_UI_CONTROL =
+            new ScreenFlashUiControl() {
                 @Override
-                public void apply(long expirationTimeMillis,
-                        @NonNull ImageCapture.ScreenFlashListener screenFlashListener) {
-                    screenFlashListener.onCompleted();
+                public void applyScreenFlashUi(
+                        @NonNull ImageCapture.ScreenFlashUiCompleter screenFlashUiCompleter) {
+                    screenFlashUiCompleter.complete();
                 }
 
                 @Override
-                public void clear() {
+                public void clearScreenFlashUi() {
 
                 }
             };
@@ -370,18 +366,17 @@ public abstract class CameraController {
 
     CameraController(@NonNull Context context,
             @NonNull ListenableFuture<ProcessCameraProviderWrapper> cameraProviderFuture) {
-        mAppContext = ContextUtil.getApplicationContext(context);
-        mPreview = createPreview();
-        mImageCapture = createImageCapture(null);
-        mImageAnalysis = createImageAnalysis(null, null, null);
-        mVideoCapture = createVideoCapture();
+        mAppContext = getApplicationContext(context);
+        mPreview = new Preview.Builder().build();
+        mImageCapture = new ImageCapture.Builder().build();
+        mImageAnalysis = new ImageAnalysis.Builder().build();
+        mVideoCapture = createNewVideoCapture();
 
         // Wait for camera to be initialized before binding use cases.
         mInitializationFuture = transform(
                 cameraProviderFuture,
                 provider -> {
                     mCameraProvider = provider;
-                    unbindAllAndRecreate();
                     startCameraAndTrackStates();
                     return null;
                 }, mainThreadExecutor());
@@ -395,6 +390,25 @@ public abstract class CameraController {
             mImageCapture.setTargetRotation(rotation);
             mVideoCapture.setTargetRotation(rotation);
         };
+    }
+
+    /**
+     * Gets the application context and preserves the attribution tag.
+     *
+     * <p> TODO(b/185272953): instrument test getting attribution tag once the view artifact depends
+     * on a core version that has the fix.
+     */
+    private static Context getApplicationContext(@NonNull Context context) {
+        Context applicationContext = context.getApplicationContext();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            String attributeTag = Api30Impl.getAttributionTag(context);
+
+            if (attributeTag != null) {
+                return Api30Impl.createAttributionContext(applicationContext, attributeTag);
+            }
+        }
+
+        return applicationContext;
     }
 
     /**
@@ -507,24 +521,13 @@ public abstract class CameraController {
 
     /**
      * Sets the {@link ResolutionSelector} on the config.
-     *
-     * <p>If the given resolution selector is {@code null}, the {@link AspectRatioStrategy} will
-     * be override to match the {@link ViewPort}.
      */
     private void setResolutionSelector(@NonNull ImageOutputConfig.Builder<?> builder,
             @Nullable ResolutionSelector resolutionSelector) {
-        if (resolutionSelector != null) {
-            builder.setResolutionSelector(resolutionSelector);
-        } else if (mViewPort != null) {
-            // Override the aspect ratio strategy if viewport is set and there's no resolution
-            // selector explicitly set by the user.
-            AspectRatioStrategy aspectRatioStrategy = getViewportAspectRatioStrategy(mViewPort);
-            if (aspectRatioStrategy != null) {
-                builder.setResolutionSelector(
-                        new ResolutionSelector.Builder().setAspectRatioStrategy(
-                                aspectRatioStrategy).build());
-            }
+        if (resolutionSelector == null) {
+            return;
         }
+        builder.setResolutionSelector(resolutionSelector);
     }
 
     /**
@@ -572,13 +575,8 @@ public abstract class CameraController {
             mSurfaceProvider = surfaceProvider;
             mPreview.setSurfaceProvider(surfaceProvider);
         }
-        boolean shouldUpdateAspectRatio = mViewPort == null || getViewportAspectRatioStrategy(
-                viewPort) != getViewportAspectRatioStrategy(mViewPort);
         mViewPort = viewPort;
         startListeningToRotationEvents();
-        if (shouldUpdateAspectRatio) {
-            unbindAllAndRecreate();
-        }
         startCameraAndTrackStates();
     }
 
@@ -692,23 +690,14 @@ public abstract class CameraController {
     /**
      * Unbinds {@link Preview} and recreates with the latest parameters.
      */
-    @MainThread
     private void unbindPreviewAndRecreate() {
         if (isCameraInitialized()) {
             mCameraProvider.unbind(mPreview);
         }
-        mPreview = createPreview();
-        if (mSurfaceProvider != null) {
-            mPreview.setSurfaceProvider(mSurfaceProvider);
-        }
-    }
-
-    private Preview createPreview() {
         Preview.Builder builder = new Preview.Builder();
         setTargetOutputSize(builder, mPreviewTargetSize);
         setResolutionSelector(builder, mPreviewResolutionSelector);
-
-        return builder.build();
+        mPreview = builder.build();
     }
 
     // ----------------------
@@ -757,8 +746,10 @@ public abstract class CameraController {
      * still set). Otherwise, {@code FLASH_MODE_OFF} will be set.
      *
      * @param flashMode the flash mode for {@link ImageCapture}.
+     *
      * @throws IllegalArgumentException If flash mode is invalid or FLASH_MODE_SCREEN is used
      *                                  without a front camera.
+     *
      * @see PreviewView#setScreenFlashWindow(Window)
      * @see ScreenFlashView#setScreenFlashWindow(Window)
      */
@@ -773,7 +764,7 @@ public abstract class CameraController {
                         "Not a front camera despite setting FLASH_MODE_SCREEN");
             }
 
-            updateScreenFlashToImageCapture();
+            updateScreenFlashUiControlToImageCapture();
         }
 
         mImageCapture.setFlashMode(flashMode);
@@ -781,7 +772,7 @@ public abstract class CameraController {
 
     /**
      * Internal API used by {@link PreviewView} and {@link ScreenFlashView} to provide a
-     * {@link ScreenFlash}.
+     * {@link ScreenFlashUiControl}.
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     public void setScreenFlashUiInfo(@NonNull ScreenFlashUiInfo screenFlashUiInfo) {
@@ -789,7 +780,7 @@ public abstract class CameraController {
         mScreenFlashUiInfoMap.put(screenFlashUiInfo.getProviderType(), screenFlashUiInfo);
         ScreenFlashUiInfo prioritizedInfo = getScreenFlashUiInfoByPriority();
         if (prioritizedInfo != null && !prioritizedInfo.equals(previousInfo)) {
-            updateScreenFlashToImageCapture();
+            updateScreenFlashUiControlToImageCapture();
         }
     }
 
@@ -798,20 +789,20 @@ public abstract class CameraController {
      * flash mode to ImageCapture in case it's pending.
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
-    public void updateScreenFlashToImageCapture() {
+    public void updateScreenFlashUiControlToImageCapture() {
         ScreenFlashUiInfo screenFlashUiInfo = getScreenFlashUiInfoByPriority();
 
         if (screenFlashUiInfo == null) {
             // PreviewView/ScreenFlashView may have not been attached yet, so setting a NO-OP
-            // ScreenFlash until one of the views is attached
-            Logger.d(TAG, "No ScreenFlash instance set yet, need to wait for "
+            // ScreenFlashUiControl until one of the views is attached
+            Logger.d(TAG, "No ScreenFlashUiControl set yet, need to wait for "
                     + "controller to be set to either ScreenFlashView or PreviewView");
-            mImageCapture.setScreenFlash(NO_OP_SCREEN_FLASH);
+            mImageCapture.setScreenFlashUiControl(NO_OP_SCREEN_FLASH_UI_CONTROL);
             return;
         }
 
-        mImageCapture.setScreenFlash(screenFlashUiInfo.getScreenFlash());
-        Logger.d(TAG, "Set ScreenFlash instance to ImageCapture, provided by "
+        mImageCapture.setScreenFlashUiControl(screenFlashUiInfo.getScreenFlashUiControl());
+        Logger.d(TAG, "Set ScreenFlashUiControl to ImageCapture, provided by "
                 + screenFlashUiInfo.getProviderType().name());
     }
 
@@ -821,7 +812,7 @@ public abstract class CameraController {
      *
      * <p> PreviewView always has a ScreenFlashView internally and does not know if user is
      * using another ScreenFlashView themselves. This API prioritizes user's ScreenFlashView over
-     * the internal one in PreviewView and provides the ScreenFlashUiInfo accordingly.
+     * the internal one in PreviewView and provides the ScreenFlashUiControlProvider accordingly.
      */
     @Nullable
     @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -847,15 +838,17 @@ public abstract class CameraController {
      *
      * <p>The saved image is cropped to match the aspect ratio of the {@link PreviewView}. To
      * take a picture with the maximum available resolution, make sure that the
-     * {@link PreviewView}'s aspect ratio matches the max JPEG resolution supported by the camera.
+     * {@link PreviewView}'s aspect ratio is 4:3.
      *
      * @param outputFileOptions  Options to store the newly captured image.
      * @param executor           The executor in which the callback methods will be run.
      * @param imageSavedCallback Callback to be called for the newly captured image.
+     *
      * @throws IllegalStateException If {@link ImageCapture#FLASH_MODE_SCREEN} is set to the
      *                               {@link CameraController}, but a non-null {@link Window}
      *                               instance has not been set with
      *                               {@link PreviewView#setScreenFlashWindow}.
+     *
      * @see ImageCapture#takePicture(
      *ImageCapture.OutputFileOptions, Executor, ImageCapture.OnImageSavedCallback)
      */
@@ -898,10 +891,12 @@ public abstract class CameraController {
      *
      * @param executor The executor in which the callback methods will be run.
      * @param callback Callback to be invoked for the newly captured image
+     *
      * @throws IllegalStateException If {@link ImageCapture#FLASH_MODE_SCREEN} is set to the
      *                               {@link CameraController}, but a non-null {@link Window}
      *                               instance has not been set with
      *                               {@link PreviewView#setScreenFlashWindow}.
+     *
      * @see ImageCapture#takePicture(Executor, ImageCapture.OnImageCapturedCallback)
      */
     @MainThread
@@ -920,8 +915,8 @@ public abstract class CameraController {
     private void throwExceptionForInvalidScreenFlashCapture() {
         if (getImageCaptureFlashMode() == ImageCapture.FLASH_MODE_SCREEN && (
                 getScreenFlashUiInfoByPriority() == null
-                        || getScreenFlashUiInfoByPriority().getScreenFlash() == null)) {
-            // ScreenFlash instance won't be found at this point only if a non-null window was not
+                        || getScreenFlashUiInfoByPriority().getScreenFlashUiControl() == null)) {
+            // ScreenFlashUiControl won't be found at this point only if a non-null window was not
             // set to PreviewView.
             throw new IllegalStateException(
                     "No window set in PreviewView despite setting FLASH_MODE_SCREEN");
@@ -1062,7 +1057,7 @@ public abstract class CameraController {
             return;
         }
         mImageCaptureIoExecutor = executor;
-        unbindImageCaptureAndRecreate(getImageCaptureMode());
+        unbindImageCaptureAndRecreate(mImageCapture.getCaptureMode());
         startCameraAndTrackStates();
     }
 
@@ -1079,28 +1074,17 @@ public abstract class CameraController {
     /**
      * Unbinds {@link ImageCapture} and recreates with the latest parameters.
      */
-    @MainThread
-    private void unbindImageCaptureAndRecreate(Integer imageCaptureMode) {
+    private void unbindImageCaptureAndRecreate(int imageCaptureMode) {
         if (isCameraInitialized()) {
             mCameraProvider.unbind(mImageCapture);
         }
-        int flashMode = mImageCapture.getFlashMode();
-        mImageCapture = createImageCapture(imageCaptureMode);
-        setImageCaptureFlashMode(flashMode);
-    }
-
-    private ImageCapture createImageCapture(Integer imageCaptureMode) {
-        ImageCapture.Builder builder = new ImageCapture.Builder();
-        if (imageCaptureMode != null) {
-            builder.setCaptureMode(imageCaptureMode);
-        }
+        ImageCapture.Builder builder = new ImageCapture.Builder().setCaptureMode(imageCaptureMode);
         setTargetOutputSize(builder, mImageCaptureTargetSize);
         setResolutionSelector(builder, mImageCaptureResolutionSelector);
         if (mImageCaptureIoExecutor != null) {
             builder.setIoExecutor(mImageCaptureIoExecutor);
         }
-
-        return builder.build();
+        mImageCapture = builder.build();
     }
 
     // -----------------
@@ -1127,12 +1111,6 @@ public abstract class CameraController {
      *
      * <p>Setting an analyzer function replaces any previous analyzer. Only one analyzer can be
      * set at any time.
-     *
-     * <p>If the {@link ImageAnalysis.Analyzer#getTargetCoordinateSystem()} returns
-     * {@link ImageAnalysis#COORDINATE_SYSTEM_VIEW_REFERENCED}, the analyzer will receive a
-     * transformation via {@link ImageAnalysis.Analyzer#updateTransform} that converts
-     * coordinates from the {@link ImageAnalysis}'s coordinate system to the {@link PreviewView}'s
-     * coordinate system.
      *
      * <p> If the {@link ImageAnalysis.Analyzer#getDefaultTargetResolution()} returns a non-null
      * value, calling this method will reconfigure the camera which might cause additional
@@ -1188,7 +1166,7 @@ public abstract class CameraController {
         if (!Objects.equals(oldResolution, newResolution)) {
             // Rebind ImageAnalysis to reconfigure target resolution.
             unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(),
-                    mImageAnalysis.getImageQueueDepth(), mImageAnalysis.getOutputImageFormat());
+                    mImageAnalysis.getImageQueueDepth());
             startCameraAndTrackStates();
         }
     }
@@ -1230,8 +1208,7 @@ public abstract class CameraController {
             return;
         }
 
-        unbindImageAnalysisAndRecreate(strategy, mImageAnalysis.getImageQueueDepth(),
-                mImageAnalysis.getOutputImageFormat());
+        unbindImageAnalysisAndRecreate(strategy, mImageAnalysis.getImageQueueDepth());
         startCameraAndTrackStates();
     }
 
@@ -1254,8 +1231,7 @@ public abstract class CameraController {
         if (mImageAnalysis.getImageQueueDepth() == depth) {
             return;
         }
-        unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(), depth,
-                mImageAnalysis.getOutputImageFormat());
+        unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(), depth);
         startCameraAndTrackStates();
     }
 
@@ -1298,8 +1274,7 @@ public abstract class CameraController {
         mImageAnalysisTargetSize = targetSize;
         unbindImageAnalysisAndRecreate(
                 mImageAnalysis.getBackpressureStrategy(),
-                mImageAnalysis.getImageQueueDepth(),
-                mImageAnalysis.getOutputImageFormat());
+                mImageAnalysis.getImageQueueDepth());
         startCameraAndTrackStates();
     }
 
@@ -1341,8 +1316,7 @@ public abstract class CameraController {
         mImageAnalysisResolutionSelector = resolutionSelector;
         unbindImageAnalysisAndRecreate(
                 mImageAnalysis.getBackpressureStrategy(),
-                mImageAnalysis.getImageQueueDepth(),
-                mImageAnalysis.getOutputImageFormat());
+                mImageAnalysis.getImageQueueDepth());
         startCameraAndTrackStates();
     }
 
@@ -1380,7 +1354,7 @@ public abstract class CameraController {
         }
         mAnalysisBackgroundExecutor = executor;
         unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(),
-                mImageAnalysis.getImageQueueDepth(), mImageAnalysis.getOutputImageFormat());
+                mImageAnalysis.getImageQueueDepth());
         startCameraAndTrackStates();
     }
 
@@ -1397,92 +1371,26 @@ public abstract class CameraController {
     }
 
     /**
-     * Sets the output image format for {@link ImageAnalysis}.
-     *
-     * <p>The supported output image format
-     * are {@link ImageAnalysis.OutputImageFormat#OUTPUT_IMAGE_FORMAT_YUV_420_888} and
-     * {@link ImageAnalysis.OutputImageFormat#OUTPUT_IMAGE_FORMAT_RGBA_8888}.
-     *
-     * <p>If not set, {@link ImageAnalysis.OutputImageFormat#OUTPUT_IMAGE_FORMAT_YUV_420_888}
-     * will be used.
-     *
-     * <p>Requesting {@link ImageAnalysis.OutputImageFormat#OUTPUT_IMAGE_FORMAT_RGBA_8888}
-     * causes extra overhead because format conversion takes time.
-     *
-     * <p>Changing the value will reconfigure the camera, which may cause additional latency. To
-     * avoid this, set the value before controller is bound to lifecycle. If the value is changed
-     * when the camera is active, check the {@link ImageProxy#getFormat()} value to determine
-     * when the new format takes effect.
-     *
-     * @see ImageAnalysis.Builder#setOutputImageFormat(int)
-     * @see ImageAnalysis.Builder#getOutputImageFormat()
-     * @see ImageAnalysis#getOutputImageFormat()
-     */
-    @MainThread
-    public void setImageAnalysisOutputImageFormat(
-            @ImageAnalysis.OutputImageFormat int imageAnalysisOutputImageFormat) {
-        checkMainThread();
-        if (imageAnalysisOutputImageFormat == mImageAnalysis.getOutputImageFormat()) {
-            // No-op if the value is not changed.
-            return;
-        }
-        unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(),
-                mImageAnalysis.getImageQueueDepth(), imageAnalysisOutputImageFormat);
-    }
-
-    /**
-     * Gets the output image format for {@link ImageAnalysis}.
-     *
-     * <p>The returned image format can be either
-     * {@link ImageAnalysis#OUTPUT_IMAGE_FORMAT_YUV_420_888} or
-     * {@link ImageAnalysis#OUTPUT_IMAGE_FORMAT_RGBA_8888}.
-     *
-     * @see ImageAnalysis.Builder#setOutputImageFormat(int)
-     * @see ImageAnalysis.Builder#getOutputImageFormat()
-     * @see ImageAnalysis#getOutputImageFormat()
-     */
-    @MainThread
-    @ImageAnalysis.OutputImageFormat
-    public int getImageAnalysisOutputImageFormat() {
-        checkMainThread();
-        return mImageAnalysis.getOutputImageFormat();
-    }
-
-    /**
      * Unbinds {@link ImageAnalysis} and recreates with the latest parameters.
      */
     @MainThread
-    private void unbindImageAnalysisAndRecreate(Integer strategy, Integer imageQueueDepth,
-            Integer outputFormat) {
+    private void unbindImageAnalysisAndRecreate(int strategy, int imageQueueDepth) {
         checkMainThread();
         if (isCameraInitialized()) {
             mCameraProvider.unbind(mImageAnalysis);
         }
-        mImageAnalysis = createImageAnalysis(strategy, imageQueueDepth, outputFormat);
-        if (mAnalysisExecutor != null && mAnalysisAnalyzer != null) {
-            mImageAnalysis.setAnalyzer(mAnalysisExecutor, mAnalysisAnalyzer);
-        }
-    }
-
-    private ImageAnalysis createImageAnalysis(Integer strategy, Integer imageQueueDepth,
-            Integer outputFormat) {
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        if (strategy != null) {
-            builder.setBackpressureStrategy(strategy);
-        }
-        if (imageQueueDepth != null) {
-            builder.setImageQueueDepth(imageQueueDepth);
-        }
-        if (outputFormat != null) {
-            builder.setOutputImageFormat(outputFormat);
-        }
+        ImageAnalysis.Builder builder = new ImageAnalysis.Builder()
+                .setBackpressureStrategy(strategy)
+                .setImageQueueDepth(imageQueueDepth);
         setTargetOutputSize(builder, mImageAnalysisTargetSize);
         setResolutionSelector(builder, mImageAnalysisResolutionSelector);
         if (mAnalysisBackgroundExecutor != null) {
             builder.setBackgroundExecutor(mAnalysisBackgroundExecutor);
         }
-
-        return builder.build();
+        mImageAnalysis = builder.build();
+        if (mAnalysisExecutor != null && mAnalysisAnalyzer != null) {
+            mImageAnalysis.setAnalyzer(mAnalysisExecutor, mAnalysisAnalyzer);
+        }
     }
 
     @OptIn(markerClass = {TransformExperimental.class})
@@ -1493,7 +1401,7 @@ public abstract class CameraController {
             return;
         }
         if (mAnalysisAnalyzer.getTargetCoordinateSystem()
-                == ImageAnalysis.COORDINATE_SYSTEM_VIEW_REFERENCED) {
+                == COORDINATE_SYSTEM_VIEW_REFERENCED) {
             mAnalysisAnalyzer.updateTransform(matrix);
         }
     }
@@ -1905,84 +1813,21 @@ public abstract class CameraController {
     /**
      * Unbinds VideoCapture and recreate with the latest parameters.
      */
-    @MainThread
     private void unbindVideoAndRecreate() {
         if (isCameraInitialized()) {
             mCameraProvider.unbind(mVideoCapture);
         }
-        mVideoCapture = createVideoCapture();
+        mVideoCapture = createNewVideoCapture();
     }
 
-    private VideoCapture<Recorder> createVideoCapture() {
-        Recorder.Builder videoRecorderBuilder = new Recorder.Builder().setQualitySelector(
-                mVideoCaptureQualitySelector);
-        if (mViewPort != null
-                && mVideoCaptureQualitySelector == Recorder.DEFAULT_QUALITY_SELECTOR) {
-            int aspectRatioInt = getViewportAspectRatioInt(mViewPort);
-            if (aspectRatioInt != AspectRatio.RATIO_DEFAULT) {
-                videoRecorderBuilder.setAspectRatio(aspectRatioInt);
-            }
-        }
-
-        return new VideoCapture.Builder<>(videoRecorderBuilder.build())
+    private VideoCapture<Recorder> createNewVideoCapture() {
+        Recorder videoRecorder = new Recorder.Builder().setQualitySelector(
+                mVideoCaptureQualitySelector).build();
+        return new VideoCapture.Builder<>(videoRecorder)
                 .setTargetFrameRate(mVideoCaptureTargetFrameRate)
                 .setMirrorMode(mVideoCaptureMirrorMode)
                 .setDynamicRange(mVideoCaptureDynamicRange)
                 .build();
-    }
-
-    @Nullable
-    private AspectRatioStrategy getViewportAspectRatioStrategy(@NonNull ViewPort viewPort) {
-        int aspectRatioInt = getViewportAspectRatioInt(viewPort);
-        if (aspectRatioInt != AspectRatio.RATIO_DEFAULT) {
-            return new AspectRatioStrategy(aspectRatioInt, AspectRatioStrategy.FALLBACK_RULE_AUTO);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * If the aspect ratio of the viewport is one of the {@link AspectRatio.Ratio}, returns it,
-     * otherwise returns {@link AspectRatio.Ratio#RATIO_DEFAULT}.
-     */
-    @AspectRatio.Ratio
-    private int getViewportAspectRatioInt(@NonNull ViewPort viewPort) {
-        int surfaceRotationDegrees =
-                viewPort == null ? 0 : CameraOrientationUtil.surfaceRotationToDegrees(
-                        viewPort.getRotation());
-        int sensorRotationDegrees =
-                mCameraProvider == null ? 0 : mCameraProvider.getCameraInfo(
-                        mCameraSelector).getSensorRotationDegrees();
-        boolean isOppositeFacing =
-                mCameraProvider == null ? true : mCameraProvider.getCameraInfo(
-                        mCameraSelector).getLensFacing() == CameraSelector.LENS_FACING_BACK;
-        int relativeRotation = CameraOrientationUtil.getRelativeImageRotation(
-                surfaceRotationDegrees, sensorRotationDegrees, isOppositeFacing);
-        Rational aspectRatio = viewPort.getAspectRatio();
-        if (relativeRotation == 90 || relativeRotation == 270) {
-            aspectRatio = new Rational(/* numerator= */ aspectRatio.getDenominator(),
-                    /* denominator= */ aspectRatio.getNumerator());
-        }
-
-        if (aspectRatio.equals(new Rational(4, 3))) {
-            return AspectRatio.RATIO_4_3;
-        } else if (aspectRatio.equals(new Rational(16, 9))) {
-            return AspectRatio.RATIO_16_9;
-        } else {
-            return AspectRatio.RATIO_DEFAULT;
-        }
-    }
-
-    /**
-     * Unbinds all the use cases and recreate with the latest parameters.
-     */
-    @MainThread
-    private void unbindAllAndRecreate() {
-        unbindPreviewAndRecreate();
-        unbindImageCaptureAndRecreate(getImageCaptureMode());
-        unbindImageAnalysisAndRecreate(mImageAnalysis.getBackpressureStrategy(),
-                mImageAnalysis.getImageQueueDepth(), mImageAnalysis.getOutputImageFormat());
-        unbindVideoAndRecreate();
     }
 
     // -----------------
@@ -2559,6 +2404,29 @@ public abstract class CameraController {
     }
 
     /**
+     * Nested class to avoid verification errors for methods introduced in Android 11 (API 30).
+     */
+    @RequiresApi(30)
+    private static class Api30Impl {
+
+        private Api30Impl() {
+        }
+
+        @DoNotInline
+        @NonNull
+        static Context createAttributionContext(@NonNull Context context,
+                @Nullable String attributeTag) {
+            return context.createAttributionContext(attributeTag);
+        }
+
+        @DoNotInline
+        @Nullable
+        static String getAttributionTag(@NonNull Context context) {
+            return context.getAttributionTag();
+        }
+    }
+
+    /**
      * Represents the output size of a {@link UseCase}.
      *
      * <p> This class is a preferred output size to be used with {@link CameraController}. The
@@ -2570,6 +2438,7 @@ public abstract class CameraController {
      * @deprecated Use {@link ResolutionSelector} instead.
      */
     @Deprecated
+    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     public static final class OutputSize {
 
         /**

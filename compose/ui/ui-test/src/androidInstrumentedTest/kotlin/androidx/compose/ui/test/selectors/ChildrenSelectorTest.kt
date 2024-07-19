@@ -33,7 +33,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ChildrenSelectorTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun twoChildren() {
@@ -44,16 +45,23 @@ class ChildrenSelectorTest {
             }
         }
 
-        rule.onNodeWithTag("Parent").onChildren().assertCountEquals(2).apply {
-            get(0).assert(hasTestTag("Child1"))
-            get(1).assert(hasTestTag("Child2"))
-        }
+        rule.onNodeWithTag("Parent")
+            .onChildren()
+            .assertCountEquals(2)
+            .apply {
+                get(0).assert(hasTestTag("Child1"))
+                get(1).assert(hasTestTag("Child2"))
+            }
     }
 
     @Test
     fun noChildren() {
-        rule.setContent { BoundaryNode(testTag = "Parent") }
+        rule.setContent {
+            BoundaryNode(testTag = "Parent")
+        }
 
-        rule.onNodeWithTag("Parent").onChildren().assertCountEquals(0)
+        rule.onNodeWithTag("Parent")
+            .onChildren()
+            .assertCountEquals(0)
     }
 }

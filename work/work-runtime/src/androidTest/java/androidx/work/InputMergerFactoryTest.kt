@@ -41,7 +41,9 @@ class InputMergerFactoryTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         factory = mock(InputMergerFactory::class.java)
-        configuration = Configuration.Builder().setInputMergerFactory(factory).build()
+        configuration = Configuration.Builder()
+            .setInputMergerFactory(factory)
+            .build()
     }
 
     @Test
@@ -54,13 +56,14 @@ class InputMergerFactoryTest {
 
     @Test
     fun testInputMergerFactory2() {
-        factory =
-            object : InputMergerFactory() {
-                override fun createInputMerger(className: String): InputMerger? {
-                    return OverwritingInputMerger()
-                }
+        factory = object : InputMergerFactory() {
+            override fun createInputMerger(className: String): InputMerger? {
+                return OverwritingInputMerger()
             }
-        configuration = Configuration.Builder().setInputMergerFactory(factory).build()
+        }
+        configuration = Configuration.Builder()
+            .setInputMergerFactory(factory)
+            .build()
 
         val name = ArrayCreatingInputMerger::class.java.name
         val merger = configuration.inputMergerFactory.createInputMergerWithDefaultFallback(name)

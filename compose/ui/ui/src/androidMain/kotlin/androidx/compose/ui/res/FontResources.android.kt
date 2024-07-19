@@ -29,10 +29,11 @@ import androidx.compose.ui.text.font.Typeface
 private val cacheLock = Object()
 
 /**
- * This cache is expected to be used for SystemFontFamily or LoadedFontFamily. FontFamily instance
- * cannot be used as the file based FontFamily.
+ * This cache is expected to be used for SystemFontFamily or LoadedFontFamily.
+ * FontFamily instance cannot be used as the file based FontFamily.
  */
-@GuardedBy("cacheLock") private val syncLoadedTypefaces = mutableMapOf<FontFamily, Typeface>()
+@GuardedBy("cacheLock")
+private val syncLoadedTypefaces = mutableMapOf<FontFamily, Typeface>()
 
 /**
  * Synchronously load an font from [FontFamily].
@@ -45,8 +46,9 @@ private val cacheLock = Object()
 @ReadOnlyComposable
 @Deprecated(
     "Prefer to preload fonts using FontFamily.Resolver.",
-    replaceWith =
-        ReplaceWith("FontFamily.Resolver.preload(fontFamily, Font.AndroidResourceLoader(context))"),
+    replaceWith = ReplaceWith(
+        "FontFamily.Resolver.preload(fontFamily, Font.AndroidResourceLoader(context))"
+    ),
     level = DeprecationLevel.WARNING
 )
 fun fontResource(fontFamily: FontFamily): Typeface {
@@ -56,14 +58,17 @@ fun fontResource(fontFamily: FontFamily): Typeface {
 @Suppress("DEPRECATION")
 @Deprecated(
     "Prefer to preload fonts using FontFamily.Resolver.",
-    replaceWith =
-        ReplaceWith("FontFamily.Resolver.preload(fontFamily, Font.AndroidResourceLoader(context))"),
+    replaceWith = ReplaceWith(
+        "FontFamily.Resolver.preload(fontFamily, Font.AndroidResourceLoader(context))"
+    ),
     level = DeprecationLevel.WARNING
 )
 private fun fontResourceFromContext(context: Context, a: FontFamily): Typeface {
     if (a is SystemFontFamily || a is LoadedFontFamily) {
         synchronized(cacheLock) {
-            return syncLoadedTypefaces.getOrPut(a) { Typeface(context, a) }
+            return syncLoadedTypefaces.getOrPut(a) {
+                Typeface(context, a)
+            }
         }
     } else {
         return Typeface(context, a)

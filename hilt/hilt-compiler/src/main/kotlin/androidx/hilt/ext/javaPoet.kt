@@ -34,6 +34,7 @@ internal fun TypeSpec.Builder.addGeneratedAnnotation(env: XProcessingEnv) = appl
             AnnotationSpec.builder(ClassName.bestGuess(it.asClassName().canonicalName))
                 .addMember("value", S, AndroidXHiltProcessor::class.java.canonicalName)
                 .build()
+
         )
     }
 }

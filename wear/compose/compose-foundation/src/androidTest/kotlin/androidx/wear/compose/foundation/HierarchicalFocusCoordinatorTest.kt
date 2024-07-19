@@ -35,13 +35,15 @@ import org.junit.Test
 
 @OptIn(ExperimentalWearFoundationApi::class)
 class HierarchicalFocusCoordinatorTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @Test fun basic_OnFocusChange_works_1_of_3() = basic_OnFocusChange_works(0, 3)
-
-    @Test fun basic_OnFocusChange_works_2_of_5() = basic_OnFocusChange_works(1, 5)
-
-    @Test fun basic_OnFocusChange_works_4_of_4() = basic_OnFocusChange_works(3, 4)
+    @Test
+    fun basic_OnFocusChange_works_1_of_3() = basic_OnFocusChange_works(0, 3)
+    @Test
+    fun basic_OnFocusChange_works_2_of_5() = basic_OnFocusChange_works(1, 5)
+    @Test
+    fun basic_OnFocusChange_works_4_of_4() = basic_OnFocusChange_works(3, 4)
 
     private fun basic_OnFocusChange_works(selected: Int, numItems: Int) {
         var focused = BooleanArray(numItems)
@@ -54,14 +56,19 @@ class HierarchicalFocusCoordinatorTest {
             }
         }
 
-        rule.runOnIdle { checkFocus(selected, focused) }
+        rule.runOnIdle {
+            checkFocus(selected, focused)
+        }
     }
 
-    @Test fun basic_selection_works_1_of_3() = basic_selection_works(0, 3)
+    @Test
+    fun basic_selection_works_1_of_3() = basic_selection_works(0, 3)
 
-    @Test fun basic_selection_works_2_of_5() = basic_selection_works(1, 5)
+    @Test
+    fun basic_selection_works_2_of_5() = basic_selection_works(1, 5)
 
-    @Test fun basic_selection_works_4_of_4() = basic_selection_works(3, 4)
+    @Test
+    fun basic_selection_works_4_of_4() = basic_selection_works(3, 4)
 
     private fun basic_selection_works(selected: Int, numItems: Int) {
         var focused = BooleanArray(numItems)
@@ -76,29 +83,33 @@ class HierarchicalFocusCoordinatorTest {
             }
         }
 
-        rule.runOnIdle { checkFocus(selected, focused) }
+        rule.runOnIdle {
+            checkFocus(selected, focused)
+        }
     }
 
-    @Test fun nested_selection_initial() = nested_selection_works(0) { _, _ -> }
-
-    @Test fun nested_selection_switch_top() = nested_selection_works(3) { top, _ -> top.value = 1 }
+    @Test
+    fun nested_selection_initial() = nested_selection_works(0) { _, _ -> }
 
     @Test
-    fun nested_selection_switch_bottom() =
-        nested_selection_works(1) { _, bottom ->
-            bottom[0].value = 1
-            bottom[1].value = 2
-            bottom[2].value = 0
-        }
+    fun nested_selection_switch_top() = nested_selection_works(3) { top, _ ->
+        top.value = 1
+    }
 
     @Test
-    fun nested_selection_switch_both() =
-        nested_selection_works(5) { top, bottom ->
-            bottom[0].value = 1
-            bottom[1].value = 2
-            bottom[2].value = 0
-            top.value = 1
-        }
+    fun nested_selection_switch_bottom() = nested_selection_works(1) { _, bottom ->
+        bottom[0].value = 1
+        bottom[1].value = 2
+        bottom[2].value = 0
+    }
+
+    @Test
+    fun nested_selection_switch_both() = nested_selection_works(5) { top, bottom ->
+        bottom[0].value = 1
+        bottom[1].value = 2
+        bottom[2].value = 0
+        top.value = 1
+    }
 
     /*
      * We have 3 top FocusControl groups, each having 3 bottom FocusControl groups, and the
@@ -133,9 +144,9 @@ class HierarchicalFocusCoordinatorTest {
                     HierarchicalFocusCoordinator({ topIx == topSelected.value }) {
                         Box {
                             repeat(numItems) { bottomIx ->
-                                HierarchicalFocusCoordinator({
-                                    bottomIx == bottomSelected[topIx].value
-                                }) {
+                                HierarchicalFocusCoordinator(
+                                    { bottomIx == bottomSelected[topIx].value }
+                                ) {
                                     FocusableTestItem { focused[topIx * numItems + bottomIx] = it }
                                 }
                             }
@@ -145,9 +156,13 @@ class HierarchicalFocusCoordinatorTest {
             }
         }
 
-        rule.runOnIdle { act(topSelected, bottomSelected) }
+        rule.runOnIdle {
+            act(topSelected, bottomSelected)
+        }
 
-        rule.runOnIdle { checkFocus(expectedSelected, focused) }
+        rule.runOnIdle {
+            checkFocus(expectedSelected, focused)
+        }
     }
 
     @Test
@@ -155,7 +170,7 @@ class HierarchicalFocusCoordinatorTest {
         val selected = mutableStateOf(0)
         var focused = false
         rule.setContent {
-            Box(Modifier.focusable()) {
+            Box {
                 HierarchicalFocusCoordinator({ selected.value == 0 }) {
                     FocusableTestItem { focused = it }
                 }
@@ -172,9 +187,10 @@ class HierarchicalFocusCoordinatorTest {
             selected.value = 1
         }
 
-        rule.runOnIdle { Assert.assertFalse(focused) }
+        rule.runOnIdle {
+            Assert.assertFalse(focused)
+        }
     }
-
     @Test
     public fun add_focusable_works() {
         var show by mutableStateOf(false)
@@ -189,9 +205,13 @@ class HierarchicalFocusCoordinatorTest {
             }
         }
 
-        rule.runOnIdle { show = true }
+        rule.runOnIdle {
+            show = true
+        }
 
-        rule.runOnIdle { Assert.assertTrue(focused) }
+        rule.runOnIdle {
+            Assert.assertTrue(focused)
+        }
     }
 
     @Test
@@ -199,13 +219,17 @@ class HierarchicalFocusCoordinatorTest {
         var focused = false
         rule.setContent {
             Box {
-                HierarchicalFocusCoordinator(requiresFocus = { false }) {
+                HierarchicalFocusCoordinator(
+                    requiresFocus = { false }
+                ) {
                     FocusableTestItem { focused = it }
                 }
             }
         }
 
-        rule.runOnIdle { Assert.assertFalse(focused) }
+        rule.runOnIdle {
+            Assert.assertFalse(focused)
+        }
     }
 
     @Test
@@ -217,32 +241,34 @@ class HierarchicalFocusCoordinatorTest {
                 HierarchicalFocusCoordinator(
                     // We switch between a lambda that always returns false and one that always
                     // return true given the state of lambdaUpdated.
-                    requiresFocus =
-                        if (lambdaUpdated) {
-                            { true }
-                        } else {
-                            { false }
-                        }
+                    requiresFocus = if (lambdaUpdated) {
+                        { true }
+                    } else {
+                        { false }
+                    }
                 ) {
                     FocusableTestItem { focused = it }
                 }
             }
         }
 
-        rule.runOnIdle { lambdaUpdated = true }
+        rule.runOnIdle {
+            lambdaUpdated = true
+        }
 
-        rule.runOnIdle { Assert.assertTrue(focused) }
+        rule.runOnIdle {
+            Assert.assertTrue(focused)
+        }
     }
-
     @Composable
     private fun FocusableTestItem(onFocusChanged: (Boolean) -> Unit) {
         val focusRequester = rememberActiveFocusRequester()
         Box(
-            Modifier.size(10.dp) // View.requestFocus() will not take focus if the view has no size.
+            Modifier
+                .size(10.dp) // View.requestFocus() will not take focus if the view has no size.
                 .focusRequester(focusRequester)
                 .onFocusChanged { onFocusChanged(it.isFocused) }
-                .focusable()
-        )
+                .focusable())
     }
 
     // Ensure that the expected element, and only it, is focused.

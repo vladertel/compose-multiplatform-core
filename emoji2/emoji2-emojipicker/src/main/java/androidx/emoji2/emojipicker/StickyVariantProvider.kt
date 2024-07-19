@@ -19,7 +19,9 @@ package androidx.emoji2.emojipicker
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 
-/** A class that handles user's emoji variant selection using SharedPreferences. */
+/**
+ * A class that handles user's emoji variant selection using SharedPreferences.
+ */
 internal class StickyVariantProvider(context: Context) {
     companion object {
         const val PREFERENCES_FILE_NAME = "androidx.emoji2.emojipicker.preferences"
@@ -32,16 +34,11 @@ internal class StickyVariantProvider(context: Context) {
         context.getSharedPreferences(PREFERENCES_FILE_NAME, MODE_PRIVATE)
 
     private val stickyVariantMap: MutableMap<String, String> by lazy {
-        sharedPreferences
-            .getString(STICKY_VARIANT_PROVIDER_KEY, null)
-            ?.split(ENTRY_DELIMITER)
+        sharedPreferences.getString(STICKY_VARIANT_PROVIDER_KEY, null)?.split(ENTRY_DELIMITER)
             ?.associate { entry ->
-                entry
-                    .split(KEY_VALUE_DELIMITER, limit = 2)
-                    .takeIf { it.size == 2 }
+                entry.split(KEY_VALUE_DELIMITER, limit = 2).takeIf { it.size == 2 }
                     ?.let { it[0] to it[1] } ?: ("" to "")
-            }
-            ?.toMutableMap() ?: mutableMapOf()
+            }?.toMutableMap() ?: mutableMapOf()
     }
 
     internal operator fun get(emoji: String): String = stickyVariantMap[emoji] ?: emoji
@@ -53,10 +50,11 @@ internal class StickyVariantProvider(context: Context) {
             } else {
                 this[baseEmoji] = variantClicked
             }
-            sharedPreferences
-                .edit()
-                .putString(STICKY_VARIANT_PROVIDER_KEY, entries.joinToString(ENTRY_DELIMITER))
-                .commit()
+            sharedPreferences.edit()
+                .putString(
+                    STICKY_VARIANT_PROVIDER_KEY,
+                    entries.joinToString(ENTRY_DELIMITER)
+                ).commit()
         }
     }
 }

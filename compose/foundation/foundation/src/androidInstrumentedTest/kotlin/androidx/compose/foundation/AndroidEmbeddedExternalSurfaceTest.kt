@@ -57,7 +57,8 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 @RunWith(AndroidJUnit4::class)
 class AndroidEmbeddedExternalSurfaceTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     val size = 48.dp
 
@@ -69,7 +70,9 @@ class AndroidEmbeddedExternalSurfaceTest {
         var expectedSize = 0
 
         rule.setContent {
-            expectedSize = with(LocalDensity.current) { size.toPx().roundToInt() }
+            expectedSize = with(LocalDensity.current) {
+                size.toPx().roundToInt()
+            }
 
             AndroidEmbeddedExternalSurface(modifier = Modifier.size(size)) {
                 onSurface { surface, width, height ->
@@ -80,7 +83,10 @@ class AndroidEmbeddedExternalSurfaceTest {
             }
         }
 
-        rule.onRoot().assertWidthIsEqualTo(size).assertHeightIsEqualTo(size).assertIsDisplayed()
+        rule.onRoot()
+            .assertWidthIsEqualTo(size)
+            .assertHeightIsEqualTo(size)
+            .assertIsDisplayed()
 
         rule.runOnIdle {
             assertNotNull(surfaceRef)
@@ -98,7 +104,9 @@ class AndroidEmbeddedExternalSurfaceTest {
         var desiredSize by mutableStateOf(size)
 
         rule.setContent {
-            expectedSize = with(LocalDensity.current) { desiredSize.toPx().roundToInt() }
+            expectedSize = with(LocalDensity.current) {
+                desiredSize.toPx().roundToInt()
+            }
 
             AndroidEmbeddedExternalSurface(modifier = Modifier.size(desiredSize)) {
                 onSurface { surface, initWidth, initHeight ->
@@ -113,7 +121,9 @@ class AndroidEmbeddedExternalSurfaceTest {
             }
         }
 
-        rule.onRoot().assertWidthIsEqualTo(desiredSize).assertHeightIsEqualTo(desiredSize)
+        rule.onRoot()
+            .assertWidthIsEqualTo(desiredSize)
+            .assertHeightIsEqualTo(desiredSize)
 
         rule.runOnIdle {
             assertEquals(expectedSize, surfaceWidth)
@@ -124,7 +134,9 @@ class AndroidEmbeddedExternalSurfaceTest {
         val prevSurfaceWidth = surfaceWidth
         val prevSurfaceHeight = surfaceHeight
 
-        rule.onRoot().assertWidthIsEqualTo(desiredSize).assertHeightIsEqualTo(desiredSize)
+        rule.onRoot()
+            .assertWidthIsEqualTo(desiredSize)
+            .assertHeightIsEqualTo(desiredSize)
 
         rule.runOnIdle {
             assertNotEquals(prevSurfaceWidth, surfaceWidth)
@@ -145,17 +157,23 @@ class AndroidEmbeddedExternalSurfaceTest {
                     onSurface { surface, _, _ ->
                         surfaceRef = surface
 
-                        surface.onDestroyed { surfaceRef = null }
+                        surface.onDestroyed {
+                            surfaceRef = null
+                        }
                     }
                 }
             }
         }
 
-        rule.runOnIdle { assertNotNull(surfaceRef) }
+        rule.runOnIdle {
+            assertNotNull(surfaceRef)
+        }
 
         visible = false
 
-        rule.runOnIdle { assertNull(surfaceRef) }
+        rule.runOnIdle {
+            assertNull(surfaceRef)
+        }
     }
 
     @Test
@@ -171,7 +189,9 @@ class AndroidEmbeddedExternalSurfaceTest {
                 AndroidEmbeddedExternalSurface(modifier = Modifier.size(size)) {
                     onSurface { surface, _, _ ->
                         surfaceCreatedCount++
-                        surface.onDestroyed { surfaceDestroyedCount++ }
+                        surface.onDestroyed {
+                            surfaceDestroyedCount++
+                        }
                     }
                 }
             }
@@ -201,7 +221,9 @@ class AndroidEmbeddedExternalSurfaceTest {
         var expectedSize = 0
 
         rule.setContent {
-            expectedSize = with(LocalDensity.current) { size.toPx().roundToInt() }
+            expectedSize = with(LocalDensity.current) {
+                size.toPx().roundToInt()
+            }
             AndroidEmbeddedExternalSurface(modifier = Modifier.size(size)) {
                 onSurface { surface, _, _ ->
                     surfaceRef = surface
@@ -213,9 +235,13 @@ class AndroidEmbeddedExternalSurfaceTest {
             }
         }
 
-        rule.runOnIdle { assertNotNull(surfaceRef) }
+        rule.runOnIdle {
+            assertNotNull(surfaceRef)
+        }
 
-        surfaceRef!!.captureToImage(expectedSize, expectedSize).assertPixels { Color.Blue }
+        surfaceRef!!
+            .captureToImage(expectedSize, expectedSize)
+            .assertPixels { Color.Blue }
     }
 
     @Test
@@ -224,9 +250,13 @@ class AndroidEmbeddedExternalSurfaceTest {
 
         rule.setContent {
             Box(modifier = Modifier.size(size)) {
-                Canvas(modifier = Modifier.size(size)) { drawRect(Color.White) }
+                Canvas(modifier = Modifier.size(size)) {
+                    drawRect(Color.White)
+                }
                 AndroidEmbeddedExternalSurface(
-                    modifier = Modifier.size(size).testTag("EmbeddedExternalSurface"),
+                    modifier = Modifier
+                        .size(size)
+                        .testTag("EmbeddedExternalSurface"),
                     isOpaque = false
                 ) {
                     onSurface { surface, _, _ ->
@@ -242,18 +272,23 @@ class AndroidEmbeddedExternalSurfaceTest {
 
         val expectedColor = Color(ColorUtils.compositeColors(translucentRed, Color.White.toArgb()))
 
-        rule.onNodeWithTag("EmbeddedExternalSurface").captureToImage().assertPixels {
-            expectedColor
-        }
+        rule
+            .onNodeWithTag("EmbeddedExternalSurface")
+            .captureToImage()
+            .assertPixels { expectedColor }
     }
 
     @Test
     fun testOpaque() {
         rule.setContent {
             Box(modifier = Modifier.size(size)) {
-                Canvas(modifier = Modifier.size(size)) { drawRect(Color.Green) }
+                Canvas(modifier = Modifier.size(size)) {
+                    drawRect(Color.Green)
+                }
                 AndroidEmbeddedExternalSurface(
-                    modifier = Modifier.size(size).testTag("EmbeddedExternalSurface")
+                    modifier = Modifier
+                        .size(size)
+                        .testTag("EmbeddedExternalSurface")
                 ) {
                     onSurface { surface, _, _ ->
                         surface.lockHardwareCanvas().apply {
@@ -265,7 +300,10 @@ class AndroidEmbeddedExternalSurfaceTest {
             }
         }
 
-        rule.onNodeWithTag("EmbeddedExternalSurface").captureToImage().assertPixels { Color.Red }
+        rule
+            .onNodeWithTag("EmbeddedExternalSurface")
+            .captureToImage()
+            .assertPixels { Color.Red }
     }
 
     @Test
@@ -273,16 +311,19 @@ class AndroidEmbeddedExternalSurfaceTest {
         var expectedSize = 0
 
         rule.setContent {
-            expectedSize = with(LocalDensity.current) { size.toPx().roundToInt() }
+            expectedSize = with(LocalDensity.current) {
+                size.toPx().roundToInt()
+            }
             AndroidEmbeddedExternalSurface(
-                modifier = Modifier.size(size).testTag("EmbeddedExternalSurface"),
-                transform =
-                    Matrix().apply {
-                        val s = expectedSize / 2.0f
-                        translate(s, s)
-                        rotateZ(180.0f)
-                        translate(-s, -s)
-                    }
+                modifier = Modifier
+                    .size(size)
+                    .testTag("EmbeddedExternalSurface"),
+                transform = Matrix().apply {
+                    val s = expectedSize / 2.0f
+                    translate(s, s)
+                    rotateZ(180.0f)
+                    translate(-s, -s)
+                }
             ) {
                 onSurface { surface, _, _ ->
                     // Draw the top half in red, the bottom half in blue
@@ -306,8 +347,9 @@ class AndroidEmbeddedExternalSurfaceTest {
         }
 
         val halfHeight = (expectedSize.toFloat() / 2.0f).roundToInt()
-        rule.onNodeWithTag("EmbeddedExternalSurface").captureToImage().assertPixels {
-            if (it.y < halfHeight) Color.Blue else Color.Red
-        }
+        rule
+            .onNodeWithTag("EmbeddedExternalSurface")
+            .captureToImage()
+            .assertPixels { if (it.y < halfHeight) Color.Blue else Color.Red }
     }
 }

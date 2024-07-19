@@ -30,8 +30,9 @@ fun Element.getPackageQName() = getPackage().qualifiedName.toString()
 
 fun ExecutableElement.name() = simpleName.toString()
 
-fun ExecutableElement.isPackagePrivate() =
-    !modifiers.any { it == Modifier.PUBLIC || it == Modifier.PROTECTED || it == Modifier.PRIVATE }
+fun ExecutableElement.isPackagePrivate() = !modifiers.any {
+    it == Modifier.PUBLIC || it == Modifier.PROTECTED || it == Modifier.PRIVATE
+}
 
 fun ExecutableElement.isProtected() = modifiers.contains(Modifier.PROTECTED)
 

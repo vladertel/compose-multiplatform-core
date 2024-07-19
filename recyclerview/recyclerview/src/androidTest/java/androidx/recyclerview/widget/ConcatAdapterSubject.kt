@@ -23,9 +23,16 @@ import com.google.common.truth.Truth.assertAbout
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 
-/** Helper subject to write nicer looking ConcatAdapter tests. */
-internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapter: ConcatAdapter) :
-    Subject(metadata, adapter) {
+/**
+ * Helper subject to write nicer looking ConcatAdapter tests.
+ */
+internal class ConcatAdapterSubject(
+    metadata: FailureMetadata,
+    private val adapter: ConcatAdapter
+) : Subject(
+    metadata,
+    adapter
+) {
     fun hasItemCount(itemCount: Int) {
         assertThat(adapter.itemCount).isEqualTo(itemCount)
     }
@@ -34,18 +41,27 @@ internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapt
         assertThat(adapter.stateRestorationPolicy).isEqualTo(policy)
     }
 
-    fun bindView(recyclerView: RecyclerView, globalPosition: Int): BindingSubject {
+    fun bindView(
+        recyclerView: RecyclerView,
+        globalPosition: Int
+    ): BindingSubject {
         if (recyclerView.adapter == null) {
             recyclerView.adapter = adapter
         } else {
-            check(recyclerView.adapter == adapter) { "recyclerview is bound to another adapter" }
+            check(recyclerView.adapter == adapter) {
+                "recyclerview is bound to another adapter"
+            }
         }
         // clear state
         recyclerView.mState.apply {
             mItemCount = adapter.itemCount
             mLayoutStep = RecyclerView.State.STEP_LAYOUT
         }
-        return assertAbout(BindingSubject.Factory(recyclerView = recyclerView)).that(globalPosition)
+        return assertAbout(
+            BindingSubject.Factory(
+                recyclerView = recyclerView
+            )
+        ).that(globalPosition)
     }
 
     fun canRestoreState() {
@@ -57,7 +73,9 @@ internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapt
     }
 
     fun throwsException(block: (ConcatAdapter) -> Unit): ThrowableSubject {
-        val result = runCatching { block(adapter) }.exceptionOrNull()
+        val result = runCatching {
+            block(adapter)
+        }.exceptionOrNull()
         assertWithMessage("expected an exception").that(result).isNotNull()
         return assertThat(result)
     }
@@ -65,7 +83,9 @@ internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapt
     fun hasItemIds(expectedIds: IntRange) = hasItemIds(expectedIds.toList())
 
     fun hasItemIds(expectedIds: Collection<Int>) {
-        val existingIds = (0 until adapter.itemCount).map { adapter.getItemId(it) }
+        val existingIds = (0 until adapter.itemCount).map {
+            adapter.getItemId(it)
+        }
         assertThat(existingIds).containsExactlyElementsIn(expectedIds.map { it.toLong() }).inOrder()
     }
 
@@ -78,23 +98,28 @@ internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapt
     }
 
     object Factory : Subject.Factory<ConcatAdapterSubject, ConcatAdapter> {
-        override fun createSubject(
-            metadata: FailureMetadata,
-            actual: ConcatAdapter
-        ): ConcatAdapterSubject {
-            return ConcatAdapterSubject(metadata = metadata, adapter = actual)
-        }
+        override fun createSubject(metadata: FailureMetadata, actual: ConcatAdapter):
+            ConcatAdapterSubject {
+                return ConcatAdapterSubject(
+                    metadata = metadata,
+                    adapter = actual
+                )
+            }
     }
 
     companion object {
-        fun assertThat(concatAdapter: ConcatAdapter) = assertAbout(Factory).that(concatAdapter)
+        fun assertThat(concatAdapter: ConcatAdapter) =
+            assertAbout(Factory).that(concatAdapter)
     }
 
     class BindingSubject(
         metadata: FailureMetadata,
         recyclerView: RecyclerView,
         globalPosition: Int
-    ) : Subject(metadata, globalPosition) {
+    ) : Subject(
+        metadata,
+        globalPosition
+    ) {
         private val viewHolder by lazy {
             val view = recyclerView.mRecycler.getViewForPosition(globalPosition)
             val layoutParams = view.layoutParams
@@ -112,18 +137,20 @@ internal class ConcatAdapterSubject(metadata: FailureMetadata, private val adapt
             assertThat(viewHolder.boundAdapter()).isSameInstanceAs(adapter)
         }
 
-        class Factory(private val recyclerView: RecyclerView) :
-            Subject.Factory<BindingSubject, Int> {
+        class Factory(
+            private val recyclerView: RecyclerView
+        ) : Subject.Factory<BindingSubject, Int> {
             override fun createSubject(
                 metadata: FailureMetadata,
                 globalPosition: Int
-            ): BindingSubject {
-                return BindingSubject(
-                    metadata = metadata,
-                    recyclerView = recyclerView,
-                    globalPosition = globalPosition
-                )
-            }
+            ):
+                BindingSubject {
+                    return BindingSubject(
+                        metadata = metadata,
+                        recyclerView = recyclerView,
+                        globalPosition = globalPosition
+                    )
+                }
         }
     }
 }

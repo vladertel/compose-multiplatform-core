@@ -48,16 +48,6 @@ public class OutputConfigurationCompatApi33Impl extends OutputConfigurationCompa
     }
 
     @Override
-    public int getMirrorMode() {
-        return ((OutputConfiguration) getOutputConfiguration()).getMirrorMode();
-    }
-
-    @Override
-    public void setMirrorMode(int mirrorMode) {
-        ((OutputConfiguration) getOutputConfiguration()).setMirrorMode(mirrorMode);
-    }
-
-    @Override
     public long getDynamicRangeProfile() {
         return ((OutputConfiguration) getOutputConfiguration()).getDynamicRangeProfile();
     }

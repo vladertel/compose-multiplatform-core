@@ -143,8 +143,7 @@ class FoldableCameraActivity : AppCompatActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu
-            .findItem(R.id.implementationMode)
+        menu.findItem(R.id.implementationMode)
             ?.setTitle("Current impl: ${binding.previewView.implementationMode}")
         return super.onPrepareOptionsMenu(menu)
     }
@@ -181,12 +180,12 @@ class FoldableCameraActivity : AppCompatActivity() {
 
         // Runs Flow.collect in separate coroutine because it will block the coroutine.
         lifecycleScope.launch {
-            windowInfoTracker.windowLayoutInfo(this@FoldableCameraActivity).collect { newLayoutInfo
-                ->
-                Log.d(TAG, "newLayoutInfo: $newLayoutInfo")
-                activeWindowLayoutInfo = newLayoutInfo
-                adjustPreviewByFoldingState()
-            }
+            windowInfoTracker.windowLayoutInfo(this@FoldableCameraActivity)
+                .collect { newLayoutInfo ->
+                    Log.d(TAG, "newLayoutInfo: $newLayoutInfo")
+                    activeWindowLayoutInfo = newLayoutInfo
+                    adjustPreviewByFoldingState()
+                }
         }
     }
 
@@ -194,13 +193,11 @@ class FoldableCameraActivity : AppCompatActivity() {
         binding.btnTakePicture.setOnClickListener {
             val contentValues = ContentValues()
             contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            val outputFileOptions =
-                ImageCapture.OutputFileOptions.Builder(
-                        contentResolver,
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        contentValues
-                    )
-                    .build()
+            val outputFileOptions = ImageCapture.OutputFileOptions.Builder(
+                contentResolver,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            ).build()
 
             cameraController.takePicture(
                 outputFileOptions,
@@ -208,26 +205,24 @@ class FoldableCameraActivity : AppCompatActivity() {
                 object : ImageCapture.OnImageSavedCallback {
                     override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                         Toast.makeText(
-                                this@FoldableCameraActivity,
-                                "Image captured successfully",
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                            this@FoldableCameraActivity,
+                            "Image captured successfully",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     override fun onError(exception: ImageCaptureException) {
                         Toast.makeText(
-                                this@FoldableCameraActivity,
-                                "Failed to capture",
-                                Toast.LENGTH_SHORT
-                            )
-                            .show()
+                            this@FoldableCameraActivity, "Failed to capture", Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             )
         }
 
-        binding.btnSwitchCamera.setOnClickListener { showSwitchCameraMenu() }
+        binding.btnSwitchCamera.setOnClickListener {
+            showSwitchCameraMenu()
+        }
 
         val tapGestureDetector = GestureDetector(this, onTapGestureListener)
         val scaleDetector = ScaleGestureDetector(this, mScaleGestureListener)
@@ -247,7 +242,8 @@ class FoldableCameraActivity : AppCompatActivity() {
         object : SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val cameraInfo = cameraController.cameraInfo
-                val newZoom = cameraInfo!!.zoomState.value!!.zoomRatio * detector.scaleFactor
+                val newZoom =
+                    cameraInfo!!.zoomState.value!!.zoomRatio * detector.scaleFactor
                 cameraController.setZoomRatio(newZoom)
                 return true
             }
@@ -256,7 +252,9 @@ class FoldableCameraActivity : AppCompatActivity() {
         object : SimpleOnGestureListener() {
             override fun onSingleTapUp(e: MotionEvent): Boolean {
                 val factory: MeteringPointFactory = binding.previewView.meteringPointFactory
-                val action = FocusMeteringAction.Builder(factory.createPoint(e.x, e.y)).build()
+                val action = FocusMeteringAction.Builder(
+                    factory.createPoint(e.x, e.y)
+                ).build()
 
                 val future = cameraController.cameraControl!!.startFocusAndMetering(action)
                 future.addListener({}, { v -> v.run() })
@@ -267,12 +265,12 @@ class FoldableCameraActivity : AppCompatActivity() {
     private fun adjustPreviewByFoldingState() {
         val previewView = binding.previewView
         val btnSwitchArea = binding.btnSwitchArea
-        activeWindowLayoutInfo
-            ?.displayFeatures
-            ?.firstOrNull { it is FoldingFeature }
+        activeWindowLayoutInfo?.displayFeatures?.firstOrNull { it is FoldingFeature }
             ?.let {
-                val rect =
-                    getFeaturePositionInViewRect(it, previewView.parent as View) ?: return@let
+                val rect = getFeaturePositionInViewRect(
+                    it,
+                    previewView.parent as View
+                ) ?: return@let
                 val foldingFeature = it as FoldingFeature
                 if (foldingFeature.state == FoldingFeature.State.HALF_OPENED) {
                     btnSwitchArea.visibility = View.VISIBLE
@@ -282,12 +280,13 @@ class FoldableCameraActivity : AppCompatActivity() {
                                 previewView.moveToLeftOf(rect)
                                 val blankAreaWidth =
                                     (btnSwitchArea.parent as View).width - rect.right
-                                btnSwitchArea.x =
-                                    rect.right + (blankAreaWidth - btnSwitchArea.width) / 2f
+                                btnSwitchArea.x = rect.right +
+                                    (blankAreaWidth - btnSwitchArea.width) / 2f
                                 btnSwitchArea.y = (previewView.height - btnSwitchArea.height) / 2f
                             } else {
                                 previewView.moveToRightOf(rect)
-                                btnSwitchArea.x = (rect.left - btnSwitchArea.width) / 2f
+                                btnSwitchArea.x =
+                                    (rect.left - btnSwitchArea.width) / 2f
                                 btnSwitchArea.y = (previewView.height - btnSwitchArea.height) / 2f
                             }
                         }
@@ -297,12 +296,13 @@ class FoldableCameraActivity : AppCompatActivity() {
                                 val blankAreaHeight =
                                     (btnSwitchArea.parent as View).height - rect.bottom
                                 btnSwitchArea.x = (previewView.width - btnSwitchArea.width) / 2f
-                                btnSwitchArea.y =
-                                    rect.bottom + (blankAreaHeight - btnSwitchArea.height) / 2f
+                                btnSwitchArea.y = rect.bottom +
+                                    (blankAreaHeight - btnSwitchArea.height) / 2f
                             } else {
                                 previewView.moveToBottomOf(rect)
                                 btnSwitchArea.x = (previewView.width - btnSwitchArea.width) / 2f
-                                btnSwitchArea.y = (rect.top - btnSwitchArea.height) / 2f
+                                btnSwitchArea.y =
+                                    (rect.top - btnSwitchArea.height) / 2f
                             }
                         }
                     }
@@ -318,33 +318,38 @@ class FoldableCameraActivity : AppCompatActivity() {
 
     private fun View.moveToLeftOf(foldingFeatureRect: Rect) {
         x = 0f
-        layoutParams = layoutParams.apply { width = foldingFeatureRect.left }
+        layoutParams = layoutParams.apply {
+            width = foldingFeatureRect.left
+        }
     }
 
     private fun View.moveToRightOf(foldingFeatureRect: Rect) {
         x = foldingFeatureRect.left.toFloat()
-        layoutParams =
-            layoutParams.apply { width = (parent as View).width - foldingFeatureRect.left }
+        layoutParams = layoutParams.apply {
+            width = (parent as View).width - foldingFeatureRect.left
+        }
     }
 
     private fun View.moveToTopOf(foldingFeatureRect: Rect) {
         y = 0f
-        layoutParams = layoutParams.apply { height = foldingFeatureRect.top }
+        layoutParams = layoutParams.apply {
+            height = foldingFeatureRect.top
+        }
     }
 
     private fun View.moveToBottomOf(foldingFeatureRect: Rect) {
         y = foldingFeatureRect.top.toFloat()
-        layoutParams =
-            layoutParams.apply { height = (parent as View).height - foldingFeatureRect.top }
+        layoutParams = layoutParams.apply {
+            height = (parent as View).height - foldingFeatureRect.top
+        }
     }
 
     private fun View.restore() {
         // Restore to full view
-        layoutParams =
-            layoutParams.apply {
-                width = MATCH_PARENT
-                height = MATCH_PARENT
-            }
+        layoutParams = layoutParams.apply {
+            width = MATCH_PARENT
+            height = MATCH_PARENT
+        }
         y = 0f
         x = 0f
     }
@@ -378,21 +383,19 @@ class FoldableCameraActivity : AppCompatActivity() {
         for (display in displayManager.displays) {
             val realPt = Point()
             display?.getRealSize(realPt)
-            totalMsg +=
-                "Display(${display.displayId})  size=(${realPt.x},${realPt.y}) " +
-                    "rot=${display.rotationString}\n"
+            totalMsg += "Display(${display.displayId})  size=(${realPt.x},${realPt.y}) " +
+                "rot=${display.rotationString}\n"
         }
 
         totalMsg += "WindowMetrics=${lastWindowMetrics.bounds}\n"
 
         for (id in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(id)
-            val msg =
-                "[$id] ${characteristics.lensFacing} " +
-                    "${characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)} degrees\n" +
-                    "  array = " +
-                    "${characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)}\n" +
-                    "  focal length = [${characteristics.focalLength}]\n"
+            val msg = "[$id] ${characteristics.lensFacing} " +
+                "${characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)} degrees\n" +
+                "  array = " +
+                "${characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)}\n" +
+                "  focal length = [${characteristics.focalLength}]\n"
             totalMsg += msg
         }
 
@@ -422,27 +425,23 @@ class FoldableCameraActivity : AppCompatActivity() {
         when (cameraSelectorStr) {
             BACK_CAMERA_STR -> CameraSelector.DEFAULT_BACK_CAMERA
             FRONT_CAMERA_STR -> CameraSelector.DEFAULT_FRONT_CAMERA
-            else ->
-                CameraSelector.Builder()
-                    .addCameraFilter {
-                        for (cameraInfo in it) {
-                            if (Camera2CameraInfo.from(cameraInfo).cameraId == cameraSelectorStr) {
-                                return@addCameraFilter listOf(cameraInfo)
-                            }
-                        }
-                        return@addCameraFilter emptyList<CameraInfo>()
+            else -> CameraSelector.Builder().addCameraFilter {
+                for (cameraInfo in it) {
+                    if (Camera2CameraInfo.from(cameraInfo).cameraId == cameraSelectorStr) {
+                        return@addCameraFilter listOf(cameraInfo)
                     }
-                    .build()
+                }
+                return@addCameraFilter emptyList<CameraInfo>()
+            }.build()
         }
 
     private val CameraCharacteristics.lensFacing: String
-        get() =
-            when (this.get(CameraCharacteristics.LENS_FACING)) {
-                CameraCharacteristics.LENS_FACING_BACK -> "BACK"
-                CameraCharacteristics.LENS_FACING_FRONT -> "FRONT"
-                CameraCharacteristics.LENS_FACING_EXTERNAL -> "EXTERNAL"
-                else -> "UNKNOWN"
-            }
+        get() = when (this.get(CameraCharacteristics.LENS_FACING)) {
+            CameraCharacteristics.LENS_FACING_BACK -> "BACK"
+            CameraCharacteristics.LENS_FACING_FRONT -> "FRONT"
+            CameraCharacteristics.LENS_FACING_EXTERNAL -> "EXTERNAL"
+            else -> "UNKNOWN"
+        }
 
     private val CameraCharacteristics.focalLength: String
         get() {
@@ -459,6 +458,7 @@ class FoldableCameraActivity : AppCompatActivity() {
      *
      * Copied from windowManager Jetpack library sample codes.
      * https://github.com/android/user-interface-samples/tree/main/WindowManager
+     *
      */
     fun getFeaturePositionInViewRect(
         displayFeature: DisplayFeature,
@@ -470,13 +470,10 @@ class FoldableCameraActivity : AppCompatActivity() {
         view.getLocationInWindow(viewLocationInWindow)
 
         // Intersect the feature rectangle in window with view rectangle to clip the bounds.
-        val viewRect =
-            Rect(
-                viewLocationInWindow[0],
-                viewLocationInWindow[1],
-                viewLocationInWindow[0] + view.width,
-                viewLocationInWindow[1] + view.height
-            )
+        val viewRect = Rect(
+            viewLocationInWindow[0], viewLocationInWindow[1],
+            viewLocationInWindow[0] + view.width, viewLocationInWindow[1] + view.height
+        )
 
         // Include padding if needed
         if (includePadding) {
@@ -488,7 +485,9 @@ class FoldableCameraActivity : AppCompatActivity() {
 
         val featureRectInView = Rect(displayFeature.bounds)
         val intersects = featureRectInView.intersect(viewRect)
-        if ((featureRectInView.width() == 0 && featureRectInView.height() == 0) || !intersects) {
+        if ((featureRectInView.width() == 0 && featureRectInView.height() == 0) ||
+            !intersects
+        ) {
             return null
         }
 

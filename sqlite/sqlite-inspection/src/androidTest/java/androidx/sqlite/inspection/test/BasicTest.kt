@@ -29,7 +29,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class BasicTest {
-    @get:Rule val testEnvironment = SqliteInspectorTestEnvironment()
+    @get:Rule
+    val testEnvironment = SqliteInspectorTestEnvironment()
 
     @Test
     fun test_basic_proto() {
@@ -50,13 +51,14 @@ class BasicTest {
 
     @Test
     fun test_unset_command() = runBlocking {
-        testEnvironment.sendCommand(SqliteInspectorProtocol.Command.getDefaultInstance()).let {
-            response ->
-            assertThat(response.hasErrorOccurred()).isEqualTo(true)
-            assertThat(response.errorOccurred.content.message)
-                .contains("Unrecognised command type: ONEOF_NOT_SET")
-            assertThat(response.errorOccurred.content.errorCodeValue)
-                .isEqualTo(ERROR_UNRECOGNISED_COMMAND_VALUE)
-        }
+        testEnvironment.sendCommand(SqliteInspectorProtocol.Command.getDefaultInstance())
+            .let { response ->
+                assertThat(response.hasErrorOccurred()).isEqualTo(true)
+                assertThat(response.errorOccurred.content.message)
+                    .contains("Unrecognised command type: ONEOF_NOT_SET")
+                assertThat(response.errorOccurred.content.errorCodeValue).isEqualTo(
+                    ERROR_UNRECOGNISED_COMMAND_VALUE
+                )
+            }
     }
 }

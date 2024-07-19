@@ -38,9 +38,11 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 internal class HandwritingHandlerTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val immRule = ComposeInputMethodManagerTestRule()
+    @get:Rule
+    val immRule = ComposeInputMethodManagerTestRule()
 
     @Before
     fun setup() {
@@ -62,7 +64,8 @@ internal class HandwritingHandlerTest {
             )
         }
 
-        rule.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.RequestFocus)
+        rule.onNodeWithTag(tag)
+            .performSemanticsAction(SemanticsActions.RequestFocus)
 
         rule.runOnIdle {
             imm.expectCall("acceptStylusHandwritingDelegation")

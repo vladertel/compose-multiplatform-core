@@ -53,7 +53,9 @@ class PrimitiveShortArraySubjectTest {
 
     @Test
     fun isEqualTo_Fail_NotAnshortArrayOf() {
-        assertFailsWith<AssertionError> { assertThat(shortArrayOf(1, 0, 1)).isEqualTo(Any()) }
+        assertFailsWith<AssertionError> {
+            assertThat(shortArrayOf(1, 0, 1)).isEqualTo(Any())
+        }
     }
 
     @Test
@@ -81,6 +83,8 @@ class PrimitiveShortArraySubjectTest {
     @Test
     fun isNotEqualTo_FailSame() {
         val same = shortArrayOf(1, 0)
-        assertFailsWith<AssertionError> { assertThat(same).isNotEqualTo(same) }
+        assertFailsWith<AssertionError> {
+            assertThat(same).isNotEqualTo(same)
+        }
     }
 }

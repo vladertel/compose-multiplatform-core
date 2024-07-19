@@ -47,7 +47,9 @@ fun ReportDrawnWhenSample() {
 @Composable
 fun ReportDrawnAfterSample() {
     val lazyListState = remember { LazyListState() }
-    ReportDrawnAfter { lazyListState.animateScrollToItem(10) }
+    ReportDrawnAfter {
+        lazyListState.animateScrollToItem(10)
+    }
 }
 
 @Sampled

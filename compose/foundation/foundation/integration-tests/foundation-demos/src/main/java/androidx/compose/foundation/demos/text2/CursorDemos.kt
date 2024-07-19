@@ -47,8 +47,9 @@ import androidx.compose.ui.window.Dialog
 @Composable
 fun TextFieldCursorNotBlinkingInUnfocusedWindowDemo() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        val textFieldDecoration =
-            Modifier.border(2.dp, Color.DarkGray, RoundedCornerShape(5.dp)).padding(8.dp)
+        val textFieldDecoration = Modifier
+            .border(2.dp, Color.DarkGray, RoundedCornerShape(5.dp))
+            .padding(8.dp)
 
         val textState = rememberTextFieldState("hello")
         BasicTextField(textState, textFieldDecoration)
@@ -66,11 +67,14 @@ fun TextFieldCursorNotBlinkingInUnfocusedWindowDemo() {
                     val dialogFocusRequester = remember { FocusRequester() }
                     Text(
                         "Hello! This is a dialog.",
-                        Modifier.padding(20.dp)
+                        Modifier
+                            .padding(20.dp)
                             .focusRequester(dialogFocusRequester)
                             .background(Color.DarkGray)
                     )
-                    LaunchedEffect(Unit) { dialogFocusRequester.requestFocus() }
+                    LaunchedEffect(Unit) {
+                        dialogFocusRequester.requestFocus()
+                    }
                 }
             }
         }

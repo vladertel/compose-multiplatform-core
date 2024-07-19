@@ -19,6 +19,7 @@ package androidx.camera.core.impl.utils.executor;
 import android.os.Process;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraXThreads;
 
 import java.util.Locale;
@@ -31,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * A singleton executor which is suitable for audio I/O tasks.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class AudioExecutor implements Executor {
     private static volatile Executor sExecutor;
 

@@ -43,8 +43,7 @@ public operator fun Menu.contains(item: MenuItem): Boolean {
 public inline operator fun Menu.minusAssign(item: MenuItem): Unit = removeItem(item.itemId)
 
 /** Returns the number of items in this menu. */
-public inline val Menu.size: Int
-    get() = size()
+public inline val Menu.size: Int get() = size()
 
 /** Returns true if this menu contains no items. */
 public inline fun Menu.isEmpty(): Boolean = size() == 0
@@ -70,11 +69,8 @@ public inline fun Menu.forEachIndexed(action: (index: Int, item: MenuItem) -> Un
 public operator fun Menu.iterator(): MutableIterator<MenuItem> =
     object : MutableIterator<MenuItem> {
         private var index = 0
-
         override fun hasNext() = index < size()
-
         override fun next() = getItem(index++) ?: throw IndexOutOfBoundsException()
-
         override fun remove() = removeItemAt(--index)
     }
 
@@ -88,7 +84,6 @@ public inline fun Menu.removeItemAt(index: Int) =
 
 /** Returns a [Sequence] over the items in this menu. */
 public val Menu.children: Sequence<MenuItem>
-    get() =
-        object : Sequence<MenuItem> {
-            override fun iterator() = this@children.iterator()
-        }
+    get() = object : Sequence<MenuItem> {
+        override fun iterator() = this@children.iterator()
+    }

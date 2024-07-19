@@ -43,7 +43,9 @@ class SlideableStateListenerTest {
         var isSlideableCalled = false
         TestActivity.onActivityCreated = { activity ->
             val container = FrameLayout(activity)
-            val layout = activity.layoutInflater.inflate(R.layout.activity_test_layout, null, false)
+            val layout = activity.layoutInflater.inflate(
+                R.layout.activity_test_layout, null, false
+            )
             container.addView(
                 layout,
                 ViewGroup.LayoutParams(
@@ -51,17 +53,18 @@ class SlideableStateListenerTest {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             )
-            val slidingPaneLayout =
-                container.findViewById<SlidingPaneLayout>(R.id.sliding_pane_layout)
-            slidingPaneLayout.addSlideableStateListener { _ -> isSlideableCalled = true }
+            val slidingPaneLayout = container
+                .findViewById<SlidingPaneLayout>(R.id.sliding_pane_layout)
+            slidingPaneLayout.addSlideableStateListener { _ ->
+                isSlideableCalled = true
+            }
 
             activity.setContentView(container)
         }
 
         with(ActivityScenario.launch(TestActivity::class.java)) {
             assertWithMessage(
-                    "isSlideable should be called when measuring the layout has completed"
-                )
+                "isSlideable should be called when measuring the layout has completed")
                 .that(isSlideableCalled)
                 .isTrue()
         }
@@ -73,7 +76,9 @@ class SlideableStateListenerTest {
 
         TestActivity.onActivityCreated = { activity ->
             val container = FrameLayout(activity)
-            val layout = activity.layoutInflater.inflate(R.layout.activity_test_layout, null, false)
+            val layout = activity.layoutInflater.inflate(
+                R.layout.activity_test_layout, null, false
+            )
             container.addView(
                 layout,
                 ViewGroup.LayoutParams(
@@ -81,10 +86,12 @@ class SlideableStateListenerTest {
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
             )
-            val slideableStateListener = SlideableStateListener { isSlideableCalled = true }
+            val slideableStateListener = SlideableStateListener {
+                isSlideableCalled = true
+            }
 
-            val slidingPaneLayout =
-                container.findViewById<SlidingPaneLayout>(R.id.sliding_pane_layout)
+            val slidingPaneLayout = container
+                .findViewById<SlidingPaneLayout>(R.id.sliding_pane_layout)
             slidingPaneLayout.addSlideableStateListener(slideableStateListener)
 
             activity.setContentView(container)

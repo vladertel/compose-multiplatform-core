@@ -113,7 +113,11 @@ fun VerticalGradientColorStopSample() {
 
 @Sampled
 fun VerticalGradientSample() {
-    Brush.verticalGradient(listOf(Color.Red, Color.Green, Color.Blue), startY = 0.0f, endY = 100.0f)
+    Brush.verticalGradient(
+        listOf(Color.Red, Color.Green, Color.Blue),
+        startY = 0.0f,
+        endY = 100.0f
+    )
 }
 
 @Sampled
@@ -154,5 +158,8 @@ fun SweepGradientColorStopSample() {
 
 @Sampled
 fun SweepGradientSample() {
-    Brush.sweepGradient(listOf(Color.Red, Color.Green, Color.Blue), center = Offset(10.0f, 20.0f))
+    Brush.sweepGradient(
+        listOf(Color.Red, Color.Green, Color.Blue),
+        center = Offset(10.0f, 20.0f)
+    )
 }

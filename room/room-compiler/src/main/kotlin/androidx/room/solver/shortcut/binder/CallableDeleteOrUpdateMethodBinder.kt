@@ -32,8 +32,7 @@ import androidx.room.vo.ShortcutQueryParameter
  * [DeleteOrUpdateMethodAdapter]. Usage of the Callable impl is then delegate to the [addStmntBlock]
  * function.
  */
-class CallableDeleteOrUpdateMethodBinder
-private constructor(
+class CallableDeleteOrUpdateMethodBinder private constructor(
     val typeArg: XType,
     val addStmntBlock: XCodeBlock.Builder.(callableImpl: XTypeSpec, dbField: XPropertySpec) -> Unit,
     adapter: DeleteOrUpdateMethodAdapter?
@@ -43,8 +42,10 @@ private constructor(
         fun createDeleteOrUpdateBinder(
             typeArg: XType,
             adapter: DeleteOrUpdateMethodAdapter?,
-            addCodeBlock:
-                XCodeBlock.Builder.(callableImpl: XTypeSpec, dbField: XPropertySpec) -> Unit
+            addCodeBlock: XCodeBlock.Builder.(
+                callableImpl: XTypeSpec,
+                dbField: XPropertySpec
+            ) -> Unit
         ) = CallableDeleteOrUpdateMethodBinder(typeArg, addCodeBlock, adapter)
     }
 
@@ -54,28 +55,19 @@ private constructor(
         dbProperty: XPropertySpec,
         scope: CodeGenScope
     ) {
-        convertAndReturnCompat(parameters, adapters, dbProperty, scope)
-    }
-
-    override fun convertAndReturnCompat(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, XTypeSpec>>,
-        dbProperty: XPropertySpec,
-        scope: CodeGenScope
-    ) {
         val adapterScope = scope.fork()
-        val callableImpl =
-            CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
-                    adapter?.generateMethodBodyCompat(
-                        parameters = parameters,
-                        adapters = adapters,
-                        dbProperty = dbProperty,
-                        scope = adapterScope
-                    )
-                    addCode(adapterScope.generate())
-                }
-                .build()
+        val callableImpl = CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
+            adapter?.createDeleteOrUpdateMethodBody(
+                parameters = parameters,
+                adapters = adapters,
+                dbProperty = dbProperty,
+                scope = adapterScope
+            )
+            addCode(adapterScope.generate())
+        }.build()
 
-        scope.builder.apply { addStmntBlock(callableImpl, dbProperty) }
+        scope.builder.apply {
+            addStmntBlock(callableImpl, dbProperty)
+        }
     }
 }

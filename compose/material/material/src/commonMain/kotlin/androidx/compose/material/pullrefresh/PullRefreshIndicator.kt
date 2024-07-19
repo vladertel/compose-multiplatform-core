@@ -81,29 +81,32 @@ fun PullRefreshIndicator(
     contentColor: Color = contentColorFor(backgroundColor),
     scale: Boolean = false
 ) {
-    val showElevation by
-        remember(refreshing, state) { derivedStateOf { refreshing || state.position > 0.5f } }
+    val showElevation by remember(refreshing, state) {
+        derivedStateOf { refreshing || state.position > 0.5f }
+    }
 
     // Apply an elevation overlay if needed. Note that we aren't using Surface here, as we do not
     // want its input-blocking behaviour, since the indicator is typically displayed above other
     // (possibly) interactive content.
     val elevationOverlay = LocalElevationOverlay.current
-    val color =
-        elevationOverlay?.apply(color = backgroundColor, elevation = Elevation) ?: backgroundColor
+    val color = elevationOverlay?.apply(color = backgroundColor, elevation = Elevation)
+        ?: backgroundColor
 
     Box(
-        modifier =
-            modifier
-                .size(IndicatorSize)
-                .pullRefreshIndicatorTransform(state, scale)
-                .shadow(if (showElevation) Elevation else 0.dp, SpinnerShape, clip = true)
-                .background(color = color, shape = SpinnerShape)
+        modifier = modifier
+            .size(IndicatorSize)
+            .pullRefreshIndicatorTransform(state, scale)
+            .shadow(if (showElevation) Elevation else 0.dp, SpinnerShape, clip = true)
+            .background(color = color, shape = SpinnerShape)
     ) {
         Crossfade(
             targetState = refreshing,
             animationSpec = tween(durationMillis = CrossfadeDurationMs)
         ) { refreshing ->
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 val spinnerSize = (ArcRadius + StrokeWidth).times(2)
 
                 if (refreshing) {
@@ -120,7 +123,9 @@ fun PullRefreshIndicator(
     }
 }
 
-/** Modifier.size MUST be specified. */
+/**
+ * Modifier.size MUST be specified.
+ */
 @Composable
 @ExperimentalMaterialApi
 private fun CircularArrowIndicator(
@@ -130,8 +135,11 @@ private fun CircularArrowIndicator(
 ) {
     val path = remember { Path().apply { fillType = PathFillType.EvenOdd } }
 
-    val targetAlpha by
-        remember(state) { derivedStateOf { if (state.progress >= 1f) MaxAlpha else MinAlpha } }
+    val targetAlpha by remember(state) {
+        derivedStateOf {
+            if (state.progress >= 1f) MaxAlpha else MinAlpha
+        }
+    }
 
     val alphaState = animateFloatAsState(targetValue = targetAlpha, animationSpec = AlphaTween)
 
@@ -142,13 +150,12 @@ private fun CircularArrowIndicator(
 
         rotate(degrees = values.rotation) {
             val arcRadius = ArcRadius.toPx() + StrokeWidth.toPx() / 2f
-            val arcBounds =
-                Rect(
-                    size.center.x - arcRadius,
-                    size.center.y - arcRadius,
-                    size.center.x + arcRadius,
-                    size.center.y + arcRadius
-                )
+            val arcBounds = Rect(
+                size.center.x - arcRadius,
+                size.center.y - arcRadius,
+                size.center.x + arcRadius,
+                size.center.y + arcRadius
+            )
             drawArc(
                 color = color,
                 alpha = alpha,
@@ -157,7 +164,10 @@ private fun CircularArrowIndicator(
                 useCenter = false,
                 topLeft = arcBounds.topLeft,
                 size = arcBounds.size,
-                style = Stroke(width = StrokeWidth.toPx(), cap = StrokeCap.Square)
+                style = Stroke(
+                    width = StrokeWidth.toPx(),
+                    cap = StrokeCap.Square
+                )
             )
             drawArrow(path, arcBounds, color, alpha, values)
         }
@@ -204,15 +214,23 @@ private fun DrawScope.drawArrow(
     arrow.lineTo(x = ArrowWidth.toPx() * values.scale, y = 0f) // Line to right corner
 
     // Line to tip of arrow
-    arrow.lineTo(x = ArrowWidth.toPx() * values.scale / 2, y = ArrowHeight.toPx() * values.scale)
+    arrow.lineTo(
+        x = ArrowWidth.toPx() * values.scale / 2,
+        y = ArrowHeight.toPx() * values.scale
+    )
 
     val radius = min(bounds.width, bounds.height) / 2f
     val inset = ArrowWidth.toPx() * values.scale / 2f
     arrow.translate(
-        Offset(x = radius + bounds.center.x - inset, y = bounds.center.y + StrokeWidth.toPx() / 2f)
+        Offset(
+            x = radius + bounds.center.x - inset,
+            y = bounds.center.y + StrokeWidth.toPx() / 2f
+        )
     )
     arrow.close()
-    rotate(degrees = values.endAngle) { drawPath(path = arrow, color = color, alpha = alpha) }
+    rotate(degrees = values.endAngle) {
+        drawPath(path = arrow, color = color, alpha = alpha)
+    }
 }
 
 private const val CrossfadeDurationMs = 100

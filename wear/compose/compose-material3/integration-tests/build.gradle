@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 
 plugins {
@@ -44,7 +37,7 @@ dependencies {
     implementation(project(':wear:compose:compose-material3'))
     implementation(project(':wear:compose:compose-material3-samples'))
     implementation(project(':wear:compose:integration-tests:demos:common'))
-    implementation("androidx.compose.material:material-icons-core:1.6.7")
+    implementation(project(':compose:material:material-icons-core'))
 }
 
 androidx {

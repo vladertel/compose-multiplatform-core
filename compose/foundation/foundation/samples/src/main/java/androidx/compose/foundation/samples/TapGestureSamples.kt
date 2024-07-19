@@ -41,7 +41,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
-/** Simple [awaitLongPressOrCancellation] demo. */
+/**
+ * Simple [awaitLongPressOrCancellation] demo.
+ */
 @Composable
 @Sampled
 fun AwaitLongPressOrCancellationSample() {
@@ -56,7 +58,9 @@ fun AwaitLongPressOrCancellationSample() {
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        awaitLongPressOrCancellation(down.id)?.let { count++ }
+                        awaitLongPressOrCancellation(down.id)?.let {
+                            count++
+                        }
                     }
                 }
                 .clipToBounds()

@@ -29,7 +29,9 @@ import androidx.credentials.R
 @RequiresApi(23)
 internal class FrameworkImplHelper {
     companion object {
-        /** Take the create request's `credentialData` and add SDK specific values to it. */
+        /**
+         * Take the create request's `credentialData` and add SDK specific values to it.
+         */
         @RestrictTo(RestrictTo.Scope.LIBRARY) // used from java tests
         @JvmStatic
         @RequiresApi(23)

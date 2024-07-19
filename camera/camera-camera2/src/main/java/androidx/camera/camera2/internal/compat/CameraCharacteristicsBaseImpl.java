@@ -20,10 +20,12 @@ import android.hardware.camera2.CameraCharacteristics;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import java.util.Collections;
 import java.util.Set;
 
+@RequiresApi(21)
 class CameraCharacteristicsBaseImpl
         implements CameraCharacteristicsCompat.CameraCharacteristicsCompatImpl {
     @NonNull

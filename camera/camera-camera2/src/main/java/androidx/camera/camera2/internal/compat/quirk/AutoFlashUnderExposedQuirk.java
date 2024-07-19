@@ -17,6 +17,7 @@
 package androidx.camera.camera2.internal.compat.quirk;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
 import androidx.camera.core.impl.Quirk;
 
@@ -30,6 +31,7 @@ import androidx.camera.core.impl.Quirk;
  *     with good exposure.
  *     Device(s): Pixel 3a / Pixel 3a XL
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class AutoFlashUnderExposedQuirk implements Quirk {
     static boolean load(@NonNull CameraCharacteristicsCompat cameraCharacteristics) {
         // Currently disable this quirk on Pixel 3a / Pixel 3a XL as using torch can achieve

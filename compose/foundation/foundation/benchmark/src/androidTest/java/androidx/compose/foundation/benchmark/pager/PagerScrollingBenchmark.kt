@@ -56,7 +56,8 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class PagerScrollingBenchmark(private val testCase: PagerScrollingTestCase) {
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     @Test
     fun scrollProgrammatically_noNewPages() {
@@ -197,9 +198,8 @@ class PagerScrollingBenchmark(private val testCase: PagerScrollingTestCase) {
 
         // Copied from AndroidComposeTestCaseRunner
         private val supportsRenderNode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-        private val supportsMRenderNode =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.P &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+        private val supportsMRenderNode = Build.VERSION.SDK_INT < Build.VERSION_CODES.P &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
     }
 }
 
@@ -208,9 +208,11 @@ data class PagerScrollingTestCase(
     private val name: String,
     val isVertical: Boolean,
     val beyondBoundsPageCount: Int,
-    val content:
-        @Composable
-        PagerRemeasureTestCase.(PagerState, useKeys: Boolean, beyondBoundsPageCount: Int) -> Unit
+    val content: @Composable PagerRemeasureTestCase.(
+        PagerState,
+        useKeys: Boolean,
+        beyondBoundsPageCount: Int
+    ) -> Unit
 ) {
     override fun toString(): String {
         return name
@@ -220,9 +222,11 @@ data class PagerScrollingTestCase(
 @OptIn(ExperimentalFoundationApi::class)
 class PagerRemeasureTestCase(
     val addNewItemOnToggle: Boolean,
-    val content:
-        @Composable
-        PagerRemeasureTestCase.(PagerState, useKeys: Boolean, beyondBoundsPageCount: Int) -> Unit,
+    val content: @Composable PagerRemeasureTestCase.(
+        PagerState,
+        useKeys: Boolean,
+        beyondBoundsPageCount: Int
+    ) -> Unit,
     val isVertical: Boolean,
     val usePointerInput: Boolean = false,
     val useKeys: Boolean = true,
@@ -252,13 +256,15 @@ class PagerRemeasureTestCase(
     }
 
     override fun setUp() {
-        runBlocking { pagerState.scrollToPage(0, 0.0f) }
+        runBlocking {
+            pagerState.scrollToPage(0, 0.0f)
+        }
     }
 
     override fun tearDown() {
         runBlocking {
             try {
-                pagerState.scroll {}
+                pagerState.scroll { }
             } catch (_: CancellationException) {
                 // prevent snapping
             }
@@ -267,43 +273,44 @@ class PagerRemeasureTestCase(
 
     @Composable
     override fun Content() {
-        val scrollBy =
-            if (addNewItemOnToggle) {
-                with(LocalDensity.current) { 5.dp.roundToPx() }
-            } else {
-                1
-            }
+        val scrollBy = if (addNewItemOnToggle) {
+            with(LocalDensity.current) { 5.dp.roundToPx() }
+        } else {
+            1
+        }
         InitializeScrollHelper(scrollAmount = scrollBy)
         pagerState = rememberPagerState { pageCount }
         content(pagerState, useKeys, beyondBoundsPageCount)
     }
 }
 
-val NoOpInfoProvider =
-    object : SnapLayoutInfoProvider {
-        override fun calculateApproachOffset(velocity: Float, decayOffset: Float): Float = 0.0f
+val NoOpInfoProvider = object : SnapLayoutInfoProvider {
+    override fun calculateApproachOffset(velocity: Float, decayOffset: Float): Float =
+        0.0f
 
-        override fun calculateSnapOffset(velocity: Float): Float {
-            return 0f
-        }
+    override fun calculateSnapOffset(velocity: Float): Float {
+        return 0f
     }
+}
 
-val VerticalPagerContent:
-    @Composable
-    PagerRemeasureTestCase.(
-        state: PagerState, useKeys: Boolean, beyondBoundsPageCount: Int
-    ) -> Unit =
+val VerticalPagerContent: @Composable PagerRemeasureTestCase.(
+    state: PagerState,
+    useKeys: Boolean,
+    beyondBoundsPageCount: Int
+) -> Unit =
     { state, useKeys, beyondBoundsPageCount ->
-        val flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider = NoOpInfoProvider)
+        val flingBehavior = rememberSnapFlingBehavior(
+            snapLayoutInfoProvider = NoOpInfoProvider
+        )
         VerticalPager(
-            state = state,
-            modifier = Modifier.requiredHeight(400.dp).fillMaxWidth(),
-            key =
-                if (useKeys) {
-                    { pages[it].index }
-                } else {
-                    null
-                },
+            state = state, modifier = Modifier
+                .requiredHeight(400.dp)
+                .fillMaxWidth(),
+            key = if (useKeys) {
+                { pages[it].index }
+            } else {
+                null
+            },
             pageSize = PageSize.Fixed(30.dp),
             beyondViewportPageCount = beyondBoundsPageCount,
             flingBehavior = flingBehavior
@@ -312,22 +319,24 @@ val VerticalPagerContent:
         }
     }
 
-val HorizontalPagerContent:
-    @Composable
-    PagerRemeasureTestCase.(
-        state: PagerState, useKeys: Boolean, beyondBoundsPageCount: Int
-    ) -> Unit =
+val HorizontalPagerContent: @Composable PagerRemeasureTestCase.(
+    state: PagerState,
+    useKeys: Boolean,
+    beyondBoundsPageCount: Int
+) -> Unit =
     { state, useKeys, beyondBoundsPageCount ->
-        val flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider = NoOpInfoProvider)
+        val flingBehavior = rememberSnapFlingBehavior(
+            snapLayoutInfoProvider = NoOpInfoProvider
+        )
         HorizontalPager(
-            state = state,
-            modifier = Modifier.requiredWidth(400.dp).fillMaxHeight(),
-            key =
-                if (useKeys) {
-                    { pages[it].index }
-                } else {
-                    null
-                },
+            state = state, modifier = Modifier
+                .requiredWidth(400.dp)
+                .fillMaxHeight(),
+            key = if (useKeys) {
+                { pages[it].index }
+            } else {
+                null
+            },
             pageSize = PageSize.Fixed(30.dp),
             beyondViewportPageCount = beyondBoundsPageCount,
             flingBehavior = flingBehavior

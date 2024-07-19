@@ -40,11 +40,10 @@ class LetterSpacingSpanPxTest {
 
         val letterSpacingSpanPx = LetterSpacingSpanPx(letterSpacing)
 
-        val textPaint =
-            mock<TextPaint> {
-                on { this.textSize } doReturn textSize
-                on { this.textScaleX } doReturn textScaleX
-            }
+        val textPaint = mock<TextPaint> {
+            on { this.textSize } doReturn textSize
+            on { this.textScaleX } doReturn textScaleX
+        }
 
         letterSpacingSpanPx.updateDrawState(textPaint)
 
@@ -59,11 +58,10 @@ class LetterSpacingSpanPxTest {
 
         val letterSpacingSpanPx = LetterSpacingSpanPx(letterSpacing)
 
-        val textPaint =
-            mock<TextPaint> {
-                on { this.textSize } doReturn textSize
-                on { this.textScaleX } doReturn textScaleX
-            }
+        val textPaint = mock<TextPaint> {
+            on { this.textSize } doReturn textSize
+            on { this.textScaleX } doReturn textScaleX
+        }
 
         letterSpacingSpanPx.updateDrawState(textPaint)
 
@@ -78,11 +76,10 @@ class LetterSpacingSpanPxTest {
 
         val letterSpacingSpanPx = LetterSpacingSpanPx(letterSpacing)
 
-        val textPaint =
-            mock<TextPaint> {
-                on { this.textSize } doReturn textSize
-                on { this.textScaleX } doReturn textScaleX
-            }
+        val textPaint = mock<TextPaint> {
+            on { this.textSize } doReturn textSize
+            on { this.textScaleX } doReturn textScaleX
+        }
 
         letterSpacingSpanPx.updateMeasureState(textPaint)
 
@@ -97,11 +94,10 @@ class LetterSpacingSpanPxTest {
 
         val letterSpacingSpanPx = LetterSpacingSpanPx(letterSpacing)
 
-        val textPaint =
-            mock<TextPaint> {
-                on { this.textSize } doReturn textSize
-                on { this.textScaleX } doReturn textScaleX
-            }
+        val textPaint = mock<TextPaint> {
+            on { this.textSize } doReturn textSize
+            on { this.textScaleX } doReturn textScaleX
+        }
 
         letterSpacingSpanPx.updateMeasureState(textPaint)
 

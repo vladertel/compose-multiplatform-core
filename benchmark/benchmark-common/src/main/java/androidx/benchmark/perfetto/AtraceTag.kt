@@ -28,13 +28,10 @@ import android.os.Build
  * intent of this class is to track this information statically.
  */
 @Suppress("unused") // enums always accessed via values()
-internal enum class AtraceTag(val tag: String) {
+internal enum class AtraceTag(
+    val tag: String
+) {
     ActivityManager("am"),
-    Aidl("aidl") {
-        override fun supported(api: Int, rooted: Boolean): Boolean {
-            return api >= 28
-        }
-    },
     Audio("audio") {
         override fun supported(api: Int, rooted: Boolean): Boolean {
             return api >= 23
@@ -57,7 +54,6 @@ internal enum class AtraceTag(val tag: String) {
             return rooted || api >= 24
         }
     },
-    Power("power"),
     Resources("res"),
     Scheduling("sched"),
     Synchronization("sync") {
@@ -70,19 +66,27 @@ internal enum class AtraceTag(val tag: String) {
     WindowManager("wm");
 
     /**
-     * Return true if the tag is available on the specified api level, with specified shell session
-     * root status.
+     * Return true if the tag is available on the specified api level, with specified shell
+     * session root status.
      */
     open fun supported(api: Int, rooted: Boolean): Boolean {
         return true
     }
 
     companion object {
-        fun supported(api: Int = Build.VERSION.SDK_INT, rooted: Boolean): Set<AtraceTag> {
-            return values().filter { it.supported(api = api, rooted = rooted) }.toSet()
+        fun supported(
+            api: Int = Build.VERSION.SDK_INT,
+            rooted: Boolean
+        ): Set<AtraceTag> {
+            return values()
+                .filter { it.supported(api = api, rooted = rooted) }
+                .toSet()
         }
 
-        fun unsupported(api: Int = Build.VERSION.SDK_INT, rooted: Boolean): Set<AtraceTag> {
+        fun unsupported(
+            api: Int = Build.VERSION.SDK_INT,
+            rooted: Boolean
+        ): Set<AtraceTag> {
             return values().toSet() - supported(api, rooted)
         }
     }

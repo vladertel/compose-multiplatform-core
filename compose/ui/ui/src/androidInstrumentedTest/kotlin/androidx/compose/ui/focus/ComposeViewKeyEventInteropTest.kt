@@ -41,13 +41,16 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalComposeUiApi::class)
 class ComposeViewKeyEventInteropTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun composeView_doesNotConsumesKeyEvent_ifTheContentIsNotFocusable() {
         // Arrange.
         rule.activityRule.scenario.onActivity { activity ->
-            activity.setContent { BasicText("text") }
+            activity.setContent {
+                BasicText("text")
+            }
         }
 
         // Act.
@@ -66,7 +69,9 @@ class ComposeViewKeyEventInteropTest {
             activity.setContent {
                 BasicText(
                     text = "text",
-                    modifier = Modifier.focusRequester(focusRequester).focusable()
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
+                        .focusable()
                 )
             }
         }
@@ -90,14 +95,16 @@ class ComposeViewKeyEventInteropTest {
                 Row {
                     BasicText(
                         text = "Item 1",
-                        modifier =
-                            Modifier.focusRequester(item1)
-                                .focusProperties { right = item2 }
-                                .focusable()
+                        modifier = Modifier
+                            .focusRequester(item1)
+                            .focusProperties { right = item2 }
+                            .focusable()
                     )
                     BasicText(
                         text = "Item 2",
-                        modifier = Modifier.focusRequester(item2).focusable()
+                        modifier = Modifier
+                            .focusRequester(item2)
+                            .focusable()
                     )
                 }
             }
@@ -120,8 +127,10 @@ class ComposeViewKeyEventInteropTest {
             activity.setContent {
                 BasicText(
                     text = "Item 1",
-                    modifier =
-                        Modifier.focusRequester(item1).focusProperties { down = item2 }.focusable()
+                    modifier = Modifier
+                        .focusRequester(item1)
+                        .focusProperties { down = item2 }
+                        .focusable()
                 )
             }
         }
@@ -144,10 +153,10 @@ class ComposeViewKeyEventInteropTest {
                 Box(Modifier.focusable()) {
                     BasicText(
                         text = "Item 1",
-                        modifier =
-                            Modifier.focusRequester(item1)
-                                .focusProperties { down = item2 }
-                                .focusable()
+                        modifier = Modifier
+                            .focusRequester(item1)
+                            .focusProperties { down = item2 }
+                            .focusable()
                     )
                 }
             }

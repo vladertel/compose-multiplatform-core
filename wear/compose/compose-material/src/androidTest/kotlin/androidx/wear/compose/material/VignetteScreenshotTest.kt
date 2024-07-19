@@ -25,8 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.DeviceConfigurationOverride
-import androidx.compose.ui.test.RoundScreen
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -45,17 +43,20 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class VignetteScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
 
-    @get:Rule val testName = TestName()
+    @get:Rule
+    val testName = TestName()
 
     private val screenSize = 340.dp
 
     @Test
     fun vignette_circular_top() = verifyScreenshot {
-        DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(isScreenRound = true)) {
+        ConfiguredShapeScreen(isRound = true) {
             sampleVignette(
                 VignettePosition.Top,
                 modifier = Modifier.size(screenSize).clip(CircleShape)
@@ -65,7 +66,7 @@ class VignetteScreenshotTest {
 
     @Test
     fun vignette_circular_bottom() = verifyScreenshot {
-        DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(isScreenRound = true)) {
+        ConfiguredShapeScreen(isRound = true) {
             sampleVignette(
                 VignettePosition.Bottom,
                 modifier = Modifier.size(screenSize).clip(CircleShape)
@@ -75,7 +76,7 @@ class VignetteScreenshotTest {
 
     @Test
     fun vignette_circular_top_and_bottom() = verifyScreenshot {
-        DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(isScreenRound = true)) {
+        ConfiguredShapeScreen(isRound = true) {
             sampleVignette(
                 VignettePosition.TopAndBottom,
                 modifier = Modifier.size(screenSize).clip(CircleShape)
@@ -83,10 +84,15 @@ class VignetteScreenshotTest {
         }
     }
 
-    @Test fun vignette_square_top() = verifyScreenshot { sampleVignette(VignettePosition.Top) }
+    @Test
+    fun vignette_square_top() = verifyScreenshot {
+        sampleVignette(VignettePosition.Top)
+    }
 
     @Test
-    fun vignette_square_bottom() = verifyScreenshot { sampleVignette(VignettePosition.Bottom) }
+    fun vignette_square_bottom() = verifyScreenshot {
+        sampleVignette(VignettePosition.Bottom)
+    }
 
     @Test
     fun vignette_square_top_and_bottom() = verifyScreenshot {
@@ -102,15 +108,22 @@ class VignetteScreenshotTest {
             vignette = { Vignette(vignettePosition = vignettePosition) },
             modifier = Modifier.testTag(TEST_TAG)
         ) {
-            Box(modifier = modifier, contentAlignment = Alignment.Center) {}
+            Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center
+            ) {
+            }
         }
     }
 
-    private fun verifyScreenshot(content: @Composable () -> Unit) {
-        rule.setContentWithTheme { content() }
+    private fun verifyScreenshot(
+        content: @Composable () -> Unit
+    ) {
+        rule.setContentWithTheme {
+            content()
+        }
 
-        rule
-            .onNodeWithTag(TEST_TAG)
+        rule.onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, testName.methodName)
     }

@@ -73,10 +73,9 @@ class UpdateMethodProcessorTest :
 
     @Test
     fun targetEntityMissingPrimaryKey() {
-        val usernameSource =
-            Source.java(
-                "foo.bar.Username",
-                """
+        val usernameSource = Source.java(
+            "foo.bar.Username",
+            """
             package foo.bar;
             import androidx.room.*;
 
@@ -84,7 +83,7 @@ class UpdateMethodProcessorTest :
                 String name;
             }
             """
-            )
+        )
         singleShortcutMethod(
             """
                 @Update(entity = User.class)

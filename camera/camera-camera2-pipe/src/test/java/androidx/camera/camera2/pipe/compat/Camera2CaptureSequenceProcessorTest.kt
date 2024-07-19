@@ -104,32 +104,28 @@ internal class Camera2CaptureSequenceProcessorTest {
             SurfaceTexture(0).also {
                 val output = stream1Config.outputs.first()
                 it.setDefaultBufferSize(output.size.width, output.size.height)
-            }
-        )
+            })
 
     private val surface2 =
         Surface(
             SurfaceTexture(0).also {
                 val output = stream2Config.outputs.first()
                 it.setDefaultBufferSize(output.size.width, output.size.height)
-            }
-        )
+            })
 
     private val surface3 =
         Surface(
             SurfaceTexture(0).also {
                 val output = stream3Config.outputs.first()
                 it.setDefaultBufferSize(output.size.width, output.size.height)
-            }
-        )
+            })
 
     private val surface4 =
         Surface(
             SurfaceTexture(0).also {
                 val output = stream4Config.outputs.first()
                 it.setDefaultBufferSize(output.size.width, output.size.height)
-            }
-        )
+            })
 
     private val stream1 = streamGraph[stream1Config]!!
     private val stream2 = streamGraph[stream2Config]!!
@@ -150,16 +146,13 @@ internal class Camera2CaptureSequenceProcessorTest {
         val requestBuilder = fakeCameraDevice.fakeCamera.cameraDevice.createCaptureRequest(1)
         // Parameters
         requestBuilder.set(
-            CaptureRequest.CONTROL_AE_MODE,
-            CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH
+            CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH
         )
         requestBuilder.set(
-            CaptureRequest.CONTROL_AF_MODE,
-            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+            CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
         )
         requestBuilder.set(
-            CaptureRequest.CONTROL_AF_MODE,
-            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
+            CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
         )
 
         // Surfaces
@@ -192,17 +185,17 @@ internal class Camera2CaptureSequenceProcessorTest {
                 isRepeating = false,
                 requests = listOf(Request(listOf(stream1.id, stream2.id))),
                 defaultParameters =
-                    mapOf<Any, Any?>(
-                        CaptureRequest.CONTROL_AE_MODE to
-                            CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH,
-                        CaptureRequest.CONTROL_AF_MODE to
-                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                    ),
+                mapOf<Any, Any?>(
+                    CaptureRequest.CONTROL_AE_MODE to
+                        CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH,
+                    CaptureRequest.CONTROL_AF_MODE to
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                ),
                 requiredParameters =
-                    mapOf<Any, Any?>(
-                        CaptureRequest.CONTROL_AF_MODE to
-                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
-                    ),
+                mapOf<Any, Any?>(
+                    CaptureRequest.CONTROL_AF_MODE to
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
+                ),
                 listeners = listOf(),
                 sequenceListener = FakeCaptureSequenceListener()
             )
@@ -312,17 +305,17 @@ internal class Camera2CaptureSequenceProcessorTest {
                 isRepeating = false,
                 requests = listOf(Request(listOf(stream3.id, stream4.id))),
                 defaultParameters =
-                    mapOf<Any, Any?>(
-                        CaptureRequest.CONTROL_AE_MODE to
-                            CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH,
-                        CaptureRequest.CONTROL_AF_MODE to
-                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                    ),
+                mapOf<Any, Any?>(
+                    CaptureRequest.CONTROL_AE_MODE to
+                        CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH,
+                    CaptureRequest.CONTROL_AF_MODE to
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                ),
                 requiredParameters =
-                    mapOf<Any, Any?>(
-                        CaptureRequest.CONTROL_AF_MODE to
-                            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
-                    ),
+                mapOf<Any, Any?>(
+                    CaptureRequest.CONTROL_AF_MODE to
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
+                ),
                 listeners = listOf(),
                 sequenceListener = FakeCaptureSequenceListener()
             )

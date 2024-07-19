@@ -95,7 +95,8 @@ open class DisplayFeaturesActivity : AppCompatActivity() {
 
         // Update the UI with the current state
         val stateStringBuilder = StringBuilder()
-        stateStringBuilder.append(getString(R.string.window_layout)).append(": ")
+        stateStringBuilder.append(getString(R.string.window_layout))
+            .append(": ")
 
         // Add views that represent display features
         for (displayFeature in windowLayoutInfo.displayFeatures) {

@@ -33,8 +33,13 @@ import androidx.wear.compose.material3.touchTargetAwareSize
 @Composable
 fun TextToggleButtonSample() {
     var checked by remember { mutableStateOf(true) }
-    TextToggleButton(checked = checked, onCheckedChange = { checked = !checked }) {
-        Text(text = if (checked) "On" else "Off")
+    TextToggleButton(
+        checked = checked,
+        onCheckedChange = { checked = !checked }
+    ) {
+        Text(
+            text = if (checked) "On" else "Off"
+        )
     }
 }
 

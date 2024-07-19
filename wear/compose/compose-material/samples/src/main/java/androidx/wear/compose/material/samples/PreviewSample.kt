@@ -55,9 +55,8 @@ fun ButtonWithIconPreview() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ButtonDefaults.DefaultIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ButtonDefaults.DefaultIconSize).wrapContentSize(align = Alignment.Center),
         )
     }
 }
@@ -69,10 +68,9 @@ fun TitleCardWithImagePreview() {
     TitleCard(
         onClick = { /* Do something */ },
         title = { Text("TitleCard With an ImageBackground") },
-        backgroundPainter =
-            CardDefaults.imageWithScrimBackgroundPainter(
-                backgroundImagePainter = painterResource(id = R.drawable.backgroundimage)
-            ),
+        backgroundPainter = CardDefaults.imageWithScrimBackgroundPainter(
+            backgroundImagePainter = painterResource(id = R.drawable.backgroundimage)
+        ),
         contentColor = MaterialTheme.colors.onSurface,
         titleColor = MaterialTheme.colors.onSurface,
     ) {
@@ -93,9 +91,9 @@ fun ToggleButtonWithIconPreview() {
         Icon(
             painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
             contentDescription = "airplane",
-            modifier =
-                Modifier.size(ToggleButtonDefaults.DefaultIconSize)
-                    .wrapContentSize(align = Alignment.Center),
+            modifier = Modifier
+                .size(ToggleButtonDefaults.DefaultIconSize)
+                .wrapContentSize(align = Alignment.Center),
         )
     }
 }

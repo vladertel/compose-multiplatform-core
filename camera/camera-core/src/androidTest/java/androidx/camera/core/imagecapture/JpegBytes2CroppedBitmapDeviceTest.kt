@@ -36,7 +36,9 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Unit tests for [JpegBytes2CroppedBitmap]. */
+/**
+ * Unit tests for [JpegBytes2CroppedBitmap].
+ */
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 21)
@@ -51,17 +53,16 @@ class JpegBytes2CroppedBitmapTest {
         val cropRect = Rect(0, 240, 640, 480)
         // A mirroring on the x-axis.
         val transform = Matrix().apply { this.setScale(-1F, 1F, 320F, 240F) }
-        val input =
-            Packet.of(
-                jpegBytes,
-                createExif(jpegBytes),
-                ImageFormat.JPEG,
-                Size(WIDTH, HEIGHT),
-                cropRect,
-                90,
-                transform,
-                CAMERA_CAPTURE_RESULT
-            )
+        val input = Packet.of(
+            jpegBytes,
+            createExif(jpegBytes),
+            ImageFormat.JPEG,
+            Size(WIDTH, HEIGHT),
+            cropRect,
+            90,
+            transform,
+            CAMERA_CAPTURE_RESULT
+        )
 
         // Act.
         val output = operation.apply(input)

@@ -49,7 +49,9 @@ class InvalidatingPagingSourceFactoryTest {
         val testFactory = InvalidatingPagingSourceFactory { TestPagingSource() }
         repeat(4) { testFactory() }
         testFactory.pagingSources().forEachIndexed { index, pagingSource ->
-            pagingSource.registerInvalidatedCallback { invalidateCalls[index] = true }
+            pagingSource.registerInvalidatedCallback {
+                invalidateCalls[index] = true
+            }
         }
         testFactory.invalidate()
         assertTrue { invalidateCalls.all { it } }
@@ -67,7 +69,11 @@ class InvalidatingPagingSourceFactoryTest {
 
         var invalidateCount = 0
 
-        testFactory.pagingSources().forEach { it.registerInvalidatedCallback { invalidateCount++ } }
+        testFactory.pagingSources().forEach {
+            it.registerInvalidatedCallback {
+                invalidateCount++
+            }
+        }
 
         testFactory.invalidate()
 
@@ -90,16 +96,15 @@ class InvalidatingPagingSourceFactoryTest {
     }
 
     @Test
-    fun invalidate_threadSafe() =
-        runBlocking<Unit> {
-            val factory = InvalidatingPagingSourceFactory { TestPagingSource() }
-            (0 until 100)
-                .map {
-                    async(Dispatchers.Default) {
-                        factory().registerInvalidatedCallback { factory().invalidate() }
-                        factory.invalidate()
-                    }
+    fun invalidate_threadSafe() = runBlocking<Unit> {
+        val factory = InvalidatingPagingSourceFactory { TestPagingSource() }
+        (0 until 100).map {
+            async(Dispatchers.Default) {
+                factory().registerInvalidatedCallback {
+                    factory().invalidate()
                 }
-                .awaitAll()
-        }
+                factory.invalidate()
+            }
+        }.awaitAll()
+    }
 }

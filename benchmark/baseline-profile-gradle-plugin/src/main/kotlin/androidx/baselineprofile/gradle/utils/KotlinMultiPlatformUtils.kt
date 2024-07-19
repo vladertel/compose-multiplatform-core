@@ -26,10 +26,11 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
  */
 internal object KotlinMultiPlatformUtils {
 
-    fun androidTargetName(project: Project) =
-        project.extensions
-            .findByType(KotlinMultiplatformExtension::class.java)
-            ?.targets
-            ?.firstOrNull { it.platformType == KotlinPlatformType.androidJvm }
-            ?.name ?: ""
+    fun androidTargetName(project: Project) = project
+        .extensions
+        .findByType(KotlinMultiplatformExtension::class.java)
+        ?.targets
+        ?.firstOrNull { it.platformType == KotlinPlatformType.androidJvm }
+        ?.name
+        ?: ""
 }

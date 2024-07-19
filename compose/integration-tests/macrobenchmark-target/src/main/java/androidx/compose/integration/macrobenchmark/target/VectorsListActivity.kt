@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.Dp
 class VectorsListActivity : ComponentActivity() {
 
     private var contents = arrayListOf<String>()
-
     init {
         for (index in 0..1000) {
             contents.add("compose$index")
@@ -58,7 +57,9 @@ class VectorsListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent { ComposeLazyList() }
+        setContent {
+            ComposeLazyList()
+        }
 
         launchIdlenessTracking()
     }
@@ -68,26 +69,44 @@ class VectorsListActivity : ComponentActivity() {
         LazyColumn(
             modifier = Modifier.fillMaxSize().semantics { contentDescription = "IamLazy" },
         ) {
-            items(count = 1000, key = { index -> index }, contentType = { "test" }) { index ->
+            items(
+                count = 1000,
+                key = { index ->
+                    index
+                },
+                contentType = {
+                    "test"
+                }
+            ) { index ->
                 val text = contents[index]
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .defaultMinSize(Dp(64F))
-                            .wrapContentHeight()
-                            .padding(vertical = Dp(12F), horizontal = Dp(12F)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(Dp(64F))
+                        .wrapContentHeight()
+                        .padding(
+                            vertical = Dp(12F),
+                            horizontal = Dp(12F)
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher),
-                        modifier = Modifier.height(Dp(40F)).width(Dp(40F)),
+                        painter = painterResource(
+                            id = R.drawable.ic_launcher
+                        ),
+                        modifier = Modifier
+                            .height(Dp(40F))
+                            .width(Dp(40F)),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.Center,
                         contentDescription = ""
                     )
                     Column(
-                        modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = Dp(16F))
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = Dp(16F))
                     ) {
                         Text(
                             fontStyle = FontStyle.Normal,
@@ -96,14 +115,17 @@ class VectorsListActivity : ComponentActivity() {
                             overflow = TextOverflow.Ellipsis,
                             text = text
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Image(
-                                painter =
-                                    painterResource(
-                                        id = R.drawable.ic_cloud14 // Drawable id
-                                    ),
-                                modifier =
-                                    Modifier.height(Dp(16F)).width(Dp(16F)).padding(end = Dp(1F)),
+                                painter = painterResource(
+                                    id = R.drawable.ic_cloud14 // Drawable id
+                                ),
+                                modifier = Modifier
+                                    .height(Dp(16F))
+                                    .width(Dp(16F))
+                                    .padding(end = Dp(1F)),
                                 contentScale = ContentScale.Fit,
                                 alignment = Alignment.Center,
                                 contentDescription = ""
@@ -118,21 +140,23 @@ class VectorsListActivity : ComponentActivity() {
                         }
                     }
                     Image(
-                        painter =
-                            painterResource(
-                                id = R.drawable.ic_favourite // Drawable id
-                            ),
-                        modifier = Modifier.height(Dp(24F)).width(Dp(24F)),
+                        painter = painterResource(
+                            id = R.drawable.ic_favourite // Drawable id
+                        ),
+                        modifier = Modifier
+                            .height(Dp(24F))
+                            .width(Dp(24F)),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterEnd,
                         contentDescription = ""
                     )
                     Image(
-                        painter =
-                            painterResource(
-                                id = R.drawable.ic_more // Drawable id
-                            ),
-                        modifier = Modifier.height(Dp(24F)).width(Dp(24F)),
+                        painter = painterResource(
+                            id = R.drawable.ic_more // Drawable id
+                        ),
+                        modifier = Modifier
+                            .height(Dp(24F))
+                            .width(Dp(24F)),
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterEnd,
                         contentDescription = ""

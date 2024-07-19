@@ -35,9 +35,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 /**
- * This activity uses ComposeViews inside a RecyclerView. This helps us benchmark a common point of
- * migration between views and Compose. The implementation is designed to match the
- * LazyColumnActivity and the RecyclerViewActivity for comparison.
+ * This activity uses ComposeViews inside a RecyclerView. This helps us benchmark
+ * a common point of migration between views and Compose. The implementation is designed to
+ * match the LazyColumnActivity and the RecyclerViewActivity for comparison.
  */
 class RecyclerViewListActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,7 +53,9 @@ class RecyclerViewListActivity : AppCompatActivity() {
         launchIdlenessTracking()
     }
 
-    private fun entries(size: Int) = List(size) { Entry("Item $it") }
+    private fun entries(size: Int) = List(size) {
+        Entry("Item $it")
+    }
 
     companion object {
         const val EXTRA_ITEM_COUNT = "ITEM_COUNT"
@@ -68,7 +70,11 @@ class EntryViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(co
     }
 
     fun bind(entry: Entry) {
-        composeView.setContent { MaterialTheme { ListRow(entry) } }
+        composeView.setContent {
+            MaterialTheme {
+                ListRow(entry)
+            }
+        }
     }
 }
 
@@ -97,9 +103,16 @@ class EntryAdapter(
 private fun ListRow(entry: Entry) {
     Card(modifier = Modifier.padding(8.dp)) {
         Row {
-            Text(text = entry.contents, modifier = Modifier.padding(16.dp))
+            Text(
+                text = entry.contents,
+                modifier = Modifier.padding(16.dp)
+            )
             Spacer(modifier = Modifier.weight(1f, fill = true))
-            Checkbox(checked = false, onCheckedChange = {}, modifier = Modifier.padding(16.dp))
+            Checkbox(
+                checked = false,
+                onCheckedChange = {},
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }

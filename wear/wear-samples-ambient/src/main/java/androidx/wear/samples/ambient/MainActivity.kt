@@ -13,7 +13,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 /** Sample activity that provides an ambient experience. */
-class MainActivity : ComponentActivity() {
+class MainActivity :
+    ComponentActivity() {
 
     /** Used to dispatch periodic updates when the activity is in active mode. */
     private val activeUpdatesHandler = Handler(Looper.getMainLooper())
@@ -30,37 +31,37 @@ class MainActivity : ComponentActivity() {
     private val timestampTextView by lazy { findViewById<TextView>(R.id.timestamp) }
     private val updatesTextView by lazy { findViewById<TextView>(R.id.updates) }
 
-    private val ambientCallback =
-        object : AmbientLifecycleCallback {
-            override fun onEnterAmbient(ambientDetails: AmbientDetails) {
-                Log.d(TAG, "onEnterAmbient()")
-                model.setStatus(Status.AMBIENT)
-                model.publishUpdate()
-            }
-
-            override fun onUpdateAmbient() {
-                Log.d(TAG, "onUpdateAmbient()")
-                model.publishUpdate()
-            }
-
-            override fun onExitAmbient() {
-                Log.d(TAG, "onExitAmbient()")
-                model.setStatus(Status.ACTIVE)
-                model.publishUpdate()
-                schedule()
-            }
+    private val ambientCallback = object : AmbientLifecycleCallback {
+        override fun onEnterAmbient(ambientDetails: AmbientDetails) {
+            Log.d(TAG, "onEnterAmbient()")
+            model.setStatus(Status.AMBIENT)
+            model.publishUpdate()
         }
+
+        override fun onUpdateAmbient() {
+            Log.d(TAG, "onUpdateAmbient()")
+            model.publishUpdate()
+        }
+
+        override fun onExitAmbient() {
+            Log.d(TAG, "onExitAmbient()")
+            model.setStatus(Status.ACTIVE)
+            model.publishUpdate()
+            schedule()
+        }
+    }
 
     /** Invoked on [activeUpdatesHandler], posts an update when the activity is in active mode. */
-    private val mActiveUpdatesRunnable: Runnable = Runnable {
-        // If invoked in ambient mode, do nothing.
-        if (ambientObserver.isAmbient) {
-            return@Runnable
+    private val mActiveUpdatesRunnable: Runnable =
+        Runnable {
+            // If invoked in ambient mode, do nothing.
+            if (ambientObserver.isAmbient) {
+                return@Runnable
+            }
+            model.publishUpdate()
+            // Schedule the next update.
+            schedule()
         }
-        model.publishUpdate()
-        // Schedule the next update.
-        schedule()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,9 +102,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun observeModel() {
-        model.observeStartTime(this) { timerTextView.text = formatTimer(model.getTimer()) }
-        model.observeStatus(this) { status -> statusTextView.text = "Status: $status" }
-        model.observeUpdates(this) { updates -> updatesTextView.text = formatUpdates(updates) }
+        model.observeStartTime(this) {
+            timerTextView.text = formatTimer(model.getTimer())
+        }
+        model.observeStatus(this) { status ->
+            statusTextView.text = "Status: $status"
+        }
+        model.observeUpdates(this) { updates ->
+            updatesTextView.text = formatUpdates(updates)
+        }
         model.observeUpdateTimestamp(this) { timestamp ->
             timestampTextView.text = formatTimestamp(timestamp)
             timerTextView.text = formatTimer(model.getTimer())

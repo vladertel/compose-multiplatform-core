@@ -34,12 +34,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FragmentManagerTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     @Test
     fun addRemoveFragmentOnAttachListener() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
-            val fm = withActivity { supportFragmentManager }
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+            val fm = withActivity {
+                supportFragmentManager
+            }
             val fragmentBefore = StrictFragment()
             val fragmentDuring = StrictFragment()
             val fragmentAfter = StrictFragment()
@@ -49,17 +52,23 @@ class FragmentManagerTest {
                 attachedFragments.add(fragment)
             }
 
-            fm.beginTransaction().add(fragmentBefore, "before").commit()
+            fm.beginTransaction()
+                .add(fragmentBefore, "before")
+                .commit()
             executePendingTransactions()
 
             fm.addFragmentOnAttachListener(listener)
 
-            fm.beginTransaction().add(fragmentDuring, "during").commit()
+            fm.beginTransaction()
+                .add(fragmentDuring, "during")
+                .commit()
             executePendingTransactions()
 
             fm.removeFragmentOnAttachListener(listener)
 
-            fm.beginTransaction().add(fragmentAfter, "after").commit()
+            fm.beginTransaction()
+                .add(fragmentAfter, "after")
+                .commit()
             executePendingTransactions()
 
             assertThat(attachedFragments).containsExactly(fragmentDuring)
@@ -68,28 +77,32 @@ class FragmentManagerTest {
 
     @Test
     fun removeReentrantFragmentOnAttachListener() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
-            val fm = withActivity { supportFragmentManager }
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+            val fm = withActivity {
+                supportFragmentManager
+            }
             val fragmentDuring = StrictFragment()
             val fragmentAfter = StrictFragment()
 
             val attachedFragments = mutableListOf<Fragment>()
-            fm.addFragmentOnAttachListener(
-                object : FragmentOnAttachListener {
-                    override fun onAttachFragment(
-                        fragmentManager: FragmentManager,
-                        fragment: Fragment
-                    ) {
-                        attachedFragments.add(fragment)
-                        fragmentManager.removeFragmentOnAttachListener(this)
-                    }
+            fm.addFragmentOnAttachListener(object : FragmentOnAttachListener {
+                override fun onAttachFragment(
+                    fragmentManager: FragmentManager,
+                    fragment: Fragment
+                ) {
+                    attachedFragments.add(fragment)
+                    fragmentManager.removeFragmentOnAttachListener(this)
                 }
-            )
+            })
 
-            fm.beginTransaction().add(fragmentDuring, "during").commit()
+            fm.beginTransaction()
+                .add(fragmentDuring, "during")
+                .commit()
             executePendingTransactions()
 
-            fm.beginTransaction().add(fragmentAfter, "after").commit()
+            fm.beginTransaction()
+                .add(fragmentAfter, "after")
+                .commit()
             executePendingTransactions()
 
             assertThat(attachedFragments).containsExactly(fragmentDuring)
@@ -98,7 +111,7 @@ class FragmentManagerTest {
 
     @Test
     fun findFragmentChildFragment() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fm = withActivity {
                 setContentView(R.layout.simple_container)
                 supportFragmentManager
@@ -111,8 +124,7 @@ class FragmentManagerTest {
                 .setReorderingAllowed(false)
                 .commit()
             executePendingTransactions()
-            parentFragment.childFragmentManager
-                .beginTransaction()
+            parentFragment.childFragmentManager.beginTransaction()
                 .add(R.id.squareContainer, childFragment)
                 .setReorderingAllowed(false)
                 .commit()
@@ -125,7 +137,9 @@ class FragmentManagerTest {
             assertThat(FragmentManager.findFragment<Fragment>(childRootView))
                 .isEqualTo(childFragment)
 
-            fm.beginTransaction().remove(parentFragment).commit()
+            fm.beginTransaction()
+                .remove(parentFragment)
+                .commit()
             executePendingTransactions()
 
             // Check that even after removal, findFragment still returns the right Fragment
@@ -138,7 +152,7 @@ class FragmentManagerTest {
 
     @Test
     fun findFragmentManagerChildFragment() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
             val fm = withActivity {
                 setContentView(R.layout.simple_container)
                 supportFragmentManager
@@ -151,8 +165,7 @@ class FragmentManagerTest {
                 .setReorderingAllowed(false)
                 .commit()
             executePendingTransactions()
-            parentFragment.childFragmentManager
-                .beginTransaction()
+            parentFragment.childFragmentManager.beginTransaction()
                 .add(R.id.squareContainer, childFragment)
                 .setReorderingAllowed(false)
                 .commit()
@@ -167,15 +180,16 @@ class FragmentManagerTest {
             assertThat(FragmentManager.findFragmentManager(childRootView))
                 .isEqualTo(childChildFragmentManager)
 
-            fm.beginTransaction().remove(parentFragment).commit()
+            fm.beginTransaction()
+                .remove(parentFragment)
+                .commit()
             executePendingTransactions()
 
             try {
                 FragmentManager.findFragmentManager(parentRootView)
                 fail("findFragmentManager on the removed parentRootView should throw")
             } catch (expected: IllegalStateException) {
-                assertThat(expected)
-                    .hasMessageThat()
+                assertThat(expected).hasMessageThat()
                     .isEqualTo(
                         "The Fragment $parentFragment that owns View $parentRootView" +
                             " has already been destroyed. Nested fragments should always use " +
@@ -186,8 +200,7 @@ class FragmentManagerTest {
                 FragmentManager.findFragmentManager(childRootView)
                 fail("findFragmentManager on the removed childRootView should throw")
             } catch (expected: IllegalStateException) {
-                assertThat(expected)
-                    .hasMessageThat()
+                assertThat(expected).hasMessageThat()
                     .isEqualTo(
                         "The Fragment $childFragment that owns View $childRootView" +
                             " has already been destroyed. Nested fragments should always use " +
@@ -199,8 +212,10 @@ class FragmentManagerTest {
 
     @Test
     fun addRemoveReorderingAllowedWithoutExecutePendingTransactions() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
-            val fm = withActivity { supportFragmentManager }
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+            val fm = withActivity {
+                supportFragmentManager
+            }
             val fragment1 = StrictFragment()
 
             val originalWho = fragment1.mWho
@@ -224,8 +239,10 @@ class FragmentManagerTest {
 
     @Test
     fun reAddRemovedBeforeAttached() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
-            val fm = withActivity { supportFragmentManager }
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+            val fm = withActivity {
+                supportFragmentManager
+            }
             val fragment1 = StrictFragment()
 
             val originalWho = fragment1.mWho
@@ -247,7 +264,10 @@ class FragmentManagerTest {
 
             val afterRemovalWho = fragment1.mWho
 
-            fm.beginTransaction().add(fragment1, "fragment1").setReorderingAllowed(true).commit()
+            fm.beginTransaction()
+                .add(fragment1, "fragment1")
+                .setReorderingAllowed(true)
+                .commit()
             executePendingTransactions()
 
             assertThat(fragment1.mWho).isEqualTo(afterRemovalWho)
@@ -256,11 +276,16 @@ class FragmentManagerTest {
 
     @Test
     fun popBackStackImmediate() {
-        withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
-            val fm = withActivity { supportFragmentManager }
+       withUse(ActivityScenario.launch(FragmentTestActivity::class.java)) {
+            val fm = withActivity {
+                supportFragmentManager
+            }
             val fragment1 = StrictFragment()
 
-            fm.beginTransaction().add(fragment1, "fragment1").addToBackStack("stack1").commit()
+            fm.beginTransaction()
+                .add(fragment1, "fragment1")
+                .addToBackStack("stack1")
+                .commit()
             executePendingTransactions()
 
             var popped = false
@@ -314,7 +339,8 @@ class FragmentManagerTest {
 
             val restoredFragmentManager = withActivity { supportFragmentManager }
 
-            assertThat(restoredFragmentManager.findFragmentByTag("fragment2")).isNotNull()
+            assertThat(restoredFragmentManager.findFragmentByTag("fragment2"))
+                .isNotNull()
         }
     }
 
@@ -375,7 +401,8 @@ class FragmentManagerTest {
 
             val restoredFragmentManager = withActivity { supportFragmentManager }
 
-            assertThat(restoredFragmentManager.findFragmentByTag("fragment2")).isNotNull()
+            assertThat(restoredFragmentManager.findFragmentByTag("fragment2"))
+                .isNotNull()
         }
     }
 }

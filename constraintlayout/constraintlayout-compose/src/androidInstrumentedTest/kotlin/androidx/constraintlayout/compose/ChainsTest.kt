@@ -36,7 +36,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class ChainsTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun testHorizontalPacked_withConstraintSet() {
@@ -65,13 +66,30 @@ class ChainsTest {
                 top.linkTo(parent.top, margin)
                 start.linkTo(parent.start, margin)
             }
-            constrain(chain0) { start.linkTo(box2.end, margin) }
+            constrain(chain0) {
+                start.linkTo(box2.end, margin)
+            }
         }
         rule.setContent {
-            ConstraintLayout(modifier = Modifier.size(rootSize), constraintSet = constraintSet) {
-                Box(modifier = Modifier.background(Color.Red).layoutTestId("box0"))
-                Box(modifier = Modifier.background(Color.Blue).layoutTestId("box1"))
-                Box(modifier = Modifier.background(Color.Green).layoutTestId("box2"))
+            ConstraintLayout(
+                modifier = Modifier.size(rootSize),
+                constraintSet = constraintSet
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .layoutTestId("box0")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .layoutTestId("box1")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Green)
+                        .layoutTestId("box2")
+                )
             }
         }
         rule.waitForIdle()
@@ -98,40 +116,46 @@ class ChainsTest {
         val boxSizes = arrayOf(10.dp, 20.dp, 30.dp)
         val margin = 10.dp
         rule.setContent {
-            ConstraintLayout(Modifier.background(Color.LightGray).size(rootSize)) {
+            ConstraintLayout(
+                Modifier
+                    .background(Color.LightGray)
+                    .size(rootSize)
+            ) {
                 val (box0, box1, box2) = createRefs()
                 val chain0 = createHorizontalChain(box0, box1, chainStyle = ChainStyle.Packed)
-                constrain(chain0) { start.linkTo(box2.end, margin) }
+                constrain(chain0) {
+                    start.linkTo(box2.end, margin)
+                }
                 Box(
-                    modifier =
-                        Modifier.background(Color.Red)
-                            .constrainAs(box0) {
-                                width = Dimension.value(boxSizes[0])
-                                height = Dimension.value(boxSizes[0])
-                                centerVerticallyTo(parent)
-                            }
-                            .layoutTestId("box0")
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .constrainAs(box0) {
+                            width = Dimension.value(boxSizes[0])
+                            height = Dimension.value(boxSizes[0])
+                            centerVerticallyTo(parent)
+                        }
+                        .layoutTestId("box0")
                 )
                 Box(
-                    modifier =
-                        Modifier.background(Color.Blue)
-                            .constrainAs(box1) {
-                                width = Dimension.value(boxSizes[1])
-                                height = Dimension.value(boxSizes[1])
-                                centerVerticallyTo(box0)
-                            }
-                            .layoutTestId("box1")
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .constrainAs(box1) {
+                            width = Dimension.value(boxSizes[1])
+                            height = Dimension.value(boxSizes[1])
+                            centerVerticallyTo(box0)
+                        }
+                        .layoutTestId("box1")
                 )
                 Box(
-                    modifier =
-                        Modifier.background(Color.Green)
-                            .constrainAs(box2) {
-                                width = Dimension.value(boxSizes[2])
-                                height = Dimension.value(boxSizes[2])
-                                top.linkTo(parent.top, margin)
-                                start.linkTo(parent.start, margin)
-                            }
-                            .layoutTestId("box2")
+                    modifier = Modifier
+                        .background(Color.Green)
+                        .constrainAs(box2) {
+                            width = Dimension.value(boxSizes[2])
+                            height = Dimension.value(boxSizes[2])
+                            top.linkTo(parent.top, margin)
+                            start.linkTo(parent.start, margin)
+                        }
+                        .layoutTestId("box2")
                 )
             }
         }
@@ -208,12 +232,26 @@ class ChainsTest {
         }
         rule.setContent {
             ConstraintLayout(
-                modifier = Modifier.background(Color.LightGray).size(rootSize),
+                modifier = Modifier
+                    .background(Color.LightGray)
+                    .size(rootSize),
                 constraintSet = constraintSet
             ) {
-                Box(modifier = Modifier.background(Color.Red).layoutTestId("box0"))
-                Box(modifier = Modifier.background(Color.Blue).layoutTestId("box1"))
-                Box(modifier = Modifier.background(Color.Green).layoutTestId("box2"))
+                Box(
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .layoutTestId("box0")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .layoutTestId("box1")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Green)
+                        .layoutTestId("box2")
+                )
             }
         }
         rule.waitForIdle()
@@ -290,12 +328,26 @@ class ChainsTest {
         }
         rule.setContent {
             ConstraintLayout(
-                modifier = Modifier.background(Color.LightGray).size(rootSize),
+                modifier = Modifier
+                    .background(Color.LightGray)
+                    .size(rootSize),
                 constraintSet = constraintSet
             ) {
-                Box(modifier = Modifier.background(Color.Red).layoutTestId("box0"))
-                Box(modifier = Modifier.background(Color.Blue).layoutTestId("box1"))
-                Box(modifier = Modifier.background(Color.Green).layoutTestId("box2"))
+                Box(
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .layoutTestId("box0")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .layoutTestId("box1")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Green)
+                        .layoutTestId("box2")
+                )
             }
         }
         rule.waitForIdle()
@@ -324,28 +376,37 @@ class ChainsTest {
 
         rule.setContent {
             ConstraintLayout(
-                modifier = Modifier.background(Color.LightGray).size(rootSize),
-                constraintSet =
-                    ConstraintSet {
-                        val box0 = createRefFor("box0")
-                        val box1 = createRefFor("box1")
+                modifier = Modifier
+                    .background(Color.LightGray)
+                    .size(rootSize),
+                constraintSet = ConstraintSet {
+                    val box0 = createRefFor("box0")
+                    val box1 = createRefFor("box1")
 
-                        constrain(box0) {
-                            width = Dimension.fillToConstraints
-                            height = Dimension.value(boxSize)
+                    constrain(box0) {
+                        width = Dimension.fillToConstraints
+                        height = Dimension.value(boxSize)
 
-                            horizontalChainWeight = 1.0f
-                            verticalChainWeight = 2.0f // Ignored in horizontal chain
-                        }
-                        constrain(box1) {
-                            width = Dimension.fillToConstraints
-                            height = Dimension.value(boxSize)
-                        }
-                        createHorizontalChain(box0, box1.withChainParams(weight = 0.5f))
+                        horizontalChainWeight = 1.0f
+                        verticalChainWeight = 2.0f // Ignored in horizontal chain
                     }
+                    constrain(box1) {
+                        width = Dimension.fillToConstraints
+                        height = Dimension.value(boxSize)
+                    }
+                    createHorizontalChain(box0, box1.withChainParams(weight = 0.5f))
+                }
             ) {
-                Box(modifier = Modifier.background(Color.Red).layoutTestId("box0"))
-                Box(modifier = Modifier.background(Color.Blue).layoutTestId("box1"))
+                Box(
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .layoutTestId("box0")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .layoutTestId("box1")
+                )
             }
         }
         rule.waitForIdle()
@@ -361,28 +422,37 @@ class ChainsTest {
 
         rule.setContent {
             ConstraintLayout(
-                modifier = Modifier.background(Color.LightGray).size(rootSize),
-                constraintSet =
-                    ConstraintSet {
-                        val box0 = createRefFor("box0")
-                        val box1 = createRefFor("box1")
+                modifier = Modifier
+                    .background(Color.LightGray)
+                    .size(rootSize),
+                constraintSet = ConstraintSet {
+                    val box0 = createRefFor("box0")
+                    val box1 = createRefFor("box1")
 
-                        constrain(box0) {
-                            width = Dimension.value(boxSize)
-                            height = Dimension.fillToConstraints
+                    constrain(box0) {
+                        width = Dimension.value(boxSize)
+                        height = Dimension.fillToConstraints
 
-                            horizontalChainWeight = 2.0f // Ignored in vertical chain
-                            verticalChainWeight = 1.0f
-                        }
-                        constrain(box1) {
-                            width = Dimension.value(boxSize)
-                            height = Dimension.fillToConstraints
-                        }
-                        createVerticalChain(box0, box1.withChainParams(weight = 0.5f))
+                        horizontalChainWeight = 2.0f // Ignored in vertical chain
+                        verticalChainWeight = 1.0f
                     }
+                    constrain(box1) {
+                        width = Dimension.value(boxSize)
+                        height = Dimension.fillToConstraints
+                    }
+                    createVerticalChain(box0, box1.withChainParams(weight = 0.5f))
+                }
             ) {
-                Box(modifier = Modifier.background(Color.Red).layoutTestId("box0"))
-                Box(modifier = Modifier.background(Color.Blue).layoutTestId("box1"))
+                Box(
+                    modifier = Modifier
+                        .background(Color.Red)
+                        .layoutTestId("box0")
+                )
+                Box(
+                    modifier = Modifier
+                        .background(Color.Blue)
+                        .layoutTestId("box1")
+                )
             }
         }
         rule.waitForIdle()

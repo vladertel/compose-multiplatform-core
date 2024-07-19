@@ -31,8 +31,7 @@ class PojoProcessorTargetMethodTest {
     companion object {
         val MY_POJO = XClassName.get("foo.bar", "MyPojo")
         val AUTOVALUE_MY_POJO = XClassName.get("foo.bar", "AutoValue_MyPojo")
-        const val HEADER =
-            """
+        const val HEADER = """
             package foo.bar;
 
             import androidx.room.*;
@@ -42,8 +41,7 @@ class PojoProcessorTargetMethodTest {
             @AutoValue
             public abstract class MyPojo {
             """
-        const val AUTO_VALUE_HEADER =
-            """
+        const val AUTO_VALUE_HEADER = """
             package foo.bar;
 
             import androidx.room.*;
@@ -57,10 +55,9 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun invalidAnnotationInMethod() {
-        val source =
-            Source.java(
-                MY_POJO.canonicalName,
-                """
+        val source = Source.java(
+            MY_POJO.canonicalName,
+            """
             package foo.bar;
 
             import androidx.room.*;
@@ -70,7 +67,7 @@ class PojoProcessorTargetMethodTest {
                 void someRandomMethod() { }
             }
             """
-            )
+        )
         singleRun(source) { invocation ->
             invocation.assertCompilationResult {
                 hasErrorContaining(
@@ -85,10 +82,9 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun invalidAnnotationInStaticMethod() {
-        val source =
-            Source.java(
-                MY_POJO.canonicalName,
-                """
+        val source = Source.java(
+            MY_POJO.canonicalName,
+            """
             package foo.bar;
 
             import androidx.room.*;
@@ -98,7 +94,7 @@ class PojoProcessorTargetMethodTest {
                 static void someRandomMethod() { }
             }
             """
-            )
+        )
         singleRun(source) { invocation ->
             invocation.assertCompilationResult {
                 hasErrorContaining(
@@ -113,10 +109,9 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun invalidAnnotationInAbstractMethod() {
-        val source =
-            Source.java(
-                MY_POJO.canonicalName,
-                """
+        val source = Source.java(
+            MY_POJO.canonicalName,
+            """
             package foo.bar;
 
             import androidx.room.*;
@@ -126,7 +121,7 @@ class PojoProcessorTargetMethodTest {
                 abstract void someRandomMethod();
             }
             """
-            )
+        )
         singleRun(source) { invocation ->
             invocation.assertCompilationResult {
                 hasErrorContaining(
@@ -171,8 +166,7 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun invalidAnnotationInAutoValueParentMethod() {
-        val parent =
-            """
+        val parent = """
             package foo.bar;
 
             import androidx.room.*;
@@ -227,10 +221,9 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun validAnnotationInField() {
-        val source =
-            Source.java(
-                MY_POJO.canonicalName,
-                """
+        val source = Source.java(
+            MY_POJO.canonicalName,
+            """
             package foo.bar;
 
             import androidx.room.*;
@@ -240,16 +233,15 @@ class PojoProcessorTargetMethodTest {
                 int someRandomField;
             }
             """
-            )
+        )
         singleRun(source)
     }
 
     @Test
     fun validAnnotationInStaticField() {
-        val source =
-            Source.java(
-                MY_POJO.canonicalName,
-                """
+        val source = Source.java(
+            MY_POJO.canonicalName,
+            """
             package foo.bar;
 
             import androidx.room.*;
@@ -259,7 +251,7 @@ class PojoProcessorTargetMethodTest {
                 static final int SOME_RANDOM_CONSTANT = 42;
             }
             """
-            )
+        )
         singleRun(source)
     }
 
@@ -284,8 +276,7 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun validAnnotationInAutoValueParentMethod() {
-        val parent =
-            """
+        val parent = """
             package foo.bar;
 
             import androidx.room.*;
@@ -329,8 +320,7 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun validAnnotationInAutoValueImplementedInterfaceMethod() {
-        val parent =
-            """
+        val parent = """
             package foo.bar;
 
             import androidx.room.*;
@@ -374,8 +364,7 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun validEmbeddedAnnotationInAutoValueAbstractMethod() {
-        val embeddedPojo =
-            """
+        val embeddedPojo = """
             package foo.bar;
 
             public class EmbeddedPojo {
@@ -416,8 +405,7 @@ class PojoProcessorTargetMethodTest {
 
     @Test
     fun validRelationAnnotationInAutoValueAbstractMethod() {
-        val embeddedPojo =
-            """
+        val embeddedPojo = """
             package foo.bar;
 
             import androidx.room.*;
@@ -460,15 +448,19 @@ class PojoProcessorTargetMethodTest {
         )
     }
 
-    private fun singleRun(vararg sources: Source, handler: ((XTestInvocation) -> Unit)? = null) {
-        runProcessorTest(sources = sources.toList()) { invocation ->
+    private fun singleRun(
+        vararg sources: Source,
+        handler: ((XTestInvocation) -> Unit)? = null
+    ) {
+        runProcessorTest(
+            sources = sources.toList()
+        ) { invocation ->
             PojoProcessor.createFor(
-                    context = invocation.context,
-                    element = invocation.processingEnv.requireTypeElement(MY_POJO),
-                    bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                    parent = null
-                )
-                .process()
+                context = invocation.context,
+                element = invocation.processingEnv.requireTypeElement(MY_POJO),
+                bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
+                parent = null
+            ).process()
             handler?.invoke(invocation)
         }
     }
@@ -480,14 +472,12 @@ class PojoProcessorTargetMethodTest {
         handler: ((XTestInvocation) -> Unit)? = null
     ) {
         singleRunFullClass(
-            pojoCode =
-                """
+            pojoCode = """
                     $HEADER
                     $pojoCode
                     $FOOTER
                     """,
-            autoValuePojoCode =
-                """
+            autoValuePojoCode = """
                     $AUTO_VALUE_HEADER
                     $autoValuePojoCode
                     $FOOTER
@@ -506,14 +496,15 @@ class PojoProcessorTargetMethodTest {
         val pojoSource = Source.java(MY_POJO.canonicalName, pojoCode)
         val autoValuePojoSource = Source.java(AUTOVALUE_MY_POJO.canonicalName, autoValuePojoCode)
         val all = sources.toList() + pojoSource + autoValuePojoSource
-        return runProcessorTest(sources = all) { invocation ->
+        return runProcessorTest(
+            sources = all
+        ) { invocation ->
             PojoProcessor.createFor(
-                    context = invocation.context,
-                    element = invocation.processingEnv.requireTypeElement(MY_POJO),
-                    bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
-                    parent = null
-                )
-                .process()
+                context = invocation.context,
+                element = invocation.processingEnv.requireTypeElement(MY_POJO),
+                bindingScope = FieldProcessor.BindingScope.READ_FROM_CURSOR,
+                parent = null
+            ).process()
             handler?.invoke(invocation)
         }
     }
@@ -523,10 +514,9 @@ class PojoProcessorTargetMethodTest {
      * processor. It only matters for the test assertion
      */
     private val XTestInvocation.functionKindName: String
-        get() =
-            if (this.isKsp) {
-                "function"
-            } else {
-                "method"
-            }
+        get() = if (this.isKsp) {
+            "function"
+        } else {
+            "method"
+        }
 }

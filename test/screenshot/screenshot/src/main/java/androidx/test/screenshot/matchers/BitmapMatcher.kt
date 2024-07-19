@@ -18,7 +18,9 @@ package androidx.test.screenshot.matchers
 
 import android.graphics.Bitmap
 
-/** Interface to implement to provide custom bitmap matchers. */
+/**
+ * Interface to implement to provide custom bitmap matchers.
+ */
 interface BitmapMatcher {
     /**
      * Compares the given bitmaps and returns result of the operation.
@@ -38,8 +40,12 @@ interface BitmapMatcher {
  *
  * @param matches True if bitmaps match.
  * @param comparisonStatistics Matching statistics provided by this matcher that performed the
- *   comparison.
+ * comparison.
  * @param diff Diff bitmap that highlights the differences between the images. Can be null if match
- *   was found.
+ * was found.
  */
-class MatchResult(val matches: Boolean, val comparisonStatistics: String, val diff: Bitmap?)
+class MatchResult(
+    val matches: Boolean,
+    val comparisonStatistics: String,
+    val diff: Bitmap?
+)

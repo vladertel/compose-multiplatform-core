@@ -32,8 +32,7 @@ class CardViewTabLayoutActivity : CardViewActivity() {
 
         tabLayout = findViewById(R.id.tabs)
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-                tab.text = Card.DECK[position].toString()
-            }
-            .attach()
+            tab.text = Card.DECK[position].toString()
+        }.attach()
     }
 }

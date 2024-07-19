@@ -30,11 +30,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ColorsTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     /**
-     * Test for switching between provided [Colors], ensuring that the existing colors objects are
-     * preserved. (b/182635582)
+     * Test for switching between provided [Colors], ensuring that the existing colors objects
+     * are preserved. (b/182635582)
      */
     @Test
     fun switchingBetweenColors() {
@@ -43,7 +44,9 @@ class ColorsTest {
         val colorState = mutableStateOf(lightColors)
         var currentColors: Colors? = null
         rule.setContent {
-            MaterialTheme(colorState.value) { Button(onReadColors = { currentColors = it }) }
+            MaterialTheme(colorState.value) {
+                Button(onReadColors = { currentColors = it })
+            }
         }
 
         rule.runOnIdle {

@@ -20,9 +20,10 @@ import androidx.kruth.Fact.Companion.fact
 import androidx.kruth.Fact.Companion.simpleFact
 import com.google.common.base.Optional
 
-/** Propositions for Guava [Optional] subjects. */
-class GuavaOptionalSubject<T : Any>
-internal constructor(
+/**
+ * Propositions for Guava [Optional] subjects.
+ */
+class GuavaOptionalSubject<T : Any> internal constructor(
     actual: Optional<out T>?,
     metadata: FailureMetadata = FailureMetadata(),
 ) : Subject<Optional<out T>>(actual, metadata = metadata, typeDescriptionOverride = "optional") {
@@ -52,6 +53,7 @@ internal constructor(
      * Fails if the [Optional]`<T>` does not have the given value or the subject is null.
      *
      * To make more complex assertions on the optional's value split your assertion in two:
+     *
      * ```
      * assertThat(myOptional).isPresent()
      * assertThat(myOptional.get()).contains("foo")

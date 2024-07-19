@@ -45,9 +45,7 @@ fun StepperSample() {
         increaseIcon = { Icon(StepperDefaults.Increase, "Increase") },
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         steps = 7
-    ) {
-        Text("Value: $value")
-    }
+    ) { Text("Value: $value") }
 }
 
 @Sampled
@@ -60,9 +58,7 @@ fun StepperWithIntegerSample() {
         increaseIcon = { Icon(StepperDefaults.Increase, "Increase") },
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         valueProgression = 1..10
-    ) {
-        Text("Value: $value")
-    }
+    ) { Text("Value: $value") }
 }
 
 @Sampled
@@ -77,9 +73,7 @@ fun StepperWithoutRangeSemanticsSample() {
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         steps = 7,
         enableRangeSemantics = false
-    ) {
-        Text("Value: $value")
-    }
+    ) { Text("Value: $value") }
 }
 
 @Sampled
@@ -99,9 +93,7 @@ fun StepperWithCustomSemanticsSample() {
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         steps = steps,
         enableRangeSemantics = false
-    ) {
-        Text("Value: $value")
-    }
+    ) { Text("Value: $value") }
 }
 
 // Declaring the custom semantics for StepperWithCustomSemanticsSample
@@ -111,29 +103,27 @@ private fun Modifier.customSemantics(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int
-): Modifier =
-    semantics(mergeDescendants = true) {
-            if (!enabled) disabled()
-            setProgress(
-                action = { targetValue ->
-                    val newStepIndex =
-                        ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start) *
-                                (steps + 1))
-                            .roundToInt()
-                            .coerceIn(0, steps + 1)
+): Modifier = semantics(mergeDescendants = true) {
 
-                    if (value.toInt() == newStepIndex) {
-                        false
-                    } else {
-                        onValueChange(targetValue)
-                        true
-                    }
-                }
-            )
+    if (!enabled) disabled()
+    setProgress(
+        action = { targetValue ->
+            val newStepIndex = ((value - valueRange.start) /
+                (valueRange.endInclusive - valueRange.start) * (steps + 1))
+                .roundToInt().coerceIn(0, steps + 1)
+
+            if (value.toInt() == newStepIndex) {
+                false
+            } else {
+                onValueChange(targetValue)
+                true
+            }
         }
-        .progressSemantics(
-            lerp(valueRange.start, valueRange.endInclusive, value / (steps + 1).toFloat())
-                .coerceIn(valueRange),
-            valueRange,
-            steps
-        )
+    )
+}.progressSemantics(
+    lerp(
+        valueRange.start, valueRange.endInclusive,
+        value / (steps + 1).toFloat()
+    ).coerceIn(valueRange),
+    valueRange, steps
+)

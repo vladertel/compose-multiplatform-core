@@ -27,9 +27,12 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.imagecapture.RgbaImageProxy
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 
-/** A image effect that applies the same tone mapping as [ToneMappingSurfaceProcessor]. */
-class ToneMappingImageEffect :
-    CameraEffect(IMAGE_CAPTURE, mainThreadExecutor(), ToneMappingImageProcessor(), {}) {
+/**
+ * A image effect that applies the same tone mapping as [ToneMappingSurfaceProcessor].
+ */
+class ToneMappingImageEffect : CameraEffect(
+    IMAGE_CAPTURE, mainThreadExecutor(), ToneMappingImageProcessor(), {}
+) {
 
     fun isInvoked(): Boolean {
         return (imageProcessor as ToneMappingImageProcessor).processoed
@@ -49,7 +52,9 @@ class ToneMappingImageEffect :
             return Response { outputImage }
         }
 
-        /** Creates output image */
+        /**
+         * Creates output image
+         */
         private fun createOutputImage(newBitmap: Bitmap, imageIn: ImageProxy): ImageProxy {
             return RgbaImageProxy(
                 newBitmap,
@@ -60,34 +65,19 @@ class ToneMappingImageEffect :
             )
         }
 
-        /** Applies the same color matrix as [ToneMappingSurfaceProcessor]. */
+        /**
+         * Applies the same color matrix as [ToneMappingSurfaceProcessor].
+         */
         private fun applyToneMapping(bitmap: Bitmap) {
             val paint = Paint()
-            paint.colorFilter =
-                ColorMatrixColorFilter(
-                    floatArrayOf(
-                        0.5F,
-                        0.8F,
-                        0.3F,
-                        0F,
-                        0F,
-                        0.4F,
-                        0.7F,
-                        0.2F,
-                        0F,
-                        0F,
-                        0.3F,
-                        0.5F,
-                        0.1F,
-                        0F,
-                        0F,
-                        0F,
-                        0F,
-                        0F,
-                        1F,
-                        0F,
-                    )
+            paint.colorFilter = ColorMatrixColorFilter(
+                floatArrayOf(
+                    0.5F, 0.8F, 0.3F, 0F, 0F,
+                    0.4F, 0.7F, 0.2F, 0F, 0F,
+                    0.3F, 0.5F, 0.1F, 0F, 0F,
+                    0F, 0F, 0F, 1F, 0F,
                 )
+            )
             val canvas = Canvas(bitmap)
             canvas.drawBitmap(bitmap, 0F, 0F, paint)
         }

@@ -20,7 +20,6 @@ import android.os.Build
 import android.util.Size
 import androidx.camera.camera2.pipe.OutputId
 import androidx.camera.camera2.pipe.StreamFormat
-import androidx.camera.camera2.pipe.StreamId
 import androidx.camera.camera2.pipe.testing.FakeImage
 import androidx.camera.camera2.pipe.testing.FakeImageReader
 import com.google.common.truth.Truth.assertThat
@@ -34,18 +33,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class ImageSourceTest {
-    private val streamId = StreamId(32)
-    private val outputId = OutputId(42)
+    private val outputStream = OutputId(42)
     private val fakeImageSize = Size(640, 480)
     private val fakeImageFormat = StreamFormat.YUV_420_888
-    private val fakeImageReader =
-        FakeImageReader.create(
-            format = fakeImageFormat,
-            streamId = streamId,
-            outputId = outputId,
-            size = fakeImageSize,
-            capacity = 10
-        )
+    private val fakeImageReader = FakeImageReader.create(
+        format = fakeImageFormat,
+        outputId = outputStream,
+        size = fakeImageSize,
+        capacity = 10
+    )
 
     private val imageSource = ImageSource.create(fakeImageReader)
 
@@ -57,11 +53,11 @@ class ImageSourceTest {
     @Test
     fun testImageSourceForwardsImagesFromImageReader() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
-        fakeImageReader.simulateImage(outputId, 12345)
+        imageSource.setImageSourceListener(testListener)
+        fakeImageReader.simulateImage(outputStream, 12345)
 
         assertThat(testListener.onImageEvents.size).isEqualTo(1)
-        assertThat(testListener.onImageEvents[0].outputId).isEqualTo(outputId)
+        assertThat(testListener.onImageEvents[0].outputId).isEqualTo(outputStream)
         assertThat(testListener.onImageEvents[0].outputTimestamp).isEqualTo(12345)
         assertThat(testListener.onImageEvents[0].image).isNotNull()
     }
@@ -69,48 +65,52 @@ class ImageSourceTest {
     @Test
     fun testImageSourceForwardsEmptyImagesAfterReachingCapacity() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
+        imageSource.setImageSourceListener(testListener)
 
         for (i in 0..99) {
-            fakeImageReader.simulateImage(outputId, 12345 + (i * 10000L))
+            fakeImageReader.simulateImage(outputStream, 12345 + (i * 10000L))
         }
 
         assertThat(testListener.onImageEvents.size).isEqualTo(100)
         // Spot check 11th index
-        assertThat(testListener.onImageEvents[10].outputId).isEqualTo(outputId)
+        assertThat(testListener.onImageEvents[10].outputId).isEqualTo(outputStream)
         assertThat(testListener.onImageEvents[10].image).isNull()
 
         // Spot check last index
-        assertThat(testListener.onImageEvents[99].outputId).isEqualTo(outputId)
+        assertThat(testListener.onImageEvents[99].outputId).isEqualTo(outputStream)
         assertThat(testListener.onImageEvents[99].image).isNull()
     }
 
     @Test
     fun closingImagesAllowsAllImagesToBeProduced() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
+        imageSource.setImageSourceListener(testListener)
 
         for (i in 0..99) {
-            fakeImageReader.simulateImage(outputId, 12345 + (i * 10000L))
+            fakeImageReader.simulateImage(outputStream, 12345 + (i * 10000L))
             testListener.onImageEvents.last().image!!.close()
         }
 
         assertThat(testListener.onImageEvents.size).isEqualTo(100)
         // Spot check 11th index
-        assertThat(testListener.onImageEvents[10].outputId).isEqualTo(outputId)
+        assertThat(testListener.onImageEvents[10].outputId).isEqualTo(outputStream)
         assertThat(testListener.onImageEvents[10].image).isNotNull()
 
         // Spot check last index
-        assertThat(testListener.onImageEvents[99].outputId).isEqualTo(outputId)
+        assertThat(testListener.onImageEvents[99].outputId).isEqualTo(outputStream)
         assertThat(testListener.onImageEvents[99].image).isNotNull()
     }
 
     @Test
     fun imagesWithoutAListenerAreClosed() {
-        val image =
-            FakeImage(fakeImageSize.width, fakeImageSize.height, fakeImageFormat.value, 12345)
+        val image = FakeImage(
+            fakeImageSize.width,
+            fakeImageSize.height,
+            fakeImageFormat.value,
+            12345
+        )
 
-        fakeImageReader.simulateImage(outputId, image)
+        fakeImageReader.simulateImage(outputStream, image)
         assertThat(image.isClosed).isTrue()
     }
 
@@ -123,12 +123,12 @@ class ImageSourceTest {
     @Test
     fun closingImageSourceAfterClosingImagesClosesImageReader() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
+        imageSource.setImageSourceListener(testListener)
 
         // Simulate 3 images.
-        fakeImageReader.simulateImage(outputId, 12345)
-        fakeImageReader.simulateImage(outputId, 12345)
-        fakeImageReader.simulateImage(outputId, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
 
         // Close all the images
         testListener.onImageEvents.forEach { it.image!!.close() }
@@ -143,12 +143,12 @@ class ImageSourceTest {
     @Test
     fun closingImageSourceBeforeClosingImagesClosesImageReader() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
+        imageSource.setImageSourceListener(testListener)
 
         // Simulate 3 images.
-        fakeImageReader.simulateImage(outputId, 12345)
-        fakeImageReader.simulateImage(outputId, 12345)
-        fakeImageReader.simulateImage(outputId, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
+        fakeImageReader.simulateImage(outputStream, 12345)
 
         // Close the image source before closing images.
         imageSource.close()
@@ -166,12 +166,12 @@ class ImageSourceTest {
     @Test
     fun imagesAfterCloseAreClosed() {
         val testListener = TestImageSourceListener()
-        imageSource.setListener(testListener)
+        imageSource.setImageSourceListener(testListener)
 
         // Simulate 3 images.
-        fakeImageReader.simulateImage(outputId, 12345)
-        fakeImageReader.simulateImage(outputId, 12346)
-        fakeImageReader.simulateImage(outputId, 12347)
+        fakeImageReader.simulateImage(outputStream, 12345)
+        fakeImageReader.simulateImage(outputStream, 12346)
+        fakeImageReader.simulateImage(outputStream, 12347)
 
         // Close the image source before closing images.
         imageSource.close()
@@ -180,9 +180,13 @@ class ImageSourceTest {
         assertThat(fakeImageReader.isClosed).isFalse()
 
         // Now simulate the imageReader producing images after the imageSource is closed
-        val fakeImage =
-            FakeImage(fakeImageSize.width, fakeImageSize.height, fakeImageFormat.value, 54321)
-        fakeImageReader.simulateImage(outputId, fakeImage)
+        val fakeImage = FakeImage(
+            fakeImageSize.width,
+            fakeImageSize.height,
+            fakeImageFormat.value,
+            54321
+        )
+        fakeImageReader.simulateImage(outputStream, fakeImage)
         // Image is immediately closed
         assertThat(fakeImage.isClosed)
 
@@ -201,20 +205,14 @@ class ImageSourceTest {
     private class TestImageSourceListener : ImageSourceListener {
         val onImageEvents = mutableListOf<OnImage>()
 
+        override fun onImage(outputId: OutputId, outputTimestamp: Long, image: ImageWrapper?) {
+            onImageEvents.add(OnImage(outputId, outputTimestamp, image))
+        }
+
         data class OnImage(
-            val streamId: StreamId,
             val outputId: OutputId,
             val outputTimestamp: Long,
-            val image: ImageWrapper?,
+            val image: ImageWrapper?
         )
-
-        override fun onImage(
-            streamId: StreamId,
-            outputId: OutputId,
-            outputTimestamp: Long,
-            image: ImageWrapper?
-        ) {
-            onImageEvents.add(OnImage(streamId, outputId, outputTimestamp, image))
-        }
     }
 }

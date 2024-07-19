@@ -27,35 +27,37 @@ import androidx.window.layout.HardwareFoldingFeature
 import androidx.window.layout.HardwareFoldingFeature.Type.Companion.HINGE
 import androidx.window.layout.WindowLayoutInfo
 import androidx.window.layout.adapter.sidecar.ExtensionInterfaceCompat.ExtensionCallbackInterface
+import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * An implementation of [ExtensionInterfaceCompat] that switches the state when a consumer is
- * unregistered. Useful for testing consumers when they go through a cycle of register then
+ * An implementation of [ExtensionInterfaceCompat] that switches the state when a consumer
+ * is unregistered. Useful for testing consumers when they go through a cycle of register then
  * unregister then register again.
  */
 internal class SwitchOnUnregisterExtensionInterfaceCompat : ExtensionInterfaceCompat {
-    private val globalLock = ReentrantLock()
+    private val lock: Lock = ReentrantLock()
     private val foldBounds = Rect(0, 100, 200, 100)
-    @GuardedBy("globalLock")
+    @GuardedBy("mLock")
     private var callback: ExtensionCallbackInterface = EmptyExtensionCallbackInterface()
-    @GuardedBy("globalLock") private var state = FLAT
+    @GuardedBy("mLock")
+    private var state = FLAT
 
     override fun validateExtensionInterface(): Boolean {
         return true
     }
 
     override fun setExtensionCallback(extensionCallback: ExtensionCallbackInterface) {
-        globalLock.withLock { callback = extensionCallback }
+        lock.withLock { callback = extensionCallback }
     }
 
     override fun onWindowLayoutChangeListenerAdded(activity: Activity) {
-        globalLock.withLock { callback.onWindowLayoutChanged(activity, currentWindowLayoutInfo()) }
+        lock.withLock { callback.onWindowLayoutChanged(activity, currentWindowLayoutInfo()) }
     }
 
     override fun onWindowLayoutChangeListenerRemoved(activity: Activity) {
-        globalLock.withLock { state = toggleState(state) }
+        lock.withLock { state = toggleState(state) }
     }
 
     fun currentWindowLayoutInfo(): WindowLayoutInfo {

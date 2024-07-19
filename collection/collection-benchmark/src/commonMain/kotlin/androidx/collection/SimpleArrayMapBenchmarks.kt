@@ -84,27 +84,25 @@ internal class SimpleArrayMapAddAllThenRemoveIndividuallyBenchmark(
 
 internal fun createSourceMap(size: Int, sparse: Boolean): Map<Int, String> {
     return mutableMapOf<Int, String>().apply {
-        val keyFactory: () -> Int =
-            if (sparse) {
-                // Despite the fixed seed, the algorithm which produces random values may vary
-                // across
-                // OS versions. Since we're not doing cross-device comparison this is acceptable.
-                val random = Random(0);
-                {
-                    val value: Int
-                    while (true) {
-                        val candidate = random.nextInt()
-                        if (candidate !in this) {
-                            value = candidate
-                            break
-                        }
+        val keyFactory: () -> Int = if (sparse) {
+            // Despite the fixed seed, the algorithm which produces random values may vary across
+            // OS versions. Since we're not doing cross-device comparison this is acceptable.
+            val random = Random(0);
+            {
+                val value: Int
+                while (true) {
+                    val candidate = random.nextInt()
+                    if (candidate !in this) {
+                        value = candidate
+                        break
                     }
-                    value
                 }
-            } else {
-                var value = 0
-                { value++ }
+                value
             }
+        } else {
+            var value = 0
+            { value++ }
+        }
         repeat(size) {
             val key = keyFactory()
             this.put(key, "value of $key")

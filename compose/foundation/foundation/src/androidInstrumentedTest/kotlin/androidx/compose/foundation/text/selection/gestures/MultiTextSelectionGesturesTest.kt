@@ -62,31 +62,32 @@ internal class MultiTextSelectionGesturesTest : TextSelectionGesturesTest() {
 
     @Before
     fun setupAsserter() {
-        asserter =
-            object :
-                TextSelectionAsserter(
-                    textContent = textContent.value,
-                    rule = rule,
-                    textToolbar = textToolbar,
-                    hapticFeedback = hapticFeedback,
-                    getActual = { selection.value }
-                ) {
-                override fun subAssert() {
-                    Truth.assertAbout(MultiSelectionSubject.withContent(texts.value))
-                        .that(getActual())
-                        .hasSelection(
-                            expected = selection,
-                            startTextDirection = startLayoutDirection,
-                            endTextDirection = endLayoutDirection,
-                        )
-                }
+        asserter = object : TextSelectionAsserter(
+            textContent = textContent.value,
+            rule = rule,
+            textToolbar = textToolbar,
+            hapticFeedback = hapticFeedback,
+            getActual = { selection.value }
+        ) {
+            override fun subAssert() {
+                Truth.assertAbout(MultiSelectionSubject.withContent(texts.value))
+                    .that(getActual())
+                    .hasSelection(
+                        expected = selection,
+                        startTextDirection = startLayoutDirection,
+                        endTextDirection = endLayoutDirection,
+                    )
             }
+        }
     }
 
     @Composable
     override fun TextContent() {
         texts = derivedStateOf {
-            textContent.value.split("\n").withIndex().map { (index, str) -> str to "testTag$index" }
+            textContent.value
+                .split("\n")
+                .withIndex()
+                .map { (index, str) -> str to "testTag$index" }
         }
 
         textContentIndices = derivedStateOf { texts.value.textContentIndices() }
@@ -95,12 +96,13 @@ internal class MultiTextSelectionGesturesTest : TextSelectionGesturesTest() {
             texts.value.fastForEach { (str, tag) ->
                 BasicText(
                     text = str,
-                    style =
-                        TextStyle(
-                            fontFamily = fontFamily,
-                            fontSize = fontSize,
-                        ),
-                    modifier = Modifier.fillMaxWidth().testTag(tag),
+                    style = TextStyle(
+                        fontFamily = fontFamily,
+                        fontSize = fontSize,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(tag),
                 )
             }
         }
@@ -114,8 +116,7 @@ internal class MultiTextSelectionGesturesTest : TextSelectionGesturesTest() {
             rule.onNodeWithTag(pointerAreaTag).fetchSemanticsNode().positionInRoot
         val nodePosition = rule.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot
         val textLayoutResult = rule.onNodeWithTag(tag).fetchTextLayoutResult()
-        return textLayoutResult
-            .getBoundingBox(localOffset)
+        return textLayoutResult.getBoundingBox(localOffset)
             .translate(nodePosition - pointerAreaPosition)
             .centerLeft
             .nudge(HorizontalDirection.END)
@@ -128,13 +129,19 @@ internal class MultiTextSelectionGesturesTest : TextSelectionGesturesTest() {
             press()
         }
 
-        asserter.applyAndAssert { selection = 23.collapsed }
+        asserter.applyAndAssert {
+            selection = 23.collapsed
+        }
 
         mouseDragTo(characterPosition(offset = 24))
 
-        asserter.applyAndAssert { selection = 23 to 24 }
+        asserter.applyAndAssert {
+            selection = 23 to 24
+        }
 
-        performTouchGesture { enterTouchMode() }
+        performTouchGesture {
+            enterTouchMode()
+        }
 
         asserter.applyAndAssert {
             selectionHandlesShown = true

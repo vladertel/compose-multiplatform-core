@@ -39,7 +39,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 class TextFieldUndoTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun undo_redo_withCtrlShiftZ() {
@@ -55,7 +56,10 @@ class TextFieldUndoTest {
     private fun undoRedoTest(redoKeys: List<Key>) {
         val state = mutableStateOf("hi")
         rule.setContent {
-            BasicTextField(value = state.value, onValueChange = { state.value = it })
+            BasicTextField(
+                value = state.value,
+                onValueChange = { state.value = it }
+            )
         }
 
         state.value = "hello"
@@ -63,10 +67,16 @@ class TextFieldUndoTest {
         // undo command
         with(rule.onNode(hasSetTextAction())) {
             requestFocus()
-            performKeyInput { withKeyDown(Key.CtrlLeft) { pressKey(Key.Z) } }
+            performKeyInput {
+                withKeyDown(Key.CtrlLeft) {
+                    pressKey(Key.Z)
+                }
+            }
         }
 
-        rule.runOnIdle { assertThat(state.value).isEqualTo("hi") }
+        rule.runOnIdle {
+            assertThat(state.value).isEqualTo("hi")
+        }
 
         // redo command
         rule.onNode(hasSetTextAction()).performKeyInput {
@@ -75,6 +85,8 @@ class TextFieldUndoTest {
             redoKeys.forEach { keyUp(it) }
         }
 
-        rule.runOnIdle { assertThat(state.value).isEqualTo("hello") }
+        rule.runOnIdle {
+            assertThat(state.value).isEqualTo("hello")
+        }
     }
 }

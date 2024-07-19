@@ -39,16 +39,18 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 private class NoDefaultConstructorFragmentFactory(val arg: String) : FragmentFactory() {
-    override fun instantiate(classLoader: ClassLoader, className: String) =
-        when (className) {
-            NoDefaultConstructorFragment::class.java.name -> NoDefaultConstructorFragment(arg)
-            else -> super.instantiate(classLoader, className)
-        }
+    override fun instantiate(
+        classLoader: ClassLoader,
+        className: String
+    ) = when (className) {
+        NoDefaultConstructorFragment::class.java.name -> NoDefaultConstructorFragment(arg)
+        else -> super.instantiate(classLoader, className)
+    }
 }
 
 /**
- * Tests for FragmentScenario's implementation. Verifies FragmentScenario API works consistently
- * across different Android framework versions.
+ * Tests for FragmentScenario's implementation.
+ * Verifies FragmentScenario API works consistently across different Android framework versions.
  */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -71,7 +73,8 @@ class FragmentScenarioTest {
         val args = Bundle().apply { putString("my_arg_is", "androidx") }
         with(launchFragment<StateRecordingFragment>(args)) {
             onFragment { fragment ->
-                assertThat(fragment.requireArguments().getString("my_arg_is")).isEqualTo("androidx")
+                assertThat(fragment.requireArguments().getString("my_arg_is"))
+                    .isEqualTo("androidx")
                 // FragmentScenario#launch doesn't attach view to the hierarchy.
                 // To test graphical Fragment, use FragmentScenario#launchInContainer.
                 assertThat(fragment.isViewAttachedToWindow).isFalse()
@@ -107,7 +110,8 @@ class FragmentScenarioTest {
         val args = Bundle().apply { putString("my_arg_is", "androidx") }
         with(launchFragmentInContainer<StateRecordingFragment>(args)) {
             onFragment { fragment ->
-                assertThat(fragment.requireArguments().getString("my_arg_is")).isEqualTo("androidx")
+                assertThat(fragment.requireArguments().getString("my_arg_is"))
+                    .isEqualTo("androidx")
                 assertThat(fragment.isViewAttachedToWindow).isTrue()
                 assertThat(fragment.numberOfRecreations).isEqualTo(0)
             }
@@ -208,7 +212,7 @@ class FragmentScenarioTest {
                             if (event == Lifecycle.Event.ON_START) {
                                 tagSetBeforeOnStart =
                                     fragment.requireView().getTag(view_tag_id) ==
-                                        "fakeNavController"
+                                    "fakeNavController"
                             }
                         }
                     )
@@ -240,8 +244,7 @@ class FragmentScenarioTest {
                     throw IllegalStateException("Throwing an exception within withFragment")
                 }
             } catch (e: IllegalStateException) {
-                assertThat(e)
-                    .hasMessageThat()
+                assertThat(e).hasMessageThat()
                     .isEqualTo("Throwing an exception within withFragment")
             }
         }
@@ -282,7 +285,9 @@ class FragmentScenarioTest {
 
     @Test
     fun fromResumedToDestroyed() {
-        with(launchFragmentInContainer<StateRecordingFragment>()) { moveToState(State.DESTROYED) }
+        with(launchFragmentInContainer<StateRecordingFragment>()) {
+            moveToState(State.DESTROYED)
+        }
     }
 
     @Test
@@ -292,7 +297,9 @@ class FragmentScenarioTest {
         } catch (e: IllegalArgumentException) {
             assertThat(e)
                 .hasMessageThat()
-                .contains("Cannot set initial Lifecycle state to DESTROYED for FragmentScenario")
+                .contains(
+                    "Cannot set initial Lifecycle state to DESTROYED for FragmentScenario"
+                )
         }
     }
 

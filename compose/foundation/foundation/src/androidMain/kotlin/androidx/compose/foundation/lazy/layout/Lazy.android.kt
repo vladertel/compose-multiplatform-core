@@ -39,7 +39,8 @@ private data class DefaultLazyKey(private val index: Int) : Parcelable {
         @JvmField
         val CREATOR: Parcelable.Creator<DefaultLazyKey> =
             object : Parcelable.Creator<DefaultLazyKey> {
-                override fun createFromParcel(parcel: Parcel) = DefaultLazyKey(parcel.readInt())
+                override fun createFromParcel(parcel: Parcel) =
+                    DefaultLazyKey(parcel.readInt())
 
                 override fun newArray(size: Int) = arrayOfNulls<DefaultLazyKey?>(size)
             }

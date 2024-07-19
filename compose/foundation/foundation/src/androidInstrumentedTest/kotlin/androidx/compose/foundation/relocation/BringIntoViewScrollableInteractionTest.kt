@@ -16,6 +16,8 @@
 
 package androidx.compose.foundation.relocation
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.ScrollingLayoutElement
@@ -79,14 +81,16 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class BringIntoViewScrollableInteractionTest(private val orientation: Orientation) {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val parentBox = "parent box"
     private val childBox = "child box"
 
     /**
-     * Captures a scope from inside the composition for [runBlockingAndAwaitIdle]. Make sure to call
-     * [setContentAndInitialize] instead of calling `rule.setContent` to initialize this.
+     * Captures a scope from inside the composition for [runBlockingAndAwaitIdle].
+     * Make sure to call [setContentAndInitialize] instead of calling `rule.setContent` to
+     * initialize this.
      */
     private lateinit var testScope: CoroutineScope
 
@@ -102,7 +106,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.then(
+                Modifier
+                    .then(
                         when (orientation) {
                             Horizontal -> Modifier.size(100.toDp(), 50.toDp())
                             Vertical -> Modifier.size(50.toDp(), 100.toDp())
@@ -112,7 +117,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     .background(LightGray)
             ) {
                 Box(
-                    Modifier.size(50.toDp())
+                    Modifier
+                        .size(50.toDp())
                         .background(Blue)
                         .bringIntoViewRequester(bringIntoViewRequester)
                         .testTag(childBox)
@@ -135,7 +141,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.then(
+                Modifier
+                    .then(
                         when (orientation) {
                             Horizontal -> Modifier.size(100.toDp(), 50.toDp())
                             Vertical -> Modifier.size(50.toDp(), 100.toDp())
@@ -145,7 +152,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     .background(LightGray)
             ) {
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.offset(x = 150.toDp())
                                 Vertical -> Modifier.offset(y = 150.toDp())
@@ -174,21 +182,26 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp())
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
                                     .horizontalScroll(rememberScrollState())
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp())
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
                                     .verticalScroll(rememberScrollState())
                         }
                     )
             ) {
                 Box(
-                    Modifier.size(50.toDp())
+                    Modifier
+                        .size(50.toDp())
                         .background(Blue)
                         .bringIntoViewRequester(bringIntoViewRequester)
                         .testTag(childBox)
@@ -211,21 +224,26 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp())
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
                                     .horizontalScroll(rememberScrollState())
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp())
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
                                     .verticalScroll(rememberScrollState())
                         }
                     )
             ) {
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.offset(x = 50.toDp())
                                 Vertical -> Modifier.offset(y = 50.toDp())
@@ -254,21 +272,26 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp())
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
                                     .horizontalScroll(rememberScrollState())
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp())
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
                                     .verticalScroll(rememberScrollState())
                         }
                     )
             ) {
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.offset(x = 25.toDp())
                                 Vertical -> Modifier.offset(y = 25.toDp())
@@ -297,7 +320,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequester = BringIntoViewRequester()
         setContentAndInitialize {
             Box(
-                Modifier.size(50.toDp())
+                Modifier
+                    .size(50.toDp())
                     .testTag(parentBox)
                     .background(LightGray)
                     .then(
@@ -310,11 +334,25 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                 // Using a multi-colored item to make sure we can assert that the right part of
                 // the item is visible.
                 RowOrColumn(
-                    Modifier.bringIntoViewRequester(bringIntoViewRequester).testTag(childBox)
+                    Modifier
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .testTag(childBox)
                 ) {
-                    Box(Modifier.size(50.toDp()).background(Blue))
-                    Box(Modifier.size(50.toDp()).background(Green))
-                    Box(Modifier.size(50.toDp()).background(Red))
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Blue)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Green)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Red)
+                    )
                 }
             }
         }
@@ -336,7 +374,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.size(50.toDp())
+                Modifier
+                    .size(50.toDp())
                     .testTag(parentBox)
                     .background(LightGray)
                     .then(
@@ -349,11 +388,25 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                 // Using a multi-colored item to make sure we can assert that the right part of
                 // the item is visible.
                 RowOrColumn(
-                    Modifier.bringIntoViewRequester(bringIntoViewRequester).testTag(childBox)
+                    Modifier
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .testTag(childBox)
                 ) {
-                    Box(Modifier.size(50.toDp()).background(Red))
-                    Box(Modifier.size(50.toDp()).background(Green))
-                    Box(Modifier.size(50.toDp()).background(Blue))
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Red)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Green)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Blue)
+                    )
                 }
             }
         }
@@ -376,7 +429,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.size(50.toDp())
+                Modifier
+                    .size(50.toDp())
                     .testTag(parentBox)
                     .background(LightGray)
                     .then(
@@ -389,11 +443,25 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                 // Using a multi-colored item to make sure we can assert that the right part of
                 // the item is visible.
                 RowOrColumn(
-                    Modifier.bringIntoViewRequester(bringIntoViewRequester).testTag(childBox)
+                    Modifier
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .testTag(childBox)
                 ) {
-                    Box(Modifier.size(50.toDp()).background(Green))
-                    Box(Modifier.size(50.toDp()).background(Blue))
-                    Box(Modifier.size(50.toDp()).background(Red))
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Green)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Blue)
+                    )
+                    Box(
+                        Modifier
+                            .size(50.toDp())
+                            .background(Red)
+                    )
                 }
             }
         }
@@ -416,14 +484,20 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp()).horizontalScroll(scrollState)
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
+                                    .horizontalScroll(scrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp()).verticalScroll(scrollState)
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
+                                    .verticalScroll(scrollState)
                         }
                     )
             ) {
@@ -434,7 +508,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     }
                 ) {
                     Box(
-                        Modifier.then(
+                        Modifier
+                            .then(
                                 when (orientation) {
                                     Horizontal -> Modifier.offset(x = 50.toDp())
                                     Vertical -> Modifier.offset(y = 50.toDp())
@@ -466,14 +541,20 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp()).horizontalScroll(scrollState)
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
+                                    .horizontalScroll(scrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp()).verticalScroll(scrollState)
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
+                                    .verticalScroll(scrollState)
                         }
                     )
             ) {
@@ -484,7 +565,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     }
                 ) {
                     Box(
-                        Modifier.then(
+                        Modifier
+                            .then(
                                 when (orientation) {
                                     Horizontal -> Modifier.offset(x = 150.toDp())
                                     Vertical -> Modifier.offset(y = 150.toDp())
@@ -504,12 +586,10 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         runBlockingAndAwaitIdle { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule
-            .onNodeWithTag(childBox)
-            .assertPositionInRootIsEqualTo(
-                expectedLeft = if (orientation == Horizontal) 50.toDp() else 0.toDp(),
-                expectedTop = if (orientation == Horizontal) 0.toDp() else 50.toDp()
-            )
+        rule.onNodeWithTag(childBox).assertPositionInRootIsEqualTo(
+            expectedLeft = if (orientation == Horizontal) 50.toDp() else 0.toDp(),
+            expectedTop = if (orientation == Horizontal) 0.toDp() else 50.toDp()
+        )
         assertChildMaxInView()
     }
 
@@ -521,20 +601,27 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp()).horizontalScroll(scrollState)
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
+                                    .horizontalScroll(scrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp()).verticalScroll(scrollState)
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
+                                    .verticalScroll(scrollState)
                         }
                     )
             ) {
                 Box(Modifier.size(200.toDp())) {
                     Box(
-                        Modifier.then(
+                        Modifier
+                            .then(
                                 when (orientation) {
                                     Horizontal -> Modifier.offset(x = 25.toDp())
                                     Vertical -> Modifier.offset(y = 25.toDp())
@@ -566,14 +653,20 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             scrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp()).horizontalScroll(scrollState)
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
+                                    .horizontalScroll(scrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp()).verticalScroll(scrollState)
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
+                                    .verticalScroll(scrollState)
                         }
                     )
             ) {
@@ -584,7 +677,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     }
                 ) {
                     Box(
-                        Modifier.then(
+                        Modifier
+                            .then(
                                 when (orientation) {
                                     Horizontal -> Modifier.offset(x = 150.toDp())
                                     Vertical -> Modifier.offset(y = 150.toDp())
@@ -604,12 +698,10 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         runBlockingAndAwaitIdle { bringIntoViewRequester.bringIntoView() }
 
         // Assert.
-        rule
-            .onNodeWithTag(childBox)
-            .assertPositionInRootIsEqualTo(
-                expectedLeft = if (orientation == Horizontal) 50.toDp() else 0.toDp(),
-                expectedTop = if (orientation == Horizontal) 0.toDp() else 50.toDp()
-            )
+        rule.onNodeWithTag(childBox).assertPositionInRootIsEqualTo(
+            expectedLeft = if (orientation == Horizontal) 50.toDp() else 0.toDp(),
+            expectedTop = if (orientation == Horizontal) 0.toDp() else 50.toDp()
+        )
         assertChildMaxInView()
     }
 
@@ -623,28 +715,36 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             parentScrollState = rememberScrollState()
             grandParentScrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp())
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
                                     .horizontalScroll(grandParentScrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp())
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
                                     .verticalScroll(grandParentScrollState)
                         }
                     )
             ) {
                 Box(
-                    Modifier.background(LightGray)
+                    Modifier
+                        .background(LightGray)
                         .then(
                             when (orientation) {
                                 Horizontal ->
-                                    Modifier.size(200.toDp(), 50.toDp())
+                                    Modifier
+                                        .size(200.toDp(), 50.toDp())
                                         .horizontalScroll(parentScrollState)
+
                                 Vertical ->
-                                    Modifier.size(50.toDp(), 200.toDp())
+                                    Modifier
+                                        .size(50.toDp(), 200.toDp())
                                         .verticalScroll(parentScrollState)
                             }
                         )
@@ -656,7 +756,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                         }
                     ) {
                         Box(
-                            Modifier.then(
+                            Modifier
+                                .then(
                                     when (orientation) {
                                         Horizontal -> Modifier.offset(x = 25.toDp())
                                         Vertical -> Modifier.offset(y = 25.toDp())
@@ -692,21 +793,26 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             parentScrollState = rememberScrollState()
             grandParentScrollState = rememberScrollState()
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .background(LightGray)
                     .then(
                         when (orientation) {
                             Horizontal ->
-                                Modifier.size(100.toDp(), 50.toDp())
+                                Modifier
+                                    .size(100.toDp(), 50.toDp())
                                     .verticalScroll(grandParentScrollState)
+
                             Vertical ->
-                                Modifier.size(50.toDp(), 100.toDp())
+                                Modifier
+                                    .size(50.toDp(), 100.toDp())
                                     .horizontalScroll(grandParentScrollState)
                         }
                     )
             ) {
                 Box(
-                    Modifier.size(100.toDp())
+                    Modifier
+                        .size(100.toDp())
                         .background(LightGray)
                         .then(
                             when (orientation) {
@@ -717,7 +823,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                 ) {
                     Box(Modifier.size(200.toDp())) {
                         Box(
-                            Modifier.offset(x = 25.toDp(), y = 25.toDp())
+                            Modifier
+                                .offset(x = 25.toDp(), y = 25.toDp())
                                 .size(50.toDp())
                                 .background(Blue)
                                 .bringIntoViewRequester(bringIntoViewRequester)
@@ -746,7 +853,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         setContentAndInitialize {
             density = LocalDensity.current
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .size(50.toDp())
                     .background(LightGray)
                     .then(
@@ -757,7 +865,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                     )
             ) {
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.size(150.toDp(), 50.toDp())
                                 Vertical -> Modifier.size(50.toDp(), 150.toDp())
@@ -766,7 +875,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                         .bringIntoViewRequester(bringIntoViewRequester)
                 ) {
                     Box(
-                        Modifier.size(50.toDp())
+                        Modifier
+                            .size(50.toDp())
                             .then(
                                 when (orientation) {
                                     Horizontal -> Modifier.offset(50.toDp(), 0.toDp())
@@ -782,13 +892,12 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
 
         // Act.
         runBlockingAndAwaitIdle {
-            val rect =
-                with(density) {
-                    when (orientation) {
-                        Horizontal -> DpRect(50.toDp(), 0.toDp(), 100.toDp(), 50.toDp()).toRect()
-                        Vertical -> DpRect(0.toDp(), 50.toDp(), 50.toDp(), 100.toDp()).toRect()
-                    }
+            val rect = with(density) {
+                when (orientation) {
+                    Horizontal -> DpRect(50.toDp(), 0.toDp(), 100.toDp(), 50.toDp()).toRect()
+                    Vertical -> DpRect(0.toDp(), 50.toDp(), 50.toDp(), 100.toDp()).toRect()
                 }
+            }
             bringIntoViewRequester.bringIntoView(rect)
         }
 
@@ -801,25 +910,24 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
     @Test
     fun doesNotCrashWhenCoordinatesDetachedDuringOperation() {
         val requests = mutableListOf<() -> Rect?>()
-        val responder =
-            object : BringIntoViewResponder {
-                override fun calculateRectForParent(localRect: Rect): Rect = localRect
+        val responder = object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect = localRect
 
-                override suspend fun bringChildIntoView(localRect: () -> Rect?) {
-                    requests += localRect
-                }
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) {
+                requests += localRect
             }
+        }
         val requester = BringIntoViewRequester()
         var coordinates: LayoutCoordinates? = null
         var attach by mutableStateOf(true)
         setContentAndInitialize {
             if (attach) {
                 Box(
-                    modifier =
-                        Modifier.bringIntoViewResponder(responder)
-                            .bringIntoViewRequester(requester)
-                            .onPlaced { coordinates = it }
-                            .size(10.toDp())
+                    modifier = Modifier
+                        .bringIntoViewResponder(responder)
+                        .bringIntoViewRequester(requester)
+                        .onPlaced { coordinates = it }
+                        .size(10.toDp())
                 )
 
                 LaunchedEffect(Unit) {
@@ -854,7 +962,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val completedRequests = mutableListOf<BringIntoViewRequester>()
         setContentAndInitialize {
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .size(100.toDp())
                     .background(LightGray)
                     .then(
@@ -866,7 +975,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             ) {
                 // Nested boxes each with their own requester.
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.padding(start = 100.toDp())
                                 Vertical -> Modifier.padding(top = 100.toDp())
@@ -877,13 +987,15 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                         .bringIntoViewRequester(childA)
                 ) {
                     Box(
-                        Modifier.align(Alignment.TopStart)
+                        Modifier
+                            .align(Alignment.TopStart)
                             .size(50.toDp())
                             .background(Green.copy(alpha = 0.25f))
                             .bringIntoViewRequester(childB)
                     ) {
                         Box(
-                            Modifier.align(Alignment.TopStart)
+                            Modifier
+                                .align(Alignment.TopStart)
                                 .size(25.toDp())
                                 .background(Green.copy(alpha = 0.25f))
                                 .bringIntoViewRequester(childC)
@@ -906,9 +1018,9 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         // Assert.
         // The innermost request will be the first one to fully come into view, so it should
         // complete first, and the outermost one should complete last.
-        assertThat(completedRequests)
-            .containsExactlyElementsIn(listOf(childC, childB, childA))
-            .inOrder()
+        assertThat(completedRequests).containsExactlyElementsIn(
+            listOf(childC, childB, childA)
+        ).inOrder()
     }
 
     @Test
@@ -920,7 +1032,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val completedRequests = mutableListOf<BringIntoViewRequester>()
         setContentAndInitialize {
             Box(
-                Modifier.testTag(parentBox)
+                Modifier
+                    .testTag(parentBox)
                     .size(100.toDp())
                     .background(LightGray)
                     .then(
@@ -932,7 +1045,8 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             ) {
                 // Nested boxes each with their own requester.
                 Box(
-                    Modifier.then(
+                    Modifier
+                        .then(
                             when (orientation) {
                                 Horizontal -> Modifier.padding(start = 100.toDp())
                                 Vertical -> Modifier.padding(top = 100.toDp())
@@ -943,13 +1057,15 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
                         .bringIntoViewRequester(childA)
                 ) {
                     Box(
-                        Modifier.align(Alignment.TopStart)
+                        Modifier
+                            .align(Alignment.TopStart)
                             .size(50.toDp())
                             .background(Green.copy(alpha = 0.25f))
                             .bringIntoViewRequester(childB)
                     ) {
                         Box(
-                            Modifier.align(Alignment.TopStart)
+                            Modifier
+                                .align(Alignment.TopStart)
                                 .size(25.toDp())
                                 .background(Green.copy(alpha = 0.25f))
                                 .bringIntoViewRequester(childC)
@@ -972,9 +1088,9 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         // Assert.
         // The innermost request will be the first one to fully come into view, so it should
         // complete first, and the outermost one should complete last.
-        assertThat(completedRequests)
-            .containsExactlyElementsIn(listOf(childC, childB, childA))
-            .inOrder()
+        assertThat(completedRequests).containsExactlyElementsIn(
+            listOf(childC, childB, childA)
+        ).inOrder()
     }
 
     @Test
@@ -988,12 +1104,15 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             expectedChildSize = 10.dp // child is visible
         ) {
             Box(
-                modifier =
-                    Modifier.size(10.dp)
-                        .onPlaced { bringIntoViewItemCoordinates.value = it }
-                        .bringIntoViewRequester(bringIntoViewRequester)
+                modifier = Modifier
+                    .size(10.dp)
+                    .onPlaced { bringIntoViewItemCoordinates.value = it }
+                    .bringIntoViewRequester(bringIntoViewRequester)
             )
-            Box(modifier = Modifier.size(100.dp))
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+            )
         }
     }
 
@@ -1007,14 +1126,20 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             childCoordinates = bringIntoViewItemCoordinates,
             expectedChildSize = 10.dp // child is visible
         ) {
-            Box(modifier = Modifier.size(100.dp))
             Box(
-                modifier =
-                    Modifier.size(10.dp)
-                        .onPlaced { bringIntoViewItemCoordinates.value = it }
-                        .bringIntoViewRequester(bringIntoViewRequester)
+                modifier = Modifier
+                    .size(100.dp)
             )
-            Box(modifier = Modifier.size(100.dp))
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .onPlaced { bringIntoViewItemCoordinates.value = it }
+                    .bringIntoViewRequester(bringIntoViewRequester)
+            )
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+            )
         }
     }
 
@@ -1028,12 +1153,15 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             childCoordinates = bringIntoViewItemCoordinates,
             expectedChildSize = 10.dp // child is part visible
         ) {
-            Box(modifier = Modifier.size(195.dp))
             Box(
-                modifier =
-                    Modifier.size(10.dp)
-                        .onPlaced { bringIntoViewItemCoordinates.value = it }
-                        .bringIntoViewRequester(bringIntoViewRequester)
+                modifier = Modifier
+                    .size(195.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .onPlaced { bringIntoViewItemCoordinates.value = it }
+                    .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
     }
@@ -1048,12 +1176,15 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
             childCoordinates = bringIntoViewItemCoordinates,
             expectedChildSize = 10.dp // child is not visible
         ) {
-            Box(modifier = Modifier.size(205.dp))
             Box(
-                modifier =
-                    Modifier.size(10.dp)
-                        .onPlaced { bringIntoViewItemCoordinates.value = it }
-                        .bringIntoViewRequester(bringIntoViewRequester)
+                modifier = Modifier
+                    .size(205.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .onPlaced { bringIntoViewItemCoordinates.value = it }
+                    .bringIntoViewRequester(bringIntoViewRequester)
             )
         }
     }
@@ -1069,47 +1200,49 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
 
         fun calculateExpectedChildOffset(): Int {
             return if (orientation == Horizontal) {
-                    childCoordinates.value?.positionInParent()?.x
-                } else {
-                    childCoordinates.value?.positionInParent()?.y
-                }
-                ?.toInt() ?: 0
+                childCoordinates.value?.positionInParent()?.x
+            } else {
+                childCoordinates.value?.positionInParent()?.y
+            }?.toInt() ?: 0
         }
 
         val expectedContainerSize = with(rule.density) { containerSize.roundToPx() }
-        val customBringIntoViewSpec =
-            object : BringIntoViewSpec {
-                override fun calculateScrollDistance(
-                    offset: Float,
-                    size: Float,
-                    containerSize: Float
-                ): Float {
-                    assertThat(containerSize).isEqualTo(expectedContainerSize)
-                    assertThat(size).isEqualTo(with(rule.density) { expectedChildSize.roundToPx() })
-                    assertThat(offset).isEqualTo(calculateExpectedChildOffset())
-                    return 0f
-                }
+        val customBringIntoViewSpec = object : BringIntoViewSpec {
+            override val scrollAnimationSpec: AnimationSpec<Float> = spring()
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float {
+                assertThat(containerSize).isEqualTo(expectedContainerSize)
+                assertThat(size).isEqualTo(with(rule.density) { expectedChildSize.roundToPx() })
+                assertThat(offset).isEqualTo(calculateExpectedChildOffset())
+                return 0f
             }
+        }
 
         rule.setContent {
             testScope = rememberCoroutineScope()
             val state = rememberScrollState()
             RowOrColumn(
-                modifier =
-                    Modifier.size(containerSize)
-                        .scrollable(
-                            state = state,
-                            overscrollEffect = null,
-                            orientation = orientation,
-                            bringIntoViewSpec = customBringIntoViewSpec
-                        )
-                        .then(ScrollingLayoutElement(state, false, orientation == Vertical))
+                modifier = Modifier
+                    .size(containerSize)
+                    .scrollable(
+                        state = state,
+                        overscrollEffect = null,
+                        orientation = orientation,
+                        bringIntoViewSpec = customBringIntoViewSpec
+                    )
+                    .then(ScrollingLayoutElement(state, false, orientation == Vertical))
             ) {
                 content()
             }
         }
 
-        testScope.launch { requester.bringIntoView() }
+        testScope.launch {
+            requester.bringIntoView()
+        }
 
         rule.waitForIdle()
     }
@@ -1119,44 +1252,51 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val bringIntoViewRequests = listOf(300f, 150f, 0f)
         val scrollState = ScrollState(0)
         var requestsFulfilledScroll = 0
-        val customBringIntoViewSpec =
-            object : BringIntoViewSpec {
-                var index = 0
+        val customBringIntoViewSpec = object : BringIntoViewSpec {
+            var index = 0
 
-                override fun calculateScrollDistance(
-                    offset: Float,
-                    size: Float,
-                    containerSize: Float
-                ): Float {
-                    return bringIntoViewRequests[index].also {
-                        index = (index + 1)
-                        if (index > 2) {
-                            requestsFulfilledScroll = scrollState.value
-                            index = 2
-                        }
+            override val scrollAnimationSpec: AnimationSpec<Float> = spring()
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float {
+                return bringIntoViewRequests[index].also {
+                    index = (index + 1)
+                    if (index > 2) {
+                        requestsFulfilledScroll = scrollState.value
+                        index = 2
                     }
                 }
             }
+        }
 
         val requester = BringIntoViewRequester()
 
         rule.setContent {
             testScope = rememberCoroutineScope()
             Box(
-                modifier =
-                    Modifier.size(200.dp)
-                        .scrollable(
-                            state = scrollState,
-                            overscrollEffect = null,
-                            orientation = orientation,
-                            bringIntoViewSpec = customBringIntoViewSpec
-                        )
+                modifier = Modifier
+                    .size(200.dp)
+                    .scrollable(
+                        state = scrollState,
+                        overscrollEffect = null,
+                        orientation = orientation,
+                        bringIntoViewSpec = customBringIntoViewSpec
+                    )
             ) {
-                Box(modifier = Modifier.size(10.dp).bringIntoViewRequester(requester))
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .bringIntoViewRequester(requester)
+                )
             }
         }
 
-        testScope.launch { requester.bringIntoView() }
+        testScope.launch {
+            requester.bringIntoView()
+        }
 
         rule.waitForIdle()
 
@@ -1175,9 +1315,9 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
     }
 
     /**
-     * Sizes and offsets of the composables in these tests must be specified using this function. If
-     * they're specified using `xx.dp` syntax, a rounding error somewhere in the layout system will
-     * cause the pixel values to be off-by-one.
+     * Sizes and offsets of the composables in these tests must be specified using this function.
+     * If they're specified using `xx.dp` syntax, a rounding error somewhere in the layout system
+     * will cause the pixel values to be off-by-one.
      */
     private fun Int.toDp(): Dp = with(rule.density) { this@toDp.toDp() }
 
@@ -1191,7 +1331,10 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
     }
 
     @Composable
-    private fun RowOrColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    private fun RowOrColumn(
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
         when (orientation) {
             Horizontal -> Row(modifier) { content() }
             Vertical -> Column(modifier) { content() }
@@ -1201,7 +1344,9 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
     private fun runBlockingAndAwaitIdle(block: suspend CoroutineScope.() -> Unit) {
         val job = testScope.launch(block = block)
         rule.waitForIdle()
-        runBlocking { job.join() }
+        runBlocking {
+            job.join()
+        }
     }
 
     /**
@@ -1214,13 +1359,13 @@ class BringIntoViewScrollableInteractionTest(private val orientation: Orientatio
         val childNode = rule.onNodeWithTag(childBox).fetchSemanticsNode()
 
         // BoundsInRoot returns the clipped bounds.
-        val visibleBounds: IntSize =
-            childNode.boundsInRoot.size.run { IntSize(width.roundToInt(), height.roundToInt()) }
-        val expectedVisibleBounds =
-            IntSize(
-                width = minOf(parentNode.size.width, childNode.size.width),
-                height = minOf(parentNode.size.height, childNode.size.height)
-            )
+        val visibleBounds: IntSize = childNode.boundsInRoot.size.run {
+            IntSize(width.roundToInt(), height.roundToInt())
+        }
+        val expectedVisibleBounds = IntSize(
+            width = minOf(parentNode.size.width, childNode.size.width),
+            height = minOf(parentNode.size.height, childNode.size.height)
+        )
 
         assertThat(visibleBounds).isEqualTo(expectedVisibleBounds)
     }

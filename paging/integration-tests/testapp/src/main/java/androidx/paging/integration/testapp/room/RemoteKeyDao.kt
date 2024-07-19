@@ -20,7 +20,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy.Companion.REPLACE
 import androidx.room.Query
 
-/** Simple Customer DAO for Room Customer list sample. */
+/**
+ * Simple Customer DAO for Room Customer list sample.
+ */
 @Dao
 interface RemoteKeyDao {
     /**
@@ -28,11 +30,18 @@ interface RemoteKeyDao {
      *
      * @param remoteKey
      */
-    @Insert(onConflict = REPLACE) suspend fun insert(remoteKey: RemoteKey)
+    @Insert(onConflict = REPLACE)
+    suspend fun insert(remoteKey: RemoteKey)
 
-    /** Clears the RemoteKey */
-    @Query("DELETE FROM remote_key") fun delete()
+    /**
+     * Clears the RemoteKey
+     */
+    @Query("DELETE FROM remote_key")
+    fun delete()
 
-    /** @return Latest persisted RemoteKey */
-    @Query("SELECT * FROM remote_key LIMIT 1") suspend fun queryRemoteKey(): RemoteKey?
+    /**
+     * @return Latest persisted RemoteKey
+     */
+    @Query("SELECT * FROM remote_key LIMIT 1")
+    suspend fun queryRemoteKey(): RemoteKey?
 }

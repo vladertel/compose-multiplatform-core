@@ -37,7 +37,9 @@ import org.junit.runner.RunWith
 class SavedStateRegistryOwnerInAppCompatActivityTest {
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule = androidx.test.rule.ActivityTestRule(AppCompatActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule(
+        AppCompatActivity::class.java
+    )
     private lateinit var activity: AppCompatActivity
 
     @Before

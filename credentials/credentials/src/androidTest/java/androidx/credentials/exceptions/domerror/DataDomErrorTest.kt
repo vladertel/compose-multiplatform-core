@@ -34,7 +34,8 @@ class DataDomErrorTest {
     @Test
     fun getter_success() {
         val error = DataError()
-        val expectedType = DataError.TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_DATA_ERROR
+        val expectedType =
+            DataError.TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_DATA_ERROR
         assertThat(error.type).isEqualTo(expectedType)
     }
 }

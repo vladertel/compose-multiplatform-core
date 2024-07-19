@@ -33,7 +33,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Benchmark that runs [RectsInFlowColumnTestCase]. */
+/**
+ * Benchmark that runs [RectsInFlowColumnTestCase].
+ */
 @LargeTest
 @RunWith(Parameterized::class)
 class RectsInFlowColumnBenchmark(private val numberOfRectangles: Int) {
@@ -44,7 +46,8 @@ class RectsInFlowColumnBenchmark(private val numberOfRectangles: Int) {
         fun initParameters(): Array<Any> = arrayOf(10, 100)
     }
 
-    @get:Rule val benchmarkRule = ComposeBenchmarkRule()
+    @get:Rule
+    val benchmarkRule = ComposeBenchmarkRule()
 
     private val rectsInFlowColumnCaseFactory = { RectsInFlowColumnTestCase(numberOfRectangles) }
 

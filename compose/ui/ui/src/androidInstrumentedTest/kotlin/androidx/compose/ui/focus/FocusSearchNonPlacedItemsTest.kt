@@ -43,7 +43,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FocusSearchNonPlacedItemsTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private lateinit var focusManager: FocusManager
     private val initialFocus: FocusRequester = FocusRequester()
@@ -61,7 +62,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Previous) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Previous)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -85,7 +88,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Next) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Next)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -109,7 +114,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Left) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Left)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -133,7 +140,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Right) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Right)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -157,7 +166,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Up) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Up)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -181,7 +192,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Down) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Down)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -204,7 +217,10 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { @OptIn(ExperimentalComposeUiApi::class) focusManager.moveFocus(Enter) }
+        rule.runOnIdle {
+            @OptIn(ExperimentalComposeUiApi::class)
+            focusManager.moveFocus(Enter)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -227,7 +243,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Previous) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Previous)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -251,7 +269,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Next) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Next)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -276,7 +296,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Previous) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Previous)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -302,7 +324,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Next) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Next)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -328,7 +352,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Left) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Left)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -354,7 +380,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Right) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Right)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -380,7 +408,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Up) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Up)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -406,7 +436,9 @@ class FocusSearchNonPlacedItemsTest {
         }
 
         // Act.
-        rule.runOnIdle { focusManager.moveFocus(FocusDirection.Down) }
+        rule.runOnIdle {
+            focusManager.moveFocus(FocusDirection.Down)
+        }
 
         // Assert.
         rule.runOnIdle {
@@ -429,12 +461,12 @@ class FocusSearchNonPlacedItemsTest {
         content: @Composable BoxScope.() -> Unit = {}
     ) {
         Box(
-            modifier =
-                Modifier.offset(x, y)
-                    .size(width, height)
-                    .focusRequester(focusRequester ?: remember { FocusRequester() })
-                    .onFocusChanged { isFocused.value = it.isFocused }
-                    .focusTarget(),
+            modifier = Modifier
+                .offset(x, y)
+                .size(width, height)
+                .focusRequester(focusRequester ?: remember { FocusRequester() })
+                .onFocusChanged { isFocused.value = it.isFocused }
+                .focusTarget(),
             content = content
         )
     }
@@ -448,22 +480,21 @@ class FocusSearchNonPlacedItemsTest {
     ) {
         Layout(
             content = content,
-            modifier =
-                Modifier.focusRequester(focusRequester ?: remember { FocusRequester() })
-                    .onFocusChanged { isFocused.value = it.isFocused }
-                    .focusTarget()
+            modifier = Modifier
+                .focusRequester(focusRequester ?: remember { FocusRequester() })
+                .onFocusChanged { isFocused.value = it.isFocused }
+                .focusTarget()
         ) { measurables, constraints ->
             var width = 0
             var height = 0
-            val placeables =
-                measurables.map {
-                    it.measure(constraints).run {
-                        val offset = IntOffset(width, height)
-                        width += this.width
-                        height = maxOf(height, this.height)
-                        Pair(this, offset)
-                    }
+            val placeables = measurables.map {
+                it.measure(constraints).run {
+                    val offset = IntOffset(width, height)
+                    width += this.width
+                    height = maxOf(height, this.height)
+                    Pair(this, offset)
                 }
+            }
 
             layout(width, height) {
                 placeables.forEachIndexed { index, placeable ->
@@ -484,22 +515,21 @@ class FocusSearchNonPlacedItemsTest {
     ) {
         Layout(
             content = content,
-            modifier =
-                Modifier.focusRequester(focusRequester ?: remember { FocusRequester() })
-                    .onFocusChanged { isFocused.value = it.isFocused }
-                    .focusTarget()
+            modifier = Modifier
+                .focusRequester(focusRequester ?: remember { FocusRequester() })
+                .onFocusChanged { isFocused.value = it.isFocused }
+                .focusTarget()
         ) { measurables, constraints ->
             var width = 0
             var height = 0
-            val placeables =
-                measurables.map {
-                    it.measure(constraints).run {
-                        val offset = IntOffset(width, height)
-                        width = maxOf(width, this.width)
-                        height += this.height
-                        Pair(this, offset)
-                    }
+            val placeables = measurables.map {
+                it.measure(constraints).run {
+                    val offset = IntOffset(width, height)
+                    width = maxOf(width, this.width)
+                    height += this.height
+                    Pair(this, offset)
                 }
+            }
 
             layout(width, height) {
                 placeables.forEachIndexed { index, placeable ->

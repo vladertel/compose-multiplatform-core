@@ -18,9 +18,7 @@ package androidx.camera.testing.impl.fakes;
 
 import static android.graphics.ImageFormat.JPEG;
 import static android.graphics.ImageFormat.YUV_420_888;
-
 import static androidx.camera.core.impl.ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE;
-
 import static com.google.common.primitives.Ints.asList;
 
 import android.util.Pair;
@@ -28,6 +26,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.AttachedSurfaceInfo;
 import androidx.camera.core.impl.CameraDeviceSurfaceManager;
 import androidx.camera.core.impl.CameraMode;
@@ -43,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** A CameraDeviceSurfaceManager which has no supported SurfaceConfigs. */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class FakeCameraDeviceSurfaceManager implements CameraDeviceSurfaceManager {
 
     public static final Size MAX_OUTPUT_SIZE = new Size(4032, 3024); // 12.2 MP

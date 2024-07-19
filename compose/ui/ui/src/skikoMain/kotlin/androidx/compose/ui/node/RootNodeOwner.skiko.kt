@@ -26,7 +26,6 @@ import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
-import androidx.compose.ui.autofill.SemanticAutofill
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusOwner
@@ -66,6 +65,7 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.RenderNodeLayer
+import androidx.compose.ui.platform.asDragAndDropManager
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
@@ -122,6 +122,8 @@ internal class RootNodeOwner(
             platformContext.parentFocusManager.clearFocus(true)
         },
     )
+    private val dragAndDropManager: DragAndDropManager =
+        platformContext.createDragAndDropManager().asDragAndDropManager()
     private val rootSemanticsNode = EmptySemanticsModifier()
 
     private val rootModifier = EmptySemanticsElement(rootSemanticsNode)
@@ -137,6 +139,7 @@ internal class RootNodeOwner(
             }
         }
         .then(focusOwner.modifier)
+        .then(dragAndDropManager.modifier)
         .semantics {
             // This makes the reported role of the root node "PANEL", which is ignored by VoiceOver
             // (which is what we want).
@@ -314,8 +317,6 @@ internal class RootNodeOwner(
         override val textToolbar get() = platformContext.textToolbar
         override val autofillTree = AutofillTree()
         override val autofill: Autofill?  get() = null
-        // TODO https://youtrack.jetbrains.com/issue/CMP-1572/Support-SemanticAutofill
-        override val semanticAutofill: SemanticAutofill? get() = null
         override val density get() = this@RootNodeOwner.density
         override val textInputService = TextInputService(platformContext.textInputService)
         override val softwareKeyboardController =
@@ -327,8 +328,7 @@ internal class RootNodeOwner(
         ): Nothing {
             awaitCancellation()
         }
-        // TODO https://youtrack.jetbrains.com/issue/COMPOSE-743/Implement-commonMain-Dragdrop-developed-in-AOSP
-        override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
+        override val dragAndDropManager: DragAndDropManager = this@RootNodeOwner.dragAndDropManager
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
@@ -459,7 +459,8 @@ internal class RootNodeOwner(
         }
 
         @InternalComposeUiApi
-        override fun onInteropViewLayoutChange(view: InteropView) {}
+        override fun onInteropViewLayoutChange(view: InteropView) {
+        }
 
         override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
             return when (keyEvent.key) {

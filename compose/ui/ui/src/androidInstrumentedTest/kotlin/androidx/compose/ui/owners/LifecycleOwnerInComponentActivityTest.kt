@@ -37,8 +37,9 @@ import org.junit.runner.RunWith
 class LifecycleOwnerInComponentActivityTest {
     @Suppress("DEPRECATION")
     @get:Rule
-    val activityTestRule =
-        androidx.test.rule.ActivityTestRule<ComponentActivity>(ComponentActivity::class.java)
+    val activityTestRule = androidx.test.rule.ActivityTestRule<ComponentActivity>(
+        ComponentActivity::class.java
+    )
     private lateinit var activity: ComponentActivity
 
     @Before

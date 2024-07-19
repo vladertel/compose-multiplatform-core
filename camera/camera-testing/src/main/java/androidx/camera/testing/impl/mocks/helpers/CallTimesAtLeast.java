@@ -17,11 +17,13 @@
 package androidx.camera.testing.impl.mocks.helpers;
 
 import androidx.annotation.IntRange;
+import androidx.annotation.RequiresApi;
 import androidx.core.util.Preconditions;
 
 /**
  * Utility for defining the number of invocations allowed while testing fake class methods.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class CallTimesAtLeast extends CallTimes {
     /**
      * Creates a new instance of {@link CallTimesAtLeast} with the given parameter.

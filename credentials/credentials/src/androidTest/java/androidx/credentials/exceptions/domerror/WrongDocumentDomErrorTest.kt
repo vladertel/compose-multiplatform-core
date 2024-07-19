@@ -33,7 +33,8 @@ class WrongDocumentDomErrorTest {
     @Test
     fun getter_success() {
         val error = WrongDocumentError()
-        val expectedType = WrongDocumentError.TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_WRONG_DOCUMENT_ERROR
+        val expectedType = WrongDocumentError
+            .TYPE_CREATE_PUBLIC_KEY_CREDENTIAL_WRONG_DOCUMENT_ERROR
         assertThat(error.type).isEqualTo(expectedType)
     }
 }

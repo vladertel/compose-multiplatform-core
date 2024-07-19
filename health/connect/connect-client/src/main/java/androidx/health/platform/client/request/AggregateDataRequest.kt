@@ -17,12 +17,13 @@
 package androidx.health.platform.client.request
 
 import android.os.Parcelable
-import androidx.annotation.RestrictTo
 import androidx.health.platform.client.impl.data.ProtoParcelable
 import androidx.health.platform.client.proto.RequestProto
 
-/** Internal wrapper to help transfer protos over ipc. */
-@RestrictTo(RestrictTo.Scope.LIBRARY)
+/**
+ * Internal wrapper to help transfer protos over ipc.
+ * @suppress
+ */
 class AggregateDataRequest(override val proto: RequestProto.AggregateDataRequest) :
     ProtoParcelable<RequestProto.AggregateDataRequest>() {
 

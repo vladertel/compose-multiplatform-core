@@ -20,6 +20,7 @@ import android.content.Context
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraDevice
 import android.view.Surface
+import androidx.camera.camera2.Camera2Config
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -28,12 +29,10 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
 import androidx.camera.extensions.ExtensionsManager
-import androidx.camera.integration.extensions.CameraExtensionsActivity.CAMERA_PIPE_IMPLEMENTATION_OPTION
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil
-import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.CameraXExtensionTestParams
+import androidx.camera.integration.extensions.utils.CameraIdExtensionModePair
 import androidx.camera.integration.extensions.utils.CameraSelectorUtil
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
 import androidx.camera.testing.impl.StressTestRule
@@ -60,16 +59,11 @@ import org.junit.runners.Parameterized
 @LargeTest
 @RunWith(Parameterized::class)
 @SdkSuppress(minSdkVersion = 21)
-class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTestParams) {
+class OpenCloseCaptureSessionStressTest(private val config: CameraIdExtensionModePair) {
     @get:Rule
-    val cameraPipeConfigTestRule =
-        CameraPipeConfigTestRule(active = config.implName == CAMERA_PIPE_IMPLEMENTATION_OPTION)
-
-    @get:Rule
-    val useCamera =
-        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
-            PreTestCameraIdList(config.cameraXConfig)
-        )
+    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
+        PreTestCameraIdList(Camera2Config.defaultConfig())
+    )
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -88,25 +82,26 @@ class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTest
     @Before
     fun setUp(): Unit = runBlocking {
         assumeTrue(CameraXExtensionsTestUtil.isTargetDeviceAvailableForExtensions())
-        val (_, cameraXConfig, cameraId, extensionMode) = config
-        ProcessCameraProvider.configureInstance(cameraXConfig)
         cameraProvider = ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
-        extensionsManager =
-            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
-                    10000, TimeUnit.MILLISECONDS]
+        extensionsManager = ExtensionsManager.getInstanceAsync(
+            context,
+            cameraProvider
+        )[10000, TimeUnit.MILLISECONDS]
 
+        val (cameraId, extensionMode) = config
         baseCameraSelector = CameraSelectorUtil.createCameraSelectorById(cameraId)
         assumeTrue(extensionsManager.isExtensionAvailable(baseCameraSelector, extensionMode))
 
-        extensionCameraSelector =
-            extensionsManager.getExtensionEnabledCameraSelector(baseCameraSelector, extensionMode)
+        extensionCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(
+            baseCameraSelector,
+            extensionMode
+        )
 
-        camera =
-            withContext(Dispatchers.Main) {
-                lifecycleOwner = FakeLifecycleOwner()
-                lifecycleOwner.startAndResume()
-                cameraProvider.bindToLifecycle(lifecycleOwner, extensionCameraSelector)
-            }
+        camera = withContext(Dispatchers.Main) {
+            lifecycleOwner = FakeLifecycleOwner()
+            lifecycleOwner.startAndResume()
+            cameraProvider.bindToLifecycle(lifecycleOwner, extensionCameraSelector)
+        }
 
         val previewBuilder = Preview.Builder()
         injectCameraSessionMonitor(previewBuilder, cameraSessionMonitor)
@@ -126,47 +121,46 @@ class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTest
         cameraMonitor: CameraSessionMonitor
     ) {
         Camera2Interop.Extender(previewBuilder)
-            .setSessionStateCallback(
-                object : CameraCaptureSession.StateCallback() {
-                    override fun onConfigured(session: CameraCaptureSession) {
-                        cameraMonitor.onOpenedSession()
-                    }
-
-                    override fun onClosed(session: CameraCaptureSession) {
-                        cameraMonitor.onClosedSession()
-                    }
-
-                    override fun onConfigureFailed(session: CameraCaptureSession) {}
-
-                    override fun onReady(session: CameraCaptureSession) {}
-
-                    override fun onActive(session: CameraCaptureSession) {}
-
-                    override fun onCaptureQueueEmpty(session: CameraCaptureSession) {}
-
-                    override fun onSurfacePrepared(
-                        session: CameraCaptureSession,
-                        surface: Surface
-                    ) {}
+            .setSessionStateCallback(object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    cameraMonitor.onOpenedSession()
                 }
-            )
-            .setDeviceStateCallback(
-                object : CameraDevice.StateCallback() {
-                    override fun onOpened(device: CameraDevice) {}
 
-                    // Some device doesn't invoke CameraCaptureSession onClosed callback thus
-                    // we need to invoke when camera is closed.
-                    override fun onClosed(device: CameraDevice) {
-                        cameraMonitor.onClosedSession()
-                    }
-
-                    override fun onDisconnected(device: CameraDevice) {}
-
-                    override fun onError(device: CameraDevice, error: Int) {}
+                override fun onClosed(session: CameraCaptureSession) {
+                    cameraMonitor.onClosedSession()
                 }
-            )
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                }
+
+                override fun onReady(session: CameraCaptureSession) {
+                }
+
+                override fun onActive(session: CameraCaptureSession) {
+                }
+
+                override fun onCaptureQueueEmpty(session: CameraCaptureSession) {
+                }
+
+                override fun onSurfacePrepared(session: CameraCaptureSession, surface: Surface) {
+                }
+            })
+            .setDeviceStateCallback(object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                }
+                // Some device doesn't invoke CameraCaptureSession onClosed callback thus
+                // we need to invoke when camera is closed.
+                override fun onClosed(device: CameraDevice) {
+                    cameraMonitor.onClosedSession()
+                }
+
+                override fun onDisconnected(device: CameraDevice) {
+                }
+
+                override fun onError(device: CameraDevice, error: Int) {
+                }
+            })
     }
-
     @After
     fun cleanUp(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
@@ -198,8 +192,8 @@ class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTest
         }
 
     /**
-     * Repeatedly binds use cases, unbind all to check whether the capture session can be opened and
-     * closed successfully by monitoring the camera session state.
+     * Repeatedly binds use cases, unbind all to check whether the capture session can be opened
+     * and closed successfully by monitoring the camera session state.
      */
     private fun bindUseCase_unbindAll_toCheckCameraSession_repeatedly(
         vararg useCases: UseCase,
@@ -211,14 +205,20 @@ class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTest
 
             withContext(Dispatchers.Main) {
                 // Act: binds use cases
-                cameraProvider.bindToLifecycle(lifecycleOwner, extensionCameraSelector, *useCases)
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    extensionCameraSelector,
+                    *useCases
+                )
             }
 
             // Assert: checks the camera session is opened.
             cameraSessionMonitor.awaitSessionOpenedAndAssert()
 
             // Act: unbinds all use cases
-            withContext(Dispatchers.Main) { cameraProvider.unbindAll() }
+            withContext(Dispatchers.Main) {
+                cameraProvider.unbindAll()
+            }
 
             // Assert: checks the camera session is closed.
             cameraSessionMonitor.awaitSessionClosedAndAssert()
@@ -226,15 +226,18 @@ class OpenCloseCaptureSessionStressTest(private val config: CameraXExtensionTest
     }
 
     companion object {
-        @ClassRule @JvmField val stressTest = StressTestRule()
+        @ClassRule
+        @JvmField val stressTest = StressTestRule()
 
         @JvmStatic
         @get:Parameterized.Parameters(name = "config = {0}")
-        val parameters: Collection<CameraXExtensionTestParams>
+        val parameters: Collection<CameraIdExtensionModePair>
             get() = CameraXExtensionsTestUtil.getAllCameraIdExtensionModeCombinations()
     }
 
-    /** To monitor whether the camera is closed or opened. */
+    /**
+     * To monitor whether the camera is closed or opened.
+     */
     private class CameraSessionMonitor {
         private var sessionEnabledLatch = CountDownLatch(1)
         private var sessionDisabledLatch = CountDownLatch(1)

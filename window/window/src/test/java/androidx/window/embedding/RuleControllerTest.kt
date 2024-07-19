@@ -82,12 +82,10 @@ class RuleControllerTest {
 
     @Test
     fun testGetInstance() {
-        EmbeddingBackend.overrideDecorator(
-            object : EmbeddingBackendDecorator {
-                override fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend =
-                    mockEmbeddingBackend
-            }
-        )
+        EmbeddingBackend.overrideDecorator(object : EmbeddingBackendDecorator {
+            override fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend =
+                mockEmbeddingBackend
+        })
 
         val controller = RuleController.getInstance(mockContext)
         controller.clearRules()

@@ -41,19 +41,20 @@ import androidx.compose.ui.util.fastFirst
 
 /**
  * A BadgeBox is used to decorate [content] with a [badge] that can contain dynamic information,
- * such as the presence of a new notification or a number of pending requests. Badges can be icon
- * only or contain short text.
+ * such
+ * as the presence of a new notification or a number of pending requests. Badges can be icon only
+ * or contain short text.
  *
- * A common use case is to display a badge with bottom navigation items. For more information, see
- * [Bottom Navigation](https://material.io/components/bottom-navigation#behavior)
+ * A common use case is to display a badge with bottom navigation items.
+ * For more information, see [Bottom Navigation](https://material.io/components/bottom-navigation#behavior)
  *
  * A simple icon with badge example looks like:
- *
  * @sample androidx.compose.material.samples.BottomNavigationItemWithBadge
  *
  * @param badge the badge to be displayed - typically a [Badge]
  * @param modifier optional [Modifier] for this item
  * @param content the anchor to which this badge will be positioned
+ *
  */
 @Composable
 fun BadgedBox(
@@ -68,19 +69,19 @@ fun BadgedBox(
                 contentAlignment = Alignment.Center,
                 content = content
             )
-            Box(modifier = Modifier.layoutId("badge"), content = badge)
+            Box(
+                modifier = Modifier.layoutId("badge"),
+                content = badge
+            )
         },
         modifier = modifier
     ) { measurables, constraints ->
-        val badgePlaceable =
-            measurables
-                .fastFirst { it.layoutId == "badge" }
-                .measure(
-                    // Measure with loose constraints for height as we don't want the text to take
-                    // up more
-                    // space than it needs.
-                    constraints.copy(minHeight = 0)
-                )
+
+        val badgePlaceable = measurables.fastFirst { it.layoutId == "badge" }.measure(
+            // Measure with loose constraints for height as we don't want the text to take up more
+            // space than it needs.
+            constraints.copy(minHeight = 0)
+        )
 
         val anchorPlaceable = measurables.fastFirst { it.layoutId == "anchor" }.measure(constraints)
 
@@ -94,7 +95,10 @@ fun BadgedBox(
             totalHeight,
             // Provide custom baselines based only on the anchor content to avoid default baseline
             // calculations from including by any badge content.
-            mapOf(FirstBaseline to firstBaseline, LastBaseline to lastBaseline)
+            mapOf(
+                FirstBaseline to firstBaseline,
+                LastBaseline to lastBaseline
+            )
         ) {
             // Use the width of the badge to infer whether it has any content (based on radius used
             // in [Badge]) and determine its horizontal offset.
@@ -121,6 +125,7 @@ fun BadgedBox(
  * @param backgroundColor the background color for the badge
  * @param contentColor the color of label text rendered in the badge
  * @param content optional content to be rendered inside the badge
+ *
  */
 @Composable
 fun Badge(
@@ -134,19 +139,28 @@ fun Badge(
 
     // Draw badge container.
     Row(
-        modifier =
-            modifier
-                .defaultMinSize(minWidth = radius * 2, minHeight = radius * 2)
-                .background(color = backgroundColor, shape = shape)
-                .clip(shape)
-                .padding(horizontal = BadgeWithContentHorizontalPadding),
+        modifier = modifier
+            .defaultMinSize(minWidth = radius * 2, minHeight = radius * 2)
+            .background(
+                color = backgroundColor,
+                shape = shape
+            )
+            .clip(shape)
+            .padding(
+                horizontal = BadgeWithContentHorizontalPadding
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         if (content != null) {
-            CompositionLocalProvider(LocalContentColor provides contentColor) {
+            CompositionLocalProvider(
+                LocalContentColor provides contentColor
+            ) {
                 val style = MaterialTheme.typography.button.copy(fontSize = BadgeContentFontSize)
-                ProvideTextStyle(value = style, content = { content() })
+                ProvideTextStyle(
+                    value = style,
+                    content = { content() }
+                )
             }
         }
     }

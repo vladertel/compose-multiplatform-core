@@ -52,16 +52,14 @@ class Camera2CameraFactoryTest {
 
         setupCameras()
 
-        val camera2CameraFactory =
-            Camera2CameraFactory(
-                ApplicationProvider.getApplicationContext(),
-                CameraThreadConfig.create(
-                    CameraXExecutors.mainThreadExecutor(),
-                    Handler(Looper.getMainLooper())
-                ),
-                null,
-                -1L
-            )
+        val camera2CameraFactory = Camera2CameraFactory(
+            ApplicationProvider.getApplicationContext(),
+            CameraThreadConfig.create(
+                CameraXExecutors.mainThreadExecutor(),
+                Handler(Looper.getMainLooper())
+            ),
+            null,
+            -1L)
 
         assertThat(camera2CameraFactory.availableCameraIds).containsExactly("0", "1", "2")
     }
@@ -74,16 +72,14 @@ class Camera2CameraFactoryTest {
 
         setupCameras()
 
-        val camera2CameraFactory =
-            Camera2CameraFactory(
-                ApplicationProvider.getApplicationContext(),
-                CameraThreadConfig.create(
-                    CameraXExecutors.mainThreadExecutor(),
-                    Handler(Looper.getMainLooper())
-                ),
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                -1L
-            )
+        val camera2CameraFactory = Camera2CameraFactory(
+            ApplicationProvider.getApplicationContext(),
+            CameraThreadConfig.create(
+                CameraXExecutors.mainThreadExecutor(),
+                Handler(Looper.getMainLooper())
+            ),
+            CameraSelector.DEFAULT_BACK_CAMERA,
+            -1L)
 
         assertThat(camera2CameraFactory.availableCameraIds).containsExactly("0", "2")
     }
@@ -92,16 +88,14 @@ class Camera2CameraFactoryTest {
     fun NotFilterOutIncompatibleCameras_whenBuildFingerprintIsRobolectric() {
         setupCameras()
 
-        val camera2CameraFactory =
-            Camera2CameraFactory(
-                ApplicationProvider.getApplicationContext(),
-                CameraThreadConfig.create(
-                    CameraXExecutors.mainThreadExecutor(),
-                    Handler(Looper.getMainLooper())
-                ),
-                null,
-                -1L
-            )
+        val camera2CameraFactory = Camera2CameraFactory(
+            ApplicationProvider.getApplicationContext(),
+            CameraThreadConfig.create(
+                CameraXExecutors.mainThreadExecutor(),
+                Handler(Looper.getMainLooper())
+            ),
+            null,
+            -1L)
 
         assertThat(camera2CameraFactory.availableCameraIds).containsExactly("0", "1", "2", "3")
     }
@@ -141,9 +135,9 @@ class Camera2CameraFactoryTest {
 
         // Add the camera to the camera service
         (Shadow.extract<Any>(
-                ApplicationProvider.getApplicationContext<Context>()
-                    .getSystemService(Context.CAMERA_SERVICE)
-            ) as ShadowCameraManager)
+            ApplicationProvider.getApplicationContext<Context>()
+                .getSystemService(Context.CAMERA_SERVICE)
+        ) as ShadowCameraManager)
             .addCamera(cameraId, characteristics)
     }
 }

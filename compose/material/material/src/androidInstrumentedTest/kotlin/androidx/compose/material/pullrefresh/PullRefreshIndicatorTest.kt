@@ -54,7 +54,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalMaterialApi::class)
 class PullRefreshIndicatorTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun indicatorDisplayed_refreshingInitially() {
@@ -93,17 +94,19 @@ class PullRefreshIndicatorTest {
         var refreshing by mutableStateOf(false)
 
         rule.setContent {
-            val state =
-                rememberPullRefreshState(
-                    refreshing,
-                    {
-                        refreshing = true
-                        refreshCount++
-                    }
-                )
+            val state = rememberPullRefreshState(refreshing, { refreshing = true; refreshCount++ })
 
-            Box(Modifier.pullRefresh(state).testTag(PullRefreshTag)) {
-                LazyColumn { items(30) { ListItem { Text("Item: $it") } } }
+            Box(
+                Modifier
+                    .pullRefresh(state)
+                    .testTag(PullRefreshTag)) {
+                LazyColumn {
+                    items(30) {
+                        ListItem {
+                            Text("Item: $it")
+                        }
+                    }
+                }
                 PullRefreshIndicator(refreshing, state, Modifier.testTag(IndicatorTag))
             }
         }
@@ -129,8 +132,17 @@ class PullRefreshIndicatorTest {
         rule.setContent {
             val state = rememberPullRefreshState(refreshing, {})
 
-            Box(Modifier.pullRefresh(state).testTag(PullRefreshTag)) {
-                LazyColumn { items(30) { ListItem { Text("Item: $it") } } }
+            Box(
+                Modifier
+                    .pullRefresh(state)
+                    .testTag(PullRefreshTag)) {
+                LazyColumn {
+                    items(30) {
+                        ListItem {
+                            Text("Item: $it")
+                        }
+                    }
+                }
                 PullRefreshIndicator(refreshing, state, Modifier.testTag(IndicatorTag))
             }
         }
@@ -168,24 +180,20 @@ class PullRefreshIndicatorTest {
             state = rememberPullRefreshState(false, {})
 
             Box {
-                Box(
-                    Modifier.fillMaxSize().pointerInput(Unit) {
-                        awaitEachGesture { downEvent = awaitFirstDown() }
+                Box(Modifier.fillMaxSize().pointerInput(Unit) {
+                    awaitEachGesture {
+                        downEvent = awaitFirstDown()
                     }
-                )
+                })
                 PullRefreshIndicator(
                     refreshing = false,
                     state = state,
-                    modifier =
-                        Modifier.onSizeChanged {
-                                // The indicator starts as offset by its negative height in the y
-                                // direction,
-                                // so work out its height so we can place it inside its normal
-                                // layout
-                                // bounds
-                                indicatorSize = it
-                            }
-                            .testTag(IndicatorTag)
+                    modifier = Modifier.onSizeChanged {
+                        // The indicator starts as offset by its negative height in the y direction,
+                        // so work out its height so we can place it inside its normal layout
+                        // bounds
+                        indicatorSize = it
+                    }.testTag(IndicatorTag)
                 )
             }
         }
@@ -205,11 +213,8 @@ class PullRefreshIndicatorTest {
         }
     }
 
-    private val pullRefreshNode
-        get() = rule.onNodeWithTag(PullRefreshTag)
-
-    private val indicatorNode
-        get() = rule.onNodeWithTag(IndicatorTag).onChild()
+    private val pullRefreshNode get() = rule.onNodeWithTag(PullRefreshTag)
+    private val indicatorNode get() = rule.onNodeWithTag(IndicatorTag).onChild()
 }
 
 private const val PullRefreshTag = "pull-refresh"

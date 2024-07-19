@@ -51,8 +51,12 @@ fun ChipDemo() {
             contentPadding = PaddingValues(DefaultSpace),
             verticalArrangement = Arrangement.spacedBy(DefaultSpace)
         ) {
-            item { Chips(chipEnabledState.value) }
-            item { FilterChips(chipEnabledState.value) }
+            item {
+                Chips(chipEnabledState.value)
+            }
+            item {
+                FilterChips(chipEnabledState.value)
+            }
         }
         Row(horizontalArrangement = Arrangement.Center) {
             Text("Enabled")
@@ -71,13 +75,24 @@ private fun Chips(enabled: Boolean) {
     Text("Action Chips")
     Spacer(Modifier.height(DefaultSpace))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        Chip(onClick = { /* Do something! */ }, enabled = enabled) { Text("Action chip") }
+        Chip(
+            onClick = { /* Do something! */ },
+            enabled = enabled
+        ) {
+            Text("Action chip")
+        }
         Chip(
             onClick = { /* Do something! */ },
             border = ChipDefaults.outlinedBorder,
             colors = ChipDefaults.outlinedChipColors(),
             enabled = enabled,
-            leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) }
+            leadingIcon =
+            {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = null
+                )
+            }
         ) {
             Text("Action chip")
         }
@@ -92,9 +107,7 @@ private fun FilterChips(enabled: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         val state1 = remember { mutableStateOf(false) }
         FilterChip(
-            selected = state1.value,
-            onClick = { state1.value = !state1.value },
-            enabled = enabled,
+            selected = state1.value, onClick = { state1.value = !state1.value }, enabled = enabled,
             selectedIcon = {
                 Icon(
                     imageVector = Icons.Filled.Done,

@@ -42,7 +42,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Test for [TouchInjectionScope.swipe] along a curve without key times */
+/**
+ * Test for [TouchInjectionScope.swipe] along a curve without key times
+ */
 @MediumTest
 @RunWith(Parameterized::class)
 class SwipeCurveTest(private val config: TestConfig) {
@@ -58,22 +60,26 @@ class SwipeCurveTest(private val config: TestConfig) {
         }
     }
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val recorder = SinglePointerInputRecorder()
-
     private fun curve(t: Long) = Offset(t + 10f, t + 10f)
 
     @Before
     fun setContent() {
         rule.setContent {
-            Box(Modifier.fillMaxSize()) { ClickableTestBox(modifier = recorder, tag = tag) }
+            Box(Modifier.fillMaxSize()) {
+                ClickableTestBox(modifier = recorder, tag = tag)
+            }
         }
     }
 
     @Test
     fun swipe() {
-        rule.onNodeWithTag(tag).performTouchInput { swipe(curve = ::curve, config.duration) }
+        rule.onNodeWithTag(tag).performTouchInput {
+            swipe(curve = ::curve, config.duration)
+        }
 
         rule.runOnIdle {
             recorder.apply {

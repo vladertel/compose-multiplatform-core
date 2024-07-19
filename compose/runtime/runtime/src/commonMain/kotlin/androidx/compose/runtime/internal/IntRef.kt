@@ -16,6 +16,8 @@
 
 package androidx.compose.runtime.internal
 
-internal class IntRef(var element: Int = 0) {
+internal class IntRef(
+    var element: Int = 0
+) {
     override fun toString() = "IntRef(element = $element)@${hashCode().toString(16)}"
 }

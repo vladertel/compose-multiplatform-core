@@ -51,8 +51,7 @@ class ApiParser(private val resolver: Resolver, private val logger: KSPLogger) {
                     services.joinToString {
                         it.type.simpleName
                     }
-                })."
-            )
+                }).")
         }
         val values = parseAllValues()
         val callbacks = parseAllCallbacks()
@@ -61,10 +60,8 @@ class ApiParser(private val resolver: Resolver, private val logger: KSPLogger) {
     }
 
     private fun parseAllValues(): Set<AnnotatedValue> {
-        return resolver
-            .getSymbolsWithAnnotation(PrivacySandboxValue::class.qualifiedName!!)
-            .mapNotNull(valueParser::parseValue)
-            .toSet()
+        return resolver.getSymbolsWithAnnotation(PrivacySandboxValue::class.qualifiedName!!)
+            .mapNotNull(valueParser::parseValue).toSet()
     }
 
     private fun parseAllServices(): Set<AnnotatedInterface> {
@@ -85,16 +82,14 @@ class ApiParser(private val resolver: Resolver, private val logger: KSPLogger) {
             .toSet()
     }
 
-    private fun getInterfacesWithAnnotation(
-        annotationName: KClass<*>
-    ): Sequence<KSClassDeclaration> {
+    private fun getInterfacesWithAnnotation(annotationName: KClass<*>):
+        Sequence<KSClassDeclaration> {
         val symbolsWithAnnotation =
             resolver.getSymbolsWithAnnotation(annotationName.qualifiedName!!)
-        if (
-            symbolsWithAnnotation.any {
-                it !is KSClassDeclaration || it.classKind != ClassKind.INTERFACE
-            }
-        ) {
+        if (symbolsWithAnnotation.any {
+                it !is KSClassDeclaration ||
+                    it.classKind != ClassKind.INTERFACE
+            }) {
             logger.error("Only interfaces can be annotated with @${annotationName.simpleName}.")
             return emptySequence()
         }

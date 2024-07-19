@@ -35,7 +35,8 @@ private val UnfocusedDimensionConstraintMax = 2 shl 13
 @RunWith(AndroidJUnit4::class)
 class BasicTextLayoutTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun simple_layoutText_doesNotThrow_when2shl14char() {
@@ -49,8 +50,9 @@ class BasicTextLayoutTest {
         }
         rule.waitForIdle()
 
-        assertThat(textLayoutResult?.multiParagraph?.height)
-            .isGreaterThan(UnfocusedDimensionConstraintMax)
+        assertThat(textLayoutResult?.multiParagraph?.height).isGreaterThan(
+            UnfocusedDimensionConstraintMax
+        )
     }
 
     @Test
@@ -64,7 +66,8 @@ class BasicTextLayoutTest {
             )
         }
         rule.waitForIdle()
-        assertThat(textLayoutResult?.multiParagraph?.height)
-            .isGreaterThan(UnfocusedDimensionConstraintMax)
+        assertThat(textLayoutResult?.multiParagraph?.height).isGreaterThan(
+            UnfocusedDimensionConstraintMax
+        )
     }
 }

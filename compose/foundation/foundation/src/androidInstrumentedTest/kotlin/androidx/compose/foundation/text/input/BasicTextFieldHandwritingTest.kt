@@ -48,9 +48,11 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 internal class BasicTextFieldHandwritingTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val immRule = ComposeInputMethodManagerTestRule()
+    @get:Rule
+    val immRule = ComposeInputMethodManagerTestRule()
 
     private val inputMethodInterceptor = InputMethodInterceptor(rule)
 
@@ -68,7 +70,9 @@ internal class BasicTextFieldHandwritingTest {
 
     @Test
     fun textField_startStylusHandwriting_unfocused() {
-        testStylusHandwriting(stylusHandwritingStarted = true) { performStylusHandwriting() }
+        testStylusHandwriting(stylusHandwritingStarted = true) {
+            performStylusHandwriting()
+        }
     }
 
     @Test
@@ -81,17 +85,23 @@ internal class BasicTextFieldHandwritingTest {
 
     @Test
     fun textField_click_notStartStylusHandwriting() {
-        testStylusHandwriting(stylusHandwritingStarted = false) { performStylusClick() }
+        testStylusHandwriting(stylusHandwritingStarted = false) {
+            performStylusClick()
+        }
     }
 
     @Test
     fun textField_longClick_notStartStylusHandwriting() {
-        testStylusHandwriting(stylusHandwritingStarted = false) { performStylusLongClick() }
+        testStylusHandwriting(stylusHandwritingStarted = false) {
+            performStylusLongClick()
+        }
     }
 
     @Test
     fun textField_longPressAndDrag_notStartStylusHandwriting() {
-        testStylusHandwriting(stylusHandwritingStarted = false) { performStylusLongPressAndDrag() }
+        testStylusHandwriting(stylusHandwritingStarted = false) {
+            performStylusLongPressAndDrag()
+        }
     }
 
     @Test
@@ -108,7 +118,9 @@ internal class BasicTextFieldHandwritingTest {
 
         rule.onNodeWithTag(Tag).performStylusHandwriting()
 
-        rule.runOnIdle { imm.expectNoMoreCalls() }
+        rule.runOnIdle {
+            imm.expectNoMoreCalls()
+        }
     }
 
     @Test
@@ -125,7 +137,9 @@ internal class BasicTextFieldHandwritingTest {
 
         rule.onNodeWithTag(Tag).performStylusHandwriting()
 
-        rule.runOnIdle { imm.expectNoMoreCalls() }
+        rule.runOnIdle {
+            imm.expectNoMoreCalls()
+        }
     }
 
     @Test
@@ -251,7 +265,10 @@ internal class BasicTextFieldHandwritingTest {
         immRule.setFactory { imm }
         inputMethodInterceptor.setTextFieldTestContent {
             val state = remember { TextFieldState() }
-            BasicTextField(state = state, modifier = Modifier.fillMaxSize().testTag(Tag))
+            BasicTextField(
+                state = state,
+                modifier = Modifier.fillMaxSize().testTag(Tag)
+            )
         }
 
         interaction.invoke(rule.onNodeWithTag(Tag))

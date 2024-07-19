@@ -43,9 +43,11 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 class BasicTextScreenshotTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_UI)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_UI)
 
     private val textTag = "text"
 
@@ -53,24 +55,21 @@ class BasicTextScreenshotTest {
     fun multiStyleText_setFontWeight() {
         rule.setContent {
             BasicText(
-                text =
-                    buildAnnotatedString {
-                        append("Hello ")
-                        pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-                        append("World")
-                        pop()
-                    },
+                text = buildAnnotatedString {
+                    append("Hello ")
+                    pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+                    append("World")
+                    pop()
+                },
                 modifier = Modifier.testTag(textTag),
-                style =
-                    TextStyle(
-                        fontSize = 24.sp,
-                        fontStyle = FontStyle.Italic,
-                        fontFamily = FontFamily.Monospace
-                    )
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    fontStyle = FontStyle.Italic,
+                    fontFamily = FontFamily.Monospace
+                )
             )
         }
-        rule
-            .onNodeWithTag(textTag)
+        rule.onNodeWithTag(textTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "multiStyleText_setFontWeight")
     }
@@ -79,25 +78,22 @@ class BasicTextScreenshotTest {
     fun multiStyleText_setFontFamily() {
         rule.setContent {
             BasicText(
-                text =
-                    buildAnnotatedString {
-                        append("Hello ")
-                        pushStyle(SpanStyle(fontFamily = FontFamily.SansSerif))
-                        append("World")
-                        pop()
-                    },
+                text = buildAnnotatedString {
+                    append("Hello ")
+                    pushStyle(SpanStyle(fontFamily = FontFamily.SansSerif))
+                    append("World")
+                    pop()
+                },
                 modifier = Modifier.testTag(textTag),
-                style =
-                    TextStyle(
-                        fontSize = 24.sp,
-                        fontStyle = FontStyle.Italic,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
-                    )
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    fontStyle = FontStyle.Italic,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
             )
         }
-        rule
-            .onNodeWithTag(textTag)
+        rule.onNodeWithTag(textTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "multiStyleText_setFontFamily")
     }
@@ -106,24 +102,21 @@ class BasicTextScreenshotTest {
     fun multiStyleText_setFontStyle() {
         rule.setContent {
             BasicText(
-                text =
-                    buildAnnotatedString {
-                        append("Hello ")
-                        pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
-                        append("World")
-                        pop()
-                    },
+                text = buildAnnotatedString {
+                    append("Hello ")
+                    pushStyle(SpanStyle(fontStyle = FontStyle.Italic))
+                    append("World")
+                    pop()
+                },
                 modifier = Modifier.testTag(textTag),
-                style =
-                    TextStyle(
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
-                    )
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
             )
         }
-        rule
-            .onNodeWithTag(textTag)
+        rule.onNodeWithTag(textTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, "multiStyleText_setFontStyle")
     }

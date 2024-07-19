@@ -36,11 +36,17 @@ class ScopeMapTest {
 
     @Test
     fun add() {
-        scopeList.forEach { scope -> valueList.forEach { value -> map.add(value, scope) } }
+        scopeList.forEach { scope ->
+            valueList.forEach { value ->
+                map.add(value, scope)
+            }
+        }
         assertEquals(valueList.size, map.size)
         val verifierList = mutableListOf<Scope>()
         valueList.forEach { value ->
-            map.forEachScopeOf(value) { verifierList += it }
+            map.forEachScopeOf(value) {
+                verifierList += it
+            }
             assertEquals(scopeList.size, verifierList.size)
             verifierList.clear()
         }
@@ -60,7 +66,9 @@ class ScopeMapTest {
         assertEquals(1, count)
 
         val verifierSet = mutableListOf<Scope>()
-        map.forEachScopeOf(valueList[0]) { scope -> verifierSet += scope }
+        map.forEachScopeOf(valueList[0]) { scope ->
+            verifierSet += scope
+        }
         assertEquals(2, verifierSet.size)
         assertTrue(verifierSet.contains(scopeList[0]))
         assertTrue(verifierSet.contains(scopeList[1]))
@@ -103,14 +111,20 @@ class ScopeMapTest {
         map.add(valueC, scopeList[3])
 
         // remove a scope that won't cause any values to be removed:
-        map.removeScopeIf { scope -> scope === scopeList[1] }
+        map.removeScopeIf { scope ->
+            scope === scopeList[1]
+        }
         assertEquals(3, map.size)
 
         // remove the last scope in a set:
-        map.removeScopeIf { scope -> scope === scopeList[2] }
+        map.removeScopeIf { scope ->
+            scope === scopeList[2]
+        }
         assertEquals(2, map.size)
 
-        map.forEachScopeOf(valueList[1]) { fail("There shouldn't be any scopes for this value") }
+        map.forEachScopeOf(valueList[1]) {
+            fail("There shouldn't be any scopes for this value")
+        }
     }
 
     @Test
@@ -128,6 +142,5 @@ class ScopeMapTest {
     }
 
     class Scope(val item: Int)
-
     class Value(val s: String)
 }

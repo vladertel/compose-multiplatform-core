@@ -17,7 +17,9 @@
 package androidx.benchmark.darwin
 
 abstract class TestCase {
-    /** Provides an opportunity to customize initial state before a test case begins. */
+    /**
+     * Provides an opportunity to customize initial state before a test case begins.
+     */
     open fun setUp() {}
 
     abstract fun benchmark(context: TestCaseContext)

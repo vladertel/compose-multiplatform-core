@@ -16,6 +16,7 @@
 
 package androidx.fragment.app.testing
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.annotation.RestrictTo
 import androidx.fragment.app.FragmentActivity
@@ -27,6 +28,7 @@ import androidx.fragment.testing.manifest.R
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class EmptyFragmentActivity : FragmentActivity() {
+    @SuppressLint("RestrictedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(
             intent.getIntExtra(
@@ -48,8 +50,7 @@ class EmptyFragmentActivity : FragmentActivity() {
     }
 
     companion object {
-        const val THEME_EXTRAS_BUNDLE_KEY =
-            "androidx.fragment.app.testing.FragmentScenario" +
-                ".EmptyFragmentActivity.THEME_EXTRAS_BUNDLE_KEY"
+        const val THEME_EXTRAS_BUNDLE_KEY = "androidx.fragment.app.testing.FragmentScenario" +
+            ".EmptyFragmentActivity.THEME_EXTRAS_BUNDLE_KEY"
     }
 }

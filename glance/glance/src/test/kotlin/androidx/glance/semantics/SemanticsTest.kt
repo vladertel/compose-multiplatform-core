@@ -30,11 +30,9 @@ class SemanticsTest {
 
         val semanticsModifier = checkNotNull(modifiers.findModifier<SemanticsModifier>())
         assertThat(
-                semanticsModifier.configuration
-                    .getOrNull(SemanticsProperties.ContentDescription)
-                    ?.joinToString()
-            )
-            .isEqualTo("test_description")
+            semanticsModifier.configuration.getOrNull(SemanticsProperties.ContentDescription)
+                ?.joinToString()
+        ).isEqualTo("test_description")
     }
 
     @Test
@@ -43,9 +41,8 @@ class SemanticsTest {
 
         val semanticsModifier = checkNotNull(modifiers.findModifier<SemanticsModifier>())
         assertThat(
-                semanticsModifier.configuration.getOrNull(SemanticsProperties.ContentDescription)
-            )
-            .isNull()
+            semanticsModifier.configuration.getOrNull(SemanticsProperties.ContentDescription)
+        ).isNull()
     }
 
     @Test
@@ -53,8 +50,9 @@ class SemanticsTest {
         val modifiers = GlanceModifier.semantics { testTag = "test_tag" }
 
         val semanticsModifier = checkNotNull(modifiers.findModifier<SemanticsModifier>())
-        assertThat(semanticsModifier.configuration.getOrNull(SemanticsProperties.TestTag))
-            .isEqualTo("test_tag")
+        assertThat(
+            semanticsModifier.configuration.getOrNull(SemanticsProperties.TestTag)
+        ).isEqualTo("test_tag")
     }
 
     @Test
@@ -62,7 +60,9 @@ class SemanticsTest {
         val modifiers = GlanceModifier.semantics { contentDescription = "desc" }
 
         val semanticsModifier = checkNotNull(modifiers.findModifier<SemanticsModifier>())
-        assertThat(semanticsModifier.configuration.getOrNull(SemanticsProperties.TestTag)).isNull()
+        assertThat(
+            semanticsModifier.configuration.getOrNull(SemanticsProperties.TestTag)
+        ).isNull()
     }
 
     @Test

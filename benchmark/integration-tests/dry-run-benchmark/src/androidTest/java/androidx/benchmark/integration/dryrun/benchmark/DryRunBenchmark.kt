@@ -28,12 +28,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class DryRunBenchmark {
-    @get:Rule val benchmarkRule = BenchmarkRule()
+    @get:Rule
+    val benchmarkRule = BenchmarkRule()
 
     @Test
     fun benchmarkOne() {
         var iterationCount = 0
-        benchmarkRule.measureRepeated { iterationCount++ }
+        benchmarkRule.measureRepeated {
+            iterationCount++
+        }
         // dry run mode always runs 1 loops
         assertEquals(1, iterationCount)
     }
@@ -42,7 +45,9 @@ class DryRunBenchmark {
     @Test
     fun benchmarkTwo() {
         var iterationCount = 0
-        benchmarkRule.measureRepeated { iterationCount++ }
+        benchmarkRule.measureRepeated {
+            iterationCount++
+        }
         // dry run mode always runs 1 loops
         assertEquals(1, iterationCount)
     }

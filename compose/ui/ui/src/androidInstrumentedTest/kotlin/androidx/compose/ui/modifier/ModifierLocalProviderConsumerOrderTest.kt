@@ -36,7 +36,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ModifierLocalProviderConsumerOrderTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val defaultValue = "Default Value"
     private val modifierLocal = modifierLocalOf { defaultValue }
@@ -84,18 +85,15 @@ class ModifierLocalProviderConsumerOrderTest {
         var consumerValue by mutableStateOf("")
         rule.setContent {
             Box(ProviderModifier(modifierLocal) { "Outer" }) {
-                val modifier =
-                    if (useInnerModifier) {
-                        ProviderModifier(modifierLocal) { "Inner" }
-                    } else {
-                        Modifier
-                    }
+                val modifier = if (useInnerModifier) {
+                    ProviderModifier(modifierLocal) { "Inner" }
+                } else {
+                    Modifier
+                }
                 Box(modifier) {
-                    Box(
-                        ProviderConsumerModifier(modifierLocal, { "" }) {
-                            consumerValue = modifierLocal.current
-                        }
-                    )
+                    Box(ProviderConsumerModifier(modifierLocal, { "" }) {
+                        consumerValue = modifierLocal.current
+                    })
                 }
             }
         }
@@ -107,7 +105,9 @@ class ModifierLocalProviderConsumerOrderTest {
             useInnerModifier = false
         }
 
-        rule.runOnIdle { assertThat(consumerValue).isEqualTo("Outer") }
+        rule.runOnIdle {
+            assertThat(consumerValue).isEqualTo("Outer")
+        }
     }
 
     @Test
@@ -115,18 +115,15 @@ class ModifierLocalProviderConsumerOrderTest {
         var useProvider by mutableStateOf(true)
         var consumerValue by mutableStateOf("")
         rule.setContent {
-            val modifier =
-                if (useProvider) {
-                    ProviderModifier(modifierLocal) { "Provided Value" }
-                } else {
-                    Modifier
-                }
+            val modifier = if (useProvider) {
+                ProviderModifier(modifierLocal) { "Provided Value" }
+            } else {
+                Modifier
+            }
             Box(modifier) {
-                Box(
-                    ProviderConsumerModifier(modifierLocal, { "" }) {
-                        consumerValue = modifierLocal.current
-                    }
-                )
+                Box(ProviderConsumerModifier(modifierLocal, { "" }) {
+                    consumerValue = modifierLocal.current
+                })
             }
         }
 
@@ -137,7 +134,9 @@ class ModifierLocalProviderConsumerOrderTest {
             useProvider = false
         }
 
-        rule.runOnIdle { assertThat(consumerValue).isEqualTo(defaultValue) }
+        rule.runOnIdle {
+            assertThat(consumerValue).isEqualTo(defaultValue)
+        }
     }
 
     @Test
@@ -146,18 +145,15 @@ class ModifierLocalProviderConsumerOrderTest {
         var consumerValue by mutableStateOf("")
         rule.setContent {
             Box(ProviderModifier(modifierLocal) { "Outer" }) {
-                val modifier =
-                    if (useInnerModifier) {
-                        ProviderModifier(modifierLocal) { "Inner" }
-                    } else {
-                        Modifier
-                    }
+                val modifier = if (useInnerModifier) {
+                    ProviderModifier(modifierLocal) { "Inner" }
+                } else {
+                    Modifier
+                }
                 Box(modifier) {
-                    Box(
-                        ProviderConsumerModifier(modifierLocal, { "" }) {
-                            consumerValue = modifierLocal.current
-                        }
-                    )
+                    Box(ProviderConsumerModifier(modifierLocal, { "" }) {
+                        consumerValue = modifierLocal.current
+                    })
                 }
             }
         }
@@ -169,7 +165,9 @@ class ModifierLocalProviderConsumerOrderTest {
             useInnerModifier = true
         }
 
-        rule.runOnIdle { assertThat(consumerValue).isEqualTo("Inner") }
+        rule.runOnIdle {
+            assertThat(consumerValue).isEqualTo("Inner")
+        }
     }
 
     @Test
@@ -177,18 +175,15 @@ class ModifierLocalProviderConsumerOrderTest {
         var useProvider by mutableStateOf(false)
         var consumerValue by mutableStateOf("")
         rule.setContent {
-            val modifier =
-                if (useProvider) {
-                    ProviderModifier(modifierLocal) { "Provided Value" }
-                } else {
-                    Modifier
-                }
+            val modifier = if (useProvider) {
+                ProviderModifier(modifierLocal) { "Provided Value" }
+            } else {
+                Modifier
+            }
             Box(modifier) {
-                Box(
-                    ProviderConsumerModifier(modifierLocal, { "" }) {
-                        consumerValue = modifierLocal.current
-                    }
-                )
+                Box(ProviderConsumerModifier(modifierLocal, { "" }) {
+                    consumerValue = modifierLocal.current
+                })
             }
         }
 
@@ -199,7 +194,9 @@ class ModifierLocalProviderConsumerOrderTest {
             useProvider = true
         }
 
-        rule.runOnIdle { assertThat(consumerValue).isEqualTo("Provided Value") }
+        rule.runOnIdle {
+            assertThat(consumerValue).isEqualTo("Provided Value")
+        }
     }
 
     @Test
@@ -219,11 +216,15 @@ class ModifierLocalProviderConsumerOrderTest {
             providedValue = "Value 2"
         }
 
-        rule.runOnIdle { assertThat(consumerValue.value).isEqualTo("Value 2") }
+        rule.runOnIdle {
+            assertThat(consumerValue.value).isEqualTo("Value 2")
+        }
     }
 }
 
-/** This is extracted out so that it can be skipped. */
+/**
+ * This is extracted out so that it can be skipped.
+ */
 @Composable
 fun ConsumeLocal(
     modifierLocal: ProvidableModifierLocal<String>,
@@ -242,7 +243,6 @@ class ProviderConsumerModifier<T>(
     private val consumer: ModifierLocalReadScope.() -> Unit
 ) : ModifierLocalConsumer, ModifierLocalProvider<T> {
     override val value by derivedStateOf(value)
-
     override fun onModifierLocalsUpdated(scope: ModifierLocalReadScope) {
         consumer(scope)
     }

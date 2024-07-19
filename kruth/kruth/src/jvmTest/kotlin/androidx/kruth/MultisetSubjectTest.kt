@@ -34,6 +34,8 @@ class MultisetSubjectTest {
     @Test
     fun hasCountFail() {
         val multiset = ImmutableMultiset.of("kurt", "kurt", "kluever")
-        assertFailsWith<AssertionError> { assertThat(multiset).hasCount("kurt", 3) }
+        assertFailsWith<AssertionError> {
+            assertThat(multiset).hasCount("kurt", 3)
+        }
     }
 }

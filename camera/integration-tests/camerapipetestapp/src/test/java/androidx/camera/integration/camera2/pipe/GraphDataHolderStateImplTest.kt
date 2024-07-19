@@ -25,12 +25,18 @@ class GraphDataHolderStateImplTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun inputParams_emptyMap() {
-        GraphDataHolderStateImpl(hashMapOf(), GraphDataSortedRingBuffer())
+        GraphDataHolderStateImpl(
+            hashMapOf(),
+            GraphDataSortedRingBuffer()
+        )
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun inputParams_emptyStringStateName() {
-        GraphDataHolderStateImpl(hashMapOf(1 to "one", 2 to ""), GraphDataSortedRingBuffer())
+        GraphDataHolderStateImpl(
+            hashMapOf(1 to "one", 2 to ""),
+            GraphDataSortedRingBuffer()
+        )
     }
 
     @Test
@@ -52,7 +58,11 @@ class GraphDataHolderStateImplTest {
                 GraphDataSortedRingBuffer()
             )
 
-        Truth.assertThat(graphDataHolderStateImpl.getStrings())
-            .isEqualTo(listOf("one", "two", "three"))
+        Truth.assertThat(graphDataHolderStateImpl.getStrings()).isEqualTo(
+            listOf(
+                "one", "two",
+                "three"
+            )
+        )
     }
 }

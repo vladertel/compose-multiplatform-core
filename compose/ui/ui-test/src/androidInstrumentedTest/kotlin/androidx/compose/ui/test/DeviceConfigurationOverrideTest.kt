@@ -53,7 +53,8 @@ import org.junit.Test
 
 class DeviceConfigurationOverrideTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun smallSizeOverride_onSmallerElements_isDisplayed() {
@@ -68,7 +69,8 @@ class DeviceConfigurationOverrideTest {
             }
         }
 
-        rule.onNodeWithTag("node").assertIsDisplayed()
+        rule.onNodeWithTag("node")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -84,7 +86,8 @@ class DeviceConfigurationOverrideTest {
             }
         }
 
-        rule.onNodeWithTag("node").assertIsNotDisplayed()
+        rule.onNodeWithTag("node")
+            .assertIsNotDisplayed()
     }
 
     @Test
@@ -100,7 +103,8 @@ class DeviceConfigurationOverrideTest {
             }
         }
 
-        rule.onNodeWithTag("node").assertIsDisplayed()
+        rule.onNodeWithTag("node")
+            .assertIsDisplayed()
     }
 
     @Test
@@ -116,7 +120,8 @@ class DeviceConfigurationOverrideTest {
             }
         }
 
-        rule.onNodeWithTag("node").assertIsNotDisplayed()
+        rule.onNodeWithTag("node")
+            .assertIsNotDisplayed()
     }
 
     @Test
@@ -129,17 +134,16 @@ class DeviceConfigurationOverrideTest {
                 DeviceConfigurationOverride.ForcedSize(DpSize(30.dp, 40.dp))
             ) {
                 Spacer(
-                    modifier =
-                        Modifier.layout { measurable, constraints ->
-                            actualConstraints = constraints
-                            actualDensity = this
+                    modifier = Modifier.layout { measurable, constraints ->
+                        actualConstraints = constraints
+                        actualDensity = this
 
-                            val placeable = measurable.measure(constraints)
+                        val placeable = measurable.measure(constraints)
 
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeRelative(0, 0)
-                            }
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
                         }
+                    }
                 )
             }
         }
@@ -169,17 +173,16 @@ class DeviceConfigurationOverrideTest {
                 DeviceConfigurationOverride.ForcedSize(DpSize(40.dp, 30.dp))
             ) {
                 Spacer(
-                    modifier =
-                        Modifier.layout { measurable, constraints ->
-                            actualConstraints = constraints
-                            actualDensity = this
+                    modifier = Modifier.layout { measurable, constraints ->
+                        actualConstraints = constraints
+                        actualDensity = this
 
-                            val placeable = measurable.measure(constraints)
+                        val placeable = measurable.measure(constraints)
 
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeRelative(0, 0)
-                            }
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
                         }
+                    }
                 )
             }
         }
@@ -209,17 +212,16 @@ class DeviceConfigurationOverrideTest {
                 DeviceConfigurationOverride.ForcedSize(DpSize(3000.dp, 4000.dp))
             ) {
                 Spacer(
-                    modifier =
-                        Modifier.layout { measurable, constraints ->
-                            actualConstraints = constraints
-                            actualDensity = this
+                    modifier = Modifier.layout { measurable, constraints ->
+                        actualConstraints = constraints
+                        actualDensity = this
 
-                            val placeable = measurable.measure(constraints)
+                        val placeable = measurable.measure(constraints)
 
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeRelative(0, 0)
-                            }
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
                         }
+                    }
                 )
             }
         }
@@ -249,17 +251,16 @@ class DeviceConfigurationOverrideTest {
                 DeviceConfigurationOverride.ForcedSize(DpSize(4000.dp, 3000.dp))
             ) {
                 Spacer(
-                    modifier =
-                        Modifier.layout { measurable, constraints ->
-                            actualConstraints = constraints
-                            actualDensity = this
+                    modifier = Modifier.layout { measurable, constraints ->
+                        actualConstraints = constraints
+                        actualDensity = this
 
-                            val placeable = measurable.measure(constraints)
+                        val placeable = measurable.measure(constraints)
 
-                            layout(placeable.width, placeable.height) {
-                                placeable.placeRelative(0, 0)
-                            }
+                        layout(placeable.width, placeable.height) {
+                            placeable.placeRelative(0, 0)
                         }
+                    }
                 )
             }
         }
@@ -334,7 +335,10 @@ class DeviceConfigurationOverrideTest {
 
         // This is a strict equality for floating point values which is normally problematic, but
         // these should be precisely equal
-        assertEquals(originalDensity.density, overriddenDensity.density)
+        assertEquals(
+            originalDensity.density,
+            overriddenDensity.density
+        )
 
         // Convert the Configuration's density in DPI to the raw float multiplier
         val overriddenConfigurationDensityMultiplier =
@@ -370,7 +374,10 @@ class DeviceConfigurationOverrideTest {
 
         // This is a strict equality for floating point values which is normally problematic, but
         // these should be precisely equal
-        assertEquals(originalDensity.density, overriddenDensity.density)
+        assertEquals(
+            originalDensity.density,
+            overriddenDensity.density
+        )
 
         // Convert the Configuration's density in DPI to the raw float multiplier
         val overriddenConfigurationDensityMultiplier =
@@ -428,7 +435,9 @@ class DeviceConfigurationOverrideTest {
         lateinit var configuration: Configuration
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.FontScale(1.5f)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.FontScale(1.5f)
+            ) {
                 density = LocalDensity.current
                 configuration = LocalConfiguration.current
             }
@@ -483,7 +492,9 @@ class DeviceConfigurationOverrideTest {
         lateinit var configuration: Configuration
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.DarkMode(true)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.DarkMode(true)
+            ) {
                 configuration = LocalConfiguration.current
             }
         }
@@ -499,7 +510,9 @@ class DeviceConfigurationOverrideTest {
         lateinit var configuration: Configuration
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.DarkMode(false)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.DarkMode(false)
+            ) {
                 configuration = LocalConfiguration.current
             }
         }
@@ -518,15 +531,19 @@ class DeviceConfigurationOverrideTest {
         lateinit var typefaceBold: android.graphics.Typeface
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.FontWeightAdjustment(500)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.FontWeightAdjustment(500)
+            ) {
                 typefaceNormal =
-                    LocalFontFamilyResolver.current
-                        .resolveAsTypeface(FontFamily.SansSerif, FontWeight.Normal)
-                        .value
+                    LocalFontFamilyResolver.current.resolveAsTypeface(
+                        FontFamily.SansSerif,
+                        FontWeight.Normal
+                    ).value
                 typefaceBold =
-                    LocalFontFamilyResolver.current
-                        .resolveAsTypeface(FontFamily.SansSerif, FontWeight.Bold)
-                        .value
+                    LocalFontFamilyResolver.current.resolveAsTypeface(
+                        FontFamily.SansSerif,
+                        FontWeight.Bold
+                    ).value
                 configuration = LocalConfiguration.current
             }
         }
@@ -544,7 +561,9 @@ class DeviceConfigurationOverrideTest {
         lateinit var configuration: Configuration
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(true)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.RoundScreen(true)
+            ) {
                 configuration = LocalConfiguration.current
             }
         }
@@ -558,7 +577,9 @@ class DeviceConfigurationOverrideTest {
         lateinit var configuration: Configuration
 
         rule.setContent {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(false)) {
+            DeviceConfigurationOverride(
+                DeviceConfigurationOverride.RoundScreen(false)
+            ) {
                 configuration = LocalConfiguration.current
             }
         }

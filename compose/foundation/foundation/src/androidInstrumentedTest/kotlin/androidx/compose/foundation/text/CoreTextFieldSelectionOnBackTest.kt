@@ -52,13 +52,22 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CoreTextFieldSelectionOnBackTest : FocusedWindowTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val Tag = "textField"
-    private val backKeyDown =
-        KeyEvent(NativeKeyEvent(NativeKeyEvent.ACTION_DOWN, NativeKeyEvent.KEYCODE_BACK))
-    private val backKeyUp =
-        KeyEvent(NativeKeyEvent(NativeKeyEvent.ACTION_UP, NativeKeyEvent.KEYCODE_BACK))
+    private val backKeyDown = KeyEvent(
+        NativeKeyEvent(
+            NativeKeyEvent.ACTION_DOWN,
+            NativeKeyEvent.KEYCODE_BACK
+        )
+    )
+    private val backKeyUp = KeyEvent(
+        NativeKeyEvent(
+            NativeKeyEvent.ACTION_UP,
+            NativeKeyEvent.KEYCODE_BACK
+        )
+    )
 
     @Test
     fun whenBackPressed_andReleased_coreTextFieldClearsSelection() {
@@ -72,7 +81,8 @@ class CoreTextFieldSelectionOnBackTest : FocusedWindowTest {
         }
 
         val textNode = rule.onNodeWithTag(Tag)
-        val middleCharPosition = textNode.fetchTextLayoutResult().getBoundingBox(2).centerLeft
+        val middleCharPosition =
+            textNode.fetchTextLayoutResult().getBoundingBox(2).centerLeft
 
         textNode.performTouchInput { longClick(middleCharPosition) }
         rule.waitForIdle()
@@ -96,12 +106,14 @@ class CoreTextFieldSelectionOnBackTest : FocusedWindowTest {
             BasicTextField(
                 "hello world",
                 onValueChange = {},
-                Modifier.testTag(Tag).onKeyEvent {
-                    if (it.type == KeyEventType.KeyUp && it.key == Key.Back) {
-                        backPressCount++
+                Modifier
+                    .testTag(Tag)
+                    .onKeyEvent {
+                        if (it.type == KeyEventType.KeyUp && it.key == Key.Back) {
+                            backPressCount++
+                        }
+                        false
                     }
-                    false
-                }
             )
         }
 
@@ -112,14 +124,18 @@ class CoreTextFieldSelectionOnBackTest : FocusedWindowTest {
 
             // Hide the keyboard before pressing back, since the first back should be consumed by
             // the keyboard.
-            rule.runOnUiThread { softwareKeyboardController!!.hide() }
+            rule.runOnUiThread {
+                softwareKeyboardController!!.hide()
+            }
 
             // Press back.
             performKeyPress(backKeyDown)
             performKeyPress(backKeyUp)
 
             // Ensure back event was propagated up past the text field.
-            rule.runOnIdle { assertThat(backPressCount).isEqualTo(1) }
+            rule.runOnIdle {
+                assertThat(backPressCount).isEqualTo(1)
+            }
         }
     }
 }

@@ -19,8 +19,9 @@ package androidx.fragment.app.testing
 import androidx.fragment.testing.test.R
 
 /**
- * A minimum example fragment which requires a specific theme. For example, if your fragment uses
- * material components views, those views require Theme.MaterialComponents.
+ * A minimum example fragment which requires a specific theme.
+ * For example, if your fragment uses material components views, those views require
+ * Theme.MaterialComponents.
  */
 class ThemedFragment : StateRecordingFragment() {
     fun hasThemedFragmentTheme(): Boolean {

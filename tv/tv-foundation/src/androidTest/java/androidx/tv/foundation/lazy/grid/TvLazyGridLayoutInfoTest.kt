@@ -42,20 +42,19 @@ import org.junit.runners.Parameterized
 
 @MediumTest
 @RunWith(Parameterized::class)
-class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
-    BaseLazyGridTestWithOrientation(param.orientation) {
+class TvLazyGridLayoutInfoTest(
+    param: LayoutInfoTestParam
+) : BaseLazyGridTestWithOrientation(param.orientation) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun initParameters(): Array<Any> =
-            arrayOf(
-                LayoutInfoTestParam(Orientation.Vertical, false),
-                LayoutInfoTestParam(Orientation.Vertical, true),
-                LayoutInfoTestParam(Orientation.Horizontal, false),
-                LayoutInfoTestParam(Orientation.Horizontal, true),
-            )
+        fun initParameters(): Array<Any> = arrayOf(
+            LayoutInfoTestParam(Orientation.Vertical, false),
+            LayoutInfoTestParam(Orientation.Vertical, true),
+            LayoutInfoTestParam(Orientation.Horizontal, false),
+            LayoutInfoTestParam(Orientation.Horizontal, true),
+        )
     }
-
     private val isVertical = param.orientation == Orientation.Vertical
     private val reverseLayout = param.reverseLayout
 
@@ -82,11 +81,15 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 modifier = Modifier.axisSize(gridWidthDp, itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.mainAxisSize(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.mainAxisSize(itemSizeDp))
+                }
             }
         }
 
-        rule.runOnIdle { state.layoutInfo.assertVisibleItems(count = 8, cells = 2) }
+        rule.runOnIdle {
+            state.layoutInfo.assertVisibleItems(count = 8, cells = 2)
+        }
     }
 
     @Test
@@ -99,18 +102,18 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 modifier = Modifier.axisSize(gridWidthDp, itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.mainAxisSize(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.mainAxisSize(itemSizeDp))
+                }
             }
         }
 
         rule.runOnIdle {
-            runBlocking { state.scrollToItem(2, 10) }
-            state.layoutInfo.assertVisibleItems(
-                count = 8,
-                startIndex = 2,
-                startOffset = -10,
-                cells = 2
-            )
+            runBlocking {
+                state.scrollToItem(2, 10)
+            }
+            state.layoutInfo
+                .assertVisibleItems(count = 8, startIndex = 2, startOffset = -10, cells = 2)
         }
     }
 
@@ -125,7 +128,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 mainAxisSpacedBy = itemSizeDp,
                 modifier = Modifier.axisSize(itemSizeDp, itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.mainAxisSize(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.mainAxisSize(itemSizeDp))
+                }
             }
         }
 
@@ -138,7 +143,6 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
     fun ObservingFun(state: TvLazyGridState, currentInfo: StableRef<TvLazyGridLayoutInfo?>) {
         currentInfo.value = state.layoutInfo
     }
-
     @Test
     fun visibleItemsAreObservableWhenWeScroll() {
         lateinit var state: TvLazyGridState
@@ -150,7 +154,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 modifier = Modifier.axisSize(itemSizeDp * 2f, itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.mainAxisSize(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.mainAxisSize(itemSizeDp))
+                }
             }
             ObservingFun(state, currentInfo)
         }
@@ -158,12 +164,15 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
         rule.runOnIdle {
             // empty it here and scrolling should invoke observingFun again
             currentInfo.value = null
-            runBlocking { state.scrollToItem(2, 0) }
+            runBlocking {
+                state.scrollToItem(2, 0)
+            }
         }
 
         rule.runOnIdle {
             assertThat(currentInfo.value).isNotNull()
-            currentInfo.value!!.assertVisibleItems(count = 8, startIndex = 2, cells = 2)
+            currentInfo.value!!
+                .assertVisibleItems(count = 8, startIndex = 2, cells = 2)
         }
     }
 
@@ -183,7 +192,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 state = rememberTvLazyGridState().also { state = it },
             ) {
-                item { Box(Modifier.size(size)) }
+                item {
+                    Box(Modifier.size(size))
+                }
             }
             observingFun()
         }
@@ -192,12 +203,11 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
             assertThat(currentInfo).isNotNull()
             currentInfo!!.assertVisibleItems(
                 count = 1,
-                expectedSize =
-                    if (isVertical) {
-                        IntSize(itemSizePx, itemSizePx * 2)
-                    } else {
-                        IntSize(itemSizePx * 2, itemSizePx)
-                    },
+                expectedSize = if (isVertical) {
+                    IntSize(itemSizePx, itemSizePx * 2)
+                } else {
+                    IntSize(itemSizePx * 2, itemSizePx)
+               },
                 cells = 1
             )
             currentInfo = null
@@ -224,7 +234,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 state = rememberTvLazyGridState().also { state = it },
             ) {
-                items((0 until count).toList()) { Box(Modifier.mainAxisSize(10.dp)) }
+                items((0 until count).toList()) {
+                    Box(Modifier.mainAxisSize(10.dp))
+                }
             }
         }
 
@@ -233,7 +245,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
             count = 20
         }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.totalItemsCount).isEqualTo(20) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.totalItemsCount).isEqualTo(20)
+        }
     }
 
     @Test
@@ -248,21 +262,22 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 state = rememberTvLazyGridState().also { state = it },
             ) {
-                items((0..7).toList()) { Box(Modifier.mainAxisSize(sizeDp)) }
+                items((0..7).toList()) {
+                    Box(Modifier.mainAxisSize(sizeDp))
+                }
             }
         }
 
         rule.runOnIdle {
             assertThat(state.layoutInfo.viewportStartOffset).isEqualTo(0)
             assertThat(state.layoutInfo.viewportEndOffset).isEqualTo(sizePx)
-            assertThat(state.layoutInfo.viewportSize)
-                .isEqualTo(
-                    if (isVertical) {
-                        IntSize(sizePx * 2, sizePx)
-                    } else {
-                        IntSize(sizePx, sizePx * 2)
-                    }
-                )
+            assertThat(state.layoutInfo.viewportSize).isEqualTo(
+                if (isVertical) {
+                    IntSize(sizePx * 2, sizePx)
+                } else {
+                    IntSize(sizePx, sizePx * 2)
+                }
+            )
         }
     }
 
@@ -272,30 +287,29 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
         val startPaddingPx = 10
         val endPaddingPx = 15
         val sizeDp = with(rule.density) { sizePx.toDp() }
-        val beforeContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
-            }
-        val afterContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
-            }
+        val beforeContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
+        }
+        val afterContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
+        }
         lateinit var state: TvLazyGridState
         rule.setContent {
             LazyGrid(
                 cells = 2,
                 modifier = Modifier.axisSize(sizeDp * 2, sizeDp),
-                contentPadding =
-                    PaddingValues(
-                        beforeContent = beforeContentPaddingDp,
-                        afterContent = afterContentPaddingDp,
-                        beforeContentCrossAxis = 2.dp,
-                        afterContentCrossAxis = 2.dp
-                    ),
+                contentPadding = PaddingValues(
+                    beforeContent = beforeContentPaddingDp,
+                    afterContent = afterContentPaddingDp,
+                    beforeContentCrossAxis = 2.dp,
+                    afterContentCrossAxis = 2.dp
+                ),
                 reverseLayout = reverseLayout,
                 state = rememberTvLazyGridState().also { state = it },
             ) {
-                items((0..7).toList()) { Box(Modifier.mainAxisSize(sizeDp)) }
+                items((0..7).toList()) {
+                    Box(Modifier.mainAxisSize(sizeDp))
+                }
             }
         }
 
@@ -303,14 +317,13 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
             assertThat(state.layoutInfo.viewportStartOffset).isEqualTo(-startPaddingPx)
             assertThat(state.layoutInfo.viewportEndOffset).isEqualTo(sizePx - startPaddingPx)
             assertThat(state.layoutInfo.afterContentPadding).isEqualTo(endPaddingPx)
-            assertThat(state.layoutInfo.viewportSize)
-                .isEqualTo(
-                    if (isVertical) {
-                        IntSize(sizePx * 2, sizePx)
-                    } else {
-                        IntSize(sizePx, sizePx * 2)
-                    }
-                )
+            assertThat(state.layoutInfo.viewportSize).isEqualTo(
+                if (isVertical) {
+                    IntSize(sizePx * 2, sizePx)
+                } else {
+                    IntSize(sizePx, sizePx * 2)
+                }
+            )
         }
     }
 
@@ -318,9 +331,12 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
     fun emptyItemsInVisibleItemsInfo() {
         lateinit var state: TvLazyGridState
         rule.setContent {
-            LazyGrid(cells = 2, state = rememberTvLazyGridState().also { state = it }) {
+            LazyGrid(
+                cells = 2,
+                state = rememberTvLazyGridState().also { state = it }
+            ) {
                 item { Box(Modifier) }
-                item {}
+                item { }
             }
         }
 
@@ -338,26 +354,24 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
         val startPaddingPx = 10
         val endPaddingPx = 15
         val sizeDp = with(rule.density) { sizePx.toDp() }
-        val beforeContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
-            }
-        val afterContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
-            }
+        val beforeContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
+        }
+        val afterContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
+        }
         rule.setContent {
             LazyGrid(
                 cells = 1,
                 modifier = Modifier.mainAxisSize(sizeDp).crossAxisSize(sizeDp * 2),
                 state = rememberTvLazyGridState().also { state = it },
                 reverseLayout = reverseLayout,
-                contentPadding =
-                    PaddingValues(
-                        beforeContent = beforeContentPaddingDp,
-                        afterContent = afterContentPaddingDp
-                    )
-            ) {}
+                contentPadding = PaddingValues(
+                    beforeContent = beforeContentPaddingDp,
+                    afterContent = afterContentPaddingDp
+                )
+            ) {
+            }
         }
 
         rule.runOnIdle {
@@ -365,10 +379,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
             assertThat(state.layoutInfo.viewportEndOffset).isEqualTo(sizePx - startPaddingPx)
             assertThat(state.layoutInfo.beforeContentPadding).isEqualTo(startPaddingPx)
             assertThat(state.layoutInfo.afterContentPadding).isEqualTo(endPaddingPx)
-            assertThat(state.layoutInfo.viewportSize)
-                .isEqualTo(
-                    if (vertical) IntSize(sizePx * 2, sizePx) else IntSize(sizePx, sizePx * 2)
-                )
+            assertThat(state.layoutInfo.viewportSize).isEqualTo(
+                if (vertical) IntSize(sizePx * 2, sizePx) else IntSize(sizePx, sizePx * 2)
+            )
         }
     }
 
@@ -379,27 +392,26 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
         val startPaddingPx = 10
         val endPaddingPx = 15
         val sizeDp = with(rule.density) { sizePx.toDp() }
-        val beforeContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
-            }
-        val afterContentPaddingDp =
-            with(rule.density) {
-                if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
-            }
+        val beforeContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) startPaddingPx.toDp() else endPaddingPx.toDp()
+        }
+        val afterContentPaddingDp = with(rule.density) {
+            if (!reverseLayout) endPaddingPx.toDp() else startPaddingPx.toDp()
+        }
         rule.setContent {
             LazyGrid(
                 cells = 1,
                 modifier = Modifier.mainAxisSize(sizeDp).crossAxisSize(sizeDp * 2),
                 state = rememberTvLazyGridState().also { state = it },
                 reverseLayout = reverseLayout,
-                contentPadding =
-                    PaddingValues(
-                        beforeContent = beforeContentPaddingDp,
-                        afterContent = afterContentPaddingDp
-                    )
+                contentPadding = PaddingValues(
+                    beforeContent = beforeContentPaddingDp,
+                    afterContent = afterContentPaddingDp
+                )
             ) {
-                item { Box(Modifier.size(sizeDp / 2)) }
+                item {
+                    Box(Modifier.size(sizeDp / 2))
+                }
             }
         }
 
@@ -408,10 +420,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
             assertThat(state.layoutInfo.viewportEndOffset).isEqualTo(sizePx - startPaddingPx)
             assertThat(state.layoutInfo.beforeContentPadding).isEqualTo(startPaddingPx)
             assertThat(state.layoutInfo.afterContentPadding).isEqualTo(endPaddingPx)
-            assertThat(state.layoutInfo.viewportSize)
-                .isEqualTo(
-                    if (vertical) IntSize(sizePx * 2, sizePx) else IntSize(sizePx, sizePx * 2)
-                )
+            assertThat(state.layoutInfo.viewportSize).isEqualTo(
+                if (vertical) IntSize(sizePx * 2, sizePx) else IntSize(sizePx, sizePx * 2)
+            )
         }
     }
 
@@ -425,11 +436,15 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 modifier = Modifier.width(gridWidthDp).height(itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.size(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.size(itemSizeDp))
+                }
             }
         }
 
-        rule.runOnIdle { assertThat(state.layoutInfo.reverseLayout).isEqualTo(reverseLayout) }
+        rule.runOnIdle {
+            assertThat(state.layoutInfo.reverseLayout).isEqualTo(reverseLayout)
+        }
     }
 
     @Test
@@ -442,7 +457,9 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 reverseLayout = reverseLayout,
                 modifier = Modifier.axisSize(gridWidthDp, itemSizeDp * 3.5f),
             ) {
-                items((0..11).toList()) { Box(Modifier.mainAxisSize(itemSizeDp)) }
+                items((0..11).toList()) {
+                    Box(Modifier.mainAxisSize(itemSizeDp))
+                }
             }
         }
 
@@ -475,8 +492,10 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
                 .that(if (isVertical) it.offset.y else it.offset.x)
                 .isEqualTo(currentOffset)
             assertThat(it.size).isEqualTo(expectedSize)
-            assertThat(if (isVertical) it.row else it.column).isEqualTo(currentLine)
-            assertThat(if (isVertical) it.column else it.row).isEqualTo(currentCell)
+            assertThat(if (isVertical) it.row else it.column)
+                .isEqualTo(currentLine)
+            assertThat(if (isVertical) it.column else it.row)
+                .isEqualTo(currentCell)
             currentIndex++
             currentCell++
             if (currentCell == cells) {
@@ -488,10 +507,14 @@ class TvLazyGridLayoutInfoTest(param: LayoutInfoTestParam) :
     }
 }
 
-class LayoutInfoTestParam(val orientation: Orientation, val reverseLayout: Boolean) {
+class LayoutInfoTestParam(
+    val orientation: Orientation,
+    val reverseLayout: Boolean
+) {
     override fun toString(): String {
         return "orientation=$orientation;reverseLayout=$reverseLayout"
     }
 }
 
-@Stable class StableRef<T>(var value: T)
+@Stable
+class StableRef<T>(var value: T)

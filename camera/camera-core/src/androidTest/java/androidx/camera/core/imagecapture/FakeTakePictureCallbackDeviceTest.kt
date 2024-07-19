@@ -16,6 +16,7 @@
 
 package androidx.camera.core.imagecapture
 
+import androidx.annotation.RequiresApi
 import androidx.camera.core.ImageCapture.OutputFileResults
 import androidx.camera.testing.impl.fakes.FakeImageInfo
 import androidx.camera.testing.impl.fakes.FakeImageProxy
@@ -24,7 +25,10 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
-/** Unit tests for [FakeTakePictureCallbackDeviceTest] */
+/**
+ * Unit tests for [FakeTakePictureCallbackDeviceTest]
+ */
+@RequiresApi(21)
 @SdkSuppress(minSdkVersion = 21)
 class FakeTakePictureCallbackDeviceTest {
 
@@ -43,7 +47,8 @@ class FakeTakePictureCallbackDeviceTest {
     @Test
     fun inMemoryResultArrivesBeforeGet_canGetResult() = runBlocking {
         // Arrange.
-        val inMemoryResult = FakeImageProxy(FakeImageInfo())
+        val inMemoryResult =
+            FakeImageProxy(FakeImageInfo())
         // Assert.
         fakeTakePictureCallback.onFinalResult(inMemoryResult)
         // Act.

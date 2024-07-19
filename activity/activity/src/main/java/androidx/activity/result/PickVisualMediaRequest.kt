@@ -18,6 +18,7 @@ package androidx.activity.result
 
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageAndVideo
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VisualMediaType
+import androidx.annotation.RequiresApi
 
 /**
  * Creates a request for a
@@ -25,22 +26,28 @@ import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
  * [androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia] Activity Contract.
  *
  * @param mediaType type to go into the PickVisualMediaRequest
+ *
  * @return a PickVisualMediaRequest that contains the given input
  */
-fun PickVisualMediaRequest(mediaType: VisualMediaType = ImageAndVideo) =
-    PickVisualMediaRequest.Builder().setMediaType(mediaType).build()
+@RequiresApi(19)
+fun PickVisualMediaRequest(
+    mediaType: VisualMediaType = ImageAndVideo
+) = PickVisualMediaRequest.Builder().setMediaType(mediaType).build()
 
 /**
  * A request for a
  * [androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia] or
  * [androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia] Activity Contract.
  */
+@RequiresApi(19)
 class PickVisualMediaRequest internal constructor() {
 
     var mediaType: VisualMediaType = ImageAndVideo
         internal set
 
-    /** A builder for constructing [PickVisualMediaRequest] instances. */
+    /**
+     * A builder for constructing [PickVisualMediaRequest] instances.
+     */
     class Builder {
 
         private var mediaType: VisualMediaType = ImageAndVideo
@@ -64,7 +71,8 @@ class PickVisualMediaRequest internal constructor() {
          *
          * @return the newly constructed PickVisualMediaRequest.
          */
-        fun build(): PickVisualMediaRequest =
-            PickVisualMediaRequest().apply { this.mediaType = this@Builder.mediaType }
+        fun build(): PickVisualMediaRequest = PickVisualMediaRequest().apply {
+            this.mediaType = this@Builder.mediaType
+        }
     }
 }

@@ -161,5 +161,3 @@ internal fun handlePopupOnKeyEvent(
 } else {
     false
 }
-
-internal actual val DefaultMenuProperties = PopupProperties(focusable = true)

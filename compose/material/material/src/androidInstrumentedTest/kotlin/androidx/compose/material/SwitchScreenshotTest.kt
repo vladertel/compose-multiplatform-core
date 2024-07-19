@@ -17,7 +17,6 @@
 package androidx.compose.material
 
 import android.os.Build
-import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentSize
@@ -49,9 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.screenshot.AndroidXScreenshotTestRule
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,28 +59,26 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 class SwitchScreenshotTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
-
-    // TODO(b/267253920): Add a compose test API to set/reset InputMode.
-    @After
-    fun resetTouchMode() =
-        with(InstrumentationRegistry.getInstrumentation()) {
-            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
-        }
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     // TODO: this test tag as well as Boxes inside testa are temporarty, remove then b/157687898
     //  is fixed
     private val wrapperTestTag = "switchWrapper"
 
-    private val wrapperModifier =
-        Modifier.wrapContentSize(Alignment.TopStart).testTag(wrapperTestTag)
+    private val wrapperModifier = Modifier
+        .wrapContentSize(Alignment.TopStart)
+        .testTag(wrapperTestTag)
 
     @Test
     fun switchTest_checked() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = true, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = true, onCheckedChange = { })
+            }
         }
         assertToggeableAgainstGolden("switch_checked")
     }
@@ -93,7 +88,7 @@ class SwitchScreenshotTest {
         rule.setMaterialContent {
             Box(wrapperModifier) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Switch(checked = true, onCheckedChange = {})
+                    Switch(checked = true, onCheckedChange = { })
                 }
             }
         }
@@ -106,7 +101,7 @@ class SwitchScreenshotTest {
             Box(wrapperModifier) {
                 Switch(
                     checked = true,
-                    onCheckedChange = {},
+                    onCheckedChange = { },
                     colors = SwitchDefaults.colors(checkedThumbColor = Color.Red)
                 )
             }
@@ -117,7 +112,9 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_unchecked() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = false, onCheckedChange = { })
+            }
         }
         assertToggeableAgainstGolden("switch_unchecked")
     }
@@ -127,7 +124,7 @@ class SwitchScreenshotTest {
         rule.setMaterialContent {
             Box(wrapperModifier) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Switch(checked = false, onCheckedChange = {})
+                    Switch(checked = false, onCheckedChange = { })
                 }
             }
         }
@@ -138,7 +135,7 @@ class SwitchScreenshotTest {
     fun switchTest_bigSizeSpecified() {
         rule.setMaterialContent {
             Box(wrapperModifier.requiredSize(50.dp)) {
-                Switch(checked = true, onCheckedChange = {})
+                Switch(checked = true, onCheckedChange = { })
             }
         }
         assertToggeableAgainstGolden("switch_bigger_size")
@@ -147,10 +144,14 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_pressed() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = false, enabled = true, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = false, enabled = true, onCheckedChange = { })
+            }
         }
 
-        rule.onNode(isToggleable()).performTouchInput { down(center) }
+        rule.onNode(isToggleable()).performTouchInput {
+            down(center)
+        }
 
         // Ripples are drawn on the RenderThread, not the main (UI) thread, so we can't wait for
         // synchronization. Instead just wait until after the ripples are finished animating.
@@ -162,7 +163,9 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_disabled_checked() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = true, enabled = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = true, enabled = false, onCheckedChange = { })
+            }
         }
         assertToggeableAgainstGolden("switch_disabled_checked")
     }
@@ -170,7 +173,9 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_disabled_unchecked() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = false, enabled = false, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(checked = false, enabled = false, onCheckedChange = { })
+            }
         }
         assertToggeableAgainstGolden("switch_disabled_unchecked")
     }
@@ -180,7 +185,10 @@ class SwitchScreenshotTest {
         rule.setMaterialContent {
             val isChecked = remember { mutableStateOf(false) }
             Box(wrapperModifier) {
-                Switch(checked = isChecked.value, onCheckedChange = { isChecked.value = it })
+                Switch(
+                    checked = isChecked.value,
+                    onCheckedChange = { isChecked.value = it }
+                )
             }
         }
 
@@ -203,7 +211,10 @@ class SwitchScreenshotTest {
         rule.setMaterialContent {
             val isChecked = remember { mutableStateOf(true) }
             Box(wrapperModifier) {
-                Switch(checked = isChecked.value, onCheckedChange = { isChecked.value = it })
+                Switch(
+                    checked = isChecked.value,
+                    onCheckedChange = { isChecked.value = it }
+                )
             }
         }
 
@@ -224,10 +235,16 @@ class SwitchScreenshotTest {
     @Test
     fun switchTest_hover() {
         rule.setMaterialContent {
-            Box(wrapperModifier) { Switch(checked = true, onCheckedChange = {}) }
+            Box(wrapperModifier) {
+                Switch(
+                    checked = true,
+                    onCheckedChange = { }
+                )
+            }
         }
 
-        rule.onNode(isToggleable()).performMouseInput { enter(center) }
+        rule.onNode(isToggleable())
+            .performMouseInput { enter(center) }
 
         rule.waitForIdle()
 
@@ -244,8 +261,9 @@ class SwitchScreenshotTest {
             Box(wrapperModifier) {
                 Switch(
                     checked = true,
-                    onCheckedChange = {},
-                    modifier = Modifier.focusRequester(focusRequester)
+                    onCheckedChange = { },
+                    modifier = Modifier
+                        .focusRequester(focusRequester)
                 )
             }
         }
@@ -262,8 +280,7 @@ class SwitchScreenshotTest {
     }
 
     private fun assertToggeableAgainstGolden(goldenName: String) {
-        rule
-            .onNodeWithTag(wrapperTestTag)
+        rule.onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }

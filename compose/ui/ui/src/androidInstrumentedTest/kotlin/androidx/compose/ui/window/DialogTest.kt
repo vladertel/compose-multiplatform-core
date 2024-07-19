@@ -58,7 +58,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class DialogTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     private val defaultText = "dialogText"
 
@@ -68,7 +69,9 @@ class DialogTest {
             val showDialog = remember { mutableStateOf(true) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = {}) { BasicText(defaultText) }
+                Dialog(onDismissRequest = {}) {
+                    BasicText(defaultText)
+                }
             }
         }
 
@@ -86,17 +89,22 @@ class DialogTest {
             val text = remember { mutableStateOf(textBeforeClick) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = { showDialog.value = false }) {
+                Dialog(
+                    onDismissRequest = {
+                        showDialog.value = false
+                    }
+                ) {
                     BasicText(
                         text = text.value,
-                        modifier = Modifier.clickable { text.value = textAfterClick }
+                        modifier = Modifier.clickable {
+                            text.value = textAfterClick
+                        }
                     )
                 }
             }
         }
 
-        rule
-            .onNodeWithText(textBeforeClick)
+        rule.onNodeWithText(textBeforeClick)
             .assertIsDisplayed()
             // Click inside the dialog
             .performClick()
@@ -114,7 +122,13 @@ class DialogTest {
             val showDialog = remember { mutableStateOf(true) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = { showDialog.value = false }) { BasicText(defaultText) }
+                Dialog(
+                    onDismissRequest = {
+                        showDialog.value = false
+                    }
+                ) {
+                    BasicText(defaultText)
+                }
             }
         }
 
@@ -122,11 +136,9 @@ class DialogTest {
 
         // Click outside the dialog to dismiss it
         val outsideX = 0
-        val outsideY =
-            with(rule.density) {
-                rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() /
-                    2
-            }
+        val outsideY = with(rule.density) {
+            rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() / 2
+        }
         UiDevice.getInstance(getInstrumentation()).click(outsideX, outsideY)
 
         rule.onNodeWithText(defaultText).assertDoesNotExist()
@@ -138,7 +150,9 @@ class DialogTest {
             val showDialog = remember { mutableStateOf(true) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = {}) { BasicText(defaultText) }
+                Dialog(onDismissRequest = {}) {
+                    BasicText(defaultText)
+                }
             }
         }
 
@@ -146,11 +160,9 @@ class DialogTest {
 
         // Click outside the dialog to try to dismiss it
         val outsideX = 0
-        val outsideY =
-            with(rule.density) {
-                rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() /
-                    2
-            }
+        val outsideY = with(rule.density) {
+            rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() / 2
+        }
         UiDevice.getInstance(getInstrumentation()).click(outsideX, outsideY)
 
         // The Dialog should still be visible
@@ -164,7 +176,9 @@ class DialogTest {
 
             if (showDialog.value) {
                 Dialog(
-                    onDismissRequest = { showDialog.value = false },
+                    onDismissRequest = {
+                        showDialog.value = false
+                    },
                     properties = DialogProperties(dismissOnClickOutside = false)
                 ) {
                     BasicText(defaultText)
@@ -176,11 +190,9 @@ class DialogTest {
 
         // Click outside the dialog to try to dismiss it
         val outsideX = 0
-        val outsideY =
-            with(rule.density) {
-                rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() /
-                    2
-            }
+        val outsideY = with(rule.density) {
+            rule.onAllNodes(isRoot()).onFirst().getUnclippedBoundsInRoot().height.roundToPx() / 2
+        }
         UiDevice.getInstance(getInstrumentation()).click(outsideX, outsideY)
 
         // The Dialog should still be visible
@@ -193,7 +205,13 @@ class DialogTest {
             val showDialog = remember { mutableStateOf(true) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = { showDialog.value = false }) { BasicText(defaultText) }
+                Dialog(
+                    onDismissRequest = {
+                        showDialog.value = false
+                    }
+                ) {
+                    BasicText(defaultText)
+                }
             }
         }
 
@@ -211,7 +229,9 @@ class DialogTest {
             val showDialog = remember { mutableStateOf(true) }
 
             if (showDialog.value) {
-                Dialog(onDismissRequest = {}) { BasicText(defaultText) }
+                Dialog(onDismissRequest = {}) {
+                    BasicText(defaultText)
+                }
             }
         }
 
@@ -231,7 +251,9 @@ class DialogTest {
 
             if (showDialog.value) {
                 Dialog(
-                    onDismissRequest = { showDialog.value = false },
+                    onDismissRequest = {
+                        showDialog.value = false
+                    },
                     properties = DialogProperties(dismissOnBackPress = false)
                 ) {
                     BasicText(defaultText)
@@ -265,7 +287,9 @@ class DialogTest {
                 Dialog(onDismissRequest = {}) {
                     val clickCount = remember { mutableStateOf(0) }
                     BasicText(clickCountPrefix + clickCount.value)
-                    BackHandler { clickCount.value++ }
+                    BackHandler {
+                        clickCount.value++
+                    }
                 }
             }
         }
@@ -284,10 +308,14 @@ class DialogTest {
         var value = 0f
         rule.setContent {
             CompositionLocalProvider(compositionLocal provides 1f) {
-                Dialog(onDismissRequest = {}) { value = compositionLocal.current }
+                Dialog(onDismissRequest = {}) {
+                    value = compositionLocal.current
+                }
             }
         }
-        rule.runOnIdle { assertEquals(1f, value) }
+        rule.runOnIdle {
+            assertEquals(1f, value)
+        }
     }
 
     @Test
@@ -306,11 +334,10 @@ class DialogTest {
             }
         }
         rule.runOnIdle {
-            Truth.assertThat(box1Width)
-                .isEqualTo(
-                    (rule.activity.resources.configuration.screenWidthDp * rule.density.density)
-                        .roundToInt()
-                )
+            Truth.assertThat(box1Width).isEqualTo(
+                (rule.activity.resources.configuration.screenWidthDp * rule.density.density)
+                    .roundToInt()
+            )
             Truth.assertThat(box2Width).isLessThan(box1Width)
         }
     }

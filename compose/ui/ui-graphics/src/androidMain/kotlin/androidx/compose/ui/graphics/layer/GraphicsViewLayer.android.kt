@@ -102,10 +102,6 @@ internal class ViewLayer(
         this.parentLayer = parentLayer
     }
 
-    fun resetDrawBlock() {
-        drawBlock = DefaultDrawBlock
-    }
-
     init {
         setWillNotDraw(false) // we WILL draw
         this.clipBounds = null
@@ -136,7 +132,8 @@ internal class ViewLayer(
         isInvalidated = false
     }
 
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {}
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+    }
 
     override fun forceLayout() {
         // Don't do anything. These Views are treated as RenderNodes, so a forced layout
@@ -144,19 +141,21 @@ internal class ViewLayer(
     }
 
     companion object {
-        internal val LayerOutlineProvider =
-            object : ViewOutlineProvider() {
-                override fun getOutline(view: View?, outline: Outline) {
-                    if (view is ViewLayer) {
-                        view.layerOutline?.let { layerOutline -> outline.set(layerOutline) }
+        internal val LayerOutlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View?, outline: Outline) {
+                if (view is ViewLayer) {
+                    view.layerOutline?.let { layerOutline ->
+                        outline.set(layerOutline)
                     }
                 }
             }
+        }
     }
 }
 
 internal class GraphicsViewLayer(
     private val layerContainer: DrawChildContainer,
+    override val ownerId: Long,
     val canvasHolder: CanvasHolder = CanvasHolder(),
     canvasDrawScope: CanvasDrawScope = CanvasDrawScope()
 ) : GraphicsLayerImpl {
@@ -166,20 +165,17 @@ internal class GraphicsViewLayer(
     private val clipRect = android.graphics.Rect()
     private var layerPaint: android.graphics.Paint? = null
 
-    private val picture: Picture? =
-        if (mayRenderInSoftware) {
+    private val picture: Picture? = if (mayRenderInSoftware) {
             Picture()
         } else {
             null
         }
-    private val pictureDrawScope: CanvasDrawScope? =
-        if (mayRenderInSoftware) {
+    private val pictureDrawScope: CanvasDrawScope? = if (mayRenderInSoftware) {
             CanvasDrawScope()
         } else {
             null
         }
-    private val pictureCanvasHolder: CanvasHolder? =
-        if (mayRenderInSoftware) {
+    private val pictureCanvasHolder: CanvasHolder? = if (mayRenderInSoftware) {
             CanvasHolder()
         } else {
             null
@@ -206,14 +202,12 @@ internal class GraphicsViewLayer(
             obtainLayerPaint().apply { xfermode = PorterDuffXfermode(value.toPorterDuffMode()) }
             updateLayerProperties()
         }
-
     override var colorFilter: ColorFilter? = null
         set(value) {
             field = value
             obtainLayerPaint().apply { this.colorFilter = value?.asAndroidColorFilter() }
             updateLayerProperties()
         }
-
     override var compositingStrategy: CompositingStrategy = CompositingStrategy.Auto
         set(value) {
             field = value
@@ -221,21 +215,20 @@ internal class GraphicsViewLayer(
         }
 
     private fun applyCompositingLayer(compositingStrategy: CompositingStrategy) {
-        viewLayer.canUseCompositingLayer =
-            when (compositingStrategy) {
-                CompositingStrategy.Offscreen -> {
-                    viewLayer.setLayerType(LAYER_TYPE_HARDWARE, layerPaint)
-                    true
-                }
-                CompositingStrategy.ModulateAlpha -> {
-                    viewLayer.setLayerType(LAYER_TYPE_NONE, layerPaint)
-                    false
-                }
-                else -> {
-                    viewLayer.setLayerType(LAYER_TYPE_NONE, layerPaint)
-                    true
-                }
+        viewLayer.canUseCompositingLayer = when (compositingStrategy) {
+            CompositingStrategy.Offscreen -> {
+                viewLayer.setLayerType(LAYER_TYPE_HARDWARE, layerPaint)
+                true
             }
+            CompositingStrategy.ModulateAlpha -> {
+                viewLayer.setLayerType(LAYER_TYPE_NONE, layerPaint)
+                false
+            }
+            else -> {
+                viewLayer.setLayerType(LAYER_TYPE_NONE, layerPaint)
+                true
+            }
+        }
     }
 
     private fun updateLayerProperties() {
@@ -250,7 +243,8 @@ internal class GraphicsViewLayer(
         layerPaint ?: android.graphics.Paint().also { layerPaint = it }
 
     private fun requiresCompositingLayer(): Boolean =
-        compositingStrategy == CompositingStrategy.Offscreen || requiresLayerPaint()
+        compositingStrategy == CompositingStrategy.Offscreen ||
+            requiresLayerPaint()
 
     private fun requiresLayerPaint(): Boolean =
         blendMode != BlendMode.SrcOver || colorFilter != null
@@ -280,13 +274,11 @@ internal class GraphicsViewLayer(
                 viewLayer.pivotY = value.y
             }
         }
-
     override var scaleX: Float = 1f
         set(value) {
             field = value
             viewLayer.scaleX = value
         }
-
     override var scaleY: Float = 1f
         set(value) {
             field = value
@@ -298,7 +290,6 @@ internal class GraphicsViewLayer(
             field = value
             viewLayer.translationX = value
         }
-
     override var translationY: Float = 0f
         set(value) {
             field = value
@@ -310,44 +301,38 @@ internal class GraphicsViewLayer(
             field = value
             viewLayer.elevation = value
         }
-
     override var ambientShadowColor: Color = Color.Black
         set(value) {
+            field = value
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                field = value
                 ViewLayerVerificationHelper28.setOutlineAmbientShadowColor(
                     viewLayer,
                     value.toArgb()
                 )
             }
         }
-
     override var spotShadowColor: Color = Color.Black
         set(value) {
+            field = value
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                field = value
                 ViewLayerVerificationHelper28.setOutlineSpotShadowColor(viewLayer, value.toArgb())
             }
         }
-
     override var rotationX: Float = 0f
         set(value) {
             field = value
             viewLayer.rotationX = value
         }
-
     override var rotationY: Float = 0f
         set(value) {
             field = value
             viewLayer.rotationY = value
         }
-
     override var rotationZ: Float = 0f
         set(value) {
             field = value
             viewLayer.rotation = value
         }
-
     override var cameraDistance: Float
         get() {
             return viewLayer.getCameraDistance() / resources.displayMetrics.densityDpi
@@ -363,7 +348,6 @@ internal class GraphicsViewLayer(
             clipBoundsInvalidated = true
             viewLayer.clipToOutline = value && outlineIsProvided
         }
-
     override var renderEffect: RenderEffect? = null
         set(value) {
             field = value
@@ -422,6 +406,9 @@ internal class GraphicsViewLayer(
         layer: GraphicsLayer,
         block: DrawScope.() -> Unit
     ) {
+        if (viewLayer.parent == null) {
+            layerContainer.addView(viewLayer)
+        }
         viewLayer.setDrawParams(density, layoutDirection, layer, block)
         // According to View#canHaveDisplaylist, a View can only have a displaylist
         // if it is attached and there is a valid ThreadedRenderer instance on the corresponding
@@ -444,8 +431,6 @@ internal class GraphicsViewLayer(
             }
         }
     }
-
-    override val supportsSoftwareRendering: Boolean = mayRenderInSoftware
 
     private fun recordDrawingOperations() {
         try {
@@ -472,47 +457,39 @@ internal class GraphicsViewLayer(
     override fun calculateMatrix(): Matrix = viewLayer.matrix
 
     private fun updateClipBounds() {
-        if (clipBoundsInvalidated) {
-            viewLayer.clipBounds =
-                if (clip && !outlineIsProvided) {
-                    clipRect.apply {
-                        left = 0
-                        top = 0
-                        right = viewLayer.width
-                        bottom = viewLayer.height
-                    }
-                } else {
-                    null
-                }
-        }
+       if (clipBoundsInvalidated) {
+           viewLayer.clipBounds = if (clip && !outlineIsProvided) {
+               clipRect.apply {
+                   left = 0
+                   top = 0
+                   right = viewLayer.width
+                   bottom = viewLayer.height
+               }
+           } else {
+               null
+           }
+       }
     }
 
     override fun discardDisplayList() {
         layerContainer.removeViewInLayout(viewLayer)
     }
 
-    override fun onReused() {
-        viewLayer.resetDrawBlock()
-        // it was removed in discardDisplayList()
-        layerContainer.addView(viewLayer)
-    }
-
     companion object {
 
         val mayRenderInSoftware = !isLockHardwareCanvasAvailable()
 
-        val PlaceholderCanvas =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                // For Android M+ we just need a Canvas that returns true for isHardwareAccelerated
-                // in order to get the draw calls to update the displaylist of the backing View
-                object : Canvas() {
-                    override fun isHardwareAccelerated(): Boolean = true
-                }
-            } else {
-                // On Android L, there is an instanceof check that verify that the Canvas is a
-                // HardwareCanvas so return our subclass of the HardwareCanvas stub
-                PlaceholderHardwareCanvas()
+        val PlaceholderCanvas = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // For Android M+ we just need a Canvas that returns true for isHardwareAccelerated
+            // in order to get the draw calls to update the displaylist of the backing View
+            object : Canvas() {
+                override fun isHardwareAccelerated(): Boolean = true
             }
+        } else {
+            // On Android L, there is an instanceof check that verify that the Canvas is a
+            // HardwareCanvas so return our subclass of the HardwareCanvas stub
+            PlaceholderHardwareCanvas()
+        }
     }
 }
 
@@ -549,8 +526,8 @@ private object OutlineUtils {
     private var hasRetrievedMethod = false
 
     /**
-     * Returns true if the outline was rebuilt successfully, false otherwise. This can only return
-     * false on API 21 if the reflective API call had failed
+     * Returns true if the outline was rebuilt successfully, false otherwise.
+     * This can only return false on API 21 if the reflective API call had failed
      */
     fun rebuildOutline(view: View): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {

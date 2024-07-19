@@ -46,21 +46,19 @@ fun FocusableSample() {
 
     // text below will change when we focus it via button click
     val isFocused = interactionSource.collectIsFocusedAsState().value
-    val text =
-        if (isFocused) {
-            "Focused! tap anywhere to free the focus"
-        } else {
-            "Bring focus to me by tapping the button below!"
-        }
+    val text = if (isFocused) {
+        "Focused! tap anywhere to free the focus"
+    } else {
+        "Bring focus to me by tapping the button below!"
+    }
     Column {
         // this Text will change it's text parameter depending on the presence of a focus
         Text(
             text = text,
-            modifier =
-                Modifier
-                    // add focusRequester modifier before the focusable (or even in the parent)
-                    .focusRequester(focusRequester)
-                    .focusable(interactionSource = interactionSource)
+            modifier = Modifier
+                // add focusRequester modifier before the focusable (or even in the parent)
+                .focusRequester(focusRequester)
+                .focusable(interactionSource = interactionSource)
         )
         Button(onClick = { focusRequester.requestFocus() }) {
             Text("Bring focus to the text above")
@@ -90,9 +88,14 @@ fun FocusGroupSample() {
 fun FocusableFocusGroupSample() {
     val interactionSource = remember { MutableInteractionSource() }
     LazyRow(
-        Modifier.focusable(interactionSource = interactionSource)
+        Modifier
+            .focusable(interactionSource = interactionSource)
             .border(1.dp, if (interactionSource.collectIsFocusedAsState().value) Red else Black)
     ) {
-        repeat(10) { item { Button({}) { Text("Button$it") } } }
+        repeat(10) {
+            item {
+                Button({}) { Text("Button$it") }
+            }
+        }
     }
 }

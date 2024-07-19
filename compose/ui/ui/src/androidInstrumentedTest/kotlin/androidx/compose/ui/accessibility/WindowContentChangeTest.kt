@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2020 The Android Open Source Project
  *
@@ -55,7 +56,8 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class WindowContentChangeTest {
-    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule
+    val rule = createAndroidComposeRule<TestActivity>()
 
     private lateinit var androidComposeView: AndroidComposeView
     private val dispatchedAccessibilityEvents = mutableListOf<AccessibilityEvent>()
@@ -68,9 +70,11 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    if (addProperty) disabled()
-                }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        if (addProperty) disabled()
+                    }
             )
         }
 
@@ -98,9 +102,11 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    if (!removeProperty) disabled()
-                }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        if (!removeProperty) disabled()
+                    }
             )
         }
 
@@ -129,13 +135,15 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    if (!propertiesChanged) {
-                        disabled()
-                    } else {
-                        onClick { true }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        if (!propertiesChanged) {
+                            disabled()
+                        } else {
+                            onClick { true }
+                        }
                     }
-                }
             )
         }
 
@@ -163,13 +171,15 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    if (!newAction) {
-                        onClick(label = "action") { true }
-                    } else {
-                        onClick(label = "action") { true }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        if (!newAction) {
+                            onClick(label = "action") { true }
+                        } else {
+                            onClick(label = "action") { true }
+                        }
                     }
-                }
             )
         }
 
@@ -188,13 +198,15 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    if (!newAction) {
-                        onClick(label = "action1") { true }
-                    } else {
-                        onClick(label = "action2") { true }
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        if (!newAction) {
+                            onClick(label = "action1") { true }
+                        } else {
+                            onClick(label = "action2") { true }
+                        }
                     }
-                }
             )
         }
 
@@ -222,14 +234,15 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    customActions =
-                        if (!newAction) {
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        customActions = if (!newAction) {
                             listOf(CustomAccessibilityAction("action") { true })
                         } else {
                             listOf(CustomAccessibilityAction("action") { false })
                         }
-                }
+                    }
             )
         }
 
@@ -248,14 +261,15 @@ class WindowContentChangeTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithAccessibilityEnabled {
             Box(
-                Modifier.size(10.dp).semantics(mergeDescendants = false) {
-                    customActions =
-                        if (!newAction) {
+                Modifier
+                    .size(10.dp)
+                    .semantics(mergeDescendants = false) {
+                        customActions = if (!newAction) {
                             listOf(CustomAccessibilityAction("action1") { true })
                         } else {
                             listOf(CustomAccessibilityAction("action2") { true })
                         }
-                }
+                    }
             )
         }
 
@@ -283,10 +297,7 @@ class WindowContentChangeTest {
             androidComposeView = LocalView.current as AndroidComposeView
             with(androidComposeView.composeAccessibilityDelegate) {
                 accessibilityForceEnabledForTesting = true
-                onSendAccessibilityEvent = {
-                    dispatchedAccessibilityEvents += it
-                    false
-                }
+                onSendAccessibilityEvent = { dispatchedAccessibilityEvents += it; false }
             }
             content()
         }
@@ -298,11 +309,10 @@ class WindowContentChangeTest {
     }
 
     companion object {
-        internal val AccessibilityEventComparator =
-            Correspondence.from<AccessibilityEvent, AccessibilityEvent>(
+        internal val AccessibilityEventComparator = Correspondence
+            .from<AccessibilityEvent, AccessibilityEvent>(
                 { actual, expected ->
-                    actual != null &&
-                        expected != null &&
+                    actual != null && expected != null &&
                         actual.eventType == expected.eventType &&
                         actual.eventTime == expected.eventTime &&
                         actual.packageName == expected.packageName &&
@@ -339,20 +349,18 @@ class WindowContentChangeTest {
     }
 
     private val View.composeAccessibilityDelegate: AndroidComposeViewAccessibilityDelegateCompat
-        get() =
-            ViewCompat.getAccessibilityDelegate(this)
-                as AndroidComposeViewAccessibilityDelegateCompat
+        get() = ViewCompat.getAccessibilityDelegate(this)
+            as AndroidComposeViewAccessibilityDelegateCompat
 
     // TODO(b/304359126): Move this to AccessibilityEventCompat and use it wherever we use obtain().
-    private fun AccessibilityEvent(): AccessibilityEvent =
-        if (SDK_INT >= R) {
-                android.view.accessibility.AccessibilityEvent()
-            } else {
-                @Suppress("DEPRECATION") AccessibilityEvent.obtain()
-            }
-            .apply {
-                packageName = "androidx.compose.ui.test"
-                className = "android.view.View"
-                isEnabled = true
-            }
+    private fun AccessibilityEvent(): AccessibilityEvent = if (SDK_INT >= R) {
+        android.view.accessibility.AccessibilityEvent()
+    } else {
+        @Suppress("DEPRECATION")
+        AccessibilityEvent.obtain()
+    }.apply {
+        packageName = "androidx.compose.ui.test"
+        className = "android.view.View"
+        isEnabled = true
+    }
 }

@@ -96,15 +96,23 @@ fun BasicTextFieldInScrollableDemo() {
 @Preview(showBackground = true)
 @Composable
 private fun TextFieldInScrollableColumn() {
-    Column(Modifier.verticalScroll(rememberScrollState())) {
-        repeat(50) { index -> DemoTextField(index) }
+    Column(
+        Modifier.verticalScroll(rememberScrollState())
+    ) {
+        repeat(50) { index ->
+            DemoTextField(index)
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun TextFieldInLazyColumn() {
-    LazyColumn { items(50) { index -> DemoTextField(index) } }
+    LazyColumn {
+        items(50) { index ->
+            DemoTextField(index)
+        }
+    }
 }
 
 @Preview(showBackground = true)
@@ -132,8 +140,7 @@ private class EditTextsInScrollableView(context: Context) : ScrollView(context) 
         val column = LinearLayout(context)
         column.orientation = LinearLayout.VERTICAL
         addView(
-            column,
-            ViewGroup.LayoutParams(
+            column, ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
@@ -141,14 +148,12 @@ private class EditTextsInScrollableView(context: Context) : ScrollView(context) 
 
         repeat(30) {
             val text = EditText(context)
-            column.addView(
-                text,
-                LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                    .also { it.setMargins(20) }
-            )
+            column.addView(text, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.setMargins(20)
+            })
         }
     }
 }

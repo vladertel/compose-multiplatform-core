@@ -17,6 +17,7 @@
 package androidx.camera.core;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.CaptureConfig;
 import androidx.camera.core.impl.Config;
@@ -31,6 +32,7 @@ import androidx.camera.core.impl.UseCaseConfigFactory;
 import java.util.UUID;
 
 /** A fake configuration for {@link FakeOtherUseCase}. */
+@RequiresApi(21)
 public class FakeOtherUseCaseConfig implements UseCaseConfig<FakeOtherUseCase> {
 
     private final Config mConfig;
@@ -161,6 +163,22 @@ public class FakeOtherUseCaseConfig implements UseCaseConfig<FakeOtherUseCase> {
         @NonNull
         public Builder setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
+            return this;
+        }
+
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @Override
+        @NonNull
+        public Builder setCameraSelector(@NonNull CameraSelector cameraSelector) {
+            getMutableConfig().insertOption(OPTION_CAMERA_SELECTOR, cameraSelector);
+            return this;
+        }
+
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @Override
+        @NonNull
+        public Builder setUseCaseEventCallback(@NonNull UseCase.EventCallback eventCallback) {
+            getMutableConfig().insertOption(OPTION_USE_CASE_EVENT_CALLBACK, eventCallback);
             return this;
         }
 

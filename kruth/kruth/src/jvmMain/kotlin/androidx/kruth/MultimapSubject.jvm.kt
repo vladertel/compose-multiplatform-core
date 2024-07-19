@@ -28,8 +28,7 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.SetMultimap
 
 /** Propositions for [Multimap] subjects. */
-open class MultimapSubject<K, V>
-internal constructor(
+open class MultimapSubject<K, V> internal constructor(
     actual: Multimap<K, V>?,
     metadata: FailureMetadata = FailureMetadata(),
 ) : Subject<Multimap<K, V>>(actual, metadata, typeDescriptionOverride = "multimap") {
@@ -81,8 +80,7 @@ internal constructor(
                     simpleFact("but did not"),
                     fact(
                         "though it did contain",
-                        actual
-                            .entries()
+                        actual.entries()
                             .retainMatchingToString(entryList)
                             .countDuplicatesAndAddTypeInfo(),
                     ),
@@ -95,8 +93,7 @@ internal constructor(
                 )
             } else if (actual.containsValue(value)) {
                 val keys =
-                    actual
-                        .entries()
+                    actual.entries()
                         .asSequence()
                         .filter { it.value == value }
                         .map { it.key }
@@ -113,15 +110,17 @@ internal constructor(
         }
     }
 
-    /** Fails if the multimap contains the given entry. */
+    /** Fails if the multimap contains the given entry.  */
     fun doesNotContainEntry(key: K, value: Any?) {
         // TODO: Use checkNoNeedToDisplayBothValues("entries()") when the API is there?
-        check().that(requireNonNull(actual).entries()).doesNotContain(immutableEntry(key, value))
+        check()
+            .that(requireNonNull(actual).entries())
+            .doesNotContain(immutableEntry(key, value))
     }
 
     /**
-     * Returns a context-aware [Subject] for making assertions about the values for the given key
-     * within the [Multimap].
+     * Returns a context-aware [Subject] for making assertions about the values for the given
+     * key within the [Multimap].
      *
      * This method performs no checks on its own and cannot cause test failures. Subsequent
      * assertions must be chained onto this method call to test properties of the [Multimap].
@@ -137,9 +136,8 @@ internal constructor(
         }
 
         // Fail but with a more descriptive message:
-        if (
-            ((actual is ListMultimap) && (expected is SetMultimap<*, *>)) ||
-                ((actual is SetMultimap) && (expected is ListMultimap<*, *>))
+        if (((actual is ListMultimap) && (expected is SetMultimap<*, *>)) ||
+            ((actual is SetMultimap) && (expected is ListMultimap<*, *>))
         ) {
             val actualType = if (actual is ListMultimap) "ListMultimap" else "SetMultimap"
             val otherType = if (expected is ListMultimap<*, *>) "ListMultimap" else "SetMultimap"
@@ -165,8 +163,9 @@ internal constructor(
      * Fails if the [Multimap] does not contain precisely the same entries as the argument
      * [Multimap].
      *
-     * A subsequent call to [Ordered.inOrder] may be made if the caller wishes to verify that the
-     * two multimaps iterate fully in the same order. That is, their key sets iterate in the same
+     *
+     * A subsequent call to [Ordered.inOrder] may be made if the caller wishes to verify that
+     * the two multimaps iterate fully in the same order. That is, their key sets iterate in the same
      * order, and the value collections for each key iterate in the same order.
      */
     fun containsExactlyEntriesIn(expectedMultimap: Multimap<K, *>?): Ordered {
@@ -181,10 +180,8 @@ internal constructor(
         if (!missing.isEmpty) {
             if (!extra.isEmpty) {
                 val addTypeInfo = missing.entries().hasMatchingToStringPair(extra.entries())
-                // Note: The usage of countDuplicatesAndAddTypeInfo() below causes entries no longer
-                // to be
-                // grouped by key in the 'missing' and 'unexpected items' parts of the message (we
-                // still
+                // Note: The usage of countDuplicatesAndAddTypeInfo() below causes entries no longer to be
+                // grouped by key in the 'missing' and 'unexpected items' parts of the message (we still
                 // show the actual and expected multimaps in the standard format).
 
                 val missingDisplay =
@@ -228,8 +225,9 @@ internal constructor(
     /**
      * Fails if the [Multimap] does not contain at least the entries in the argument [ ].
      *
-     * A subsequent call to [Ordered.inOrder] may be made if the caller wishes to verify that the
-     * entries are present in the same order as given. That is, the keys are present in the given
+     *
+     * A subsequent call to [Ordered.inOrder] may be made if the caller wishes to verify that
+     * the entries are present in the same order as given. That is, the keys are present in the given
      * order in the key set, and the values for each key are present in the given order order in the
      * value collections.
      */
@@ -250,9 +248,12 @@ internal constructor(
         return MultimapInOrder(allowUnexpected = true, expectedMultimap = expectedMultimap)
     }
 
-    /** Fails if the multimap is not empty. */
+    /** Fails if the multimap is not empty.  */
     fun containsExactly(): Ordered =
-        check().about(iterableEntries()).that(checkNotNull(actual).entries()).containsExactly()
+        check()
+            .about(iterableEntries())
+            .that(checkNotNull(actual).entries())
+            .containsExactly()
 
     /** Fails if the multimap does not contain exactly the given set of key/value pairs. */
     fun containsExactly(vararg entries: Pair<K, *>): Ordered {
@@ -276,8 +277,8 @@ internal constructor(
         /**
          * Checks whether entries in expected appear in the same order in actual.
          *
-         * We allow for actual to have more items than the expected to support both
-         * [ ][.containsExactly] and [.containsAtLeast].
+         *
+         * We allow for actual to have more items than the expected to support both [ ][.containsExactly] and [.containsAtLeast].
          */
         override fun inOrder() {
             requireNonNull(actual)
@@ -357,16 +358,16 @@ private fun <T> difference(minuend: Iterable<T>, subtrahend: Iterable<T>): List<
 }
 
 private fun <K> Multimap<K, *>.countDuplicates(): String =
-    keySet()
-        .joinToString(
-            prefix = "{",
-            postfix = "}",
-            transform = { key -> "$key=${get(key).countDuplicates()}" },
-        )
+    keySet().joinToString(
+        prefix = "{",
+        postfix = "}",
+        transform = { key -> "$key=${get(key).countDuplicates()}" },
+    )
 
 /**
  * Returns a multimap with all empty strings (as keys or values) replaced by a non-empty human
  * understandable indicator for an empty string.
+ *
  *
  * Returns the given multimap if it contains no empty strings.
  */
@@ -405,4 +406,6 @@ private fun <T> Iterator<T>.advanceToFind(value: T): Boolean {
 }
 
 private fun <K, V> accumulateMultimap(entries: Array<out Pair<K, V>>): ListMultimap<K, V> =
-    LinkedListMultimap.create<K, V>().also { map -> entries.forEach { (k, v) -> map.put(k, v) } }
+    LinkedListMultimap.create<K, V>().also { map ->
+        entries.forEach { (k, v) -> map.put(k, v) }
+    }

@@ -43,7 +43,8 @@ import org.junit.Test
 @MediumTest
 @OptIn(ExperimentalTestApi::class)
 class MouseEventTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     val tag = "Tagged Layout"
 
@@ -57,7 +58,9 @@ class MouseEventTest {
         rule.setContent {
             Box(Modifier.fillMaxSize()) {
                 Box(
-                    Modifier.align(Alignment.Center).size(50.dp).testTag(tag).pointerInput(Unit) {
+                    Modifier.align(Alignment.Center).size(50.dp)
+                    .testTag(tag)
+                    .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 events += awaitPointerEvent().type
@@ -88,7 +91,9 @@ class MouseEventTest {
         rule.setContent {
             Box(Modifier.fillMaxSize()) {
                 Box(
-                    Modifier.align(Alignment.Center).size(50.dp).testTag(tag).pointerInput(Unit) {
+                    Modifier.align(Alignment.Center).size(50.dp)
+                    .testTag(tag)
+                    .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 events += awaitPointerEvent().type
@@ -100,13 +105,12 @@ class MouseEventTest {
         }
 
         rule.waitForIdle()
-        rule
-            .onNodeWithTag(tag)
-            .performMouseInput { moveTo(Offset.Zero) }
-            .performTouchInput {
-                down(Offset.Zero)
-                up()
-            }
+        rule.onNodeWithTag(tag).performMouseInput {
+            moveTo(Offset.Zero)
+        }.performTouchInput {
+            down(Offset.Zero)
+            up()
+        }
 
         assertThat(events).hasSize(4)
         assertThat(events[0]).isEqualTo(PointerEventType.Enter)
@@ -125,13 +129,15 @@ class MouseEventTest {
         rule.setContent {
             Box(Modifier.fillMaxSize()) {
                 Box(
-                    Modifier.align(Alignment.Center).size(50.dp).testTag(tag).pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                events += awaitPointerEvent().type
+                    Modifier.align(Alignment.Center).size(50.dp)
+                        .testTag(tag)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    events += awaitPointerEvent().type
+                                }
                             }
                         }
-                    }
                 )
             }
         }
@@ -161,7 +167,9 @@ class MouseEventTest {
         val alignment = mutableStateOf(Alignment.BottomCenter)
         val events = createRelayoutComposition(alignment)
 
-        rule.onNodeWithTag(tag).performMouseInput { moveTo(Offset.Zero) }
+        rule.onNodeWithTag(tag).performMouseInput {
+            moveTo(Offset.Zero)
+        }
 
         assertThat(events).hasSize(1)
         assertThat(events[0]).isEqualTo(PointerEventType.Enter)
@@ -240,13 +248,15 @@ class MouseEventTest {
         rule.setContent {
             Box(Modifier.fillMaxSize()) {
                 Box(
-                    Modifier.align(alignment.value).size(50.dp).testTag(tag).pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                events += awaitPointerEvent().type
+                    Modifier.align(alignment.value).size(50.dp)
+                        .testTag(tag)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    events += awaitPointerEvent().type
+                                }
                             }
                         }
-                    }
                 )
             }
         }

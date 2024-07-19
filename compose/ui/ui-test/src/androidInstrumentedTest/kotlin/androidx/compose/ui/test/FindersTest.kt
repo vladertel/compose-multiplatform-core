@@ -40,11 +40,14 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FindersTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun findAll_zeroOutOfOne_findsNone() {
-        rule.setContent { BoundaryNode { testTag = "not_myTestTag" } }
+        rule.setContent {
+            BoundaryNode { testTag = "not_myTestTag" }
+        }
 
         rule.onAllNodes(hasTestTag("myTestTag")).assertCountEquals(0)
     }
@@ -56,8 +59,7 @@ class FindersTest {
             BoundaryNode { testTag = "myTestTag2" }
         }
 
-        rule
-            .onAllNodes(hasTestTag("myTestTag"))
+        rule.onAllNodes(hasTestTag("myTestTag"))
             .assertCountEquals(1)
             .onFirst()
             .assert(hasTestTag("myTestTag"))
@@ -70,22 +72,28 @@ class FindersTest {
             BoundaryNode { testTag = "myTestTag" }
         }
 
-        rule.onAllNodes(hasTestTag("myTestTag")).assertCountEquals(2).apply {
-            get(0).assert(hasTestTag("myTestTag"))
-            get(1).assert(hasTestTag("myTestTag"))
-        }
+        rule.onAllNodes(hasTestTag("myTestTag"))
+            .assertCountEquals(2)
+            .apply {
+                get(0).assert(hasTestTag("myTestTag"))
+                get(1).assert(hasTestTag("myTestTag"))
+            }
     }
 
     @Test
     fun findByText_matches() {
-        rule.setContent { BoundaryNode { text = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { text = AnnotatedString("Hello World") }
+        }
 
         rule.onNodeWithText("Hello World").assertExists()
     }
 
     @Test
     fun findByText_withEditableText_matches() {
-        rule.setContent { BoundaryNode { editableText = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { editableText = AnnotatedString("Hello World") }
+        }
 
         rule.onNodeWithText("Hello World").assertExists()
     }
@@ -93,7 +101,7 @@ class FindersTest {
     @Test
     fun findByText_merged_matches() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Text("Hello")
                 Text("World")
             }
@@ -107,7 +115,9 @@ class FindersTest {
 
     @Test(expected = AssertionError::class)
     fun findByText_fails() {
-        rule.setContent { BoundaryNode { text = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { text = AnnotatedString("Hello World") }
+        }
 
         // Need to assert exists or it won't fail
         rule.onNodeWithText("World").assertExists()
@@ -116,7 +126,7 @@ class FindersTest {
     @Test(expected = AssertionError::class)
     fun findByText_merged_fails() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Text("Hello")
                 Text("World")
             }
@@ -127,7 +137,9 @@ class FindersTest {
 
     @Test
     fun findBySubstring_matches() {
-        rule.setContent { BoundaryNode { text = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { text = AnnotatedString("Hello World") }
+        }
 
         rule.onNodeWithText("World", substring = true).assertExists()
     }
@@ -135,7 +147,7 @@ class FindersTest {
     @Test
     fun findBySubstring_merged_matches() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Text("Hello")
                 Text("World")
             }
@@ -147,14 +159,18 @@ class FindersTest {
 
     @Test
     fun findBySubstring_ignoreCase_matches() {
-        rule.setContent { BoundaryNode { text = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { text = AnnotatedString("Hello World") }
+        }
 
         rule.onNodeWithText("world", substring = true, ignoreCase = true).assertExists()
     }
 
     @Test
     fun findBySubstring_wrongCase_fails() {
-        rule.setContent { BoundaryNode { text = AnnotatedString("Hello World") } }
+        rule.setContent {
+            BoundaryNode { text = AnnotatedString("Hello World") }
+        }
 
         expectError<AssertionError> {
             // Need to assert exists or it won't fetch nodes
@@ -177,7 +193,9 @@ class FindersTest {
 
     @Test
     fun findByContentDescription_matches() {
-        rule.setContent { BoundaryNode { contentDescription = "Hello World" } }
+        rule.setContent {
+            BoundaryNode { contentDescription = "Hello World" }
+        }
 
         rule.onNodeWithContentDescription("Hello World").assertExists()
     }
@@ -185,7 +203,7 @@ class FindersTest {
     @Test
     fun findByContentDescription_merged_matches() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Box(Modifier.semantics { contentDescription = "Hello" })
                 Box(Modifier.semantics { contentDescription = "World" })
             }
@@ -199,7 +217,9 @@ class FindersTest {
 
     @Test(expected = AssertionError::class)
     fun findByContentDescription_fails() {
-        rule.setContent { BoundaryNode { contentDescription = "Hello World" } }
+        rule.setContent {
+            BoundaryNode { contentDescription = "Hello World" }
+        }
 
         rule.onNodeWithContentDescription("Hello").assertExists()
     }
@@ -207,7 +227,7 @@ class FindersTest {
     @Test(expected = AssertionError::class)
     fun findByContentDescription_merged_fails() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Box(Modifier.semantics { contentDescription = "Hello" })
                 Box(Modifier.semantics { contentDescription = "World" })
             }
@@ -218,7 +238,9 @@ class FindersTest {
 
     @Test
     fun findByContentDescription_substring_matches() {
-        rule.setContent { BoundaryNode { contentDescription = "Hello World" } }
+        rule.setContent {
+            BoundaryNode { contentDescription = "Hello World" }
+        }
 
         rule.onNodeWithContentDescription("World", substring = true).assertExists()
     }
@@ -226,7 +248,7 @@ class FindersTest {
     @Test
     fun findByContentDescription_merged_substring_matches() {
         rule.setContent {
-            Box(Modifier.semantics(mergeDescendants = true) {}) {
+            Box(Modifier.semantics(mergeDescendants = true) { }) {
                 Box(Modifier.semantics { contentDescription = "Hello" })
                 Box(Modifier.semantics { contentDescription = "World" })
             }
@@ -237,17 +259,21 @@ class FindersTest {
     }
 
     fun findByContentDescription_substring_noResult() {
-        rule.setContent { BoundaryNode { contentDescription = "Hello World" } }
+        rule.setContent {
+            BoundaryNode { contentDescription = "Hello World" }
+        }
 
-        rule.onNodeWithContentDescription("world", substring = true).assertDoesNotExist()
+        rule.onNodeWithContentDescription("world", substring = true)
+            .assertDoesNotExist()
     }
 
     @Test
     fun findByContentDescription_substring_ignoreCase_matches() {
-        rule.setContent { BoundaryNode { contentDescription = "Hello World" } }
+        rule.setContent {
+            BoundaryNode { contentDescription = "Hello World" }
+        }
 
-        rule
-            .onNodeWithContentDescription("world", substring = true, ignoreCase = true)
+        rule.onNodeWithContentDescription("world", substring = true, ignoreCase = true)
             .assertExists()
     }
 

@@ -58,18 +58,30 @@ fun SwapFieldSameStateDemo() {
     val state = remember { TextFieldState() }
 
     Column {
-        Button(onClick = { swapped = !swapped }) { Text("Swap") }
+        Button(onClick = { swapped = !swapped }) {
+            Text("Swap")
+        }
         if (swapped) {
-            BasicTextField(state, Modifier.border(1.dp, Color.Magenta))
+            BasicTextField(
+                state,
+                Modifier.border(1.dp, Color.Magenta)
+            )
         } else {
-            BasicTextField(state, Modifier.border(1.dp, Color.Blue))
+            BasicTextField(
+                state,
+                Modifier.border(1.dp, Color.Blue)
+            )
         }
     }
 }
 
 @Composable
 fun BasicTextFieldDemos() {
-    Column(Modifier.imePadding().verticalScroll(rememberScrollState())) {
+    Column(
+        Modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+    ) {
         TagLine(tag = "Plain BasicTextField")
         PlainBasicTextField()
 
@@ -89,7 +101,11 @@ fun BasicTextFieldDemos() {
 
 @Composable
 fun BasicTextFieldValueCallbackDemo() {
-    Column(Modifier.imePadding().verticalScroll(rememberScrollState())) {
+    Column(
+        Modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+    ) {
         TagLine("Simple string-only")
         SimpleValueCallbackDemo()
 
@@ -101,7 +117,11 @@ fun BasicTextFieldValueCallbackDemo() {
 @Composable
 private fun SimpleValueCallbackDemo() {
     var text by remember { mutableStateOf("") }
-    BasicTextField(value = text, onValueChange = { text = it }, modifier = demoTextFieldModifiers)
+    BasicTextField(
+        value = text,
+        onValueChange = { text = it },
+        modifier = demoTextFieldModifiers
+    )
 }
 
 @Composable
@@ -142,7 +162,10 @@ fun MultiLineBasicTextField() {
         state = state,
         modifier = demoTextFieldModifiers,
         textStyle = TextStyle(fontSize = fontSize8, textAlign = TextAlign.Center),
-        lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3, maxHeightInLines = 3)
+        lineLimits = TextFieldLineLimits.MultiLine(
+            minHeightInLines = 3,
+            maxHeightInLines = 3
+        )
     )
 }
 
@@ -152,14 +175,10 @@ fun StateTogglingBasicTextField() {
     var counter by remember { mutableIntStateOf(0) }
     val states = remember { listOf(TextFieldState(), TextFieldState()) }
     val state = states[counter]
-    Text(
-        "Click to toggle state: $counter",
-        modifier =
-            Modifier.clickable {
-                counter++
-                counter %= 2
-            }
-    )
+    Text("Click to toggle state: $counter", modifier = Modifier.clickable {
+        counter++
+        counter %= 2
+    })
 
     BasicTextField(state, demoTextFieldModifiers, textStyle = LocalTextStyle.current)
 }

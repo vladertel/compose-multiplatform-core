@@ -32,9 +32,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ViewTreeOnBackPressedDispatcherTest {
 
-    @get:Rule val rule = DetectLeaksAfterTestSuccess()
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
-    /** Tests that a direct set/get on a single view survives a round trip */
+    /**
+     * Tests that a direct set/get on a single view survives a round trip
+     */
     @Test
     fun setGetSameView() {
         val v = View(InstrumentationRegistry.getInstrumentation().context)
@@ -50,8 +53,8 @@ class ViewTreeOnBackPressedDispatcherTest {
     }
 
     /**
-     * Tests that the owner set on a root of a subhierarchy is seen by both direct children and
-     * other descendants
+     * Tests that the owner set on a root of a subhierarchy is seen by both direct children
+     * and other descendants
      */
     @Test
     fun ancestorOwner() {
@@ -80,8 +83,8 @@ class ViewTreeOnBackPressedDispatcherTest {
     }
 
     /**
-     * Tests that a new owner set between a root and a descendant is seen by the descendant instead
-     * of the root value
+     * Tests that a new owner set between a root and a descendant is seen by the descendant
+     * instead of the root value
      */
     @Test
     fun shadowedOwner() {

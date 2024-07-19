@@ -26,7 +26,8 @@ public class ExerciseStateInfo(
      * The [ExerciseEndReason] if [state] is [ExerciseState.ENDED], otherwise
      * [ExerciseEndReason.UNKNOWN].
      */
-    @ExerciseEndReason public val endReason: Int
+    @ExerciseEndReason
+    public val endReason: Int
 
     /**
      * The [ExerciseState]. If set to [ExerciseState.ENDED], the [endReason] property will contain
@@ -45,15 +46,15 @@ public class ExerciseStateInfo(
             // Mark exerciseState as ExerciseState.ENDED or ENDING if we set exerciseEndReason from
             // exerciseState.
             state =
-                if (endReason != ExerciseEndReason.UNKNOWN) {
-                    if (exerciseState.isEnded) {
-                        ExerciseState.ENDED
-                    } else {
-                        ExerciseState.ENDING
-                    }
+              if (endReason != ExerciseEndReason.UNKNOWN) {
+                if (exerciseState.isEnded) {
+                  ExerciseState.ENDED
                 } else {
-                    exerciseState
+                  ExerciseState.ENDING
                 }
+              } else {
+                exerciseState
+              }
         }
     }
 
@@ -68,7 +69,10 @@ public class ExerciseStateInfo(
 
     public companion object {
 
-        /** Gets the [ExerciseEndReason] from the current [ExerciseState]. */
+        /**
+         * Gets the [ExerciseEndReason] from the current [ExerciseState].
+         *
+         */
         @ExerciseEndReason
         internal fun getEndReasonFromState(exerciseState: ExerciseState): Int =
             when (exerciseState) {

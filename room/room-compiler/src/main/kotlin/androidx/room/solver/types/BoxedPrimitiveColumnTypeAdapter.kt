@@ -19,7 +19,9 @@ package androidx.room.solver.types
 import androidx.room.compiler.processing.XType
 import androidx.room.solver.CodeGenScope
 
-/** Adapters for all boxed primitives that has direct cursor mappings. */
+/**
+ * Adapters for all boxed primitives that has direct cursor mappings.
+ */
 class BoxedPrimitiveColumnTypeAdapter(
     boxed: XType,
     val primitiveAdapter: PrimitiveColumnTypeAdapter
@@ -30,7 +32,10 @@ class BoxedPrimitiveColumnTypeAdapter(
             primitiveAdapters: List<PrimitiveColumnTypeAdapter>
         ): List<ColumnTypeAdapter> {
             return primitiveAdapters.map {
-                BoxedPrimitiveColumnTypeAdapter(it.out.boxed().makeNullable(), it)
+                BoxedPrimitiveColumnTypeAdapter(
+                    it.out.boxed().makeNullable(),
+                    it
+                )
             }
         }
     }

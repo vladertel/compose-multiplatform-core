@@ -27,7 +27,9 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import java.util.Collections
 import java.util.WeakHashMap
 
-/** Storage for the preview generated [CompositionData]s. */
+/**
+ * Storage for the preview generated [CompositionData]s.
+ */
 internal interface CompositionDataRecord {
     val store: Set<CompositionData>
 
@@ -37,7 +39,8 @@ internal interface CompositionDataRecord {
 }
 
 private class CompositionDataRecordImpl : CompositionDataRecord {
-    override val store: MutableSet<CompositionData> = Collections.newSetFromMap(WeakHashMap())
+    override val store: MutableSet<CompositionData> =
+        Collections.newSetFromMap(WeakHashMap())
 }
 
 /**
@@ -45,7 +48,7 @@ private class CompositionDataRecordImpl : CompositionDataRecord {
  * is in inspection mode.
  *
  * @param compositionDataRecord [CompositionDataRecord] to record the SlotTable used in the
- *   composition of [content]
+ * composition of [content]
  */
 @Composable
 internal fun Inspectable(

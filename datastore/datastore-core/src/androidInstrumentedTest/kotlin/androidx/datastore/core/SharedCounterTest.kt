@@ -44,7 +44,8 @@ class SharedCounterTest {
         }
     }
 
-    @get:Rule val tempFolder = TemporaryFolder()
+    @get:Rule
+    val tempFolder = TemporaryFolder()
     private lateinit var testFile: File
 
     @Before
@@ -62,7 +63,11 @@ class SharedCounterTest {
     fun testCreate_failure() {
         val tempFile = tempFolder.newFile()
         tempFile.setReadable(false)
-        assertThrows(IOException::class.java) { SharedCounter.create { tempFile } }
+        assertThrows(IOException::class.java) {
+            SharedCounter.create {
+                tempFile
+            }
+        }
     }
 
     @Test

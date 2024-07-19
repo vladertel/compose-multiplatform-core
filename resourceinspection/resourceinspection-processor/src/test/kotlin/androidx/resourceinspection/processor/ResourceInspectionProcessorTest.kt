@@ -31,12 +31,11 @@ import org.junit.Test
 class ResourceInspectionProcessorTest {
     @Test
     fun `test layout inspection of a trivial view`() {
-        val compilation =
-            compile(
-                fakeR("androidx.pkg", "testAttribute"),
-                java(
-                    "androidx.pkg.TrivialTestView",
-                    """
+        val compilation = compile(
+            fakeR("androidx.pkg", "testAttribute"),
+            java(
+                "androidx.pkg.TrivialTestView",
+                """
                     package androidx.pkg;
 
                     import android.content.Context;
@@ -55,13 +54,12 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                ),
-            )
+            ),
+        )
 
-        val expected =
-            java(
-                "androidx.pkg.TrivialTestView\$InspectionCompanion",
-                """
+        val expected = java(
+            "androidx.pkg.TrivialTestView\$InspectionCompanion",
+            """
                 package androidx.pkg;
 
                 import android.view.inspector.InspectionCompanion;
@@ -106,7 +104,7 @@ class ResourceInspectionProcessorTest {
                     }
                 }
             """
-            )
+        )
 
         assertThat(compilation).succeededWithoutWarnings()
 
@@ -118,11 +116,11 @@ class ResourceInspectionProcessorTest {
     @Test
     fun `test mixed namespaces`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "color"),
-                    java(
-                        "androidx.pkg.MixedNamespaceTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "color"),
+                java(
+                    "androidx.pkg.MixedNamespaceTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -150,9 +148,9 @@ class ResourceInspectionProcessorTest {
                         }
 
                     """
-                    )
                 )
             )
+        )
             .generatedSourceFile("androidx.pkg.MixedNamespaceTestView\$InspectionCompanion")
             .hasSourceEquivalentTo(
                 java(
@@ -213,29 +211,16 @@ class ResourceInspectionProcessorTest {
     @Test
     fun `test simple attribute types`() {
         assertThat(
-                compile(
-                    fakeR(
-                        "androidx.pkg",
-                        "testBoolean",
-                        "testByte",
-                        "testCharacter",
-                        "testDouble",
-                        "testFloat",
-                        "testInt",
-                        "testLong",
-                        "testShort",
-                        "testString",
-                        "colorInt",
-                        "colorLong",
-                        "colorObject",
-                        "layoutResourceId",
-                        "anyResourceId",
-                        "gravityInt",
-                        "intArray"
-                    ),
-                    java(
-                        "androidx.pkg.SimpleTypesTestView",
-                        """
+            compile(
+                fakeR(
+                    "androidx.pkg", "testBoolean", "testByte", "testCharacter", "testDouble",
+                    "testFloat", "testInt", "testLong", "testShort", "testString",
+                    "colorInt", "colorLong", "colorObject", "layoutResourceId", "anyResourceId",
+                    "gravityInt", "intArray"
+                ),
+                java(
+                    "androidx.pkg.SimpleTypesTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -344,9 +329,9 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
+        )
             .generatedSourceFile("androidx.pkg.SimpleTypesTestView\$InspectionCompanion")
             .hasSourceEquivalentTo(
                 java(
@@ -486,6 +471,7 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
+
                 )
             )
     }
@@ -493,11 +479,11 @@ class ResourceInspectionProcessorTest {
     @Test
     fun `int enum attributes`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "intEnum"),
-                    java(
-                        "androidx.pkg.IntEnumTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "intEnum"),
+                java(
+                    "androidx.pkg.IntEnumTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -520,9 +506,9 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
+        )
             .generatedSourceFile("androidx.pkg.IntEnumTestView\$InspectionCompanion")
             .hasSourceEquivalentTo(
                 java(
@@ -598,11 +584,11 @@ class ResourceInspectionProcessorTest {
     @Test
     fun `int flag attributes`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "intFlag"),
-                    java(
-                        "androidx.pkg.IntFlagTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "intFlag"),
+                java(
+                    "androidx.pkg.IntFlagTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -626,9 +612,9 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
+        )
             .generatedSourceFile("androidx.pkg.IntFlagTestView\$InspectionCompanion")
             .hasSourceEquivalentTo(
                 java(
@@ -715,10 +701,10 @@ class ResourceInspectionProcessorTest {
     @Test
     fun `fails with @Attribute on non view classes`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.NonViewTest",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.NonViewTest",
+                    """
                         package androidx.pkg;
 
                         import androidx.annotation.ColorInt;
@@ -732,19 +718,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("@Attribute must be on a subclass of android.view.View")
+        ).hadErrorContaining("@Attribute must be on a subclass of android.view.View")
     }
 
     @Test
     fun `fails on non-getter methods`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.SetterNotGetterTestView",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.SetterNotGetterTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -764,19 +749,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("@Attribute must annotate a getter")
+        ).hadErrorContaining("@Attribute must annotate a getter")
     }
 
     @Test
     fun `fails on missing namespace`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.MissingNamespaceTestView",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.MissingNamespaceTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -797,19 +781,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("@Attribute must include namespace")
+        ).hadErrorContaining("@Attribute must include namespace")
     }
 
     @Test
     fun `fails on invalid name`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.InvalidNameTestView",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.InvalidNameTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -828,19 +811,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Invalid attribute name")
+        ).hadErrorContaining("Invalid attribute name")
     }
 
     @Test
     fun `fails on non-public getter`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.NonPublicGetterTestView",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.NonPublicGetterTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -861,19 +843,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("@Attribute getter must be public")
+        ).hadErrorContaining("@Attribute getter must be public")
     }
 
     @Test
     fun `fails when R file for namespace is not present`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.pkg.MissingRFileTestView",
-                        """
+            compile(
+                java(
+                    "androidx.pkg.MissingRFileTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -892,20 +873,19 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Attribute bad.pkg:attribute not found")
+        ).hadErrorContaining("Attribute bad.pkg:attribute not found")
     }
 
     @Test
     fun `fails when attribute is not present in R file`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "good"),
-                    java(
-                        "androidx.pkg.MissingAttributeTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "good"),
+                java(
+                    "androidx.pkg.MissingAttributeTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -929,20 +909,18 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Attribute androidx.pkg:bad not found")
+        ).hadErrorContaining("Attribute androidx.pkg:bad not found")
     }
 
     @Test
     fun `fails on duplicate attributes`() {
-        val compilation =
-            compile(
-                fakeR("androidx.pkg", "duplicated"),
-                java(
-                    "androidx.pkg.DuplicateAttributesTestView",
-                    """
+        val compilation = compile(
+            fakeR("androidx.pkg", "duplicated"),
+            java(
+                "androidx.pkg.DuplicateAttributesTestView",
+                """
                     package androidx.pkg;
 
                     import android.content.Context;
@@ -967,29 +945,27 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
 
-        assertThat(compilation)
-            .hadErrorContaining(
-                "Duplicate attribute androidx.pkg:duplicated is also present on getDuplicated1()"
-            )
+        assertThat(compilation).hadErrorContaining(
+            "Duplicate attribute androidx.pkg:duplicated is also present on getDuplicated1()"
+        )
 
-        assertThat(compilation)
-            .hadErrorContaining(
-                "Duplicate attribute androidx.pkg:duplicated is also present on getDuplicated2()"
-            )
+        assertThat(compilation).hadErrorContaining(
+            "Duplicate attribute androidx.pkg:duplicated is also present on getDuplicated2()"
+        )
     }
 
     @Test
     fun `shadowed background tint`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "backgroundTint", "backgroundTintMode"),
-                    fakeInterface("androidx.core.view.TintableBackgroundView"),
-                    java(
-                        "androidx.appcompat.test.BackgroundTintTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "backgroundTint", "backgroundTintMode"),
+                fakeInterface("androidx.core.view.TintableBackgroundView"),
+                java(
+                    "androidx.appcompat.test.BackgroundTintTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1006,16 +982,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.BackgroundTintTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.BackgroundTintTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.BackgroundTintTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1067,25 +1041,22 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed auto-size text view`() {
         assertThat(
-                compile(
-                    fakeR(
-                        "androidx.appcompat",
-                        "autoSizeMaxTextSize",
-                        "autoSizeMinTextSize",
-                        "autoSizeStepGranularity",
-                        "autoSizeTextType"
-                    ),
-                    fakeInterface("androidx.core.widget.AutoSizeableTextView"),
-                    java(
-                        "androidx.appcompat.test.AutoSizeTestView",
-                        """
+            compile(
+                fakeR(
+                    "androidx.appcompat", "autoSizeMaxTextSize", "autoSizeMinTextSize",
+                    "autoSizeStepGranularity", "autoSizeTextType"
+                ),
+                fakeInterface("androidx.core.widget.AutoSizeableTextView"),
+                java(
+                    "androidx.appcompat.test.AutoSizeTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1102,16 +1073,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.AutoSizeTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.AutoSizeTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.AutoSizeTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1192,19 +1161,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed check mark tint`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "checkMarkTint", "checkMarkTintMode"),
-                    fakeInterface("androidx.core.widget.TintableCheckedTextView"),
-                    java(
-                        "androidx.appcompat.test.CheckMarkTintTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "checkMarkTint", "checkMarkTintMode"),
+                fakeInterface("androidx.core.widget.TintableCheckedTextView"),
+                java(
+                    "androidx.appcompat.test.CheckMarkTintTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1221,16 +1190,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.CheckMarkTintTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.CheckMarkTintTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.CheckMarkTintTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1282,19 +1249,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed compound button tint`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "buttonTint", "buttonTintMode"),
-                    fakeInterface("androidx.core.widget.TintableCompoundButton"),
-                    java(
-                        "androidx.appcompat.test.CompoundButtonTintTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "buttonTint", "buttonTintMode"),
+                fakeInterface("androidx.core.widget.TintableCompoundButton"),
+                java(
+                    "androidx.appcompat.test.CompoundButtonTintTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1311,16 +1278,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.CompoundButtonTintTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.CompoundButtonTintTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.CompoundButtonTintTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1372,19 +1337,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed compound drawables tint`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "drawableTint", "drawableTintMode"),
-                    fakeInterface("androidx.core.widget.TintableCompoundDrawablesView"),
-                    java(
-                        "androidx.appcompat.test.CompoundDrawablesTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "drawableTint", "drawableTintMode"),
+                fakeInterface("androidx.core.widget.TintableCompoundDrawablesView"),
+                java(
+                    "androidx.appcompat.test.CompoundDrawablesTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1401,16 +1366,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.CompoundDrawablesTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.CompoundDrawablesTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.CompoundDrawablesTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1462,19 +1425,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed image tint`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "tint", "tintMode"),
-                    fakeInterface("androidx.core.widget.TintableImageSourceView"),
-                    java(
-                        "androidx.appcompat.test.ImageTintTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "tint", "tintMode"),
+                fakeInterface("androidx.core.widget.TintableImageSourceView"),
+                java(
+                    "androidx.appcompat.test.ImageTintTestView",
+                    """
                         package androidx.appcompat.test;
 
                         import android.content.Context;
@@ -1491,16 +1454,14 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .generatedSourceFile(
+        ).generatedSourceFile(
+            "androidx.appcompat.test.ImageTintTestView${'$'}InspectionCompanion",
+        ).hasSourceEquivalentTo(
+            java(
                 "androidx.appcompat.test.ImageTintTestView${'$'}InspectionCompanion",
-            )
-            .hasSourceEquivalentTo(
-                java(
-                    "androidx.appcompat.test.ImageTintTestView${'$'}InspectionCompanion",
-                    """
+                """
                     package androidx.appcompat.test;
 
                     import android.view.inspector.InspectionCompanion;
@@ -1548,19 +1509,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                )
             )
+        )
     }
 
     @Test
     fun `shadowed attributes fails outside of appcompat`() {
         assertThat(
-                compile(
-                    fakeR("androidx.appcompat", "backgroundTint", "backgroundTintMode"),
-                    fakeInterface("androidx.core.view.TintableBackgroundView"),
-                    java(
-                        "androidx.pkg.BadPackageShadowedTestView",
-                        """
+            compile(
+                fakeR("androidx.appcompat", "backgroundTint", "backgroundTintMode"),
+                fakeInterface("androidx.core.view.TintableBackgroundView"),
+                java(
+                    "androidx.pkg.BadPackageShadowedTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -1577,21 +1538,20 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining(
-                "@AppCompatShadowedAttributes is only supported in the androidx.appcompat package"
-            )
+        ).hadErrorContaining(
+            "@AppCompatShadowedAttributes is only supported in the androidx.appcompat package"
+        )
     }
 
     @Test
     fun `shadowed attributes fails with no interfaces`() {
         assertThat(
-                compile(
-                    java(
-                        "androidx.appcompat.test.NoShadowedInterfaceTestView",
-                        """
+            compile(
+                java(
+                    "androidx.appcompat.test.NoShadowedInterfaceTestView",
+                    """
                     package androidx.appcompat.test;
 
                     import android.content.Context;
@@ -1607,21 +1567,19 @@ class ResourceInspectionProcessorTest {
                         }
                     }
                 """
-                    )
                 )
             )
-            .hadErrorContaining(
-                "@AppCompatShadowedAttributes is present on this view, but it does not implement any " +
-                    "interfaces that indicate it has shadowed attributes."
-            )
+        ).hadErrorContaining(
+            "@AppCompatShadowedAttributes is present on this view, but it does not implement any " +
+                "interfaces that indicate it has shadowed attributes."
+        )
     }
 
     @Test
     fun `fails when view inspection API is missing`() {
-        val source =
-            java(
-                "androidx.pkg.MissingViewInspectorApiTestClass",
-                """
+        val source = java(
+            "androidx.pkg.MissingViewInspectorApiTestClass",
+            """
                 package androidx.pkg;
 
                 import androidx.resourceinspection.annotation.Attribute;
@@ -1633,34 +1591,32 @@ class ResourceInspectionProcessorTest {
                     }
                 }
             """
-            )
+        )
 
-        val classpath =
-            System.getProperty("java.class.path")
-                .split(File.pathSeparator)
-                .map { File(it) }
-                .filterNot { it.name == "android.jar" }
+        val classpath = System.getProperty("java.class.path")
+            .split(File.pathSeparator)
+            .map { File(it) }
+            .filterNot { it.name == "android.jar" }
 
         assertThat(
-                javac()
-                    .withClasspath(classpath)
-                    .withProcessors(ResourceInspectionProcessor())
-                    .compile(source)
-            )
-            .hadErrorContaining(
-                "View inspector (android.view.inspector) API is not present. Please ensure compile " +
-                    "SDK is 29 or greater."
-            )
+            javac()
+                .withClasspath(classpath)
+                .withProcessors(ResourceInspectionProcessor())
+                .compile(source)
+        ).hadErrorContaining(
+            "View inspector (android.view.inspector) API is not present. Please ensure compile " +
+                "SDK is 29 or greater."
+        )
     }
 
     @Test
     fun `fails on duplicate int map names`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "attribute"),
-                    java(
-                        "androidx.pkg.DuplicateIntMapNameTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "attribute"),
+                java(
+                    "androidx.pkg.DuplicateIntMapNameTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -1683,20 +1639,19 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Duplicate int enum entry name: \"duplicated\"")
+        ).hadErrorContaining("Duplicate int enum entry name: \"duplicated\"")
     }
 
     @Test
     fun `fails on duplicate int enum value`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "attribute"),
-                    java(
-                        "androidx.pkg.DuplicateIntEnumValueTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "attribute"),
+                java(
+                    "androidx.pkg.DuplicateIntEnumValueTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -1720,20 +1675,19 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Int enum value 1 is duplicated on entries \"FOO\", \"BAR\"")
+        ).hadErrorContaining("Int enum value 1 is duplicated on entries \"FOO\", \"BAR\"")
     }
 
     @Test
     fun `fails on invalid int flag mask`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "attribute"),
-                    java(
-                        "androidx.pkg.InvalidIntFlagTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "attribute"),
+                java(
+                    "androidx.pkg.InvalidIntFlagTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -1754,20 +1708,19 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining("Int flag mask 0x1 does not reveal value 0x3")
+        ).hadErrorContaining("Int flag mask 0x1 does not reveal value 0x3")
     }
 
     @Test
     fun `fails on duplicate int flag mask and value`() {
         assertThat(
-                compile(
-                    fakeR("androidx.pkg", "attribute"),
-                    java(
-                        "androidx.pkg.DuplicateIntFlagTestView",
-                        """
+            compile(
+                fakeR("androidx.pkg", "attribute"),
+                java(
+                    "androidx.pkg.DuplicateIntFlagTestView",
+                    """
                         package androidx.pkg;
 
                         import android.content.Context;
@@ -1790,16 +1743,17 @@ class ResourceInspectionProcessorTest {
                             }
                         }
                     """
-                    )
                 )
             )
-            .hadErrorContaining(
-                "Int flag mask 0x3 and value 0x3 is duplicated on entries \"FOO\", \"BAR\""
-            )
+        ).hadErrorContaining(
+            "Int flag mask 0x3 and value 0x3 is duplicated on entries \"FOO\", \"BAR\""
+        )
     }
 
     private fun compile(vararg sources: JavaFileObject): Compilation {
-        return javac().withProcessors(ResourceInspectionProcessor()).compile(sources.toList())
+        return javac()
+            .withProcessors(ResourceInspectionProcessor())
+            .compile(sources.toList())
     }
 
     private fun java(qualifiedName: String, @Language("JAVA") source: String): JavaFileObject {

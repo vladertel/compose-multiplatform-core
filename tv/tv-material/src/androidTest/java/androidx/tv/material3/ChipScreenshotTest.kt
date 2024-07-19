@@ -45,37 +45,41 @@ import org.junit.runners.Parameterized
 @OptIn(ExperimentalTvMaterial3Api::class)
 class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
-    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
+    @get:Rule
+    val screenshotRule = AndroidXScreenshotTestRule(TV_GOLDEN_MATERIAL3)
 
-    private val leadingIcon =
-        @Composable {
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Favourite icon",
-            )
-        }
+    private val leadingIcon = @Composable {
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = "Favourite icon",
+        )
+    }
 
-    private val trailingIcon =
-        @Composable {
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Favourite icon",
-            )
-        }
+    private val trailingIcon = @Composable {
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = "Favourite icon",
+        )
+    }
 
     private val wrapperTestTag = "chipWrapper"
 
-    private val wrapperBoxModifier =
-        Modifier.testTag(wrapperTestTag)
-            .background(if (scheme.name == lightThemeName) Color.White else Color.Black)
-            .padding(20.dp)
+    private val wrapperBoxModifier = Modifier
+        .testTag(wrapperTestTag)
+        .background(if (scheme.name == lightThemeName) Color.White else Color.Black)
+        .padding(20.dp)
 
     @Test
     fun assistChip_default() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperBoxModifier) { AssistChip(onClick = {}) { Text(text = "Label") } }
+            Box(wrapperBoxModifier) {
+                AssistChip(onClick = { }) {
+                    Text(text = "Label")
+                }
+            }
         }
 
         assertAgainstGolden("assistChip_default_${scheme.name}")
@@ -85,7 +89,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun assistChip_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                AssistChip(onClick = {}, enabled = false) { Text(text = "Label") }
+                AssistChip(onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -96,7 +102,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun assistChip_leadingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                AssistChip(onClick = {}, leadingIcon = leadingIcon) { Text(text = "Like") }
+                AssistChip(onClick = { }, leadingIcon = leadingIcon) {
+                    Text(text = "Like")
+                }
             }
         }
 
@@ -107,7 +115,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun assistChip_trailingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                AssistChip(onClick = {}, trailingIcon = trailingIcon) { Text(text = "Like") }
+                AssistChip(onClick = { }, trailingIcon = trailingIcon) {
+                    Text(text = "Like")
+                }
             }
         }
 
@@ -117,7 +127,11 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     @Test
     fun suggestionChip_default() {
         rule.setMaterialContent(scheme.colorScheme) {
-            Box(wrapperBoxModifier) { SuggestionChip(onClick = {}) { Text(text = "Label") } }
+            Box(wrapperBoxModifier) {
+                SuggestionChip(onClick = { }) {
+                    Text(text = "Label")
+                }
+            }
         }
 
         assertAgainstGolden("suggestionChip_default_${scheme.name}")
@@ -127,7 +141,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun suggestionChip_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                SuggestionChip(onClick = {}, enabled = false) { Text(text = "Label") }
+                SuggestionChip(onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -138,7 +154,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_selected_default() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = true, onClick = {}) { Text(text = "Label") }
+                FilterChip(selected = true, onClick = { }) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -149,7 +167,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_unselected_default() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = false, onClick = {}) { Text(text = "Label") }
+                FilterChip(selected = false, onClick = { }) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -160,7 +180,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_selected_enabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = true, onClick = {}, enabled = true) { Text(text = "Label") }
+                FilterChip(selected = true, onClick = { }, enabled = true) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -171,7 +193,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_selected_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = true, onClick = {}, enabled = false) { Text(text = "Label") }
+                FilterChip(selected = true, onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -182,7 +206,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_unselected_enabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = false, onClick = {}, enabled = true) { Text(text = "Label") }
+                FilterChip(selected = false, onClick = { }, enabled = true) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -193,7 +219,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_unselected_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = false, onClick = {}, enabled = false) { Text(text = "Label") }
+                FilterChip(selected = false, onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -204,7 +232,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_selected_leadingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = true, onClick = {}, leadingIcon = leadingIcon) {
+                FilterChip(selected = true, onClick = { }, leadingIcon = leadingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -217,7 +245,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_unselected_leadingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = false, onClick = {}, leadingIcon = leadingIcon) {
+                FilterChip(selected = false, onClick = { }, leadingIcon = leadingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -230,7 +258,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_selected_trailingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = true, onClick = {}, trailingIcon = trailingIcon) {
+                FilterChip(selected = true, onClick = { }, trailingIcon = trailingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -243,7 +271,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun filterChip_unselected_trailingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                FilterChip(selected = false, onClick = {}, trailingIcon = trailingIcon) {
+                FilterChip(selected = false, onClick = { }, trailingIcon = trailingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -256,7 +284,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_selected_default() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = true, onClick = {}) { Text(text = "Label") }
+                InputChip(selected = true, onClick = { }) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -267,7 +297,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_unselected_default() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = false, onClick = {}) { Text(text = "Label") }
+                InputChip(selected = false, onClick = { }) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -278,7 +310,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_selected_enabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = true, onClick = {}, enabled = true) { Text(text = "Label") }
+                InputChip(selected = true, onClick = { }, enabled = true) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -289,7 +323,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_selected_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = true, onClick = {}, enabled = false) { Text(text = "Label") }
+                InputChip(selected = true, onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -300,7 +336,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_unselected_enabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = false, onClick = {}, enabled = true) { Text(text = "Label") }
+                InputChip(selected = false, onClick = { }, enabled = true) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -311,7 +349,9 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_unselected_disabled() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = false, onClick = {}, enabled = false) { Text(text = "Label") }
+                InputChip(selected = false, onClick = { }, enabled = false) {
+                    Text(text = "Label")
+                }
             }
         }
 
@@ -322,7 +362,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_selected_leadingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = true, onClick = {}, leadingIcon = leadingIcon) {
+                InputChip(selected = true, onClick = { }, leadingIcon = leadingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -335,7 +375,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_unselected_leadingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = false, onClick = {}, leadingIcon = leadingIcon) {
+                InputChip(selected = false, onClick = { }, leadingIcon = leadingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -348,7 +388,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_selected_trailingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = true, onClick = {}, trailingIcon = trailingIcon) {
+                InputChip(selected = true, onClick = { }, trailingIcon = trailingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -361,7 +401,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     fun inputChip_unselected_trailingIcon() {
         rule.setMaterialContent(scheme.colorScheme) {
             Box(wrapperBoxModifier) {
-                InputChip(selected = false, onClick = {}, trailingIcon = trailingIcon) {
+                InputChip(selected = false, onClick = { }, trailingIcon = trailingIcon) {
                     Text(text = "Like")
                 }
             }
@@ -371,8 +411,7 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
     }
 
     private fun assertAgainstGolden(goldenName: String) {
-        rule
-            .onNodeWithTag(wrapperTestTag)
+        rule.onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
@@ -384,11 +423,10 @@ class ChipScreenshotTest(private val scheme: ColorSchemeWrapper) {
         @OptIn(ExperimentalTvMaterial3Api::class)
         @Parameterized.Parameters(name = "{0}")
         @JvmStatic
-        fun parameters() =
-            arrayOf(
-                ColorSchemeWrapper(lightThemeName, lightColorScheme()),
-                ColorSchemeWrapper(darkThemeName, darkColorScheme()),
-            )
+        fun parameters() = arrayOf(
+            ColorSchemeWrapper(lightThemeName, lightColorScheme()),
+            ColorSchemeWrapper(darkThemeName, darkColorScheme()),
+        )
     }
 
     @OptIn(ExperimentalTvMaterial3Api::class)

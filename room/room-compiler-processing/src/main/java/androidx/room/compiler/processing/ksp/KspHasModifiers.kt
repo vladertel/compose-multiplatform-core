@@ -32,8 +32,12 @@ import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Origin
 import com.google.devtools.ksp.symbol.Visibility
 
-/** Implementation of [XHasModifiers] for ksp declarations. */
-sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasModifiers {
+/**
+ * Implementation of [XHasModifiers] for ksp declarations.
+ */
+sealed class KspHasModifiers(
+    protected val declaration: KSDeclaration
+) : XHasModifiers {
     override fun isPublic(): Boolean {
         // internals are public from java but KSP's declaration.isPublic excludes them.
         return declaration.getVisibility() == Visibility.INTERNAL ||
@@ -59,7 +63,7 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
     }
 
     override fun isKtPrivate(): Boolean {
-        return isPrivate()
+      return isPrivate()
     }
 
     override fun isPrivate(): Boolean {
@@ -115,9 +119,8 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
             // for .class files, there is currently a bug:
             // https://github.com/google/ksp/pull/232 and once it is fixed, inner modifier will
             // be reported for .class files as well.
-            if (
-                declaration.origin != Origin.JAVA &&
-                    declaration.parentDeclaration is KSClassDeclaration // nested class
+            if (declaration.origin != Origin.JAVA &&
+                declaration.parentDeclaration is KSClassDeclaration // nested class
             ) {
                 return !declaration.modifiers.contains(Modifier.INNER)
             }
@@ -125,8 +128,9 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
         }
     }
 
-    private class PropertyField(val propertyDeclaration: KSPropertyDeclaration) :
-        KspHasModifiers(propertyDeclaration) {
+    private class PropertyField(
+        val propertyDeclaration: KSPropertyDeclaration
+    ) : KspHasModifiers(propertyDeclaration) {
         private val acceptDeclarationModifiers by lazy {
             // Deciding whether we should read modifiers from a KSPropertyDeclaration is not very
             // straightforward. (jvmField == true -> read modifiers from declaration)
@@ -137,14 +141,11 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
             // Unfortunately, we don't have a way of checking it as KotlinMetadata annotation is not
             // visible via KSP. We approximate it by checking if it is delegated or not.
             when (declaration.origin) {
-                Origin.JAVA,
-                Origin.JAVA_LIB -> true
-                Origin.KOTLIN,
-                Origin.KOTLIN_LIB -> declaration.hasJvmFieldAnnotation()
+                Origin.JAVA, Origin.JAVA_LIB -> true
+                Origin.KOTLIN, Origin.KOTLIN_LIB -> declaration.hasJvmFieldAnnotation()
                 else -> false
             }
         }
-
         override fun isPublic(): Boolean {
             return if (acceptDeclarationModifiers) {
                 super.isPublic()
@@ -153,7 +154,7 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
                 // lateinit property setter:
                 // https://kotlinlang.org/docs/java-to-kotlin-interop.html#instance-fields
                 isLateinit &&
-                    (setterModifiers?.contains(Modifier.PUBLIC) == true ||
+                        (setterModifiers?.contains(Modifier.PUBLIC) == true ||
                         setterModifiers?.contains(Modifier.INTERNAL) == true)
             }
         }
@@ -188,12 +189,13 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
     }
 
     /**
-     * Handles accessor visibility when there is an accessor declared in code. We cannot simply
-     * merge modifiers of the property and the accessor as the visibility rules of the declaration
-     * is more complicated than just looking at modifiers.
+     * Handles accessor visibility when there is an accessor declared in code.
+     * We cannot simply merge modifiers of the property and the accessor as the visibility rules
+     * of the declaration is more complicated than just looking at modifiers.
      */
-    private class PropertyFieldAccessor(private val accessor: KSPropertyAccessor) :
-        KspHasModifiers(accessor.receiver) {
+    private class PropertyFieldAccessor(
+        private val accessor: KSPropertyAccessor
+    ) : KspHasModifiers(accessor.receiver) {
         override fun isPublic(): Boolean {
             return accessor.modifiers.contains(Modifier.PUBLIC) ||
                 (!isPrivate() && !isProtected() && super.isPublic())
@@ -205,7 +207,8 @@ sealed class KspHasModifiers(protected val declaration: KSDeclaration) : XHasMod
         }
 
         override fun isPrivate(): Boolean {
-            return accessor.modifiers.contains(Modifier.PRIVATE) || super.isPrivate()
+            return accessor.modifiers.contains(Modifier.PRIVATE) ||
+                super.isPrivate()
         }
 
         override fun isFinal(): Boolean {

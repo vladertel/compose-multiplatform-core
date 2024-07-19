@@ -23,11 +23,13 @@ import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.util.Preconditions;
 
 import java.util.List;
 import java.util.concurrent.Executor;
 
+@RequiresApi(21)
 class CameraCaptureSessionCompatBaseImpl implements
         CameraCaptureSessionCompat.CameraCaptureSessionCompatImpl {
 

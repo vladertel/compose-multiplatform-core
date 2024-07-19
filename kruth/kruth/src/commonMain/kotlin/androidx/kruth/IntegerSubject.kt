@@ -20,10 +20,9 @@ package androidx.kruth
  * Propositions for [Int] subjects.
  *
  * @constructor Constructor for use by subclasses. If you want to create an instance of this class
- *   itself, call [check(...)][Subject.check].[that(actual)][StandardSubjectBuilder.that].
+ * itself, call [check(...)][Subject.check].[that(actual)][StandardSubjectBuilder.that].
  */
-open class IntegerSubject
-protected constructor(
+open class IntegerSubject protected constructor(
     metadata: FailureMetadata,
     actual: Int?,
 ) : ComparableSubject<Int>(metadata, actual) {

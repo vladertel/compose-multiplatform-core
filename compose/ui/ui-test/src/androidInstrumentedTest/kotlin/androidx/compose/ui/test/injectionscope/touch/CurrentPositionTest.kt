@@ -32,14 +32,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CurrentPositionTest {
 
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     private val recorder = MultiPointerInputRecorder()
 
     @Before
     fun setUp() {
         // Given some content
-        rule.setContent { ClickableTestBox(recorder) }
+        rule.setContent {
+            ClickableTestBox(recorder)
+        }
     }
 
     @Test
@@ -113,7 +116,9 @@ class CurrentPositionTest {
             assertThat(currentPosition(2)).isEqualTo(center)
         }
         // And this remains the same in the next invocation
-        rule.performTouchInput { assertThat(currentPosition(2)).isEqualTo(center) }
+        rule.performTouchInput {
+            assertThat(currentPosition(2)).isEqualTo(center)
+        }
     }
 
     @Test
@@ -127,7 +132,9 @@ class CurrentPositionTest {
             assertThat(currentPosition(3)).isNull()
         }
         // And this remains the same in the next invocation
-        rule.performTouchInput { assertThat(currentPosition(3)).isNull() }
+        rule.performTouchInput {
+            assertThat(currentPosition(3)).isNull()
+        }
     }
 
     @Test
@@ -141,6 +148,8 @@ class CurrentPositionTest {
             assertThat(currentPosition(4)).isNull()
         }
         // And this remains the same in the next invocation
-        rule.performTouchInput { assertThat(currentPosition(4)).isNull() }
+        rule.performTouchInput {
+            assertThat(currentPosition(4)).isNull()
+        }
     }
 }

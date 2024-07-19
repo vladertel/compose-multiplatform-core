@@ -78,17 +78,25 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         val largePaddingSize = pageTotalSize
 
         createPager(
-            modifier = Modifier.requiredSize(containerSize).testTag(PagerTag),
-            contentPadding =
-                PaddingValues(mainAxis = largePaddingSize, crossAxis = smallPaddingSize),
+            modifier = Modifier
+                .requiredSize(containerSize)
+                .testTag(PagerTag),
+            contentPadding = PaddingValues(
+                mainAxis = largePaddingSize,
+                crossAxis = smallPaddingSize
+            ),
             pageCount = { 1 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.fillMaxCrossAxis().mainAxisSize(pageTotalSize).testTag(PageTag))
+            Spacer(
+                Modifier
+                    .fillMaxCrossAxis()
+                    .mainAxisSize(pageTotalSize)
+                    .testTag(PageTag)
+            )
         }
 
-        rule
-            .onNodeWithTag(PageTag)
+        rule.onNodeWithTag(PageTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertStartPositionInRootIsEqualTo(largePaddingSize)
             .assertCrossAxisSizeIsEqualTo(containerSize - smallPaddingSize * 2)
@@ -96,8 +104,7 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
 
         pagerState.scrollBy(largePaddingSize)
 
-        rule
-            .onNodeWithTag(PageTag)
+        rule.onNodeWithTag(PageTag)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
     }
@@ -105,12 +112,19 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
     @Test
     fun contentPaddingIsNotAffectingScrollPosition() {
         createPager(
-            modifier = Modifier.requiredSize(pageTotalSize * 2).testTag(PagerTag),
+            modifier = Modifier
+                .requiredSize(pageTotalSize * 2)
+                .testTag(PagerTag),
             contentPadding = PaddingValues(mainAxis = pageTotalSize),
             pageCount = { 1 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.fillMaxCrossAxis().mainAxisSize(pageTotalSize).testTag(PageTag))
+            Spacer(
+                Modifier
+                    .fillMaxCrossAxis()
+                    .mainAxisSize(pageTotalSize)
+                    .testTag(PageTag)
+            )
         }
 
         pagerState.assertScrollPosition(0, 0.dp)
@@ -124,38 +138,57 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
     fun scrollForwardItemWithinStartPaddingDisplayed() {
         val padding = pageTotalSize * 1.5f
         createPager(
-            modifier = Modifier.requiredSize(padding * 2 + pageTotalSize).testTag(PagerTag),
+            modifier = Modifier
+                .requiredSize(padding * 2 + pageTotalSize)
+                .testTag(PagerTag),
             contentPadding = PaddingValues(mainAxis = padding),
             pageCount = { 4 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.requiredSize(pageTotalSize).testTag(it.toString()))
+            Spacer(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag(it.toString())
+            )
         }
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(padding)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize + padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 2 + padding)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize + padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2 + padding)
 
         pagerState.scrollBy(padding)
 
         pagerState.assertScrollPosition(1, padding - pageTotalSize)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 2)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize * 3)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 3)
     }
 
     @Test
     fun scrollBackwardItemWithinStartPaddingDisplayed() {
         val padding = pageTotalSize * 1.5f
         createPager(
-            modifier = Modifier.requiredSize(padding * 2 + pageTotalSize).testTag(PagerTag),
+            modifier = Modifier
+                .requiredSize(padding * 2 + pageTotalSize)
+                .testTag(PagerTag),
             contentPadding = PaddingValues(mainAxis = padding),
             pageCount = { 4 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.requiredSize(pageTotalSize).testTag(it.toString()))
+            Spacer(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag(it.toString())
+            )
         }
 
         pagerState.scrollBy(pageTotalSize * 3)
@@ -163,52 +196,74 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
 
         pagerState.assertScrollPosition(1, pageTotalSize * 0.5f)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(pageTotalSize * 1.5f - padding)
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize * 2.5f - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 3.5f - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize * 4.5f - padding)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 1.5f - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2.5f - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 3.5f - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 4.5f - padding)
     }
 
     @Test
     fun scrollForwardTillTheEnd() {
         val padding = pageTotalSize * 1.5f
         createPager(
-            modifier = Modifier.requiredSize(padding * 2 + pageTotalSize).testTag(PagerTag),
+            modifier = Modifier
+                .requiredSize(padding * 2 + pageTotalSize)
+                .testTag(PagerTag),
             contentPadding = PaddingValues(mainAxis = padding),
             pageCount = { 4 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.requiredSize(pageTotalSize).testTag(it.toString()))
+            Spacer(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag(it.toString())
+            )
         }
 
         pagerState.scrollBy(pageTotalSize * 3)
 
         pagerState.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 2 - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize * 3 - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2 - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 3 - padding)
 
         // there are no space to scroll anymore, so it should change nothing
         pagerState.scrollBy(10.dp)
 
         pagerState.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 2 - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize * 3 - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2 - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 3 - padding)
     }
 
     @Test
     fun scrollForwardTillTheEndAndABitBack() {
         val padding = pageTotalSize * 1.5f
         createPager(
-            modifier = Modifier.requiredSize(padding * 2 + pageTotalSize).testTag(PagerTag),
+            modifier = Modifier
+                .requiredSize(padding * 2 + pageTotalSize)
+                .testTag(PagerTag),
             contentPadding = PaddingValues(mainAxis = padding),
             pageCount = { 4 },
             pageSize = { PageSize.Fixed(pageTotalSize) }
         ) {
-            Spacer(Modifier.requiredSize(pageTotalSize).testTag(it.toString()))
+            Spacer(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag(it.toString())
+            )
         }
 
         pagerState.scrollBy(pageTotalSize * 3)
@@ -216,9 +271,12 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
 
         pagerState.assertScrollPosition(2, pageTotalSize / 2)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize * 1.5f - padding)
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize * 2.5f - padding)
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize * 3.5f - padding)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 1.5f - padding)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 2.5f - padding)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize * 3.5f - padding)
     }
 
     @Test
@@ -228,29 +286,30 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 HorizontalOrVerticalPager(
                     state = state,
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        ),
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    ),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Spacer(Modifier.requiredSize(pageTotalSize).testTag(PageTag))
+                    Spacer(
+                        Modifier
+                            .requiredSize(pageTotalSize)
+                            .testTag(PageTag)
+                    )
                 }
             }
         }
 
-        rule
-            .onNodeWithTag(PageTag)
+        rule.onNodeWithTag(PageTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(2.dp)
             .assertStartPositionInRootIsEqualTo(4.dp)
             .assertCrossAxisSizeIsEqualTo(pageTotalSize)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(pageTotalSize + 2.dp + 6.dp)
@@ -264,20 +323,18 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 HorizontalOrVerticalPager(
                     state = state,
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        ),
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    ),
                     pageSize = PageSize.Fixed(pageTotalSize)
-                ) {}
+                ) { }
             }
         }
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(8.dp)
@@ -291,22 +348,20 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 HorizontalOrVerticalPager(
                     state = state,
-                    contentPadding =
-                        PaddingValues(
-                            beforeContentCrossAxis = 2.dp,
-                            beforeContent = 4.dp,
-                            afterContentCrossAxis = 6.dp,
-                            afterContent = 8.dp
-                        ),
+                    contentPadding = PaddingValues(
+                        beforeContentCrossAxis = 2.dp,
+                        beforeContent = 4.dp,
+                        afterContentCrossAxis = 6.dp,
+                        afterContent = 8.dp
+                    ),
                     pageSize = PageSize.Fixed(0.dp)
                 ) {
-                    Box {}
+                    Box { }
                 }
             }
         }
 
-        rule
-            .onNodeWithTag(ContainerTag)
+        rule.onNodeWithTag(ContainerTag)
             .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
             .assertStartPositionInRootIsEqualTo(0.dp)
             .assertCrossAxisSizeIsEqualTo(8.dp)
@@ -321,22 +376,27 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         createPager(
             reverseLayout = true,
             modifier = Modifier.requiredSize(listSize),
-            contentPadding =
-                PaddingValues(beforeContent = topPadding, afterContent = bottomPadding),
+            contentPadding = PaddingValues(
+                beforeContent = topPadding,
+                afterContent = bottomPadding
+            ),
             pageSize = { PageSize.Fixed(pageTotalSize) },
             pageCount = { 3 }
         ) { page ->
-            Box(Modifier.requiredSize(pageTotalSize).testTag("$page"))
+            Box(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag("$page")
+            )
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(listSize - bottomPadding - pageTotalSize)
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(listSize - bottomPadding - pageTotalSize * 2)
         // Partially visible.
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(-pageTotalSize / 2)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(-pageTotalSize / 2)
 
         // Scroll to the top.
         pagerState.scrollBy(pageTotalSize * 2.5f)
@@ -355,15 +415,22 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         createPager(
             reverseLayout = true,
             modifier = Modifier.requiredSize(listSize),
-            contentPadding =
-                PaddingValues(beforeContent = topPadding, afterContent = bottomPadding),
+            contentPadding = PaddingValues(
+                beforeContent = topPadding,
+                afterContent = bottomPadding
+            ),
             pageSize = { PageSize.Fixed(pageTotalSize) },
             pageCount = { 3 }
         ) { page ->
-            Box(Modifier.requiredSize(pageTotalSize).testTag("$page"))
+            Box(
+                Modifier
+                    .requiredSize(pageTotalSize)
+                    .testTag("$page")
+            )
         }
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
         // Shouldn't be visible
         rule.onNodeWithTag("1").assertDoesNotExist()
 
@@ -382,25 +449,29 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         rule.setContent {
             state = rememberPagerState { 2 }
             Box(
-                modifier = Modifier.testTag(ContainerTag).size(pageTotalSize + smallPaddingSize * 2)
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize + smallPaddingSize * 2)
             ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = smallPaddingSize),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").fillMaxSize())
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .fillMaxSize()
+                    )
                 }
             }
         }
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
 
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize + pageTotalSize)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
 
@@ -413,13 +484,11 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
             }
         }
 
-        rule
-            .onNodeWithTag("1")
+        rule.onNodeWithTag("1")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
 
-        rule
-            .onNodeWithTag("0")
+        rule.onNodeWithTag("0")
             .assertStartPositionInRootIsEqualTo(smallPaddingSize - pageTotalSize)
             .assertMainAxisSizeIsEqualTo(pageTotalSize)
     }
@@ -429,20 +498,30 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
-        rule.onNodeWithTag("1").assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -456,24 +535,35 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.scrollBy(pageTotalSize)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(1, 0.dp)
@@ -486,24 +576,35 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.runScrollToPage(3)
 
-        rule.onNodeWithTag("1").assertDoesNotExist()
+        rule.onNodeWithTag("1")
+            .assertDoesNotExist()
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -516,24 +617,35 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize),
                     pageSize = PageSize.Fixed(pageTotalSize),
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.scrollBy(pageTotalSize * 3)
 
-        rule.onNodeWithTag("1").assertIsNotDisplayed()
+        rule.onNodeWithTag("1")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -547,22 +659,32 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.scrollBy(pageTotalSize * 4.5f)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("3").assertStartPositionInRootIsEqualTo(-pageTotalSize * 0.5f)
+        rule.onNodeWithTag("3")
+            .assertStartPositionInRootIsEqualTo(-pageTotalSize * 0.5f)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, pageTotalSize * 1.5f)
@@ -575,18 +697,27 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize * 2),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -600,24 +731,35 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize * 2),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.scrollBy(pageTotalSize * 2)
 
-        rule.onNodeWithTag("0").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
-        rule.onNodeWithTag("2").assertIsNotDisplayed()
+        rule.onNodeWithTag("2")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(2, 0.dp)
@@ -630,26 +772,38 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize * 2),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.runScrollToPage(3)
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -662,26 +816,38 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize * 2),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
 
         state.scrollBy(pageTotalSize * 3)
 
-        rule.onNodeWithTag("0").assertIsNotDisplayed()
+        rule.onNodeWithTag("0")
+            .assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1").assertStartPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1")
+            .assertStartPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2").assertStartPositionInRootIsEqualTo(pageTotalSize)
+        rule.onNodeWithTag("2")
+            .assertStartPositionInRootIsEqualTo(pageTotalSize)
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -695,13 +861,21 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         lateinit var state: PagerState
         rule.setContent {
             state = rememberPagerState { 4 }
-            Box(modifier = Modifier.testTag(ContainerTag).size(pageTotalSize * 1.5f)) {
+            Box(
+                modifier = Modifier
+                    .testTag(ContainerTag)
+                    .size(pageTotalSize * 1.5f)
+            ) {
                 HorizontalOrVerticalPager(
                     state = state,
                     contentPadding = PaddingValues(mainAxis = pageTotalSize * 2),
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").size(pageTotalSize))
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .size(pageTotalSize)
+                    )
                 }
             }
         }
@@ -712,7 +886,8 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
                 pageTotalSize * 3 // all pages
         )
 
-        rule.onNodeWithTag("3").assertIsNotDisplayed()
+        rule.onNodeWithTag("3")
+            .assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, pageTotalSize * 3.5f)
@@ -728,12 +903,19 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
             state = rememberPagerState { 4 }
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 HorizontalOrVerticalPager(
-                    modifier = Modifier.testTag("list").mainAxisSize(pageTotalSize * 2),
+                    modifier = Modifier
+                        .testTag("list")
+                        .mainAxisSize(pageTotalSize * 2),
                     state = state,
                     contentPadding = padding,
                     pageSize = PageSize.Fixed(pageTotalSize)
                 ) {
-                    Box(Modifier.testTag("$it").background(Color.Red).size(pageTotalSize)) {
+                    Box(
+                        Modifier
+                            .testTag("$it")
+                            .background(Color.Red)
+                            .size(pageTotalSize)
+                    ) {
                         BasicText("$it")
                     }
                 }
@@ -741,22 +923,20 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         }
 
         if (vertical) {
-            rule
-                .onNodeWithTag("0")
+            rule.onNodeWithTag("0")
                 .assertStartPositionInRootIsEqualTo(0.dp)
                 .assertCrossAxisStartPositionInRootIsEqualTo(
                     padding.calculateLeftPadding(LayoutDirection.Rtl)
                 )
 
-            rule.onNodeWithTag("list").assertWidthIsEqualTo(28.dp + pageTotalSize)
+            rule.onNodeWithTag("list")
+                .assertWidthIsEqualTo(28.dp + pageTotalSize)
         } else {
-            rule
-                .onNodeWithTag("0")
+            rule.onNodeWithTag("0")
                 .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
                 .assertStartPositionInRootIsEqualTo(
                     // list width - pageSize - padding
-                    pageTotalSize * 2 -
-                        pageTotalSize -
+                    pageTotalSize * 2 - pageTotalSize -
                         padding.calculateRightPadding(LayoutDirection.Rtl)
                 )
         }
@@ -764,15 +944,13 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         state.scrollBy(pageTotalSize * 4)
 
         if (vertical) {
-            rule
-                .onNodeWithTag("3")
+            rule.onNodeWithTag("3")
                 .assertStartPositionInRootIsEqualTo(pageTotalSize)
                 .assertCrossAxisStartPositionInRootIsEqualTo(
                     padding.calculateLeftPadding(LayoutDirection.Rtl)
                 )
         } else {
-            rule
-                .onNodeWithTag("3")
+            rule.onNodeWithTag("3")
                 .assertCrossAxisStartPositionInRootIsEqualTo(0.dp)
                 .assertStartPositionInRootIsEqualTo(
                     padding.calculateLeftPadding(LayoutDirection.Rtl)
@@ -788,20 +966,20 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
     }
 
     private fun PagerState.runScrollToPage(page: Int) {
-        runBlocking(Dispatchers.Main + AutoTestFrameClock()) { scrollToPage(page) }
+        runBlocking(Dispatchers.Main + AutoTestFrameClock()) {
+            scrollToPage(page)
+        }
     }
 
-    private fun PagerState.assertScrollPosition(index: Int, offset: Dp) =
-        with(rule.density) {
-            assertThat(firstVisiblePage).isEqualTo(index)
-            assertThat(firstVisiblePageOffset.toDp().value).isWithin(0.5f).of(offset.value)
-        }
+    private fun PagerState.assertScrollPosition(index: Int, offset: Dp) = with(rule.density) {
+        assertThat(firstVisiblePage).isEqualTo(index)
+        assertThat(firstVisiblePageOffset.toDp().value).isWithin(0.5f).of(offset.value)
+    }
 
-    private fun PagerState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) =
-        with(rule.density) {
-            assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
-                .isEqualTo(from.roundToPx() to to.roundToPx())
-        }
+    private fun PagerState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) = with(rule.density) {
+        assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
+            .isEqualTo(from.roundToPx() to to.roundToPx())
+    }
 
     private fun PagerState.assertVisibleItems(vararg expected: Pair<Int, Dp>) =
         with(rule.density) {
@@ -810,6 +988,8 @@ internal class PagerContentPaddingTest(paramConfig: ParamConfig) : BasePagerTest
         }
 
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun params() = AllOrientationsParams
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun params() = AllOrientationsParams
     }
 }

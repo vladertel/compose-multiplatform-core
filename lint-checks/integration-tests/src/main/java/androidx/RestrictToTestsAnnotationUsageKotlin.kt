@@ -21,9 +21,12 @@ package androidx
 import androidx.annotation.RestrictTo
 
 class RestrictToTestsAnnotationUsageKotlin {
-    @RestrictTo(RestrictTo.Scope.TESTS) fun testMethod() {}
+    @RestrictTo(RestrictTo.Scope.TESTS)
+    fun testMethod() {}
 
-    @RestrictTo(RestrictTo.Scope.TESTS, RestrictTo.Scope.LIBRARY) fun testMethodVarArg() {}
+    @RestrictTo(RestrictTo.Scope.TESTS, RestrictTo.Scope.LIBRARY)
+    fun testMethodVarArg() {}
 
-    @get:RestrictTo(RestrictTo.Scope.TESTS) val testPropertyGet = "test"
+    @get:RestrictTo(RestrictTo.Scope.TESTS)
+    val testPropertyGet = "test"
 }

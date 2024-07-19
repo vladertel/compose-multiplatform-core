@@ -58,7 +58,6 @@ internal fun CallCompat.addParticipantsSupport(
 }
 
 // Allows the InCallService implementer to inspect state and perform requests to update state
-@ExperimentalAppActions
 internal interface ParticipantClientActions {
     val negotiatedActions: Set<Int>
     val isParticipantExtensionSupported: Boolean
@@ -70,6 +69,5 @@ internal interface ParticipantClientActions {
 
     // outgoing information to the voip app:
     suspend fun toggleHandRaised(isHandRaised: Boolean): CallControlResult
-
-    suspend fun kickParticipant(participant: Participant): CallControlResult
+    suspend fun kickParticipant(participantId: Int): CallControlResult
 }

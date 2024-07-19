@@ -23,6 +23,7 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
 import androidx.camera.camera2.internal.compat.StreamConfigurationMapCompat;
 import androidx.camera.camera2.internal.compat.workaround.SupportedRepeatingSurfaceSize;
@@ -52,6 +53,7 @@ import java.util.UUID;
  * created in Camera2 layer to make Camera2 have the repeating surface to metering the auto 3A or
  * wait for 3A converged.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class MeteringRepeatingSession {
     private static final String TAG = "MeteringRepeating";
 

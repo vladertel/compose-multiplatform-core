@@ -63,26 +63,23 @@ class ProcessorTests : DatabaseTest() {
     lateinit var defaultExecutor: ExecutorService
     lateinit var backgroundExecutor: ExecutorService
     lateinit var serialExecutor: SerialExecutorImpl
-    private val context =
-        TrackingContext(ApplicationProvider.getApplicationContext<Context>().applicationContext)
+    private val context = TrackingContext(
+        ApplicationProvider.getApplicationContext<Context>().applicationContext
+    )
 
     private val foregroundInfo: ForegroundInfo
         get() {
-            val channel =
-                NotificationChannelCompat.Builder(
-                        "test",
-                        NotificationManagerCompat.IMPORTANCE_DEFAULT
-                    )
-                    .setName("hello")
-                    .build()
+            val channel = NotificationChannelCompat
+                .Builder("test", NotificationManagerCompat.IMPORTANCE_DEFAULT)
+                .setName("hello")
+                .build()
             NotificationManagerCompat.from(context).createNotificationChannel(channel)
-            val notification =
-                NotificationCompat.Builder(context, "test")
-                    .setOngoing(true)
-                    .setTicker("ticker")
-                    .setContentText("content text")
-                    .setSmallIcon(androidx.core.R.drawable.notification_bg)
-                    .build()
+            val notification = NotificationCompat.Builder(context, "test")
+                .setOngoing(true)
+                .setTicker("ticker")
+                .setContentText("content text")
+                .setSmallIcon(androidx.core.R.drawable.notification_bg)
+                .build()
             return ForegroundInfo(1, notification, FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         }
 
@@ -93,20 +90,23 @@ class ProcessorTests : DatabaseTest() {
         defaultExecutor = Executors.newFixedThreadPool(2)
         backgroundExecutor = Executors.newSingleThreadExecutor()
         serialExecutor = SerialExecutorImpl(backgroundExecutor)
-        val taskExecutor =
-            object : TaskExecutor {
-                val mainExecutor = Executor { runnable -> runnable.run() }
-
-                override fun getMainThreadExecutor(): Executor {
-                    return mainExecutor
-                }
-
-                override fun getSerialTaskExecutor(): SerialExecutorImpl {
-                    return serialExecutor
-                }
+        val taskExecutor = object : TaskExecutor {
+            val mainExecutor = Executor { runnable ->
+                runnable.run()
             }
-        val configuration =
-            Configuration.Builder().setWorkerFactory(factory).setExecutor(defaultExecutor).build()
+
+            override fun getMainThreadExecutor(): Executor {
+                return mainExecutor
+            }
+
+            override fun getSerialTaskExecutor(): SerialExecutorImpl {
+                return serialExecutor
+            }
+        }
+        val configuration = Configuration.Builder()
+            .setWorkerFactory(factory)
+            .setExecutor(defaultExecutor)
+            .build()
         processor = Processor(context, configuration, taskExecutor, mDatabase)
     }
 
@@ -117,37 +117,39 @@ class ProcessorTests : DatabaseTest() {
         val request2 = OneTimeWorkRequest.Builder(StopLatchWorker::class.java).build()
         insertWork(request1)
         insertWork(request2)
-        class CountDownListener(val expectedId: String) : ExecutionListener {
-            val latch = CountDownLatch(1)
-
-            override fun onExecuted(id: WorkGenerationalId, needsReschedule: Boolean) {
-                if (id.workSpecId == expectedId) {
-                    latch.countDown()
-                }
+        var listenerCalled = false
+        val listener = ExecutionListener { id, _ ->
+            if (!listenerCalled) {
+                listenerCalled = true
+                assertEquals(request1.workSpec.id, id.workSpecId)
             }
         }
-        val firstListener = CountDownListener(request1.workSpec.id)
-        processor.addExecutionListener(firstListener)
+        processor.addExecutionListener(listener)
         val startStopToken = StartStopToken(WorkGenerationalId(request1.workSpec.id, 0))
         processor.startWork(startStopToken)
 
         val firstWorker = factory.awaitWorker(request1.id)
-        Executors.newSingleThreadExecutor().execute {
-            // wil result in long running onStop call, but it will block task thread
+        val blockedThread = Executors.newSingleThreadExecutor()
+        blockedThread.execute {
+            // gonna stall for 10 seconds
             processor.stopWork(startStopToken, 0)
         }
         assertTrue((firstWorker as StopLatchWorker).awaitOnStopCall())
-
-        val secondListener = CountDownListener(request2.workSpec.id)
-        processor.addExecutionListener(secondListener)
+        // onStop call results in onExecuted. It happens on "main thread", which is instant
+        // in this case.
+        assertTrue(listenerCalled)
+        processor.removeExecutionListener(listener)
+        listenerCalled = false
+        val executionFinished = CountDownLatch(1)
+        processor.addExecutionListener { _, _ -> executionFinished.countDown() }
         // This would have previously failed trying to acquire a lock
         processor.startWork(StartStopToken(WorkGenerationalId(request2.workSpec.id, 0)))
-        firstWorker.countDown()
         val secondWorker = factory.awaitWorker(request2.id)
-        assertTrue(firstListener.latch.await(3, TimeUnit.SECONDS))
         (secondWorker as StopLatchWorker).countDown()
-        assertTrue(secondListener.latch.await(3, TimeUnit.SECONDS))
+        assertTrue(executionFinished.await(3, TimeUnit.SECONDS))
         firstWorker.countDown()
+        blockedThread.shutdown()
+        assertTrue(blockedThread.awaitTermination(3, TimeUnit.SECONDS))
         assertTrue(context.intents.isEmpty())
     }
 
@@ -191,7 +193,8 @@ class ProcessorTests : DatabaseTest() {
         assertTrue(executionFinished.await(3, TimeUnit.SECONDS))
         val stopIntentExpected = createStopForegroundIntent(context)
 
-        val intent = context.intents.getOrNull(1) ?: throw AssertionError("Stop Intent wasn't sent")
+        val intent = context.intents.getOrNull(1)
+            ?: throw AssertionError("Stop Intent wasn't sent")
         assertTrue(intent.filterEquals(stopIntentExpected))
     }
 
@@ -223,8 +226,9 @@ class ProcessorTests : DatabaseTest() {
     @Test
     @MediumTest
     fun testStartNewGenerationDoesntStopCurrentWorker() {
-        val request =
-            PeriodicWorkRequest.Builder(LatchWorker::class.java, 10, TimeUnit.DAYS).build()
+        val request = PeriodicWorkRequest.Builder(
+            LatchWorker::class.java, 10, TimeUnit.DAYS
+        ).build()
         insertWork(request)
         val token = StartStopToken(WorkGenerationalId(request.workSpec.id, 0))
         processor.startWork(token)
@@ -276,7 +280,6 @@ class ProcessorTests : DatabaseTest() {
 
     private class TrackingContext(base: Context) : ContextWrapper(base) {
         val intents = mutableListOf<Intent>()
-
         override fun startService(service: Intent): ComponentName? {
             // don't start anything, simply track requests
             intents.add(service)

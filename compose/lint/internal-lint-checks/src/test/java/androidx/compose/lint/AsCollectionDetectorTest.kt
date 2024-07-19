@@ -23,24 +23,27 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
+/* ktlint-disable max-line-length */
 @RunWith(Parameterized::class)
-class AsCollectionDetectorTest(val types: CollectionType) : LintDetectorTest() {
+class AsCollectionDetectorTest(
+    val types: CollectionType
+) : LintDetectorTest() {
 
     override fun getDetector(): Detector = AsCollectionDetector()
 
-    override fun getIssues(): MutableList<Issue> = mutableListOf(AsCollectionDetector.ISSUE)
+    override fun getIssues(): MutableList<Issue> =
+        mutableListOf(AsCollectionDetector.ISSUE)
 
     private val collectionTilde = "~".repeat(types.collection.length)
 
     @Test
     fun immutableAsImmutable() {
-        lint()
-            .files(
-                ScatterMapClass,
-                ScatterSetClass,
-                ObjectListClass,
-                kotlin(
-                    """
+        lint().files(
+            ScatterMapClass,
+            ScatterSetClass,
+            ObjectListClass,
+            kotlin(
+                """
                         package androidx.compose.lint
 
                         import androidx.collection.${types.immutable}
@@ -48,28 +51,25 @@ class AsCollectionDetectorTest(val types: CollectionType) : LintDetectorTest() {
                         fun foo(collection: ${types.immutable}${types.params}): ${types.collection}${types.params} =
                             collection.as${types.collection}()
                         """
-                )
             )
-            .run()
-            .expect(
-                """
+        ).run().expect(
+            """
 src/androidx/compose/lint/test.kt:7: Error: Use method as${types.collection}() only for public API usage [AsCollectionCall]
                             collection.as${types.collection}()
                             ~~~~~~~~~~~~~$collectionTilde~~
 1 errors, 0 warnings
             """
-            )
+        )
     }
 
     @Test
     fun mutableAsImmutable() {
-        lint()
-            .files(
-                ScatterMapClass,
-                ScatterSetClass,
-                ObjectListClass,
-                kotlin(
-                    """
+        lint().files(
+            ScatterMapClass,
+            ScatterSetClass,
+            ObjectListClass,
+            kotlin(
+                """
                         package androidx.compose.lint
 
                         import androidx.collection.Mutable${types.immutable}
@@ -77,28 +77,25 @@ src/androidx/compose/lint/test.kt:7: Error: Use method as${types.collection}() o
                         fun foo(collection: Mutable${types.immutable}${types.params}): ${types.collection}${types.params} =
                             collection.as${types.collection}()
                         """
-                )
             )
-            .run()
-            .expect(
-                """
+        ).run().expect(
+            """
 src/androidx/compose/lint/test.kt:7: Error: Use method as${types.collection}() only for public API usage [AsCollectionCall]
                             collection.as${types.collection}()
                             ~~~~~~~~~~~~~$collectionTilde~~
 1 errors, 0 warnings
             """
-            )
+        )
     }
 
     @Test
     fun mutableAsMutable() {
-        lint()
-            .files(
-                ScatterMapClass,
-                ScatterSetClass,
-                ObjectListClass,
-                kotlin(
-                    """
+        lint().files(
+            ScatterMapClass,
+            ScatterSetClass,
+            ObjectListClass,
+            kotlin(
+                """
                         package androidx.compose.lint
 
                         import androidx.collection.Mutable${types.immutable}
@@ -106,25 +103,22 @@ src/androidx/compose/lint/test.kt:7: Error: Use method as${types.collection}() o
                         fun foo(collection: Mutable${types.immutable}${types.params}): Mutable${types.collection}${types.params} =
                             collection.asMutable${types.collection}()
                         """
-                )
             )
-            .run()
-            .expect(
-                """
+        ).run().expect(
+            """
 src/androidx/compose/lint/test.kt:7: Error: Use method asMutable${types.collection}() only for public API usage [AsCollectionCall]
                             collection.asMutable${types.collection}()
                             ~~~~~~~~~~~~~~~~~~~~$collectionTilde~~
 1 errors, 0 warnings
             """
-            )
+        )
     }
 
     @Test
     fun nonCollectionAs() {
-        lint()
-            .files(
-                kotlin(
-                    """
+        lint().files(
+            kotlin(
+                """
                         package androidx.compose.lint
 
                         fun foo(): ${types.collection}${types.params} =
@@ -136,27 +130,27 @@ src/androidx/compose/lint/test.kt:7: Error: Use method asMutable${types.collecti
                             fun asMap(): Map<String, String>? = null
                         }
                         """
-                )
             )
-            .run()
-            .expectClean()
+        ).run().expectClean()
     }
 
-    class CollectionType(val immutable: String, val collection: String, val params: String)
+    class CollectionType(
+        val immutable: String,
+        val collection: String,
+        val params: String
+    )
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun initParameters() =
-            listOf(
-                CollectionType("ScatterMap", "Map", "<String, String>"),
-                CollectionType("ScatterSet", "Set", "<String>"),
-                CollectionType("ObjectList", "List", "<String>")
-            )
+        fun initParameters() = listOf(
+            CollectionType("ScatterMap", "Map", "<String, String>"),
+            CollectionType("ScatterSet", "Set", "<String>"),
+            CollectionType("ObjectList", "List", "<String>")
+        )
 
-        val ScatterMapClass =
-            kotlin(
-                """
+        val ScatterMapClass = kotlin(
+            """
             package androidx.collection
             sealed class ScatterMap<K, V> {
                 fun asMap(): Map<K, V> = mapOf()
@@ -165,13 +159,11 @@ src/androidx/compose/lint/test.kt:7: Error: Use method asMutable${types.collecti
             class MutableScatterMap<K, V> : ScatterMap<K, V>() {
                 fun asMutableMap(): MutableMap<K, V> = mutableMapOf()
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
 
-        val ScatterSetClass =
-            kotlin(
-                """
+        val ScatterSetClass = kotlin(
+            """
             package androidx.collection
             sealed class ScatterSet<E> {
                 fun asSet(): Set<E> = setOf()
@@ -180,13 +172,11 @@ src/androidx/compose/lint/test.kt:7: Error: Use method asMutable${types.collecti
             class MutableScatterSet<E> : ScatterSet<E>() {
                 fun asMutableSet(): MutableSet<E> = mutableSetOf()
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
 
-        val ObjectListClass =
-            kotlin(
-                """
+        val ObjectListClass = kotlin(
+            """
             package androidx.collection
             sealed class ObjectList<E> {
                 fun asList(): List<E> = listOf()
@@ -195,8 +185,7 @@ src/androidx/compose/lint/test.kt:7: Error: Use method asMutable${types.collecti
             class MutableObjectList<E> : ObjectList<E>() {
                 fun asMutableList(): MutableList<E> = mutableListOf()
             }
-            """
-                    .trimIndent()
-            )
+            """.trimIndent()
+        )
     }
 }

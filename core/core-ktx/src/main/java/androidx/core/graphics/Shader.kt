@@ -19,7 +19,9 @@ package androidx.core.graphics
 import android.graphics.Matrix
 import android.graphics.Shader
 
-/** Wrap the specified [block] in calls to [Shader.getLocalMatrix] and [Shader.setLocalMatrix]. */
+/**
+ * Wrap the specified [block] in calls to [Shader.getLocalMatrix] and [Shader.setLocalMatrix].
+ */
 public inline fun Shader.transform(block: Matrix.() -> Unit) {
     val matrix = Matrix()
     getLocalMatrix(matrix)

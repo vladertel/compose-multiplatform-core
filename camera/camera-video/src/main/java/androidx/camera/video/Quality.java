@@ -25,6 +25,7 @@ import android.media.CamcorderProfile;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 
@@ -39,6 +40,7 @@ import java.util.Set;
  * A class representing video quality constraints that will be used by {@link QualitySelector} to
  * choose video resolution and appropriate encoding parameters.
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class Quality {
 
     // Restrict access to sealed class
@@ -114,6 +116,7 @@ public class Quality {
         return new ArrayList<>(QUALITIES_ORDER_BY_SIZE);
     }
 
+    @RequiresApi(21)
     @RestrictTo(Scope.LIBRARY)
     @AutoValue
     public abstract static class ConstantQuality extends Quality {

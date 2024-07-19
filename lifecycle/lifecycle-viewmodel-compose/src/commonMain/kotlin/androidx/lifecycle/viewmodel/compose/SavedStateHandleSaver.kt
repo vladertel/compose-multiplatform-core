@@ -37,14 +37,15 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 /**
- * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is being saved via
- * [rememberSaveable] with a custom [Saver] can also be saved with [SavedStateHandle].
+ * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is
+ * being saved via [rememberSaveable] with a custom [Saver] can also be saved with
+ * [SavedStateHandle].
  *
  * The returned state [T] should be the only way that a value is saved or restored from the
  * [SavedStateHandle] with the given [key].
  *
- * Using the same key again with another [SavedStateHandle] method is not supported, as values won't
- * cross-set or communicate updates.
+ * Using the same key again with another [SavedStateHandle] method is not supported, as values
+ * won't cross-set or communicate updates.
  *
  * @sample androidx.lifecycle.viewmodel.compose.samples.SnapshotStateViewModel
  */
@@ -62,23 +63,26 @@ fun <T : Any> SavedStateHandle.saveable(
 
     // Hook up saving the state to the SavedStateHandle
     setSavedStateProvider(key) {
-        bundleOf("value" to with(saver) { SaverScope(::validateValue).save(value) })
+        bundleOf("value" to with(saver) {
+            SaverScope(::validateValue).save(value)
+        })
     }
     return value
 }
 
 /**
- * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is being saved via
- * [rememberSaveable] with a custom [Saver] can also be saved with [SavedStateHandle].
+ * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is
+ * being saved via [rememberSaveable] with a custom [Saver] can also be saved with
+ * [SavedStateHandle].
  *
  * The returned [MutableState] should be the only way that a value is saved or restored from the
  * [SavedStateHandle] with the given [key].
  *
- * Using the same key again with another [SavedStateHandle] method is not supported, as values won't
- * cross-set or communicate updates.
+ * Using the same key again with another [SavedStateHandle] method is not supported, as values
+ * won't cross-set or communicate updates.
  *
- * Use this overload if you remember a mutable state with a type which can't be stored in the Bundle
- * so you have to provide a custom saver object.
+ * Use this overload if you remember a mutable state with a type which can't be stored in the
+ * Bundle so you have to provide a custom saver object.
  *
  * @sample androidx.lifecycle.viewmodel.compose.samples.SnapshotStateViewModel
  */
@@ -87,20 +91,25 @@ fun <T> SavedStateHandle.saveable(
     key: String,
     stateSaver: Saver<T, out Any>,
     init: () -> MutableState<T>
-): MutableState<T> = saveable(saver = mutableStateSaver(stateSaver), key = key, init = init)
+): MutableState<T> = saveable(
+    saver = mutableStateSaver(stateSaver),
+    key = key,
+    init = init
+)
 
 /**
- * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is being saved via
- * [rememberSaveable] with a custom [Saver] can also be saved with [SavedStateHandle].
+ * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is
+ * being saved via [rememberSaveable] with a custom [Saver] can also be saved with
+ * [SavedStateHandle].
  *
- * The key is automatically retrieved as the name of the property this delegate is being used to
- * create.
+ * The key is automatically retrieved as the name of the property this delegate is being used
+ * to create.
  *
  * The returned state [T] should be the only way that a value is saved or restored from the
  * [SavedStateHandle] with the automatic key.
  *
- * Using the same key again with another [SavedStateHandle] method is not supported, as values won't
- * cross-set or communicate updates.
+ * Using the same key again with another [SavedStateHandle] method is not supported, as values
+ * won't cross-set or communicate updates.
  *
  * @sample androidx.lifecycle.viewmodel.compose.samples.SnapshotStateViewModelWithDelegates
  */
@@ -109,9 +118,9 @@ fun <T : Any> SavedStateHandle.saveable(
     saver: Saver<T, out Any> = autoSaver(),
     init: () -> T,
 ): PropertyDelegateProvider<Any?, ReadOnlyProperty<Any?, T>> =
-    PropertyDelegateProvider { thisRef, property ->
+    PropertyDelegateProvider { _, property ->
         val value = saveable(
-            key = getSaveableKeyPrefix(thisRef) + property.name,
+            key = property.name,
             saver = saver,
             init = init
         )
@@ -120,17 +129,18 @@ fun <T : Any> SavedStateHandle.saveable(
     }
 
 /**
- * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is being saved via
- * [rememberSaveable] with a custom [Saver] can also be saved with [SavedStateHandle].
+ * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is
+ * being saved via [rememberSaveable] with a custom [Saver] can also be saved with
+ * [SavedStateHandle].
  *
- * The key is automatically retrieved as the name of the property this delegate is being used to
- * create.
+ * The key is automatically retrieved as the name of the property this delegate is being used
+ * to create.
  *
  * The delegated [MutableState] should be the only way that a value is saved or restored from the
  * [SavedStateHandle] with the automatic key.
  *
- * Using the same key again with another [SavedStateHandle] method is not supported, as values won't
- * cross-set or communicate updates.
+ * Using the same key again with another [SavedStateHandle] method is not supported, as values
+ * won't cross-set or communicate updates.
  *
  * Use this overload to allow delegating to a mutable state just like you can with
  * `rememberSaveable`:
@@ -142,13 +152,13 @@ fun <T : Any> SavedStateHandle.saveable(
  */
 @SavedStateHandleSaveableApi
 @JvmName("saveableMutableState")
-fun <T, M : MutableState<T>> SavedStateHandle.saveable(
+fun <T : Any, M : MutableState<T>> SavedStateHandle.saveable(
     stateSaver: Saver<T, out Any> = autoSaver(),
     init: () -> M,
 ): PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> =
-    PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> { thisRef, property ->
+    PropertyDelegateProvider<Any?, ReadWriteProperty<Any?, T>> { _, property ->
         val mutableState = saveable(
-            key = getSaveableKeyPrefix(thisRef) + property.name,
+            key = property.name,
             stateSaver = stateSaver,
             init = init
         )
@@ -163,28 +173,25 @@ fun <T, M : MutableState<T>> SavedStateHandle.saveable(
         }
     }
 
-/** Copied from RememberSaveable.kt */
+/**
+ * Copied from RememberSaveable.kt
+ */
 @Suppress("UNCHECKED_CAST")
-private fun <T> mutableStateSaver(inner: Saver<T, out Any>) =
-    with(inner as Saver<T, Any>) {
-        Saver<MutableState<T>, MutableState<Any?>>(
-            save = { state ->
-                require(state is SnapshotMutableState<T>) {
-                    "If you use a custom MutableState implementation you have to write a custom " +
-                        "Saver and pass it as a saver param to rememberSaveable()"
-                }
-                mutableStateOf(save(state.value), state.policy as SnapshotMutationPolicy<Any?>)
-            },
-            restore =
-                @Suppress("UNCHECKED_CAST", "ExceptionMessage") {
-                    require(it is SnapshotMutableState<Any?>)
-                    mutableStateOf(
-                        if (it.value != null) restore(it.value!!) else null,
-                        it.policy as SnapshotMutationPolicy<T?>
-                    )
-                        as MutableState<T>
-                }
-        )
-    }
-
-internal expect fun getSaveableKeyPrefix(thisRef: Any?): String
+private fun <T> mutableStateSaver(inner: Saver<T, out Any>) = with(inner as Saver<T, Any>) {
+    Saver<MutableState<T>, MutableState<Any?>>(
+        save = { state ->
+            require(state is SnapshotMutableState<T>) {
+                "If you use a custom MutableState implementation you have to write a custom " +
+                    "Saver and pass it as a saver param to rememberSaveable()"
+            }
+            mutableStateOf(save(state.value), state.policy as SnapshotMutationPolicy<Any?>)
+        },
+        restore = @Suppress("UNCHECKED_CAST", "ExceptionMessage") {
+            require(it is SnapshotMutableState<Any?>)
+            mutableStateOf(
+                if (it.value != null) restore(it.value!!) else null,
+                it.policy as SnapshotMutationPolicy<T?>
+            ) as MutableState<T>
+        }
+    )
+}

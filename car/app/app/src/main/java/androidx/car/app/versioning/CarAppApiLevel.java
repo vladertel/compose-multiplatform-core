@@ -31,8 +31,7 @@ import java.lang.annotation.RetentionPolicy;
         CarAppApiLevels.LEVEL_4,
         CarAppApiLevels.LEVEL_5,
         CarAppApiLevels.LEVEL_6,
-        CarAppApiLevels.LEVEL_7,
-        CarAppApiLevels.LEVEL_8})
+        CarAppApiLevels.LEVEL_7})
 @Retention(RetentionPolicy.SOURCE)
 public @interface CarAppApiLevel {
 }

@@ -29,7 +29,8 @@ class ArrayRingBufferTest {
 
     @Test
     fun testEnqueue() {
-        val testBuffer: RingBuffer<Int> = ArrayRingBuffer(3)
+        val testBuffer: RingBuffer<Int> =
+            ArrayRingBuffer(3)
         testBuffer.enqueue(1)
         testBuffer.enqueue(2)
         testBuffer.enqueue(3)
@@ -40,11 +41,15 @@ class ArrayRingBufferTest {
     @Test
     fun testDequeue_correctValueIsDequeued() {
         @Suppress("UNCHECKED_CAST")
-        val mockCallback: RingBuffer.OnRemoveCallback<Int> =
-            Mockito.mock(RingBuffer.OnRemoveCallback::class.java)
-                as RingBuffer.OnRemoveCallback<Int>
+        val mockCallback: RingBuffer.OnRemoveCallback<Int> = Mockito.mock(
+            RingBuffer.OnRemoveCallback::class.java
+        ) as RingBuffer.OnRemoveCallback<Int>
 
-        val testBuffer: RingBuffer<Int> = ArrayRingBuffer(3, mockCallback)
+        val testBuffer: RingBuffer<Int> =
+            ArrayRingBuffer(
+                3,
+                mockCallback
+            )
         testBuffer.enqueue(1)
         testBuffer.enqueue(2)
         testBuffer.enqueue(3)
@@ -55,11 +60,15 @@ class ArrayRingBufferTest {
     @Test
     fun testDequeue_OnRemoveCallbackCalledOnlyWhenDiscardingItemsDueToCapacity() {
         @Suppress("UNCHECKED_CAST")
-        val mockCallback: RingBuffer.OnRemoveCallback<Int> =
-            Mockito.mock(RingBuffer.OnRemoveCallback::class.java)
-                as RingBuffer.OnRemoveCallback<Int>
+        val mockCallback: RingBuffer.OnRemoveCallback<Int> = Mockito.mock(
+            RingBuffer.OnRemoveCallback::class.java
+        ) as RingBuffer.OnRemoveCallback<Int>
 
-        val testBuffer: RingBuffer<Int> = ArrayRingBuffer(3, mockCallback)
+        val testBuffer: RingBuffer<Int> =
+            ArrayRingBuffer(
+                3,
+                mockCallback
+            )
         testBuffer.enqueue(1)
         testBuffer.enqueue(2)
         testBuffer.enqueue(3)
@@ -71,7 +80,8 @@ class ArrayRingBufferTest {
 
     @Test()
     fun testDequeue_exceptionThrownWhenBufferEmpty() {
-        val testBuffer: RingBuffer<Int> = ArrayRingBuffer(5)
+        val testBuffer: RingBuffer<Int> =
+            ArrayRingBuffer(5)
         assertThrows(NoSuchElementException::class.java, testBuffer::dequeue)
     }
 }

@@ -40,22 +40,21 @@ class CompositionDataTests {
 
     @Test
     fun canIterateASlotTable() {
-        val slots =
-            SlotTable().also {
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(1) {
-                            for (i in 1..5) {
-                                writer.group(i * 10) {
-                                    for (j in 1..i) {
-                                        writer.update(i * 100 + j)
-                                    }
+        val slots = SlotTable().also {
+            it.write { writer ->
+                writer.insert {
+                    writer.group(1) {
+                        for (i in 1..5) {
+                            writer.group(i * 10) {
+                                for (j in 1..i) {
+                                    writer.update(i * 100 + j)
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
         slots.verifyWellFormed()
 
@@ -74,27 +73,11 @@ class CompositionDataTests {
 
         assertEquals(
             listOf(
-                1,
-                10,
-                101,
-                20,
-                201,
-                202,
-                30,
-                301,
-                302,
-                303,
-                40,
-                401,
-                402,
-                403,
-                404,
-                50,
-                501,
-                502,
-                503,
-                504,
-                505
+                1, 10, 101,
+                20, 201, 202,
+                30, 301, 302, 303,
+                40, 401, 402, 403, 404,
+                50, 501, 502, 503, 504, 505
             ),
             list
         )
@@ -103,27 +86,28 @@ class CompositionDataTests {
     @Test
     fun canFindNodes() {
         val data = List(26) { 'A' + it }
-        val slots =
-            SlotTable().also {
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(0) {
-                            fun emit(a: List<Char>) {
-                                if (a.isNotEmpty()) {
-                                    writer.group(1) {
-                                        val mid = (a.size - 1) / 2 + 1
-                                        writer.nodeGroup(10, a[0])
-                                        if (mid > 1) emit(a.subList(1, mid))
-                                        if (mid < a.size) emit(a.subList(mid, a.size))
-                                    }
+        val slots = SlotTable().also {
+            it.write { writer ->
+                writer.insert {
+                    writer.group(0) {
+                        fun emit(a: List<Char>) {
+                            if (a.isNotEmpty()) {
+                                writer.group(1) {
+                                    val mid = (a.size - 1) / 2 + 1
+                                    writer.nodeGroup(10, a[0])
+                                    if (mid > 1)
+                                        emit(a.subList(1, mid))
+                                    if (mid < a.size)
+                                        emit(a.subList(mid, a.size))
                                 }
                             }
-
-                            emit(data)
                         }
+
+                        emit(data)
                     }
                 }
             }
+        }
 
         val collected = mutableListOf<Char>()
 
@@ -143,32 +127,31 @@ class CompositionDataTests {
 
     @Test
     fun canFindSourceInfo() {
-        val slots =
-            SlotTable().also {
-                var data = 0
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(0) {
-                            fun emit(depth: Int) {
-                                if (depth == 0) {
-                                    writer.startData(100, aux = "$data")
+        val slots = SlotTable().also {
+            var data = 0
+            it.write { writer ->
+                writer.insert {
+                    writer.group(0) {
+                        fun emit(depth: Int) {
+                            if (depth == 0) {
+                                writer.startData(100, aux = "$data")
+                                data++
+                                writer.endGroup()
+                            } else {
+                                if (depth == 2) {
+                                    writer.startData(depth * 1000, aux = "$data")
                                     data++
-                                    writer.endGroup()
-                                } else {
-                                    if (depth == 2) {
-                                        writer.startData(depth * 1000, aux = "$data")
-                                        data++
-                                    } else writer.startGroup(depth)
-                                    emit(depth - 1)
-                                    emit(depth - 1)
-                                    writer.endGroup()
-                                }
+                                } else writer.startGroup(depth)
+                                emit(depth - 1)
+                                emit(depth - 1)
+                                writer.endGroup()
                             }
-                            emit(5)
                         }
+                        emit(5)
                     }
                 }
             }
+        }
 
         val collected = mutableListOf<String>()
 
@@ -189,20 +172,25 @@ class CompositionDataTests {
 
     @Test
     fun writeDuringIterationCausesException() {
-        val slots =
-            SlotTable().also {
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(0) { repeat(10) { index -> writer.group(100 + index) {} } }
+        val slots = SlotTable().also {
+            it.write { writer ->
+                writer.insert {
+                    writer.group(0) {
+                        repeat(10) { index ->
+                            writer.group(100 + index) { }
+                        }
                     }
                 }
             }
+        }
 
         fun insertAGroup() {
             slots.write { writer ->
                 writer.group {
-                    repeat(3) { writer.group {} }
-                    writer.insert { writer.group(200) {} }
+                    repeat(3) { writer.group { } }
+                    writer.insert {
+                        writer.group(200) { }
+                    }
                     writer.skipToGroupEnd()
                 }
             }
@@ -219,19 +207,24 @@ class CompositionDataTests {
 
     @Test
     fun iterationDuringWriteCausesException() {
-        val slots =
-            SlotTable().also {
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(0) { repeat(10) { index -> writer.group(100 + index) {} } }
+        val slots = SlotTable().also {
+            it.write { writer ->
+                writer.insert {
+                    writer.group(0) {
+                        repeat(10) { index ->
+                            writer.group(100 + index) { }
+                        }
                     }
                 }
             }
+        }
 
         slots.write { writer ->
             writer.group {
-                repeat(3) { writer.group {} }
-                writer.insert { writer.group(200) {} }
+                repeat(3) { writer.group { } }
+                writer.insert {
+                    writer.group(200) { }
+                }
                 writer.skipToGroupEnd()
 
                 assertFailsWith(ConcurrentModificationException::class) {
@@ -244,14 +237,17 @@ class CompositionDataTests {
 
     @Test
     fun canFindAGroupInCompositionData() {
-        val slots =
-            SlotTable().also {
-                it.write { writer ->
-                    writer.insert {
-                        writer.group(0) { repeat(10) { index -> writer.group(100 + index) {} } }
+        val slots = SlotTable().also {
+            it.write { writer ->
+                writer.insert {
+                    writer.group(0) {
+                        repeat(10) { index ->
+                            writer.group(100 + index) { }
+                        }
                     }
                 }
             }
+        }
 
         val identity = slots.compositionGroups.first().compositionGroups.drop(5).first().identity
         assertEquals(identity, slots.find(identity!!)?.identity)
@@ -259,33 +255,26 @@ class CompositionDataTests {
 
     @Test
     fun canFindAGrouplessCallGroupInCompositionData() {
-        val slots =
-            SlotTable().also {
-                it.collectSourceInformation()
-                it.write { writer ->
-                    with(writer) {
-                        insert {
-                            group(100) {
-                                group(200) {
-                                    group(300) {}
-                                    grouplessCall(400, "CC400") {}
-                                    group(500) {}
-                                    grouplessCall(600, "CC600") {}
-                                }
+        val slots = SlotTable().also {
+            it.collectSourceInformation()
+            it.write { writer ->
+                with(writer) {
+                    insert {
+                        group(100) {
+                            group(200) {
+                                group(300) { }
+                                grouplessCall(400, "CC400") { }
+                                group(500) { }
+                                grouplessCall(600, "CC600") { }
                             }
                         }
                     }
                 }
             }
+        }
 
-        val identities =
-            slots.compositionGroups
-                .first()
-                .compositionGroups
-                .first()
-                .compositionGroups
-                .filter { it.key == 400 || it.key == 600 }
-                .map { it.identity }
+        val identities = slots.compositionGroups.first().compositionGroups.first()
+            .compositionGroups.filter { it.key == 400 || it.key == 600 }.map { it.identity }
 
         for (identity in identities) {
             assertNotNull(identity)
@@ -296,29 +285,30 @@ class CompositionDataTests {
 
     @Test
     fun canFindANestedGrouplessCallGroup() {
-        val slots =
-            SlotTable().also {
-                it.collectSourceInformation()
-                it.write { writer ->
-                    with(writer) {
-                        insert {
-                            group(100) {
-                                group(200) {
-                                    grouplessCall(300, "CC300") {
-                                        grouplessCall(400, "CC400") {
-                                            group(500) {}
-                                            grouplessCall(600, "CC600") { group(700) {} }
-                                            group(800) {}
-                                            grouplessCall(900, "CC900") {}
+        val slots = SlotTable().also {
+            it.collectSourceInformation()
+            it.write { writer ->
+                with(writer) {
+                    insert {
+                        group(100) {
+                            group(200) {
+                                grouplessCall(300, "CC300") {
+                                    grouplessCall(400, "CC400") {
+                                        group(500) { }
+                                        grouplessCall(600, "CC600") {
+                                            group(700) { }
                                         }
-                                        grouplessCall(1000, "CC1000") {}
+                                        group(800) { }
+                                        grouplessCall(900, "CC900") { }
                                     }
+                                    grouplessCall(1000, "CC1000") { }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
 
         val identities = findAll(slots) { it.sourceInfo != null }.map { it.identity }
         for (identity in identities) {

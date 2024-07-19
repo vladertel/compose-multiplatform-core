@@ -16,7 +16,10 @@
 
 package androidx.camera.core.imagecapture;
 
+import android.os.Build;
+
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.CaptureConfig;
 
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.List;
 /**
  * Request sent to camera and its callback.
  */
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public final class CameraRequest {
 
     private final List<CaptureConfig> mCaptureConfigs;

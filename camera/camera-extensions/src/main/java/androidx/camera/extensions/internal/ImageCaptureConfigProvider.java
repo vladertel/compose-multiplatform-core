@@ -20,6 +20,7 @@ import android.util.Pair;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.impl.ConfigProvider;
 import androidx.camera.core.impl.ImageCaptureConfig;
@@ -29,6 +30,7 @@ import java.util.List;
 /**
  * Provides extensions related configs for image capture
  */
+@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class ImageCaptureConfigProvider implements ConfigProvider<ImageCaptureConfig> {
 
     private final VendorExtender mVendorExtender;

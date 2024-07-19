@@ -16,9 +16,11 @@
 
 package androidx.room.androidx.room.integration.kotlintestapp.vo
 
-@JvmInline value class Schrodinger(val experiment: Experiment)
+@JvmInline
+value class Schrodinger(val experiment: Experiment)
 
-@JvmInline value class Cat(val catStatus: CatStatus)
+@JvmInline
+value class Cat(val catStatus: CatStatus)
 
 data class Experiment(val isCatAlive: String)
 

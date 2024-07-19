@@ -83,6 +83,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -105,7 +106,7 @@ public class ExposureDeviceTest {
     private static final int DEFAULT_AVAILABLE_CAMERA_COUNT = 1;
 
     @Rule
-    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest(
             new CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
     );
 
@@ -179,7 +180,7 @@ public class ExposureDeviceTest {
                 StreamSpec.builder(new Size(640, 480)).build());
         mCameraCoordinator = new FakeCameraCoordinator();
         mCameraUseCaseAdapter = new CameraUseCaseAdapter(
-                mCamera2CameraImpl,
+                new LinkedHashSet<>(Collections.singleton(mCamera2CameraImpl)),
                 mCameraCoordinator,
                 fakeCameraDeviceSurfaceManager, new FakeUseCaseConfigFactory());
     }
