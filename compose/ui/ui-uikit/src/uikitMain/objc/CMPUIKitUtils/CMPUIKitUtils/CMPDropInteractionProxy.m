@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)canHandleSession:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (void)dropInteraction:(UIDropInteraction *)interaction performDrop:(id<UIDropSession>)session {
@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (void)performDropFromSession:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (UIDropProposal *)dropInteraction:(UIDropInteraction *)interaction sessionDidUpdate:(id<UIDropSession>)session {
@@ -32,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (UIDropProposal *)proposalForSessionUpdate:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 @end

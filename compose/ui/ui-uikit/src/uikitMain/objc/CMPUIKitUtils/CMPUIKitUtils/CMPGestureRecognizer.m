@@ -7,9 +7,7 @@
 
 #import "CMPGestureRecognizer.h"
 
-@implementation CMPGestureRecognizer {
-    dispatch_block_t _scheduledFailureBlock;
-}
+@implementation CMPGestureRecognizer
 
 - (instancetype)init {
     self = [super init];
@@ -23,99 +21,47 @@
 }
 
 - (void)handleStateChange {
-    switch (self.state) {
-        case UIGestureRecognizerStateEnded:
-        case UIGestureRecognizerStateCancelled:
-            [self cancelFailure];
-            break;
-
-        default:
-            break;
-    }
+    // No-op
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    NSLog(@"is not required to fail %@", otherGestureRecognizer);
-    
+    return [self gestureRecognizerShouldRequireFailureOfGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
+}
+
+- (BOOL)gestureRecognizerShouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return NO;
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    UIView *view = self.view;
-    UIView *otherView = otherGestureRecognizer.view;
-    
-    NSLog(@"%@", otherGestureRecognizer);
-    
-    if (view == nil || otherView == nil) {
-        return NO;
-    }
-    
-    if (otherView == view) {
-        NSLog(@"is allowed to run with %@", otherGestureRecognizer);
-        return YES;
-    }
-    
-    // Allow simultaneous recognition only if otherGestureRecognizer is attached to the view up in the hierarchy
-    return ![otherView isDescendantOfView:view];
-    
+    return [self gestureRecognizerShouldRequireFailureOfGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
+}
+
+- (BOOL)gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return YES;
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    if (otherGestureRecognizer.view == self.view) {
-        NSLog(@"is not required to be failed by %@", otherGestureRecognizer);
-        return NO;
-    } else {
-        return YES;
-    }
+    return [self gestureRecognizerShouldBeRequiredToFailByGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
 }
 
-- (void)cancelFailure {
-    if (_scheduledFailureBlock) {
-        dispatch_block_cancel(_scheduledFailureBlock);
-        _scheduledFailureBlock = NULL;
-    }
-}
-
-- (void)fail {
-    [self.handler onFailure];
-}
-
-- (void)scheduleFailure {
-    __weak typeof(self) weakSelf = self;
-    dispatch_block_t dispatchBlock = dispatch_block_create(0, ^{
-        [weakSelf fail];
-    });
-    
-    if (_scheduledFailureBlock) {
-        dispatch_block_cancel(_scheduledFailureBlock);
-    }
-    _scheduledFailureBlock = dispatchBlock;
-    
-    // 150ms is a timer delay for notifying a handler that the gesture was failed to recognize.
-    // `handler` implementtion is responsible for cancelling this via calling `cancelFailure` and transitioning
-    // this gesture recognizer to a proper state.
-    double failureDelay = 0.15;
-    
-    dispatch_time_t dispatchTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(failureDelay * NSEC_PER_SEC));
-
-    // Schedule the block to be executed at `dispatchTime`
-    dispatch_after(dispatchTime, dispatch_get_main_queue(), dispatchBlock);
+- (BOOL)gestureRecognizerShouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return NO;
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    [self.handler touchesBegan:touches withEvent:event];
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    [self.handler touchesMoved:touches withEvent:event];
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    [self.handler touchesEnded:touches withEvent:event];
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    [self.handler touchesCancelled:touches withEvent:event];
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 @end

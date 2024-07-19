@@ -30,7 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (NSArray<UIDragItem *> *)itemsForBeginningSession:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (BOOL)dragInteraction:(UIDragInteraction *)interaction sessionAllowsMoveOperation:(id<UIDragSession>)session {
@@ -38,7 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)doesSessionAllowMoveOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 - (BOOL)dragInteraction:(UIDragInteraction *)interaction sessionIsRestrictedToDraggingApplication:(id<UIDragSession>)session {
@@ -46,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)isSessionRestrictedToDraggingApplication:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
-    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+    CMP_ABSTRACT_FUNCTION_CALLED
 }
 
 @end

@@ -16,8 +16,17 @@
 
 #import <Foundation/Foundation.h>
 
-#define CMP_MUST_BE_OVERRIDED
-#define CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION assert(false && "MUST_OVERRIDE");
+// Marker for functions which must be override by subclasses
+#define CMP_ABSTRACT_FUNCTION
+
+// Marker for functions which are assumed to be override and call super
+#define CMP_MUST_CALL_SUPER
+
+// Marker for functions which can be override, but have default behavior
+#define CMP_CAN_OVERRIDE
+
+// Failure indicating that function wasn't override when supposed to
+#define CMP_ABSTRACT_FUNCTION_CALLED assert(false && "MUST_OVERRIDE");
 
 // Marker for indicating that raw pointer returned from a function is owned by the caller
 #define CMP_OWNED
