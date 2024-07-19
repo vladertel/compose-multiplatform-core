@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.draganddrop.DragGatingGestureRecognizer
 import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
@@ -24,9 +25,7 @@ import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.viewinterop.InteropView
 import kotlin.coroutines.CoroutineContext
 import kotlin.experimental.ExperimentalObjCName
-import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
-import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
@@ -84,7 +83,7 @@ private val UIGestureRecognizerState.isOngoing: Boolean
  * to control touches delivery to [UIView]s and their [UIGestureRecognizer]s in a fine-grain manner.
  */
 @OptIn(ExperimentalObjCName::class)
-@ObjCName(name = "ForwardingGestureRecognizer")
+@ObjCName("ForwardingGestureRecognizer")
 private class ForwardingGestureRecognizer(
     private var onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
     private val onTouchesCountChanged: (by: Int) -> Unit,
@@ -174,30 +173,6 @@ private class ForwardingGestureRecognizer(
         // Delays touches reception by underlying views until the gesture recognizer is explicitly
         // stated as failed (aka, the touch sequence is targeted to the interop view).
         delaysTouchesBegan = true
-    }
-
-    override fun handleStateChange() {
-        when (state) {
-            UIGestureRecognizerStateBegan -> {
-                println("UIGestureRecognizerStateBegan")
-            }
-
-            UIGestureRecognizerStateChanged -> {
-                println("UIGestureRecognizerStateChanged")
-            }
-
-            UIGestureRecognizerStateEnded -> {
-                println("UIGestureRecognizerStateEnded")
-            }
-
-            UIGestureRecognizerStateCancelled -> {
-                println("UIGestureRecognizerStateCancelled")
-            }
-
-            UIGestureRecognizerStateFailed -> {
-                println("UIGestureRecognizerStateFailed")
-            }
-        }
     }
 
     /**
@@ -572,6 +547,8 @@ internal class InteractionUIView(
         onTouchesCountChanged = { touchesCount += it }
     )
 
+    private val dragGatingGestureRecognizer = DragGatingGestureRecognizer()
+
     /**
      * When there at least one tracked touch, we need notify redrawer about it. It should schedule
      * CADisplayLink which affects frequency of polling UITouch events on high frequency display
@@ -587,10 +564,13 @@ internal class InteractionUIView(
         multipleTouchEnabled = true
         userInteractionEnabled = true
 
-        addGestureRecognizer(forwardingGestureRecognizer)
-
         addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
+
+        dragGatingGestureRecognizer.setupInView(this)
+
         addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
+
+        addGestureRecognizer(forwardingGestureRecognizer)
     }
 
     override fun canBecomeFirstResponder() = true
