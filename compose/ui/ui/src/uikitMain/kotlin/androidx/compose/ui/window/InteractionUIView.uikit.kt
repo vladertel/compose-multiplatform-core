@@ -325,6 +325,39 @@ private class ForwardingGestureRecognizer(
         }
     }
 
+    override fun gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer(
+        gestureRecognizer: UIGestureRecognizer,
+        otherGestureRecognizer: UIGestureRecognizer
+    ): Boolean {
+        // Can't check if either view is null
+        val view = gestureRecognizer.view ?: return false
+        val otherView = otherGestureRecognizer.view ?: return false
+
+        val otherIsAscendant = !otherView.isDescendantOfView(view)
+
+        // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
+        // or to a view up in the hierarchy
+        return otherView == view || otherIsAscendant
+    }
+
+    /**
+     * We don't require the other gesture recognizer to fail.
+     */
+    override fun gestureRecognizerShouldRequireFailureOfGestureRecognizer(
+        gestureRecognizer: UIGestureRecognizer,
+        otherGestureRecognizer: UIGestureRecognizer
+    ): Boolean {
+        return false
+    }
+
+    override fun gestureRecognizerShouldBeRequiredToFailByGestureRecognizer(
+        gestureRecognizer: UIGestureRecognizer,
+        otherGestureRecognizer: UIGestureRecognizer
+    ): Boolean {
+        // Other gesture recognizer should fail if it's attached to a different view
+        return gestureRecognizer.view != otherGestureRecognizer.view
+    }
+
     /**
      * Fail the gesture recognizer explicitly.
      *
