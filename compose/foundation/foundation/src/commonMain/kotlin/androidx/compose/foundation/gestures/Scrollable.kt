@@ -684,17 +684,16 @@ internal class ScrollingLogic(
     suspend fun onDragStopped(initialVelocity: Velocity) {
         val availableVelocity = initialVelocity.singleAxisVelocity()
 
-        val performFling: suspend (Velocity) -> Velocity = { velocity ->
-            val preConsumedByParent = nestedScrollDispatcher.dispatchPreFling(velocity)
-            val available = velocity - preConsumedByParent
-
-            val velocityLeft = doFlingAnimation(available)
-
-            val consumedPost =
-                nestedScrollDispatcher.dispatchPostFling((available - velocityLeft), velocityLeft)
-            val totalLeft = velocityLeft - consumedPost
-            velocity - totalLeft
-        }
+        scroll {
+            val performFling: suspend (Velocity) -> Velocity = { velocity ->
+                val preConsumedByParent = nestedScrollDispatcher.dispatchPreFling(velocity)
+                val available = velocity - preConsumedByParent
+                val velocityLeft = doFlingAnimation(available)
+                val consumedPost =
+                    nestedScrollDispatcher.dispatchPostFling((available - velocityLeft), velocityLeft)
+                val totalLeft = velocityLeft - consumedPost
+                velocity - totalLeft
+            }
 
         val overscroll = overscrollEffect
         if (overscroll != null && shouldDispatchOverscroll) {
