@@ -105,22 +105,26 @@ internal fun Modifier.updateSelectionTouchMode(updateTouchMode: (Boolean) -> Uni
 internal fun Modifier.selectionGestureInput(
     mouseSelectionObserver: MouseSelectionObserver,
     textDragObserver: TextDragObserver,
-) =
-    this.pointerInput(mouseSelectionObserver, textDragObserver) {
+): Modifier = composed {
+    // TODO(https://youtrack.jetbrains.com/issue/COMPOSE-79) how we can rewrite this without `composed`?
+    val currentMouseSelectionObserver by rememberUpdatedState(mouseSelectionObserver)
+    val currentTextDragObserver by rememberUpdatedState(textDragObserver)
+    this.pointerInput(Unit) {
         val clicksCounter = ClicksCounter(viewConfiguration)
         awaitEachGesture {
             val down = awaitDown()
             if (
                 down.isPrecisePointer &&
-                    down.buttons.isPrimaryPressed &&
-                    down.changes.fastAll { !it.isConsumed }
+                down.buttons.isPrimaryPressed &&
+                down.changes.fastAll { !it.isConsumed }
             ) {
-                mouseSelection(mouseSelectionObserver, clicksCounter, down)
+                mouseSelection(currentMouseSelectionObserver, clicksCounter, down)
             } else if (!down.isPrecisePointer) {
-                touchSelection(textDragObserver, down)
+                touchSelection(currentTextDragObserver, down)
             }
         }
     }
+}
 
 private suspend fun AwaitPointerEventScope.touchSelection(
     observer: TextDragObserver,
