@@ -52,11 +52,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.min
 
+@ExperimentalFoundationApi
+@Composable
+internal expect fun rememberTextFieldOverscrollEffect(): OverscrollEffect?
+
 // Scrollable
 internal fun Modifier.textFieldScrollable(
     scrollerPosition: TextFieldScrollerPosition,
     interactionSource: MutableInteractionSource? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    overscrollEffect: OverscrollEffect? = null
 ) =
     composed(
         inspectorInfo =
@@ -99,6 +104,7 @@ internal fun Modifier.textFieldScrollable(
             Modifier.scrollable(
                 orientation = scrollerPosition.orientation,
                 reverseDirection = reverseDirection,
+                overscrollEffect = overscrollEffect,
                 state = wrappedScrollableState,
                 interactionSource = interactionSource,
                 enabled = enabled && scrollerPosition.maximum != 0f

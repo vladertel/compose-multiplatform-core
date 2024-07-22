@@ -20,7 +20,6 @@ import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDecay
-import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.FocusedBoundsObserverNode
 import androidx.compose.foundation.MutatePriority
@@ -287,7 +286,7 @@ private class ScrollableNode(
     private val scrollableContainerNode = delegate(ScrollableContainerNode(enabled))
 
     // Place holder fling behavior, we'll initialize it when the density is available.
-    private val defaultFlingBehavior = DefaultFlingBehavior(splineBasedDecay(UnityDensity))
+    private val defaultFlingBehavior = platformDefaultFlingBehavior()
 
     private val scrollingLogic =
         ScrollingLogic(
@@ -531,10 +530,7 @@ object ScrollableDefaults {
 
     /** Create and remember default [FlingBehavior] that will represent natural fling curve. */
     @Composable
-    fun flingBehavior(): FlingBehavior {
-        val flingSpec = rememberSplineBasedDecay<Float>()
-        return remember(flingSpec) { DefaultFlingBehavior(flingSpec) }
-    }
+    fun flingBehavior(): FlingBehavior = rememberPlatformDefaultFlingBehavior()
 
     /**
      * Create and remember default [OverscrollEffect] that will be used for showing over scroll
@@ -808,10 +804,33 @@ private class ScrollableNestedScrollConnection(
     }
 }
 
+/**
+ * Compatibility interface for default fling behaviors that depends on [Density].
+ */
+internal interface ScrollableDefaultFlingBehavior : FlingBehavior {
+    /**
+     * Update the internal parameters of FlingBehavior in accordance with the new [androidx.compose.ui.unit.Density] value.
+     *
+     * @param density new density value.
+     */
+    fun updateDensity(density: Density) = Unit
+}
+
+/**
+ * This method returns [ScrollableDefaultFlingBehavior] whose density will be managed by the
+ * [ScrollableElement] because it's not created inside [Composable] context.
+ * This is different from [rememberPlatformDefaultFlingBehavior] which creates [FlingBehavior] whose density
+ * depends on [LocalDensity] and is automatically resolved.
+ */
+internal expect fun platformDefaultFlingBehavior(): ScrollableDefaultFlingBehavior
+
+@Composable
+internal expect fun rememberPlatformDefaultFlingBehavior(): FlingBehavior
+
 internal class DefaultFlingBehavior(
     var flingDecay: DecayAnimationSpec<Float>,
     private val motionDurationScale: MotionDurationScale = DefaultScrollMotionDurationScale
-) : FlingBehavior {
+) : ScrollableDefaultFlingBehavior {
 
     // For Testing
     var lastAnimationCycleCount = 0
