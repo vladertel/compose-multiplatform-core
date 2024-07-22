@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.node
+package androidx.compose.ui.input.pointer
 
-internal expect class TreeSet<E>(comparator: Comparator<in E>) {
-    fun add(element: E): Boolean
+import kotlinx.coroutines.CancellationException
 
-    fun remove(element: E): Boolean
-
-    fun first(): E
-
-    fun contains(element: E): Boolean
-
-    fun isEmpty(): Boolean
-}
+/**
+ * An exception thrown from [AwaitPointerEventScope.withTimeout] when the execution time
+ * of the coroutine is too long.
+ */
+expect class PointerEventTimeoutCancellationException(time: Long) : CancellationException

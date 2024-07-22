@@ -28,7 +28,7 @@ import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAct
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.trace
-import kotlin.system.measureNanoTime
+import kotlin.time.measureTime
 
 /**
  * State for lazy items prefetching, used by lazy layouts to instruct the prefetcher.
@@ -171,31 +171,31 @@ internal class PrefetchMetrics {
      * average.
      */
     internal inline fun recordCompositionTiming(contentType: Any?, doComposition: () -> Unit) {
-        val executionTime = measureNanoTime(doComposition)
+        val executionTime = measureTime(doComposition)
         contentType?.let {
             val currentAvgCompositionTimeNanos =
                 averageCompositionTimeNanosByContentType.getOrDefault(contentType, 0L)
             val newAvgCompositionTimeNanos =
-                calculateAverageTime(executionTime, currentAvgCompositionTimeNanos)
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgCompositionTimeNanos)
             averageCompositionTimeNanosByContentType[contentType] = newAvgCompositionTimeNanos
         }
         averageCompositionTimeNanos =
-            calculateAverageTime(executionTime, averageCompositionTimeNanos)
+            calculateAverageTime(executionTime.inWholeNanoseconds, averageCompositionTimeNanos)
     }
 
     /**
      * Executes the [doMeasure] block and updates [averageMeasureTimeNanos] with the new average.
      */
     internal inline fun recordMeasureTiming(contentType: Any?, doMeasure: () -> Unit) {
-        val executionTime = measureNanoTime(doMeasure)
+        val executionTime = measureTime(doMeasure)
         contentType?.let {
             val currentAvgMeasureTimeNanos =
                 averageMeasureTimeNanosByContentType.getOrDefault(contentType, 0L)
             val newAvgMeasureTimeNanos =
-                calculateAverageTime(executionTime, currentAvgMeasureTimeNanos)
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgMeasureTimeNanos)
             averageMeasureTimeNanosByContentType[contentType] = newAvgMeasureTimeNanos
         }
-        averageMeasureTimeNanos = calculateAverageTime(executionTime, averageMeasureTimeNanos)
+        averageMeasureTimeNanos = calculateAverageTime(executionTime.inWholeNanoseconds, averageMeasureTimeNanos)
     }
 
     private fun calculateAverageTime(new: Long, current: Long): Long {

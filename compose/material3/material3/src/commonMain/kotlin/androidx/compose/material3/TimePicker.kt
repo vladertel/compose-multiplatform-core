@@ -174,6 +174,7 @@ import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.zIndex
+import kotlin.jvm.JvmInline
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -584,7 +585,7 @@ fun rememberTimePickerState(
 
 /** Represents the different configurations for the layout of the Time Picker */
 @Immutable
-@JvmInline
+@kotlin.jvm.JvmInline
 @ExperimentalMaterial3Api
 value class TimePickerLayoutType internal constructor(internal val value: Int) {
 

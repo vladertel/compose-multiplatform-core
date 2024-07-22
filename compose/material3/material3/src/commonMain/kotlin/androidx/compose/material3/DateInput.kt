@@ -24,6 +24,7 @@ import androidx.compose.material3.internal.CalendarDate
 import androidx.compose.material3.internal.CalendarModel
 import androidx.compose.material3.internal.DateInputFormat
 import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.format
 import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -301,7 +302,7 @@ internal class DateInputValidator(
  * when validating the user input, and especially when validating an input range.
  */
 @Immutable
-@JvmInline
+@kotlin.jvm.JvmInline
 internal value class InputIdentifier internal constructor(internal val value: Int) {
 
     companion object {

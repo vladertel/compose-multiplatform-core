@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.text.platform
+package androidx.compose.material.internal
 
-internal expect class SynchronizedObject
-
-internal expect fun createSynchronizedObject(): SynchronizedObject
-
-@PublishedApi
-internal expect inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R
+internal expect fun identityHashCode(instance: Any?): Int

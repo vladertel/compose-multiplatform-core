@@ -199,9 +199,9 @@ internal fun RowColumnMeasurePolicy.measure(
                             "itemWeight " +
                             itemWeight +
                             "weightedSize " +
-                            weightedSize
+                            weightedSize,
+                        e
                     )
-                    .initCause(e)
             }
         }
 
@@ -276,9 +276,9 @@ internal fun RowColumnMeasurePolicy.measure(
                                 "remainderUnit " +
                                 remainderUnit +
                                 "childMainAxisSize " +
-                                childMainAxisSize
+                                childMainAxisSize,
+                            e
                         )
-                        .initCause(e)
                 }
                 val placeable = child.measure(childConstraints)
                 val placeableMainAxisSize = placeable.mainAxisSize()

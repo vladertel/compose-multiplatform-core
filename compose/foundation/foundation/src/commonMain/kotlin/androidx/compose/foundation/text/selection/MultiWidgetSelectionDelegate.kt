@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
+import kotlin.jvm.Synchronized
 import kotlin.math.max
 
 internal class MultiWidgetSelectionDelegate(

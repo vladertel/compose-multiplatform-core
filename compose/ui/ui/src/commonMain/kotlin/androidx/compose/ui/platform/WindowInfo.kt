@@ -24,9 +24,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.input.pointer.EmptyPointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
+import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 
 /** Provides information about the Window that is hosting this compose hierarchy. */
 @Stable
+@JvmDefaultWithCompatibility
 interface WindowInfo {
     /**
      * Indicates whether the window hosting this compose hierarchy is in focus.

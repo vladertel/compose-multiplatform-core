@@ -18,6 +18,7 @@ package androidx.compose.ui.input.pointer
 
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.PlatformOptimizedCancellationException
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.node.ModifierNodeElement
@@ -26,7 +27,8 @@ import androidx.compose.ui.node.requireLayoutNode
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewConfiguration
-import androidx.compose.ui.platform.synchronized
+import androidx.compose.ui.createSynchronizedObject
+import androidx.compose.ui.synchronized
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastAll
@@ -39,6 +41,7 @@ import kotlin.coroutines.RestrictsSuspension
 import kotlin.coroutines.createCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.js.JsName
 import kotlin.math.max
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
@@ -149,6 +152,7 @@ interface PointerInputScope : Density {
      */
     @Suppress("GetterSetterNames")
     @get:Suppress("GetterSetterNames")
+    @JsName("varinterceptOutOfBoundsChildEvents")
     var interceptOutOfBoundsChildEvents: Boolean
         get() = false
         set(_) {}
@@ -542,6 +546,8 @@ internal class SuspendingPointerInputModifierNodeImpl(
     private val pointerHandlers =
         mutableVectorOf<SuspendingPointerInputModifierNodeImpl.PointerEventHandlerCoroutine<*>>()
 
+    private val pointerHandlersLock = createSynchronizedObject()
+
     /**
      * Scratch list for dispatching to handlers for a particular phase. Used to hold a copy of the
      * contents of [pointerHandlers] during dispatch so that resumed continuations may add/remove
@@ -670,7 +676,7 @@ internal class SuspendingPointerInputModifierNodeImpl(
         block: (SuspendingPointerInputModifierNodeImpl.PointerEventHandlerCoroutine<*>) -> Unit
     ) {
         // Copy handlers to avoid mutating the collection during dispatch
-        synchronized(pointerHandlers) { dispatchingPointerHandlers.addAll(pointerHandlers) }
+        synchronized(pointerHandlersLock) { dispatchingPointerHandlers.addAll(pointerHandlers) }
         try {
             when (pass) {
                 PointerEventPass.Initial,
@@ -761,7 +767,7 @@ internal class SuspendingPointerInputModifierNodeImpl(
         block: suspend AwaitPointerEventScope.() -> R
     ): R = suspendCancellableCoroutine { continuation ->
         val handlerCoroutine = PointerEventHandlerCoroutine(continuation)
-        synchronized(pointerHandlers) {
+        synchronized(pointerHandlersLock) {
             pointerHandlers += handlerCoroutine
 
             // NOTE: We resume the new continuation while holding this lock.
@@ -835,7 +841,7 @@ internal class SuspendingPointerInputModifierNodeImpl(
 
         // Implementation of Continuation; clean up and resume our wrapped continuation.
         override fun resumeWith(result: Result<R>) {
-            synchronized(pointerHandlers) { pointerHandlers -= this }
+            synchronized(pointerHandlersLock) { pointerHandlers -= this }
             completion.resumeWith(result)
         }
 
@@ -888,43 +894,16 @@ internal class SuspendingPointerInputModifierNodeImpl(
     }
 }
 
-private val EmptyStackTraceElements = emptyArray<StackTraceElement>()
-
-/**
- * An exception thrown from [AwaitPointerEventScope.withTimeout] when the execution time of the
- * coroutine is too long.
- */
-class PointerEventTimeoutCancellationException(time: Long) :
-    CancellationException("Timed out waiting for $time ms") {
-    override fun fillInStackTrace(): Throwable {
-        // Avoid null.clone() on Android <= 6.0 when accessing stackTrace
-        stackTrace = EmptyStackTraceElements
-        return this
-    }
-}
-
 /**
  * Used in place of the standard Job cancellation pathway to avoid reflective javaClass.simpleName
  * lookups to build the exception message and stack trace collection. Remove if these are changed in
  * kotlinx.coroutines.
  */
-private class PointerInputResetException : CancellationException("Pointer input was reset") {
-    override fun fillInStackTrace(): Throwable {
-        // Avoid null.clone() on Android <= 6.0 when accessing stackTrace
-        stackTrace = EmptyStackTraceElements
-        return this
-    }
-}
+private class PointerInputResetException : PlatformOptimizedCancellationException("Pointer input was reset")
 
 /**
  * Also used in place of standard Job cancellation pathway; since we control this code path we
  * shouldn't need to worry about other code calling addSuppressed on this exception so a singleton
  * instance is used
  */
-private object CancelTimeoutCancellationException : CancellationException() {
-    override fun fillInStackTrace(): Throwable {
-        // Avoid null.clone() on Android <= 6.0 when accessing stackTrace
-        stackTrace = EmptyStackTraceElements
-        return this
-    }
-}
+private object CancelTimeoutCancellationException : PlatformOptimizedCancellationException()
