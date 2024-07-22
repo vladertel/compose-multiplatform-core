@@ -55,7 +55,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.format
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.internal.rememberAccessibilityServiceState
 import androidx.compose.material3.tokens.TimeInputTokens
@@ -175,7 +174,6 @@ import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.zIndex
-import kotlin.jvm.JvmInline
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -586,7 +584,7 @@ fun rememberTimePickerState(
 
 /** Represents the different configurations for the layout of the Time Picker */
 @Immutable
-@kotlin.jvm.JvmInline
+@JvmInline
 @ExperimentalMaterial3Api
 value class TimePickerLayoutType internal constructor(internal val value: Int) {
 
@@ -1922,7 +1920,7 @@ internal fun numberContentDescription(
             Strings.TimePickerHourSuffix
         }
 
-    return getString(id).format(number)
+    return getString(id, number)
 }
 
 private fun dist(x1: Float, y1: Float, x2: Int, y2: Int): Float {
@@ -1941,16 +1939,8 @@ private enum class LayoutId {
     InnerCircle,
 }
 
-// TODO(https://github.com/JetBrains/compose-multiplatform/issues/3373) fix expect composable getter
-@OptIn(ExperimentalMaterial3Api::class)
-internal val defaultTimePickerLayoutType: TimePickerLayoutType
-    @Composable
-    @ReadOnlyComposable get() = defaultTimePickerLayoutType()
-
-@Composable
-@ReadOnlyComposable
-@OptIn(ExperimentalMaterial3Api::class)
-internal expect fun defaultTimePickerLayoutType() : TimePickerLayoutType
+internal expect val defaultTimePickerLayoutType: TimePickerLayoutType
+    @Composable @ReadOnlyComposable get
 
 private const val FullCircle: Float = (PI * 2).toFloat()
 private const val HalfCircle: Float = FullCircle / 2f

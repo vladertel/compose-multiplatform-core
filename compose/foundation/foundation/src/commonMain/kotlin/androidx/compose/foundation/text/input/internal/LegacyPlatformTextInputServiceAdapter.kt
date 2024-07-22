@@ -20,7 +20,6 @@ package androidx.compose.foundation.text.input.internal
 
 import androidx.compose.foundation.text.LegacyTextFieldState
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -28,8 +27,7 @@ import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.input.PlatformTextInputService
 import kotlinx.coroutines.Job
 
-@Composable
-internal expect fun legacyPlatformTextInputServiceAdapter():
+internal expect fun createLegacyPlatformTextInputServiceAdapter():
     LegacyPlatformTextInputServiceAdapter
 
 /**

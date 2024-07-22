@@ -33,7 +33,6 @@ import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.gestures.DragEvent.DragDelta
 import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
-import androidx.compose.foundation.PlatformOptimizedCancellationException
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
@@ -63,7 +62,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import kotlin.js.JsName
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -1491,7 +1489,12 @@ private fun Float.coerceToTarget(target: Float): Float {
     return if (target > 0) coerceAtMost(target) else coerceAtLeast(target)
 }
 
-private class AnchoredDragFinishedSignal : PlatformOptimizedCancellationException()
+private class AnchoredDragFinishedSignal : CancellationException() {
+    override fun fillInStackTrace(): Throwable {
+        stackTrace = emptyArray()
+        return this
+    }
+}
 
 private suspend fun <I> restartable(inputs: () -> I, block: suspend (I) -> Unit) {
     try {

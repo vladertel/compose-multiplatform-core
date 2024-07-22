@@ -186,7 +186,7 @@ class Typography(
 }
 
 /** Helper function for component typography tokens. */
-internal fun Typography.fromToken(value: TypographyKeyTokens): TextStyle {
+private fun Typography.fromToken(value: TypographyKeyTokens): TextStyle {
     return when (value) {
         TypographyKeyTokens.DisplayLarge -> displayLarge
         TypographyKeyTokens.DisplayMedium -> displayMedium

@@ -1385,7 +1385,7 @@ private fun Iterator<Measurable>.safeNext(info: FlowLineInfo?): Measurable? {
         } else {
             next()
         }
-    } catch (e: IndexOutOfBoundsException) {
+    } catch (e: ArrayIndexOutOfBoundsException) {
         null
     }
 }

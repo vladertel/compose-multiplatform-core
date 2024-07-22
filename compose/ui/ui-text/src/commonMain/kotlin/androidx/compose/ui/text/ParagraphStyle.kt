@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.isUnspecified
-import kotlin.jvm.JvmName
 
 private val DefaultLineHeight = TextUnit.Unspecified
 
@@ -400,22 +399,18 @@ class ParagraphStyle(
         return result
     }
 
-    // Long string concatenation causes atomicfu plugin to be slow/hang.
-    // See https://youtrack.jetbrains.com/issue/KT-65645/Atomicfu-plugin-compilation-hangs-on-a-long-string-concatenation
     override fun toString(): String {
-        return buildString {
-            append("ParagraphStyle(")
-            append("textAlign=$textAlign, ")
-            append("textDirection=$textDirection, ")
-            append("lineHeight=$lineHeight, ")
-            append("textIndent=$textIndent, ")
-            append("platformStyle=$platformStyle, ")
-            append("lineHeightStyle=$lineHeightStyle, ")
-            append("lineBreak=$lineBreak, ")
-            append("hyphens=$hyphens, ")
-            append("textMotion=$textMotion")
-            append(")")
-        }
+        return "ParagraphStyle(" +
+            "textAlign=$textAlign, " +
+            "textDirection=$textDirection, " +
+            "lineHeight=$lineHeight, " +
+            "textIndent=$textIndent, " +
+            "platformStyle=$platformStyle, " +
+            "lineHeightStyle=$lineHeightStyle, " +
+            "lineBreak=$lineBreak, " +
+            "hyphens=$hyphens, " +
+            "textMotion=$textMotion" +
+            ")"
     }
 }
 

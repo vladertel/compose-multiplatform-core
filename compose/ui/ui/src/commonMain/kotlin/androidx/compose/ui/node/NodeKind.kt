@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +43,6 @@ import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
 import androidx.compose.ui.modifier.ModifierLocalProvider
 import androidx.compose.ui.semantics.SemanticsModifier
-import kotlin.jvm.JvmInline
-import kotlin.jvm.JvmStatic
 
 @Suppress("NOTHING_TO_INLINE")
 @JvmInline
@@ -142,10 +140,6 @@ internal object Nodes {
     @JvmStatic
     inline val Traversable
         get() = NodeKind<TraversableNode>(0b1 shl 18)
-
-    @JvmStatic
-    inline val Unplaced
-        get() = NodeKind<OnUnplacedModifierNode>(0b1 shl 19)
     // ...
 }
 
@@ -246,9 +240,6 @@ internal fun calculateNodeKindSetFrom(node: Modifier.Node): Int {
         if (node is TraversableNode) {
             mask = mask or Nodes.Traversable
         }
-        if (node is OnUnplacedModifierNode) {
-            mask = mask or Nodes.Unplaced
-        }
         mask
     }
 }
@@ -330,8 +321,8 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
     }
     if (
         Nodes.FocusProperties in selfKindSet &&
-        node is FocusPropertiesModifierNode &&
-        node.specifiesCanFocusProperty()
+            node is FocusPropertiesModifierNode &&
+            node.specifiesCanFocusProperty()
     ) {
         when (phase) {
             Removed -> node.scheduleInvalidationOfAssociatedFocusTargets()

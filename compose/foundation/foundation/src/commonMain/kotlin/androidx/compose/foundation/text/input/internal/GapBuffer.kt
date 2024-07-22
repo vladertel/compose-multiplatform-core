@@ -167,8 +167,8 @@ private class GapBuffer(initBuffer: CharArray, initGapStart: Int, initGapEnd: In
      * @param builder The output string builder
      */
     fun append(builder: StringBuilder) {
-        builder.appendRange(buffer, startIndex = 0, endIndex = gapStart)
-        builder.appendRange(value = buffer, startIndex = gapEnd, endIndex = capacity)
+        builder.append(buffer, 0, gapStart)
+        builder.append(buffer, gapEnd, capacity - gapEnd)
     }
 
     /**

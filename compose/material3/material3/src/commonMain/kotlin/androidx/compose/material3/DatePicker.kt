@@ -72,7 +72,6 @@ import androidx.compose.material3.internal.MillisecondsIn24Hours
 import androidx.compose.material3.internal.ProvideContentColorTextStyle
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.createCalendarModel
-import androidx.compose.material3.internal.format
 import androidx.compose.material3.internal.formatWithSkeleton
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.DatePickerModalTokens
@@ -125,7 +124,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
-import kotlin.jvm.JvmInline
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.input.pointer
 
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass.Main

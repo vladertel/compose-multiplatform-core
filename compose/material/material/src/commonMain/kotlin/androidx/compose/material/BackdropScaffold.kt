@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.offset
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
-import kotlin.jvm.JvmName
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min

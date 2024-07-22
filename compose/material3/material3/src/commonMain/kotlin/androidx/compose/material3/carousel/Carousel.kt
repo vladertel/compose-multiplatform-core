@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
-import kotlin.jvm.JvmInline
 
 /**
  * <a href=https://m3.material.io/components/carousel/overview" class="external"

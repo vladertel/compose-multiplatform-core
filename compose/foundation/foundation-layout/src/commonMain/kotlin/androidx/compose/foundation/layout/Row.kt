@@ -17,7 +17,6 @@
 package androidx.compose.foundation.layout
 
 import androidx.annotation.FloatRange
-import androidx.compose.foundation.layout.internal.JvmDefaultWithCompatibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable

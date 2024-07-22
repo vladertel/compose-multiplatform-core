@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.offset
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
-import kotlin.jvm.JvmInline
 
 /**
  * State for [Scaffold] composable component.

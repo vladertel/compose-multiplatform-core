@@ -57,12 +57,12 @@ interface DragAndDropSourceScope : PointerInputScope {
 fun Modifier.dragAndDropSource(
     drawDragDecoration: DrawScope.() -> Unit,
     block: suspend DragAndDropSourceScope.() -> Unit
-): Modifier {
-    return this then DragAndDropSourceElement(
-        drawDragDecoration = drawDragDecoration,
-        dragAndDropSourceHandler = block,
-    )
-}
+): Modifier =
+    this then
+        DragAndDropSourceElement(
+            drawDragDecoration = drawDragDecoration,
+            dragAndDropSourceHandler = block,
+        )
 
 private data class DragAndDropSourceElement(
     /** @see Modifier.dragAndDropSource */

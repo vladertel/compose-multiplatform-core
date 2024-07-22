@@ -44,7 +44,7 @@ internal class DepthSortedSet(private val extraAssertions: Boolean) {
                 return l1.hashCode().compareTo(l2.hashCode())
             }
         }
-    private val set = SortedSet(DepthComparator)
+    private val set = TreeSet(DepthComparator)
 
     fun contains(node: LayoutNode): Boolean {
         val contains = set.contains(node)

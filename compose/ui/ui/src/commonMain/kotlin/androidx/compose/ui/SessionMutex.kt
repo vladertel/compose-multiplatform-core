@@ -17,7 +17,6 @@
 package androidx.compose.ui
 
 import androidx.annotation.RestrictTo
-import kotlin.jvm.JvmInline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin

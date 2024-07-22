@@ -227,8 +227,6 @@ private val sync = SynchronizedObject()
 private class StateSetIterator<T>(val set: SnapshotStateSet<T>, val iterator: Iterator<T>) :
     MutableIterator<T> {
     var current: T? = null
-    @Suppress("OPTIONAL_DECLARATION_USAGE_IN_NON_COMMON_SOURCE")
-    @kotlin.js.JsName("_hasNext")
     var next: T? = null
     var modification = set.modification
 

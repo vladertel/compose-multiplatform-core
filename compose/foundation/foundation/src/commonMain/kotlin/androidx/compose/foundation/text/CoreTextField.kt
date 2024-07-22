@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.handwriting.stylusHandwriting
-import androidx.compose.foundation.text.input.internal.legacyPlatformTextInputServiceAdapter
+import androidx.compose.foundation.text.input.internal.createLegacyPlatformTextInputServiceAdapter
 import androidx.compose.foundation.text.input.internal.legacyTextInputAdapter
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.OffsetProvider
@@ -216,11 +216,10 @@ internal fun CoreTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() },
-    textScrollerPosition: TextFieldScrollerPosition? = null,
+        @Composable { innerTextField -> innerTextField() }
 ) {
     val focusRequester = remember { FocusRequester() }
-    val legacyTextInputServiceAdapter = legacyPlatformTextInputServiceAdapter()
+    val legacyTextInputServiceAdapter = remember { createLegacyPlatformTextInputServiceAdapter() }
     val textInputService: TextInputService = remember {
         TextInputService(legacyTextInputServiceAdapter)
     }
@@ -236,20 +235,10 @@ internal fun CoreTextField(
     // Scroll state
     val singleLine = maxLines == 1 && !softWrap && imeOptions.singleLine
     val orientation = if (singleLine) Orientation.Horizontal else Orientation.Vertical
-    val scrollerPosition = textScrollerPosition ?: rememberSaveable(
-        orientation,
-        saver = TextFieldScrollerPosition.Saver
-    ) { TextFieldScrollerPosition(orientation) }
-    if (scrollerPosition.orientation != orientation) {
-        throw IllegalArgumentException(
-            "Mismatching scroller orientation; " + (
-                if (orientation == Orientation.Vertical)
-                    "only single-line, non-wrap text fields can scroll horizontally"
-                else
-                    "single-line, non-wrap text fields can only scroll horizontally"
-                )
-        )
-    }
+    val scrollerPosition =
+        rememberSaveable(orientation, saver = TextFieldScrollerPosition.Saver) {
+            TextFieldScrollerPosition(orientation)
+        }
 
     // State
     val transformedText =
@@ -314,13 +303,6 @@ internal fun CoreTextField(
 
     val coroutineScope = rememberCoroutineScope()
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
-
-    rememberClipboardEventsHandler(
-        isEnabled = state.hasFocus,
-        onCopy = { manager.onCopyWithResult() },
-        onCut = { manager.onCutWithResult() },
-        onPaste = { manager.paste(AnnotatedString(it)) }
-    )
 
     // Focus
     val focusModifier =
@@ -389,15 +371,35 @@ internal fun CoreTextField(
         }
     }
 
-    val pointerModifier = Modifier.textFieldPointer(
-        manager,
-        enabled,
-        interactionSource,
-        state,
-        focusRequester,
-        readOnly,
-        offsetMapping,
-    )
+    val pointerModifier =
+        Modifier.updateSelectionTouchMode { state.isInTouchMode = it }
+            .tapPressTextFieldModifier(interactionSource, enabled) { offset ->
+                tapToFocus(state, focusRequester, !readOnly)
+                if (state.hasFocus && enabled) {
+                    if (state.handleState != HandleState.Selection) {
+                        state.layoutResult?.let { layoutResult ->
+                            TextFieldDelegate.setCursorOffset(
+                                offset,
+                                layoutResult,
+                                state.processor,
+                                offsetMapping,
+                                state.onValueChange
+                            )
+                            // Won't enter cursor state when text is empty.
+                            if (state.textDelegate.text.isNotEmpty()) {
+                                state.handleState = HandleState.Cursor
+                            }
+                        }
+                    } else {
+                        manager.deselect(offset)
+                    }
+                }
+            }
+            .selectionGestureInput(
+                mouseSelectionObserver = manager.mouseSelectionObserver,
+                textDragObserver = manager.touchSelectionObserver,
+            )
+            .pointerHoverIcon(textPointerIcon)
 
     val drawModifier =
         Modifier.drawBehind {
@@ -580,7 +582,7 @@ internal fun CoreTextField(
             onClick {
                 // according to the documentation, we still need to provide proper semantics actions
                 // even if the state is 'disabled'
-                requestFocusAndShowKeyboardIfNeeded(state, focusRequester, !readOnly)
+                tapToFocus(state, focusRequester, !readOnly)
                 true
             }
             onLongClick {
@@ -665,8 +667,6 @@ internal fun CoreTextField(
             true
         }
 
-    val overscrollEffect = rememberTextFieldOverscrollEffect()
-
     // Modifiers that should be applied to the outer text field container. Usually those include
     // gesture and semantics modifiers.
     val decorationBoxModifier =
@@ -677,7 +677,7 @@ internal fun CoreTextField(
             .interceptDPadAndMoveFocus(state, focusManager)
             .previewKeyEventToDeselectOnBack(state, manager)
             .then(textKeyInputModifier)
-            .textFieldScrollable(scrollerPosition, interactionSource, enabled, overscrollEffect)
+            .textFieldScrollable(scrollerPosition, interactionSource, enabled)
             .then(pointerModifier)
             .then(semanticsModifier)
             .onGloballyPositioned @DontMemoize { state.layoutResult?.decorationBoxCoordinates = it }
@@ -693,11 +693,6 @@ internal fun CoreTextField(
 
     CoreTextFieldRootBox(decorationBoxModifier, manager) {
         decorationBox {
-            fun Modifier.overscroll(): Modifier =
-                overscrollEffect?.let {
-                    this then it.effectModifier
-                } ?: this
-
             // Modifiers applied directly to the internal input field implementation. In general,
             // these will most likely include draw, layout and IME related modifiers.
             val coreTextFieldModifier =
@@ -707,7 +702,6 @@ internal fun CoreTextField(
                     // TextFields
                     .heightIn(min = state.minHeightForSingleLineField)
                     .heightInLines(textStyle = textStyle, minLines = minLines, maxLines = maxLines)
-                    .overscroll()
                     .textFieldScroll(
                         scrollerPosition = scrollerPosition,
                         textFieldValue = value,
@@ -1063,7 +1057,7 @@ internal class LegacyTextFieldState(
 }
 
 /** Request focus on tap. If already focused, makes sure the keyboard is requested. */
-internal fun requestFocusAndShowKeyboardIfNeeded(
+private fun tapToFocus(
     state: LegacyTextFieldState,
     focusRequester: FocusRequester,
     allowKeyboard: Boolean

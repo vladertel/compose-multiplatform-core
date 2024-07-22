@@ -35,18 +35,26 @@ internal object RootMeasurePolicy :
             }
             measurables.size == 1 -> {
                 val placeable = measurables[0].measure(constraints)
-                layout(constraints.maxWidth, constraints.maxHeight) {
+                layout(
+                    constraints.constrainWidth(placeable.width),
+                    constraints.constrainHeight(placeable.height)
+                ) {
                     placeable.placeRelativeWithLayer(0, 0)
                 }
             }
             else -> {
-                val placeables = measurables.fastMap {
-                    it.measure(constraints)
+                val placeables = measurables.fastMap { it.measure(constraints) }
+                var maxWidth = 0
+                var maxHeight = 0
+                placeables.fastForEach { placeable ->
+                    maxWidth = maxOf(placeable.width, maxWidth)
+                    maxHeight = maxOf(placeable.height, maxHeight)
                 }
-                layout(constraints.maxWidth, constraints.maxHeight) {
-                    placeables.fastForEach { placeable ->
-                        placeable.placeRelativeWithLayer(0, 0)
-                    }
+                layout(
+                    constraints.constrainWidth(maxWidth),
+                    constraints.constrainHeight(maxHeight)
+                ) {
+                    placeables.fastForEach { placeable -> placeable.placeRelativeWithLayer(0, 0) }
                 }
             }
         }

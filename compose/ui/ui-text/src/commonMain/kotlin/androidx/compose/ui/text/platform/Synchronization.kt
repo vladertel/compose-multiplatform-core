@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation
+package androidx.compose.ui.text.platform
 
-//TODO: Move this configuration to the top-level (ComposeScene.Platform, for example)
-// Issue https://github.com/JetBrains/compose-multiplatform/issues/3508
-internal expect fun isMouseInputWorkaround(): Boolean
+internal expect class SynchronizedObject
+
+internal expect fun createSynchronizedObject(): SynchronizedObject
+
+@PublishedApi
+internal expect inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R

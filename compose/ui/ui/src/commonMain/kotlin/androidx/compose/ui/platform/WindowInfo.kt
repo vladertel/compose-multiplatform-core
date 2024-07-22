@@ -19,15 +19,15 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.input.pointer.EmptyPointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 
 /** Provides information about the Window that is hosting this compose hierarchy. */
 @Stable
-@JvmDefaultWithCompatibility
-expect interface WindowInfo {
+interface WindowInfo {
     /**
      * Indicates whether the window hosting this compose hierarchy is in focus.
      *
@@ -39,7 +39,8 @@ expect interface WindowInfo {
 
     /** Indicates the state of keyboard modifiers (pressed or not). */
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-    open val keyboardModifiers: PointerKeyboardModifiers
+    val keyboardModifiers: PointerKeyboardModifiers
+        get() = WindowInfoImpl.GlobalKeyboardModifiers.value
 }
 
 @Composable
@@ -48,5 +49,28 @@ internal fun WindowFocusObserver(onWindowFocusChanged: (isWindowFocused: Boolean
     val callback = rememberUpdatedState(onWindowFocusChanged)
     LaunchedEffect(windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { callback.value(it) }
+    }
+}
+
+internal class WindowInfoImpl : WindowInfo {
+    private val _isWindowFocused = mutableStateOf(false)
+
+    override var isWindowFocused: Boolean
+        set(value) {
+            _isWindowFocused.value = value
+        }
+        get() = _isWindowFocused.value
+
+    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
+    override var keyboardModifiers: PointerKeyboardModifiers
+        get() = GlobalKeyboardModifiers.value
+        set(value) {
+            GlobalKeyboardModifiers.value = value
+        }
+
+    companion object {
+        // One instance across all windows makes sense, since the state of KeyboardModifiers is
+        // common for all windows.
+        internal val GlobalKeyboardModifiers = mutableStateOf(EmptyPointerKeyboardModifiers())
     }
 }

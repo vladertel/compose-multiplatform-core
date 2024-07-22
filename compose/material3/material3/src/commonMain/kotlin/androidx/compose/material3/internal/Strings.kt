@@ -21,7 +21,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 
 @Immutable
-@kotlin.jvm.JvmInline
+@JvmInline
 internal expect value class Strings constructor(val value: Int) {
     companion object {
         val NavigationMenu: Strings
@@ -93,4 +93,6 @@ internal expect value class Strings constructor(val value: Int) {
 
 @Composable @ReadOnlyComposable internal expect fun getString(string: Strings): String
 
-internal expect fun String.format(vararg formatArgs: Any?): String
+@Composable
+@ReadOnlyComposable
+internal expect fun getString(string: Strings, vararg formatArgs: Any): String

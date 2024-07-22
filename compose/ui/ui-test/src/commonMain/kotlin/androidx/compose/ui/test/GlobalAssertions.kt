@@ -17,8 +17,6 @@
 
 package androidx.compose.ui.test
 
-import kotlin.jvm.JvmName
-
 /**
  * Adds a named assertion to the collection of assertions to be executed before test actions.
  *

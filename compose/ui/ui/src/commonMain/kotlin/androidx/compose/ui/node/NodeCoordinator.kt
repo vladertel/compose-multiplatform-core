@@ -310,12 +310,6 @@ internal abstract class NodeCoordinator(
         }
     }
 
-    fun onUnplaced() {
-        if (hasNode(Nodes.Unplaced)) {
-            visitNodes(Nodes.Unplaced) { it.onUnplaced() }
-        }
-    }
-
     /** Places the modified child. */
     /*@CallSuper*/
     override fun placeAt(
@@ -1306,7 +1300,6 @@ internal abstract class NodeCoordinator(
         )
     }
 
-    @kotlin.native.concurrent.ThreadLocal
     internal companion object {
         const val ExpectAttachedLayoutCoordinates =
             "LayoutCoordinate operations are only valid " + "when isAttached is true"

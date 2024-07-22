@@ -22,7 +22,6 @@ import androidx.compose.runtime.remember
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlin.js.JsName
 
 /**
  * InteractionSource represents a stream of [Interaction]s corresponding to events emitted by a
@@ -125,7 +124,6 @@ interface MutableInteractionSource : InteractionSource {
  * @see InteractionSource
  * @see MutableInteractionSource
  */
-@JsName("funMutableInteractionSource")
 fun MutableInteractionSource(): MutableInteractionSource = MutableInteractionSourceImpl()
 
 @Stable

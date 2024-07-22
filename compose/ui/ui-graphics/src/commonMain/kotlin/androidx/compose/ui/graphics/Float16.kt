@@ -16,7 +16,6 @@
 package androidx.compose.ui.graphics
 
 import androidx.compose.ui.util.floatFromBits
-import kotlin.jvm.JvmInline
 
 /**
  * The `Float16` class is a wrapper and a utility class to manipulate half-precision 16-bit
