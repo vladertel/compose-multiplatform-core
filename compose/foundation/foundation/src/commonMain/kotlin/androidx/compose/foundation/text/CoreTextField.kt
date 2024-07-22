@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.handwriting.stylusHandwriting
-import androidx.compose.foundation.text.input.internal.createLegacyPlatformTextInputServiceAdapter
+import androidx.compose.foundation.text.input.internal.legacyPlatformTextInputServiceAdapter
 import androidx.compose.foundation.text.input.internal.legacyTextInputAdapter
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.OffsetProvider
@@ -219,7 +219,7 @@ internal fun CoreTextField(
         @Composable { innerTextField -> innerTextField() }
 ) {
     val focusRequester = remember { FocusRequester() }
-    val legacyTextInputServiceAdapter = remember { createLegacyPlatformTextInputServiceAdapter() }
+    val legacyTextInputServiceAdapter = legacyPlatformTextInputServiceAdapter()
     val textInputService: TextInputService = remember {
         TextInputService(legacyTextInputServiceAdapter)
     }
@@ -371,35 +371,15 @@ internal fun CoreTextField(
         }
     }
 
-    val pointerModifier =
-        Modifier.updateSelectionTouchMode { state.isInTouchMode = it }
-            .tapPressTextFieldModifier(interactionSource, enabled) { offset ->
-                tapToFocus(state, focusRequester, !readOnly)
-                if (state.hasFocus && enabled) {
-                    if (state.handleState != HandleState.Selection) {
-                        state.layoutResult?.let { layoutResult ->
-                            TextFieldDelegate.setCursorOffset(
-                                offset,
-                                layoutResult,
-                                state.processor,
-                                offsetMapping,
-                                state.onValueChange
-                            )
-                            // Won't enter cursor state when text is empty.
-                            if (state.textDelegate.text.isNotEmpty()) {
-                                state.handleState = HandleState.Cursor
-                            }
-                        }
-                    } else {
-                        manager.deselect(offset)
-                    }
-                }
-            }
-            .selectionGestureInput(
-                mouseSelectionObserver = manager.mouseSelectionObserver,
-                textDragObserver = manager.touchSelectionObserver,
-            )
-            .pointerHoverIcon(textPointerIcon)
+    val pointerModifier = Modifier.textFieldPointer(
+        manager,
+        enabled,
+        interactionSource,
+        state,
+        focusRequester,
+        readOnly,
+        offsetMapping,
+    )
 
     val drawModifier =
         Modifier.drawBehind {
@@ -582,7 +562,7 @@ internal fun CoreTextField(
             onClick {
                 // according to the documentation, we still need to provide proper semantics actions
                 // even if the state is 'disabled'
-                tapToFocus(state, focusRequester, !readOnly)
+                requestFocusAndShowKeyboardIfNeeded(state, focusRequester, !readOnly)
                 true
             }
             onLongClick {
@@ -1057,7 +1037,7 @@ internal class LegacyTextFieldState(
 }
 
 /** Request focus on tap. If already focused, makes sure the keyboard is requested. */
-private fun tapToFocus(
+internal fun requestFocusAndShowKeyboardIfNeeded(
     state: LegacyTextFieldState,
     focusRequester: FocusRequester,
     allowKeyboard: Boolean
