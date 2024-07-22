@@ -325,6 +325,7 @@ internal abstract class BaseTextPreparedSelection<T : BaseTextPreparedSelection<
     }
 
     private fun charOffset(offset: Int) = offset.coerceAtMost(text.length - 1)
+            .coerceAtLeast(0)
 
     companion object {
         /**
