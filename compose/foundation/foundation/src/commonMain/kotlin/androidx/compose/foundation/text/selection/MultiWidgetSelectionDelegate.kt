@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -192,6 +192,14 @@ internal class MultiWidgetSelectionDelegate(
     override fun getLastVisibleOffset(): Int {
         val textLayoutResult = layoutResultCallback() ?: return 0
         return textLayoutResult.lastVisibleOffset
+    }
+
+    override fun getLineHeight(offset: Int): Float {
+        val textLayoutResult = layoutResultCallback() ?: return 0f
+        val textLength = textLayoutResult.layoutInput.text.length
+        if (textLength < 1) return 0f
+        val line = textLayoutResult.getLineForOffset(offset.coerceIn(0, textLength - 1))
+        return textLayoutResult.multiParagraph.getLineHeight(line)
     }
 }
 
