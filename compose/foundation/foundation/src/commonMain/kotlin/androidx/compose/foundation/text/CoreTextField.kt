@@ -315,6 +315,13 @@ internal fun CoreTextField(
     val coroutineScope = rememberCoroutineScope()
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
+    rememberClipboardEventsHandler(
+        isEnabled = state.hasFocus,
+        onCopy = { manager.onCopyWithResult() },
+        onCut = { manager.onCutWithResult() },
+        onPaste = { manager.paste(AnnotatedString(it)) }
+    )
+
     // Focus
     val focusModifier =
         Modifier.textFieldFocusModifier(

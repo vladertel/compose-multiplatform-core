@@ -145,7 +145,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 .focusable()
                 .updateSelectionTouchMode { isInTouchMode = it }
                 .onKeyEvent {
-                    if (isCopyKeyEvent(it)) {
+                    if (!skipCopyKeyEvent && isCopyKeyEvent(it)) {
                         copy()
                         true
                     } else {
@@ -1077,3 +1077,7 @@ internal fun LayoutCoordinates.visibleBounds(): Rect {
 
 internal fun Rect.containsInclusive(offset: Offset): Boolean =
     offset.x in left..right && offset.y in top..bottom
+
+
+// We skip `isCopyKeyEvent(it)` on web, because should handle browser 'copy' event
+internal expect val SelectionManager.skipCopyKeyEvent: Boolean
