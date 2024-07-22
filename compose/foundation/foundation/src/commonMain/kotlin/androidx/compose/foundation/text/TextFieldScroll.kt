@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -91,14 +95,7 @@ internal fun Modifier.textFieldScrollable(
         //  setting these
         val wrappedScrollableState =
             remember(scrollableState, scrollerPosition) {
-                object : ScrollableState by scrollableState {
-                    override val canScrollForward by derivedStateOf {
-                        scrollerPosition.offset < scrollerPosition.maximum
-                    }
-                    override val canScrollBackward by derivedStateOf {
-                        scrollerPosition.offset > 0f
-                    }
-                }
+                createScrollableState(scrollableState, scrollerPosition)
             }
         val scroll =
             Modifier.scrollable(
@@ -112,8 +109,28 @@ internal fun Modifier.textFieldScrollable(
         scroll
     }
 
+// Workaround for K/JS
+private inline fun createScrollableState(
+    scrollableState: ScrollableState,
+    scrollerPosition: TextFieldScrollerPosition
+): ScrollableState {
+    return object : ScrollableState by scrollableState {
+        override val canScrollForward by derivedStateOf {
+            scrollerPosition.offset < scrollerPosition.maximum
+        }
+        override val canScrollBackward by derivedStateOf { scrollerPosition.offset > 0f }
+    }
+}
+
 // Layout
-internal fun Modifier.textFieldScroll(
+internal expect fun Modifier.textFieldScroll(
+    scrollerPosition: TextFieldScrollerPosition,
+    textFieldValue: TextFieldValue,
+    visualTransformation: VisualTransformation,
+    textLayoutResultProvider: () -> TextLayoutResultProxy?
+): Modifier
+
+internal fun Modifier.defaultTextFieldScroll(
     scrollerPosition: TextFieldScrollerPosition,
     textFieldValue: TextFieldValue,
     visualTransformation: VisualTransformation,
@@ -281,6 +298,12 @@ internal class TextFieldScrollerPosition(
         private set
 
     /**
+     * Size of the visible part, on the scrollable axis, in pixels.
+     */
+    var viewportSize by mutableStateOf(0)
+        private set
+
+    /**
      * Keeps the cursor position before a new symbol has been typed or the text field has been
      * dragged. We check it to understand if the [offset] needs to be updated.
      */
@@ -308,6 +331,7 @@ internal class TextFieldScrollerPosition(
             previousCursorRect = cursorRect
         }
         offset = offset.coerceIn(0f, difference)
+        viewportSize = containerSize
     }
 
     /*@VisibleForTesting*/

@@ -216,7 +216,8 @@ internal fun CoreTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() }
+        @Composable { innerTextField -> innerTextField() },
+    textScrollerPosition: TextFieldScrollerPosition? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val legacyTextInputServiceAdapter = legacyPlatformTextInputServiceAdapter()
@@ -235,10 +236,20 @@ internal fun CoreTextField(
     // Scroll state
     val singleLine = maxLines == 1 && !softWrap && imeOptions.singleLine
     val orientation = if (singleLine) Orientation.Horizontal else Orientation.Vertical
-    val scrollerPosition =
-        rememberSaveable(orientation, saver = TextFieldScrollerPosition.Saver) {
-            TextFieldScrollerPosition(orientation)
-        }
+    val scrollerPosition = textScrollerPosition ?: rememberSaveable(
+        orientation,
+        saver = TextFieldScrollerPosition.Saver
+    ) { TextFieldScrollerPosition(orientation) }
+    if (scrollerPosition.orientation != orientation) {
+        throw IllegalArgumentException(
+            "Mismatching scroller orientation; " + (
+                if (orientation == Orientation.Vertical)
+                    "only single-line, non-wrap text fields can scroll horizontally"
+                else
+                    "single-line, non-wrap text fields can only scroll horizontally"
+                )
+        )
+    }
 
     // State
     val transformedText =
