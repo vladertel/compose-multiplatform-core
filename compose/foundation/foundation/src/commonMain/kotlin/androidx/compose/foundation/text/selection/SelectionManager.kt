@@ -22,8 +22,9 @@ import androidx.collection.emptyLongObjectMap
 import androidx.collection.mutableLongIntMapOf
 import androidx.collection.mutableLongObjectMapOf
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitAllPointersUp
 import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextDragObserver
 import androidx.compose.foundation.text.input.internal.coerceIn
@@ -45,7 +46,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
@@ -123,8 +124,11 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     /** Focus requester used to request focus when selection becomes active. */
     var focusRequester: FocusRequester = FocusRequester()
 
-    /** Return true if the corresponding SelectionContainer is focused. */
+    /** Return true if the corresponding SelectionContainer has a child that is focused. */
     var hasFocus: Boolean by mutableStateOf(false)
+
+    /** Return true if dragging gesture is currently in process. */
+    private val isDraggingInProgress get() = draggingHandle != null
 
     /** Modifier for selection container. */
     val modifier
@@ -133,10 +137,10 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 .onGloballyPositioned { containerLayoutCoordinates = it }
                 .focusRequester(focusRequester)
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && hasFocus) {
+                    if (!focusState.hasFocus && hasFocus) {
                         onRelease()
                     }
-                    hasFocus = focusState.isFocused
+                    this.hasFocus = focusState.hasFocus
                 }
                 .focusable()
                 .updateSelectionTouchMode { isInTouchMode = it }
@@ -211,7 +215,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         private set
 
     private val shouldShowMagnifier
-        get() = draggingHandle != null && isInTouchMode && !isTriviallyCollapsedSelection()
+        get() = isDraggingInProgress && isInTouchMode && !isTriviallyCollapsedSelection()
 
     @VisibleForTesting internal var previousSelectionLayout: SelectionLayout? = null
 
@@ -716,14 +720,27 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
             override fun onCancel() = done()
         }
 
-    /** Detect tap without consuming the up event. */
-    private suspend fun PointerInputScope.detectNonConsumingTap(onTap: (Offset) -> Unit) {
-        awaitEachGesture { waitForUpOrCancellation()?.let { onTap(it.position) } }
-    }
+    private fun Modifier.onClearSelectionRequested(block: () -> Unit): Modifier =
+        pointerInput(Unit) {
+            // Clear the selection on mouse-up that isn't a drag-end.
+            // Note that at the moment, this is only needed inside `DisableSelection` because inside
+            // regular, selectable, text, the selection is already cleared (collapsed, actually) on
+            // the first mouse-down of the selection logic.
+            // That isn't actually the correct behavior on either Windows or macOS, but that's what
+            // happens at the moment.
+            awaitEachGesture {
+                // Wait for primary pointer to be down
+                awaitFirstDown(requireUnconsumed = false)
 
-    private fun Modifier.onClearSelectionRequested(block: () -> Unit): Modifier {
-        return if (hasFocus) pointerInput(Unit) { detectNonConsumingTap { block() } } else this
-    }
+                // Wait for all pointers to be up, and if we're not dragging, clear the selection.
+                // Do it in the initial phase so that when this happens while dragging, we check
+                // isDraggingInProgress before the drag-end event clears it.
+                awaitAllPointersUp(PointerEventPass.Initial)
+                if (!isDraggingInProgress) {
+                    block()
+                }
+            }
+        }
 
     private fun convertToContainerCoordinates(
         layoutCoordinates: LayoutCoordinates,

@@ -183,15 +183,19 @@ private suspend fun AwaitPointerEventScope.mouseSelection(
 
         val started = observer.onStart(downChange.position, selectionAdjustment)
         if (started) {
+            var dragConsumed = selectionAdjustment != SelectionAdjustment.None
             val shouldConsumeUp =
                 drag(downChange.id) {
                     if (observer.onDrag(it.position, selectionAdjustment)) {
                         it.consume()
+                        dragConsumed = true
                     }
                 }
 
-            if (shouldConsumeUp) {
-                currentEvent.changes.fastForEach { if (it.changedToUp()) it.consume() }
+            if (shouldConsumeUp && dragConsumed) {
+                currentEvent.changes.fastForEach {
+                    if (it.changedToUp()) it.consume()
+                }
             }
 
             observer.onDragDone()
@@ -382,15 +386,19 @@ private suspend fun AwaitPointerEventScope.mouseSelectionBtf2(
         if (started) {
             try {
                 downChange.consume()
+                var dragConsumed = selectionAdjustment != SelectionAdjustment.None
                 val shouldConsumeUp =
                     drag(downChange.id) {
                         if (observer.onDrag(it.position, selectionAdjustment)) {
                             it.consume()
+                            dragConsumed = true
                         }
                     }
 
-                if (shouldConsumeUp) {
-                    currentEvent.changes.fastForEach { if (it.changedToUp()) it.consume() }
+                if (shouldConsumeUp && dragConsumed) {
+                    currentEvent.changes.fastForEach {
+                        if (it.changedToUp()) it.consume()
+                    }
                 }
             } finally {
                 observer.onDragDone()
