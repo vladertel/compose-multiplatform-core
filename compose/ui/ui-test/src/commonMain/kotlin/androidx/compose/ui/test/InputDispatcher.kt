@@ -15,6 +15,8 @@
  */
 package androidx.compose.ui.test
 
+import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.identityHashCode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.node.RootForTest
@@ -63,9 +65,12 @@ internal expect fun createInputDispatcher(
  * Chaining methods:
  * * [advanceEventTime]
  */
+@OptIn(InternalComposeApi::class)
 internal abstract class InputDispatcher(
     private val testContext: TestContext,
-    private val root: RootForTest
+    private val root: RootForTest,
+    private val exitHoverOnPress: Boolean = true,
+    private val moveOnScroll: Boolean = true
 ) {
     companion object {
         /**
@@ -393,7 +398,7 @@ internal abstract class InputDispatcher(
         mouse.setButtonBit(buttonId)
 
         // Exit hovering if necessary
-        if (mouse.isEntered) {
+        if (mouse.isEntered && exitHoverOnPress) {
             mouse.exitHover()
         }
         // down/move + press
@@ -461,7 +466,7 @@ internal abstract class InputDispatcher(
         mouse.enqueueRelease(buttonId)
 
         // When no buttons remaining, enter hover state immediately
-        if (mouse.hasNoButtonsPressed && isWithinRootBounds(currentMousePosition)) {
+        if (exitHoverOnPress && mouse.hasNoButtonsPressed && isWithinRootBounds(currentMousePosition)) {
             mouse.enterHover()
             mouse.enqueueMove()
         }
@@ -524,8 +529,10 @@ internal abstract class InputDispatcher(
     fun enqueueMouseScroll(delta: Float, scrollWheel: ScrollWheel) {
         val mouse = mouseInputState
 
-        // A scroll is always preceded by a move(/hover) event
-        enqueueMouseMove(currentMousePosition)
+        if (moveOnScroll) {
+            // On Android a scroll is always preceded by a move(/hover) event
+            enqueueMouseMove(currentMousePosition)
+        }
         if (isWithinRootBounds(currentMousePosition)) {
             mouse.enqueueScroll(delta, scrollWheel)
         }
