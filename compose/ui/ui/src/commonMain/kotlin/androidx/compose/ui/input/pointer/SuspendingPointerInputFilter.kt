@@ -541,7 +541,7 @@ internal class SuspendingPointerInputModifierNodeImpl(
 
     /**
      * Actively registered input handlers from currently ongoing calls to [awaitPointerEventScope].
-     * Must use `synchronized(pointerHandlers)` to access.
+     * Must use `synchronized(pointerHandlersLock)` to access.
      */
     private val pointerHandlers =
         mutableVectorOf<SuspendingPointerInputModifierNodeImpl.PointerEventHandlerCoroutine<*>>()
@@ -751,6 +751,8 @@ internal class SuspendingPointerInputModifierNodeImpl(
                     type = old.type
                 )
             }
+
+        if (newChanges.isEmpty()) return
 
         val cancelEvent = PointerEvent(newChanges)
 
