@@ -20,7 +20,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
-class ClipboardManagerTest {
+class ClipboardTest {
 
     @Test
     fun clipboardManagerWithoutHasText_returnsTrue_withNonEmptyGetText() {

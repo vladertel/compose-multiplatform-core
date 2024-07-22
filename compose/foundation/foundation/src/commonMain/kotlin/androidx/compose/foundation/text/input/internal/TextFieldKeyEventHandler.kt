@@ -33,6 +33,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.text.TextRange
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /** Factory function to create a platform specific [TextFieldKeyEventHandler]. */
 internal expect fun createTextFieldKeyEventHandler(): TextFieldKeyEventHandler
@@ -75,7 +77,8 @@ internal abstract class TextFieldKeyEventHandler {
         textFieldSelectionState: TextFieldSelectionState,
         editable: Boolean,
         singleLine: Boolean,
-        onSubmit: () -> Unit
+        onSubmit: () -> Unit,
+        coroutineScope: CoroutineScope
     ): Boolean {
         if (event.type != KeyEventType.KeyDown) {
             return false
@@ -107,9 +110,15 @@ internal abstract class TextFieldKeyEventHandler {
         var consumed = true
         preparedSelectionContext(textFieldState, textLayoutState, event.isFromSoftKeyboard) {
             when (command) {
-                KeyCommand.COPY -> textFieldSelectionState.copy(false)
-                KeyCommand.PASTE -> textFieldSelectionState.paste()
-                KeyCommand.CUT -> textFieldSelectionState.cut()
+                KeyCommand.COPY -> coroutineScope.launch {
+                    textFieldSelectionState.copy(false)
+                }
+                KeyCommand.PASTE -> coroutineScope.launch {
+                    textFieldSelectionState.paste()
+                }
+                KeyCommand.CUT -> coroutineScope.launch {
+                    textFieldSelectionState.cut()
+                }
                 KeyCommand.LEFT_CHAR -> collapseLeftOr { moveCursorLeft() }
                 KeyCommand.RIGHT_CHAR -> collapseRightOr { moveCursorRight() }
                 KeyCommand.LEFT_WORD -> moveCursorLeftByWord()

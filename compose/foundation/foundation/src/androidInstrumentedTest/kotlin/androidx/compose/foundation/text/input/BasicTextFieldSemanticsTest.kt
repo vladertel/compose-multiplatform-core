@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.internal.selection.FakeClipboard
 import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.foundation.text.selection.isSelectionHandle
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.testutils.expectError
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -440,8 +442,12 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
     fun semantics_paste_appliesFilter() {
         val state = TextFieldState("Here World!")
         val clipboardManager = FakeClipboardManager("Hello")
+        val clipboard = FakeClipboard("Hello")
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(
+//                LocalClipboardManager provides clipboardManager,
+                LocalClipboard provides clipboard
+                ) {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),

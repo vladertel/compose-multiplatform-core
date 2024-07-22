@@ -72,6 +72,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -115,8 +117,8 @@ internal class TextFieldSelectionState(
     /** [TextToolbar] to show floating toolbar(post-M) or primary toolbar(pre-M). */
     private var textToolbar: TextToolbar? = null
 
-    /** [ClipboardManager] to perform clipboard features. */
-    private var clipboardManager: ClipboardManager? = null
+    /** [Clipboard] to perform clipboard features. */
+    private var clipboard: Clipboard? = null
 
     /** Whether user is interacting with the UI in touch mode. */
     var isInTouchMode: Boolean by mutableStateOf(true)
@@ -327,7 +329,7 @@ internal class TextFieldSelectionState(
 
     fun update(
         hapticFeedBack: HapticFeedback,
-        clipboardManager: ClipboardManager,
+        clipboard: Clipboard,
         textToolbar: TextToolbar,
         density: Density,
         enabled: Boolean,
@@ -338,7 +340,7 @@ internal class TextFieldSelectionState(
             hideTextToolbar()
         }
         this.hapticFeedBack = hapticFeedBack
-        this.clipboardManager = clipboardManager
+        this.clipboard = clipboard
         this.textToolbar = textToolbar
         this.density = density
         this.enabled = enabled
@@ -400,8 +402,9 @@ internal class TextFieldSelectionState(
     suspend fun observeChanges() {
         try {
             coroutineScope {
+                val scope = this
                 launch { observeTextChanges() }
-                launch { observeTextToolbarVisibility() }
+                launch { observeTextToolbarVisibility(scope) }
             }
         } finally {
             showCursorHandle = false
@@ -419,7 +422,7 @@ internal class TextFieldSelectionState(
         hideTextToolbar()
 
         textToolbar = null
-        clipboardManager = null
+        clipboard = null
         hapticFeedBack = null
     }
 
@@ -1043,8 +1046,10 @@ internal class TextFieldSelectionState(
      *   [getContentRect]
      * - When selection is initiated via long press, double click, or semantics, text toolbar shows
      *   [TextToolbarState.Selection]
+     *
+     *   @param coroutineScope A [CoroutineScope] used to run the actions of Toolbar menu items
      */
-    private suspend fun observeTextToolbarVisibility() {
+    private suspend fun observeTextToolbarVisibility(coroutineScope: CoroutineScope) {
         snapshotFlow {
                 val isCollapsed = textFieldState.visualText.selection.collapsed
                 val textToolbarStateVisible =
@@ -1091,7 +1096,7 @@ internal class TextFieldSelectionState(
                 if (rect == Rect.Zero) {
                     hideTextToolbar()
                 } else {
-                    showTextToolbar(rect)
+                    showTextToolbar(rect, coroutineScope)
                 }
             }
     }
@@ -1252,11 +1257,12 @@ internal class TextFieldSelectionState(
      * cursor offset should be between the text before the selection, and the text after the
      * selection.
      */
-    fun cut() {
+    suspend fun cut() {
         val text = textFieldState.visualText
         if (text.selection.collapsed) return
 
-        clipboardManager?.setText(AnnotatedString(text.getSelectedText().toString()))
+        val textToCut = AnnotatedString(text.getSelectedText().toString())
+        clipboard?.setText(textToCut)
 
         textFieldState.deleteSelectedText()
     }
@@ -1275,11 +1281,12 @@ internal class TextFieldSelectionState(
      * unchanged. If [cancelSelection] is true, the new cursor offset should be at the end of the
      * previous selected text.
      */
-    fun copy(cancelSelection: Boolean = true) {
+    suspend fun copy(cancelSelection: Boolean = true) {
         val text = textFieldState.visualText
         if (text.selection.collapsed) return
 
-        clipboardManager?.setText(AnnotatedString(text.getSelectedText().toString()))
+        val textToCopy = AnnotatedString(text.getSelectedText().toString())
+        clipboard?.setText(textToCopy)
 
         if (!cancelSelection) return
 
@@ -1290,19 +1297,19 @@ internal class TextFieldSelectionState(
      * Whether a paste operation can execute now and have a meaningful effect. The paste operation
      * requires the text field to be editable, and the clipboard manager to have content to paste.
      */
-    fun canPaste(): Boolean {
+    suspend fun canPaste(): Boolean {
         if (!editable) return false
         // if receive content is not configured, we expect at least a text item to be present
-        if (clipboardManager?.hasText() == true) return true
+        if (clipboard?.hasText() == true) return true
         // if receive content is configured, hasClip should be enough to show the paste option
-        return receiveContentConfiguration?.invoke() != null && clipboardManager?.getClip() != null
+        return receiveContentConfiguration?.invoke() != null && clipboard?.getClip() != null
     }
 
-    fun paste() {
+    suspend fun paste() {
         val receiveContentConfiguration =
             receiveContentConfiguration?.invoke() ?: return pasteAsPlainText()
 
-        val clipEntry = clipboardManager?.getClip() ?: return pasteAsPlainText()
+        val clipEntry = clipboard?.getClip() ?: return pasteAsPlainText()
         val clipMetadata = clipEntry.clipMetadata
 
         val remaining =
@@ -1332,8 +1339,8 @@ internal class TextFieldSelectionState(
      * after the selected text. Then the selection should collapse, and the new cursor offset should
      * be at the end of the newly added text.
      */
-    private fun pasteAsPlainText() {
-        val clipboardText = clipboardManager?.getText()?.text ?: return
+    private suspend fun pasteAsPlainText() {
+        val clipboardText = clipboard?.getText()?.text ?: return
 
         textFieldState.replaceSelectedText(
             clipboardText,
@@ -1363,14 +1370,18 @@ internal class TextFieldSelectionState(
      * copy, paste and cut method as callbacks when "copy", "cut" or "paste" is clicked.
      *
      * @param contentRect Rectangle region where the toolbar will be anchored.
+     * @param coroutineScope A [CoroutineScope] used to launch the menu items' actions.
      */
-    private fun showTextToolbar(contentRect: Rect) {
+    private suspend fun showTextToolbar(
+        contentRect: Rect,
+        coroutineScope: CoroutineScope
+    ) {
         // TODO(halilibo): Add a new TextToolbar option "paste as plain text".
         textToolbar?.showMenu(
             rect = contentRect,
-            onCopyRequested = menuItem(canCopy(), None) { copy() },
-            onPasteRequested = menuItem(canPaste(), None) { paste() },
-            onCutRequested = menuItem(canCut(), None) { cut() },
+            onCopyRequested = menuItem(canCopy(), None) { coroutineScope.launch { copy() } },
+            onPasteRequested = menuItem(canPaste(), None) { coroutineScope.launch { paste() } },
+            onCutRequested = menuItem(canCut(), None) { coroutineScope.launch { cut() } },
             onSelectAllRequested = menuItem(canSelectAll(), Selection) { selectAll() },
         )
     }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.selection.contextMenuBuilder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.res.stringResource
 
 @Composable
@@ -51,10 +52,11 @@ internal actual fun ContextMenuArea(
     content: @Composable () -> Unit
 ) {
     val state = remember { ContextMenuState() }
+    val coroutineScope = rememberCoroutineScope()
     androidx.compose.foundation.contextmenu.ContextMenuArea(
         state = state,
         onDismiss = { state.close() },
-        contextMenuBuilderBlock = selectionState.contextMenuBuilder(state),
+        contextMenuBuilderBlock = selectionState.contextMenuBuilder(state, coroutineScope),
         enabled = enabled,
         content = content,
     )

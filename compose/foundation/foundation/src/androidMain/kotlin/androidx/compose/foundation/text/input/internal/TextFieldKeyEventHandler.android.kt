@@ -32,6 +32,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.SoftwareKeyboardController
+import kotlinx.coroutines.CoroutineScope
 
 internal actual fun createTextFieldKeyEventHandler(): TextFieldKeyEventHandler =
     AndroidTextFieldKeyEventHandler()
@@ -98,7 +99,8 @@ internal class AndroidTextFieldKeyEventHandler : TextFieldKeyEventHandler() {
         textFieldSelectionState: TextFieldSelectionState,
         editable: Boolean,
         singleLine: Boolean,
-        onSubmit: () -> Unit
+        onSubmit: () -> Unit,
+        coroutineScope: CoroutineScope
     ): Boolean {
         if (
             event.type == KeyDown &&
@@ -114,7 +116,8 @@ internal class AndroidTextFieldKeyEventHandler : TextFieldKeyEventHandler() {
             textFieldSelectionState,
             editable,
             singleLine,
-            onSubmit
+            onSubmit,
+            coroutineScope
         )
     }
 }

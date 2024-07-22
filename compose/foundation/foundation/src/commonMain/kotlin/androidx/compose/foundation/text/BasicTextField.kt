@@ -54,6 +54,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -284,6 +286,7 @@ internal fun BasicTextField(
         }
     val currentHapticFeedback = LocalHapticFeedback.current
     val currentClipboardManager = LocalClipboardManager.current
+    val currentClipboard = LocalClipboard.current
     val currentTextToolbar = LocalTextToolbar.current
     SideEffect {
         // These properties are not backed by snapshot state, so they can't be updated directly in
@@ -292,7 +295,7 @@ internal fun BasicTextField(
 
         textFieldSelectionState.update(
             hapticFeedBack = currentHapticFeedback,
-            clipboardManager = currentClipboardManager,
+            clipboard = currentClipboard,
             textToolbar = currentTextToolbar,
             density = density,
             enabled = enabled,

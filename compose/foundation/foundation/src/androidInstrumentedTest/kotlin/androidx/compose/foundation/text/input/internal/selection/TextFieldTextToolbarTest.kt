@@ -52,10 +52,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.NativeClipboard
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.platform.testTag
@@ -881,6 +883,39 @@ private constructor(failureMetadata: FailureMetadata?, private val subject: Rect
         assertThat(subject.top).isWithin(tolerance).of(expected.top)
         assertThat(subject.right).isWithin(tolerance).of(expected.right)
         assertThat(subject.bottom).isWithin(tolerance).of(expected.bottom)
+    }
+}
+
+internal fun FakeClipboard(
+    initialText: String? = null,
+    supportsClipEntry: Boolean = false,
+) = object : Clipboard {
+
+    private var currentText: AnnotatedString? = initialText?.let { AnnotatedString(it) }
+    private var currentClipEntry: ClipEntry? = null
+
+    override suspend fun setText(annotatedString: AnnotatedString) {
+        currentText = annotatedString
+    }
+
+    override suspend fun getText(): AnnotatedString? {
+        return currentText
+    }
+
+    override suspend fun getClip(): ClipEntry? {
+        if (supportsClipEntry) {
+            return currentClipEntry
+        } else {
+            throw NotImplementedError("This clipboard does not support clip entries")
+        }
+    }
+
+    override suspend fun setClip(clipEntry: ClipEntry?) {
+        if (supportsClipEntry) {
+            currentClipEntry = clipEntry
+        } else {
+            throw NotImplementedError("This clipboard does not support clip entries")
+        }
     }
 }
 

@@ -20,14 +20,24 @@ import androidx.compose.foundation.contextmenu.ContextMenuScope
 import androidx.compose.foundation.contextmenu.ContextMenuState
 import androidx.compose.foundation.text.TextContextMenuItems
 import androidx.compose.foundation.text.TextItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 
 internal fun TextFieldSelectionState.contextMenuBuilder(
     state: ContextMenuState,
+    coroutineScope: CoroutineScope,
 ): ContextMenuScope.() -> Unit = {
-    TextItem(state, TextContextMenuItems.Cut, enabled = canCut()) { cut() }
-    TextItem(state, TextContextMenuItems.Copy, enabled = canCopy()) {
-        copy(cancelSelection = false)
+    coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        TextItem(state, TextContextMenuItems.Cut, enabled = canCut()) {
+            coroutineScope.launch { cut() }
+        }
+        TextItem(state, TextContextMenuItems.Copy, enabled = canCopy()) {
+            coroutineScope.launch { copy(cancelSelection = false) }
+        }
+        TextItem(state, TextContextMenuItems.Paste, enabled = canPaste()) {
+            coroutineScope.launch { paste() }
+        }
+        TextItem(state, TextContextMenuItems.SelectAll, enabled = canSelectAll()) { selectAll() }
     }
-    TextItem(state, TextContextMenuItems.Paste, enabled = canPaste()) { paste() }
-    TextItem(state, TextContextMenuItems.SelectAll, enabled = canSelectAll()) { selectAll() }
 }
