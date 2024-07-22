@@ -704,6 +704,7 @@ class PointerInputChange(
      * copies will consume any other copy automatically. Therefore, copy with the new [isConsumed]
      * is not possible. Consider creating a new [PointerInputChange].
      */
+    @ExperimentalComposeUiApi
     @Suppress("DEPRECATION")
     fun copy(
         id: PointerId = this.id,
@@ -735,6 +736,8 @@ class PointerInputChange(
             )
             .also { it.consumed = this.consumed }
 
+    // Long string concatenation causes atomicfu plugin to be slow/hang.
+    // See https://youtrack.jetbrains.com/issue/KT-65645/Atomicfu-plugin-compilation-hangs-on-a-long-string-concatenation
     override fun toString(): String {
         return "PointerInputChange(id=$id, " +
             "uptimeMillis=$uptimeMillis, " +

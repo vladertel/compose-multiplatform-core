@@ -322,8 +322,8 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
     }
     if (
         Nodes.FocusProperties in selfKindSet &&
-            node is FocusPropertiesModifierNode &&
-            node.specifiesCanFocusProperty()
+        node is FocusPropertiesModifierNode &&
+        node.specifiesCanFocusProperty()
     ) {
         when (phase) {
             Removed -> node.scheduleInvalidationOfAssociatedFocusTargets()

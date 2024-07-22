@@ -20,6 +20,7 @@ package androidx.compose.animation.core
 
 import androidx.annotation.FloatRange
 import androidx.annotation.RestrictTo
+import androidx.collection.MutableObjectLongMap
 import androidx.collection.MutableObjectList
 import androidx.compose.animation.core.internal.JvmDefaultWithCompatibility
 import androidx.compose.runtime.Composable

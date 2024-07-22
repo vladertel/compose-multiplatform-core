@@ -640,6 +640,11 @@ fun rememberPullToRefreshState(): PullToRefreshState {
 @JsName("funPullToRefreshState")
 @ExperimentalMaterial3Api fun PullToRefreshState(): PullToRefreshState = PullToRefreshStateImpl()
 
+/**
+ * Creates a [PullToRefreshState].
+ *
+ * Note that in most cases, you are advised to use [rememberPullToRefreshState] when in composition.
+ */
 @ExperimentalMaterial3Api
 internal class PullToRefreshStateImpl
 private constructor(private val anim: Animatable<Float, AnimationVector1D>) : PullToRefreshState {
