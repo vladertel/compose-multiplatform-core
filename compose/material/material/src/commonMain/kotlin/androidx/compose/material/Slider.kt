@@ -67,15 +67,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -97,6 +105,7 @@ import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMinByOrNull
 import androidx.compose.ui.util.lerp
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -163,6 +172,8 @@ fun Slider(
     require(steps >= 0) { "steps should be >= 0" }
     val onValueChangeState = rememberUpdatedState(onValueChange)
     val tickFractions = remember(steps) { stepsToTickFractions(steps) }
+
+    val focusRequester = remember { FocusRequester() }
     BoxWithConstraints(
         modifier
             .minimumInteractiveComponentSize()
@@ -175,9 +186,9 @@ fun Slider(
                 valueRange,
                 steps
             )
+            .focusRequester(focusRequester)
             .focusable(enabled, interactionSource)
     ) {
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         val widthPx = constraints.maxWidth.toFloat()
         val maxPx: Float
         val minPx: Float
@@ -213,6 +224,7 @@ fun Slider(
             rememberUpdatedState<(Float) -> Unit> { velocity: Float ->
                 val current = rawOffset.floatValue
                 val target = snapValueToTick(current, tickFractions, minPx, maxPx)
+                focusRequester.requestFocus()
                 if (current != target) {
                     scope.launch {
                         animateToTarget(draggableState, current, target, velocity)

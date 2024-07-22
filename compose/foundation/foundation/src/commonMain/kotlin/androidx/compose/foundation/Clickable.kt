@@ -213,9 +213,6 @@ fun Modifier.clickable(
  * other overload and explicitly passing `LocalIndication.current` for improved performance. For
  * more information see the documentation on the other overload.
  *
- * Note, if the modifier instance gets re-used between a key down and key up events, the ongoing
- * input will be aborted.
- *
  * ***Note*** Any removal operations on Android Views from `clickable` should wrap `onClick` in a
  * `post { }` block to guarantee the event dispatch completes before executing the removal. (You do
  * not need to do this when removing a composable because Compose guarantees it completes via the
@@ -579,6 +576,7 @@ internal open class ClickableNode(
         detectTapAndPress(
             onPress = { offset ->
                 if (enabled) {
+                    focusableNode.requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -721,14 +719,15 @@ private class CombinedClickableNodeImpl(
         detectTapGestures(
             onDoubleTap =
                 if (enabled && onDoubleClick != null) {
-                    { onDoubleClick?.invoke() }
+                    { focusableNode.requestFocusWhenInMouseInputMode(); onDoubleClick?.invoke() }
                 } else null,
             onLongPress =
                 if (enabled && onLongClick != null) {
-                    { onLongClick?.invoke() }
+                    { focusableNode.requestFocusWhenInMouseInputMode(); onLongClick?.invoke() }
                 } else null,
             onPress = { offset ->
                 if (enabled) {
+                    focusableNode.requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -873,12 +872,13 @@ internal abstract class AbstractClickableNode(
 
     final override val shouldAutoInvalidate: Boolean = false
 
-    private val focusableNode: FocusableNode =
+    protected val focusableNode: FocusableNode =
         FocusableNode(
             interactionSource,
             focusability = Focusability.SystemDefined,
             onFocus = ::initializeIndicationAndInteractionSourceIfNeeded
         )
+
 
     private var pointerInputNode: SuspendingPointerInputModifierNode? = null
     private var indicationNode: DelegatableNode? = null
@@ -1193,4 +1193,11 @@ internal fun TraversableNode.hasScrollableContainer(): Boolean {
         !hasScrollable
     }
     return hasScrollable
+}
+
+private fun FocusableNode.requestFocusWhenInMouseInputMode() {
+    if (isMouseInputWorkaround()) {
+        // TODO Restore focus workaround after merging
+        //  requestFocus()
+    }
 }
