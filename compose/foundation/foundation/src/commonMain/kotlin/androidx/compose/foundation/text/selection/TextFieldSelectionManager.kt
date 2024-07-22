@@ -38,7 +38,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
@@ -136,17 +135,17 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      * is stopped.
      */
     var draggingHandle: Handle? by mutableStateOf(null)
-        private set
+        internal set
 
     /** The current position of a drag, in decoration box coordinates. */
     var currentDragPosition: Offset? by mutableStateOf(null)
-        private set
+        internal set
 
     /**
      * The previous offset of a drag, before selection adjustments. Only update when a selection
      * layout change has occurred, or set to -1 if a new drag begins.
      */
-    private var previousRawDragOffset: Int = -1
+    internal var previousRawDragOffset: Int = -1
 
     /**
      * The old [TextFieldValue] before entering the selection mode on long press. Used to exit the
@@ -155,7 +154,7 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
     private var oldValue: TextFieldValue = TextFieldValue()
 
     /** The previous [SelectionLayout] where [SelectionLayout.shouldRecomputeSelection] was true. */
-    private var previousSelectionLayout: SelectionLayout? = null
+    internal var previousSelectionLayout: SelectionLayout? = null
 
     /** [TextDragObserver] for long press and drag to select in TextField. */
     internal val touchSelectionObserver =
@@ -1002,14 +1001,16 @@ internal fun TextFieldSelectionHandle(
 }
 
 /** Whether the selection handle is in the visible bound of the TextField. */
-internal fun TextFieldSelectionManager.isSelectionHandleInVisibleBound(
+internal expect fun TextFieldSelectionManager.isSelectionHandleInVisibleBound(
+    isStartHandle: Boolean
+): Boolean
+
+
+internal fun TextFieldSelectionManager.isSelectionHandleInVisibleBoundDefault(
     isStartHandle: Boolean
 ): Boolean =
     state?.layoutCoordinates?.visibleBounds()?.containsInclusive(getHandlePosition(isStartHandle))
         ?: false
-
-// TODO(b/180075467) it should be part of PointerEvent API in one way or another
-internal expect val PointerEvent.isShiftPressed: Boolean
 
 /**
  * Optionally shows a magnifier widget, if the current platform supports it, for the current state

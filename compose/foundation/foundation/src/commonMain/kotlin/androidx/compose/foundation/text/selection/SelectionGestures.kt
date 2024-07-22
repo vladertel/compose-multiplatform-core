@@ -22,7 +22,10 @@ import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.pointerSlop
 import androidx.compose.foundation.text.TextDragObserver
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
@@ -35,9 +38,11 @@ import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.CancellationException
@@ -150,9 +155,9 @@ private suspend fun AwaitPointerEventScope.mouseSelection(
     clicksCounter: ClicksCounter,
     down: PointerEvent
 ) {
-    clicksCounter.update(down)
     val downChange = down.changes[0]
-    if (down.isShiftPressed) {
+    clicksCounter.update(downChange)
+    if (down.keyboardModifiers.isShiftPressed) {
         val started = observer.onExtend(downChange.position)
         if (started) {
             val shouldConsumeUp =
@@ -205,7 +210,7 @@ internal suspend fun PointerInputScope.selectionGesturePointerInputBtf2(
     val clicksCounter = ClicksCounter(viewConfiguration)
     awaitEachGesture {
         val downEvent = awaitDown()
-        clicksCounter.update(downEvent)
+        clicksCounter.update(downEvent.changes[0])
         val isPrecise = downEvent.isPrecisePointer
         if (
             isPrecise &&
@@ -346,7 +351,7 @@ private suspend fun AwaitPointerEventScope.mouseSelectionBtf2(
     down: PointerEvent
 ) {
     val downChange = down.changes[0]
-    if (down.isShiftPressed) {
+    if (down.keyboardModifiers.isShiftPressed) {
         val started = observer.onExtend(downChange.position)
         if (started) {
             try {
@@ -394,23 +399,25 @@ private suspend fun AwaitPointerEventScope.mouseSelectionBtf2(
     }
 }
 
-private class ClicksCounter(private val viewConfiguration: ViewConfiguration) {
+internal class ClicksCounter(
+    private val viewConfiguration: ViewConfiguration
+) {
     var clicks = 0
-    var prevClick: PointerInputChange? = null
+    private var prevClick: PointerInputChange? = null
 
-    fun update(event: PointerEvent) {
-        val currentPrevClick = prevClick
-        val newClick = event.changes[0]
+    fun update(event: PointerInputChange) {
+        val currentPrevEvent = prevClick
+        // Here and further event means upcoming event (new)
         if (
-            currentPrevClick != null &&
-                timeIsTolerable(currentPrevClick, newClick) &&
-                positionIsTolerable(currentPrevClick, newClick)
+            currentPrevEvent != null &&
+                timeIsTolerable(currentPrevEvent, event) &&
+                positionIsTolerable(currentPrevEvent, event)
         ) {
             clicks += 1
         } else {
             clicks = 1
         }
-        prevClick = newClick
+        prevClick = event
     }
 
     fun timeIsTolerable(prevClick: PointerInputChange, newClick: PointerInputChange): Boolean =
