@@ -309,10 +309,10 @@ internal fun datePatternAsInputFormat(localeFormat: String): DateInputFormat {
 
     val delimiterRegex = Regex("[/\\-.]")
     val delimiterMatchResult = delimiterRegex.find(patternWithDelimiters)
-    val delimiterIndex = delimiterMatchResult!!.groups[0]!!.range.first
-    val delimiter = patternWithDelimiters.substring(delimiterIndex, delimiterIndex + 1)
+    val delimiter = delimiterMatchResult!!.groups[0]!!.value
     return DateInputFormat(patternWithDelimiters = patternWithDelimiters, delimiter = delimiter[0])
 }
 
 internal const val DaysInWeek: Int = 7
 internal const val MillisecondsIn24Hours = 86400000L
+internal const val MillisecondsIn24HoursDouble = 86400000.0

@@ -55,6 +55,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.format
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.internal.rememberAccessibilityServiceState
 import androidx.compose.material3.tokens.TimeInputTokens
@@ -1921,7 +1922,7 @@ internal fun numberContentDescription(
             Strings.TimePickerHourSuffix
         }
 
-    return getString(id, number)
+    return getString(id).format(number)
 }
 
 private fun dist(x1: Float, y1: Float, x2: Int, y2: Int): Float {
@@ -1940,8 +1941,16 @@ private enum class LayoutId {
     InnerCircle,
 }
 
-internal expect val defaultTimePickerLayoutType: TimePickerLayoutType
-    @Composable @ReadOnlyComposable get
+// TODO(https://github.com/JetBrains/compose-multiplatform/issues/3373) fix expect composable getter
+@OptIn(ExperimentalMaterial3Api::class)
+internal val defaultTimePickerLayoutType: TimePickerLayoutType
+    @Composable
+    @ReadOnlyComposable get() = defaultTimePickerLayoutType()
+
+@Composable
+@ReadOnlyComposable
+@OptIn(ExperimentalMaterial3Api::class)
+internal expect fun defaultTimePickerLayoutType() : TimePickerLayoutType
 
 private const val FullCircle: Float = (PI * 2).toFloat()
 private const val HalfCircle: Float = FullCircle / 2f
