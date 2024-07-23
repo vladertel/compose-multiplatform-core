@@ -22,21 +22,45 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerStateFailed
+import platform.UIKit.UIGestureRecognizerStatePossible
 import platform.UIKit.UILongPressGestureRecognizer
 import platform.UIKit.UIView
 import platform.UIKit.setState
+
+/**
+ * The result of [DragAndDropSessionGatingGestureRecognizer.interrupt]. If the
+ * gesture recognizers that are required to fail are in [UIGestureRecognizerStatePossible],
+ * then we unlock their recognition and allow the drag and drop session to start (but can't give
+ * a strong guarantee that it will start).
+ *
+ * If the gesture recognizers are in [UIGestureRecognizerStateFailed], then we can guarantee that
+ * the drag and drop session will not start until the next gesture sequence and return
+ */
+enum class DragAndDropSessionGatingInterruptionOutcome {
+    /**
+     * The drag and drop session can start and is not gated by this gesture recognizer.
+     */
+    POTENTIAL_SUCCESS,
+
+    /**
+     * The drag and drop session is not possible
+     */
+    FAILURE
+}
 
 /**
  * This class is a dummy gesture recognizer that is used to gate drag and drop events.
  * It is used to configure failure requirements for [UIGestureRecognizer]s created by
  * [UIDragInteraction].
  *
- * Until this fails explicitly, the drag and drop session can not be started by the system.
+ * Until this fails explicitly in [interrupt], the drag and drop session can not be started by the system, because
+ * all the touches will be redirected to this gesture recognizer first.
  */
-
 @OptIn(ExperimentalObjCName::class)
-@ObjCName("DragGatingGestureRecognizer")
-internal class DragGatingGestureRecognizer: CMPGestureRecognizer(target = null, action = null) {
+@ObjCName("DragAndDropSessionGatingGestureRecognizer")
+internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(target = null, action = null) {
+    private var gatedGestureRecognizers: List<UIGestureRecognizer>? = null
+
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent) {
         // no-op
     }
@@ -56,9 +80,25 @@ internal class DragGatingGestureRecognizer: CMPGestureRecognizer(target = null, 
     /**
      * Mark this gesture recognizer as failed to allow native [UILongPressGestureRecognizer]s responsible
      * for [UIDragInteraction] to start.
+     *
+     * @return true if the gesture recognizer was marked as failed, false otherwise.
      */
-    fun allowDragAndDrop() {
+    fun interrupt(): DragAndDropSessionGatingInterruptionOutcome {
+        val gatedGesturesRecognizers = checkNotNull(gatedGestureRecognizers) {
+            "DragAndDropSessionGatingGestureRecognizer.interrupt() called before configuration"
+        }
+
+        val areAllGatedGestureRecognizersPossible = gatedGesturesRecognizers.all {
+            it.state == UIGestureRecognizerStatePossible
+        }
+
         setState(UIGestureRecognizerStateFailed)
+
+        return if (areAllGatedGestureRecognizersPossible) {
+            DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS
+        } else {
+            DragAndDropSessionGatingInterruptionOutcome.FAILURE
+        }
     }
 
     /**
@@ -66,20 +106,22 @@ internal class DragGatingGestureRecognizer: CMPGestureRecognizer(target = null, 
      * requirements for the [UILongPressGestureRecognizer]s that assumed to be backing the
      * [UIDragInteraction] logic in the view.
      */
-    fun setupInView(view: UIView) {
+    fun configure(view: UIView, gestureRecognizersRequiredToFail: List<UIGestureRecognizer>) {
+        check(gatedGestureRecognizers == null) {
+            "DragAndDropSessionGatingGestureRecognizer.configure() called multiple times"
+        }
+
         view.addGestureRecognizer(this)
 
-        view.gestureRecognizers?.forEach {
-            // This is fragile code and can potentially break if we bring our own [UILongPressGestureRecognizer]
-            // or if Apple changes the implementation of [UIDragInteraction] in the future.
-            // We are relying on the fact that [UIDragInteraction] creates a [UILongPressGestureRecognizer]
-            // If something breaks, we will need to revisit this code.
+        for (gestureRecognizer in gestureRecognizersRequiredToFail) {
+            gestureRecognizer.requireGestureRecognizerToFail(this)
 
-            if (it is UILongPressGestureRecognizer) {
+            if (gestureRecognizer is UILongPressGestureRecognizer) {
                 // override the minimum press duration to 0.0 to allow the drag and drop to start
-                // immediately when we fail this gesture recognizer
-                it.minimumPressDuration = 0.0
-                it.requireGestureRecognizerToFail(this)
+                // immediately when we fail this gesture recognizer and not rely on the press duration
+                // of Compose internal longPressGesture
+                gestureRecognizer.minimumPressDuration = 0.0
+
             }
         }
     }

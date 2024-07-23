@@ -34,19 +34,33 @@ import androidx.compose.ui.node.RootNodeOwner
  * [PlatformContext].
  *
  * For documentation of the methods of this interface refer to [DragAndDropManager].
+ *
+ * @see [DragAndDropManager]
  */
 @InternalComposeUiApi
 interface PlatformDragAndDropManager {
+    /**
+     * @see [DragAndDropManager.modifier]
+     */
     val modifier: Modifier
 
+    /**
+     * @see [DragAndDropManager.drag]
+     */
     fun drag(
         transferData: DragAndDropTransferData,
         decorationSize: Size,
         drawDragDecoration: DrawScope.() -> Unit,
     ): Boolean
 
+    /**
+     * @see [DragAndDropManager.registerNodeInterest]
+     */
     fun registerNodeInterest(node: DragAndDropModifierNode)
 
+    /**
+     * @see [DragAndDropManager.isInterestedNode]
+     */
     fun isInterestedNode(node: DragAndDropModifierNode): Boolean
 }
 

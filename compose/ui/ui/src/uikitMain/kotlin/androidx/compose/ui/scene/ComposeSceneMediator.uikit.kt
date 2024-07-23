@@ -284,7 +284,7 @@ internal class ComposeSceneMediator(
         InteractionUIView(
             hitTestInteropView = ::hitTestInteropView,
             onTouchesEvent = ::onTouchesEvent,
-            onTouchesCountChange = ::onTouchesCountChange,
+            onTouchesDownChanged = ::onTouchesDownChanged,
             inInteractionBounds = { point ->
                 val positionInContainer = point.useContents {
                     asDpOffset().toOffset(container.systemDensity).round()
@@ -358,9 +358,8 @@ internal class ComposeSceneMediator(
         }
     }
 
-    private fun onTouchesCountChange(count: Int) {
-        val needHighFrequencyPolling: Boolean = count > 0
-        renderingView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
+    private fun onTouchesDownChanged(isAnyTouchDown: Boolean) {
+        renderingView.redrawer.needsProactiveDisplayLink = isAnyTouchDown
     }
 
     private fun hitTestInteropView(point: CValue<CGPoint>, event: UIEvent?): InteropView? =
@@ -706,7 +705,9 @@ internal class ComposeSceneMediator(
             windowContext.convertScreenToLocalPosition(viewForKeyboardOffsetTransform, positionOnScreen)
 
         override fun createDragAndDropManager() =
-            UIKitDragAndDropManager()
+            UIKitDragAndDropManager(
+                view = interactionView
+            )
 
         override val measureDrawLayerBounds get() = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration get() = this@ComposeSceneMediator.viewConfiguration

@@ -16,13 +16,18 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.draganddrop.DragGatingGestureRecognizer
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
+import androidx.compose.ui.draganddrop.DragAndDropSessionGatingInterruptionOutcome
 import androidx.compose.ui.draganddrop.cupertino.loadString
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.viewinterop.InteropView
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import kotlin.coroutines.CoroutineContext
 import kotlin.experimental.ExperimentalObjCName
 import kotlinx.cinterop.CValue
@@ -112,11 +117,6 @@ private class ForwardingGestureRecognizer(
      * Touches that are currently tracked by the gesture recognizer.
      */
     private val trackedTouches: MutableSet<UITouch> = mutableSetOf()
-
-    /**
-     * Coroutine context for the gesture recognizer scheduled operations.
-     */
-    private val coroutineContext: CoroutineContext = Dispatchers.Main
 
     /**
      * Scheduled job for the gesture recognizer failure.
@@ -333,6 +333,9 @@ private class ForwardingGestureRecognizer(
         gestureRecognizer: UIGestureRecognizer,
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
+        // We should recognize simultaneously only with the gesture recognizers
+        //belonging to itself or to the views up in the hierarchy.
+
         // Can't check if either view is null
         val view = gestureRecognizer.view ?: return false
         val otherView = otherGestureRecognizer.view ?: return false
@@ -344,13 +347,13 @@ private class ForwardingGestureRecognizer(
         return otherView == view || otherIsAscendant
     }
 
-    /**
-     * We don't require the other gesture recognizer to fail.
-     */
     override fun gestureRecognizerShouldRequireFailureOfGestureRecognizer(
         gestureRecognizer: UIGestureRecognizer,
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
+        // We don't require other gesture recognizers to fail. Assumption is that we recognize
+        // simultaneously with the gesture recognizers of the views up in the hierarchy.
+        // And gesture recognizers down the hierarchy require to failure us.
         return false
     }
 
@@ -358,7 +361,10 @@ private class ForwardingGestureRecognizer(
         gestureRecognizer: UIGestureRecognizer,
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
-        // Other gesture recognizer should fail if it's attached to a different view
+        // Other gesture recognizers except the case where it belongs to the same view are required
+        // to wait until we fail. In practice, it can only happen when other gesture recognizers are
+        // attached to the descendant views (aka interop views). In other cases, it's allowed to
+        // recognised simultaneously so this method will not be called.
         return gestureRecognizer.view != otherGestureRecognizer.view
     }
 
@@ -392,12 +398,23 @@ private class ForwardingGestureRecognizer(
         trackedTouches.clear()
     }
 
+    /**
+     * Schedule the gesture recognizer failure after a certain time frame.
+     * We still pass the touches to the interop view until the gesture recognizer is explicitly failed.
+     * But when failure happens, we need to pass all the touches to the runtime as cancelled and stop
+     * receiving touches from the system.
+     *
+     * This logic only happens if the hitTest is not the view itself.
+     *
+     * @see [fail]
+     * @see [cancelScheduledFailure]
+     */
     private fun scheduleFailure() {
         failureJob?.cancel()
 
-        failureJob = CoroutineScope(coroutineContext).launch {
+        failureJob = CoroutineScope(Dispatchers.Main).launch {
             // Wait for the gesture to be recognized or failed
-            kotlinx.coroutines.delay(150)
+            kotlinx.coroutines.delay(FAILURE_DELAY)
 
             fail()
         }
@@ -464,6 +481,14 @@ private class ForwardingGestureRecognizer(
 
         onTouchesEvent(view, touches, event, phase)
     }
+
+    companion object {
+        /**
+         * The delay in milliseconds after which the gesture recognizer should be failed if it's not
+         * detecting any movement to allow the touches to be processed exclusively by the interop view.
+         */
+        const val FAILURE_DELAY = 150L
+    }
 }
 
 /**
@@ -472,8 +497,8 @@ private class ForwardingGestureRecognizer(
  *
  * @param hitTestInteropView A callback to find an [InteropView] at the given point.
  * @param onTouchesEvent A callback to notify the Compose runtime about touch events.
- * @param onTouchesCountChange A callback to notify the Compose runtime about the number of tracked
- * touches.
+ * @param onTouchesDownChanged A callback to notify the Compose runtime whether there are any touches
+ * down.
  * @param inInteractionBounds A callback to check if the given point is within the interaction
  * bounds as defined by the owning implementation.
  * @param onKeyboardPresses A callback to notify the Compose runtime about keyboard presses.
@@ -483,62 +508,10 @@ private class ForwardingGestureRecognizer(
 internal class InteractionUIView(
     private var hitTestInteropView: (point: CValue<CGPoint>, event: UIEvent?) -> InteropView?,
     onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
-    private var onTouchesCountChange: (count: Int) -> Unit,
+    private var onTouchesDownChanged: (hasAnyTouchesDown: Boolean) -> Unit,
     private var inInteractionBounds: (CValue<CGPoint>) -> Boolean,
     private var onKeyboardPresses: (Set<*>) -> Unit,
 ) : UIView(CGRectZero.readValue()) {
-    private val dragInteractionProxy = object : CMPDragInteractionProxy() {
-        override fun isSessionRestrictedToDraggingApplication(
-            session: UIDragSessionProtocol,
-            interaction: UIDragInteraction
-        ): Boolean {
-            return false
-        }
-
-        override fun itemsForBeginningSession(
-            session: UIDragSessionProtocol,
-            interaction: UIDragInteraction
-        ): List<*> {
-            return listOf<Any>()
-        }
-
-        override fun doesSessionAllowMoveOperation(
-            session: UIDragSessionProtocol,
-            interaction: UIDragInteraction
-        ): Boolean {
-            return true
-        }
-    }
-
-    private val dropInteractionProxy = object : CMPDropInteractionProxy() {
-        override fun canHandleSession(
-            session: UIDropSessionProtocol,
-            interaction: UIDropInteraction
-        ): Boolean {
-            return false
-        }
-
-        override fun performDropFromSession(
-            session: UIDropSessionProtocol,
-            interaction: UIDropInteraction
-        ) {
-            CoroutineScope(Dispatchers.Main).launch {
-                for (item in session.items) {
-                    if (item !is UIDragItem) return@launch
-                    val text = item.loadString()
-                    println("Dropped string: $text")
-                }
-            }
-        }
-
-        override fun proposalForSessionUpdate(
-            session: UIDropSessionProtocol,
-            interaction: UIDropInteraction
-        ): UIDropProposal {
-            return UIDropProposal(UIDropOperationForbidden)
-        }
-    }
-
     /**
      * Gesture recognizer that forwards touches to the Compose runtime.
      */
@@ -547,28 +520,22 @@ internal class InteractionUIView(
         onTouchesCountChanged = { touchesCount += it }
     )
 
-    private val dragGatingGestureRecognizer = DragGatingGestureRecognizer()
-
     /**
-     * When there at least one tracked touch, we need notify redrawer about it. It should schedule
-     * CADisplayLink which affects frequency of polling UITouch events on high frequency display
-     * and forces it to match display refresh rate.
+     * When there at least one tracked touch, we need notify [MetalRedrawer] about it. It should
+     * schedule CADisplayLink which affects frequency of polling UITouch events on high frequency
+     * display and forces it to match display refresh rate.
      */
     private var touchesCount = 0
         set(value) {
+            if (field == value) return
+
             field = value
-            onTouchesCountChange(value)
+            onTouchesDownChanged(value > 0)
         }
 
     init {
         multipleTouchEnabled = true
         userInteractionEnabled = true
-
-        addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
-
-        dragGatingGestureRecognizer.setupInView(this)
-
-        addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
 
         addGestureRecognizer(forwardingGestureRecognizer)
     }
@@ -619,7 +586,7 @@ internal class InteractionUIView(
 
         hitTestInteropView = { _, _ -> null }
 
-        onTouchesCountChange = {}
+        onTouchesDownChanged = {}
         inInteractionBounds = { false }
         onKeyboardPresses = {}
     }

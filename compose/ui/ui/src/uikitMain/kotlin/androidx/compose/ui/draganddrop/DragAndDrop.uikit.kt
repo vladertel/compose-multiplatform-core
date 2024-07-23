@@ -26,14 +26,14 @@ import platform.UIKit.UIView
 /**
  * A representation of an event sent by the platform during a drag and drop operation.
  */
-actual class DragAndDropEvent {
-    var view: UIView? = null
-    var session: UIDropSessionProtocol? = null
-}
+actual class DragAndDropEvent(
+    val view: UIView? = null,
+    val session: UIDropSessionProtocol? = null
+)
 
 /**
- * Definition for a type representing transferable data. It could be a remote URI,
- * rich text data on the clip board, a local file, or more.
+ * On iOS drag and drop session data is represented by [UIDragItem]s, which contains
+ * information about how data can be transferred across processes boundaries.
  */
 actual class DragAndDropTransferData(
     val items: List<UIDragItem>
