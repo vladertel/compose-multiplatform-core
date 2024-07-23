@@ -33,6 +33,7 @@ import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
+import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.window.InteractionUIView
 import kotlinx.cinterop.readValue
 import kotlinx.coroutines.CoroutineScope
@@ -205,20 +206,21 @@ internal class UIKitDragAndDropManager(
     private val interestedNodes = mutableSetOf<DragAndDropModifierNode>()
 
     init {
-        val getViewGestureRecognizersSet = {
-            val list = view.gestureRecognizers ?: emptyList<Any>()
-            list.map { it as UIGestureRecognizer }.toSet()
+        val getViewGestureRecognizers = {
+            view.gestureRecognizers?.map {
+                it as UIGestureRecognizer
+            } ?: emptyList()
         }
 
-        val preInteractionAddedSet = getViewGestureRecognizersSet()
+        val preInteractionAddedSet = getViewGestureRecognizers().toHashSet()
 
         view.addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
         view.addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
 
-        val postInteractionAddedSet = getViewGestureRecognizersSet()
-        val addedGestureRecognizers = postInteractionAddedSet - preInteractionAddedSet
+        val postInteractionAddedSet = getViewGestureRecognizers()
+        val addedGestureRecognizers = postInteractionAddedSet.fastFilter { it !in preInteractionAddedSet }
 
-        dragAndDropSessionGatingGestureRecognizer.configure(view, addedGestureRecognizers.toList())
+        dragAndDropSessionGatingGestureRecognizer.configure(view, addedGestureRecognizers.toHashSet())
     }
 
     override fun drag(
