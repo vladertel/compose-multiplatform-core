@@ -49,6 +49,15 @@ NS_ASSUME_NONNULL_BEGIN
     CMP_ABSTRACT_FUNCTION_CALLED
 }
 
+- (UITargetedDragPreview *_Nullable)dragInteraction:(UIDragInteraction *)interaction previewForLiftingItem:(UIDragItem *)item session:(id<UIDragSession>)session {
+    return [self previewForLiftingItemInSession:session item:item interaction:interaction];
+}
+
+- (UITargetedDragPreview *_Nullable)previewForLiftingItemInSession:(id<UIDragSession>)session item:(UIDragItem *)item interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION {
+    CMP_ABSTRACT_FUNCTION_CALLED
+}
+
+
 @end
 
 @implementation UIDragItem (CMPInitializers)

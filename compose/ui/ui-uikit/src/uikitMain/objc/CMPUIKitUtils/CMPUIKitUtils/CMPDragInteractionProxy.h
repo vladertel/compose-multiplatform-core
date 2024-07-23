@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSArray<UIDragItem *> *)itemsForBeginningSession:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION;
 - (BOOL)isSessionRestrictedToDraggingApplication:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION;
 - (BOOL)doesSessionAllowMoveOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION;
+- (UITargetedDragPreview *_Nullable)previewForLiftingItemInSession:(id<UIDragSession>)session item:(UIDragItem *)item interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION;
 
 @end
 

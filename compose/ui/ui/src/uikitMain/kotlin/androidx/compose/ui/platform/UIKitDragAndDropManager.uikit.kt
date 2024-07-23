@@ -26,15 +26,20 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.asCGRect
+import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.window.InteractionUIView
-import kotlinx.cinterop.CValue
+import kotlinx.cinterop.readValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import platform.CoreGraphics.CGSize
+import platform.CoreGraphics.CGAffineTransformIdentity
+import platform.UIKit.UIColor
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
@@ -45,13 +50,56 @@ import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIGestureRecognizer
+import platform.UIKit.UIPreviewParameters
+import platform.UIKit.UIPreviewTarget
+import platform.UIKit.UITargetedDragPreview
+import platform.UIKit.UIView
 
 
-internal class DragSessionContext(
+private class DragAndDropSessionContext(
     val transferData: DragAndDropTransferData,
     val decorationSize: Size,
     val drawDragDecoration: DrawScope.() -> Unit
-)
+) {
+    private var hasEmittedPreview = false
+
+    fun generatePreviewIfNeeded(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview? =
+        if (hasEmittedPreview) {
+            // We only generate the preview once, and then return null for subsequent calls.
+            // Delegate request a preview for every item in the session.
+            null
+        } else {
+            hasEmittedPreview = true
+            generatePreview(view, session)
+        }
+
+    fun generatePreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
+        val window = checkNotNull(view.window) {
+            "Can't generate UITargetedDragPreview for a view, detached from the window"
+        }
+
+        val density = Density(density = window.screen.scale.toFloat())
+
+        val decorationCgRect = decorationSize
+            .toRect()
+            .toDpRect(density)
+            .asCGRect()
+
+        val decorationView = UIView(frame = decorationCgRect)
+        decorationView.backgroundColor = UIColor.blueColor
+
+        val preview = UITargetedDragPreview(
+            view = decorationView,
+            parameters = UIPreviewParameters(),
+            target = UIPreviewTarget(
+                container = view,
+                center = session.locationInView(view),
+                transform = CGAffineTransformIdentity.readValue()
+            )
+        )
+        return preview
+    }
+}
 
 /**
  * The [PlatformDragAndDropManager] and corresponding delegating [DragAndDropManager] implementation
@@ -64,7 +112,10 @@ internal class DragSessionContext(
 internal class UIKitDragAndDropManager(
     val view: InteractionUIView,
 ) : PlatformDragAndDropManager {
-    var dragSessionContext: DragSessionContext? = null
+    /**
+     * Context for a drag and drop session initiated by the [drag] method.
+     */
+    private var sessionContext: DragAndDropSessionContext? = null
 
     /**
      * The [CMPDragInteractionProxy] that handles the serves as [UIDragInteractionDelegateProtocol] for the
@@ -79,12 +130,16 @@ internal class UIKitDragAndDropManager(
 
         override fun itemsForBeginningSession(
             session: UIDragSessionProtocol, interaction: UIDragInteraction
-        ): List<*> {
-            val context = checkNotNull(dragSessionContext) {
-                "The session driven by the drag interaction does not have any transfer data"
-            }
+        ): List<*> = withSessionContext {
+            transferData.items
+        }
 
-            return context.transferData.items
+        override fun previewForLiftingItemInSession(
+            session: UIDragSessionProtocol,
+            item: UIDragItem,
+            interaction: UIDragInteraction
+        ): UITargetedDragPreview? = withSessionContext {
+            generatePreviewIfNeeded(view, session)
         }
 
         override fun doesSessionAllowMoveOperation(
@@ -120,7 +175,7 @@ internal class UIKitDragAndDropManager(
         }
 
         override fun sessionDidEnd(session: UIDropSessionProtocol, interaction: UIDropInteraction) {
-            dragSessionContext = null
+            sessionContext = null
             interestedNodes.clear()
         }
     }
@@ -180,7 +235,7 @@ internal class UIKitDragAndDropManager(
 
         val interruptionOutcome = dragAndDropSessionGatingGestureRecognizer.interrupt(
             performSessionSetup = {
-                dragSessionContext = DragSessionContext(
+                sessionContext = DragAndDropSessionContext(
                     transferData = transferData,
                     decorationSize = decorationSize,
                     drawDragDecoration = drawDragDecoration
@@ -213,5 +268,13 @@ internal class UIKitDragAndDropManager(
 
     override fun isInterestedNode(node: DragAndDropModifierNode): Boolean {
         return interestedNodes.contains(node)
+    }
+
+    private fun <R> withSessionContext(block: DragAndDropSessionContext.() -> R): R {
+        val context = checkNotNull(sessionContext) {
+            "No context set for the drag and drop session"
+        }
+
+        return context.block()
     }
 }
