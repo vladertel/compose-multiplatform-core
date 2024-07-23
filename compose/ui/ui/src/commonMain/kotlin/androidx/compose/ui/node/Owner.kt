@@ -87,7 +87,6 @@ internal interface Owner : PositionCalculator {
 
     /** Provide clipboard manager with suspend function to the user.
      * Use the Android version of clipboard manager. */
-    @ExperimentalComposeUiApi
     val clipboard: Clipboard
 
     /**

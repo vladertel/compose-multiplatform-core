@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
@@ -65,6 +66,8 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMapNotNull
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /** A bridge class between user interaction to the text composables for text selection. */
 internal class SelectionManager(private val selectionRegistrar: SelectionRegistrarImpl) {
@@ -114,8 +117,11 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     /** [HapticFeedback] handle to perform haptic feedback. */
     var hapticFeedBack: HapticFeedback? = null
 
-    /** [ClipboardManager] to perform clipboard features. */
-    var clipboardManager: ClipboardManager? = null
+    /** [Clipboard] to perform clipboard features. */
+    var clipboard: Clipboard? = null
+
+    /** [CoroutineScope] to perform clipboard features */
+    var coroutineScope: CoroutineScope? = null
 
     /** [TextToolbar] to show floating toolbar(post-M) or primary toolbar(pre-M). */
     var textToolbar: TextToolbar? = null
@@ -540,8 +546,8 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         }
     }
 
-    internal fun copy() {
-        getSelectedText()?.takeIf { it.isNotEmpty() }?.let { clipboardManager?.setText(it) }
+    internal fun copy() = coroutineScope?.launch {
+        getSelectedText()?.takeIf { it.isNotEmpty() }?.let { clipboard?.setText(it) }
     }
 
     /**

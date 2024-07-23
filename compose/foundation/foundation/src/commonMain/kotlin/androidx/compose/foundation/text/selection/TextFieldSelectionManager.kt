@@ -40,6 +40,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
@@ -59,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /** A bridge class between user interaction to the text field selection. */
 internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
@@ -91,8 +94,11 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      */
     internal var visualTransformation: VisualTransformation = VisualTransformation.None
 
-    /** [ClipboardManager] to perform clipboard features. */
-    internal var clipboardManager: ClipboardManager? = null
+    /** [Clipboard] to perform clipboard features. */
+    internal var clipboard: Clipboard? = null
+
+    /** [CoroutineScope] to perform clipboard features **/
+    internal var coroutineScope: CoroutineScope? = null
 
     /** [TextToolbar] to show floating toolbar(post-M) or primary toolbar(pre-M). */
     var textToolbar: TextToolbar? = null
@@ -601,13 +607,13 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      * unchanged. If [cancelSelection] is true, the new cursor offset should be at the end of the
      * previous selected text.
      */
-    internal fun copy(cancelSelection: Boolean = true) {
-        if (value.selection.collapsed) return
+    internal fun copy(cancelSelection: Boolean = true) = coroutineScope?.launch {
+        if (value.selection.collapsed) return@launch
 
         // TODO(b/171947959) check if original or transformed should be copied
-        clipboardManager?.setText(value.getSelectedText())
+        clipboard?.setText(value.getSelectedText())
 
-        if (!cancelSelection) return
+        if (!cancelSelection) return@launch
 
         val newCursorOffset = value.selection.max
         val newValue =
@@ -627,8 +633,8 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      * the selected text. Then the selection should collapse, and the new cursor offset should be
      * the end of the newly added text.
      */
-    internal fun paste() {
-        val text = clipboardManager?.getText() ?: return
+    internal fun paste() = coroutineScope?.launch {
+        val text = clipboard?.getText() ?: return@launch
 
         val newText =
             value.getTextBeforeSelection(value.text.length) +
@@ -654,11 +660,11 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      * cursor offset should be between the text before the selection, and the text after the
      * selection.
      */
-    internal fun cut() {
-        if (value.selection.collapsed) return
+    internal fun cut() = coroutineScope?.launch {
+        if (value.selection.collapsed) return@launch
 
         // TODO(b/171947959) check if original or transformed should be cut
-        clipboardManager?.setText(value.getSelectedText())
+        clipboard?.setText(value.getSelectedText())
 
         val newText =
             value.getTextBeforeSelection(value.text.length) +
@@ -732,13 +738,13 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
      * make the FloatingToolbar show up in the proper place. In addition, this function passes the
      * copy, paste and cut method as callbacks when "copy", "cut" or "paste" is clicked.
      */
-    internal fun showSelectionToolbar() {
-        if (!enabled || state?.isInTouchMode == false) return
+    internal fun showSelectionToolbar() = coroutineScope?.launch {
+        if (!enabled || state?.isInTouchMode == false) return@launch
         val isPassword = visualTransformation is PasswordVisualTransformation
         val copy: (() -> Unit)? =
             if (!value.selection.collapsed && !isPassword) {
                 {
-                    copy()
+                    coroutineScope?.launch { copy() }
                     hideSelectionToolbar()
                 }
             } else null
@@ -746,15 +752,15 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
         val cut: (() -> Unit)? =
             if (!value.selection.collapsed && editable && !isPassword) {
                 {
-                    cut()
+                    coroutineScope?.launch { cut() }
                     hideSelectionToolbar()
                 }
             } else null
 
         val paste: (() -> Unit)? =
-            if (editable && clipboardManager?.hasText() == true) {
+            if (editable && clipboard?.hasText() == true) {
                 {
-                    paste()
+                    coroutineScope?.launch { paste() }
                     hideSelectionToolbar()
                 }
             } else null

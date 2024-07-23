@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicSecureTextField
-import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
+import androidx.compose.foundation.text.input.internal.selection.FakeClipboard
 import androidx.compose.foundation.text.selection.FakeTextToolbar
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.runtime.CompositionLocalProvider
@@ -32,7 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -373,11 +374,11 @@ internal class BasicSecureTextFieldTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun semantics_copy() {
+    fun semantics_copy() = runTest {
         val state = TextFieldState("Hello World!")
-        val clipboardManager = FakeClipboardManager("initial")
+        val clipboard = FakeClipboard("initial")
         inputMethodInterceptor.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicSecureTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -385,16 +386,17 @@ internal class BasicSecureTextFieldTest {
         rule.onNodeWithTag(Tag).performTextInputSelection(TextRange(0, 5))
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CopyText)
 
-        rule.runOnIdle { assertThat(clipboardManager.getText()?.toString()).isEqualTo("initial") }
+        rule.waitForIdle()
+        assertThat(clipboard.getText()?.toString()).isEqualTo("initial")
     }
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun semantics_cut() {
+    fun semantics_cut() = runTest {
         val state = TextFieldState("Hello World!")
-        val clipboardManager = FakeClipboardManager("initial")
+        val clipboard = FakeClipboard("initial")
         inputMethodInterceptor.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicSecureTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -402,10 +404,9 @@ internal class BasicSecureTextFieldTest {
         rule.onNodeWithTag(Tag).performTextInputSelection(TextRange(0, 5))
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CutText)
 
-        rule.runOnIdle {
-            assertThat(clipboardManager.getText()?.toString()).isEqualTo("initial")
-            assertThat(state.text.toString()).isEqualTo("Hello World!")
-        }
+        rule.waitForIdle()
+        assertThat(clipboard.getText()?.toString()).isEqualTo("initial")
+        assertThat(state.text.toString()).isEqualTo("Hello World!")
     }
 
     @Test

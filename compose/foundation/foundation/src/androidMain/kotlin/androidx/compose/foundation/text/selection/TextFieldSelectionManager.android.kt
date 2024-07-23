@@ -33,6 +33,7 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.launch
 
 internal actual val PointerEvent.isShiftPressed: Boolean
     get() = false
@@ -70,34 +71,36 @@ internal actual fun Modifier.textFieldMagnifier(manager: TextFieldSelectionManag
 internal fun TextFieldSelectionManager.contextMenuBuilder(
     contextMenuState: ContextMenuState
 ): ContextMenuScope.() -> Unit = {
-    val isPassword = visualTransformation is PasswordVisualTransformation
-    val hasSelection = !value.selection.collapsed
-    TextItem(
-        state = contextMenuState,
-        label = TextContextMenuItems.Cut,
-        enabled = hasSelection && editable && !isPassword,
-    ) {
-        cut()
-    }
-    TextItem(
-        state = contextMenuState,
-        label = TextContextMenuItems.Copy,
-        enabled = hasSelection && !isPassword,
-    ) {
-        copy(cancelSelection = false)
-    }
-    TextItem(
-        state = contextMenuState,
-        label = TextContextMenuItems.Paste,
-        enabled = editable && clipboardManager?.hasText() == true,
-    ) {
-        paste()
-    }
-    TextItem(
-        state = contextMenuState,
-        label = TextContextMenuItems.SelectAll,
-        enabled = value.selection.length != value.text.length,
-    ) {
-        selectAll()
+    coroutineScope?.launch {
+        val isPassword = visualTransformation is PasswordVisualTransformation
+        val hasSelection = !value.selection.collapsed
+        TextItem(
+            state = contextMenuState,
+            label = TextContextMenuItems.Cut,
+            enabled = hasSelection && editable && !isPassword,
+        ) {
+            cut()
+        }
+        TextItem(
+            state = contextMenuState,
+            label = TextContextMenuItems.Copy,
+            enabled = hasSelection && !isPassword,
+        ) {
+            copy(cancelSelection = false)
+        }
+        TextItem(
+            state = contextMenuState,
+            label = TextContextMenuItems.Paste,
+            enabled = editable && clipboard?.hasText() == true,
+        ) {
+            paste()
+        }
+        TextItem(
+            state = contextMenuState,
+            label = TextContextMenuItems.SelectAll,
+            enabled = value.selection.length != value.text.length,
+        ) {
+            selectAll()
+        }
     }
 }

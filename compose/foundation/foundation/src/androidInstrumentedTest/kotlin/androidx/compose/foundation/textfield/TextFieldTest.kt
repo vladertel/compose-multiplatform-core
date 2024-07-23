@@ -72,7 +72,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -162,6 +164,7 @@ import com.google.common.truth.Truth.assertWithMessage
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -1296,25 +1299,25 @@ class TextFieldTest : FocusedWindowTest {
 
     // Regression test for b/311834126
     @Test
-    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
+    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() = runTest {
         val longText = "Text".repeat(4)
         val shortText = "Text".repeat(2)
 
         var tfv by mutableStateOf(TextFieldValue(shortText))
-        val clipboardManager =
-            object : ClipboardManager {
+        val clipboard =
+            object : Clipboard {
                 var contents: AnnotatedString? = null
 
-                override fun setText(annotatedString: AnnotatedString) {
+                override suspend fun setText(annotatedString: AnnotatedString) {
                     contents = annotatedString
                 }
 
-                override fun getText(): AnnotatedString? {
+                override suspend fun getText(): AnnotatedString? {
                     return contents
                 }
             }
         rule.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(
                     value = tfv,
                     onValueChange = { tfv = it },
@@ -1322,7 +1325,7 @@ class TextFieldTest : FocusedWindowTest {
                 )
             }
         }
-        clipboardManager.setText(AnnotatedString(longText))
+        clipboard.setText(AnnotatedString(longText))
         rule.waitForIdle()
 
         val node = rule.onNodeWithTag(Tag)

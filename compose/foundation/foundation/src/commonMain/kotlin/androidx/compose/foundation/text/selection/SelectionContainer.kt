@@ -24,11 +24,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalTextToolbar
@@ -90,7 +92,8 @@ internal fun SelectionContainer(
     val manager = remember { SelectionManager(registrarImpl) }
 
     manager.hapticFeedBack = LocalHapticFeedback.current
-    manager.clipboardManager = LocalClipboardManager.current
+    manager.clipboard = LocalClipboard.current
+    manager.coroutineScope = rememberCoroutineScope()
     manager.textToolbar = LocalTextToolbar.current
     manager.onSelectionChange = onSelectionChange
     manager.selection = selection

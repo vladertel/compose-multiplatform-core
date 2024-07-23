@@ -18,6 +18,7 @@ package androidx.compose.ui.platform
 
 import androidx.compose.ui.text.AnnotatedString
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class ClipboardTest {
@@ -39,6 +40,24 @@ class ClipboardTest {
         val clipboardManager = FakeClipboardManager("")
         assertThat(clipboardManager.hasText()).isFalse()
     }
+
+    @Test
+    fun clipboardWithoutHasText_returnsTrue_withNonEmptyGetText() = runTest {
+        val clipboard = FakeClipboard("Something")
+        assertThat(clipboard.hasText()).isTrue()
+    }
+
+    @Test
+    fun clipboardWithoutHasText_returnsFalse_withNullGetText() = runTest {
+        val clipboard = FakeClipboard()
+        assertThat(clipboard.hasText()).isFalse()
+    }
+
+    @Test
+    fun clipboardWithoutHasText_returnsFalse_withEmptyGetText() = runTest {
+        val clipboard = FakeClipboard("")
+        assertThat(clipboard.hasText()).isFalse()
+    }
 }
 
 fun FakeClipboardManager(initialText: String? = null) =
@@ -54,4 +73,19 @@ fun FakeClipboardManager(initialText: String? = null) =
         override fun getClip(): ClipEntry? = null
 
         override fun setClip(clipEntry: ClipEntry?) = Unit
+    }
+
+fun FakeClipboard(initialText: String? = null) =
+    object : Clipboard {
+        private var currentText: AnnotatedString? = initialText?.let { AnnotatedString(it) }
+
+        override suspend fun setText(annotatedString: AnnotatedString) {
+            currentText = annotatedString
+        }
+
+        override suspend fun getText(): AnnotatedString? = currentText
+
+        override suspend fun getClip(): ClipEntry? = null
+
+        override suspend fun setClip(clipEntry: ClipEntry?) = Unit
     }

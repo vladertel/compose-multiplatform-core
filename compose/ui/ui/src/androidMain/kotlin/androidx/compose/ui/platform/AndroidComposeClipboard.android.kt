@@ -20,7 +20,6 @@ import android.content.Context
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.AnnotatedString
 
-@ExperimentalComposeUiApi
 internal class AndroidComposeClipboard
 internal constructor(private val androidClipboardManager: AndroidClipboardManager) :
     Clipboard {
