@@ -16,19 +16,9 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
-import androidx.compose.ui.draganddrop.DragAndDropSessionGatingInterruptionOutcome
-import androidx.compose.ui.draganddrop.cupertino.loadString
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
-import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
-import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.viewinterop.InteropView
-import androidx.compose.ui.draganddrop.DragAndDropManager
-import kotlin.coroutines.CoroutineContext
 import kotlin.experimental.ExperimentalObjCName
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
@@ -40,13 +30,6 @@ import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectZero
-import platform.UIKit.UIDragInteraction
-import platform.UIKit.UIDragItem
-import platform.UIKit.UIDragSessionProtocol
-import platform.UIKit.UIDropInteraction
-import platform.UIKit.UIDropOperationForbidden
-import platform.UIKit.UIDropProposal
-import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.UIEvent
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerState
@@ -90,6 +73,8 @@ private object ForwardingGestureRecognizerConstants {
     const val FAILURE_DELAY = 150L
 }
 
+
+// TODO(es) Move to the separate file after opt-out delay logic is merged
 /**
  * Implementation of [CMPGestureRecognizer] that handles touch events and forwards
  * them. The main difference from the original [UIView] touches based implementation is that it's built on top of
@@ -100,7 +85,7 @@ private object ForwardingGestureRecognizerConstants {
  */
 @OptIn(ExperimentalObjCName::class)
 @ObjCName("ForwardingGestureRecognizer")
-private class ForwardingGestureRecognizer(
+internal class ForwardingGestureRecognizer(
     private var onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
     private val onTouchesCountChanged: (by: Int) -> Unit,
 ): CMPGestureRecognizer(target = null, action = null) {

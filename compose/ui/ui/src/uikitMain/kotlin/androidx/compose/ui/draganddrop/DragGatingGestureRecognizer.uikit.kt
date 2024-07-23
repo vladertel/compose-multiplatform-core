@@ -21,17 +21,38 @@ import kotlin.experimental.ExperimentalObjCName
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ObjCAction
 import platform.Foundation.NSSelectorFromString
+import platform.Foundation.NSStringFromClass
 import platform.UIKit.UIEvent
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIGestureRecognizer
+import platform.UIKit.UIGestureRecognizerState
 import platform.UIKit.UIGestureRecognizerStateBegan
 import platform.UIKit.UIGestureRecognizerStateCancelled
+import platform.UIKit.UIGestureRecognizerStateChanged
 import platform.UIKit.UIGestureRecognizerStateFailed
 import platform.UIKit.UIGestureRecognizerStatePossible
 import platform.UIKit.UIGestureRecognizerStateEnded
 import platform.UIKit.UILongPressGestureRecognizer
 import platform.UIKit.UIView
 import platform.UIKit.setState
+import platform.darwin.NSObject
+
+private fun UIGestureRecognizerState.asUIGestureRecognizerStateString(): String = when (this) {
+    UIGestureRecognizerStatePossible -> "Possible"
+    UIGestureRecognizerStateBegan -> "Began"
+    UIGestureRecognizerStateChanged -> "Changed"
+    UIGestureRecognizerStateEnded -> "Ended"
+    UIGestureRecognizerStateCancelled -> "Cancelled"
+    UIGestureRecognizerStateFailed -> "Failed"
+    else -> "Unknown"
+}
+
+@OptIn(BetaInteropApi::class)
+private val NSObject.className: String
+    get() {
+        val thisClass = this.`class`() ?: return "null"
+        return NSStringFromClass(thisClass)
+    }
 
 /**
  * The result of [DragAndDropSessionGatingGestureRecognizer.interrupt]. If the
@@ -138,8 +159,8 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
             if (it.state == UIGestureRecognizerStatePossible) {
                 true
             } else {
-                println("State of this gesture recognizer: ${this.state}")
-                println("areAllGatedGesturesPossible: false, because $it is in ${it.state} state")
+                println("State of this gesture recognizer: ${this.state.asUIGestureRecognizerStateString()}")
+                println("areAllGatedGesturesPossible: false, because $it is in ${it.state.asUIGestureRecognizerStateString()} state")
                 false
             }
         }
@@ -160,7 +181,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
     @OptIn(BetaInteropApi::class)
     @ObjCAction
     fun handleOtherGestureRecognizer(gestureRecognizer: UILongPressGestureRecognizer) {
-        println("$gestureRecognizer")
+        println("handleOtherGestureRecognizer: $gestureRecognizer")
     }
 
     /**
@@ -179,7 +200,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         require(gestureRecognizer == this) {
-            "Unexpected gesture recognizer $gestureRecognizer delegated to $this"
+            "Unexpected gesture recognizer $gestureRecognizer delegated to $this.c"
         }
 
         val gatedGestureRecognizers = checkNotNull(gatedGestureRecognizers) {
@@ -196,9 +217,16 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         return if (view == otherView) {
             // We allow simultaneous recognition with other gesture recognizers to the same view
             // and are not in the gated gesture recognizers set
-            otherGestureRecognizer !in gatedGestureRecognizers
+            val result = otherGestureRecognizer !in gatedGestureRecognizers
+            if (result) {
+                println("${this.className} allows ${otherGestureRecognizer.className} to recognize simultaneously")
+            } else {
+                println("${this.className} does not allow ${otherGestureRecognizer.className} to recognize simultaneously")
+            }
+            result
         } else {
             // and all other gesture recognizers
+            println("${this.className} allows ${otherGestureRecognizer.className} to recognize simultaneously")
             true
         }
     }
@@ -208,19 +236,20 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         require(gestureRecognizer == this) {
-            "Unexpected gesture recognizer $gestureRecognizer delegated to $this"
+            "Unexpected ${gestureRecognizer.className} delegated to ${this.className}"
         }
 
         val gatedGestureRecognizers = checkNotNull(gatedGestureRecognizers) {
             "`UIGestureRecognizerDelegate` methods called before `DragGatingGestureRecognizer.configure`"
         }
 
-
         return if (gatedGestureRecognizers.contains(otherGestureRecognizer)) {
             // We require the gated gestures to wait for this gesture recognizer to fail
+            println("${this.className} is required to fail by ${otherGestureRecognizer.className}")
             true
         } else {
             // We don't require other gesture recognizers to wait for this gesture recognizer to fail
+            println("${this.className} is not required to fail by ${otherGestureRecognizer.className}")
             false
         }
     }
@@ -230,7 +259,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         require(gestureRecognizer == this) {
-            "Unexpected gesture recognizer $gestureRecognizer delegated to $this"
+            "Unexpected  ${gestureRecognizer.className} delegated to ${this.className}"
         }
 
         checkNotNull(gatedGestureRecognizers) {
@@ -238,6 +267,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         }
 
         // We don't require other gesture recognizers to fail
+        println("${this.className} does not require ${otherGestureRecognizer.className} to fail")
         return false
     }
 
