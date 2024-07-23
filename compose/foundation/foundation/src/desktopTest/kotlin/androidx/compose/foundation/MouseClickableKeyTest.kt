@@ -34,7 +34,7 @@ import org.junit.Test
 
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalFoundationApi::class)
-class MouseClickableTest {
+class MouseClickableKeyTest {
     @Test
     fun click() = ImageComposeScene(
         width = 100,

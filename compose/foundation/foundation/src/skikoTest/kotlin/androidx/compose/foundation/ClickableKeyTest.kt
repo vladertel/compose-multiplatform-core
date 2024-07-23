@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
-class ClickableTest {
+class ClickableKeyTest {
     @Test
     fun trigger_clickable_with_enter_key() = runSkikoComposeUiTest {
         val focusRequester = FocusRequester()
