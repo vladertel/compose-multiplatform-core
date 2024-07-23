@@ -132,7 +132,12 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         }
 
         val areAllGatedGesturesPossible = gatedGesturesRecognizers.all {
-            it.state == UIGestureRecognizerStatePossible
+            if (it.state == UIGestureRecognizerStatePossible) {
+                true
+            } else {
+                println("areAllGatedGesturesPossible: false, because $it is in ${it.state} state")
+                false
+            }
         }
 
         if (areAllGatedGesturesPossible) {
@@ -167,6 +172,10 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
     fun configure(view: UIView, gestureRecognizersRequiredToFail: List<UIGestureRecognizer>) {
         check(gatedGestureRecognizers == null) {
             "DragAndDropSessionGatingGestureRecognizer.configure() called multiple times"
+        }
+
+        if (gestureRecognizersRequiredToFail.isEmpty()) {
+            println("Warning: DragAndDropSessionGatingGestureRecognizer is configured with no gated gesture recognizers")
         }
 
         view.addGestureRecognizer(this)
