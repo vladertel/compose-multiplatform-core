@@ -21,8 +21,11 @@ import kotlin.experimental.ExperimentalObjCName
 import platform.UIKit.UIEvent
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIGestureRecognizer
+import platform.UIKit.UIGestureRecognizerStateBegan
+import platform.UIKit.UIGestureRecognizerStateCancelled
 import platform.UIKit.UIGestureRecognizerStateFailed
 import platform.UIKit.UIGestureRecognizerStatePossible
+import platform.UIKit.UIGestureRecognizerStateEnded
 import platform.UIKit.UILongPressGestureRecognizer
 import platform.UIKit.UIView
 import platform.UIKit.setState
@@ -43,9 +46,16 @@ enum class DragAndDropSessionGatingInterruptionOutcome {
     POTENTIAL_SUCCESS,
 
     /**
-     * The drag and drop session is not possible
+     * The drag and drop session is not possible, because one of the system gesture recognizers
+     * that are required to fail can't begin during this gesture sequence anyway.
      */
-    FAILURE
+    REDUNDANT_GATING,
+
+    /**
+     * The gating gesture recognizer is either not possible, or already running, so the drag and drop
+     * session can't start either way, because failure requirements are not met.
+     */
+    IMPOSSIBLE
 }
 
 /**
@@ -69,35 +79,83 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         // no-op
     }
 
+    /**
+     * If the state of this gesture recognizer is [UIGestureRecognizerStateBegan] and there are no touches,
+     * we can set it to [UIGestureRecognizerStateEnded].
+     *
+     * This happens only if we were required to fail the gated gesture recognizers explicitly.
+     *
+     * @see [failGatedGestureRecognisers]
+     */
     override fun touchesEnded(touches: Set<*>, withEvent: UIEvent) {
-        // no-op
+        if (state == UIGestureRecognizerStateBegan && numberOfTouches == 0UL) {
+            setState(UIGestureRecognizerStateEnded)
+        }
     }
 
+    /**
+     * If the state of this gesture recognizer is [UIGestureRecognizerStateBegan] and there are no touches,
+     * we can set it to [UIGestureRecognizerStateCancelled].
+     *
+     * This happens only if we were required to fail the gated gesture recognizers explicitly.
+     *
+     * @see [failGatedGestureRecognisers]
+     */
     override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent) {
-        // no-op
+        if (state == UIGestureRecognizerStateBegan && numberOfTouches == 0UL) {
+            setState(UIGestureRecognizerStateCancelled)
+        }
     }
 
     /**
      * Mark this gesture recognizer as failed to allow native [UILongPressGestureRecognizer]s responsible
      * for [UIDragInteraction] to start.
      *
-     * @return true if the gesture recognizer was marked as failed, false otherwise.
+     * @param performSessionSetup block that will be executed if all the gated gesture recognizers
+     * conform to precondition to start the drag and drop session in the first place.
+     * This block is required to be executed before this gesture recognizer is failed, because
+     * gated gesture recognizers can start immediately after this gesture recognizer fails.
+     * The required context setup for possible consequent drag and drop session should be done in this block.
+     *
+     * @return [DragAndDropSessionGatingInterruptionOutcome] that describes the outcome of the interruption.
      */
-    fun interrupt(): DragAndDropSessionGatingInterruptionOutcome {
+    fun interrupt(performSessionSetup: () -> Unit): DragAndDropSessionGatingInterruptionOutcome {
         val gatedGesturesRecognizers = checkNotNull(gatedGestureRecognizers) {
             "DragAndDropSessionGatingGestureRecognizer.interrupt() called before configuration"
         }
 
-        val areAllGatedGestureRecognizersPossible = gatedGesturesRecognizers.all {
+        if (state != UIGestureRecognizerStatePossible) {
+            // Failure requirements can not be met if this gesture recognizer is not in the possible
+            // state. It's either already failed and sits in cancelled state, or running, so the
+            // drag and drop session can't start anyway.
+            return DragAndDropSessionGatingInterruptionOutcome.IMPOSSIBLE
+        }
+
+        val areAllGatedGesturesPossible = gatedGesturesRecognizers.all {
             it.state == UIGestureRecognizerStatePossible
+        }
+
+        if (areAllGatedGesturesPossible) {
+            performSessionSetup()
         }
 
         setState(UIGestureRecognizerStateFailed)
 
-        return if (areAllGatedGestureRecognizersPossible) {
+        return if (areAllGatedGesturesPossible) {
             DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS
         } else {
-            DragAndDropSessionGatingInterruptionOutcome.FAILURE
+            DragAndDropSessionGatingInterruptionOutcome.REDUNDANT_GATING
+        }
+    }
+
+    /**
+     * Fails the gated gesture recognisers immediately by setting the state of this gesture recognizer
+     * to [UIGestureRecognizerStateBegan]. They won't be able to start the drag and drop
+     * session until the next gesture sequence.
+     */
+    fun failGatedGestureRecognisers() {
+        if (state == UIGestureRecognizerStatePossible && numberOfTouches > 0UL) {
+            setState(UIGestureRecognizerStateBegan)
         }
     }
 

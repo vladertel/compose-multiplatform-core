@@ -23,15 +23,18 @@ import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
 import androidx.compose.ui.draganddrop.DragAndDropSessionGatingInterruptionOutcome
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.window.InteractionUIView
+import kotlinx.cinterop.CValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import platform.CoreGraphics.CGSize
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
@@ -43,10 +46,25 @@ import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIGestureRecognizer
 
+
+internal class DragSessionContext(
+    val transferData: DragAndDropTransferData,
+    val decorationSize: Size,
+    val drawDragDecoration: DrawScope.() -> Unit
+)
+
+/**
+ * The [PlatformDragAndDropManager] and corresponding delegating [DragAndDropManager] implementation
+ * for UIKit.
+ *
+ * This class is responsible for managing the drag and drop interactions on the UIKit platform.
+ * It is responsible for setting up the drag and drop interactions on the [view] and bridging the
+ * context between iOS and Compose.
+ */
 internal class UIKitDragAndDropManager(
     val view: InteractionUIView,
 ) : PlatformDragAndDropManager {
-    var currentTransferData: DragAndDropTransferData? = null
+    var dragSessionContext: DragSessionContext? = null
 
     /**
      * The [CMPDragInteractionProxy] that handles the serves as [UIDragInteractionDelegateProtocol] for the
@@ -62,7 +80,11 @@ internal class UIKitDragAndDropManager(
         override fun itemsForBeginningSession(
             session: UIDragSessionProtocol, interaction: UIDragInteraction
         ): List<*> {
-            return listOf<Any>()
+            val context = checkNotNull(dragSessionContext) {
+                "The session driven by the drag interaction does not have any transfer data"
+            }
+
+            return context.transferData.items
         }
 
         override fun doesSessionAllowMoveOperation(
@@ -97,7 +119,10 @@ internal class UIKitDragAndDropManager(
             return UIDropProposal(UIDropOperationForbidden)
         }
 
-        //sessio
+        override fun sessionDidEnd(session: UIDropSessionProtocol, interaction: UIDropInteraction) {
+            dragSessionContext = null
+            interestedNodes.clear()
+        }
     }
 
     /**
@@ -146,17 +171,38 @@ internal class UIKitDragAndDropManager(
         decorationSize: Size,
         drawDragDecoration: DrawScope.() -> Unit
     ): Boolean {
-        val interruptionOutcome = dragAndDropSessionGatingGestureRecognizer.interrupt()
+        if (transferData.items.isEmpty()) {
+            // The session without the payload is not allowed.
+            dragAndDropSessionGatingGestureRecognizer.failGatedGestureRecognisers()
+
+            return false
+        }
+
+        val interruptionOutcome = dragAndDropSessionGatingGestureRecognizer.interrupt(
+            performSessionSetup = {
+                dragSessionContext = DragSessionContext(
+                    transferData = transferData,
+                    decorationSize = decorationSize,
+                    drawDragDecoration = drawDragDecoration
+                )
+            }
+        )
 
         return when (interruptionOutcome) {
             DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS -> {
                 // The drag and drop session can start and is not gated by this gesture recognizer.
-                return true
+                // We can't guarantee that the drag and drop session since we don't imperatively
+                // control the drag and drop session start.
+                true
             }
 
-            DragAndDropSessionGatingInterruptionOutcome.FAILURE -> {
-                // The drag and drop session is not possible
-                return false
+            DragAndDropSessionGatingInterruptionOutcome.REDUNDANT_GATING,
+            DragAndDropSessionGatingInterruptionOutcome.IMPOSSIBLE -> {
+                // The drag and drop session is not possible, because one of the system gesture
+                // recognizers that are required to fail can't begin during this gesture sequence
+                // Or the gating gesture recognizer is either not possible, or already running, so
+                // the drag and drop session can't start either way.
+                false
             }
         }
     }
