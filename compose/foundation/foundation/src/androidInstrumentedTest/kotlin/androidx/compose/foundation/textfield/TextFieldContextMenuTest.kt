@@ -25,12 +25,14 @@ import androidx.compose.foundation.text.BasicSecureTextField
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.internal.selection.FakeClipboard
 import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -52,6 +54,7 @@ import androidx.compose.ui.unit.lerp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -518,42 +521,46 @@ class TextFieldContextMenuTest : FocusedWindowTest {
 
     // region BTF2 Context Menu Item Click Tests
     @Test
-    fun btf2_contextMenu_onClickCut() =
+    fun btf2_contextMenu_onClickCut() = runTest {
         runBtf2ClickContextMenuItemTest(
             labelToClick = ContextMenuItemLabels.CUT,
             expectedText = "Text  Text",
             expectedSelection = TextRange(5),
             expectedClipboardContent = "Text",
         )
+    }
 
     @Test
-    fun btf2_contextMenu_onClickCopy() =
+    fun btf2_contextMenu_onClickCopy() = runTest {
         runBtf2ClickContextMenuItemTest(
             labelToClick = ContextMenuItemLabels.COPY,
             expectedText = "Text Text Text",
             expectedSelection = TextRange(5, 9),
             expectedClipboardContent = "Text",
         )
+    }
 
     @Test
-    fun btf2_contextMenu_onClickPaste() =
+    fun btf2_contextMenu_onClickPaste() = runTest {
         runBtf2ClickContextMenuItemTest(
             labelToClick = ContextMenuItemLabels.PASTE,
             expectedText = "Text clip Text",
             expectedSelection = TextRange(9),
             expectedClipboardContent = "clip",
         )
+    }
 
     @Test
-    fun btf2_contextMenu_onClickSelectAll() =
+    fun btf2_contextMenu_onClickSelectAll() = runTest {
         runBtf2ClickContextMenuItemTest(
             labelToClick = ContextMenuItemLabels.SELECT_ALL,
             expectedText = "Text Text Text",
             expectedSelection = TextRange(0, 14),
             expectedClipboardContent = "clip",
         )
+    }
 
-    private fun runBtf2ClickContextMenuItemTest(
+    private suspend fun runBtf2ClickContextMenuItemTest(
         labelToClick: String,
         expectedText: String,
         expectedSelection: TextRange,
@@ -564,14 +571,14 @@ class TextFieldContextMenuTest : FocusedWindowTest {
 
         val state = TextFieldState(initialText = text, initialSelection = TextRange(5, 9))
 
-        val clipboardManager =
-            FakeClipboardManager(
+        val clipboard =
+            FakeClipboard(
                 initialText = initialClipboardText,
                 supportsClipEntry = true,
             )
 
         rule.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(textFieldTag))
             }
         }
@@ -590,7 +597,7 @@ class TextFieldContextMenuTest : FocusedWindowTest {
         // Operation was applied
         assertThat(state.text).isEqualTo(expectedText)
         assertThat(state.selection).isEqualTo(expectedSelection)
-        val clipboardContent = clipboardManager.getText()
+        val clipboardContent = clipboard.getText()
         assertThat(clipboardContent).isNotNull()
         assertThat(clipboardContent!!.text).isEqualTo(expectedClipboardContent)
     }
@@ -599,7 +606,7 @@ class TextFieldContextMenuTest : FocusedWindowTest {
 
     // region BTF2 Context Menu Correct Item Tests
     @Test
-    fun btf2_contextMenu_emptyClipboard_noSelection_itemsMatch() =
+    fun btf2_contextMenu_emptyClipboard_noSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = true,
             selectionAmount = SelectionAmount.NONE,
@@ -611,9 +618,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_emptyClipboard_partialSelection_itemsMatch() =
+    fun btf2_contextMenu_emptyClipboard_partialSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = true,
             selectionAmount = SelectionAmount.PARTIAL,
@@ -625,9 +633,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_emptyClipboard_fullSelection_itemsMatch() =
+    fun btf2_contextMenu_emptyClipboard_fullSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = true,
             selectionAmount = SelectionAmount.ALL,
@@ -639,9 +648,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.DISABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_nonEmptyClipboard_noSelection_itemsMatch() =
+    fun btf2_contextMenu_nonEmptyClipboard_noSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = false,
             selectionAmount = SelectionAmount.NONE,
@@ -653,9 +663,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_nonEmptyClipboard_partialSelection_itemsMatch() =
+    fun btf2_contextMenu_nonEmptyClipboard_partialSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = false,
             selectionAmount = SelectionAmount.PARTIAL,
@@ -667,9 +678,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_nonEmptyClipboard_fullSelection_itemsMatch() =
+    fun btf2_contextMenu_nonEmptyClipboard_fullSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isEmptyClipboard = false,
             selectionAmount = SelectionAmount.ALL,
@@ -681,9 +693,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.DISABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_password_noSelection_itemsMatch() =
+    fun btf2_contextMenu_password_noSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isPassword = true,
             selectionAmount = SelectionAmount.NONE,
@@ -695,9 +708,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_password_partialSelection_itemsMatch() =
+    fun btf2_contextMenu_password_partialSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isPassword = true,
             selectionAmount = SelectionAmount.PARTIAL,
@@ -709,9 +723,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_password_fullSelection_itemsMatch() =
+    fun btf2_contextMenu_password_fullSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isPassword = true,
             selectionAmount = SelectionAmount.ALL,
@@ -723,9 +738,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.DISABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_readOnly_noSelection_itemsMatch() =
+    fun btf2_contextMenu_readOnly_noSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isReadOnly = true,
             isEmptyClipboard = true,
@@ -738,9 +754,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_readOnly_partialSelection_itemsMatch() =
+    fun btf2_contextMenu_readOnly_partialSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isReadOnly = true,
             isEmptyClipboard = true,
@@ -753,9 +770,10 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.ENABLED,
             )
         }
+    }
 
     @Test
-    fun btf2_contextMenu_readOnly_fullSelection_itemsMatch() =
+    fun btf2_contextMenu_readOnly_fullSelection_itemsMatch() = runTest {
         runBtf2CorrectItemsTest(
             isReadOnly = true,
             isEmptyClipboard = true,
@@ -768,6 +786,7 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                 selectAllState = ContextMenuItemState.DISABLED,
             )
         }
+    }
 
     private enum class SelectionAmount {
         NONE,
@@ -775,7 +794,7 @@ class TextFieldContextMenuTest : FocusedWindowTest {
         ALL
     }
 
-    private fun runBtf2CorrectItemsTest(
+    private suspend fun runBtf2CorrectItemsTest(
         isPassword: Boolean = false, // todo use
         isReadOnly: Boolean = false,
         isEmptyClipboard: Boolean = false,
@@ -796,8 +815,8 @@ class TextFieldContextMenuTest : FocusedWindowTest {
                     }
             )
 
-        val clipboardManager =
-            FakeClipboardManager(supportsClipEntry = true).apply {
+        val clipboard =
+            FakeClipboard(supportsClipEntry = true).apply {
                 if (isEmptyClipboard) {
                     setClip(null)
                 } else {
@@ -806,7 +825,7 @@ class TextFieldContextMenuTest : FocusedWindowTest {
             }
 
         rule.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 if (isPassword) {
                     BasicSecureTextField(state = state, modifier = Modifier.testTag(textFieldTag))
                 } else {

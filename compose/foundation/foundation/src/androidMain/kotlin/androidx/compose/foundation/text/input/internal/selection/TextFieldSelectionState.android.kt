@@ -28,7 +28,7 @@ internal fun TextFieldSelectionState.contextMenuBuilder(
     state: ContextMenuState,
     coroutineScope: CoroutineScope,
 ): ContextMenuScope.() -> Unit = {
-    coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+    coroutineScope.launch {
         TextItem(state, TextContextMenuItems.Cut, enabled = canCut()) {
             coroutineScope.launch { cut() }
         }

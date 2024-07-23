@@ -35,7 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.computeSizeForDefaultText
 import androidx.compose.foundation.text.input.TextFieldBuffer.ChangeList
-import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
+import androidx.compose.foundation.text.input.internal.selection.FakeClipboard
 import androidx.compose.foundation.text.input.internal.setComposingRegion
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.foundation.verticalScroll
@@ -57,8 +57,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -110,6 +110,7 @@ import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -1063,33 +1064,33 @@ internal class BasicTextFieldTest {
 
     // Regression test for b/311834126
     @Test
-    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
+    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() = runTest {
         val longText = "Text".repeat(4)
         val shortText = "Text".repeat(2)
 
         lateinit var tfs: TextFieldState
-        val clipboardManager =
-            object : ClipboardManager {
+        val clipboard =
+            object : Clipboard {
                 var contents: AnnotatedString? = null
 
-                override fun setText(annotatedString: AnnotatedString) {
+                override suspend fun setText(annotatedString: AnnotatedString) {
                     contents = annotatedString
                 }
 
-                override fun getText(): AnnotatedString? {
+                override suspend fun getText(): AnnotatedString? {
                     return contents
                 }
             }
         inputMethodInterceptor.setTextFieldTestContent {
             tfs = rememberTextFieldState(shortText)
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(
                     state = tfs,
                     modifier = Modifier.testTag(Tag),
                 )
             }
         }
-        clipboardManager.setText(AnnotatedString(longText))
+        clipboard.setText(AnnotatedString(longText))
         rule.waitForIdle()
 
         val node = rule.onNodeWithTag(Tag)
@@ -1124,11 +1125,11 @@ internal class BasicTextFieldTest {
     }
 
     @Test
-    fun cut_contextMenuAction_cutsIntoClipboard() {
-        val clipboardManager = FakeClipboardManager("World")
+    fun cut_contextMenuAction_cutsIntoClipboard() = runTest {
+        val clipboard = FakeClipboard("World")
         val state = TextFieldState("Hello", initialSelection = TextRange(0, 2))
         inputMethodInterceptor.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -1137,18 +1138,17 @@ internal class BasicTextFieldTest {
 
         inputMethodInterceptor.withInputConnection { performContextMenuAction(android.R.id.cut) }
 
-        rule.runOnIdle {
-            assertThat(clipboardManager.getText()?.text).isEqualTo("He")
-            assertThat(state.text.toString()).isEqualTo("llo")
-        }
+        rule.waitForIdle()
+        assertThat(clipboard.getText()?.text).isEqualTo("He")
+        assertThat(state.text.toString()).isEqualTo("llo")
     }
 
     @Test
-    fun copy_contextMenuAction_copiesIntoClipboard() {
-        val clipboardManager = FakeClipboardManager("World")
+    fun copy_contextMenuAction_copiesIntoClipboard() = runTest {
+        val clipboard = FakeClipboard("World")
         val state = TextFieldState("Hello", initialSelection = TextRange(0, 2))
         inputMethodInterceptor.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -1157,15 +1157,16 @@ internal class BasicTextFieldTest {
 
         inputMethodInterceptor.withInputConnection { performContextMenuAction(android.R.id.copy) }
 
-        rule.runOnIdle { assertThat(clipboardManager.getText()?.text).isEqualTo("He") }
+        rule.waitForIdle()
+        assertThat(clipboard.getText()?.text).isEqualTo("He")
     }
 
     @Test
     fun paste_contextMenuAction_pastesFromClipboard() {
-        val clipboardManager = FakeClipboardManager("World")
+        val clipboard = FakeClipboard("World")
         val state = TextFieldState("Hello", initialSelection = TextRange(0, 4))
         inputMethodInterceptor.setTextFieldTestContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }

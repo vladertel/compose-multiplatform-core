@@ -24,7 +24,6 @@ import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.internal.selection.FakeClipboard
-import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.foundation.text.selection.isSelectionHandle
 import androidx.compose.runtime.CompositionLocalProvider
@@ -70,6 +69,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -421,9 +421,9 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
     @Test
     fun semantics_paste() {
         val state = TextFieldState("Here World!")
-        val clipboardManager = FakeClipboardManager("Hello")
+        val clipboard = FakeClipboard("Hello")
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -441,13 +441,9 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
     @Test
     fun semantics_paste_appliesFilter() {
         val state = TextFieldState("Here World!")
-        val clipboardManager = FakeClipboardManager("Hello")
         val clipboard = FakeClipboard("Hello")
         rule.setContent {
-            CompositionLocalProvider(
-//                LocalClipboardManager provides clipboardManager,
-                LocalClipboard provides clipboard
-                ) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
@@ -474,11 +470,11 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
 
     @OptIn(ExperimentalTestApi::class)
     @Test
-    fun semantics_copy() {
+    fun semantics_copy() = runTest {
         val state = TextFieldState("Hello World!")
-        val clipboardManager = FakeClipboardManager()
+        val clipboard = FakeClipboard()
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
@@ -486,7 +482,8 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).performTextInputSelection(TextRange(0, 5))
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CopyText)
 
-        rule.runOnIdle { assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello") }
+        rule.waitForIdle()
+        assertThat(clipboard.getText()?.toString()).isEqualTo("Hello")
     }
 
     @Test
@@ -500,9 +497,9 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
     @Test
     fun semantics_copy_appliesFilter() {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
-        val clipboardManager = FakeClipboardManager()
+        val clipboard = FakeClipboard()
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
@@ -522,30 +519,29 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
     }
 
     @Test
-    fun semantics_cut() {
+    fun semantics_cut() = runTest {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
-        val clipboardManager = FakeClipboardManager()
+        val clipboard = FakeClipboard()
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(state = state, modifier = Modifier.testTag(Tag))
             }
         }
 
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CutText)
 
-        rule.runOnIdle {
-            assertThat(state.text.toString()).isEqualTo(" World!")
-            assertThat(state.selection).isEqualTo(TextRange(0))
-            assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello")
-        }
+        rule.waitForIdle()
+        assertThat(state.text.toString()).isEqualTo(" World!")
+        assertThat(state.selection).isEqualTo(TextRange(0))
+        assertThat(clipboard.getText()?.toString()).isEqualTo("Hello")
     }
 
     @Test
-    fun semantics_cut_appliesFilter() {
+    fun semantics_cut_appliesFilter() = runTest {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
-        val clipboardManager = FakeClipboardManager()
+        val clipboard = FakeClipboard()
         rule.setContent {
-            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+            CompositionLocalProvider(LocalClipboard provides clipboard) {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
@@ -556,11 +552,10 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
 
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CutText)
 
-        rule.runOnIdle {
-            assertThat(state.text.toString()).isEqualTo("Hello World!")
-            assertThat(state.selection).isEqualTo(TextRange(0, 5))
-            assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello")
-        }
+        rule.waitForIdle()
+        assertThat(state.text.toString()).isEqualTo("Hello World!")
+        assertThat(state.selection).isEqualTo(TextRange(0, 5))
+        assertThat(clipboard.getText()?.toString()).isEqualTo("Hello")
     }
 
     @Test
