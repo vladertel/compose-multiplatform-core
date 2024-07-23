@@ -80,6 +80,17 @@ private val UIGestureRecognizerState.isOngoing: Boolean
         }
 
 /**
+ * Declared in file scope because ObjC types companion objects can't have fields.
+ */
+private object ForwardingGestureRecognizerConstants {
+    /**
+     * The delay in milliseconds after which the gesture recognizer should be failed if it's not
+     * detecting any movement to allow the touches to be processed exclusively by the interop view.
+     */
+    const val FAILURE_DELAY = 150L
+}
+
+/**
  * Implementation of [CMPGestureRecognizer] that handles touch events and forwards
  * them. The main difference from the original [UIView] touches based implementation is that it's built on top of
  * [CMPGestureRecognizer], which play differently with UIKit touches processing and are required
@@ -414,7 +425,7 @@ private class ForwardingGestureRecognizer(
 
         failureJob = CoroutineScope(Dispatchers.Main).launch {
             // Wait for the gesture to be recognized or failed
-            kotlinx.coroutines.delay(FAILURE_DELAY)
+            kotlinx.coroutines.delay(ForwardingGestureRecognizerConstants.FAILURE_DELAY)
 
             fail()
         }
@@ -480,14 +491,6 @@ private class ForwardingGestureRecognizer(
         val view = view ?: return
 
         onTouchesEvent(view, touches, event, phase)
-    }
-
-    companion object {
-        /**
-         * The delay in milliseconds after which the gesture recognizer should be failed if it's not
-         * detecting any movement to allow the touches to be processed exclusively by the interop view.
-         */
-        const val FAILURE_DELAY = 150L
     }
 }
 

@@ -16,7 +16,9 @@
 
 package androidx.compose.mpp.demo
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.cupertino.DragSource
 import androidx.compose.ui.draganddrop.cupertino.DropTarget
 import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
@@ -79,7 +82,7 @@ val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, BetaInteropApi::class)
+@OptIn(ExperimentalComposeUiApi::class, BetaInteropApi::class, ExperimentalFoundationApi::class)
 val DragAndDropExample = Screen.Example("Drag and drop") {
     Column(modifier = Modifier.fillMaxSize().padding(PaddingValues(top = 16.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
         var text by remember { mutableStateOf("Hello world!") }
@@ -105,18 +108,21 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .fillMaxWidth(1f)
                 .height(100.dp)
                 .background(Color.DarkGray)
-                .dragAndDrop(
-                    dragSource = object : DragSource {
-                        override fun UIDragInteraction.itemsForBeginningSession(session: UIDragSessionProtocol): List<UIDragItem> {
-                            addLog("itemsForBeginningSession")
-
-                            return listOf(
-                                text.toUIDragItem(),
-                                UIImage().toUIDragItem(UIImage)!!
-                            )
-                        }
+                .dragAndDropSource(
+                    drawDragDecoration = {
+                        // Sample blue
+                        drawRect(
+                            color = Color.Blue,
+                            size = size
+                        )
                     }
-                )
+                ) {
+                    startTransfer(DragAndDropTransferData(
+                        items = listOf(
+                            text.toUIDragItem()
+                        )
+                    ))
+                }
             ,
             color = Color.White,
             text = text

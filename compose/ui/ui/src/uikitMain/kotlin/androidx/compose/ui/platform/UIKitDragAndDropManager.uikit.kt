@@ -226,6 +226,8 @@ internal class UIKitDragAndDropManager(
         decorationSize: Size,
         drawDragDecoration: DrawScope.() -> Unit
     ): Boolean {
+        println("UIKitDragAndDropManager.drag")
+
         if (transferData.items.isEmpty()) {
             // The session without the payload is not allowed.
             dragAndDropSessionGatingGestureRecognizer.failGatedGestureRecognisers()

@@ -170,6 +170,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
         }
 
         view.addGestureRecognizer(this)
+        gatedGestureRecognizers = gestureRecognizersRequiredToFail
 
         for (gestureRecognizer in gestureRecognizersRequiredToFail) {
             gestureRecognizer.requireGestureRecognizerToFail(this)
