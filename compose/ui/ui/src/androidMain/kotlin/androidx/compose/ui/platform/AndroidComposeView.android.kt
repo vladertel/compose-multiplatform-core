@@ -88,6 +88,8 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropNode
+import androidx.compose.ui.draganddrop.DragAndDropRequesterModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropSourceScope
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusDirection.Companion.Down
@@ -2662,6 +2664,7 @@ private object AndroidComposeViewStartDragAndDropN {
 /**
  * A Class that provides access [View.OnDragListener] APIs for a [DragAndDropNode].
  */
+@OptIn(InternalComposeUiApi::class)
 private class DragAndDropModifierOnDragListener(
     private val startDrag: (
         transferData: DragAndDropTransferData,
@@ -2670,7 +2673,19 @@ private class DragAndDropModifierOnDragListener(
     ) -> Boolean
 ) : View.OnDragListener, DragAndDropManager {
 
-    private val rootDragAndDropNode = DragAndDropNode { null }
+    private val rootDragAndDropNode = DragAndDropNode()
+
+    private val dragAndDropSourceScope = object : DragAndDropSourceScope {
+        override fun startDragAndDropTransfer(
+            transferData: DragAndDropTransferData,
+            decorationSize: Size,
+            drawDragDecoration: DrawScope.() -> Unit
+        ): Boolean = startDrag(
+            transferData,
+            decorationSize,
+            drawDragDecoration,
+        )
+    }
 
     /**
      * A collection [DragAndDropModifierNode] instances that registered interested in a
@@ -2723,6 +2738,7 @@ private class DragAndDropModifierOnDragListener(
 
             DragEvent.ACTION_DRAG_ENDED -> {
                 rootDragAndDropNode.onEnded(dragAndDropEvent)
+                interestedNodes.clear()
                 false
             }
 
@@ -2730,15 +2746,9 @@ private class DragAndDropModifierOnDragListener(
         }
     }
 
-    override fun drag(
-        transferData: DragAndDropTransferData,
-        decorationSize: Size,
-        drawDragDecoration: DrawScope.() -> Unit,
-    ): Boolean = startDrag(
-        transferData,
-        decorationSize,
-        drawDragDecoration,
-    )
+    override fun requestDragAndDropTransfer(node: DragAndDropRequesterModifierNode, offset: Offset) {
+        with(node) { dragAndDropSourceScope.onStartTransfer(offset) }
+    }
 
     override fun registerNodeInterest(node: DragAndDropModifierNode) {
         interestedNodes.add(node)
