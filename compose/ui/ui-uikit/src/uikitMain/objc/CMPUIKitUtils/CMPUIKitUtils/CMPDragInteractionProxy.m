@@ -53,7 +53,15 @@ NS_ASSUME_NONNULL_BEGIN
     return [self previewForLiftingItemInSession:session item:item interaction:interaction];
 }
 
-- (UITargetedDragPreview *_Nullable)previewForLiftingItemInSession:(id<UIDragSession>)session item:(UIDragItem *)item interaction:(UIDragInteraction *)interaction CMP_ABSTRACT_FUNCTION {
+- (UITargetedDragPreview *_Nullable)previewForLiftingItemInSession:(id<UIDragSession>)session item:(UIDragItem *)item interaction:(UIDragInteraction *)interaction {
+    CMP_ABSTRACT_FUNCTION_CALLED
+}
+
+- (void)dragInteraction:(UIDragInteraction *)interaction session:(id<UIDragSession>)session didEndWithOperation:(UIDropOperation)operation {
+    [self sessionDidEndWithOperation:session interaction:interaction operation:operation];
+}
+
+- (void)sessionDidEndWithOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction operation:(UIDropOperation)operation {
     CMP_ABSTRACT_FUNCTION_CALLED
 }
 

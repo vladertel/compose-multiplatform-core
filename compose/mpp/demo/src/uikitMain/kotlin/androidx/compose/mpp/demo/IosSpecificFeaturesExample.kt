@@ -19,6 +19,8 @@ package androidx.compose.mpp.demo
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropSource
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.cupertino.DragSource
 import androidx.compose.ui.draganddrop.cupertino.DropTarget
@@ -117,11 +121,14 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                         )
                     }
                 ) {
-                    startTransfer(DragAndDropTransferData(
-                        items = listOf(
-                            text.toUIDragItem()
-                        )
-                    ))
+                    detectTapGestures(onLongPress = {
+                        println("Compose onLongPress")
+                        startTransfer(DragAndDropTransferData(
+                            items = listOf(
+                                text.toUIDragItem()
+                            )
+                        ))
+                    })
                 }
             ,
             color = Color.White,
@@ -140,34 +147,11 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .fillMaxWidth(1f)
                 .height(100.dp)
                 .background(Color.DarkGray)
-                .dragAndDrop(
-                    dropTarget = object : DropTarget {
-                        override fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean {
-                            addLog("canHandleSession")
+                .dragAndDropTarget(
+                    shouldStartDragAndDrop = { true },
+                    target = object : DragAndDropTarget {
+                        override fun onDrop(event: DragAndDropEvent): Boolean {
                             return true
-                        }
-
-                        override fun UIDropInteraction.proposalForSessionUpdate(session: UIDropSessionProtocol): UIDropProposal {
-                            addLog("proposalForSessionUpdate")
-                            return UIDropProposal(UIDropOperationCopy)
-                        }
-
-                        override fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol) {
-                            addLog("performDropFromSession")
-                            for (item in session.items) {
-                                val dragItem = item as UIDragItem
-
-                                coroutineScope.launch {
-                                    dragItem.loadString()?.let { string ->
-                                        dropText = string
-                                        return@launch // Early return from the coroutine if string is loaded
-                                    }
-
-                                    dragItem.load<UIImage>(UIImage)?.let { image ->
-                                        println("Image loaded: $image")
-                                    }
-                                }
-                            }
                         }
                     }
                 )

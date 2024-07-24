@@ -52,6 +52,7 @@ import platform.UIKit.UIDropProposal
 import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
+import platform.UIKit.UIDropOperation
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UILongPressGestureRecognizer
 import platform.UIKit.UIPreviewParameters
@@ -147,6 +148,15 @@ internal class UIKitDragAndDropManager(
             session: UIDragSessionProtocol, interaction: UIDragInteraction
         ): Boolean {
             return true
+        }
+
+        override fun sessionDidEndWithOperation(
+            session: UIDragSessionProtocol,
+            interaction: UIDragInteraction,
+            operation: UIDropOperation
+        ) {
+            sessionContext = null
+            interestedNodes.clear()
         }
     }
 

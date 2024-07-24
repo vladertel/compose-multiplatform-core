@@ -104,7 +104,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
                 "Unexpected gesture recognizer ${gestureRecognizer.className} delegated to ${this@DragAndDropSessionGatingGestureRecognizer.className}"
             }
 
-            return true
+            return otherGestureRecognizer != gatedGestureRecognizer
         }
 
         override fun gestureRecognizerShouldBeRequiredToFailByGestureRecognizer(
@@ -154,24 +154,24 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
     }
 
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent) {
-        // no-op
+        println("Touches began")
     }
 
     override fun touchesMoved(touches: Set<*>, withEvent: UIEvent) {
-        // no-op
+        println("Touches moved")
     }
 
     override fun touchesEnded(touches: Set<*>, withEvent: UIEvent) {
+        println("Touches ended")
         if (numberOfTouches == 0UL) {
-            println("Failed due to touches ending")
-            setState(UIGestureRecognizerStateFailed)
+            setState(UIGestureRecognizerStateRecognized)
         }
     }
 
     override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent) {
+        println("Touches cancelled")
         if (numberOfTouches == 0UL) {
-            println("Failed due to touches ending")
-            setState(UIGestureRecognizerStateFailed)
+            setState(UIGestureRecognizerStateRecognized)
         }
     }
 
@@ -186,11 +186,13 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
             // Failure requirements can not be met if this gesture recognizer is not in the possible
             // state. It's either already failed and sits in cancelled state, or running, so the
             // drag and drop session can't start anyway.
+            println("Can't interrupt")
             return DragAndDropSessionGatingInterruptionOutcome.IMPOSSIBLE
         }
 
         setState(UIGestureRecognizerStateFailed)
 
+        println("Interrupted")
         return DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS
     }
 
@@ -211,7 +213,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
 
         gatedGestureRecognizer = interactionGestureRecognizer
         interactionGestureRecognizer.minimumPressDuration = 0.0
-        interactionGestureRecognizer.requireGestureRecognizerToFail(this)
+        //interactionGestureRecognizer.requireGestureRecognizerToFail(this)
         interactionGestureRecognizer.addTarget(this, NSSelectorFromString(::dbgGesture.name + ":"))
     }
 }
