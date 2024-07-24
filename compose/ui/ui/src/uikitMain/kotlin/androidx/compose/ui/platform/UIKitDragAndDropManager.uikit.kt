@@ -133,13 +133,13 @@ internal class UIKitDragAndDropManager(
         ): List<*> = withSessionContext {
             println("itemsRequested")
             transferData.items
-        }
+        } ?: emptyList<UIDragItem>()
 
         override fun previewForLiftingItemInSession(
             session: UIDragSessionProtocol,
             item: UIDragItem,
             interaction: UIDragInteraction
-        ): UITargetedDragPreview = withSessionContext {
+        ): UITargetedDragPreview? = withSessionContext {
             getPreview(view, session)
         }
 
@@ -281,11 +281,6 @@ internal class UIKitDragAndDropManager(
         return interestedNodes.contains(node)
     }
 
-    private fun <R> withSessionContext(block: DragAndDropSessionContext.() -> R): R {
-        val context = checkNotNull(sessionContext) {
-            "No context set for the drag and drop session"
-        }
-
-        return context.block()
-    }
+    private fun <R> withSessionContext(block: DragAndDropSessionContext.() -> R): R? =
+        sessionContext?.block()
 }
