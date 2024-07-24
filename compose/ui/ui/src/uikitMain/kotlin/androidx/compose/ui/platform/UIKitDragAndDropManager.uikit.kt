@@ -62,17 +62,13 @@ private class DragAndDropSessionContext(
     val decorationSize: Size,
     val drawDragDecoration: DrawScope.() -> Unit
 ) {
-    private var hasEmittedPreview = false
+    private var preview: UITargetedDragPreview? = null
 
-    fun generatePreviewIfNeeded(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview? =
-        if (hasEmittedPreview) {
-            // We only generate the preview once, and then return null for subsequent calls.
-            // Delegate request a preview for every item in the session.
-            null
-        } else {
-            hasEmittedPreview = true
-            generatePreview(view, session)
+    fun getPreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
+        return preview ?: generatePreview(view, session).also {
+            preview = it
         }
+    }
 
     fun generatePreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
         val window = checkNotNull(view.window) {
@@ -139,8 +135,8 @@ internal class UIKitDragAndDropManager(
             session: UIDragSessionProtocol,
             item: UIDragItem,
             interaction: UIDragInteraction
-        ): UITargetedDragPreview? = withSessionContext {
-            generatePreviewIfNeeded(view, session)
+        ): UITargetedDragPreview = withSessionContext {
+            getPreview(view, session)
         }
 
         override fun doesSessionAllowMoveOperation(
@@ -188,7 +184,7 @@ internal class UIKitDragAndDropManager(
      * @see DragAndDropSessionGatingGestureRecognizer
      * @see DragAndDropSessionGatingInterruptionOutcome
      */
-    private val dragAndDropSessionGatingGestureRecognizer =
+    private val gatingGestureRecognizer =
         DragAndDropSessionGatingGestureRecognizer()
 
     /**
@@ -220,7 +216,7 @@ internal class UIKitDragAndDropManager(
         val postInteractionAddedSet = getViewGestureRecognizers()
         val addedGestureRecognizers = postInteractionAddedSet.fastFilter { it !in preInteractionAddedSet }
 
-        dragAndDropSessionGatingGestureRecognizer.configure(view, addedGestureRecognizers.toHashSet())
+        gatingGestureRecognizer.configure(view, addedGestureRecognizers)
     }
 
     override fun drag(
@@ -232,30 +228,25 @@ internal class UIKitDragAndDropManager(
 
         if (transferData.items.isEmpty()) {
             // The session without the payload is not allowed.
-            dragAndDropSessionGatingGestureRecognizer.failGatedGestureRecognisers()
-
             return false
         }
 
-        val interruptionOutcome = dragAndDropSessionGatingGestureRecognizer.interrupt(
-            performSessionSetup = {
+        val interruptionOutcome = gatingGestureRecognizer.interrupt()
+
+        return when (interruptionOutcome) {
+            DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS -> {
                 sessionContext = DragAndDropSessionContext(
                     transferData = transferData,
                     decorationSize = decorationSize,
                     drawDragDecoration = drawDragDecoration
                 )
-            }
-        )
 
-        return when (interruptionOutcome) {
-            DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS -> {
                 // The drag and drop session can start and is not gated by this gesture recognizer.
                 // We can't guarantee that the drag and drop session since we don't imperatively
                 // control the drag and drop session start.
                 true
             }
 
-            DragAndDropSessionGatingInterruptionOutcome.REDUNDANT_GATING,
             DragAndDropSessionGatingInterruptionOutcome.IMPOSSIBLE -> {
                 // The drag and drop session is not possible, because one of the system gesture
                 // recognizers that are required to fail can't begin during this gesture sequence

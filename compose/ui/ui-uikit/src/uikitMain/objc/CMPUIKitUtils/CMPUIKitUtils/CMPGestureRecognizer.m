@@ -7,22 +7,7 @@
 
 #import "CMPGestureRecognizer.h"
 
-@implementation CMPGestureRecognizer
-
-- (instancetype)initWithTarget:(id)target action:(SEL)action {
-    self = [super initWithTarget:target action:action];
-    
-    if (self) {        
-        self.delegate = self;
-        [self addTarget:self action:@selector(handleStateChange)];
-    }
-    
-    return self;
-}
-
-- (void)handleStateChange {
-    // No-op
-}
+@implementation CMPGestureRecognizerDelegateProxy
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return [self gestureRecognizerShouldRequireFailureOfGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
@@ -37,7 +22,7 @@
 }
 
 - (BOOL)gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    return YES;
+    return NO;
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
@@ -47,6 +32,11 @@
 - (BOOL)gestureRecognizerShouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return NO;
 }
+
+@end
+
+
+@implementation CMPGestureRecognizer
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     CMP_ABSTRACT_FUNCTION_CALLED

@@ -16,8 +16,10 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.draganddrop.className
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
+import androidx.compose.ui.uikit.utils.CMPGestureRecognizerDelegateProxy
 import androidx.compose.ui.viewinterop.InteropView
 import kotlin.experimental.ExperimentalObjCName
 import kotlinx.cinterop.CValue
@@ -44,7 +46,6 @@ import platform.UIKit.UIPressesEvent
 import platform.UIKit.UITouch
 import platform.UIKit.UITouchPhase
 import platform.UIKit.UIView
-import platform.UIKit.addInteraction
 import platform.UIKit.setState
 
 /**
@@ -89,6 +90,51 @@ internal class ForwardingGestureRecognizer(
     private var onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
     private val onTouchesCountChanged: (by: Int) -> Unit,
 ): CMPGestureRecognizer(target = null, action = null) {
+    private val delegateProxy: CMPGestureRecognizerDelegateProxy = object : CMPGestureRecognizerDelegateProxy() {
+        override fun gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer(
+            gestureRecognizer: UIGestureRecognizer,
+            otherGestureRecognizer: UIGestureRecognizer
+        ): Boolean {
+            // We should recognize simultaneously only with the gesture recognizers
+            // belonging to itself or to the views up in the hierarchy.
+
+            // Can't check if either view is null
+            val view = gestureRecognizer.view ?: return false
+            val otherView = otherGestureRecognizer.view ?: return false
+
+            val otherIsAscendant = !otherView.isDescendantOfView(view)
+
+            // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
+            // or to a view up in the hierarchy
+            val result = otherView == view || otherIsAscendant
+            println("${gestureRecognizer.className} recognizes with ${otherGestureRecognizer.className}: $result")
+            return result
+        }
+
+        override fun gestureRecognizerShouldRequireFailureOfGestureRecognizer(
+            gestureRecognizer: UIGestureRecognizer,
+            otherGestureRecognizer: UIGestureRecognizer
+        ): Boolean {
+            // We don't require other gesture recognizers to fail. Assumption is that we recognize
+            // simultaneously with the gesture recognizers of the views up in the hierarchy.
+            // And gesture recognizers down the hierarchy require to failure us.
+            println("${gestureRecognizer.className} requires failure of ${otherGestureRecognizer.className}: false")
+            return false
+        }
+
+        override fun gestureRecognizerShouldBeRequiredToFailByGestureRecognizer(
+            gestureRecognizer: UIGestureRecognizer,
+            otherGestureRecognizer: UIGestureRecognizer
+        ): Boolean {
+            // Other gesture recognizers except the case where it belongs to the same view are required
+            // to wait until we fail. In practice, it can only happen when other gesture recognizers are
+            // attached to the descendant views (aka interop views). In other cases, it's allowed to
+            // recognised simultaneously so this method will not be called.
+            val result = gestureRecognizer.view != otherGestureRecognizer.view
+            println("${otherGestureRecognizer.className} requires failure of ${gestureRecognizer.className}: $result")
+            return result
+        }
+    }
     /**
      * The actual view that was hit-tested by the first touch in the sequence.
      * It could be interop view, for example. If there are tracked touches assignment is ignored.
@@ -163,6 +209,8 @@ internal class ForwardingGestureRecognizer(
         }
 
     init {
+        delegate = delegateProxy
+
         // When is recognized, immediately cancel all touches in the subviews.
         cancelsTouchesInView = true
 
@@ -323,45 +371,6 @@ internal class ForwardingGestureRecognizer(
                 setState(UIGestureRecognizerStateFailed)
             }
         }
-    }
-
-    override fun gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer(
-        gestureRecognizer: UIGestureRecognizer,
-        otherGestureRecognizer: UIGestureRecognizer
-    ): Boolean {
-        // We should recognize simultaneously only with the gesture recognizers
-        //belonging to itself or to the views up in the hierarchy.
-
-        // Can't check if either view is null
-        val view = gestureRecognizer.view ?: return false
-        val otherView = otherGestureRecognizer.view ?: return false
-
-        val otherIsAscendant = !otherView.isDescendantOfView(view)
-
-        // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
-        // or to a view up in the hierarchy
-        return otherView == view || otherIsAscendant
-    }
-
-    override fun gestureRecognizerShouldRequireFailureOfGestureRecognizer(
-        gestureRecognizer: UIGestureRecognizer,
-        otherGestureRecognizer: UIGestureRecognizer
-    ): Boolean {
-        // We don't require other gesture recognizers to fail. Assumption is that we recognize
-        // simultaneously with the gesture recognizers of the views up in the hierarchy.
-        // And gesture recognizers down the hierarchy require to failure us.
-        return false
-    }
-
-    override fun gestureRecognizerShouldBeRequiredToFailByGestureRecognizer(
-        gestureRecognizer: UIGestureRecognizer,
-        otherGestureRecognizer: UIGestureRecognizer
-    ): Boolean {
-        // Other gesture recognizers except the case where it belongs to the same view are required
-        // to wait until we fail. In practice, it can only happen when other gesture recognizers are
-        // attached to the descendant views (aka interop views). In other cases, it's allowed to
-        // recognised simultaneously so this method will not be called.
-        return gestureRecognizer.view != otherGestureRecognizer.view
     }
 
     /**
