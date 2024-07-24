@@ -341,6 +341,7 @@ internal interface Owner : PositionCalculator {
      */
     fun registerOnLayoutCompletedListener(listener: OnLayoutCompletedListener)
 
+    @InternalComposeUiApi
     val dragAndDropManager: DragAndDropManager
 
     /**

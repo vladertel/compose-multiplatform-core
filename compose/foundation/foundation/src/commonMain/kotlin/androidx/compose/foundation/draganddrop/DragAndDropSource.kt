@@ -16,13 +16,19 @@
 
 package androidx.compose.foundation.draganddrop
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropSourceModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.isRequestDragAndDropTransferSupported
+import androidx.compose.ui.draw.CacheDrawModifierNode
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.ui.draw.DrawResult
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.LayoutAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -34,99 +40,224 @@ import androidx.compose.ui.unit.toSize
  * A scope that allows for the detection of the start of a drag and drop gesture, and subsequently
  * starting a drag and drop session.
  */
-@ExperimentalFoundationApi
-interface DragAndDropSourceScope : PointerInputScope {
+interface DragAndDropStartDetectorScope : PointerInputScope {
     /**
-     * Starts a drag and drop session with [transferData] as the data to be transferred on gesture
-     * completion
+     * Requests a drag and drop transfer. It might throw [UnsupportedOperationException] in case if
+     * the operation is not supported. [isRequestDragAndDropTransferSupported] can be used to check
+     * if it might be performed.
+     *
+     * @param offset the offset value representing position of the input pointer.
+     * @see isRequestDragAndDropTransferSupported
      */
-    fun startTransfer(transferData: DragAndDropTransferData)
+    fun requestDragAndDropTransfer(offset: Offset = Offset.Unspecified)
 }
 
 /**
- * A Modifier that allows an element it is applied to to be treated like a source for
- * drag and drop operations.
- *
- * Learn how to use [Modifier.dragAndDropSource] while providing a custom drag shadow:
- * @sample androidx.compose.foundation.samples.DragAndDropSourceWithColoredDragShadowSample
- *
- * @param drawDragDecoration provides the visual representation of the item dragged during the
- * drag and drop gesture.
- * @param block A lambda with a [DragAndDropSourceScope] as a receiver
- * which provides a [PointerInputScope] to detect the drag gesture, after which a drag and drop
- * gesture can be started with [DragAndDropSourceScope.startTransfer].
- *
+ * This typealias represents a suspend function with [DragAndDropStartDetectorScope] that is used to
+ * detect the start of a drag and drop gesture and initiate a drag and drop session.
  */
-@ExperimentalFoundationApi
-fun Modifier.dragAndDropSource(
-    drawDragDecoration: DrawScope.() -> Unit,
-    block: suspend DragAndDropSourceScope.() -> Unit
-): Modifier {
-    return this then DragAndDropSourceElement(
-        drawDragDecoration = drawDragDecoration,
-        dragAndDropSourceHandler = block,
-    )
+typealias DragAndDropStartDetector = suspend DragAndDropStartDetectorScope.() -> Unit
+
+/** Contains the default values used by [Modifier.dragAndDropSource]. */
+@Immutable
+expect object DragAndDropSourceDefaults {
+    /**
+     * The default start detector for drag and drop operations. It might vary on different
+     * platforms.
+     */
+    val DefaultStartDetector: DragAndDropStartDetector
 }
 
-@ExperimentalFoundationApi
-private data class DragAndDropSourceElement(
-    /**
-     * @see Modifier.dragAndDropSource
-     */
-    val drawDragDecoration: DrawScope.() -> Unit,
-    /**
-     * @see Modifier.dragAndDropSource
-     */
-    val dragAndDropSourceHandler: suspend DragAndDropSourceScope.() -> Unit
-) : ModifierNodeElement<DragAndDropSourceNode>() {
-    override fun create() = DragAndDropSourceNode(
-        drawDragDecoration = drawDragDecoration,
-        dragAndDropSourceHandler = dragAndDropSourceHandler,
-    )
+/**
+ * A [Modifier] that allows an element it is applied to be treated like a source for drag and drop
+ * operations. It displays the element dragged as a drag shadow.
+ *
+ * Note: customizing [detectDragStart] is supported not for all platforms. The status of such
+ * support might be checked by [isRequestDragAndDropTransferSupported].
+ *
+ * Learn how to use [Modifier.dragAndDropSource]:
+ *
+ * @sample androidx.compose.foundation.samples.TextDragAndDropSourceSample
+ * @param detectDragStart A [DragAndDropStartDetector] that determines when the drag operation
+ *   should start.
+ * @param transferData A function that receives the current offset of the drag operation and returns
+ *   the [DragAndDropTransferData] to be transferred.
+ */
+fun Modifier.dragAndDropSource(
+    detectDragStart: DragAndDropStartDetector = DragAndDropSourceDefaults.DefaultStartDetector,
+    transferData: (Offset) -> DragAndDropTransferData?
+): Modifier =
+    this then
+        DragAndDropSourceWithDefaultShadowElement(
+            detectDragStart = detectDragStart,
+            transferData = transferData
+        )
 
-    override fun update(node: DragAndDropSourceNode) = with(node) {
-        drawDragDecoration = this@DragAndDropSourceElement.drawDragDecoration
-        dragAndDropSourceHandler = this@DragAndDropSourceElement.dragAndDropSourceHandler
-    }
+/**
+ * A [Modifier] that allows an element it is applied to be treated like a source for drag and drop
+ * operations.
+ *
+ * Note: customizing [detectDragStart] is supported not for all platforms. The status of such
+ * support might be checked by [isRequestDragAndDropTransferSupported].
+ *
+ * Learn how to use [Modifier.dragAndDropSource] while providing a custom drag shadow:
+ *
+ * @sample androidx.compose.foundation.samples.DragAndDropSourceWithColoredDragShadowSample
+ * @param drawDragDecoration provides the visual representation of the item dragged during the drag
+ *   and drop gesture.
+ * @param detectDragStart A [DragAndDropStartDetector] that determines when the drag operation
+ *   should start.
+ * @param transferData A function that receives the current offset of the drag operation and returns
+ *   the [DragAndDropTransferData] to be transferred.
+ */
+fun Modifier.dragAndDropSource(
+    drawDragDecoration: DrawScope.() -> Unit,
+    detectDragStart: DragAndDropStartDetector = DragAndDropSourceDefaults.DefaultStartDetector,
+    transferData: (Offset) -> DragAndDropTransferData?
+): Modifier =
+    this then
+        DragAndDropSourceElement(
+            drawDragDecoration = drawDragDecoration,
+            detectDragStart = detectDragStart,
+            transferData = transferData
+        )
+
+private data class DragAndDropSourceElement(
+    /** @see Modifier.dragAndDropSource */
+    val drawDragDecoration: DrawScope.() -> Unit,
+    /** @see Modifier.dragAndDropSource */
+    val detectDragStart: DragAndDropStartDetector,
+    /** @see Modifier.dragAndDropSource */
+    val transferData: (Offset) -> DragAndDropTransferData?
+) : ModifierNodeElement<DragAndDropSourceNode>() {
+    override fun create() =
+        DragAndDropSourceNode(
+            drawDragDecoration = drawDragDecoration,
+            detectDragStart = detectDragStart,
+            transferData = transferData
+        )
+
+    override fun update(node: DragAndDropSourceNode) =
+        with(node) {
+            drawDragDecoration = this@DragAndDropSourceElement.drawDragDecoration
+            detectDragStart = this@DragAndDropSourceElement.detectDragStart
+            transferData = this@DragAndDropSourceElement.transferData
+        }
 
     override fun InspectorInfo.inspectableProperties() {
         name = "dragSource"
         properties["drawDragDecoration"] = drawDragDecoration
-        properties["dragAndDropSourceHandler"] = dragAndDropSourceHandler
+        properties["detectDragStart"] = detectDragStart
+        properties["transferData"] = transferData
     }
 }
 
-@ExperimentalFoundationApi
 internal class DragAndDropSourceNode(
     var drawDragDecoration: DrawScope.() -> Unit,
-    var dragAndDropSourceHandler: suspend DragAndDropSourceScope.() -> Unit
-) : DelegatingNode(),
-    LayoutAwareModifierNode {
+    var detectDragStart: DragAndDropStartDetector,
+    var transferData: (Offset) -> DragAndDropTransferData?
+) : DelegatingNode(), LayoutAwareModifierNode {
 
     private var size: IntSize = IntSize.Zero
 
-    init {
-        val dragAndDropModifierNode = delegate(
-            DragAndDropModifierNode()
+    private val dragAndDropModifierNode =
+        delegate(
+            DragAndDropSourceModifierNode { offset ->
+                val transferData = transferData(offset)
+                if (transferData != null) {
+                    startDragAndDropTransfer(
+                        transferData = transferData,
+                        decorationSize = size.toSize(),
+                        drawDragDecoration = drawDragDecoration
+                    )
+                }
+            }
         )
 
+    init {
         delegate(
             SuspendingPointerInputModifierNode {
-                dragAndDropSourceHandler(
-                    object : DragAndDropSourceScope, PointerInputScope by this {
-                        override fun startTransfer(transferData: DragAndDropTransferData) =
-                            dragAndDropModifierNode.drag(
-                                transferData = transferData,
-                                decorationSize = size.toSize(),
-                                drawDragDecoration = drawDragDecoration
-                            )
+                detectDragStart(
+                    object : DragAndDropStartDetectorScope, PointerInputScope by this {
+                        override fun requestDragAndDropTransfer(offset: Offset) {
+                            dragAndDropModifierNode.requestDragAndDropTransfer(offset)
+                        }
                     }
                 )
             }
         )
+
+        if (
+            !dragAndDropModifierNode.isRequestDragAndDropTransferSupported &&
+                detectDragStart !== DragAndDropSourceDefaults.DefaultStartDetector
+        ) {
+            throw UnsupportedOperationException(
+                "requestDragAndDropTransfer is not supported in the current environment. " +
+                    "A Drag & Drop transfer will be initiated by the platform itself"
+            )
+        }
+    }
+
+    override fun onPlaced(coordinates: LayoutCoordinates) {
+        dragAndDropModifierNode.onPlaced(coordinates)
     }
 
     override fun onRemeasured(size: IntSize) {
         this.size = size
+        dragAndDropModifierNode.onRemeasured(size)
     }
+}
+
+private data class DragAndDropSourceWithDefaultShadowElement(
+    /** @see Modifier.dragAndDropSource */
+    var detectDragStart: DragAndDropStartDetector,
+    /** @see Modifier.dragAndDropSource */
+    var transferData: (Offset) -> DragAndDropTransferData?
+) : ModifierNodeElement<DragSourceNodeWithDefaultPainter>() {
+    override fun create() =
+        DragSourceNodeWithDefaultPainter(
+            detectDragStart = detectDragStart,
+            transferData = transferData
+        )
+
+    override fun update(node: DragSourceNodeWithDefaultPainter) =
+        with(node) {
+            detectDragStart = this@DragAndDropSourceWithDefaultShadowElement.detectDragStart
+            transferData = this@DragAndDropSourceWithDefaultShadowElement.transferData
+        }
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "dragSourceWithDefaultPainter"
+        properties["detectDragStart"] = detectDragStart
+        properties["transferData"] = transferData
+    }
+}
+
+private class DragSourceNodeWithDefaultPainter(
+    detectDragStart: DragAndDropStartDetector,
+    transferData: (Offset) -> DragAndDropTransferData?
+) : DelegatingNode() {
+
+    private val cacheDrawScopeDragShadowCallback =
+        CacheDrawScopeDragShadowCallback().also {
+            delegate(CacheDrawModifierNode(it::cachePicture))
+        }
+
+    private val dragAndDropModifierNode =
+        delegate(
+            DragAndDropSourceNode(
+                drawDragDecoration = { cacheDrawScopeDragShadowCallback.drawDragShadow(this) },
+                detectDragStart = detectDragStart,
+                transferData = transferData
+            )
+        )
+
+    var detectDragStart: DragAndDropStartDetector by dragAndDropModifierNode::detectDragStart
+    var transferData: (Offset) -> DragAndDropTransferData? by dragAndDropModifierNode::transferData
+}
+
+internal expect class CacheDrawScopeDragShadowCallback() {
+    fun drawDragShadow(drawScope: DrawScope)
+
+    fun cachePicture(scope: CacheDrawScope): DrawResult
 }

@@ -21,14 +21,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.DragAndDropManager
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -36,8 +34,8 @@ import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.RootForTest
-import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.CanvasLayersComposeScene
+import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.EditCommand
@@ -115,7 +113,7 @@ interface PlatformContext {
     val parentFocusManager: FocusManager get() = EmptyFocusManager
     fun requestFocus(): Boolean = true
 
-    fun createDragAndDropManager(): PlatformDragAndDropManager = EmptyDragAndDropManager
+    fun createDragAndDropManager(): DragAndDropManager = EmptyDragAndDropManager
 
     /**
      * The listener to track [RootForTest]s.
@@ -235,21 +233,10 @@ private object EmptyFocusManager : FocusManager {
     override fun moveFocus(focusDirection: FocusDirection) = false
 }
 
-private object EmptyDragAndDropManager : PlatformDragAndDropManager {
-    override val modifier: Modifier
-        get() = Modifier
-
-    override fun drag(
-        transferData: DragAndDropTransferData,
-        decorationSize: Size,
-        drawDragDecoration: DrawScope.() -> Unit
-    ): Boolean {
-        return false
-    }
-
-    override fun registerNodeInterest(node: DragAndDropModifierNode) = Unit
-
-    override fun isInterestedNode(node: DragAndDropModifierNode): Boolean = false
+private object EmptyDragAndDropManager : DragAndDropManager {
+    override val modifier: Modifier get() = Modifier
+    override fun registerTargetInterest(target: DragAndDropTarget) = Unit
+    override fun isInterestedTarget(target: DragAndDropTarget): Boolean = false
 }
 
 /**

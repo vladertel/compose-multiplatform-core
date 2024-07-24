@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,18 @@
 
 package androidx.compose.foundation.draganddrop
 
-import android.graphics.Picture
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.DrawResult
+import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.draw
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import org.jetbrains.skia.Picture
+import org.jetbrains.skia.PictureRecorder
+import org.jetbrains.skia.Rect
 
 @Immutable
 actual object DragAndDropSourceDefaults {
@@ -49,13 +52,13 @@ internal actual class CacheDrawScopeDragShadowCallback {
 
     actual fun cachePicture(scope: CacheDrawScope): DrawResult =
         with(scope) {
-            val picture = Picture()
-            cachedPicture = picture
-            val width = this.size.width.toInt()
-            val height = this.size.height.toInt()
+            val width = this.size.width
+            val height = this.size.height
             onDrawWithContent {
-                val pictureCanvas =
-                    androidx.compose.ui.graphics.Canvas(picture.beginRecording(width, height))
+                val pictureRecorder = PictureRecorder()
+                val pictureCanvas = pictureRecorder
+                    .beginRecording(Rect.makeWH(width, height))
+                    .asComposeCanvas()
                 draw(
                     density = this,
                     layoutDirection = this.layoutDirection,
@@ -64,7 +67,9 @@ internal actual class CacheDrawScopeDragShadowCallback {
                 ) {
                     this@onDrawWithContent.drawContent()
                 }
-                picture.endRecording()
+                val picture = pictureRecorder.finishRecordingAsPicture()
+                pictureRecorder.close()
+                cachedPicture = picture
 
                 drawIntoCanvas { canvas -> canvas.nativeCanvas.drawPicture(picture) }
             }

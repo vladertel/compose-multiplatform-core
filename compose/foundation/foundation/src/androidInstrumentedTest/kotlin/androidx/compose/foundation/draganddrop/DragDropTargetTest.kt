@@ -109,9 +109,8 @@ class DragDropTargetTest {
         assertThat(dropEvents[2]).isEqualTo(0)
     }
 
-    // todo(jossiwolf) b/330481832 Investigate behavior and update
     @Test
-    fun dragAndDropTarget_changingTarget_whileDragging_doesntReceiveEvent() {
+    fun dragAndDropTarget_changingTarget_whileDragging_DoesReceiveEvent() {
         var targetKey by mutableIntStateOf(0)
         val dropEvents = mutableListOf<Int>()
         lateinit var view: View
@@ -145,7 +144,7 @@ class DragDropTargetTest {
             cancelDrag()
         }
         rule.waitForIdle()
-        assertThat(dropEvents).isEmpty()
+        assertThat(dropEvents).containsExactly(1)
     }
 
     @Test

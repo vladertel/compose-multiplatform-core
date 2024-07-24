@@ -694,6 +694,14 @@ internal class TextFieldDecoratorModifierNode(
         }
     }
 
+    override fun onPlaced(coordinates: LayoutCoordinates) {
+        dragAndDropNode.onPlaced(coordinates)
+    }
+
+    override fun onRemeasured(size: IntSize) {
+        dragAndDropNode.onRemeasured(size)
+    }
+
     private fun startInputSession(fromTap: Boolean) {
         if (!fromTap && !keyboardOptions.showKeyboardOnFocusOrDefault) return
 

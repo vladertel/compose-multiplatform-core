@@ -26,8 +26,10 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draw.DrawModifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.GraphicsContext
@@ -210,6 +212,11 @@ internal val LocalPointerIconService = staticCompositionLocalOf<PointerIconServi
 /** @see LocalScrollCaptureInProgress */
 internal val LocalProvidableScrollCaptureInProgress = compositionLocalOf { false }
 
+/** @see DragAndDropManager */
+@InternalComposeUiApi
+internal val LocalDragAndDropManager =
+    staticCompositionLocalOf<DragAndDropManager> { noLocalProvidedFor("LocalDragAndDropManager") }
+
 /**
  * True when the system is currently capturing the contents of a scrollable in this compose view or
  * any parent compose view.
@@ -245,6 +252,7 @@ internal fun ProvideCommonCompositionLocals(
         LocalWindowInfo provides owner.windowInfo,
         LocalPointerIconService provides owner.pointerIconService,
         LocalGraphicsContext provides owner.graphicsContext,
+        LocalDragAndDropManager provides owner.dragAndDropManager,
         content = content
     )
 }
