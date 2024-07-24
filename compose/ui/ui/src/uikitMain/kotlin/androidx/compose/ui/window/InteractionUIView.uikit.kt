@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
 import androidx.compose.ui.draganddrop.className
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
@@ -518,6 +519,11 @@ internal class InteractionUIView(
     )
 
     /**
+     * Gesture recognizer that gates drag and drop sessions.
+     */
+    internal val dragAndDropSessionGatingGestureRecognizer = DragAndDropSessionGatingGestureRecognizer()
+
+    /**
      * When there at least one tracked touch, we need notify [MetalRedrawer] about it. It should
      * schedule CADisplayLink which affects frequency of polling UITouch events on high frequency
      * display and forces it to match display refresh rate.
@@ -535,6 +541,7 @@ internal class InteractionUIView(
         userInteractionEnabled = true
 
         addGestureRecognizer(forwardingGestureRecognizer)
+        addGestureRecognizer(dragAndDropSessionGatingGestureRecognizer)
     }
 
     override fun canBecomeFirstResponder() = true

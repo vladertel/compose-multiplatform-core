@@ -104,28 +104,7 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
                 "Unexpected gesture recognizer ${gestureRecognizer.className} delegated to ${this@DragAndDropSessionGatingGestureRecognizer.className}"
             }
 
-            val gatedGestureRecognizers = checkNotNull(gatedGestureRecognizers) {
-                "`UIGestureRecognizerDelegate` methods called before `DragGatingGestureRecognizer.configure`"
-            }
-
-            val view = requireNotNull(view) {
-                "$this is not attached to a view"
-            }
-            val otherView = requireNotNull(otherGestureRecognizer.view) {
-                "$otherGestureRecognizer is not attached to a view"
-            }
-
-            return if (view == otherView) {
-                // We allow simultaneous recognition with other gesture recognizers to the same view
-                // and are not in the gated gesture recognizers set
-                val result = otherGestureRecognizer !in gatedGestureRecognizers
-                println("${gestureRecognizer.className} recognizes with ${otherGestureRecognizer.className}: $result")
-                result
-            } else {
-                // and all other gesture recognizers
-                println("${gestureRecognizer.className} recognizes with ${otherGestureRecognizer.className}: true")
-                true
-            }
+            return true
         }
 
         override fun gestureRecognizerShouldBeRequiredToFailByGestureRecognizer(
@@ -136,11 +115,12 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
                 "Unexpected ${gestureRecognizer.className} delegated to ${this@DragAndDropSessionGatingGestureRecognizer.className}"
             }
 
-            val gatedGestureRecognizers = checkNotNull(gatedGestureRecognizers) {
-                "`UIGestureRecognizerDelegate` methods called before `DragGatingGestureRecognizer.configure`"
+            if (gatedGestureRecognizer == null) {
+                // We don't have the gated gesture recognizers set up yet
+                return false
             }
 
-            return if (gatedGestureRecognizers.contains(otherGestureRecognizer)) {
+            return if (gatedGestureRecognizer == otherGestureRecognizer) {
                 // We require the gated gestures to wait for this gesture recognizer to fail
                 println("${otherGestureRecognizer.className} requires failure of ${gestureRecognizer.className}: true")
                 true
@@ -159,21 +139,18 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
                 "Unexpected  ${gestureRecognizer.className} delegated to ${this@DragAndDropSessionGatingGestureRecognizer.className}"
             }
 
-            checkNotNull(gatedGestureRecognizers) {
-                "`UIGestureRecognizerDelegate` methods called before `DragGatingGestureRecognizer.configure`"
-            }
-
             // We don't require other gesture recognizers to fail
             println("${gestureRecognizer.className} requires failure of ${otherGestureRecognizer.className}: false")
             return false
         }
     }
 
-    private var gatedGestureRecognizers: HashSet<UILongPressGestureRecognizer>? = null
+    private var gatedGestureRecognizer: UILongPressGestureRecognizer? = null
 
     init {
         delegate = delegateProxy
         cancelsTouchesInView = false
+        delaysTouchesEnded = false
     }
 
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent) {
@@ -186,13 +163,15 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
 
     override fun touchesEnded(touches: Set<*>, withEvent: UIEvent) {
         if (numberOfTouches == 0UL) {
-            setState(UIGestureRecognizerStateRecognized)
+            println("Failed due to touches ending")
+            setState(UIGestureRecognizerStateFailed)
         }
     }
 
     override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent) {
         if (numberOfTouches == 0UL) {
-            setState(UIGestureRecognizerStateRecognized)
+            println("Failed due to touches ending")
+            setState(UIGestureRecognizerStateFailed)
         }
     }
 
@@ -203,10 +182,6 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
      * @return [DragAndDropSessionGatingInterruptionOutcome] that describes the outcome of the interruption.
      */
     fun interrupt(): DragAndDropSessionGatingInterruptionOutcome {
-        checkNotNull(gatedGestureRecognizers) {
-            "`DragAndDropSessionGatingGestureRecognizer.interrupt` called before `configure`"
-        }
-
         if (state != UIGestureRecognizerStatePossible) {
             // Failure requirements can not be met if this gesture recognizer is not in the possible
             // state. It's either already failed and sits in cancelled state, or running, so the
@@ -221,36 +196,22 @@ internal class DragAndDropSessionGatingGestureRecognizer: CMPGestureRecognizer(t
 
     @OptIn(BetaInteropApi::class)
     @ObjCAction
-    fun handleOtherGestureRecognizer(gestureRecognizer: UILongPressGestureRecognizer) {
-        println("handleOtherGestureRecognizer: ${gestureRecognizer.className} is in state ${gestureRecognizer.state.asUIGestureRecognizerStateString()}")
+    fun dbgGesture(gestureRecognizer: UILongPressGestureRecognizer) {
+        println("${gestureRecognizer.className} is in state ${gestureRecognizer.state.asUIGestureRecognizerStateString()}")
     }
 
     /**
-     * Adds this gesture recognizer to the given [view] and sets up the required failure
-     * requirements for the [UILongPressGestureRecognizer]s that assumed to be backing the
+     * Sets up the failure requirements for the [UILongPressGestureRecognizer]s that assumed to be backing the
      * [UIDragInteraction] logic in the view.
      */
-    fun configure(view: UIView, interactionGestureRecognizers: List<UIGestureRecognizer>) {
-        check(gatedGestureRecognizers == null) {
+    fun configure(interactionGestureRecognizer: UILongPressGestureRecognizer) {
+        check(gatedGestureRecognizer == null) {
             "DragAndDropSessionGatingGestureRecognizer.configure() called multiple times"
         }
 
-        view.addGestureRecognizer(this)
-
-        gatedGestureRecognizers = interactionGestureRecognizers
-            .mapNotNull {
-                it as? UILongPressGestureRecognizer
-            }
-            .toHashSet()
-            .also { gestureRecognizers ->
-                if (gestureRecognizers.isEmpty()) {
-                    println("Warning: DragAndDropSessionGatingGestureRecognizer is configured with no gated UILongPressGestureRecognizers")
-                }
-
-                gestureRecognizers.forEach {
-                    it.minimumPressDuration = 0.0
-                    it.addTarget(this, NSSelectorFromString(::handleOtherGestureRecognizer.name + ":"))
-                }
-            }
+        gatedGestureRecognizer = interactionGestureRecognizer
+        interactionGestureRecognizer.minimumPressDuration = 0.0
+        interactionGestureRecognizer.requireGestureRecognizerToFail(this)
+        interactionGestureRecognizer.addTarget(this, NSSelectorFromString(::dbgGesture.name + ":"))
     }
 }

@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.util.fastFilter
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastMapNotNull
 import androidx.compose.ui.window.InteractionUIView
 import kotlinx.cinterop.readValue
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +53,7 @@ import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIGestureRecognizer
+import platform.UIKit.UILongPressGestureRecognizer
 import platform.UIKit.UIPreviewParameters
 import platform.UIKit.UIPreviewTarget
 import platform.UIKit.UITargetedDragPreview
@@ -128,6 +131,7 @@ internal class UIKitDragAndDropManager(
         override fun itemsForBeginningSession(
             session: UIDragSessionProtocol, interaction: UIDragInteraction
         ): List<*> = withSessionContext {
+            println("itemsRequested")
             transferData.items
         }
 
@@ -184,8 +188,8 @@ internal class UIKitDragAndDropManager(
      * @see DragAndDropSessionGatingGestureRecognizer
      * @see DragAndDropSessionGatingInterruptionOutcome
      */
-    private val gatingGestureRecognizer =
-        DragAndDropSessionGatingGestureRecognizer()
+    private val gatingGestureRecognizer: DragAndDropSessionGatingGestureRecognizer
+        get() = view.dragAndDropSessionGatingGestureRecognizer
 
     /**
      * The root [DragAndDropNode] that is used to perform traversal of the drag and drop aware
@@ -213,10 +217,22 @@ internal class UIKitDragAndDropManager(
         view.addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
         view.addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
 
-        val postInteractionAddedSet = getViewGestureRecognizers()
-        val addedGestureRecognizers = postInteractionAddedSet.fastFilter { it !in preInteractionAddedSet }
-
-        gatingGestureRecognizer.configure(view, addedGestureRecognizers)
+        getViewGestureRecognizers()
+            .fastMapNotNull {
+                if (it in preInteractionAddedSet) {
+                    null
+                } else {
+                    if (it is UILongPressGestureRecognizer) {
+                        it
+                    } else {
+                        null
+                    }
+                }
+            }
+            .firstOrNull()
+            ?.let {
+                gatingGestureRecognizer.configure(it)
+            }
     }
 
     override fun drag(
@@ -242,8 +258,8 @@ internal class UIKitDragAndDropManager(
                 )
 
                 // The drag and drop session can start and is not gated by this gesture recognizer.
-                // We can't guarantee that the drag and drop session since we don't imperatively
-                // control the drag and drop session start.
+                // We can't guarantee that the drag and drop session starts,
+                // since we don't imperatively control the drag and drop session start.
                 true
             }
 
