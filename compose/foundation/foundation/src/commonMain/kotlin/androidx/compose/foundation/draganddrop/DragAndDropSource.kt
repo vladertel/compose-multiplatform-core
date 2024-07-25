@@ -199,25 +199,27 @@ private data class DragAndDropSourceWithDefaultShadowElement(
 }
 
 private class DragSourceNodeWithDefaultPainter(
-    var detectDragStart: DragAndDropStartDetector?,
-    var transferData: (Offset) -> DragAndDropTransferData?
+    detectDragStart: DragAndDropStartDetector?,
+    transferData: (Offset) -> DragAndDropTransferData?
 ) : DelegatingNode() {
 
-    init {
-        val cacheDrawScopeDragShadowCallback =
-            CacheDrawScopeDragShadowCallback().also {
-                delegate(CacheDrawModifierNode(it::cachePicture))
-            }
-        delegate(
-            DragAndDropSourceNode(
-                drawDragDecoration = {
-                    cacheDrawScopeDragShadowCallback.drawDragShadow(this)
-                },
-                detectDragStart = detectDragStart,
-                transferData = transferData
-            )
+    private val cacheDrawScopeDragShadowCallback =
+        CacheDrawScopeDragShadowCallback().also {
+            delegate(CacheDrawModifierNode(it::cachePicture))
+        }
+
+    private val dragAndDropModifierNode = delegate(
+        DragAndDropSourceNode(
+            drawDragDecoration = {
+                cacheDrawScopeDragShadowCallback.drawDragShadow(this)
+            },
+            detectDragStart = detectDragStart,
+            transferData = transferData
         )
-    }
+    )
+
+    var detectDragStart: DragAndDropStartDetector? by dragAndDropModifierNode::detectDragStart
+    var transferData: (Offset) -> DragAndDropTransferData? by dragAndDropModifierNode::transferData
 }
 
 internal expect class CacheDrawScopeDragShadowCallback() {

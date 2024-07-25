@@ -196,7 +196,7 @@ class DragAndDropNode(
                 return@traverseSelfAndDescendants SkipSubtreeAndContinueTraversal
             }
 
-            if (onStartTransfer == null) {
+            if (currentNode.onStartTransfer == null) {
                 return@traverseSelfAndDescendants ContinueTraversal
             }
 
@@ -206,7 +206,7 @@ class DragAndDropNode(
                 return@traverseSelfAndDescendants ContinueTraversal
             }
 
-            onStartTransfer.invoke(this, localPosition)
+            currentNode.onStartTransfer.invoke(this, localPosition)
 
             if (isTransferStarted()) {
                 CancelTraversal
