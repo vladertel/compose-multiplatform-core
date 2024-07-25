@@ -132,7 +132,7 @@ internal class ForwardingGestureRecognizer(
             // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
             // or to a view up in the hierarchy
             val result = otherView == view || otherIsAscendant
-            println("${gestureRecognizer.className} recognizes with ${otherGestureRecognizer.className}: $result")
+//            println("${gestureRecognizer.className} recognizes with ${otherGestureRecognizer.className}: $result")
             return result
         }
 
@@ -143,7 +143,7 @@ internal class ForwardingGestureRecognizer(
             // We don't require other gesture recognizers to fail. Assumption is that we recognize
             // simultaneously with the gesture recognizers of the views up in the hierarchy.
             // And gesture recognizers down the hierarchy require to failure us.
-            println("${gestureRecognizer.className} requires failure of ${otherGestureRecognizer.className}: false")
+//            println("${gestureRecognizer.className} requires failure of ${otherGestureRecognizer.className}: false")
             return false
         }
 
@@ -156,7 +156,7 @@ internal class ForwardingGestureRecognizer(
             // attached to the descendant views (aka interop views). In other cases, it's allowed to
             // recognised simultaneously so this method will not be called.
             val result = gestureRecognizer.view != otherGestureRecognizer.view
-            println("${otherGestureRecognizer.className} requires failure of ${gestureRecognizer.className}: $result")
+//            println("${otherGestureRecognizer.className} requires failure of ${gestureRecognizer.className}: $result")
             return result
         }
     }

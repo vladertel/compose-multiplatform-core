@@ -17,14 +17,12 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropSourceScope
 import androidx.compose.ui.draganddrop.cupertino.loadString
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -32,9 +30,12 @@ import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.asCGRect
+import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.toDpRect
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.InteractionUIView
 import kotlinx.cinterop.readValue
+import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -144,10 +145,21 @@ internal class UIKitDragAndDropManager(
                 }
             }
 
-            val location = session.locationInView(view)
+            val density = Density(density = view.window?.screen?.scale?.toFloat() ?: 1f)
+            val offset = session
+                .locationInView(view)
+                .useContents {
+                    asDpOffset()
+                }
+                .toOffset(density)
 
             with(rootDragAndDropNode) {
-                scope.onStartTransfer(Offset.Zero) // TODO
+                scope.startDragAndDropTransfer(
+                    offset = offset,
+                    isTransferStarted = {
+                        sessionContext != null
+                    }
+                )
             }
 
             return sessionContext?.transferData?.items ?: emptyList<UIDragItem>()
@@ -220,18 +232,18 @@ internal class UIKitDragAndDropManager(
      */
     override val modifier: Modifier = DragAndDropModifier(rootDragAndDropNode)
 
-    private val interestedNodes = mutableSetOf<DragAndDropModifierNode>()
+    private val interestedNodes = mutableSetOf<DragAndDropNode>()
 
     init {
         view.addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
         view.addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
     }
 
-    override fun registerNodeInterest(node: DragAndDropModifierNode) {
+    override fun registerNodeInterest(node: DragAndDropNode) {
         interestedNodes.add(node)
     }
 
-    override fun isInterestedNode(node: DragAndDropModifierNode): Boolean {
+    override fun isInterestedNode(node: DragAndDropNode): Boolean {
         return interestedNodes.contains(node)
     }
 

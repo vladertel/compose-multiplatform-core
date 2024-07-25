@@ -113,10 +113,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .height(100.dp)
                 .background(Color.DarkGray)
                 .dragAndDropSource(
-                    detectDragStart = {
-                        detectTapGestures(onLongPress = {
-                            requestDragAndDropTransfer(it)
-                        })
+                    drawDragDecoration = {
+
                     }
                 ) {
                     DragAndDropTransferData(
@@ -151,8 +149,6 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
         Spacer(modifier = Modifier.height(20.dp))
 
         var dropText by remember { mutableStateOf("Drop here") }
-
-        val coroutineScope = rememberCoroutineScope()
 
         Text(
             modifier = Modifier
