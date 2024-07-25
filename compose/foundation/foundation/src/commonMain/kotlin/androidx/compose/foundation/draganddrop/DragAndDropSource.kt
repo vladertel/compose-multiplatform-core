@@ -18,8 +18,7 @@ package androidx.compose.foundation.draganddrop
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
-import androidx.compose.ui.draganddrop.DragAndDropRequesterModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropSourceModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draw.CacheDrawModifierNode
 import androidx.compose.ui.draw.CacheDrawScope
@@ -28,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.LayoutAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -68,7 +68,7 @@ fun Modifier.dragAndDropSource(
 ): Modifier =
     this then
         DragAndDropSourceWithDefaultShadowElement(
-            detectDragStart = detectDragStart ?: DefaultDragAndDropStartDetector,
+            detectDragStart = detectDragStart,
             transferData = transferData
         )
 
@@ -90,7 +90,7 @@ fun Modifier.dragAndDropSource(
     this then
         DragAndDropSourceElement(
             drawDragDecoration = drawDragDecoration,
-            detectDragStart = detectDragStart ?: DefaultDragAndDropStartDetector,
+            detectDragStart = detectDragStart,
             transferData = transferData
         )
 
@@ -98,7 +98,7 @@ private data class DragAndDropSourceElement(
     /** @see Modifier.dragAndDropSource */
     val drawDragDecoration: DrawScope.() -> Unit,
     /** @see Modifier.dragAndDropSource */
-    val detectDragStart: DragAndDropStartDetector,
+    val detectDragStart: DragAndDropStartDetector?,
     /** @see Modifier.dragAndDropSource */
     val transferData: (Offset) -> DragAndDropTransferData?
 ) : ModifierNodeElement<DragAndDropSourceNode>() {
@@ -126,46 +126,56 @@ private data class DragAndDropSourceElement(
 
 internal class DragAndDropSourceNode(
     var drawDragDecoration: DrawScope.() -> Unit,
-    var detectDragStart: DragAndDropStartDetector,
+    var detectDragStart: DragAndDropStartDetector?,
     var transferData: (Offset) -> DragAndDropTransferData?
 ) : DelegatingNode(), LayoutAwareModifierNode {
 
     private var size: IntSize = IntSize.Zero
 
-    init {
-        val dragAndDropModifierNode = delegate(DragAndDropModifierNode { offset ->
-            val transferData = transferData(offset)
-            if (transferData != null) {
-                startDragAndDropTransfer(
-                    transferData = transferData,
-                    decorationSize = size.toSize(),
-                    drawDragDecoration = drawDragDecoration
-                )
-            }
-        })
-
-        if (false /* system supports imperative start */) {
-//            delegate(SuspendingPointerInputModifierNode {
-//                detectDragStart(object : DragAndDropStartDetectorScope, PointerInputScope by this {
-//                    override fun requestDragAndDropTransfer(offset: Offset) {
-//                        dragAndDropModifierNode.requestDragAndDropTransfer(offset)
-//                    }
-//
-//                })
-//            })
-        } else if (detectDragStart != DefaultDragAndDropStartDetector) {
-            println("WARNING: Custom DragAndDropStartDetector is not supported")
+    private val dragAndDropModifierNode = delegate(DragAndDropSourceModifierNode { offset ->
+        val transferData = transferData(offset)
+        if (transferData != null) {
+            startDragAndDropTransfer(
+                transferData = transferData,
+                decorationSize = size.toSize(),
+                drawDragDecoration = drawDragDecoration
+            )
         }
+    })
+
+    init {
+        delegate(SuspendingPointerInputModifierNode {
+            val detectDragStart = detectDragStart ?: DefaultDragAndDropStartDetector
+            detectDragStart(object : DragAndDropStartDetectorScope, PointerInputScope by this {
+                override fun requestDragAndDropTransfer(offset: Offset) {
+                    dragAndDropModifierNode.startTransferRequester?.invoke(offset)
+                }
+            })
+        })
+    }
+
+    override fun onAttach() {
+        if (dragAndDropModifierNode.startTransferRequester == null && detectDragStart != null) {
+            throw UnsupportedOperationException(
+                "requestDragAndDropTransfer is not supported in the current environment. " +
+                    "A Drag & Drop transfer will be initiated by the platform itself"
+            )
+        }
+    }
+
+    override fun onPlaced(coordinates: LayoutCoordinates) {
+        dragAndDropModifierNode.onPlaced(coordinates)
     }
 
     override fun onRemeasured(size: IntSize) {
         this.size = size
+        dragAndDropModifierNode.onRemeasured(size)
     }
 }
 
 private data class DragAndDropSourceWithDefaultShadowElement(
     /** @see Modifier.dragAndDropSource */
-    var detectDragStart: DragAndDropStartDetector,
+    var detectDragStart: DragAndDropStartDetector?,
     /** @see Modifier.dragAndDropSource */
     var transferData: (Offset) -> DragAndDropTransferData?
 ) : ModifierNodeElement<DragSourceNodeWithDefaultPainter>() {
@@ -189,7 +199,7 @@ private data class DragAndDropSourceWithDefaultShadowElement(
 }
 
 private class DragSourceNodeWithDefaultPainter(
-    var detectDragStart: DragAndDropStartDetector,
+    var detectDragStart: DragAndDropStartDetector?,
     var transferData: (Offset) -> DragAndDropTransferData?
 ) : DelegatingNode() {
 
