@@ -17,9 +17,10 @@
 package androidx.compose.foundation.content.internal
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropTargetModifierNode
+import androidx.compose.ui.node.DelegatableNode
 
 internal expect fun ReceiveContentDragAndDropNode(
     receiveContentConfiguration: ReceiveContentConfiguration,
     dragAndDropRequestPermission: (DragAndDropEvent) -> Unit
-): DragAndDropModifierNode
+): DragAndDropTargetModifierNode

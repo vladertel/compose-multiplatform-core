@@ -20,7 +20,6 @@ import androidx.collection.ArraySet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.AwtDragAndDropTransferable
 import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferAction
 import androidx.compose.ui.draganddrop.DragAndDropTransferAction.Companion.Copy
@@ -28,7 +27,6 @@ import androidx.compose.ui.draganddrop.DragAndDropTransferAction.Companion.Link
 import androidx.compose.ui.draganddrop.DragAndDropTransferAction.Companion.Move
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropManager
-import androidx.compose.ui.draganddrop.DragAndDropRequesterModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropSourceScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -92,39 +90,11 @@ internal class AwtDragAndDropManager(
 
     private val rootDragAndDropNode = DragAndDropNode()
 
-    private val dragAndDropSourceScope = object : DragAndDropSourceScope {
-        override fun startDragAndDropTransfer(
-            transferData: DragAndDropTransferData,
-            decorationSize: Size,
-            drawDragDecoration: DrawScope.() -> Unit
-        ): Boolean {
-            // These should actually be the values in the local composition where dragAndDropSource was
-            // used, but we don't currently have access to them, so we use the ones corresponding to
-            // the root container.
-            val density = this@AwtDragAndDropManager.density
-            val layoutDirection = layoutDirectionFor(rootContainer)
-
-            transferHandler.startOutgoingTransfer(
-                transferData = transferData,
-                dragImage = renderDragImage(
-                    size = decorationSize,
-                    density = density,
-                    layoutDirection = layoutDirection,
-                    drawDragDecoration = drawDragDecoration
-                ),
-                dragDecorationOffset = transferData.dragDecorationOffset
-            )
-
-            return true
-        }
-    }
-
-
     private val transferHandler = ComposeTransferHandler()
 
     private val dropTarget = ComposeDropTarget()
 
-    private val interestedNodes = ArraySet<DragAndDropModifierNode>()
+    private val interestedNodes = ArraySet<DragAndDropNode>()
 
     private val density: Density
         get() = rootContainer.density
@@ -140,6 +110,42 @@ internal class AwtDragAndDropManager(
                 rootContainer.dropTarget = dropTarget
             }
 
+    override val startTransferRequester: ((DragAndDropNode, Offset) -> Unit)
+        get() = { node, offset ->
+            with(node) {
+                var isTransferStarted = false
+                val dragAndDropSourceScope = object : DragAndDropSourceScope {
+                    override fun startDragAndDropTransfer(
+                        transferData: DragAndDropTransferData,
+                        decorationSize: Size,
+                        drawDragDecoration: DrawScope.() -> Unit
+                    ): Boolean {
+                        // These should actually be the values in the local composition where dragAndDropSource was
+                        // used, but we don't currently have access to them, so we use the ones corresponding to
+                        // the root container.
+                        val density = this@AwtDragAndDropManager.density
+                        val layoutDirection = layoutDirectionFor(rootContainer)
+
+                        transferHandler.startOutgoingTransfer(
+                            transferData = transferData,
+                            dragImage = renderDragImage(
+                                size = decorationSize,
+                                density = density,
+                                layoutDirection = layoutDirection,
+                                drawDragDecoration = drawDragDecoration
+                            ),
+                            dragDecorationOffset = transferData.dragDecorationOffset
+                        )
+                        isTransferStarted = true
+                        return true
+                    }
+                }
+                dragAndDropSourceScope.startDragAndDropTransfer(offset) {
+                    isTransferStarted
+                }
+            }
+        }
+
     private fun Point.toOffset(): Offset {
         val scale = this@AwtDragAndDropManager.scale
         return Offset(
@@ -148,15 +154,11 @@ internal class AwtDragAndDropManager(
         )
     }
 
-    override fun requestDragAndDropTransfer(node: DragAndDropRequesterModifierNode, offset: Offset) {
-        with(node) { dragAndDropSourceScope.onStartTransfer(offset) }
-    }
-
-    override fun registerNodeInterest(node: DragAndDropModifierNode) {
+    override fun registerNodeInterest(node: DragAndDropNode) {
         interestedNodes.add(node)
     }
 
-    override fun isInterestedNode(node: DragAndDropModifierNode): Boolean {
+    override fun isInterestedNode(node: DragAndDropNode): Boolean {
         return interestedNodes.contains(node)
     }
 

@@ -22,7 +22,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropManager
-import androidx.compose.ui.draganddrop.DragAndDropModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
@@ -237,9 +237,9 @@ private object EmptyDragAndDropManager : DragAndDropManager {
     override val modifier: Modifier
         get() = Modifier
 
-    override fun registerNodeInterest(node: DragAndDropModifierNode) = Unit
+    override fun registerNodeInterest(node: DragAndDropNode) = Unit
 
-    override fun isInterestedNode(node: DragAndDropModifierNode): Boolean = false
+    override fun isInterestedNode(node: DragAndDropNode): Boolean = false
 }
 
 /**
