@@ -19,8 +19,6 @@ package androidx.compose.ui.platform
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropModifierNode
 import androidx.compose.ui.draganddrop.DragAndDropNode
-import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
-import androidx.compose.ui.draganddrop.DragAndDropSessionGatingInterruptionOutcome
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
@@ -33,9 +31,6 @@ import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
-import androidx.compose.ui.util.fastFilter
-import androidx.compose.ui.util.fastFirst
-import androidx.compose.ui.util.fastMapNotNull
 import androidx.compose.ui.window.InteractionUIView
 import kotlinx.cinterop.readValue
 import kotlinx.coroutines.CoroutineScope
@@ -192,16 +187,6 @@ internal class UIKitDragAndDropManager(
     }
 
     /**
-     * Gesture recognizer that gates the drag and drop session start until we explicitly allow it
-     * by interrupting its recognition.
-     *
-     * @see DragAndDropSessionGatingGestureRecognizer
-     * @see DragAndDropSessionGatingInterruptionOutcome
-     */
-    private val gatingGestureRecognizer: DragAndDropSessionGatingGestureRecognizer
-        get() = view.dragAndDropSessionGatingGestureRecognizer
-
-    /**
      * The root [DragAndDropNode] that is used to perform traversal of the drag and drop aware
      * nodes in the hierarchy. `null` returned implies that the root node is not an actual
      * [DragAndDropTarget].
@@ -216,33 +201,8 @@ internal class UIKitDragAndDropManager(
     private val interestedNodes = mutableSetOf<DragAndDropModifierNode>()
 
     init {
-        val getViewGestureRecognizers = {
-            view.gestureRecognizers?.map {
-                it as UIGestureRecognizer
-            } ?: emptyList()
-        }
-
-        val preInteractionAddedSet = getViewGestureRecognizers().toHashSet()
-
         view.addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
         view.addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
-
-        getViewGestureRecognizers()
-            .fastMapNotNull {
-                if (it in preInteractionAddedSet) {
-                    null
-                } else {
-                    if (it is UILongPressGestureRecognizer) {
-                        it
-                    } else {
-                        null
-                    }
-                }
-            }
-            .firstOrNull()
-            ?.let {
-                gatingGestureRecognizer.configure(it)
-            }
     }
 
     override fun drag(
@@ -250,37 +210,7 @@ internal class UIKitDragAndDropManager(
         decorationSize: Size,
         drawDragDecoration: DrawScope.() -> Unit
     ): Boolean {
-        println("UIKitDragAndDropManager.drag")
-
-        if (transferData.items.isEmpty()) {
-            // The session without the payload is not allowed.
-            return false
-        }
-
-        val interruptionOutcome = gatingGestureRecognizer.interrupt()
-
-        return when (interruptionOutcome) {
-            DragAndDropSessionGatingInterruptionOutcome.POTENTIAL_SUCCESS -> {
-                sessionContext = DragAndDropSessionContext(
-                    transferData = transferData,
-                    decorationSize = decorationSize,
-                    drawDragDecoration = drawDragDecoration
-                )
-
-                // The drag and drop session can start and is not gated by this gesture recognizer.
-                // We can't guarantee that the drag and drop session starts,
-                // since we don't imperatively control the drag and drop session start.
-                true
-            }
-
-            DragAndDropSessionGatingInterruptionOutcome.IMPOSSIBLE -> {
-                // The drag and drop session is not possible, because one of the system gesture
-                // recognizers that are required to fail can't begin during this gesture sequence
-                // Or the gating gesture recognizer is either not possible, or already running, so
-                // the drag and drop session can't start either way.
-                false
-            }
-        }
+        TODO()
     }
 
     override fun registerNodeInterest(node: DragAndDropModifierNode) {

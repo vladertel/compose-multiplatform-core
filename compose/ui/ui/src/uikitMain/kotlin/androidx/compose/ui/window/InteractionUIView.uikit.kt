@@ -16,13 +16,12 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.draganddrop.DragAndDropSessionGatingGestureRecognizer
-import androidx.compose.ui.draganddrop.className
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizerDelegateProxy
 import androidx.compose.ui.viewinterop.InteropView
 import kotlin.experimental.ExperimentalObjCName
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
@@ -33,6 +32,7 @@ import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectZero
+import platform.Foundation.NSStringFromClass
 import platform.UIKit.UIEvent
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerState
@@ -48,6 +48,30 @@ import platform.UIKit.UITouch
 import platform.UIKit.UITouchPhase
 import platform.UIKit.UIView
 import platform.UIKit.setState
+import platform.darwin.NSObject
+
+private fun UIGestureRecognizerState.asUIGestureRecognizerStateString(): String = when (this) {
+    UIGestureRecognizerStatePossible -> "Possible"
+    UIGestureRecognizerStateBegan -> "Began"
+    UIGestureRecognizerStateChanged -> "Changed"
+    UIGestureRecognizerStateEnded -> "Ended"
+    UIGestureRecognizerStateCancelled -> "Cancelled"
+    UIGestureRecognizerStateFailed -> "Failed"
+    else -> "Unknown"
+}
+
+@OptIn(BetaInteropApi::class)
+internal val NSObject.className: String
+    get() {
+        val thisClass = this.`class`() ?: return "null"
+        return NSStringFromClass(thisClass)
+            .split('.')
+            .lastOrNull() ?: "UnknownClassName"
+            // remove numbers in the end and prefix dashes
+            .replace(Regex("\\d+$"), "")
+            // remove prefix underscores
+            .replace(Regex("^_+"), "")
+    }
 
 /**
  * Subset of [UITouchPhase] reflecting immediate phase when event is received by the [UIView] or
@@ -519,11 +543,6 @@ internal class InteractionUIView(
     )
 
     /**
-     * Gesture recognizer that gates drag and drop sessions.
-     */
-    internal val dragAndDropSessionGatingGestureRecognizer = DragAndDropSessionGatingGestureRecognizer()
-
-    /**
      * When there at least one tracked touch, we need notify [MetalRedrawer] about it. It should
      * schedule CADisplayLink which affects frequency of polling UITouch events on high frequency
      * display and forces it to match display refresh rate.
@@ -541,7 +560,6 @@ internal class InteractionUIView(
         userInteractionEnabled = true
 
         addGestureRecognizer(forwardingGestureRecognizer)
-        addGestureRecognizer(dragAndDropSessionGatingGestureRecognizer)
     }
 
     override fun canBecomeFirstResponder() = true
