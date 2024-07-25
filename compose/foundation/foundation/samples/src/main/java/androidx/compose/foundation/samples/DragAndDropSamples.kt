@@ -141,15 +141,9 @@ fun TextDragAndDropSourceSample(
     Box(
         modifier = modifier
             .dragAndDropSource {
-                detectTapGestures(
-                    onLongPress = {
-                        startTransfer(
-                            DragAndDropTransferData(
-                                clipData = ClipData.newPlainText(label, label),
-                                flags = View.DRAG_FLAG_GLOBAL,
-                            )
-                        )
-                    }
+                DragAndDropTransferData(
+                    clipData = ClipData.newPlainText(label, label),
+                    flags = View.DRAG_FLAG_GLOBAL,
                 )
             }
             .border(
@@ -350,9 +344,7 @@ fun DragAndDropSourceWithColoredDragShadowSample(
                     drawRect(color)
                 },
             ) {
-                detectTapGestures(
-                    onLongPress = { startTransfer(color.toDragAndDropTransfer()) }
-                )
+                color.toDragAndDropTransfer()
             }
     )
 }
@@ -408,9 +400,7 @@ private fun Modifier.stateDragSource(
         drawRoundRect(state.color)
     },
 ) {
-    detectTapGestures(
-        onLongPress = { startTransfer(state.color.toDragAndDropTransfer()) }
-    )
+    state.color.toDragAndDropTransfer()
 }
 
 @OptIn(ExperimentalFoundationApi::class)
