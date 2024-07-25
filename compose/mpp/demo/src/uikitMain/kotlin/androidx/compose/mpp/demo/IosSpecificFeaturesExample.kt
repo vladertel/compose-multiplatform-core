@@ -113,23 +113,36 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .height(100.dp)
                 .background(Color.DarkGray)
                 .dragAndDropSource(
-                    drawDragDecoration = {
-                        // Sample blue
-                        drawRect(
-                            color = Color.Blue,
-                            size = size
-                        )
+                    detectDragStart = {
+                        detectTapGestures(onLongPress = {
+                            requestDragAndDropTransfer(it)
+                        })
                     }
                 ) {
-                    detectTapGestures(onLongPress = {
-                        println("Compose onLongPress")
-                        startTransfer(DragAndDropTransferData(
-                            items = listOf(
-                                text.toUIDragItem()
-                            )
-                        ))
-                    })
+                    DragAndDropTransferData(
+                        items = listOf(
+                            text.toUIDragItem()
+                        )
+                    )
                 }
+//                .dragAndDropSource(
+//                    drawDragDecoration = {
+//                        // Sample blue
+//                        drawRect(
+//                            color = Color.Blue,
+//                            size = size
+//                        )
+//                    }
+//                ) {
+//                    detectTapGestures(onLongPress = {
+//                        println("Compose onLongPress")
+//                        startTransfer(DragAndDropTransferData(
+//                            items = listOf(
+//                                text.toUIDragItem()
+//                            )
+//                        ))
+//                    })
+//                }
             ,
             color = Color.White,
             text = text

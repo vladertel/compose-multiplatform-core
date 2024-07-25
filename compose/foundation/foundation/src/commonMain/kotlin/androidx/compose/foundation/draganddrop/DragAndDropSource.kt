@@ -143,15 +143,16 @@ internal class DragAndDropSourceNode(
                 )
             }
         })
-        if (dragAndDropModifierNode is DragAndDropRequesterModifierNode) {
-            delegate(SuspendingPointerInputModifierNode {
-                detectDragStart(object : DragAndDropStartDetectorScope, PointerInputScope by this {
-                    override fun requestDragAndDropTransfer(offset: Offset) {
-                        dragAndDropModifierNode.requestDragAndDropTransfer(offset)
-                    }
 
-                })
-            })
+        if (false /* system supports imperative start */) {
+//            delegate(SuspendingPointerInputModifierNode {
+//                detectDragStart(object : DragAndDropStartDetectorScope, PointerInputScope by this {
+//                    override fun requestDragAndDropTransfer(offset: Offset) {
+//                        dragAndDropModifierNode.requestDragAndDropTransfer(offset)
+//                    }
+//
+//                })
+//            })
         } else if (detectDragStart != DefaultDragAndDropStartDetector) {
             println("WARNING: Custom DragAndDropStartDetector is not supported")
         }

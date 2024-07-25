@@ -22,7 +22,9 @@ import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
+import androidx.compose.ui.draganddrop.DragAndDropSourceScope
 import androidx.compose.ui.draganddrop.cupertino.loadString
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -98,7 +100,7 @@ private class DragAndDropSessionContext(
 }
 
 /**
- * The [PlatformDragAndDropManager] and corresponding delegating [DragAndDropManager] implementation
+ * The [DragAndDropManager] implementation
  * for UIKit.
  *
  * This class is responsible for managing the drag and drop interactions on the UIKit platform.
@@ -107,9 +109,9 @@ private class DragAndDropSessionContext(
  */
 internal class UIKitDragAndDropManager(
     val view: InteractionUIView,
-) : PlatformDragAndDropManager {
+) : DragAndDropManager {
     /**
-     * Context for a drag and drop session initiated by the [drag] method.
+     * Context for an ongoing drag and drop session.
      */
     private var sessionContext: DragAndDropSessionContext? = null
 
@@ -126,10 +128,30 @@ internal class UIKitDragAndDropManager(
 
         override fun itemsForBeginningSession(
             session: UIDragSessionProtocol, interaction: UIDragInteraction
-        ): List<*> = withSessionContext {
-            println("itemsRequested")
-            transferData.items
-        } ?: emptyList<UIDragItem>()
+        ): List<*> {
+            val scope = object : DragAndDropSourceScope {
+                override fun startDragAndDropTransfer(
+                    transferData: DragAndDropTransferData,
+                    decorationSize: Size,
+                    drawDragDecoration: DrawScope.() -> Unit
+                ): Boolean {
+                    sessionContext = DragAndDropSessionContext(
+                        transferData = transferData,
+                        decorationSize = decorationSize,
+                        drawDragDecoration = drawDragDecoration
+                    )
+                    return true
+                }
+            }
+
+            val location = session.locationInView(view)
+
+            with(rootDragAndDropNode) {
+                scope.onStartTransfer(Offset.Zero) // TODO
+            }
+
+            return sessionContext?.transferData?.items ?: emptyList<UIDragItem>()
+        }
 
         override fun previewForLiftingItemInSession(
             session: UIDragSessionProtocol,
@@ -191,7 +213,7 @@ internal class UIKitDragAndDropManager(
      * nodes in the hierarchy. `null` returned implies that the root node is not an actual
      * [DragAndDropTarget].
      */
-    private val rootDragAndDropNode = DragAndDropNode { null }
+    private val rootDragAndDropNode = DragAndDropNode()
 
     /**
      * The [Modifier] that can be added to the [Owners][androidx.compose.ui.node.Owner] modifier
@@ -203,14 +225,6 @@ internal class UIKitDragAndDropManager(
     init {
         view.addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
         view.addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
-    }
-
-    override fun drag(
-        transferData: DragAndDropTransferData,
-        decorationSize: Size,
-        drawDragDecoration: DrawScope.() -> Unit
-    ): Boolean {
-        TODO()
     }
 
     override fun registerNodeInterest(node: DragAndDropModifierNode) {
