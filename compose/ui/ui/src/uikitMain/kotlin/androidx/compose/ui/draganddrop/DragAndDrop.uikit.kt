@@ -17,6 +17,7 @@
 package androidx.compose.ui.draganddrop
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.DropSessionContext
 import kotlinx.cinterop.useContents
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
@@ -26,10 +27,15 @@ import platform.UIKit.UIView
 /**
  * A representation of an event sent by the platform during a drag and drop operation.
  */
-actual class DragAndDropEvent(
-    val view: UIView? = null,
-    val session: UIDropSessionProtocol? = null
-)
+actual class DragAndDropEvent internal constructor(
+    private val dropSessionContext: DropSessionContext
+) {
+    val view: UIView
+        get() = dropSessionContext.view
+
+    val session: UIDropSessionProtocol
+        get() = dropSessionContext.session
+}
 
 /**
  * On iOS drag and drop session data is represented by [UIDragItem]s, which contains
@@ -45,10 +51,7 @@ actual class DragAndDropTransferData(
  */
 internal actual val DragAndDropEvent.positionInRoot: Offset
     get() {
-        val view = view ?: return Offset.Unspecified
         val density = view.window?.screen?.nativeScale ?: return Offset.Unspecified
-        val session = session ?: return Offset.Unspecified
-
         val location = session.locationInView(view)
 
         return location.useContents {

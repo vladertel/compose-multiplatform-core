@@ -155,6 +155,13 @@ class DragAndDropNode(
     /** This as a drop target if eligible for processing * */
     private var thisDragAndDropTarget: DragAndDropTarget? = null
 
+    /**
+     * Indicates whether there is a child that is eligible to receive a drop gesture immediately.
+     * This is true if the last move happened over a child that is interested in receiving a drop.
+     */
+    val hasEligibleDropTarget: Boolean
+        get() = lastChildDragAndDropModifierNode != null && thisDragAndDropTarget != null
+
     internal var size: IntSize = IntSize.Zero
 
     override fun onRemeasured(size: IntSize) {

@@ -17,6 +17,7 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
@@ -48,7 +49,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGAffineTransformIdentity
-import platform.CoreGraphics.CGImageRelease
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIBezierPath
 import platform.UIKit.UIColor
@@ -62,6 +62,8 @@ import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIDropOperation
+import platform.UIKit.UIDropOperationCopy
+import platform.UIKit.UIDropOperationMove
 import platform.UIKit.UIImageView
 import platform.UIKit.UIPreviewParameters
 import platform.UIKit.UIPreviewTarget
@@ -69,20 +71,23 @@ import platform.UIKit.UITargetedDragPreview
 import platform.UIKit.UIView
 import platform.UIKit.UIViewContentMode
 
-private class DragAndDropSessionContext(
+/**
+ * Context of a drag session initiated from Compose.
+ */
+private class DragSessionContext(
     val transferData: DragAndDropTransferData,
     val decorationSize: Size,
     val drawDragDecoration: DrawScope.() -> Unit
 ) {
     private var preview: UITargetedDragPreview? = null
 
-    fun getPreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
-        return preview ?: generatePreview(view, session).also {
+    fun getCachedPreviewOrCreate(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
+        return preview ?: createPreview(view, session).also {
             preview = it
         }
     }
 
-    fun generatePreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
+    fun createPreview(view: UIView, session: UIDragSessionProtocol): UITargetedDragPreview {
         val window = checkNotNull(view.window) {
             "Can't generate UITargetedDragPreview for a view, detached from the window"
         }
@@ -151,6 +156,16 @@ private class DragAndDropSessionContext(
 }
 
 /**
+ * Context of a drop session, tracked by [UIDropInteraction] managed by compose.
+ */
+internal class DropSessionContext(
+    val view: UIView,
+    val session: UIDropSessionProtocol
+) {
+    val event = DragAndDropEvent(this)
+}
+
+/**
  * The [DragAndDropManager] implementation
  * for UIKit.
  *
@@ -162,9 +177,14 @@ internal class UIKitDragAndDropManager(
     val view: InteractionUIView,
 ) : DragAndDropManager {
     /**
-     * Context for an ongoing drag and drop session.
+     * Context for an ongoing drag session initiated from Compose.
      */
-    private var sessionContext: DragAndDropSessionContext? = null
+    private var dragSessionContext: DragSessionContext? = null
+
+    /**
+     * Context from an ongoing drop session, could possibly be initiated from outside of Compose.
+     */
+    private var dropSessionContext: DropSessionContext? = null
 
     /**
      * The [CMPDragInteractionProxy] that handles the serves as [UIDragInteractionDelegateProtocol] for the
@@ -186,7 +206,7 @@ internal class UIKitDragAndDropManager(
                     decorationSize: Size,
                     drawDragDecoration: DrawScope.() -> Unit
                 ): Boolean {
-                    sessionContext = DragAndDropSessionContext(
+                    dragSessionContext = DragSessionContext(
                         transferData = transferData,
                         decorationSize = decorationSize,
                         drawDragDecoration = drawDragDecoration
@@ -207,20 +227,20 @@ internal class UIKitDragAndDropManager(
                 scope.startDragAndDropTransfer(
                     offset = offset,
                     isTransferStarted = {
-                        sessionContext != null
+                        dragSessionContext != null
                     }
                 )
             }
 
-            return sessionContext?.transferData?.items ?: emptyList<UIDragItem>()
+            return dragSessionContext?.transferData?.items ?: emptyList<UIDragItem>()
         }
 
         override fun previewForLiftingItemInSession(
             session: UIDragSessionProtocol,
             item: UIDragItem,
             interaction: UIDragInteraction
-        ): UITargetedDragPreview? = withSessionContext {
-            getPreview(view, session)
+        ): UITargetedDragPreview? = withDragSessionContext {
+            getCachedPreviewOrCreate(view, session)
         }
 
         override fun doesSessionAllowMoveOperation(
@@ -234,8 +254,7 @@ internal class UIKitDragAndDropManager(
             interaction: UIDragInteraction,
             operation: UIDropOperation
         ) {
-            sessionContext = null
-            interestedNodes.clear()
+            dragSessionContext = null
         }
     }
 
@@ -243,29 +262,64 @@ internal class UIKitDragAndDropManager(
         override fun canHandleSession(
             session: UIDropSessionProtocol, interaction: UIDropInteraction
         ): Boolean {
-            return false
+            // Can't handle multiple drop sessions at the same time
+            if (dropSessionContext != null) return false
+
+            val context = DropSessionContext(view, session)
+
+            val accepts = rootDragAndDropNode.acceptDragAndDropTransfer(context.event)
+
+            if (accepts) {
+                dropSessionContext = context
+            }
+
+            return accepts
         }
+
 
         override fun performDropFromSession(
             session: UIDropSessionProtocol, interaction: UIDropInteraction
         ) {
-            CoroutineScope(Dispatchers.Main).launch {
-                for (item in session.items) {
-                    if (item !is UIDragItem) return@launch
-                    val text = item.loadString()
-                    println("Dropped string: $text")
-                }
+            withDropSessionContext {
+                rootDragAndDropNode.onDrop(event)
             }
         }
 
         override fun proposalForSessionUpdate(
             session: UIDropSessionProtocol, interaction: UIDropInteraction
-        ): UIDropProposal {
-            return UIDropProposal(UIDropOperationForbidden)
+        ): UIDropProposal = withDropSessionContext {
+            rootDragAndDropNode.onMoved(event)
+            if (rootDragAndDropNode.hasEligibleDropTarget) {
+                UIDropProposal(UIDropOperationCopy)
+            } else {
+                UIDropProposal(UIDropOperationForbidden)
+            }
+        } ?: UIDropProposal(UIDropOperationForbidden)
+
+        override fun sessionDidEnter(
+            session: UIDropSessionProtocol,
+            interaction: UIDropInteraction
+        ) {
+            withDropSessionContext {
+                rootDragAndDropNode.onEntered(event)
+            }
+        }
+
+        override fun sessionDidExit(
+            session: UIDropSessionProtocol,
+            interaction: UIDropInteraction
+        ) {
+            withDropSessionContext {
+                rootDragAndDropNode.onExited(event)
+            }
         }
 
         override fun sessionDidEnd(session: UIDropSessionProtocol, interaction: UIDropInteraction) {
-            sessionContext = null
+            withDropSessionContext {
+                rootDragAndDropNode.onEnded(event)
+            }
+
+            dropSessionContext = null
             interestedNodes.clear()
         }
     }
@@ -297,6 +351,9 @@ internal class UIKitDragAndDropManager(
         return interestedNodes.contains(node)
     }
 
-    private fun <R> withSessionContext(block: DragAndDropSessionContext.() -> R): R? =
-        sessionContext?.block()
+    private fun <R> withDragSessionContext(block: DragSessionContext.() -> R): R? =
+        dragSessionContext?.block()
+
+    private fun <R> withDropSessionContext(block: DropSessionContext.() -> R): R? =
+        dropSessionContext?.block()
 }

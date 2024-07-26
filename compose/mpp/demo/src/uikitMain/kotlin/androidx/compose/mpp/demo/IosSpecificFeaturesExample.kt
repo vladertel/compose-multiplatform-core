@@ -123,6 +123,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     shouldStartDragAndDrop = { true },
                     target = object : DragAndDropTarget {
                         override fun onDrop(event: DragAndDropEvent): Boolean {
+                            val item = event.session.items
                             return true
                         }
                     }

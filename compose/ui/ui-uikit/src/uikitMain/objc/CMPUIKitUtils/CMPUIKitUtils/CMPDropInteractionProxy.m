@@ -43,6 +43,22 @@ NS_ASSUME_NONNULL_BEGIN
     CMP_ABSTRACT_FUNCTION_CALLED
 }
 
+- (void)dropInteraction:(UIDropInteraction *)interaction sessionDidEnter:(id<UIDropSession>)session {
+    [self sessionDidEnter:session interaction:interaction];
+}
+
+- (void)sessionDidEnter:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
+    CMP_ABSTRACT_FUNCTION_CALLED
+}
+
+- (void)dropInteraction:(UIDropInteraction *)interaction sessionDidExit:(id<UIDropSession>)session {
+    [self sessionDidExit:session interaction:interaction];
+}
+
+- (void)sessionDidExit:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
+    CMP_ABSTRACT_FUNCTION_CALLED
+}
+
 @end
 
 @implementation UIDragItem (CMPLoading)

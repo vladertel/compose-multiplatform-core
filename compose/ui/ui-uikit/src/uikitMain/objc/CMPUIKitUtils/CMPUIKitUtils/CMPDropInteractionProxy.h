@@ -13,9 +13,16 @@ NS_ASSUME_NONNULL_BEGIN
 @interface CMPDropInteractionProxy : NSObject <UIDropInteractionDelegate>
 
 - (BOOL)canHandleSession:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction CMP_ABSTRACT_FUNCTION;
+
 - (void)performDropFromSession:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction CMP_ABSTRACT_FUNCTION;
+
 - (UIDropProposal *)proposalForSessionUpdate:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction CMP_ABSTRACT_FUNCTION;
+
 - (void)sessionDidEnd:(id<UIDropSession>)session interaction:(UIDropInteraction *) interaction CMP_ABSTRACT_FUNCTION;
+
+- (void)sessionDidEnter:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction CMP_ABSTRACT_FUNCTION;
+
+- (void)sessionDidExit:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction CMP_ABSTRACT_FUNCTION;
 
 @end
 
