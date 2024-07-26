@@ -96,7 +96,6 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .padding(16.dp)
                 .fillMaxWidth(1f)
                 .height(100.dp)
-                .background(Color.DarkGray)
                 .dragAndDropSource {
                     DragAndDropTransferData(
                         items = listOf(
@@ -104,6 +103,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                         )
                     )
                 }
+                .background(Color.DarkGray)
             ,
             color = Color.White,
             text = text

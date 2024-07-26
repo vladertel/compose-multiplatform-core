@@ -151,7 +151,7 @@ internal fun ImageBitmap.toCGImage(): CGImageRef? = withCGReleaseScope {
         CGColorSpaceCreateDeviceRGB()?.releasedAfterScopeEnds() ?: return@withCGReleaseScope null
 
     val bitmapInfo =
-        CGImageAlphaInfo.kCGImageAlphaFirst.value or kCGImageByteOrder32Little
+        CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or kCGImageByteOrder32Little
 
     val context = CGBitmapContextCreate(
         data = buffer.refTo(0),

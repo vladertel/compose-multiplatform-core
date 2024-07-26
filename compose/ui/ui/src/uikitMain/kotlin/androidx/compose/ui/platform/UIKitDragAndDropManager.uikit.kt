@@ -107,7 +107,7 @@ private class DragAndDropSessionContext(
 
         canvasScope.draw(density, LayoutDirection.Ltr, canvas, decorationSize) {
             drawRect(
-                color = Color.Black,
+                color = Color.Transparent,
                 topLeft = Offset.Zero,
                 size = decorationSize,
                 alpha = 1f,
