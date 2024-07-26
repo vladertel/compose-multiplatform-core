@@ -33,7 +33,6 @@ import platform.CoreGraphics.CGImageRef
 import platform.UIKit.UIColor
 import platform.CoreGraphics.CGImageRelease
 import platform.CoreGraphics.kCGImageByteOrder32Little
-import platform.CoreGraphics.kCGImagePixelFormatPacked
 import platform.UIKit.UIImage
 
 /**
@@ -47,6 +46,9 @@ internal fun Color.toUIColor() = UIColor(
     alpha = alpha.toDouble(),
 )
 
+/**
+ * Wrapper for managing the lifecycle of CoreFoundation objects inside a scope.
+ */
 internal sealed interface CFScopeReleasable {
     fun release()
 
@@ -70,7 +72,7 @@ internal sealed interface CFScopeReleasable {
     }
 }
 
-internal class CGReleaseScope {
+internal class CFReleaseScope {
     private val items = mutableListOf<CFScopeReleasable>()
 
     fun release() {
@@ -79,6 +81,11 @@ internal class CGReleaseScope {
 
     private fun add(item: CFScopeReleasable) {
         items.add(item)
+    }
+
+    fun CGImageRef.releasedAfterScopeEnds(): CGImageRef {
+        add(CFScopeReleasable.Image(this))
+        return this
     }
 
     fun CGContextRef.releasedAfterScopeEnds(): CGContextRef {
@@ -92,8 +99,8 @@ internal class CGReleaseScope {
     }
 }
 
-internal fun <R> withCGReleaseScope(block: CGReleaseScope.() -> R): R {
-    val scope = CGReleaseScope()
+internal fun <R> withCFReleaseScope(block: CFReleaseScope.() -> R): R {
+    val scope = CFReleaseScope()
     return try {
         scope.block()
     } finally {
@@ -106,7 +113,7 @@ internal fun <R> withCGReleaseScope(block: CGReleaseScope.() -> R): R {
  * Creates a iOS CoreGraphics [CGImageRef] with the contents of [ImageBitmap].
  * @return A retained [CGImageRef] that needs to be manually released via [CGImageRelease]
  */
-internal fun ImageBitmap.toCGImage(): CGImageRef? = withCGReleaseScope {
+internal fun ImageBitmap.toCGImage(): CGImageRef? = withCFReleaseScope {
     if (config != ImageBitmapConfig.Argb8888) {
         throw NotImplementedError("Only ImageBitmapConfig.Argb8888 is supported")
     }
@@ -115,40 +122,8 @@ internal fun ImageBitmap.toCGImage(): CGImageRef? = withCGReleaseScope {
 
     readPixels(buffer)
 
-    val hexLetters = listOf(
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"
-    )
-    val samplesPerWidth = 10
-    val samplesPerHeight =
-        (height.toFloat() / width.toFloat() * samplesPerWidth.toFloat()).toInt().coerceAtLeast(1)
-
-    for (ySample in 0 until samplesPerHeight) {
-        for (xSample in 0 until samplesPerWidth) {
-            val y = (ySample.toFloat() / samplesPerHeight.toFloat() * height.toFloat()).toInt()
-                .coerceAtMost(height - 1)
-            val x = (xSample.toFloat() / samplesPerWidth.toFloat() * width.toFloat()).toInt()
-                .coerceAtMost(width - 1)
-
-            val color = buffer[y * width + x]
-
-            fun Int.toHexString(): String {
-                val first = this / 16
-                val second = this % 16
-                return hexLetters[first] + hexLetters[second]
-            }
-
-            val alpha = (color shr 24 and 0xFF) / 255.0
-            val red = (color shr 16 and 0xFF).toHexString()
-            val green = (color shr 8 and 0xFF).toHexString()
-            val blue = (color and 0xFF).toHexString()
-
-            print("#$red$green$blue($alpha) ")
-        }
-        println()
-    }
-
     val colorSpace =
-        CGColorSpaceCreateDeviceRGB()?.releasedAfterScopeEnds() ?: return@withCGReleaseScope null
+        CGColorSpaceCreateDeviceRGB()?.releasedAfterScopeEnds() ?: return@withCFReleaseScope null
 
     val bitmapInfo =
         CGImageAlphaInfo.kCGImageAlphaPremultipliedFirst.value or kCGImageByteOrder32Little
@@ -161,18 +136,17 @@ internal fun ImageBitmap.toCGImage(): CGImageRef? = withCGReleaseScope {
         bytesPerRow = (4 * width).toULong(),
         space = colorSpace,
         bitmapInfo = bitmapInfo
-    )?.releasedAfterScopeEnds() ?: return@withCGReleaseScope null
+    )?.releasedAfterScopeEnds() ?: return@withCFReleaseScope null
 
     val cgImage = CGBitmapContextCreateImage(context) // must be released by the user
-    return@withCGReleaseScope cgImage
+    return@withCFReleaseScope cgImage
 }
 
 /**
  * Creates a iOS UIKit [UIImage] with the contents of [ImageBitmap].
  */
-internal fun ImageBitmap.toUIImage(): UIImage? {
-    val cgImage = toCGImage() ?: return null
-    val uiImage = UIImage.imageWithCGImage(cgImage)
-    CGImageRelease(cgImage)
-    return uiImage
+internal fun ImageBitmap.toUIImage(): UIImage? = withCFReleaseScope {
+    toCGImage()?.releasedAfterScopeEnds()?.let {
+        UIImage.imageWithCGImage(it)
+    }
 }
