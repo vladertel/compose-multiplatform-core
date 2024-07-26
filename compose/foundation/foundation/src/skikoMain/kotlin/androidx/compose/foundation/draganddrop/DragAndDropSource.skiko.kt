@@ -43,10 +43,10 @@ internal actual class CacheDrawScopeDragShadowCallback {
 
     actual fun cachePicture(scope: CacheDrawScope): DrawResult =
         with(scope) {
-            val pictureRecorder = PictureRecorder()
             val width = this.size.width
             val height = this.size.height
             onDrawWithContent {
+                val pictureRecorder = PictureRecorder()
                 val pictureCanvas = pictureRecorder
                     .beginRecording(Rect.makeWH(width, height))
                     .asComposeCanvas()
