@@ -329,8 +329,12 @@ private fun NSError.asThrowable(): Throwable = ThrowableNSError(this)
 fun String.toUIDragItem(): UIDragItem = UIDragItem.cmp_itemWithString(this)
 
 /**
- * Converts any [NSObject] to a [UIDragItem] for use in drag-and-drop operations considering if its
- * class implements [NSItemProviderWritingProtocol].
+ * Encodes [NSObject] into [UIDragItem] for use in drag-and-drop operations assuming it
+ * implements [NSItemProviderWritingProtocol].
+ *
+ * @param objCClass The ObjC class of the encoded object.
+ *
+ * @return UIDragItem containing the encoded object.
  */
 @OptIn(BetaInteropApi::class)
 @ExperimentalComposeUiApi
@@ -340,10 +344,13 @@ fun <T: NSObject> T.toUIDragItem(objCClass: ObjCClass): UIDragItem =
     }
 
 /**
- * Loads a string from the [UIDragItem] if it's stored inside, otherwise returns null.
+ * Attempt to decode a [String] from the [UIDragItem] if it's contained inside.
+ *
+ * @return String if it's encoded into the [UIDragItem], otherwise null.
+ * @throws [Throwable] wrapping [NSError] if NSItemProvider's loading fails.
  */
 @ExperimentalComposeUiApi
-suspend fun UIDragItem.loadString(): String? =
+suspend fun UIDragItem.decodeString(): String? =
     suspendCoroutine { continuation ->
         cmp_loadString { string, nsError ->
             if (nsError != null) {
@@ -355,11 +362,17 @@ suspend fun UIDragItem.loadString(): String? =
     }
 
 /**
- * Loads an object of type [T] from the [UIDragItem] if it's stored inside, otherwise returns null.
+ * Attempt to decode an object of type [T] from the [UIDragItem] if it's contained inside.
+ *
+ * @param objCClass The ObjC class of the expected object.
+ *
+ * @return The object of type [T] if it's stored inside the [UIDragItem], otherwise null.
+ * @throws Throwable wrapping [NSError] if NSItemProvider's loading fails.
+ * @throws IllegalStateException if the decoded object of class [objCClass] can't be cast to [T].
  */
 @OptIn(BetaInteropApi::class)
 @ExperimentalComposeUiApi
-suspend fun <T: NSObject> UIDragItem.load(objCClass: ObjCClass): T? =
+suspend fun <T: NSObject> UIDragItem.decodeObjectOfClass(objCClass: ObjCClass): T? =
     suspendCoroutine { continuation ->
         cmp_loadAny(objCClass) { obj, nsError ->
             if (nsError != null) {

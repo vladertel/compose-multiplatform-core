@@ -23,7 +23,6 @@ import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropSourceScope
-import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
@@ -45,9 +44,6 @@ import androidx.compose.ui.window.InteractionUIView
 import kotlin.math.roundToInt
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIBezierPath
@@ -63,7 +59,6 @@ import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIDropOperation
 import platform.UIKit.UIDropOperationCopy
-import platform.UIKit.UIDropOperationMove
 import platform.UIKit.UIImageView
 import platform.UIKit.UIPreviewParameters
 import platform.UIKit.UIPreviewTarget
@@ -290,8 +285,10 @@ internal class UIKitDragAndDropManager(
         ): UIDropProposal = withDropSessionContext {
             rootDragAndDropNode.onMoved(event)
             if (rootDragAndDropNode.hasEligibleDropTarget) {
+                println("Has target")
                 UIDropProposal(UIDropOperationCopy)
             } else {
+                println("Has no target")
                 UIDropProposal(UIDropOperationForbidden)
             }
         } ?: UIDropProposal(UIDropOperationForbidden)

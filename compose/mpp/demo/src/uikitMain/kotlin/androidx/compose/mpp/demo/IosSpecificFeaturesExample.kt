@@ -20,7 +20,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -44,12 +43,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.cupertino.decodeString
 import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.cinterop.BetaInteropApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import platform.UIKit.UIDragItem
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -123,7 +127,15 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     shouldStartDragAndDrop = { true },
                     target = object : DragAndDropTarget {
                         override fun onDrop(event: DragAndDropEvent): Boolean {
-                            val item = event.session.items
+                            CoroutineScope(Dispatchers.Main).launch {
+                                for (item in event.session.items) {
+                                    val dragItem = item as UIDragItem
+                                    dragItem.decodeString()?.let {
+                                        dropText = it
+                                    }
+                                }
+                            }
+
                             return true
                         }
                     }
