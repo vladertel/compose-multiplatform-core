@@ -335,6 +335,8 @@ fun String.toUIDragItem(): UIDragItem = UIDragItem.cmp_itemWithString(this)
  * @param objCClass The ObjC class of the encoded object.
  *
  * @return UIDragItem containing the encoded object.
+ *
+ * @throws IllegalArgumentException if the [objCClass] doesn't conform to [NSItemProviderWritingProtocol].
  */
 @OptIn(BetaInteropApi::class)
 @ExperimentalComposeUiApi
@@ -347,6 +349,7 @@ fun <T: NSObject> T.toUIDragItem(objCClass: ObjCClass): UIDragItem =
  * Attempt to decode a [String] from the [UIDragItem] if it's contained inside.
  *
  * @return String if it's encoded into the [UIDragItem], otherwise null.
+ *
  * @throws [Throwable] wrapping [NSError] if NSItemProvider's loading fails.
  */
 @ExperimentalComposeUiApi
@@ -367,6 +370,7 @@ suspend fun UIDragItem.decodeString(): String? =
  * @param objCClass The ObjC class of the expected object.
  *
  * @return The object of type [T] if it's stored inside the [UIDragItem], otherwise null.
+ *
  * @throws Throwable wrapping [NSError] if NSItemProvider's loading fails.
  * @throws IllegalStateException if the decoded object of class [objCClass] can't be cast to [T].
  */

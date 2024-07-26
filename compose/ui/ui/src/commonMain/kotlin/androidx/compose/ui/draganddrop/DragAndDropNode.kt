@@ -160,7 +160,7 @@ class DragAndDropNode(
      * This is true if the last move happened over a child that is interested in receiving a drop.
      */
     val hasEligibleDropTarget: Boolean
-        get() = lastChildDragAndDropModifierNode != null && thisDragAndDropTarget != null
+        get() = lastChildDragAndDropModifierNode != null || thisDragAndDropTarget != null
 
     internal var size: IntSize = IntSize.Zero
 
@@ -172,7 +172,6 @@ class DragAndDropNode(
 
     override fun onDetach() {
         // Clean up
-        println("onDetach null")
         thisDragAndDropTarget = null
         lastChildDragAndDropModifierNode = null
     }

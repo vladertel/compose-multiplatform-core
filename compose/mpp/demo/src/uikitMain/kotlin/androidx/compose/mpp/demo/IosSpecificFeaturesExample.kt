@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -117,6 +118,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
 
         var dropText by remember { mutableStateOf("Drop here") }
 
+        val scope = rememberCoroutineScope()
+
         Text(
             modifier = Modifier
                 .padding(16.dp)
@@ -127,7 +130,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     shouldStartDragAndDrop = { true },
                     target = object : DragAndDropTarget {
                         override fun onDrop(event: DragAndDropEvent): Boolean {
-                            CoroutineScope(Dispatchers.Main).launch {
+                            scope.launch {
                                 for (item in event.session.items) {
                                     val dragItem = item as UIDragItem
                                     dragItem.decodeString()?.let {

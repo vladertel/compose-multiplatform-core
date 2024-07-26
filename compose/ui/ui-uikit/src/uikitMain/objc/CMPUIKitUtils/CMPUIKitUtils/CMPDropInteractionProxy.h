@@ -28,9 +28,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface UIDragItem (CMPLoading)
 
-- (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *error))completionHandler;
+- (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *_Nullable error))completionHandler;
 
-- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id _Nullable result, NSError *_Nullable error))completionHandler;
+- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(NSObject *_Nullable result, NSError *_Nullable error))completionHandler;
 
 @end
 

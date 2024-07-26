@@ -151,7 +151,7 @@ private class DragSessionContext(
 }
 
 /**
- * Context of a drop session, tracked by [UIDropInteraction] managed by compose.
+ * Context of a drop session, tracked by [UIDropInteraction] managed by Compose.
  */
 internal class DropSessionContext(
     val view: UIView,
@@ -161,8 +161,7 @@ internal class DropSessionContext(
 }
 
 /**
- * The [DragAndDropManager] implementation
- * for UIKit.
+ * The [DragAndDropManager] implementation for UIKit.
  *
  * This class is responsible for managing the drag and drop interactions on the UIKit platform.
  * It is responsible for setting up the drag and drop interactions on the [view] and bridging the
@@ -285,10 +284,8 @@ internal class UIKitDragAndDropManager(
         ): UIDropProposal = withDropSessionContext {
             rootDragAndDropNode.onMoved(event)
             if (rootDragAndDropNode.hasEligibleDropTarget) {
-                println("Has target")
                 UIDropProposal(UIDropOperationCopy)
             } else {
-                println("Has no target")
                 UIDropProposal(UIDropOperationForbidden)
             }
         } ?: UIDropProposal(UIDropOperationForbidden)

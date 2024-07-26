@@ -71,7 +71,7 @@ NS_ASSUME_NONNULL_BEGIN
     }
 }
 
-- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id _Nullable result, NSError *_Nullable error))completionHandler {
+- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(NSObject *_Nullable result, NSError *_Nullable error))completionHandler {
     if (![objectClass conformsToProtocol:@protocol(NSItemProviderReading)]) {
         NSDictionary *userInfo = @{
             @"description" : [NSString stringWithFormat:@"%@ doesn't conform to protocol NSItemProviderReading and thus can't be loaded", objectClass.description]
