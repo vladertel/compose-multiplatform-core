@@ -318,9 +318,9 @@ fun Modifier.dragAndDrop(
     return composedDragAndDropModifier
 }
 
-private class ThrowableNSError(error: NSError): Throwable(error.localizedDescription)
+class ThrowableNSError(error: NSError): Throwable(error.toString())
 
-private fun NSError.asThrowable(): Throwable = ThrowableNSError(this)
+fun NSError.asThrowable(): Throwable = ThrowableNSError(this)
 
 /**
  * Converts a string to a [UIDragItem] for use in drag-and-drop operations.
@@ -353,16 +353,22 @@ fun <T: NSObject> T.toUIDragItem(objCClass: ObjCClass): UIDragItem =
  * @throws [Throwable] wrapping [NSError] if NSItemProvider's loading fails.
  */
 @ExperimentalComposeUiApi
-suspend fun UIDragItem.decodeString(): String? =
-    suspendCoroutine { continuation ->
-        cmp_loadString { string, nsError ->
-            if (nsError != null) {
-                continuation.resumeWithException(nsError.asThrowable())
-            } else {
-                continuation.resume(string)
+suspend fun UIDragItem.decodeString(): String? {
+    val localObject = localObject
+    return if (localObject is String) {
+        localObject
+    } else {
+        suspendCoroutine { continuation ->
+            cmp_loadString { string, nsError ->
+                if (nsError != null) {
+                    continuation.resumeWithException(nsError.asThrowable())
+                } else {
+                    continuation.resume(string)
+                }
             }
         }
     }
+}
 
 /**
  * Attempt to decode an object of type [T] from the [UIDragItem] if it's contained inside.
@@ -371,24 +377,30 @@ suspend fun UIDragItem.decodeString(): String? =
  *
  * @return The object of type [T] if it's stored inside the [UIDragItem], otherwise null.
  *
- * @throws Throwable wrapping [NSError] if NSItemProvider's loading fails.
+ * @throws ThrowableNSError if NSItemProvider loading fails.
  * @throws IllegalStateException if the decoded object of class [objCClass] can't be cast to [T].
  */
 @OptIn(BetaInteropApi::class)
 @ExperimentalComposeUiApi
-suspend fun <T: NSObject> UIDragItem.decodeObjectOfClass(objCClass: ObjCClass): T? =
-    suspendCoroutine { continuation ->
-        cmp_loadAny(objCClass) { obj, nsError ->
-            if (nsError != null) {
-                continuation.resumeWithException(nsError.asThrowable())
-            } else {
-                val result = obj as? T
-
-                if (result != null) {
-                    continuation.resume(result)
+suspend inline fun <reified T: NSObject> UIDragItem.decodeObjectOfClass(objCClass: ObjCClass): T? {
+    val localObject = localObject
+    return if (localObject is T) {
+        localObject
+    } else {
+        suspendCoroutine { continuation ->
+            cmp_loadAny(objCClass) { obj, nsError ->
+                if (nsError != null) {
+                    continuation.resumeWithException(nsError.asThrowable())
                 } else {
-                    continuation.resumeWithException(IllegalStateException("Failed to cast $obj to expected type"))
+                    val result = obj as? T
+
+                    if (result != null) {
+                        continuation.resume(result)
+                    } else {
+                        continuation.resumeWithException(IllegalStateException("Failed to cast $obj to expected type"))
+                    }
                 }
             }
         }
     }
+}

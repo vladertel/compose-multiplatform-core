@@ -133,6 +133,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                             scope.launch {
                                 for (item in event.session.items) {
                                     val dragItem = item as UIDragItem
+                                    println(dragItem)
+                                    println(dragItem.localObject)
                                     dragItem.decodeString()?.let {
                                         dropText = it
                                     }
