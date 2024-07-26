@@ -23,23 +23,34 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropSourceScope
 import androidx.compose.ui.draganddrop.cupertino.loadString
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.InteractionUIView
+import kotlin.math.roundToInt
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGAffineTransformIdentity
+import platform.CoreGraphics.CGImageRelease
+import platform.CoreGraphics.CGRectMake
+import platform.UIKit.UIBezierPath
 import platform.UIKit.UIColor
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
@@ -51,13 +62,12 @@ import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.addInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIDropOperation
-import platform.UIKit.UIGestureRecognizer
-import platform.UIKit.UILongPressGestureRecognizer
+import platform.UIKit.UIImageView
 import platform.UIKit.UIPreviewParameters
 import platform.UIKit.UIPreviewTarget
 import platform.UIKit.UITargetedDragPreview
 import platform.UIKit.UIView
-
+import platform.UIKit.UIViewContentMode
 
 private class DragAndDropSessionContext(
     val transferData: DragAndDropTransferData,
@@ -84,12 +94,52 @@ private class DragAndDropSessionContext(
             .toDpRect(density)
             .asCGRect()
 
-        val decorationView = UIView(frame = decorationCgRect)
-        decorationView.backgroundColor = UIColor.blueColor
+        val decorationView = UIImageView(frame = decorationCgRect)
+
+        val imageBitmap = ImageBitmap(
+            width = decorationSize.width.roundToInt(),
+            height = decorationSize.height.roundToInt(),
+            hasAlpha = false
+        )
+
+        val canvas = Canvas(imageBitmap)
+        val canvasScope = CanvasDrawScope()
+
+        canvasScope.draw(density, LayoutDirection.Ltr, canvas, decorationSize) {
+            drawRect(
+                color = Color.Black,
+                topLeft = Offset.Zero,
+                size = decorationSize,
+                alpha = 1f,
+                style = Fill
+            )
+
+            drawDragDecoration()
+        }
+
+        imageBitmap
+            .toUIImage()
+            ?.let { uiImage ->
+                decorationView.image = uiImage
+                decorationView.setOpaque(false)
+                decorationView.backgroundColor = UIColor.clearColor
+                decorationView.contentMode = UIViewContentMode.UIViewContentModeScaleToFill
+            }
+
+        val parameters = UIPreviewParameters()
+        val cornerRadius = decorationCgRect.useContents {
+            minOf(size.width / 2.0, size.height  / 2.0, 4.0)
+        }
+        val path = UIBezierPath.bezierPathWithRoundedRect(decorationCgRect.useContents {
+            CGRectMake(0.0, 0.0, size.width, size.height)
+        }, cornerRadius = cornerRadius)
+        parameters.backgroundColor = UIColor.clearColor
+        parameters.visiblePath = path
+        parameters.visiblePath = path
 
         val preview = UITargetedDragPreview(
             view = decorationView,
-            parameters = UIPreviewParameters(),
+            parameters = parameters,
             target = UIPreviewTarget(
                 container = view,
                 center = session.locationInView(view),

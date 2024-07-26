@@ -37,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -45,26 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.cupertino.DragSource
-import androidx.compose.ui.draganddrop.cupertino.DropTarget
-import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
-import androidx.compose.ui.draganddrop.cupertino.load
-import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.cinterop.BetaInteropApi
-import kotlinx.coroutines.launch
-import platform.UIKit.UIDragInteraction
-import platform.UIKit.UIDragItem
-import platform.UIKit.UIDragSessionProtocol
-import platform.UIKit.UIDropInteraction
-import platform.UIKit.UIDropOperationCopy
-import platform.UIKit.UIDropProposal
-import platform.UIKit.UIDropSessionProtocol
-import platform.UIKit.UIImage
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -112,35 +97,13 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .fillMaxWidth(1f)
                 .height(100.dp)
                 .background(Color.DarkGray)
-                .dragAndDropSource(
-                    drawDragDecoration = {
-
-                    }
-                ) {
+                .dragAndDropSource {
                     DragAndDropTransferData(
                         items = listOf(
                             text.toUIDragItem()
                         )
                     )
                 }
-//                .dragAndDropSource(
-//                    drawDragDecoration = {
-//                        // Sample blue
-//                        drawRect(
-//                            color = Color.Blue,
-//                            size = size
-//                        )
-//                    }
-//                ) {
-//                    detectTapGestures(onLongPress = {
-//                        println("Compose onLongPress")
-//                        startTransfer(DragAndDropTransferData(
-//                            items = listOf(
-//                                text.toUIDragItem()
-//                            )
-//                        ))
-//                    })
-//                }
             ,
             color = Color.White,
             text = text
