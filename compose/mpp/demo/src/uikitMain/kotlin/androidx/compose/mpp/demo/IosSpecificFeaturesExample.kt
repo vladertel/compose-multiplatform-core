@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.coroutines.launch
-import platform.UIKit.UIImage
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
