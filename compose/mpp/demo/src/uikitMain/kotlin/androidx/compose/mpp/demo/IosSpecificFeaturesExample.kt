@@ -100,9 +100,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .height(100.dp)
                 .dragAndDropSource {
                     DragAndDropTransferData {
-                        logs.add("Adding text: $text and some empty UIImage")
                         item(text)
-                        item(UIImage(), objCClass = UIImage)
                     }
                 }
                 .background(Color.DarkGray)
@@ -134,10 +132,6 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
 
                                     item.loadString()?.let {
                                         dropText += "Dropped $it\n"
-                                    }
-
-                                    item.loadObjectOfClass<UIImage>(UIImage)?.let {
-                                        dropText += "Dropped UIImage\n"
                                     }
                                 }
                             }
