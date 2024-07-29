@@ -94,7 +94,7 @@ class DragAndDropReceivedItem(
     @ExperimentalComposeUiApi
     suspend inline fun <reified T: NSObject> loadObjectOfClass(objCClass: ObjCClass): T? {
         val localObject = localObject
-        return if (localObject is T && !dbgIgnoreLocalObject) {
+        return if (localObject is T) {
             localObject
         } else {
             // Workaround around the same issue as in `loadString` function.
@@ -128,7 +128,7 @@ class DragAndDropReceivedItem(
     suspend fun loadString(): String? {
         val localObject = localObject
 
-        return if (localObject is String && !dbgIgnoreLocalObject) {
+        return if (localObject is String) {
             localObject
         } else {
             // Workaround for `NSItemProvider.loadObjectOfClass` silently failing
@@ -236,5 +236,3 @@ internal actual val DragAndDropEvent.positionInRoot: Offset
             Offset(x = (x * density).toFloat(), y = (y * density).toFloat())
         }
     }
-
-const val dbgIgnoreLocalObject = true

@@ -100,7 +100,9 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .height(100.dp)
                 .dragAndDropSource {
                     DragAndDropTransferData {
+                        logs.add("Adding text: $text and some empty UIImage")
                         item(text)
+                        item(UIImage(), objCClass = UIImage)
                     }
                 }
                 .background(Color.DarkGray)
@@ -125,12 +127,17 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     shouldStartDragAndDrop = { true },
                     target = object : DragAndDropTarget {
                         override fun onDrop(event: DragAndDropEvent): Boolean {
+                            dropText = ""
                             for (item in event.items) {
                                 scope.launch {
                                     println("localObject: ${item.localObject}")
+
                                     item.loadString()?.let {
-                                        println("loadedString: $it")
-                                        dropText = it
+                                        dropText += "Dropped $it\n"
+                                    }
+
+                                    item.loadObjectOfClass<UIImage>(UIImage)?.let {
+                                        dropText += "Dropped UIImage\n"
                                     }
                                 }
                             }
