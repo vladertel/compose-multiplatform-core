@@ -199,9 +199,9 @@ fun DragAndDropTransferDataScope.item(obj: NSObject, objCClass: ObjCClass): Unit
 
 @ExperimentalComposeUiApi
 class DragAndDropTransferDataItem(
-    val item: UIDragItem
+    internal val uiDragItem: UIDragItem
 ) {
-    constructor(string: String) : this(UIDragItem.cmp_itemWithString(string))
+    constructor(string: String) : this(uiDragItem = UIDragItem.cmp_itemWithString(string))
 
     /**
      * Creates [DragAndDropTransferDataItem] wrapping the [NSObject] that is assumed to
@@ -217,7 +217,7 @@ class DragAndDropTransferDataItem(
      */
     @OptIn(BetaInteropApi::class)
     constructor(obj: NSObject, objCClass: ObjCClass) : this(
-        requireNotNull(UIDragItem.cmp_itemWithObject(obj, ofClass = objCClass)) {
+        uiDragItem = requireNotNull(UIDragItem.cmp_itemWithObject(obj, ofClass = objCClass)) {
             "Failed to create UIDragItem from $obj, $objCClass doesn't conform to NSItemProviderWritingProtocol"
         }
     )

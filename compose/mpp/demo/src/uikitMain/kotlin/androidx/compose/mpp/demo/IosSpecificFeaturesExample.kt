@@ -101,7 +101,6 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .dragAndDropSource {
                     DragAndDropTransferData {
                         item(text)
-                        item(obj = UIImage(), objCClass = UIImage)
                     }
                 }
                 .background(Color.DarkGray)

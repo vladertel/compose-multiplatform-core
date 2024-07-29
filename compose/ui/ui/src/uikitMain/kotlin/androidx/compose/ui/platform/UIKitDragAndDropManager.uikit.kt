@@ -226,7 +226,9 @@ internal class UIKitDragAndDropManager(
                 )
             }
 
-            return dragSessionContext?.transferData?.items ?: emptyList<UIDragItem>()
+            return dragSessionContext?.transferData?.items?.map {
+                it.uiDragItem
+            } ?: emptyList<UIDragItem>()
         }
 
         override fun previewForLiftingItemInSession(
