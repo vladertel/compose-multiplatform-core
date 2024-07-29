@@ -38,7 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)cmp_itemWithString:(NSString *)string;
 
-+ (instancetype _Nullable)cmp_itemWithAny:(Class)objectClass object:(NSObject *)object;
++ (instancetype _Nullable)cmp_itemWithObject:(NSObject *)object ofClass:(Class)objectClass;
 
 @end
 

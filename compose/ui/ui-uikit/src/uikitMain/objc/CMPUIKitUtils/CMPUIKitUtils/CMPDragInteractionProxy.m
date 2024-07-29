@@ -78,11 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
     return item;
 }
 
-+ (instancetype _Nullable)cmp_itemWithAny:(Class)objectClass object:(id)object {
++ (instancetype _Nullable)cmp_itemWithObject:(NSObject *)object ofClass:(Class)objectClass {
     assert([object isKindOfClass:objectClass]);
-    
+            
     if ([objectClass conformsToProtocol:@protocol(NSItemProviderWriting)]) {
-        UIDragItem *item = [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:object]];
+        id<NSItemProviderWriting> conformingObject = (id<NSItemProviderWriting>)object;
+        UIDragItem *item = [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:conformingObject]];
         
         item.localObject = object;
         

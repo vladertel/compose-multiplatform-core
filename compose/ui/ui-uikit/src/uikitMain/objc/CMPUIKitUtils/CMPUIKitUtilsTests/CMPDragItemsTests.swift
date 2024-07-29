@@ -15,88 +15,76 @@
  */
 
 import XCTest
+import Foundation
 
-enum BinaryDataSerializationError: Error {
-    case unsupportedUti
-}
-
-final class BinaryData: NSObject, NSItemProviderWriting, NSItemProviderReading {
+final class StringWrapper: NSObject, NSItemProviderWriting, NSItemProviderReading {
     static var writableTypeIdentifiersForItemProvider: [String] {
-        ["org.jetbrains.bin"]
+        ["org.jetbrains.custom-string"]
     }
     
     static var readableTypeIdentifiersForItemProvider: [String] {
         writableTypeIdentifiersForItemProvider
     }
     
-    let data: Data
+    let string: String
     
-    init(data: Data) {
-        self.data = data
+    init(string: String) {
+        self.string = string
     }
     
     func loadData(withTypeIdentifier typeIdentifier: String, forItemProviderCompletionHandler completionHandler: @escaping @Sendable (Data?, (any Error)?) -> Void) -> Progress? {
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
-            completionHandler(self.data, nil)
+            completionHandler(self.string.data(using: .utf8)!, nil)
         }
         
         return nil
     }
     
     static func object(withItemProviderData data: Data, typeIdentifier: String) throws -> Self {
-        return Self(data: data)
+        return Self(string: String(data: data, encoding: .utf8)!)
     }
     
     override func isEqual(_ object: Any?) -> Bool {
-        guard let object = object as? BinaryData else {
+        guard let object = object as? StringWrapper else {
             return false
         }
         
-        return object.data == data
+        return object.string == string
     }
 }
 
 final class CMPDragItemsTests: XCTestCase {
+    @MainActor
     func testDragItems() async throws {
         let sourceString = "Sample string"
                 
-        let stringDragItem = await UIDragItem.cmp_item(with: sourceString)
+        let stringDragItem = UIDragItem.cmp_item(with: sourceString)
         
         let decodedString = try await stringDragItem.cmp_loadString()
         XCTAssertEqual(sourceString, decodedString)
         
-        let decodedNSString = try await stringDragItem.cmp_loadAny(NSString.self) as! NSString
+        let decodedNSString = try await stringDragItem.cmp_loadObject(of: NSString.self) as! NSString
         XCTAssertEqual(NSString(string: sourceString), decodedNSString)
                 
-        guard let sourceStringData = sourceString.data(using: .utf8) else {
+        let sourceStringWrapper = StringWrapper(string: sourceString)
+        
+        guard let stringWrapperDragItem = UIDragItem.cmp_item(with: sourceStringWrapper, of: StringWrapper.self) else {
             XCTFail()
             return
         }
         
-        let sourceBinaryData = BinaryData(data: sourceStringData)
-        
-        guard let binaryDataDragItem = await UIDragItem.cmp_item(withAny: BinaryData.self, object: sourceBinaryData) else {
+        guard let decodedStringWrapper = try await stringWrapperDragItem.cmp_loadObject(of: StringWrapper.self) as? StringWrapper else {
             XCTFail()
             return
         }
         
-        guard let decodedBinaryData = try await binaryDataDragItem.cmp_loadAny(BinaryData.self) as? BinaryData else {
+        guard let anotherDecodedStringWrapper = try await stringWrapperDragItem.cmp_loadObject(of: StringWrapper.self) as? StringWrapper else {
             XCTFail()
             return
         }
         
-        guard let anotherDecodedBinaryData = try await binaryDataDragItem.cmp_loadAny(BinaryData.self) as? BinaryData else {
-            XCTFail()
-            return
-        }
+        XCTAssertEqual(decodedStringWrapper, anotherDecodedStringWrapper)
         
-        XCTAssertEqual(decodedBinaryData, anotherDecodedBinaryData)
-        
-        guard let decodedBinaryDataString = String(data: anotherDecodedBinaryData.data, encoding: .utf8) else {
-            XCTFail()
-            return
-        }
-        
-        XCTAssertEqual(sourceString, decodedBinaryDataString)
+        XCTAssertEqual(sourceString, anotherDecodedStringWrapper.string)
     }
 }

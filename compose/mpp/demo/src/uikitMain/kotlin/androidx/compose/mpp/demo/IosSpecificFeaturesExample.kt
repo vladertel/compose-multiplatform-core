@@ -44,17 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.cupertino.decodeString
-import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
+import androidx.compose.ui.draganddrop.item
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlinx.cinterop.BetaInteropApi
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import platform.UIKit.UIDragItem
+import platform.UIKit.UIImage
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -102,11 +99,10 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .fillMaxWidth(1f)
                 .height(100.dp)
                 .dragAndDropSource {
-                    DragAndDropTransferData(
-                        items = listOf(
-                            text.toUIDragItem()
-                        )
-                    )
+                    DragAndDropTransferData {
+                        item(text)
+                        item(obj = UIImage(), objCClass = UIImage)
+                    }
                 }
                 .background(Color.DarkGray)
             ,
@@ -130,12 +126,11 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     shouldStartDragAndDrop = { true },
                     target = object : DragAndDropTarget {
                         override fun onDrop(event: DragAndDropEvent): Boolean {
-                            scope.launch {
-                                for (item in event.session.items) {
-                                    val dragItem = item as UIDragItem
-                                    println(dragItem)
-                                    println(dragItem.localObject)
-                                    dragItem.decodeString()?.let {
+                            for (item in event.items) {
+                                scope.launch {
+                                    println("localObject: ${item.localObject}")
+                                    item.loadString()?.let {
+                                        println("loadedString: $it")
                                         dropText = it
                                     }
                                 }

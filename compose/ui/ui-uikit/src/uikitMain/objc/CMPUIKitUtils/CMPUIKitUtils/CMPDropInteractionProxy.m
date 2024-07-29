@@ -64,14 +64,26 @@ NS_ASSUME_NONNULL_BEGIN
 @implementation UIDragItem (CMPLoading)
 
 - (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *_Nullable error))completionHandler {
-    if ([self.itemProvider canLoadObjectOfClass:NSString.class]) {
-        [self.itemProvider loadObjectOfClass:NSString.class completionHandler:completionHandler];
+    [self.itemProvider cmp_loadString:completionHandler];
+}
+
+- (void)cmp_loadObjectOfClass:(Class)objectClass onCompletion:(void (^)(NSObject *_Nullable result, NSError *_Nullable error))completionHandler {
+    [self.itemProvider cmp_loadObjectOfClass:objectClass onCompletion:completionHandler];
+}
+
+@end
+
+@implementation NSItemProvider (CMPLoading)
+
+- (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *_Nullable error))completionHandler {
+    if ([self canLoadObjectOfClass:NSString.class]) {
+        [self loadObjectOfClass:NSString.class completionHandler:completionHandler];
     } else {
         completionHandler(nil, nil);
     }
 }
 
-- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(NSObject *_Nullable result, NSError *_Nullable error))completionHandler {
+- (void)cmp_loadObjectOfClass:(Class)objectClass onCompletion:(void (^)(NSObject *_Nullable result, NSError *_Nullable error))completionHandler {
     if (![objectClass conformsToProtocol:@protocol(NSItemProviderReading)]) {
         NSDictionary *userInfo = @{
             @"description" : [NSString stringWithFormat:@"%@ doesn't conform to protocol NSItemProviderReading and thus can't be loaded", objectClass.description]
@@ -80,9 +92,9 @@ NS_ASSUME_NONNULL_BEGIN
         NSError *error = [NSError errorWithDomain:NSCocoaErrorDomain
                                              code:0
                                          userInfo:userInfo];
-        completionHandler(nil, error);                    
-    } else if ([self.itemProvider canLoadObjectOfClass:objectClass]) {
-        [self.itemProvider loadObjectOfClass:objectClass completionHandler:completionHandler];
+        completionHandler(nil, error);
+    } else if ([self canLoadObjectOfClass:objectClass]) {
+        [self loadObjectOfClass:objectClass completionHandler:completionHandler];
     } else {
         completionHandler(nil, nil);
     }
