@@ -36,7 +36,9 @@ final class BinaryData: NSObject, NSItemProviderWriting, NSItemProviderReading {
     }
     
     func loadData(withTypeIdentifier typeIdentifier: String, forItemProviderCompletionHandler completionHandler: @escaping @Sendable (Data?, (any Error)?) -> Void) -> Progress? {
-        completionHandler(data, nil)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+            completionHandler(self.data, nil)
+        }
         
         return nil
     }
