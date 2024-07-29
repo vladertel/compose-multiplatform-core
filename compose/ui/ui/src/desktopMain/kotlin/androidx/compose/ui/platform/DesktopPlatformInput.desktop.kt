@@ -34,14 +34,14 @@ import java.awt.im.InputMethodRequests
 import java.text.AttributedCharacterIterator
 import java.text.AttributedString
 import java.text.CharacterIterator
-import java.util.Locale
+import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 
 internal class DesktopTextInputService(private val component: PlatformComponent) :
     PlatformTextInputService {
     data class CurrentInput(
-        var value: TextFieldValue,
+        var value: TextFieldStateAdapter,
         val onEditCommand: ((List<EditCommand>) -> Unit),
         val onImeActionPerformed: ((ImeAction) -> Unit),
         val imeAction: ImeAction,
@@ -63,8 +63,39 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: (ImeAction) -> Unit
     ) {
+        startInputImpl(
+            value = TextFieldValueStateAdapter(value),
+            imeOptions = imeOptions,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed,
+        )
+    }
+
+    fun startInput(
+        value: TextFieldStateAdapter,
+        imeOptions: ImeOptions,
+        onEditCommand: (List<EditCommand>) -> Unit,
+        onImeActionPerformed: ((ImeAction) -> Unit)?
+    ) {
+        startInputImpl(
+            value = value,
+            imeOptions = imeOptions,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed ?: { }
+        )
+    }
+
+    private fun startInputImpl(
+        value: TextFieldStateAdapter,
+        imeOptions: ImeOptions,
+        onEditCommand: (List<EditCommand>) -> Unit,
+        onImeActionPerformed: (ImeAction) -> Unit
+    ) {
         val input = CurrentInput(
-            value, onEditCommand, onImeActionPerformed, imeOptions.imeAction
+            value = value,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed,
+            imeAction = imeOptions.imeAction
         )
         currentInput = input
 
@@ -83,14 +114,12 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     }
 
     override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
-        currentInput?.let { input ->
-            input.value = newValue
-        }
+        currentInput?.value = TextFieldValueStateAdapter(newValue)
     }
 
     // TODO(https://github.com/JetBrains/compose-jb/issues/2040): probably the position of input method
     //  popup isn't correct now
-    @Deprecated("This method should not be called, used BringIntoViewRequester instead.")
+    @Deprecated("This method should not be called, use BringIntoViewRequester instead.")
     override fun notifyFocusedRect(rect: Rect) {
         currentInput?.let { input ->
             input.focusedRect = rect
@@ -242,3 +271,19 @@ private fun AttributedCharacterIterator.toStringFrom(index: Int): String {
 
 private val isMac =
     System.getProperty("os.name").lowercase(Locale.ENGLISH).startsWith("mac")
+
+
+private class TextFieldValueStateAdapter(
+    val value: TextFieldValue
+): TextFieldStateAdapter {
+
+    override val text: CharSequence
+        get() = value.text
+
+    override val selection: TextRange
+        get() = value.selection
+
+    override val composition: TextRange?
+        get() = value.composition
+
+}
