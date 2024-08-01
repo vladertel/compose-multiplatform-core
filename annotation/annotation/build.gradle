@@ -19,6 +19,7 @@ androidXMultiplatform {
     androidNative()
     jvm()
     mac()
+    mingwX64()
     linux()
     linuxArm64()
     ios()
