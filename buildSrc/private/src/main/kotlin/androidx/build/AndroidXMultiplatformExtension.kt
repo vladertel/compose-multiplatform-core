@@ -430,6 +430,16 @@ open class AndroidXMultiplatformExtension(val project: Project) {
         }
     }
 
+    @JvmOverloads
+    fun mingwX64(block: Action<KotlinNativeTarget>? = null): KotlinNativeTargetWithHostTests? {
+        supportedPlatforms.add(PlatformIdentifier.MINGW_X_64)
+        return if (project.enableWindows()) {
+            kotlinExtension.mingwX64 { block?.execute(this) }
+        } else {
+            null
+        }
+    }
+
     /** Configures all mac targets supported by AndroidX. */
     @JvmOverloads
     fun mac(block: Action<KotlinNativeTarget>? = null): List<KotlinNativeTarget> {
