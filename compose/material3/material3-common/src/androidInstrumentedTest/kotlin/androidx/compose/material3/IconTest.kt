@@ -56,7 +56,8 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class IconTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule
+    val rule = createComposeRule()
 
     @Test
     fun vector_materialIconSize_dimensions() {
@@ -64,7 +65,9 @@ class IconTest {
         val height = 24.dp
         val vector = Icons.Filled.Menu
         rule
-            .setMaterialContentForSizeAssertions { Icon(vector, null) }
+            .setMaterialContentForSizeAssertions {
+                Icon(vector, null)
+            }
             .assertWidthIsEqualTo(width)
             .assertHeightIsEqualTo(height)
     }
@@ -73,16 +76,14 @@ class IconTest {
     fun vector_customIconSize_dimensions() {
         val width = 35.dp
         val height = 83.dp
-        val vector =
-            ImageVector.Builder(
-                    defaultWidth = width,
-                    defaultHeight = height,
-                    viewportWidth = width.value,
-                    viewportHeight = height.value
-                )
-                .build()
+        val vector = ImageVector.Builder(
+            defaultWidth = width, defaultHeight = height,
+            viewportWidth = width.value, viewportHeight = height.value
+        ).build()
         rule
-            .setMaterialContentForSizeAssertions { Icon(vector, null) }
+            .setMaterialContentForSizeAssertions {
+                Icon(vector, null)
+            }
             .assertWidthIsEqualTo(width)
             .assertHeightIsEqualTo(height)
     }
@@ -93,10 +94,9 @@ class IconTest {
         val height = 24.dp
         rule
             .setMaterialContentForSizeAssertions {
-                val image =
-                    with(LocalDensity.current) {
-                        ImageBitmap(width.roundToPx(), height.roundToPx())
-                    }
+                val image = with(LocalDensity.current) {
+                    ImageBitmap(width.roundToPx(), height.roundToPx())
+                }
 
                 Icon(image, null)
             }
@@ -111,10 +111,9 @@ class IconTest {
 
         rule
             .setMaterialContentForSizeAssertions {
-                val image =
-                    with(LocalDensity.current) {
-                        ImageBitmap(width.roundToPx(), height.roundToPx())
-                    }
+                val image = with(LocalDensity.current) {
+                    ImageBitmap(width.roundToPx(), height.roundToPx())
+                }
 
                 Icon(image, null)
             }
@@ -128,7 +127,9 @@ class IconTest {
         val height = 24.dp
         val painter = ColorPainter(Color.Red)
         rule
-            .setMaterialContentForSizeAssertions { Icon(painter, contentDescription = null) }
+            .setMaterialContentForSizeAssertions {
+                Icon(painter, contentDescription = null)
+            }
             .assertWidthIsEqualTo(width)
             .assertHeightIsEqualTo(height)
     }
@@ -140,10 +141,9 @@ class IconTest {
 
         rule
             .setMaterialContentForSizeAssertions {
-                val image =
-                    with(LocalDensity.current) {
-                        ImageBitmap(width.roundToPx(), height.roundToPx())
-                    }
+                val image = with(LocalDensity.current) {
+                    ImageBitmap(width.roundToPx(), height.roundToPx())
+                }
 
                 val bitmapPainter = BitmapPainter(image)
                 Icon(bitmapPainter, tint = { Color.Red }, null)
@@ -158,7 +158,9 @@ class IconTest {
         val height = 24.dp
         val painter = ColorPainter(Color.Red)
         rule
-            .setMaterialContentForSizeAssertions { Icon(painter, tint = { Color.Red }, null) }
+            .setMaterialContentForSizeAssertions {
+                Icon(painter, tint = { Color.Red }, null)
+            }
             .assertWidthIsEqualTo(width)
             .assertHeightIsEqualTo(height)
     }
@@ -170,10 +172,9 @@ class IconTest {
 
         rule
             .setMaterialContentForSizeAssertions {
-                val image =
-                    with(LocalDensity.current) {
-                        ImageBitmap(width.roundToPx(), height.roundToPx())
-                    }
+                val image = with(LocalDensity.current) {
+                    ImageBitmap(width.roundToPx(), height.roundToPx())
+                }
 
                 val bitmapPainter = BitmapPainter(image)
                 Icon(bitmapPainter, null)
@@ -193,8 +194,12 @@ class IconTest {
         rule.setMaterialContent(lightColorScheme()) {
             val image: ImageBitmap
             with(LocalDensity.current) {
-                image =
-                    createBitmapWithColor(this, width.roundToPx(), height.roundToPx(), Color.Red)
+                image = createBitmapWithColor(
+                    this,
+                    width.roundToPx(),
+                    height.roundToPx(),
+                    Color.Red
+                )
             }
             Icon(
                 image,
@@ -209,11 +214,12 @@ class IconTest {
             }
         }
 
-        rule
-            .onNodeWithTag(testTag)
+        rule.onNodeWithTag(testTag)
             .captureToImage()
             // The icon should be 50x50 and fill the whole size with red pixels
-            .assertPixels(expectedSize = expectedIntSize!!) { Color.Red }
+            .assertPixels(expectedSize = expectedIntSize!!) {
+                Color.Red
+            }
     }
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
@@ -225,8 +231,12 @@ class IconTest {
         rule.setMaterialContent(lightColorScheme()) {
             val image: ImageBitmap
             with(LocalDensity.current) {
-                image =
-                    createBitmapWithColor(this, width.roundToPx(), height.roundToPx(), Color.Red)
+                image = createBitmapWithColor(
+                    this,
+                    width.roundToPx(),
+                    height.roundToPx(),
+                    Color.Red
+                )
             }
             Icon(image, null, modifier = Modifier.testTag(testTag), tint = Color.Unspecified)
         }
@@ -244,8 +254,12 @@ class IconTest {
         rule.setMaterialContent(lightColorScheme()) {
             val image: ImageBitmap
             with(LocalDensity.current) {
-                image =
-                    createBitmapWithColor(this, width.roundToPx(), height.roundToPx(), Color.Red)
+                image = createBitmapWithColor(
+                    this,
+                    width.roundToPx(),
+                    height.roundToPx(),
+                    Color.Red
+                )
             }
             Icon(image, null, modifier = Modifier.testTag(testTag), tint = Color.Blue)
         }
@@ -265,8 +279,7 @@ class IconTest {
             )
         }
 
-        rule
-            .onNodeWithTag(testTag)
+        rule.onNodeWithTag(testTag)
             .assertContentDescriptionEquals("qwerty")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Image))
     }
@@ -279,7 +292,12 @@ class IconTest {
     ): ImageBitmap {
         val size = Size(width.toFloat(), height.toFloat())
         val image = ImageBitmap(width, height)
-        CanvasDrawScope().draw(density, LayoutDirection.Ltr, Canvas(image), size) {
+        CanvasDrawScope().draw(
+            density,
+            LayoutDirection.Ltr,
+            Canvas(image),
+            size
+        ) {
             drawRect(color)
         }
         return image
