@@ -24,7 +24,6 @@ import androidx.compose.runtime.mock.compositionTest
 import androidx.compose.runtime.tooling.CompositionData
 import androidx.compose.runtime.tooling.CompositionGroup
 import kotlin.jvm.JvmInline
-import kotlin.test.Ignore
 
 import kotlin.test.Test
 import kotlinx.test.IgnoreJsTarget
@@ -35,8 +34,6 @@ import kotlinx.test.IgnoreJsTarget
 // more groups than these tests expect. The behaviour of the composition is still correct (?).
 class GroupSizeValidationTests {
 
-    // TODO reenable in https://youtrack.jetbrains.com/issue/COMPOSE-1504/Compose-1.7.-Enable-Strong-Skipping-mode-for-the-sources
-    @Ignore
     @Test
     fun spacerLike() = compositionTest {
         slotExpect(
@@ -48,8 +45,6 @@ class GroupSizeValidationTests {
         }
     }
 
-    // TODO reenable in https://youtrack.jetbrains.com/issue/COMPOSE-1504/Compose-1.7.-Enable-Strong-Skipping-mode-for-the-sources
-    @Ignore
     @Test
     fun columnLikeSize() = compositionTest {
         slotExpect(
@@ -66,8 +61,6 @@ class GroupSizeValidationTests {
         slotExpect(name = "TextLike", noMoreGroupsThan = 4, noMoreSlotsThan = 4) { TextLike("") }
     }
 
-    // TODO reenable in https://youtrack.jetbrains.com/issue/COMPOSE-1504/Compose-1.7.-Enable-Strong-Skipping-mode-for-the-sources
-    @Ignore
     @Test
     fun basicTextLikeSize() = compositionTest {
         slotExpect(name = "TextLike", noMoreGroupsThan = 5, noMoreSlotsThan = 13) {
@@ -75,8 +68,6 @@ class GroupSizeValidationTests {
         }
     }
 
-    // TODO reenable in https://youtrack.jetbrains.com/issue/COMPOSE-1504/Compose-1.7.-Enable-Strong-Skipping-mode-for-the-sources
-    @Ignore
     @Test
     fun checkboxLike() = compositionTest {
         slotExpect(name = "CheckboxLike", noMoreGroupsThan = 8, noMoreSlotsThan = 17) {
