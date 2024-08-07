@@ -753,6 +753,36 @@ internal class ComposeSceneMediator(
         override val textInputService get() = this@ComposeSceneMediator.uiKitTextInputService
         override val textToolbar get() = this@ComposeSceneMediator.uiKitTextInputService
         override val semanticsOwnerListener get() = this@ComposeSceneMediator.semanticsOwnerListener
+
+        private val textInputSessionMutex = SessionMutex<IOSTextInputSession>()
+
+        override suspend fun textInputSession(session: suspend PlatformTextInputSessionScope.() -> Nothing): Nothing =
+            textInputSessionMutex.withSessionCancellingPrevious(
+                sessionInitializer = {
+                    IOSTextInputSession(it)
+                },
+                session = session
+            )
+    }
+
+    private inner class IOSTextInputSession(
+        coroutineScope: CoroutineScope
+    ) : PlatformTextInputSessionScope, CoroutineScope by coroutineScope {
+        private val innerSessionMutex = SessionMutex<Nothing?>()
+
+        override suspend fun startInputMethod(request: PlatformTextInputMethodRequest): Nothing =
+            innerSessionMutex.withSessionCancellingPrevious(
+                sessionInitializer = { null }
+            ) {
+                suspendCancellableCoroutine<Nothing> { continuation ->
+                    uiKitTextInputService.startInput(
+                        value = request.state,
+                        imeOptions = request.imeOptions,
+                        onEditCommand = request.onEditCommand,
+                        onImeActionPerformed = request.onImeAction
+                    )
+                }
+            }
     }
 }
 
