@@ -781,6 +781,10 @@ internal class ComposeSceneMediator(
                         onEditCommand = request.onEditCommand,
                         onImeActionPerformed = request.onImeAction
                     )
+
+                    continuation.invokeOnCancellation {
+                        uiKitTextInputService.stopInput()
+                    }
                 }
             }
     }
