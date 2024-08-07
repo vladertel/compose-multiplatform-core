@@ -28,6 +28,7 @@ import androidx.compose.foundation.EdgeEffectCompat.distanceCompat
 import androidx.compose.foundation.EdgeEffectCompat.onAbsorbCompat
 import androidx.compose.foundation.EdgeEffectCompat.onPullDistanceCompat
 import androidx.compose.foundation.EdgeEffectCompat.onReleaseWithOppositeDelta
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
@@ -528,6 +529,28 @@ internal class AndroidEdgeEffectOverscrollEffect(
         val consumedByDelta = performScroll(leftForDelta)
         val leftForOverscroll = leftForDelta - consumedByDelta
 
+        // If there was some delta available for scrolling (we aren't consuming delta to relax),
+        // scrolling consumed some of this delta, and we are stretched, this means that the scroll
+        // started to consume again after previously not consuming. This can happen for example when
+        // a new item was added to the end of the list, so we want to release the stretch and let
+        // scrolling continue to happen without the stretch being 'stuck'. We compare x and y values
+        // individually to avoid issues due to Offset(-0,0) != Offset(0,0)
+        if (
+            (leftForDelta.x != 0f || leftForDelta.y != 0f) &&
+                (consumedByDelta.x != 0f || consumedByDelta.y != 0f)
+        ) {
+            with(edgeEffectWrapper) {
+                if (
+                    isLeftStretched() ||
+                        isTopStretched() ||
+                        isRightStretched() ||
+                        isBottomStretched()
+                ) {
+                    animateToReleaseIfNeeded()
+                }
+            }
+        }
+
         var needsInvalidation = false
         if (source == NestedScrollSource.UserInput) {
             // Ignore small deltas (< 0.5) as this usually comes from floating point rounding issues
@@ -649,7 +672,7 @@ internal class AndroidEdgeEffectOverscrollEffect(
         val differentSize = size != containerSize
         containerSize = size
         if (differentSize) {
-            edgeEffectWrapper.setSize(IntSize(size.width.roundToInt(), size.height.roundToInt()))
+            edgeEffectWrapper.updateSize(IntSize(size.width.roundToInt(), size.height.roundToInt()))
         }
         if (!initialSetSize && differentSize) {
             animateToReleaseIfNeeded()
@@ -881,38 +904,46 @@ private class EdgeEffectWrapper(
             return !isFinished
         }
 
-    fun getOrCreateTopEffect(): EdgeEffect = topEffect ?: createEdgeEffect().also { topEffect = it }
+    fun getOrCreateTopEffect(): EdgeEffect =
+        topEffect ?: createEdgeEffect(Orientation.Vertical).also { topEffect = it }
 
     fun getOrCreateBottomEffect(): EdgeEffect =
-        bottomEffect ?: createEdgeEffect().also { bottomEffect = it }
+        bottomEffect ?: createEdgeEffect(Orientation.Vertical).also { bottomEffect = it }
 
     fun getOrCreateLeftEffect(): EdgeEffect =
-        leftEffect ?: createEdgeEffect().also { leftEffect = it }
+        leftEffect ?: createEdgeEffect(Orientation.Horizontal).also { leftEffect = it }
 
     fun getOrCreateRightEffect(): EdgeEffect =
-        rightEffect ?: createEdgeEffect().also { rightEffect = it }
+        rightEffect ?: createEdgeEffect(Orientation.Horizontal).also { rightEffect = it }
 
     fun getOrCreateTopEffectNegation(): EdgeEffect =
-        topEffectNegation ?: createEdgeEffect().also { topEffectNegation = it }
+        topEffectNegation ?: createEdgeEffect(Orientation.Vertical).also { topEffectNegation = it }
 
     fun getOrCreateBottomEffectNegation(): EdgeEffect =
-        bottomEffectNegation ?: createEdgeEffect().also { bottomEffectNegation = it }
+        bottomEffectNegation
+            ?: createEdgeEffect(Orientation.Vertical).also { bottomEffectNegation = it }
 
     fun getOrCreateLeftEffectNegation(): EdgeEffect =
-        leftEffectNegation ?: createEdgeEffect().also { leftEffectNegation = it }
+        leftEffectNegation
+            ?: createEdgeEffect(Orientation.Horizontal).also { leftEffectNegation = it }
 
     fun getOrCreateRightEffectNegation(): EdgeEffect =
-        rightEffectNegation ?: createEdgeEffect().also { rightEffectNegation = it }
+        rightEffectNegation
+            ?: createEdgeEffect(Orientation.Horizontal).also { rightEffectNegation = it }
 
-    private fun createEdgeEffect() =
+    private fun createEdgeEffect(orientation: Orientation) =
         EdgeEffectCompat.create(context).apply {
             color = glowColor
             if (size != IntSize.Zero) {
-                setSize(size.width, size.height)
+                if (orientation == Orientation.Vertical) {
+                    setSize(size.width, size.height)
+                } else {
+                    setSize(size.height, size.width)
+                }
             }
         }
 
-    fun setSize(size: IntSize) {
+    fun updateSize(size: IntSize) {
         this.size = size
         topEffect?.setSize(size.width, size.height)
         bottomEffect?.setSize(size.width, size.height)

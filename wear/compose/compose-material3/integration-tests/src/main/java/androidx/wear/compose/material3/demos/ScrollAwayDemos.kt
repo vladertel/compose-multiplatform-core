@@ -30,11 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
+import androidx.wear.compose.foundation.ScrollInfoProvider
 import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
 import androidx.wear.compose.foundation.rotary.rotaryScrollable
-import androidx.wear.compose.foundation.toScrollAwayInfoProvider
 import androidx.wear.compose.integration.demos.common.Centralize
 import androidx.wear.compose.integration.demos.common.ComposableDemo
 import androidx.wear.compose.material3.FilledTonalButton
@@ -52,7 +51,6 @@ val ScrollAwayDemos =
         ComposableDemo("Column") { Centralize { ScrollAwayColumn() } }
     )
 
-@OptIn(ExperimentalWearFoundationApi::class)
 @Composable
 fun ScrollAwayLazyColumn() {
     val scrollState = rememberLazyListState()
@@ -96,7 +94,7 @@ fun ScrollAwayLazyColumn() {
             // default handling is unsuitable.
             modifier =
                 Modifier.scrollAway(
-                    scrollInfoProvider = scrollState.toScrollAwayInfoProvider(),
+                    scrollInfoProvider = ScrollInfoProvider(scrollState),
                     screenStage = {
                         if (scrollState.isScrollInProgress) ScreenStage.Scrolling
                         else ScreenStage.Idle
@@ -107,7 +105,6 @@ fun ScrollAwayLazyColumn() {
     }
 }
 
-@OptIn(ExperimentalWearFoundationApi::class)
 @Composable
 fun ScrollAwayColumn() {
     val scrollState = rememberScrollState()
@@ -148,7 +145,7 @@ fun ScrollAwayColumn() {
             // default handling is unsuitable.
             modifier =
                 Modifier.scrollAway(
-                    scrollInfoProvider = scrollState.toScrollAwayInfoProvider(),
+                    scrollInfoProvider = ScrollInfoProvider(scrollState),
                     screenStage = {
                         if (scrollState.isScrollInProgress) ScreenStage.Scrolling
                         else ScreenStage.Idle

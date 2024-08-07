@@ -54,17 +54,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.layout.IntrinsicMeasurable
-import androidx.compose.ui.layout.LayoutIdParentData
-import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.lerp
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,40 +68,32 @@ internal enum class TextFieldType {
     Outlined
 }
 
-/** Implementation of the [TextField] and [OutlinedTextField] */
 @Composable
 internal fun CommonDecorationBox(
     type: TextFieldType,
-    value: String,
+    visualText: CharSequence,
     innerTextField: @Composable () -> Unit,
-    visualTransformation: VisualTransformation,
+    alwaysMinimizeLabel: Boolean,
     label: @Composable (() -> Unit)?,
-    placeholder: @Composable (() -> Unit)? = null,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    prefix: @Composable (() -> Unit)? = null,
-    suffix: @Composable (() -> Unit)? = null,
-    supportingText: @Composable (() -> Unit)? = null,
-    singleLine: Boolean = false,
-    enabled: Boolean = true,
-    isError: Boolean = false,
+    placeholder: @Composable (() -> Unit)?,
+    leadingIcon: @Composable (() -> Unit)?,
+    trailingIcon: @Composable (() -> Unit)?,
+    prefix: @Composable (() -> Unit)?,
+    suffix: @Composable (() -> Unit)?,
+    supportingText: @Composable (() -> Unit)?,
+    singleLine: Boolean,
+    enabled: Boolean,
+    isError: Boolean,
     interactionSource: InteractionSource,
     contentPadding: PaddingValues,
     colors: TextFieldColors,
     container: @Composable () -> Unit,
 ) {
-    val transformedText =
-        remember(value, visualTransformation) {
-                visualTransformation.filter(AnnotatedString(value))
-            }
-            .text
-            .text
-
     val isFocused = interactionSource.collectIsFocusedAsState().value
     val inputState =
         when {
             isFocused -> InputPhase.Focused
-            transformedText.isEmpty() -> InputPhase.UnfocusedEmpty
+            visualText.isEmpty() -> InputPhase.UnfocusedEmpty
             else -> InputPhase.UnfocusedNotEmpty
         }
 
@@ -131,7 +117,7 @@ internal fun CommonDecorationBox(
                 if (overrideLabelTextStyleColor) this.takeOrElse { labelColor } else this
             },
         labelColor = labelColor,
-        showLabel = label != null,
+        showExpandedLabel = label != null && !alwaysMinimizeLabel,
     ) { labelProgress, labelTextStyleColor, labelContentColor, placeholderAlpha, prefixSuffixAlpha
         ->
         val labelProgressValue = labelProgress.value
@@ -158,7 +144,7 @@ internal fun CommonDecorationBox(
             derivedStateOf(structuralEqualityPolicy()) { placeholderAlpha.value > 0f }
         }
         val decoratedPlaceholder: @Composable ((Modifier) -> Unit)? =
-            if (placeholder != null && transformedText.isEmpty() && showPlaceholder) {
+            if (placeholder != null && visualText.isEmpty() && showPlaceholder) {
                 @Composable { modifier ->
                     Box(modifier.graphicsLayer { alpha = placeholderAlpha.value }) {
                         Decoration(
@@ -246,17 +232,17 @@ internal fun CommonDecorationBox(
                     supporting = decoratedSupporting,
                     singleLine = singleLine,
                     // TODO(b/271000818): progress state read should be deferred to layout phase
-                    animationProgress = labelProgressValue,
+                    labelProgress = labelProgressValue,
                     paddingValues = contentPadding
                 )
             }
             TextFieldType.Outlined -> {
                 // Outlined cutout
-                val labelSize = remember { mutableStateOf(Size.Zero) }
+                val cutoutSize = remember { mutableStateOf(Size.Zero) }
                 val borderContainerWithId: @Composable () -> Unit = {
                     Box(
                         Modifier.layoutId(ContainerId)
-                            .outlineCutout(labelSize::value, contentPadding),
+                            .outlineCutout(cutoutSize::value, contentPadding),
                         propagateMinConstraints = true
                     ) {
                         container()
@@ -278,14 +264,14 @@ internal fun CommonDecorationBox(
                         val labelWidth = it.width * labelProgressValue
                         val labelHeight = it.height * labelProgressValue
                         if (
-                            labelSize.value.width != labelWidth ||
-                                labelSize.value.height != labelHeight
+                            cutoutSize.value.width != labelWidth ||
+                                cutoutSize.value.height != labelHeight
                         ) {
-                            labelSize.value = Size(labelWidth, labelHeight)
+                            cutoutSize.value = Size(labelWidth, labelHeight)
                         }
                     },
                     // TODO(b/271000818): progress state read should be deferred to layout phase
-                    animationProgress = labelProgressValue,
+                    labelProgress = labelProgressValue,
                     container = borderContainerWithId,
                     paddingValues = contentPadding
                 )
@@ -324,17 +310,13 @@ internal fun Modifier.textFieldBackground(
         onDrawBehind { drawOutline(outline, color = color()) }
     }
 
-internal fun widthOrZero(placeable: Placeable?) = placeable?.width ?: 0
-
-internal fun heightOrZero(placeable: Placeable?) = placeable?.height ?: 0
-
 @Composable
 private inline fun TextFieldTransitionScope(
     inputState: InputPhase,
     focusedLabelTextStyleColor: Color,
     unfocusedLabelTextStyleColor: Color,
     labelColor: Color,
-    showLabel: Boolean,
+    showExpandedLabel: Boolean,
     content:
         @Composable
         (
@@ -357,7 +339,7 @@ private inline fun TextFieldTransitionScope(
         ) {
             when (it) {
                 InputPhase.Focused -> 1f
-                InputPhase.UnfocusedEmpty -> 0f
+                InputPhase.UnfocusedEmpty -> if (showExpandedLabel) 0f else 1f
                 InputPhase.UnfocusedNotEmpty -> 1f
             }
         }
@@ -387,7 +369,7 @@ private inline fun TextFieldTransitionScope(
         ) {
             when (it) {
                 InputPhase.Focused -> 1f
-                InputPhase.UnfocusedEmpty -> if (showLabel) 0f else 1f
+                InputPhase.UnfocusedEmpty -> if (showExpandedLabel) 0f else 1f
                 InputPhase.UnfocusedNotEmpty -> 0f
             }
         }
@@ -399,7 +381,7 @@ private inline fun TextFieldTransitionScope(
         ) {
             when (it) {
                 InputPhase.Focused -> 1f
-                InputPhase.UnfocusedEmpty -> if (showLabel) 0f else 1f
+                InputPhase.UnfocusedEmpty -> if (showExpandedLabel) 0f else 1f
                 InputPhase.UnfocusedNotEmpty -> 1f
             }
         }
@@ -472,9 +454,6 @@ private enum class InputPhase {
     UnfocusedNotEmpty
 }
 
-internal val IntrinsicMeasurable.layoutId: Any?
-    get() = (parentData as? LayoutIdParentData)?.layoutId
-
 internal const val TextFieldId = "TextField"
 internal const val PlaceholderId = "Hint"
 internal const val LabelId = "Label"
@@ -484,7 +463,6 @@ internal const val PrefixId = "Prefix"
 internal const val SuffixId = "Suffix"
 internal const val SupportingId = "Supporting"
 internal const val ContainerId = "Container"
-internal val ZeroConstraints = Constraints(0, 0, 0, 0)
 
 internal const val TextFieldAnimationDuration = 150
 private const val PlaceholderAnimationDuration = 83

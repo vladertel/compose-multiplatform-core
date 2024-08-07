@@ -35,7 +35,6 @@ import android.view.accessibility.AccessibilityManager.TouchExplorationStateChan
 import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH
 import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX
 import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY
-import androidx.annotation.DoNotInline
 import androidx.annotation.IntRange
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
@@ -209,7 +208,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     // flaky, so we use this callback to test accessibility events.
     @VisibleForTesting
     internal var onSendAccessibilityEvent: (AccessibilityEvent) -> Boolean = {
-        view.parent.requestSendAccessibilityEvent(view, it)
+        trace("sendAccessibilityEvent") { view.parent.requestSendAccessibilityEvent(view, it) }
     }
 
     private val accessibilityManager: AccessibilityManager =
@@ -764,6 +763,15 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     ) {
         // set classname
         info.className = ClassName
+
+        // Set a classname for text nodes before setting a classname based on a role ensuring that
+        // the latter if present wins (see b/343392125)
+        if (semanticsNode.unmergedConfig.contains(SemanticsProperties.EditableText)) {
+            info.className = TextFieldClassName
+        }
+        if (semanticsNode.unmergedConfig.contains(SemanticsProperties.Text)) {
+            info.className = TextClassName
+        }
         val role = semanticsNode.unmergedConfig.getOrNull(SemanticsProperties.Role)
         role?.let {
             if (semanticsNode.isFake || semanticsNode.replacedChildren.isEmpty()) {
@@ -784,12 +792,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     }
                 }
             }
-        }
-        if (semanticsNode.unmergedConfig.contains(SemanticsActions.SetText)) {
-            info.className = TextFieldClassName
-        }
-        if (semanticsNode.unmergedConfig.contains(SemanticsProperties.Text)) {
-            info.className = TextClassName
         }
 
         info.packageName = view.context.packageName
@@ -1353,7 +1355,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             }
         }
 
-        if (node.unmergedConfig.contains(SemanticsActions.SetText)) {
+        if (node.unmergedConfig.contains(SemanticsProperties.EditableText)) {
             stateDescription = createStateDescriptionForTextField(node)
         }
 
@@ -1517,7 +1519,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             event.contentDescription = contentDescription.fastJoinToString(",")
         }
 
-        return trace("sendEvent") { sendEvent(event) }
+        return sendEvent(event)
     }
 
     /**
@@ -2237,47 +2239,45 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         try {
             val subtreeChangedSemanticsNodesIds = MutableIntSet()
             for (notification in boundsUpdateChannel) {
-                trace("AccessibilityLoopIteration") {
-                    if (isEnabled) {
-                        for (i in subtreeChangedLayoutNodes.indices) {
-                            val layoutNode = subtreeChangedLayoutNodes.valueAt(i)
-                            trace("sendSubtreeChangeAccessibilityEvents") {
-                                sendSubtreeChangeAccessibilityEvents(
-                                    layoutNode,
-                                    subtreeChangedSemanticsNodesIds
-                                )
-                            }
-                            trace("sendTypeViewScrolledAccessibilityEvent") {
-                                sendTypeViewScrolledAccessibilityEvent(layoutNode)
-                            }
+                if (isEnabled) {
+                    for (i in subtreeChangedLayoutNodes.indices) {
+                        val layoutNode = subtreeChangedLayoutNodes.valueAt(i)
+                        trace("sendSubtreeChangeAccessibilityEvents") {
+                            sendSubtreeChangeAccessibilityEvents(
+                                layoutNode,
+                                subtreeChangedSemanticsNodesIds
+                            )
                         }
-                        subtreeChangedSemanticsNodesIds.clear()
-                        // When the bounds of layout nodes change, we will not always get semantics
-                        // change notifications because bounds is not part of semantics. And bounds
-                        // change from a layout node without semantics will affect the global bounds
-                        // of it children which has semantics. Bounds change will affect which nodes
-                        // are covered and which nodes are not, so the currentSemanticsNodes is not
-                        // up to date anymore.
-                        // After the subtree events are sent, accessibility services will get the
-                        // current visible/invisible state. We also try to do semantics tree diffing
-                        // to send out the proper accessibility events and update our copy here so
-                        // that
-                        // our incremental changes (represented by accessibility events) are
-                        // consistent
-                        // with accessibility services. That is: change - notify - new change -
-                        // notify, if we don't do the tree diffing and update our copy here, we will
-                        // combine old change and new change, which is missing finer-grained
-                        // notification.
-                        if (!checkingForSemanticsChanges) {
-                            checkingForSemanticsChanges = true
-                            handler.post(semanticsChangeChecker)
+                        trace("sendTypeViewScrolledAccessibilityEvent") {
+                            sendTypeViewScrolledAccessibilityEvent(layoutNode)
                         }
                     }
-                    subtreeChangedLayoutNodes.clear()
-                    pendingHorizontalScrollEvents.clear()
-                    pendingVerticalScrollEvents.clear()
-                    delay(SendRecurringAccessibilityEventsIntervalMillis)
+                    subtreeChangedSemanticsNodesIds.clear()
+                    // When the bounds of layout nodes change, we will not always get semantics
+                    // change notifications because bounds is not part of semantics. And bounds
+                    // change from a layout node without semantics will affect the global bounds
+                    // of it children which has semantics. Bounds change will affect which nodes
+                    // are covered and which nodes are not, so the currentSemanticsNodes is not
+                    // up to date anymore.
+                    // After the subtree events are sent, accessibility services will get the
+                    // current visible/invisible state. We also try to do semantics tree diffing
+                    // to send out the proper accessibility events and update our copy here so
+                    // that
+                    // our incremental changes (represented by accessibility events) are
+                    // consistent
+                    // with accessibility services. That is: change - notify - new change -
+                    // notify, if we don't do the tree diffing and update our copy here, we will
+                    // combine old change and new change, which is missing finer-grained
+                    // notification.
+                    if (!checkingForSemanticsChanges) {
+                        checkingForSemanticsChanges = true
+                        handler.post(semanticsChangeChecker)
+                    }
                 }
+                subtreeChangedLayoutNodes.clear()
+                pendingHorizontalScrollEvents.clear()
+                pendingVerticalScrollEvents.clear()
+                delay(SendRecurringAccessibilityEventsIntervalMillis)
             }
         } finally {
             subtreeChangedLayoutNodes.clear()
@@ -2347,13 +2347,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         // Android Views will send proper events themselves.
         if (view.androidViewsHandler.layoutNodeToHolder.contains(layoutNode)) {
             return
-        }
-
-        // No need to send an event if an ancestor has also been changed
-        for (potentialAncestor in subtreeChangedLayoutNodes.indices) {
-            if (subtreeChangedLayoutNodes.valueAt(potentialAncestor).isAncestorOf(layoutNode)) {
-                return
-            }
         }
 
         // When we finally send the event, make sure it is an accessibility-focusable node.
@@ -2619,7 +2612,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                             val newNodeIsPassword =
                                 newNode.unmergedConfig.contains(SemanticsProperties.Password)
                             val oldNodeIsTextfield =
-                                oldNode.unmergedConfig.contains(SemanticsActions.SetText)
+                                oldNode.unmergedConfig.contains(SemanticsProperties.EditableText)
 
                             // (b/247891690) We won't send a text change event when we only toggle
                             // the password visibility of the node
@@ -3155,7 +3148,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             return node.unmergedConfig[SemanticsProperties.ContentDescription].fastJoinToString(",")
         }
 
-        if (node.unmergedConfig.contains(SemanticsActions.SetText)) {
+        if (node.unmergedConfig.contains(SemanticsProperties.EditableText)) {
             return node.unmergedConfig.getTextForTextField()?.text
         }
 
@@ -3197,7 +3190,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
 
     @RequiresApi(Build.VERSION_CODES.N)
     private object Api24Impl {
-        @DoNotInline
         @JvmStatic
         fun addSetProgressAction(info: AccessibilityNodeInfoCompat, semanticsNode: SemanticsNode) {
             if (semanticsNode.enabled()) {
@@ -3216,7 +3208,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     @RequiresApi(Build.VERSION_CODES.Q)
     private object Api29Impl {
         @JvmStatic
-        @DoNotInline
         fun addPageActions(info: AccessibilityNodeInfoCompat, semanticsNode: SemanticsNode) {
             if (semanticsNode.enabled()) {
                 semanticsNode.unmergedConfig.getOrNull(SemanticsActions.PageUp)?.let {
@@ -3272,7 +3263,7 @@ private val SemanticsNode.isRtl
 private fun SemanticsNode.excludeLineAndPageGranularities(): Boolean {
     // text field that is not in focus
     if (
-        unmergedConfig.contains(SemanticsActions.SetText) &&
+        unmergedConfig.contains(SemanticsProperties.EditableText) &&
             unmergedConfig.getOrNull(SemanticsProperties.Focused) != true
     )
         return true
@@ -3283,7 +3274,7 @@ private fun SemanticsNode.excludeLineAndPageGranularities(): Boolean {
             // looking for text field merging node
             val ancestorSemanticsConfiguration = it.collapsedSemantics
             ancestorSemanticsConfiguration?.isMergingSemanticsOfDescendants == true &&
-                ancestorSemanticsConfiguration.contains(SemanticsActions.SetText)
+                ancestorSemanticsConfiguration.contains(SemanticsProperties.EditableText)
         }
     return ancestor != null &&
         ancestor.collapsedSemantics?.getOrNull(SemanticsProperties.Focused) != true

@@ -1176,9 +1176,9 @@ class AnchoredDraggableState<T>(
      */
     fun dispatchRawDelta(delta: Float): Float {
         val newOffset = newOffsetForDelta(delta)
-        val oldOffset = if (offset.isNaN()) 0f else offset
-        offset = newOffset
-        return newOffset - oldOffset
+        val consumedDelta = (newOffset - requireOffset())
+        anchoredDragScope.dragTo(newOffset)
+        return consumedDelta
     }
 
     /**
@@ -1524,7 +1524,7 @@ private class DefaultDraggableAnchors<T>(
 ) : DraggableAnchors<T> {
 
     init {
-        assert(keys.size == anchors.size) {
+        require(keys.size == anchors.size) {
             "DraggableAnchors were constructed with " +
                 "inconsistent key-value sizes. Keys: $keys | Anchors: ${anchors.toList()}"
         }

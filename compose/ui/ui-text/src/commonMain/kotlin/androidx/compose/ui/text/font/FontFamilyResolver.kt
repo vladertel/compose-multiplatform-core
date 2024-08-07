@@ -16,10 +16,10 @@
 
 package androidx.compose.ui.text.font
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.State
-import androidx.compose.ui.text.caches.LruCache
-import androidx.compose.ui.text.createSynchronizedObject
-import androidx.compose.ui.text.synchronized
+import androidx.compose.ui.text.platform.createSynchronizedObject
+import androidx.compose.ui.text.platform.synchronized
 import androidx.compose.ui.util.fastMap
 
 internal class FontFamilyResolverImpl(
@@ -67,7 +67,7 @@ internal class FontFamilyResolverImpl(
                     onAsyncCompletion = { /* nothing */ },
                     createDefaultTypeface = createDefaultTypeface
                 )
-                ?: throw FontLoadFailedException(typeRequest.fontFamily)
+                ?: throw IllegalStateException("Could not load font")
         }
     }
 
@@ -104,8 +104,8 @@ internal class FontFamilyResolverImpl(
                         onAsyncCompletion,
                         createDefaultTypeface
                     )
-                    ?: throw FontLoadFailedException(typefaceRequest.fontFamily)
-        }
+                    ?: throw IllegalStateException("Could not load font")
+            }
         return result
     }
 }
@@ -199,7 +199,8 @@ internal class TypefaceRequestCache {
                     // immediately
                     // available without dispatch
 
-                    // this converts an async (state) result to an immutable (val) result to optimize
+                    // this converts an async (state) result to an immutable (val) result to
+                    // optimize
                     // future lookups
                     synchronized(lock) {
                         if (finalResult.cacheable) {
@@ -208,10 +209,10 @@ internal class TypefaceRequestCache {
                             resultCache.remove(typefaceRequest)
                         }
                     }
+                }
+            } catch (cause: Exception) {
+                throw IllegalStateException("Could not load font", cause)
             }
-        } catch (cause: Exception) {
-            throw FontLoadFailedException(typefaceRequest.fontFamily, cause)
-        }
         synchronized(lock) {
             // async result may have completed prior to this block entering, do not overwrite
             // final results
@@ -236,7 +237,7 @@ internal class TypefaceRequestCache {
                 try {
                     resolveTypeface(typeRequest)
                 } catch (cause: Exception) {
-                    throw FontLoadFailedException(typeRequest.fontFamily, cause)
+                    throw IllegalStateException("Could not load font", cause)
                 }
 
             // only cache immutable, should not reach as FontListFontFamilyTypefaceAdapter already
@@ -253,13 +254,5 @@ internal class TypefaceRequestCache {
 
     // @VisibleForTesting
     internal val size: Int
-        get() = synchronized(lock) { resultCache.size }
+        get() = synchronized(lock) { resultCache.size() }
 }
-
-internal class FontLoadFailedException(
-    fontFamily: FontFamily?,
-    cause: Throwable? = null,
-) : IllegalStateException(
-    /* message = */ "Failed to load font $fontFamily. Is it installed on the system?",
-    /* cause = */ cause,
-)

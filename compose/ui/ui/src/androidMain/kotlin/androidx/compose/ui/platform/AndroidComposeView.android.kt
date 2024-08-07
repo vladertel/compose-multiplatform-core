@@ -144,12 +144,12 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.AndroidPointerIcon
 import androidx.compose.ui.input.pointer.AndroidPointerIconType
+import androidx.compose.ui.input.pointer.MatrixPositionCalculator
 import androidx.compose.ui.input.pointer.MotionEventAdapter
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.input.rotary.RotaryScrollEvent
@@ -224,7 +224,7 @@ private const val ONE_FRAME_120_HERTZ_IN_MILLISECONDS = 8L
 @Suppress("ViewConstructor", "VisibleForTests", "ConstPropertyName", "NullAnnotationGroup")
 @OptIn(InternalComposeUiApi::class)
 internal class AndroidComposeView(context: Context, coroutineContext: CoroutineContext) :
-    ViewGroup(context), Owner, ViewRootForTest, PositionCalculator, DefaultLifecycleObserver {
+    ViewGroup(context), Owner, ViewRootForTest, MatrixPositionCalculator, DefaultLifecycleObserver {
 
     /**
      * Remembers the position of the last pointer input event that was down. This position will be
@@ -410,19 +410,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
 
     private val canvasHolder = CanvasHolder()
 
-    // Backed by mutableStateOf so that the ambient provider recomposes when it changes
-    override var layoutDirection by
-        mutableStateOf(
-            // We don't use the attached View's layout direction here since that layout direction
-            // may not
-            // be resolved since composables may be composed without attaching to the RootViewImpl.
-            // In Jetpack Compose, use the locale layout direction (i.e. layoutDirection came from
-            // configuration) as a default layout direction.
-            toLayoutDirection(context.resources.configuration.layoutDirection)
-                ?: LayoutDirection.Ltr
-        )
-        private set
-
     override val viewConfiguration: ViewConfiguration =
         AndroidViewConfiguration(android.view.ViewConfiguration.get(context))
 
@@ -430,7 +417,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         LayoutNode().also {
             it.measurePolicy = RootMeasurePolicy
             it.density = density
-            it.layoutDirection = layoutDirection
             it.viewConfiguration = viewConfiguration
             // Composed modifiers cannot be added here directly
             it.modifier =
@@ -651,6 +637,19 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
 
     private val Configuration.fontWeightAdjustmentCompat: Int
         get() = if (SDK_INT >= S) fontWeightAdjustment else 0
+
+    // Backed by mutableStateOf so that the ambient provider recomposes when it changes
+    override var layoutDirection by
+        mutableStateOf(
+            // We don't use the attached View's layout direction here since that layout direction
+            // may not
+            // be resolved since composables may be composed without attaching to the RootViewImpl.
+            // In Jetpack Compose, use the locale layout direction (i.e. layoutDirection came from
+            // configuration) as a default layout direction.
+            toLayoutDirection(context.resources.configuration.layoutDirection)
+                ?: LayoutDirection.Ltr
+        )
+        private set
 
     /** Provide haptic feedback to the user. Use the Android version of haptic feedback. */
     override val hapticFeedBack: HapticFeedback = PlatformHapticFeedback(this)
@@ -1231,9 +1230,10 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
     fun removeAndroidView(view: AndroidViewHolder) {
         registerOnEndApplyChangesListener {
             androidViewsHandler.removeViewInLayout(view)
-            androidViewsHandler.layoutNodeToHolder.remove(
-                androidViewsHandler.holderToLayoutNode.remove(view)
-            )
+            val layoutNode = androidViewsHandler.holderToLayoutNode.remove(view)
+            if (layoutNode != null) {
+                androidViewsHandler.layoutNodeToHolder.remove(layoutNode)
+            }
             view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO)
         }
     }
@@ -1297,6 +1297,7 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
                     requestLayout()
                 }
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+                _androidViewsHandler?.layoutChildViewsIfNeeded()
                 dispatchPendingInteropLayoutCallbacks()
             }
         }
@@ -1310,6 +1311,7 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
             // it allows us to not traverse the hierarchy twice.
             if (!measureAndLayoutDelegate.hasPendingMeasureOrLayout) {
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+                _androidViewsHandler?.layoutChildViewsIfNeeded()
                 dispatchPendingInteropLayoutCallbacks()
             }
         }
@@ -1435,6 +1437,7 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         // View is not yet laid out.
         updatePositionCacheAndDispatch()
         if (_androidViewsHandler != null) {
+            androidViewsHandler.layoutChildViewsIfNeeded()
             // Even if we laid out during onMeasure, we want to set the bounds of the
             // AndroidViewsHandler for accessibility and for Views making assumptions based on
             // the size of their ancestors. Usually the Views in the hierarchy will not

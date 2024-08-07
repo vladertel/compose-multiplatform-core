@@ -21,7 +21,7 @@ import androidx.collection.IntIntPair
 import androidx.collection.mutableIntListOf
 import androidx.collection.mutableIntObjectMapOf
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collection.MutableVector
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.remember
@@ -71,6 +71,7 @@ import kotlin.math.min
  * @param modifier The modifier to be applied to the Row.
  * @param horizontalArrangement The horizontal arrangement of the layout's children.
  * @param verticalArrangement The vertical arrangement of the layout's virtual rows.
+ * @param itemVerticalAlignment The cross axis/vertical alignment of an item in the column.
  * @param maxItemsInEachRow The maximum number of items per row
  * @param maxLines The max number of rows
  * @param overflow The strategy to handle overflowing items
@@ -85,6 +86,7 @@ fun FlowRow(
     modifier: Modifier = Modifier,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    itemVerticalAlignment: Alignment.Vertical = Alignment.Top,
     maxItemsInEachRow: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     overflow: FlowRowOverflow = FlowRowOverflow.Clip,
@@ -95,12 +97,13 @@ fun FlowRow(
         rowMeasurementMultiContentHelper(
             horizontalArrangement,
             verticalArrangement,
+            itemVerticalAlignment,
             maxItemsInEachRow,
             maxLines,
             overflowState
         )
     val list: List<@Composable () -> Unit> =
-        remember(overflow, content) {
+        remember(overflow, content, maxLines) {
             val mutableList: MutableList<@Composable () -> Unit> = mutableListOf()
             mutableList.add { FlowRowScopeInstance.content() }
             overflow.addOverflowComposables(overflowState, mutableList)
@@ -129,6 +132,7 @@ fun FlowRow(
  * @param modifier The modifier to be applied to the Row.
  * @param verticalArrangement The vertical arrangement of the layout's children.
  * @param horizontalArrangement The horizontal arrangement of the layout's virtual columns
+ * @param itemHorizontalAlignment The cross axis/horizontal alignment of an item in the column.
  * @param maxItemsInEachColumn The maximum number of items per column
  * @param maxLines The max number of rows
  * @param overflow The strategy to handle overflowing items
@@ -143,6 +147,7 @@ fun FlowColumn(
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    itemHorizontalAlignment: Alignment.Horizontal = Alignment.Start,
     maxItemsInEachColumn: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     overflow: FlowColumnOverflow = FlowColumnOverflow.Clip,
@@ -153,12 +158,13 @@ fun FlowColumn(
         columnMeasurementMultiContentHelper(
             verticalArrangement,
             horizontalArrangement,
+            itemHorizontalAlignment,
             maxItemsInEachColumn,
             maxLines,
             overflowState
         )
     val list: List<@Composable () -> Unit> =
-        remember(overflow, content) {
+        remember(overflow, content, maxLines) {
             val mutableList: MutableList<@Composable () -> Unit> = mutableListOf()
             mutableList.add { FlowColumnScopeInstance.content() }
             overflow.addOverflowComposables(overflowState, mutableList)
@@ -169,7 +175,7 @@ fun FlowColumn(
 
 /** Scope for the children of [FlowRow]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface FlowRowScope : RowScope {
     /**
@@ -191,7 +197,7 @@ interface FlowRowScope : RowScope {
 
 /** Scope for the overflow [FlowRow]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface FlowRowOverflowScope : FlowRowScope {
     /**
@@ -208,7 +214,7 @@ interface FlowRowOverflowScope : FlowRowScope {
 
 /** Scope for the children of [FlowColumn]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface FlowColumnScope : ColumnScope {
     /**
@@ -230,7 +236,7 @@ interface FlowColumnScope : ColumnScope {
 
 /** Scope for the overflow [FlowColumn]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface FlowColumnOverflowScope : FlowColumnScope {
     /**
@@ -263,21 +269,17 @@ internal object FlowRowScopeInstance : RowScope by RowScopeInstance, FlowRowScop
 @OptIn(ExperimentalLayoutApi::class)
 internal class FlowRowOverflowScopeImpl(private val state: FlowLayoutOverflowState) :
     FlowRowScope by FlowRowScopeInstance, FlowRowOverflowScope {
-    override val totalItemCount: Int
-        get() = state.itemCount
+    override val totalItemCount: Int by lazyInt { state.itemCount }
 
-    override val shownItemCount: Int
-        get() = state.shownItemCount
+    override val shownItemCount: Int by lazyInt(state.shownItemLazyErrorMessage) { state.itemShown }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 internal class FlowColumnOverflowScopeImpl(private val state: FlowLayoutOverflowState) :
     FlowColumnScope by FlowColumnScopeInstance, FlowColumnOverflowScope {
-    override val totalItemCount: Int
-        get() = state.itemCount
+    override val totalItemCount: Int by lazyInt { state.itemCount }
 
-    override val shownItemCount: Int
-        get() = state.shownItemCount
+    override val shownItemCount: Int by lazyInt(state.shownItemLazyErrorMessage) { state.itemShown }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -374,6 +376,7 @@ internal fun rowMeasurementHelper(
 internal fun rowMeasurementMultiContentHelper(
     horizontalArrangement: Arrangement.Horizontal,
     verticalArrangement: Arrangement.Vertical,
+    itemVerticalAlignment: Alignment.Vertical,
     maxItemsInMainAxis: Int,
     maxLines: Int,
     overflowState: FlowLayoutOverflowState,
@@ -381,6 +384,7 @@ internal fun rowMeasurementMultiContentHelper(
     return remember(
         horizontalArrangement,
         verticalArrangement,
+        itemVerticalAlignment,
         maxItemsInMainAxis,
         maxLines,
         overflowState
@@ -389,7 +393,7 @@ internal fun rowMeasurementMultiContentHelper(
             isHorizontal = true,
             horizontalArrangement = horizontalArrangement,
             mainAxisSpacing = horizontalArrangement.spacing,
-            crossAxisAlignment = CROSS_AXIS_ALIGNMENT_TOP,
+            crossAxisAlignment = CrossAxisAlignment.vertical(itemVerticalAlignment),
             verticalArrangement = verticalArrangement,
             crossAxisArrangementSpacing = verticalArrangement.spacing,
             maxItemsInMainAxis = maxItemsInMainAxis,
@@ -434,6 +438,7 @@ internal fun columnMeasurementHelper(
 internal fun columnMeasurementMultiContentHelper(
     verticalArrangement: Arrangement.Vertical,
     horizontalArrangement: Arrangement.Horizontal,
+    itemHorizontalAlignment: Alignment.Horizontal,
     maxItemsInMainAxis: Int,
     maxLines: Int,
     overflowState: FlowLayoutOverflowState
@@ -441,6 +446,7 @@ internal fun columnMeasurementMultiContentHelper(
     return remember(
         verticalArrangement,
         horizontalArrangement,
+        itemHorizontalAlignment,
         maxItemsInMainAxis,
         maxLines,
         overflowState
@@ -449,7 +455,7 @@ internal fun columnMeasurementMultiContentHelper(
             isHorizontal = false,
             verticalArrangement = verticalArrangement,
             mainAxisSpacing = verticalArrangement.spacing,
-            crossAxisAlignment = CROSS_AXIS_ALIGNMENT_START,
+            crossAxisAlignment = CrossAxisAlignment.horizontal(itemHorizontalAlignment),
             horizontalArrangement = horizontalArrangement,
             crossAxisArrangementSpacing = horizontalArrangement.spacing,
             maxItemsInMainAxis = maxItemsInMainAxis,

@@ -21,20 +21,45 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+import androidx.build.JetbrainsAndroidXPlugin
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
+    id("JetbrainsAndroidXPlugin")
 }
 
+JetbrainsAndroidXPlugin.applyAndConfigure(project)
 
 androidXMultiplatform {
     android()
     desktop()
+    mac()
+    linux()
+    ios()
+    js()
+    wasm()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
+}
+
+kotlin {
+    js {
+        browser()
+    }
+    wasmJs()
+
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
 
     sourceSets {
         configureEach {
@@ -45,8 +70,8 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 implementation(libs.kotlinStdlibCommon)
-                implementation("androidx.collection:collection:1.4.0")
-                implementation("androidx.annotation:annotation:1.1.0")
+                implementation(project(":collection:collection"))
+                implementation(project(":annotation:annotation"))
             }
         }
 
@@ -55,31 +80,11 @@ androidXMultiplatform {
             }
         }
 
-        jvmMain {
-            dependsOn(commonMain)
-            dependencies {
-            }
-        }
-
-        skikoMain {
-            dependsOn(commonMain)
-            dependencies {
-            }
-        }
-
         androidMain {
-            dependsOn(jvmMain)
+            dependsOn(commonMain)
             dependencies {
                 implementation("androidx.core:core-ktx:1.10.0")
-                implementation("androidx.annotation:annotation-experimental:1.4.0-rc01")
-            }
-        }
-
-        desktopMain {
-            dependsOn(skikoMain)
-            dependsOn(jvmMain)
-            dependencies {
-                implementation(libs.kotlinStdlib)
+                implementation("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
 
@@ -111,12 +116,15 @@ androidXMultiplatform {
             }
         }
 
-        desktopTest {
-            dependsOn(jvmTest)
-            dependencies {
-                implementation(libs.truth)
-                implementation(libs.junit)
-                implementation(libs.skikoCurrentOs)
+        targets.all { target ->
+            if (target.platformType !in [
+                    KotlinPlatformType.androidJvm,
+                    KotlinPlatformType.jvm,
+                    KotlinPlatformType.common
+            ]) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(nonJvmMain)
+                }
             }
         }
     }

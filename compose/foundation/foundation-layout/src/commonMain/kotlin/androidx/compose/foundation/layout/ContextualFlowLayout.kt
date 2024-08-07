@@ -16,9 +16,11 @@
 
 package androidx.compose.foundation.layout
 
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
@@ -47,13 +49,14 @@ import androidx.compose.ui.unit.dp
  * Example:
  *
  * @sample androidx.compose.foundation.layout.samples.ContextualFlowRowMaxLineDynamicSeeMore
+ * @param itemCount The total number of item composable
  * @param modifier The modifier to be applied to the Row.
  * @param horizontalArrangement The horizontal arrangement of the layout's children.
  * @param verticalArrangement The vertical arrangement of the layout's virtual rows.
+ * @param itemVerticalAlignment The cross axis/vertical alignment of an item in the column.
  * @param maxItemsInEachRow The maximum number of items per row
  * @param maxLines The maximum number of rows
  * @param overflow The strategy to handle overflowing items
- * @param itemCount The total number of item composable
  * @param content The indexed-based content of [ContextualFlowRowScope]
  * @see FlowRow
  * @see ContextualFlowColumn
@@ -65,6 +68,7 @@ fun ContextualFlowRow(
     modifier: Modifier = Modifier,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    itemVerticalAlignment: Alignment.Vertical = Alignment.Top,
     maxItemsInEachRow: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     overflow: ContextualFlowRowOverflow = ContextualFlowRowOverflow.Clip,
@@ -81,6 +85,7 @@ fun ContextualFlowRow(
         contextualRowMeasurementHelper(
             horizontalArrangement,
             verticalArrangement,
+            itemVerticalAlignment,
             maxItemsInEachRow,
             maxLines,
             overflowState,
@@ -118,13 +123,14 @@ fun ContextualFlowRow(
  * Example:
  *
  * @sample androidx.compose.foundation.layout.samples.ContextualFlowColMaxLineDynamicSeeMore
+ * @param itemCount The total number of item composable
  * @param modifier The modifier to be applied to the Row.
- * @param horizontalArrangement The horizontal arrangement of the layout's children.
  * @param verticalArrangement The vertical arrangement of the layout's virtual column.
+ * @param horizontalArrangement The horizontal arrangement of the layout's children.
+ * @param itemHorizontalAlignment The cross axis/horizontal alignment of an item in the column.
  * @param maxItemsInEachColumn The maximum number of items per column
  * @param maxLines The maximum number of columns
- * @param overflow The strategy to handle overflowing items
- * @param itemCount The total number of item composable
+ * @param overflow The straoadtegy to handle overflowing items
  * @param content The indexed-based content of [ContextualFlowColumnScope]
  * @see FlowColumn
  * @see ContextualFlowRow
@@ -136,6 +142,7 @@ fun ContextualFlowColumn(
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    itemHorizontalAlignment: Alignment.Horizontal = Alignment.Start,
     maxItemsInEachColumn: Int = Int.MAX_VALUE,
     maxLines: Int = Int.MAX_VALUE,
     overflow: ContextualFlowColumnOverflow = ContextualFlowColumnOverflow.Clip,
@@ -152,6 +159,7 @@ fun ContextualFlowColumn(
         contextualColumnMeasureHelper(
             verticalArrangement,
             horizontalArrangement,
+            itemHorizontalAlignment,
             maxItemsInEachColumn,
             maxLines,
             overflowState,
@@ -173,9 +181,25 @@ fun ContextualFlowColumn(
 
 /** Defines the scope for items within a [ContextualFlowRow]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
-interface ContextualFlowRowScope : FlowRowScope {
+interface ContextualFlowRowScope : RowScope {
+    /**
+     * Have the item fill (possibly only partially) the max height of the tallest item in the row it
+     * was placed in, within the [FlowRow].
+     *
+     * @param fraction The fraction of the max height of the tallest item between `0` and `1`,
+     *   inclusive.
+     *
+     * Example usage:
+     *
+     * @sample androidx.compose.foundation.layout.samples.SimpleFlowRow_EqualHeight
+     */
+    @ExperimentalLayoutApi
+    fun Modifier.fillMaxRowHeight(
+        @FloatRange(from = 0.0, to = 1.0) fraction: Float = 1f,
+    ): Modifier
+
     /**
      * Identifies the row or column index where the UI component(s) are to be placed, provided they
      * do not exceed the specified [maxWidthInLine] and [maxHeight] for that row or column.
@@ -224,21 +248,37 @@ interface ContextualFlowRowScope : FlowRowScope {
 
 /** Scope for the overflow [ContextualFlowRow]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface ContextualFlowRowOverflowScope : FlowRowOverflowScope
 
 /** Scope for the overflow [ContextualFlowColumn]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
 interface ContextualFlowColumnOverflowScope : FlowColumnOverflowScope
 
 /** Provides a scope for items within a [ContextualFlowColumn]. */
 @LayoutScopeMarker
-@Immutable
+@Stable
 @ExperimentalLayoutApi
-interface ContextualFlowColumnScope : FlowColumnScope {
+interface ContextualFlowColumnScope : ColumnScope {
+    /**
+     * Have the item fill (possibly only partially) the max width of the widest item in the column
+     * it was placed in, within the [FlowColumn].
+     *
+     * @param fraction The fraction of the max width of the widest item between `0` and `1`,
+     *   inclusive.
+     *
+     * Example usage:
+     *
+     * @sample androidx.compose.foundation.layout.samples.SimpleFlowColumn_EqualWidth
+     */
+    @ExperimentalLayoutApi
+    fun Modifier.fillMaxColumnWidth(
+        @FloatRange(from = 0.0, to = 1.0) fraction: Float = 1f,
+    ): Modifier
+
     /**
      * Identifies the row or column index where the UI component(s) are to be placed, provided they
      * do not exceed the specified [maxWidth] and [maxHeightInLine] for that row or column.
@@ -291,7 +331,19 @@ internal class ContextualFlowRowScopeImpl(
     override val indexInLine: Int,
     override val maxWidthInLine: Dp,
     override val maxHeight: Dp
-) : FlowRowScope by FlowRowScopeInstance, ContextualFlowRowScope
+) : RowScope by RowScopeInstance, ContextualFlowRowScope {
+    override fun Modifier.fillMaxRowHeight(fraction: Float): Modifier {
+        require(fraction >= 0.0) {
+            "invalid fraction $fraction; must be greater than " + "or equal to zero"
+        }
+        require(fraction <= 1.0) { "invalid fraction $fraction; must not be greater " + "than 1.0" }
+        return this.then(
+            FillCrossAxisSizeElement(
+                fraction = fraction,
+            )
+        )
+    }
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 internal class ContextualFlowColumnScopeImpl(
@@ -299,7 +351,19 @@ internal class ContextualFlowColumnScopeImpl(
     override val indexInLine: Int,
     override val maxWidth: Dp,
     override val maxHeightInLine: Dp
-) : FlowColumnScope by FlowColumnScopeInstance, ContextualFlowColumnScope
+) : ColumnScope by ColumnScopeInstance, ContextualFlowColumnScope {
+    override fun Modifier.fillMaxColumnWidth(fraction: Float): Modifier {
+        require(fraction >= 0.0) {
+            "invalid fraction $fraction; must be greater than or " + "equal to zero"
+        }
+        require(fraction <= 1.0) { "invalid fraction $fraction; must not be greater " + "than 1.0" }
+        return this.then(
+            FillCrossAxisSizeElement(
+                fraction = fraction,
+            )
+        )
+    }
+}
 
 @ExperimentalLayoutApi
 internal class ContextualFlowRowOverflowScopeImpl(private val state: FlowLayoutOverflowState) :
@@ -314,6 +378,7 @@ internal class ContextualFlowColumnOverflowScopeImpl(private val state: FlowLayo
 internal fun contextualRowMeasurementHelper(
     horizontalArrangement: Arrangement.Horizontal,
     verticalArrangement: Arrangement.Vertical,
+    itemVerticalAlignment: Alignment.Vertical,
     maxItemsInMainAxis: Int,
     maxLines: Int,
     overflowState: FlowLayoutOverflowState,
@@ -324,6 +389,7 @@ internal fun contextualRowMeasurementHelper(
     return remember(
         horizontalArrangement,
         verticalArrangement,
+        itemVerticalAlignment,
         maxItemsInMainAxis,
         maxLines,
         overflowState,
@@ -334,7 +400,7 @@ internal fun contextualRowMeasurementHelper(
                 isHorizontal = true,
                 horizontalArrangement = horizontalArrangement,
                 mainAxisSpacing = horizontalArrangement.spacing,
-                crossAxisAlignment = CROSS_AXIS_ALIGNMENT_TOP,
+                crossAxisAlignment = CrossAxisAlignment.vertical(itemVerticalAlignment),
                 verticalArrangement = verticalArrangement,
                 crossAxisArrangementSpacing = verticalArrangement.spacing,
                 maxItemsInMainAxis = maxItemsInMainAxis,
@@ -352,6 +418,7 @@ internal fun contextualRowMeasurementHelper(
 internal fun contextualColumnMeasureHelper(
     verticalArrangement: Arrangement.Vertical,
     horizontalArrangement: Arrangement.Horizontal,
+    itemHorizontalAlignment: Alignment.Horizontal,
     maxItemsInMainAxis: Int,
     maxLines: Int,
     overflowState: FlowLayoutOverflowState,
@@ -362,6 +429,7 @@ internal fun contextualColumnMeasureHelper(
     return remember(
         verticalArrangement,
         horizontalArrangement,
+        itemHorizontalAlignment,
         maxItemsInMainAxis,
         maxLines,
         overflowState,
@@ -372,7 +440,7 @@ internal fun contextualColumnMeasureHelper(
                 isHorizontal = false,
                 verticalArrangement = verticalArrangement,
                 mainAxisSpacing = verticalArrangement.spacing,
-                crossAxisAlignment = CROSS_AXIS_ALIGNMENT_START,
+                crossAxisAlignment = CrossAxisAlignment.horizontal(itemHorizontalAlignment),
                 horizontalArrangement = horizontalArrangement,
                 crossAxisArrangementSpacing = horizontalArrangement.spacing,
                 maxItemsInMainAxis = maxItemsInMainAxis,
@@ -488,9 +556,7 @@ internal class ContextualFlowItemIterator(
                 measurable
             }
         } else {
-            throw IndexOutOfBoundsException(
-                "No item returned at index call. Index: $itemIndex"
-            )
+            throw IndexOutOfBoundsException("No item returned at index call. Index: $itemIndex")
         }
     }
 }

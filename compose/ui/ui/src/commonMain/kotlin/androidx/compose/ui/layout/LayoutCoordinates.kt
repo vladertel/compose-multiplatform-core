@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+@file:JvmName("LayoutCoordinatesKt")
+@file:JvmMultifileClass
+
 package androidx.compose.ui.layout
 
 import androidx.compose.ui.geometry.Offset
@@ -25,6 +28,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastMaxOf
 import androidx.compose.ui.util.fastMinOf
+import kotlin.jvm.JvmMultifileClass
+import kotlin.jvm.JvmName
 
 /** A holder of the measured bounds for the [Layout]. */
 @JvmDefaultWithCompatibility
@@ -152,17 +157,6 @@ interface LayoutCoordinates {
     fun transformFrom(sourceCoordinates: LayoutCoordinates, matrix: Matrix) {
         throw UnsupportedOperationException(
             "transformFrom is not implemented on this LayoutCoordinates"
-        )
-    }
-
-    /**
-     * Takes a [matrix] which transforms some coordinate system `C` to local coordinates, and
-     * updates the matrix to transform from `C` to screen coordinates instead.
-     */
-    @Suppress("DocumentExceptions")
-    fun transformToScreen(matrix: Matrix) {
-        throw UnsupportedOperationException(
-            "transformToScreen is not implemented on this LayoutCoordinates"
         )
     }
 

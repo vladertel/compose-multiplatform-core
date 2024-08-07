@@ -31,7 +31,6 @@ import kotlin.math.sin
  * @param y Array of values (of size n), where each value is spread on a [FloatArray] for each of
  *   its dimensions, expected to be of even size since two values are needed to interpolate arcs.
  */
-@ExperimentalAnimationSpecApi
 internal class ArcSpline(arcModes: IntArray, timePoints: FloatArray, y: Array<FloatArray>) {
     private val arcs: Array<Array<Arc>>
     private val isExtrapolate = true
@@ -311,7 +310,7 @@ internal class ArcSpline(arcModes: IntArray, timePoints: FloatArray, y: Array<Fl
             var ly = 0f
             var dist = 0f
             for (i in ourPercent.indices) {
-                val angle = (90.0 * i / (ourPercent.size - 1)).toRadians().toFloat()
+                val angle = toRadians(90.0 * i / (ourPercent.size - 1)).toFloat()
                 val s = sin(angle)
                 val c = cos(angle)
                 val px = a * s
@@ -375,5 +374,5 @@ internal class ArcSpline(arcModes: IntArray, timePoints: FloatArray, y: Array<Fl
     }
 }
 
-@Suppress("NOTHING_TO_INLINE")
-private inline fun Double.toRadians(): Double = this / 180 * PI
+private inline fun toRadians(value: Double): Double =
+    value * (PI / 180.0)

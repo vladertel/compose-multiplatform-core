@@ -201,7 +201,7 @@ internal fun RowColumnMeasurePolicy.measure(
                             "weightedSize " +
                             weightedSize,
                         e
-                    )
+                )
             }
         }
 
@@ -277,8 +277,8 @@ internal fun RowColumnMeasurePolicy.measure(
                                 remainderUnit +
                                 "childMainAxisSize " +
                                 childMainAxisSize,
-                            e
-                        )
+                        e
+                    )
                 }
                 val placeable = child.measure(childConstraints)
                 val placeableMainAxisSize = placeable.mainAxisSize()

@@ -212,7 +212,6 @@ internal fun VectorizedDurationBasedAnimationSpec<*>.clampPlayTime(playTime: Lon
  *
  * @see [KeyframesSpec]
  */
-@OptIn(ExperimentalAnimationSpecApi::class)
 class VectorizedKeyframesSpec<V : AnimationVector>
 internal constructor(
     // List of all timestamps. Must include start (time = 0), end (time = durationMillis) and all
@@ -521,7 +520,6 @@ internal data class VectorizedKeyframeSpecElementInfo<V : AnimationVector>(
  * @see ArcLinear
  * @see ArcAnimationSpec
  */
-@ExperimentalAnimationSpecApi
 @JvmInline
 value class ArcMode internal constructor(internal val value: Int) {
 

@@ -16,17 +16,17 @@
 
 package androidx.compose.ui.text.font
 
+import androidx.collection.LruCache
+import androidx.collection.SimpleArrayMap
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.caches.LruCache
-import androidx.compose.ui.text.caches.SimpleArrayMap
 import androidx.compose.ui.text.platform.FontCacheManagementDispatcher
+import androidx.compose.ui.text.platform.createSynchronizedObject
+import androidx.compose.ui.text.platform.synchronized
 import androidx.compose.ui.util.fastDistinctBy
 import androidx.compose.ui.util.fastFilter
-import androidx.compose.ui.text.createSynchronizedObject
-import androidx.compose.ui.text.synchronized
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import kotlin.coroutines.CoroutineContext

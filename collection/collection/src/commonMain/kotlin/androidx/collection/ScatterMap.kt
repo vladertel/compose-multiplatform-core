@@ -27,6 +27,7 @@
 package androidx.collection
 
 import androidx.collection.internal.EMPTY_OBJECTS
+import androidx.collection.internal.requirePrecondition
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.math.max
@@ -158,7 +159,7 @@ import kotlin.math.max
 
 // Indicates that all the slot in a [Group] are empty
 // 0x8080808080808080UL, see explanation in [BitmaskMsb]
-internal const val AllEmpty = -0x7f7f7f7f7f7f7f80L
+internal const val AllEmpty = -0x7f7f7f7f_7f7f7f80L
 
 internal const val Empty = 0b10000000L
 internal const val Deleted = 0b11111110L
@@ -175,7 +176,7 @@ internal const val Deleted = 0b11111110L
 internal val EmptyGroup =
     longArrayOf(
         // NOTE: the first byte in the array's logical order is in the LSB
-        -0x7f7f7f7f7f7f7f01L, // Sentinel, Empty, Empty... or 0x80808080808080FFUL
+        -0x7f7f7f7f_7f7f7f01L, // Sentinel, Empty, Empty... or 0xFF80808080808080UL
         -1L // 0xFFFFFFFFFFFFFFFFUL
     )
 
@@ -337,7 +338,7 @@ public sealed class ScatterMap<K, V> {
                 // 0 when i < lastIndex, 1 otherwise.
                 val bitCount = 8 - ((i - lastIndex).inv() ushr 31)
                 for (j in 0 until bitCount) {
-                    if (isFull(slot and 0xFFL)) {
+                    if (isFull(slot and 0xffL)) {
                         val index = (i shl 3) + j
                         block(index)
                     }
@@ -730,7 +731,7 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
     private var growthLimit = 0
 
     init {
-        require(initialCapacity >= 0) { "Capacity must be a positive value." }
+        requirePrecondition(initialCapacity >= 0) { "Capacity must be a positive value." }
         initializeStorage(unloadedCapacity(initialCapacity))
     }
 
@@ -983,7 +984,7 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
 
         // TODO: We could just mark the entry as empty if there's a group
         //       window around this entry that was already empty
-        writeMetadata(index, Deleted)
+        writeMetadata(metadata, _capacity, index, Deleted)
         keys[index] = null
         val oldValue = values[index]
         values[index] = null
@@ -1046,7 +1047,7 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
 
         _size += 1
         growthLimit -= if (isEmpty(metadata, index)) 1 else 0
-        writeMetadata(index, hash2.toLong())
+        writeMetadata(metadata, _capacity, index, hash2.toLong())
 
         return index.inv()
     }
@@ -1096,10 +1097,107 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
      */
     private fun adjustStorage() {
         if (_capacity > GroupWidth && _size.toULong() * 32UL <= _capacity.toULong() * 25UL) {
-            resizeStorage(_capacity)
+            dropDeletes()
         } else {
             resizeStorage(nextCapacity(_capacity))
         }
+    }
+
+    private fun dropDeletes() {
+        val metadata = metadata
+        val capacity = _capacity
+        val keys = keys
+        val values = values
+
+        // Converts Sentinel and Deleted to Empty, and Full to Deleted
+        convertMetadataForCleanup(metadata, capacity)
+
+        var swapIndex = -1
+        var index = 0
+
+        // Drop deleted items and re-hashes surviving entries
+        while (index != capacity) {
+            var m = readRawMetadata(metadata, index)
+            // Formerly Deleted entry, we can use it as a swap spot
+            if (m == Empty) {
+                swapIndex = index
+                index++
+                continue
+            }
+
+            // Formerly Full entries are now marked Deleted. If we see an
+            // entry that's not marked Deleted, we can ignore it completely
+            if (m != Deleted) {
+                index++
+                continue
+            }
+
+            val hash = hash(keys[index])
+            val hash1 = h1(hash)
+            val targetIndex = findFirstAvailableSlot(hash1)
+
+            // Test if the current index (i) and the new index (targetIndex) fall
+            // within the same group based on the hash. If the group doesn't change,
+            // we don't move the entry
+            val probeOffset = hash1 and capacity
+            val newProbeIndex = ((targetIndex - probeOffset) and capacity) / GroupWidth
+            val oldProbeIndex = ((index - probeOffset) and capacity) / GroupWidth
+
+            if (newProbeIndex == oldProbeIndex) {
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, index, hash2.toLong())
+
+                // Copies the metadata into the clone area
+                metadata[metadata.lastIndex] = metadata[0]
+
+                index++
+                continue
+            }
+
+            m = readRawMetadata(metadata, targetIndex)
+            if (m == Empty) {
+                // The target is empty so we can transfer directly
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, targetIndex, hash2.toLong())
+                writeRawMetadata(metadata, index, Empty)
+
+                keys[targetIndex] = keys[index]
+                keys[index] = null
+
+                values[targetIndex] = values[index]
+                values[index] = null
+
+                swapIndex = index
+            } else /* m == Deleted */ {
+                // The target isn't empty so we use an empty slot denoted by
+                // swapIndex to perform the swap
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, targetIndex, hash2.toLong())
+
+                if (swapIndex == -1) {
+                    swapIndex = findEmptySlot(metadata, index + 1, capacity)
+                }
+
+                keys[swapIndex] = keys[targetIndex]
+                keys[targetIndex] = keys[index]
+                keys[index] = keys[swapIndex]
+
+                values[swapIndex] = values[targetIndex]
+                values[targetIndex] = values[index]
+                values[index] = values[swapIndex]
+
+                // Since we exchanged two slots we must repeat the process with
+                // element we just moved in the current location
+                index--
+            }
+
+            // Copies the metadata into the clone area
+            metadata[metadata.lastIndex] = metadata[0]
+
+            index++
+        }
+
+        initializeGrowth()
     }
 
     private fun resizeStorage(newCapacity: Int) {
@@ -1110,8 +1208,10 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
 
         initializeStorage(newCapacity)
 
+        val newMetadata = metadata
         val newKeys = keys
         val newValues = values
+        val capacity = _capacity
 
         for (i in 0 until previousCapacity) {
             if (isFull(previousMetadata, i)) {
@@ -1119,43 +1219,11 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
                 val hash = hash(previousKey)
                 val index = findFirstAvailableSlot(h1(hash))
 
-                writeMetadata(index, h2(hash).toLong())
+                writeMetadata(newMetadata, capacity, index, h2(hash).toLong())
                 newKeys[index] = previousKey
                 newValues[index] = previousValues[i]
             }
         }
-    }
-
-    private fun removeDeletedMarkers() {
-        val m = metadata
-        val capacity = _capacity
-        var removedDeletes = 0
-
-        // TODO: this can be done in a more efficient way
-        for (i in 0 until capacity) {
-            val slot = readRawMetadata(m, i)
-            if (slot == Deleted) {
-                writeMetadata(i, Empty)
-                removedDeletes++
-            }
-        }
-
-        growthLimit += removedDeletes
-    }
-
-    /**
-     * Writes the "H2" part of an entry into the metadata array at the specified [index]. The index
-     * must be a valid index. This function ensures the metadata is also written in the clone area
-     * at the end.
-     */
-    private inline fun writeMetadata(index: Int, value: Long) {
-        val m = metadata
-        writeRawMetadata(m, index, value)
-
-        // Mirroring
-        val c = _capacity
-        val cloneIndex = ((index - ClonedMetadataCount) and c) + (ClonedMetadataCount and c)
-        writeRawMetadata(m, cloneIndex, value)
     }
 
     /**
@@ -1467,6 +1535,31 @@ public class MutableScatterMap<K, V>(initialCapacity: Int = DefaultScatterCapaci
     }
 }
 
+internal fun convertMetadataForCleanup(metadata: LongArray, capacity: Int) {
+    val end = (capacity + 7) shr 3
+    for (i in 0 until end) {
+        // Converts Sentinel and Deleted to Empty, and Full to Deleted
+        val maskedGroup = metadata[i] and BitmaskMsb
+        metadata[i] = (maskedGroup.inv() + (maskedGroup ushr 7)) and BitmaskLsb.inv()
+    }
+
+    val lastIndex = metadata.lastIndex
+    // Restores the sentinel that we overwrote above
+    metadata[lastIndex - 1] =
+        (Sentinel shl 56) or (metadata[lastIndex - 1] and 0x00ffffff_ffffffffL)
+    // Copies the metadata into the clone area
+    metadata[lastIndex] = metadata[0]
+}
+
+internal fun findEmptySlot(metadata: LongArray, start: Int, end: Int): Int {
+    for (i in start until end) {
+        if (readRawMetadata(metadata, i) == Empty) {
+            return i
+        }
+    }
+    return -1
+}
+
 /**
  * Returns the hash code of [k]. The hash spreads low bits to to minimize collisions in high 25-bits
  * that are used for probing.
@@ -1487,7 +1580,7 @@ internal inline fun h1(hash: Int) = hash ushr 7
 
 // Returns the "H2" part of the specified hash code. In our implementation,
 // this corresponds to the lower 7 bits
-internal inline fun h2(hash: Int) = hash and 0x7F
+internal inline fun h2(hash: Int) = hash and 0x7f
 
 // Assumes [capacity] was normalized with [normalizedCapacity].
 // Returns the next 2^m - 1
@@ -1500,7 +1593,7 @@ internal fun nextCapacity(capacity: Int) =
 
 // n -> nearest 2^m - 1
 internal fun normalizeCapacity(n: Int) =
-    if (n > 0) (0xFFFFFFFF.toInt() ushr n.countLeadingZeroBits()) else 0
+    if (n > 0) (0xffffffff.toInt() ushr n.countLeadingZeroBits()) else 0
 
 // Computes the growth based on a load factor of 7/8 for the general case.
 // When capacity is < GroupWidth - 1, we use a load factor of 1 instead
@@ -1528,12 +1621,36 @@ internal fun unloadedCapacity(capacity: Int): Int {
 internal inline fun readRawMetadata(data: LongArray, offset: Int): Long {
     // Take the Long at index `offset / 8` and shift by `offset % 8`
     // A longer explanation can be found in [group()].
-    return (data[offset shr 3] shr ((offset and 0x7) shl 3)) and 0xFF
+    return (data[offset shr 3] shr ((offset and 0x7) shl 3)) and 0xff
 }
 
 /**
- * Writes a single byte into the long array at the specified [offset] in *bytes*. NOTE: [value] must
- * be a single byte, accepted here as a Long to avoid unnecessary conversions.
+ * Writes a single byte into the long array at the specified [offset] in *bytes* and copies it, if
+ * necessary, into the cloned bytes section at the end of the array.
+ *
+ * NOTE: [value] must be a single byte, accepted here as a Long to avoid unnecessary conversions.
+ */
+internal inline fun writeMetadata(data: LongArray, capacity: Int, offset: Int, value: Long) {
+    writeRawMetadata(data, offset, value)
+
+    // Mirroring
+    // We could/should write a single byte when cloning the metadata by calling
+    // writeRawMetadata(), but since our implementation uses Longs for storage,
+    // we always write a full Long. We can skip a bit of unnecessary work by just
+    // copying the whole group the index falls into.
+    // When index is in 0..7, we copy the group over the control bytes at the end of
+    // the array, otherwise the group is copied onto itself (cloneIndex shr 3 == index shr 3)
+    // TODO: We could further reduce the work we do by always copying index 0 to
+    //       lastIndex, but is it interesting in terms of data caches?
+    val cloneIndex =
+        ((offset - ClonedMetadataCount) and capacity) + (ClonedMetadataCount and capacity)
+    data[cloneIndex shr 3] = data[offset shr 3]
+}
+
+/**
+ * Writes a single byte into the long array at the specified [offset] in *bytes*.
+ *
+ * NOTE: [value] must be a single byte, accepted here as a Long to avoid unnecessary conversions.
  */
 internal inline fun writeRawMetadata(data: LongArray, offset: Int, value: Long) {
     // See [group()] for details. First find the index i in the LongArray,
@@ -1542,7 +1659,7 @@ internal inline fun writeRawMetadata(data: LongArray, offset: Int, value: Long) 
     val b = (offset and 0x7) shl 3
     // Mask the source data with 0xFF in the right place, then and [value]
     // moved to the right spot
-    data[i] = (data[i] and (0xFFL shl b).inv()) or (value shl b)
+    data[i] = (data[i] and (0xffL shl b).inv()) or (value shl b)
 }
 
 internal inline fun isEmpty(metadata: LongArray, index: Int) =
@@ -1599,7 +1716,7 @@ internal inline fun Bitmask.next() = this and (this - 1L)
 internal inline fun Bitmask.hasNext() = this != 0L
 
 // Least significant bits in the bitmask, one for each metadata in the group
-@PublishedApi internal const val BitmaskLsb: Long = 0x0101010101010101L
+@PublishedApi internal const val BitmaskLsb: Long = 0x01010101_01010101L
 
 // Most significant bits in the bitmask, one for each metadata in the group
 //
@@ -1608,7 +1725,7 @@ internal inline fun Bitmask.hasNext() = this != 0L
 // a Long. And since Kotlin hates signed constants, we have to use
 // -0x7f7f7f7f7f7f7f80L instead of the more sensible 0x8080808080808080L (and
 // 0x8080808080808080UL.toLong() isn't considered a constant)
-@PublishedApi internal const val BitmaskMsb: Long = -0x7f7f7f7f7f7f7f80L // srsly Kotlin @#!
+@PublishedApi internal const val BitmaskMsb: Long = -0x7f7f7f7f_7f7f7f80L // srsly Kotlin @#!
 
 /**
  * Creates a [Group] from a metadata array, starting at the specified offset. [offset] must be a

@@ -24,8 +24,8 @@ import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Update
 import androidx.room.Upsert
 import androidx.room.ext.KotlinTypeNames
+import androidx.room.ext.RoomTypeNames
 import androidx.room.ext.RoomTypeNames.ROOM_DB
-import androidx.room.ext.SupportDbTypeNames
 import androidx.room.parser.QueryType
 import androidx.room.parser.SQLTypeAffinity
 import androidx.room.vo.CustomTypeConverter
@@ -795,8 +795,8 @@ object ProcessorErrors {
     }
 
     val RAW_QUERY_STRING_PARAMETER_REMOVED =
-        "RawQuery does not allow passing a string anymore." +
-            " Please use ${SupportDbTypeNames.QUERY.canonicalName}."
+        "@RawQuery does not allow passing a string anymore." +
+            " Please use ${RoomTypeNames.RAW_QUERY.canonicalName}."
 
     val MISSING_COPY_ANNOTATIONS =
         "Annotated property getter is missing " + "@AutoValue.CopyAnnotations."
@@ -1257,4 +1257,19 @@ object ProcessorErrors {
     val RAW_QUERY_NOT_SUPPORTED_ON_NON_ANDROID =
         "@RawQuery annotated DAO functions are currently not supported in source sets targeting " +
             "non-Android platforms."
+
+    val MISSING_CONSTRUCTED_BY_ANNOTATION =
+        "The @Database class must be annotated with @ConstructedBy since the source is targeting " +
+            "non-Android platforms."
+
+    val INVALID_CONSTRUCTED_BY_CLASS = "The @ConstructedBy 'value' must be a valid class."
+
+    val INVALID_CONSTRUCTED_BY_NOT_OBJECT =
+        "The @ConstructedBy definition must be an 'object' declaration."
+
+    val INVALID_CONSTRUCTED_BY_NOT_EXPECT =
+        "The @ConstructedBy definition must be an 'expect' declaration."
+
+    fun invalidConstructedBySuperInterface(expected: String) =
+        "The @ConstructedBy definition must implement a single interface of type '$expected'."
 }

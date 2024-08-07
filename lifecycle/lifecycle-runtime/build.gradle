@@ -6,7 +6,6 @@
  * modifying its settings.
  */
 
-
 import androidx.build.JetbrainsAndroidXPlugin
 import androidx.build.KmpPlatformsKt
 import androidx.build.PlatformIdentifier
@@ -60,13 +59,12 @@ kotlin {
                 api(libs.kotlinStdlib)
                 api(project(":lifecycle:lifecycle-common"))
                 api(project(":annotation:annotation"))
-
-                implementation(libs.kotlinCoroutinesCore)
             }
         }
 
         commonTest {
             dependencies {
+                //implementation(project(":internal-testutils-lifecycle"))
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.kotlinTest)
                 implementation(project(":kruth:kruth"))
@@ -74,7 +72,7 @@ kotlin {
             }
         }
 
-        jvmMain {
+        jvmCommonMain {
             dependsOn(commonMain)
             dependencies {
                 api("androidx.arch.core:core-common:2.2.0")
@@ -82,17 +80,18 @@ kotlin {
         }
 
         desktopMain {
-            dependsOn(jvmMain)
+            dependsOn(jvmCommonMain)
         }
 
         desktopTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.kotlinCoroutinesSwing)
             }
         }
 
         androidMain {
-            dependsOn(jvmMain)
+            dependsOn(jvmCommonMain)
             dependencies {
                 api(libs.kotlinCoroutinesAndroid)
                 implementation("androidx.arch.core:core-runtime:2.2.0")
@@ -120,12 +119,12 @@ kotlin {
             }
         }
 
-        nonJvmMain {
+        nonJvmCommonMain {
             dependsOn(commonMain)
         }
 
         nativeMain {
-            dependsOn(nonJvmMain)
+            dependsOn(nonJvmCommonMain)
 
             // Required for WeakReference usage
             languageSettings.optIn("kotlin.experimental.ExperimentalNativeApi")
@@ -136,10 +135,10 @@ kotlin {
         }
 
         if (jsEnabled || wasmEnabled) {
-            webMain.dependsOn(nonJvmMain)
+            webMain.dependsOn(nonJvmCommonMain)
         }
 
-        targets.all { target ->
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nativeMain)
@@ -167,7 +166,7 @@ dependencies {
 }
 
 android {
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles "proguard-rules.pro"
     }
 
@@ -175,6 +174,8 @@ android {
     sourceSets["main"].java.srcDir("src/androidMain/java")
     sourceSets["test"].java.srcDir("src/androidUnitTest/kotlin")
     namespace "androidx.lifecycle.runtime"
+    // TODO(b/345531033)
+    experimentalProperties["android.lint.useK2Uast"] = false
 }
 
 androidx {

@@ -25,7 +25,6 @@ import androidx.collection.mutableIntObjectMapOf
 import androidx.collection.mutableIntSetOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.OwnerScope
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ScrollAxisRange
@@ -122,7 +121,7 @@ internal fun Role.toLegacyClassName(): String? =
         Role.RadioButton -> "android.widget.RadioButton"
         Role.Image -> "android.widget.ImageView"
         Role.DropdownList -> "android.widget.Spinner"
-        Role.NumberPicker -> "android.widget.NumberPicker"
+        Role.ValuePicker -> "android.widget.NumberPicker"
         else -> null
     }
 
@@ -145,12 +144,13 @@ internal class SemanticsNodeWithAdjustedBounds(
 )
 
 /** This function retrieves the View corresponding to a semanticsId, if it exists. */
-internal fun AndroidViewsHandler.semanticsIdToView(id: Int): View? =
-    layoutNodeToHolder.entries.firstOrNull { it.key.semanticsId == id }?.value
-
-internal fun LayoutNode.isAncestorOf(node: LayoutNode): Boolean {
-    val p = node.parent ?: return false
-    return (p == this) || isAncestorOf(p)
+internal fun AndroidViewsHandler.semanticsIdToView(id: Int): View? {
+    layoutNodeToHolder.forEach { key, value ->
+        if (key.semanticsId == id) {
+            return value
+        }
+    }
+    return null
 }
 
 // TODO(mnuzen): refactor `currentSemanticsNodes` in the AccessibilityDelegate file to also use
