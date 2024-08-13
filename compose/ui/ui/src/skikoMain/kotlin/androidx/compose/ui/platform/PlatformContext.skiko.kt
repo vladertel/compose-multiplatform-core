@@ -28,6 +28,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -40,11 +41,15 @@ import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TextInputService
+import androidx.compose.ui.text.input.TextInputSession
 import kotlin.reflect.KProperty
 import kotlinx.coroutines.awaitCancellation
 
@@ -109,7 +114,7 @@ interface PlatformContext {
 
     val viewConfiguration: ViewConfiguration get() = EmptyViewConfiguration
     val inputModeManager: InputModeManager
-    val textInputService: PlatformTextInputService get() = EmptyPlatformTextInputService
+    val textInputService: PlatformContextTextInputService get() = EmptyPlatformContextTextInputService
 
     suspend fun textInputSession(
         session: suspend PlatformTextInputSessionScope.() -> Nothing
@@ -212,7 +217,7 @@ internal object EmptyViewConfiguration : ViewConfiguration {
     override val touchSlop: Float = 18f
 }
 
-private object EmptyPlatformTextInputService : PlatformTextInputService {
+private object EmptyPlatformContextTextInputService : PlatformContextTextInputService {
     override fun startInput(
         value: TextFieldValue,
         imeOptions: ImeOptions,
@@ -291,5 +296,140 @@ internal class DelegateRootForTestListener : PlatformContext.RootForTestListener
         for (root in roots) {
             listener?.onRootForTestCreated(root)
         }
+    }
+}
+
+/**
+ * Platform specific text input service.
+ *
+ * This is a non-deprecated version of [PlatformTextInputService], which is needed because we can't
+ * expose deprecated APIs in [PlatformContext].
+ */
+interface PlatformContextTextInputService {
+    /**
+     * Start text input session for given client.
+     *
+     * @see TextInputService.startInput
+     */
+    fun startInput(
+        value: TextFieldValue,
+        imeOptions: ImeOptions,
+        onEditCommand: (List<EditCommand>) -> Unit,
+        onImeActionPerformed: (ImeAction) -> Unit
+    )
+
+    /**
+     * Restart input and show the keyboard. This should only be called when starting a new
+     * `PlatformTextInputModifierNode.textInputSession`.
+     *
+     * @see TextInputService.startInput
+     */
+    fun startInput() {}
+
+    /**
+     * Stop text input session.
+     *
+     * @see TextInputService.stopInput
+     */
+    fun stopInput()
+
+    /**
+     * Request showing onscreen keyboard
+     *
+     * There is no guarantee nor callback of the result of this API.
+     *
+     * @see TextInputService.showSoftwareKeyboard
+     */
+    fun showSoftwareKeyboard()
+
+    /**
+     * Hide software keyboard
+     *
+     * @see TextInputService.hideSoftwareKeyboard
+     */
+    fun hideSoftwareKeyboard()
+
+    /**
+     * Notify the new editor model to IME.
+     *
+     * @see TextInputSession.updateState
+     */
+    fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue)
+
+    /**
+     * Notify the focused rectangle to the system.
+     *
+     * The system can ignore this information or use it to for additional functionality.
+     *
+     * For example, desktop systems show a popup near the focused input area (for some languages).
+     */
+    // TODO(b/262648050) Try to find a better API.
+    fun notifyFocusedRect(rect: Rect) {
+    }
+
+    /**
+     * Notify the input service of layout and position changes.
+     *
+     * @see TextInputSession.updateTextLayoutResult
+     */
+    fun updateTextLayoutResult(
+        textFieldValue: TextFieldValue,
+        offsetMapping: OffsetMapping,
+        textLayoutResult: TextLayoutResult,
+        textFieldToRootTransform: (Matrix) -> Unit,
+        innerTextFieldBounds: Rect,
+        decorationBoxBounds: Rect
+    ) {
+    }
+}
+
+@Suppress("DEPRECATION")
+fun PlatformContextTextInputService.asPlatformTextInputService() = object : PlatformTextInputService {
+    override fun startInput(
+        value: TextFieldValue,
+        imeOptions: ImeOptions,
+        onEditCommand: (List<EditCommand>) -> Unit,
+        onImeActionPerformed: (ImeAction) -> Unit
+    ) {
+        this@asPlatformTextInputService.startInput(
+            value = value,
+            imeOptions = imeOptions,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed
+        )
+    }
+
+    override fun startInput() = this@asPlatformTextInputService.startInput()
+
+    override fun stopInput() = this@asPlatformTextInputService.stopInput()
+
+    override fun showSoftwareKeyboard() = this@asPlatformTextInputService.showSoftwareKeyboard()
+
+    override fun hideSoftwareKeyboard() = this@asPlatformTextInputService.hideSoftwareKeyboard()
+
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
+        this@asPlatformTextInputService.updateState(oldValue, newValue)
+    }
+
+    override fun notifyFocusedRect(rect: Rect) {
+        this@asPlatformTextInputService.notifyFocusedRect(rect)
+    }
+
+    override fun updateTextLayoutResult(
+        textFieldValue: TextFieldValue,
+        offsetMapping: OffsetMapping,
+        textLayoutResult: TextLayoutResult,
+        textFieldToRootTransform: (Matrix) -> Unit,
+        innerTextFieldBounds: Rect,
+        decorationBoxBounds: Rect
+    ) {
+        this@asPlatformTextInputService.updateTextLayoutResult(
+            textFieldValue = textFieldValue,
+            offsetMapping = offsetMapping,
+            textLayoutResult = textLayoutResult,
+            textFieldToRootTransform = textFieldToRootTransform,
+            innerTextFieldBounds = innerTextFieldBounds,
+            decorationBoxBounds = decorationBoxBounds
+        )
     }
 }

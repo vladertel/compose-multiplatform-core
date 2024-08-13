@@ -22,7 +22,6 @@ import androidx.compose.ui.text.input.DeleteSurroundingTextInCodePointsCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.substring
@@ -39,7 +38,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal class DesktopTextInputService(private val component: PlatformComponent) :
-    PlatformTextInputService {
+    PlatformContextTextInputService {
     data class CurrentInput(
         var value: TextFieldStateAdapter,
         val onEditCommand: ((List<EditCommand>) -> Unit),

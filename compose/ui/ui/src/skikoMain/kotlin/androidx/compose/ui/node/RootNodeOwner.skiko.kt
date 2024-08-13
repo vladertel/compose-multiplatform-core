@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.RenderNodeLayer
 import androidx.compose.ui.platform.asDragAndDropManager
+import androidx.compose.ui.platform.asPlatformTextInputService
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
@@ -317,7 +318,8 @@ internal class RootNodeOwner(
         override val autofillTree = AutofillTree()
         override val autofill: Autofill?  get() = null
         override val density get() = this@RootNodeOwner.density
-        override val textInputService = TextInputService(platformContext.textInputService)
+        override val textInputService =
+            TextInputService(platformContext.textInputService.asPlatformTextInputService())
         override val softwareKeyboardController =
             DelegatingSoftwareKeyboardController(textInputService)
 

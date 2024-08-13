@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformContextTextInputService
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
@@ -35,7 +36,6 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -391,7 +391,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
             get() = size
     }
 
-    private inner class TestTextInputService : PlatformTextInputService {
+    private inner class TestTextInputService : PlatformContextTextInputService {
         var session: Session? = null
 
         override fun startInput(
@@ -419,7 +419,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
     private inner class TestContext : PlatformContext by PlatformContext.Empty {
         override val windowInfo: WindowInfo = TestWindowInfo()
 
-        override val textInputService: PlatformTextInputService = TestTextInputService()
+        override val textInputService = TestTextInputService()
 
         override val rootForTestListener: PlatformContext.RootForTestListener
             get() = composeRootRegistry

@@ -18,11 +18,9 @@ package androidx.compose.ui.platform
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
 import org.w3c.dom.events.KeyboardEvent
 
@@ -32,11 +30,11 @@ internal interface InputAwareInputService {
     fun isVirtualKeyboard(): Boolean
 }
 
-internal abstract class WebTextInputService : PlatformTextInputService, InputAwareInputService {
+internal abstract class WebTextInputService : PlatformContextTextInputService, InputAwareInputService {
     private val webImeInputService = WebImeInputService(this)
     private val webKeyboardInputService = WebKeyboardInputService()
 
-    private fun delegatedService(): PlatformTextInputService {
+    private fun delegatedService(): PlatformContextTextInputService {
         return if (isVirtualKeyboard()) webImeInputService else webKeyboardInputService
     }
 

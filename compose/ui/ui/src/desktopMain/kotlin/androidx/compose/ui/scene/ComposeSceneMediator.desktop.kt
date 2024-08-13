@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.DesktopTextInputService
 import androidx.compose.ui.platform.EmptyViewConfiguration
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformContextTextInputService
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.PlatformWindowContext
@@ -57,7 +58,6 @@ import androidx.compose.ui.platform.a11y.AccessibilityController
 import androidx.compose.ui.platform.a11y.ComposeSceneAccessible
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -672,7 +672,7 @@ internal class ComposeSceneMediator(
 
         override val measureDrawLayerBounds: Boolean = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration: ViewConfiguration = DesktopViewConfiguration()
-        override val textInputService: PlatformTextInputService = this@ComposeSceneMediator.textInputService
+        override val textInputService = this@ComposeSceneMediator.textInputService
 
         private val textInputSessionMutex = SessionMutex<DesktopTextInputSession>()
 

@@ -27,7 +27,6 @@ import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeScenePointer
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.*
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.*
@@ -98,7 +97,7 @@ class ComposeScene internal constructor(
      */
     @ExperimentalComposeUiApi
     constructor(
-        textInputService: PlatformTextInputService,
+        textInputService: PlatformContextTextInputService,
         coroutineContext: CoroutineContext = Dispatchers.Unconfined,
         density: Density = Density(1f),
         layoutDirection: LayoutDirection = LayoutDirection.Ltr,
@@ -149,7 +148,7 @@ class ComposeScene internal constructor(
      * schedule the next [render] in your rendering loop.
      */
     constructor(
-        textInputService: PlatformTextInputService,
+        textInputService: PlatformContextTextInputService,
         coroutineContext: CoroutineContext = Dispatchers.Unconfined,
         density: Density = Density(1f),
         invalidate: () -> Unit = {}

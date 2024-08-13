@@ -19,10 +19,9 @@ package androidx.compose.ui.platform
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
 
-internal class MacosTextInputService : PlatformTextInputService {
+internal class MacosTextInputService : PlatformContextTextInputService {
 
     data class CurrentInput(
         var value: TextFieldValue,

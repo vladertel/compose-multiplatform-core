@@ -20,10 +20,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
 
-internal class WebImeInputService(parentInputService: InputAwareInputService) : PlatformTextInputService, InputAwareInputService by parentInputService {
+internal class WebImeInputService(parentInputService: InputAwareInputService) : PlatformContextTextInputService, InputAwareInputService by parentInputService {
 
     private var backingTextArea: BackingTextArea? = null
         set(value) {
