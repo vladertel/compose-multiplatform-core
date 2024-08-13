@@ -19,22 +19,21 @@ package androidx.compose.ui.platform
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.TextFieldValue
 
 internal class MacosTextInputService : PlatformContextTextInputService {
 
     data class CurrentInput(
-        var value: TextFieldValue,
+        var value: TextFieldStateAdapter,
         val onEditCommand: ((List<EditCommand>) -> Unit),
     )
 
     private var currentInput: CurrentInput? = null
 
     override fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     ) {
         currentInput = CurrentInput(
             value,
@@ -54,7 +53,7 @@ internal class MacosTextInputService : PlatformContextTextInputService {
         //do nothing
     }
 
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
         currentInput?.let { input ->
             input.value = newValue
         }

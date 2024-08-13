@@ -48,7 +48,6 @@ import androidx.compose.ui.platform.DesktopTextInputService
 import androidx.compose.ui.platform.EmptyViewConfiguration
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.PlatformContext
-import androidx.compose.ui.platform.PlatformContextTextInputService
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.PlatformWindowContext

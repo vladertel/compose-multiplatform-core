@@ -219,16 +219,16 @@ internal object EmptyViewConfiguration : ViewConfiguration {
 
 private object EmptyPlatformContextTextInputService : PlatformContextTextInputService {
     override fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     ) = Unit
 
     override fun stopInput() = Unit
     override fun showSoftwareKeyboard() = Unit
     override fun hideSoftwareKeyboard() = Unit
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) = Unit
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) = Unit
 }
 
 private object EmptyTextToolbar : TextToolbar {
@@ -312,10 +312,10 @@ interface PlatformContextTextInputService {
      * @see TextInputService.startInput
      */
     fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     )
 
     /**
@@ -354,7 +354,7 @@ interface PlatformContextTextInputService {
      *
      * @see TextInputSession.updateState
      */
-    fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue)
+    fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter)
 
     /**
      * Notify the focused rectangle to the system.
@@ -373,7 +373,7 @@ interface PlatformContextTextInputService {
      * @see TextInputSession.updateTextLayoutResult
      */
     fun updateTextLayoutResult(
-        textFieldValue: TextFieldValue,
+        textFieldValue: TextFieldStateAdapter,
         offsetMapping: OffsetMapping,
         textLayoutResult: TextLayoutResult,
         textFieldToRootTransform: (Matrix) -> Unit,
@@ -392,7 +392,7 @@ fun PlatformContextTextInputService.asPlatformTextInputService() = object : Plat
         onImeActionPerformed: (ImeAction) -> Unit
     ) {
         this@asPlatformTextInputService.startInput(
-            value = value,
+            value = value.asTextFieldStateAdapter(),
             imeOptions = imeOptions,
             onEditCommand = onEditCommand,
             onImeActionPerformed = onImeActionPerformed
@@ -408,7 +408,10 @@ fun PlatformContextTextInputService.asPlatformTextInputService() = object : Plat
     override fun hideSoftwareKeyboard() = this@asPlatformTextInputService.hideSoftwareKeyboard()
 
     override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
-        this@asPlatformTextInputService.updateState(oldValue, newValue)
+        this@asPlatformTextInputService.updateState(
+            oldValue = oldValue?.asTextFieldStateAdapter(),
+            newValue = newValue.asTextFieldStateAdapter()
+        )
     }
 
     override fun notifyFocusedRect(rect: Rect) {
@@ -424,7 +427,7 @@ fun PlatformContextTextInputService.asPlatformTextInputService() = object : Plat
         decorationBoxBounds: Rect
     ) {
         this@asPlatformTextInputService.updateTextLayoutResult(
-            textFieldValue = textFieldValue,
+            textFieldValue = textFieldValue.asTextFieldStateAdapter(),
             offsetMapping = offsetMapping,
             textLayoutResult = textLayoutResult,
             textFieldToRootTransform = textFieldToRootTransform,

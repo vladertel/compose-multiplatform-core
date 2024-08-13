@@ -20,7 +20,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.TextFieldValue
 
 internal class WebImeInputService(parentInputService: InputAwareInputService) : PlatformContextTextInputService, InputAwareInputService by parentInputService {
 
@@ -31,16 +30,16 @@ internal class WebImeInputService(parentInputService: InputAwareInputService) : 
         }
 
     override fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     ) {
         backingTextArea =
             BackingTextArea(
-                imeOptions,
-                onEditCommand,
-                onImeActionPerformed,
+                imeOptions = imeOptions,
+                onEditCommand = onEditCommand,
+                onImeActionPerformed = onImeActionPerformed,
                 processKeyboardEvent = this@WebImeInputService::processKeyboardEvent
             )
         backingTextArea?.register()
@@ -60,7 +59,7 @@ internal class WebImeInputService(parentInputService: InputAwareInputService) : 
         backingTextArea?.blur()
     }
 
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
         backingTextArea?.updateState(newValue)
     }
 

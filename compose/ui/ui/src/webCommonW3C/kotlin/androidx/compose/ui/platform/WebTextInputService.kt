@@ -21,7 +21,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.TextFieldValue
 import org.w3c.dom.events.KeyboardEvent
 
 internal interface InputAwareInputService {
@@ -39,10 +38,10 @@ internal abstract class WebTextInputService : PlatformContextTextInputService, I
     }
 
     override fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     ) {
         delegatedService().startInput(value, imeOptions, onEditCommand, onImeActionPerformed)
     }
@@ -59,7 +58,7 @@ internal abstract class WebTextInputService : PlatformContextTextInputService, I
         delegatedService().hideSoftwareKeyboard()
     }
 
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
         delegatedService().updateState(oldValue, newValue)
     }
 

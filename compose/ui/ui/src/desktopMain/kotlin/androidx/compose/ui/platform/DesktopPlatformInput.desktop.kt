@@ -23,7 +23,6 @@ import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.SetComposingTextCommand
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.substring
 import java.awt.Rectangle
 import java.awt.event.InputMethodEvent
@@ -42,7 +41,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     data class CurrentInput(
         var value: TextFieldStateAdapter,
         val onEditCommand: ((List<EditCommand>) -> Unit),
-        val onImeActionPerformed: ((ImeAction) -> Unit),
+        val onImeActionPerformed: ((ImeAction) -> Unit)?,
         val imeAction: ImeAction,
         var focusedRect: Rect? = null
     )
@@ -57,38 +56,10 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     var needToDeletePreviousChar: Boolean = false
 
     override fun startInput(
-        value: TextFieldValue,
-        imeOptions: ImeOptions,
-        onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
-    ) {
-        startInputImpl(
-            value = TextFieldValueStateAdapter(value),
-            imeOptions = imeOptions,
-            onEditCommand = onEditCommand,
-            onImeActionPerformed = onImeActionPerformed,
-        )
-    }
-
-    fun startInput(
         value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: ((ImeAction) -> Unit)?
-    ) {
-        startInputImpl(
-            value = value,
-            imeOptions = imeOptions,
-            onEditCommand = onEditCommand,
-            onImeActionPerformed = onImeActionPerformed ?: { }
-        )
-    }
-
-    private fun startInputImpl(
-        value: TextFieldStateAdapter,
-        imeOptions: ImeOptions,
-        onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
     ) {
         val input = CurrentInput(
             value = value,
@@ -112,8 +83,8 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     override fun hideSoftwareKeyboard() {
     }
 
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
-        currentInput?.value = TextFieldValueStateAdapter(newValue)
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
+        currentInput?.value = newValue
     }
 
     // TODO(https://github.com/JetBrains/compose-jb/issues/2040): probably the position of input method
@@ -270,19 +241,3 @@ private fun AttributedCharacterIterator.toStringFrom(index: Int): String {
 
 private val isMac =
     System.getProperty("os.name").lowercase(Locale.ENGLISH).startsWith("mac")
-
-
-private class TextFieldValueStateAdapter(
-    val value: TextFieldValue
-): TextFieldStateAdapter {
-
-    override val text: CharSequence
-        get() = value.text
-
-    override val selection: TextRange
-        get() = value.selection
-
-    override val composition: TextRange?
-        get() = value.composition
-
-}

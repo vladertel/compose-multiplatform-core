@@ -36,7 +36,6 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.SetComposingRegionCommand
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.asCGRect
@@ -123,20 +122,20 @@ internal class UIKitTextInputService(
     private val mainScope = MainScope()
 
     override fun startInput(
-        value: TextFieldValue,
+        value: TextFieldStateAdapter,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
+        onImeActionPerformed: ((ImeAction) -> Unit)?
     ) {
         currentInput = CurrentInput(value, onEditCommand)
         _tempCurrentInputSession = EditProcessor().apply {
-            reset(value, null)
+            reset(value.toTextFieldValue(), null)
         }
         currentImeOptions = imeOptions
         currentImeActionHandler = onImeActionPerformed
 
         attachIntermediateTextInputView()
-        textUIView?.input = createSkikoInput(value)
+        textUIView?.input = createSkikoInput()
         textUIView?.inputTraits = getUITextInputTraits(imeOptions)
 
         showSoftwareKeyboard()
@@ -166,7 +165,7 @@ internal class UIKitTextInputService(
         }
     }
 
-    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
+    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
         val internalOldValue = _tempCurrentInputSession?.toTextFieldValue()
         val textChanged = internalOldValue == null || internalOldValue.text != newValue.text
         val selectionChanged =
@@ -177,7 +176,7 @@ internal class UIKitTextInputService(
         if (selectionChanged) {
             textUIView?.selectionWillChange()
         }
-        _tempCurrentInputSession?.reset(newValue, null)
+        _tempCurrentInputSession?.reset(newValue.toTextFieldValue(), null)
         currentInput?.let { input ->
             input.value = newValue
             _tempCursorPos = null
@@ -203,7 +202,7 @@ internal class UIKitTextInputService(
     }
 
     override fun updateTextLayoutResult(
-        textFieldValue: TextFieldValue,
+        textFieldValue: TextFieldStateAdapter,
         offsetMapping: OffsetMapping,
         textLayoutResult: TextLayoutResult,
         textFieldToRootTransform: (Matrix) -> Unit,
@@ -291,7 +290,7 @@ internal class UIKitTextInputService(
         return true
     }
 
-    private fun getState(): TextFieldValue? = currentInput?.value
+    private fun getState(): TextFieldStateAdapter? = currentInput?.value
 
     override fun showMenu(
         rect: Rect,
@@ -360,7 +359,7 @@ internal class UIKitTextInputService(
         textUIView = null
     }
 
-    private fun createSkikoInput(value: TextFieldValue) = object : IOSSkikoInput {
+    private fun createSkikoInput() = object : IOSSkikoInput {
 
         private var floatingCursorTranslation : Offset? = null
 
@@ -537,7 +536,7 @@ internal class UIKitTextInputService(
          * Returned value must be in range between 0 and length of text (inclusive).
          */
         override fun positionFromPosition(position: Long, offset: Long): Long {
-            val text = getState()?.text ?: return 0
+            val text = getState()?.text?.toString() ?: return 0
 
             if (position + offset >= text.lastIndex + 1) {
                 return (text.lastIndex + 1).toLong()
@@ -569,6 +568,6 @@ internal class UIKitTextInputService(
 }
 
 private data class CurrentInput(
-    var value: TextFieldValue,
+    var value: TextFieldStateAdapter,
     val onEditCommand: (List<EditCommand>) -> Unit
 )
