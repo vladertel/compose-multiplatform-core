@@ -158,14 +158,14 @@ internal class UIKitTextInputService(
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: (ImeAction) -> Unit
     ) {
-        fun valueFromTextFieldStateAdapter(state: TextFieldStateAdapter) =
-            TextFieldValue(text = state.text.toString(), selection = state.selection, composition = state.composition)
+//        fun valueFromTextFieldStateAdapter(state: TextFieldStateAdapter) =
+//        TextFieldValue(text = state.text.toString(), selection = state.selection, composition = state.composition)
 
         currentInput = CurrentInput(valueFromTextFieldStateAdapter(value), onEditCommand)
-        // Done before
-//        _tempCurrentInputSession = EditProcessor().apply {
-//            reset(value, null)
-//        }
+//         Done before
+        _tempCurrentInputSession = EditProcessor().apply {
+            reset(valueFromTextFieldStateAdapter(value), null)
+        }
         currentImeOptions = imeOptions
         currentImeActionHandler = onImeActionPerformed
 
@@ -284,6 +284,11 @@ internal class UIKitTextInputService(
         val commandList = commands.toList()
         _tempCurrentInputSession?.apply(commandList)
         currentInput?.onEditCommand?.invoke(commandList)
+        currentInput?.let { input ->
+            input.onEditCommand(commandList)
+        }
+        val newValue = _tempCurrentInputSession?.toTextFieldValue() ?: return
+        updateState(currentInput?.value, newValue)
     }
 
     private fun getCursorPos(): Int? {
@@ -505,11 +510,12 @@ internal class UIKitTextInputService(
          */
         override fun textInRange(range: IntRange): String {
             val text = getState()?.text ?: ""
-//            println("LET'S DEBUG")
-//            println("text = ${text}")
-//            println("min(range.last + 1, text.length) => min(${range.last + 1}, ${text.length}) = ${min(range.last + 1, text.length)}")
-//            println("(range.first, min(range.last + 1, text.length) = (${range.first}, ${min(range.last + 1, text.length)})")
-//            println("text.substring(range.first, min(range.last + 1, text.length)) = ${text.substring(range.first, min(range.last + 1, text.length))}")
+            println("LET'S DEBUG")
+            println("range = $range")
+            println("text = ${text}")
+            println("min(range.last + 1, text.length) => min(${range.last + 1}, ${text.length}) = ${min(range.last + 1, text.length)}")
+            println("(range.first, min(range.last + 1, text.length) = (${range.first}, ${min(range.last + 1, text.length)})")
+            println("text.substring(range.first, min(range.last + 1, text.length)) = ${text.substring(range.first, min(range.last + 1, text.length))}")
 
             return text.substring(range.first, min(range.last + 1, text.length))
         }
