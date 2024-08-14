@@ -32,6 +32,7 @@ import androidx.compose.runtime.currentThreadName
 import androidx.compose.runtime.observeDerivedStateRecalculations
 import androidx.compose.runtime.requirePrecondition
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.runtime.synchronized
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.
@@ -252,8 +253,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
         try {
             isPaused = false
             currentMap = scopeMap
-            @Suppress("deprecation") // b/317114874
-            currentMapThreadId = Thread.currentThread().id
+            currentMapThreadId = currentThreadId()
 
             scopeMap.observe(scope, readObserver, block)
         } finally {

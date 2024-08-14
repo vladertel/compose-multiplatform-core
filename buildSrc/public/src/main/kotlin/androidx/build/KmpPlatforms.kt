@@ -60,6 +60,7 @@ enum class PlatformIdentifier(
     @Suppress("unused") private val group: PlatformGroup
 ) {
     JVM("jvm", PlatformGroup.JVM),
+    JVM_STUBS("jvmStubs", PlatformGroup.JVM),
     JS("js", PlatformGroup.JS),
     ANDROID("android", PlatformGroup.JVM),
     ANDROID_NATIVE_ARM32("androidNativeArm32", PlatformGroup.ANDROID_NATIVE),
@@ -69,6 +70,7 @@ enum class PlatformIdentifier(
     MAC_ARM_64("macosarm64", PlatformGroup.MAC),
     MAC_OSX_64("macosx64", PlatformGroup.MAC),
     LINUX_64("linuxx64", PlatformGroup.LINUX),
+    LINUX_X_64_STUBS("linuxx64Stubs", PlatformGroup.LINUX),
     IOS_SIMULATOR_ARM_64("iossimulatorarm64", PlatformGroup.MAC),
     IOS_X_64("iosx64", PlatformGroup.MAC),
     IOS_ARM_64("iosarm64", PlatformGroup.MAC),

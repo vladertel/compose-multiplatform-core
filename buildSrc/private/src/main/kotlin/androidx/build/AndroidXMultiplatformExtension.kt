@@ -350,6 +350,25 @@ open class AndroidXMultiplatformExtension(val project: Project) {
         }
     }
 
+    @JvmOverloads
+    fun jvmStubs(
+        runTests: Boolean = false,
+        block: Action<KotlinJvmTarget>? = null
+    ): KotlinJvmTarget? {
+        supportedPlatforms.add(PlatformIdentifier.JVM_STUBS)
+        return if (project.enableJvm()) {
+            kotlinExtension.jvm("jvmStubs") {
+                block?.execute(this)
+                project.tasks.named("jvmStubsTest").configure {
+                    // don't try running common tests for stubs target if disabled
+                    it.enabled = runTests
+                }
+            }
+        } else {
+            null
+        }
+    }
+
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     @JvmOverloads
     fun android(block: Action<KotlinAndroidTarget>? = null): KotlinAndroidTarget? {
@@ -519,6 +538,24 @@ open class AndroidXMultiplatformExtension(val project: Project) {
     }
 
     @JvmOverloads
+    fun linuxX64Stubs(block: Action<KotlinNativeTarget>? = null): KotlinNativeTarget? {
+        // don't enable binary compatibility validator for stubs
+        enableBinaryCompatibilityValidator = false
+        supportedPlatforms.add(PlatformIdentifier.LINUX_X_64_STUBS)
+        return if (project.enableLinux()) {
+            kotlinExtension.linuxX64("linuxx64Stubs") {
+                block?.execute(this)
+                project.tasks.named("linuxx64StubsTest").configure {
+                    // don't try running common tests for stubs target
+                    it.enabled = false
+                }
+            }
+        } else {
+            null
+        }
+    }
+
+    @JvmOverloads
     fun js(block: Action<KotlinJsTargetDsl>? = null): KotlinJsTargetDsl? {
         supportedPlatforms.add(PlatformIdentifier.JS)
         return if (project.enableJs()) {
@@ -654,11 +691,8 @@ abstract class ValidateMultiplatformSourceSetNaming : DefaultTask() {
      * List of Kotlin target names which may be used as source file suffixes. Any target whose name
      * does not appear in this list will use its [KotlinPlatformType] name.
      */
-    private val allowedTargetNameSuffixes = setOf(
-        "android",
-        "desktop",
-        "jvm"
-    )
+    private val allowedTargetNameSuffixes =
+        setOf("android", "desktop", "jvm", "commonStubs", "jvmStubs", "linuxx64Stubs", "wasmJs")
 
     /** The preferred source file suffix for the target's platform type. */
     private val KotlinTarget.preferredSourceFileSuffix: String
@@ -668,3 +702,9 @@ abstract class ValidateMultiplatformSourceSetNaming : DefaultTask() {
             platformType.name
         }
 }
+
+/**
+ * Set of targets are there to serve as stubs, but are not expected to be consumed by library
+ * consumers.
+ */
+internal val setOfStubTargets = setOf("commonStubs", "jvmStubs", "linuxx64Stubs")

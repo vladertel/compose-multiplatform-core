@@ -16,9 +16,9 @@
 
 package androidx.compose.runtime
 
+import androidx.compose.runtime.internal.PlatformOptimizedCancellationException
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -387,15 +387,8 @@ fun LaunchedEffect(
     remember(key1, key2, key3) { LaunchedEffectImpl(applyContext, block) }
 }
 
-private class LeftCompositionCancellationException : CancellationException(
-    "The coroutine scope left the composition"
-) {
-    override fun fillInStackTrace(): Throwable {
-        // Avoid null.clone() on Android <= 6.0 when accessing stackTrace
-        stackTrace = emptyArray()
-        return this
-    }
-}
+private class LeftCompositionCancellationException :
+    PlatformOptimizedCancellationException("The coroutine scope left the composition")
 
 /**
  * When [LaunchedEffect] enters the composition it will launch [block] into the composition's
