@@ -19,6 +19,10 @@ package androidx.paging
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 
 class InvalidatingPagingSourceFactoryTest {
 
@@ -26,17 +30,17 @@ class InvalidatingPagingSourceFactoryTest {
     fun getPagingSource() {
         val testFactory = InvalidatingPagingSourceFactory { TestPagingSource() }
         repeat(4) { testFactory() }
-        assertEquals(4, testFactory.pagingSources.size)
+        assertEquals(4, testFactory.pagingSources().size)
     }
 
     @Test
     fun invalidateRemoveFromList() {
         val testFactory = InvalidatingPagingSourceFactory { TestPagingSource() }
         repeat(4) { testFactory() }
-        assertEquals(4, testFactory.pagingSources.size)
+        assertEquals(4, testFactory.pagingSources().size)
 
         testFactory.invalidate()
-        assertEquals(0, testFactory.pagingSources.size)
+        assertEquals(0, testFactory.pagingSources().size)
     }
 
     @Test
@@ -44,10 +48,8 @@ class InvalidatingPagingSourceFactoryTest {
         val invalidateCalls = Array(4) { false }
         val testFactory = InvalidatingPagingSourceFactory { TestPagingSource() }
         repeat(4) { testFactory() }
-        testFactory.pagingSources.forEachIndexed { index, pagingSource ->
-            pagingSource.registerInvalidatedCallback {
-                invalidateCalls[index] = true
-            }
+        testFactory.pagingSources().forEachIndexed { index, pagingSource ->
+            pagingSource.registerInvalidatedCallback { invalidateCalls[index] = true }
         }
         testFactory.invalidate()
         assertTrue { invalidateCalls.all { it } }
@@ -58,18 +60,14 @@ class InvalidatingPagingSourceFactoryTest {
         val testFactory = InvalidatingPagingSourceFactory { TestPagingSource() }
         repeat(4) { testFactory() }
 
-        val pagingSource = testFactory.pagingSources[0]
+        val pagingSource = testFactory.pagingSources()[0]
         pagingSource.invalidate()
 
         assertTrue(pagingSource.invalid)
 
         var invalidateCount = 0
 
-        testFactory.pagingSources.forEach {
-            it.registerInvalidatedCallback {
-                invalidateCount++
-            }
-        }
+        testFactory.pagingSources().forEach { it.registerInvalidatedCallback { invalidateCount++ } }
 
         testFactory.invalidate()
 
@@ -92,17 +90,16 @@ class InvalidatingPagingSourceFactoryTest {
     }
 
     @Test
-    fun invalidate_threadSafe() {
-        val factory = InvalidatingPagingSourceFactory { TestPagingSource() }
-
-        // Check for concurrent modification when invalidating paging sources.
-        repeat(2) {
-            factory().registerInvalidatedCallback {
-                factory()
-                factory.invalidate()
-                factory()
-            }
+    fun invalidate_threadSafe() =
+        runBlocking<Unit> {
+            val factory = InvalidatingPagingSourceFactory { TestPagingSource() }
+            (0 until 100)
+                .map {
+                    async(Dispatchers.Default) {
+                        factory().registerInvalidatedCallback { factory().invalidate() }
+                        factory.invalidate()
+                    }
+                }
+                .awaitAll()
         }
-        factory.invalidate()
-    }
 }

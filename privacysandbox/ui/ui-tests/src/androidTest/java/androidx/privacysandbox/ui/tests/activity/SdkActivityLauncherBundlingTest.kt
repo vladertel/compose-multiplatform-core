@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// TODO(b/307696996) Remove this file when activity library is released.
+@file:Suppress("DEPRECATION")
+
 package androidx.privacysandbox.ui.tests.activity
 
 import android.os.Binder
@@ -64,8 +67,7 @@ class SdkActivityLauncherBundlingTest {
 
         var tokensReceived = mutableListOf<IBinder>()
 
-        override suspend fun launchSdkActivity(sdkActivityHandlerToken: IBinder):
-            Boolean {
+        override suspend fun launchSdkActivity(sdkActivityHandlerToken: IBinder): Boolean {
             tokensReceived.add(sdkActivityHandlerToken)
             return allowActivityLaunches
         }

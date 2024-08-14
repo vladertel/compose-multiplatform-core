@@ -17,16 +17,15 @@
 package androidx.window.embedding
 
 import android.app.Activity
-import android.app.ActivityOptions
 import android.content.Context
-import android.os.IBinder
+import android.os.Bundle
 import androidx.annotation.RestrictTo
 import androidx.core.util.Consumer
+import androidx.window.RequiresWindowSdkExtension
+import androidx.window.embedding.OverlayController.Companion.OVERLAY_FEATURE_VERSION
 import java.util.concurrent.Executor
 
-/**
- * @suppress
- */
+/**  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface EmbeddingBackend {
     fun setRules(rules: Set<EmbeddingRule>)
@@ -43,40 +42,76 @@ interface EmbeddingBackend {
         callback: Consumer<List<SplitInfo>>
     )
 
-    fun removeSplitListenerForActivity(
-        consumer: Consumer<List<SplitInfo>>
-    )
+    fun removeSplitListenerForActivity(consumer: Consumer<List<SplitInfo>>)
 
     val splitSupportStatus: SplitController.SplitSupportStatus
 
     fun isActivityEmbedded(activity: Activity): Boolean
 
+    @RequiresWindowSdkExtension(5)
+    fun pinTopActivityStack(taskId: Int, splitPinRule: SplitPinRule): Boolean
+
+    @RequiresWindowSdkExtension(5) fun unpinTopActivityStack(taskId: Int)
+
+    @RequiresWindowSdkExtension(2)
     fun setSplitAttributesCalculator(
         calculator: (SplitAttributesCalculatorParams) -> SplitAttributes
     )
 
-    fun clearSplitAttributesCalculator()
-
-    fun isSplitAttributesCalculatorSupported(): Boolean
+    @RequiresWindowSdkExtension(2) fun clearSplitAttributesCalculator()
 
     fun getActivityStack(activity: Activity): ActivityStack?
 
-    fun setLaunchingActivityStack(options: ActivityOptions, token: IBinder): ActivityOptions
+    @RequiresWindowSdkExtension(5)
+    fun setLaunchingActivityStack(options: Bundle, activityStack: ActivityStack): Bundle
 
-    fun finishActivityStacks(activityStacks: Set<ActivityStack>)
+    @RequiresWindowSdkExtension(5)
+    fun setOverlayCreateParams(options: Bundle, overlayCreateParams: OverlayCreateParams): Bundle
 
-    fun isFinishActivityStacksSupported(): Boolean
+    @RequiresWindowSdkExtension(5) fun finishActivityStacks(activityStacks: Set<ActivityStack>)
 
-    fun invalidateTopVisibleSplitAttributes()
+    @RequiresWindowSdkExtension(5)
+    fun setEmbeddingConfiguration(embeddingConfig: EmbeddingConfiguration)
 
+    @RequiresWindowSdkExtension(3) fun invalidateVisibleActivityStacks()
+
+    @RequiresWindowSdkExtension(3)
     fun updateSplitAttributes(splitInfo: SplitInfo, splitAttributes: SplitAttributes)
 
-    fun areSplitAttributesUpdatesSupported(): Boolean
+    @RequiresWindowSdkExtension(OVERLAY_FEATURE_VERSION)
+    fun setOverlayAttributesCalculator(
+        calculator: (OverlayAttributesCalculatorParams) -> OverlayAttributes
+    )
+
+    @RequiresWindowSdkExtension(OVERLAY_FEATURE_VERSION) fun clearOverlayAttributesCalculator()
+
+    @RequiresWindowSdkExtension(OVERLAY_FEATURE_VERSION)
+    fun updateOverlayAttributes(overlayTag: String, overlayAttributes: OverlayAttributes)
+
+    @RequiresWindowSdkExtension(OVERLAY_FEATURE_VERSION)
+    fun addOverlayInfoCallback(
+        overlayTag: String,
+        executor: Executor,
+        overlayInfoCallback: Consumer<OverlayInfo>,
+    )
+
+    @RequiresWindowSdkExtension(OVERLAY_FEATURE_VERSION)
+    fun removeOverlayInfoCallback(overlayInfoCallback: Consumer<OverlayInfo>)
+
+    @RequiresWindowSdkExtension(6)
+    fun addEmbeddedActivityWindowInfoCallbackForActivity(
+        activity: Activity,
+        callback: Consumer<EmbeddedActivityWindowInfo>
+    )
+
+    @RequiresWindowSdkExtension(6)
+    fun removeEmbeddedActivityWindowInfoCallbackForActivity(
+        callback: Consumer<EmbeddedActivityWindowInfo>
+    )
 
     companion object {
 
-        private var decorator: (EmbeddingBackend) -> EmbeddingBackend =
-            { it }
+        private var decorator: (EmbeddingBackend) -> EmbeddingBackend = { it }
 
         @JvmStatic
         @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -101,8 +136,6 @@ interface EmbeddingBackend {
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface EmbeddingBackendDecorator {
 
-    /**
-     * Returns an instance of [EmbeddingBackend]
-     */
+    /** Returns an instance of [EmbeddingBackend] */
     fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend
 }

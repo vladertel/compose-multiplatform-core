@@ -20,6 +20,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.os.Build
+import androidx.camera.camera2.pipe.CameraExtensionMetadata
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.Metadata
@@ -62,7 +63,7 @@ class FlashAvailabilityCheckerTest(
     fun isFlashAvailable_throwsForUnexpectedDevice() {
         Assume.assumeTrue(Build.MODEL == "unexpected_throwing_device")
         Assert.assertThrows(BufferUnderflowException::class.java) {
-            cameraProperties.isFlashAvailable(/*rethrowOnError=*/true)
+            cameraProperties.isFlashAvailable(/* rethrowOnError= */ true)
         }
     }
 
@@ -112,37 +113,53 @@ class FlashAvailabilityCheckerTest(
         override val isRedacted: Boolean = false
 
         override val physicalCameraIds: Set<CameraId> = physicalMetadata.keys
+        override val supportedExtensions: Set<Int>
+            get() = TODO("b/299356087 - Add support for fake extension metadata")
+
         override suspend fun getPhysicalMetadata(cameraId: CameraId): CameraMetadata =
             physicalMetadata[cameraId]!!
 
         override fun awaitPhysicalMetadata(cameraId: CameraId): CameraMetadata =
             physicalMetadata[cameraId]!!
 
-        override fun <T : Any> unwrapAs(type: KClass<T>): T? = null
+        override suspend fun getExtensionMetadata(extension: Int): CameraExtensionMetadata {
+            TODO("b/299356087 - Add support for fake extension metadata")
+        }
+
+        override fun awaitExtensionMetadata(extension: Int): CameraExtensionMetadata {
+            TODO("b/299356087 - Add support for fake extension metadata")
+        }
+
+        override fun <T : Any> unwrapAs(type: KClass<T>): T? {
+            TODO("Not yet implemented")
+        }
     }
 
     companion object {
         private const val FAKE_OEM = "fake_oem"
-        private val flashAvailabilityTrueProvider = FakeCameraProperties(
-            metadata = TestCameraMetadata(
-                characteristics = mapOf(CameraCharacteristics.FLASH_INFO_AVAILABLE to true)
+        private val flashAvailabilityTrueProvider =
+            FakeCameraProperties(
+                metadata =
+                    TestCameraMetadata(
+                        characteristics = mapOf(CameraCharacteristics.FLASH_INFO_AVAILABLE to true)
+                    )
             )
-        )
-        private val bufferUnderflowProvider = FakeCameraProperties(
-            metadata = TestCameraMetadata(mode = Mode.THROW_BUFFER_UNDERFLOW_EXCEPTION)
-        )
-        private val flashAvailabilityNullProvider = FakeCameraProperties(
-            metadata = TestCameraMetadata(mode = Mode.ALWAYS_NULL)
-        )
+        private val bufferUnderflowProvider =
+            FakeCameraProperties(
+                metadata = TestCameraMetadata(mode = Mode.THROW_BUFFER_UNDERFLOW_EXCEPTION)
+            )
+        private val flashAvailabilityNullProvider =
+            FakeCameraProperties(metadata = TestCameraMetadata(mode = Mode.ALWAYS_NULL))
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "manufacturer={0}, model={1}")
-        fun data() = mutableListOf<Array<Any?>>().apply {
-            add(arrayOf("sprd", "LEMP", bufferUnderflowProvider))
-            add(arrayOf("sprd", "DM20C", bufferUnderflowProvider))
-            add(arrayOf(FAKE_OEM, "unexpected_throwing_device", bufferUnderflowProvider))
-            add(arrayOf(FAKE_OEM, "not_a_real_device", flashAvailabilityTrueProvider))
-            add(arrayOf(FAKE_OEM, "null_returning_device", flashAvailabilityNullProvider))
-        }
+        fun data() =
+            mutableListOf<Array<Any?>>().apply {
+                add(arrayOf("sprd", "LEMP", bufferUnderflowProvider))
+                add(arrayOf("sprd", "DM20C", bufferUnderflowProvider))
+                add(arrayOf(FAKE_OEM, "unexpected_throwing_device", bufferUnderflowProvider))
+                add(arrayOf(FAKE_OEM, "not_a_real_device", flashAvailabilityTrueProvider))
+                add(arrayOf(FAKE_OEM, "null_returning_device", flashAvailabilityNullProvider))
+            }
     }
 }

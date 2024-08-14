@@ -28,7 +28,8 @@ import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestNumber
 import androidx.camera.camera2.pipe.Result3A
 import androidx.camera.camera2.pipe.StreamId
-import androidx.camera.camera2.pipe.core.TokenLockImpl
+import androidx.camera.camera2.pipe.core.tryAcquireToken
+import androidx.camera.camera2.pipe.internal.FrameCaptureQueue
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.camera2.pipe.testing.FakeCaptureSequenceProcessor
 import androidx.camera.camera2.pipe.testing.FakeFrameInfo
@@ -39,6 +40,7 @@ import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
 import androidx.testutils.assertThrows
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -51,7 +53,6 @@ import org.robolectric.annotation.internal.DoNotInstrument
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 internal class CameraGraphSessionImplTest {
-    private val tokenLock = TokenLockImpl(1)
 
     private val graphState3A = GraphState3A()
     private val listener3A = Listener3A()
@@ -64,14 +65,18 @@ internal class CameraGraphSessionImplTest {
             graphProcessor,
             // Make sure our characteristics shows that it supports AF trigger.
             FakeCameraMetadata(
-                characteristics = mapOf(
-                    CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE to 1.0f
-                )
-            ), graphState3A, listener3A
+                characteristics =
+                    mapOf(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE to 1.0f)
+            ),
+            graphState3A,
+            listener3A
         )
+    private val frameCaptureQueue = FrameCaptureQueue()
+    private val sessionMutex = Mutex()
+    private val sessionToken = sessionMutex.tryAcquireToken()!!
 
     private val session =
-        CameraGraphSessionImpl(tokenLock.acquireOrNull(1, 1)!!, graphProcessor, controller3A)
+        CameraGraphSessionImpl(sessionToken, graphProcessor, controller3A, frameCaptureQueue)
 
     @Test
     fun createCameraGraphSession() {
@@ -120,7 +125,7 @@ internal class CameraGraphSessionImplTest {
     }
 
     @Test
-    fun Lock3AShouldFailWhenInvokedBeforeStartRepeating() = runTest {
+    fun lock3AShouldFailWhenInvokedBeforeStartRepeating() = runTest {
         graphProcessor.onGraphStarted(fakeGraphRequestProcessor)
 
         val afResult = session.lock3A(afLockBehavior = Lock3ABehavior.IMMEDIATE).await()
@@ -131,7 +136,7 @@ internal class CameraGraphSessionImplTest {
     }
 
     @Test
-    fun Lock3AShouldSucceedWhenInvokedAfterStartRepeatingAndConverged() = runTest {
+    fun lock3AShouldSucceedWhenInvokedAfterStartRepeatingAndConverged() = runTest {
         val streamId = StreamId(1)
         val surfaceTexture = SurfaceTexture(0).also { it.setDefaultBufferSize(640, 480) }
         val surface = Surface(surfaceTexture)
@@ -151,10 +156,11 @@ internal class CameraGraphSessionImplTest {
             requestMetadata,
             FrameNumber(10),
             FakeFrameInfo(
-                metadata = FakeFrameMetadata(
-                    resultMetadata =
-                    mapOf(CaptureResult.CONTROL_AE_STATE to CONTROL_AE_STATE_LOCKED)
-                ),
+                metadata =
+                    FakeFrameMetadata(
+                        resultMetadata =
+                            mapOf(CaptureResult.CONTROL_AE_STATE to CONTROL_AE_STATE_LOCKED)
+                    ),
                 requestMetadata = requestMetadata
             )
         )
@@ -165,7 +171,7 @@ internal class CameraGraphSessionImplTest {
     }
 
     @Test
-    fun Lock3AShouldFailWhenInvokedAfterStartAndStopRepeating() = runTest {
+    fun lock3AShouldFailWhenInvokedAfterStartAndStopRepeating() = runTest {
         val streamId = StreamId(1)
         val surfaceTexture = SurfaceTexture(0).also { it.setDefaultBufferSize(640, 480) }
         val surface = Surface(surfaceTexture)

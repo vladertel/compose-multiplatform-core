@@ -44,61 +44,54 @@ import org.junit.Test
 )
 class PerfettoTraceProcessorBenchmark {
 
-    @get:Rule
-    val benchmarkRule = MacrobenchmarkRule()
+    @get:Rule val benchmarkRule = MacrobenchmarkRule()
 
     private val traceFile = createTempFileFromAsset("api32_startup_warm", ".perfetto-trace")
 
-    @Before
-    fun setUp() = Assume.assumeTrue(PerfettoHelper.isAbiSupported())
+    @Before fun setUp() = Assume.assumeTrue(PerfettoHelper.isAbiSupported())
 
     @Test
-    fun loadServer() = benchmarkRule.measureRepeated(
-        packageName = PACKAGE_NAME,
-        metrics = listOf(TraceSectionMetric("PerfettoTraceProcessorBenchmark")),
-        iterations = 5,
-    ) {
-        trace("PerfettoTraceProcessorBenchmark") {
-            PerfettoTraceProcessor.runServer {}
+    fun loadServer() =
+        benchmarkRule.measureRepeated(
+            packageName = PACKAGE_NAME,
+            metrics = measureBlockMetric,
+            iterations = 5,
+        ) {
+            measureBlock { PerfettoTraceProcessor.runServer {} }
         }
-    }
 
     @Test
-    fun singleTrace() = benchmarkRule.measureRepeated(
-        packageName = PACKAGE_NAME,
-        metrics = listOf(TraceSectionMetric("PerfettoTraceProcessorBenchmark")),
-        iterations = 5,
-    ) {
-        trace("PerfettoTraceProcessorBenchmark") {
-            PerfettoTraceProcessor.runServer {
-                loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
+    fun singleTrace() =
+        benchmarkRule.measureRepeated(
+            packageName = PACKAGE_NAME,
+            metrics = measureBlockMetric,
+            iterations = 5,
+        ) {
+            measureBlock {
+                PerfettoTraceProcessor.runServer {
+                    loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
+                }
             }
         }
-    }
 
     @Test
-    fun doubleTrace() = benchmarkRule.measureRepeated(
-        packageName = PACKAGE_NAME,
-        metrics = listOf(TraceSectionMetric("PerfettoTraceProcessorBenchmark")),
-        iterations = 5,
-    ) {
-        trace("PerfettoTraceProcessorBenchmark") {
-            PerfettoTraceProcessor.runServer {
-                loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
-                loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
+    fun doubleTrace() =
+        benchmarkRule.measureRepeated(
+            packageName = PACKAGE_NAME,
+            metrics = measureBlockMetric,
+            iterations = 5,
+        ) {
+            measureBlock {
+                PerfettoTraceProcessor.runServer {
+                    loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
+                    loadTrace(PerfettoTrace(traceFile.absolutePath)) {}
+                }
             }
         }
-    }
 
-    @Test
-    fun computeSingleMetric() = benchmarkWithTrace {
-        runComputeStartupMetric()
-    }
+    @Test fun computeSingleMetric() = benchmarkWithTrace { runComputeStartupMetric() }
 
-    @Test
-    fun executeSingleSliceQuery() = benchmarkWithTrace {
-        runSlicesQuery()
-    }
+    @Test fun executeSingleSliceQuery() = benchmarkWithTrace { runSlicesQuery() }
 
     @Test
     fun executeMultipleQueries() = benchmarkWithTrace {
@@ -118,10 +111,10 @@ class PerfettoTraceProcessorBenchmark {
     private fun benchmarkWithTrace(block: PerfettoTraceProcessor.Session.() -> Unit) =
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics = listOf(TraceSectionMetric("PerfettoTraceProcessorBenchmark")),
+            metrics = measureBlockMetric,
             iterations = 5,
         ) {
-            trace("PerfettoTraceProcessorBenchmark") {
+            measureBlock {
                 // This will run perfetto trace processor http server on the specified port 10555.
                 // Note that this is an arbitrary number and the default cannot be used because
                 // the macrobenchmark instance of the server is running at the same time.
@@ -144,7 +137,8 @@ class PerfettoTraceProcessorBenchmark {
                 INNER JOIN thread_track on slice.track_id = thread_track.id
                 INNER JOIN thread USING(utid)
                 INNER JOIN process USING(upid)
-            """.trimIndent()
+            """
+                .trimIndent()
         )
     }
 
@@ -154,7 +148,8 @@ class PerfettoTraceProcessorBenchmark {
                 SELECT track.name, counter.value, counter.ts
                 FROM track
                 JOIN counter ON track.id = counter.track_id
-            """.trimIndent()
+            """
+                .trimIndent()
         )
     }
 
@@ -165,14 +160,14 @@ class PerfettoTraceProcessorBenchmark {
                 FROM counter
                 JOIN process_counter_track ON process_counter_track.id = counter.track_id
                 WHERE process_counter_track.name = 'mem.swap' AND value > 1000
-            """.trimIndent()
+            """
+                .trimIndent()
         )
     }
 
     private fun createTempFileFromAsset(prefix: String, suffix: String): File {
         val file = File.createTempFile(prefix, suffix, Outputs.dirUsableByAppAndShell)
-        InstrumentationRegistry
-            .getInstrumentation()
+        InstrumentationRegistry.getInstrumentation()
             .context
             .assets
             .open(prefix + suffix)
@@ -182,5 +177,18 @@ class PerfettoTraceProcessorBenchmark {
 
     companion object {
         private const val PACKAGE_NAME = "androidx.benchmark.integration.macrobenchmark.target"
+        private const val SECTION_NAME = "PerfettoTraceProcessorBenchmark"
+
+        /** Measures single call to [measureBlock] function */
+        private val measureBlockMetric =
+            listOf(
+                TraceSectionMetric(
+                    sectionName = SECTION_NAME,
+                    targetPackageOnly = false // tracing in test process, not target app
+                )
+            )
+
+        /** This block is measured by [measureBlockMetric] */
+        internal inline fun <T> measureBlock(block: () -> T): T = trace(SECTION_NAME) { block() }
     }
 }

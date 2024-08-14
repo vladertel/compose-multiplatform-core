@@ -16,78 +16,92 @@
 
 package androidx.wear.compose.material3.demos
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.material3.AppCard
+import androidx.compose.ui.platform.LocalContext
 import androidx.wear.compose.material3.CardDefaults
-import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TitleCard
 import androidx.wear.compose.material3.samples.AppCardSample
 import androidx.wear.compose.material3.samples.AppCardWithIconSample
+import androidx.wear.compose.material3.samples.AppCardWithImageSample
 import androidx.wear.compose.material3.samples.CardSample
+import androidx.wear.compose.material3.samples.CardWithOnLongClickSample
 import androidx.wear.compose.material3.samples.OutlinedAppCardSample
 import androidx.wear.compose.material3.samples.OutlinedCardSample
 import androidx.wear.compose.material3.samples.OutlinedTitleCardSample
-import androidx.wear.compose.material3.samples.R
 import androidx.wear.compose.material3.samples.TitleCardSample
-import androidx.wear.compose.material3.samples.TitleCardWithImageSample
+import androidx.wear.compose.material3.samples.TitleCardWithImageBackgroundSample
+import androidx.wear.compose.material3.samples.TitleCardWithMultipleImagesSample
+import androidx.wear.compose.material3.samples.TitleCardWithSubtitleAndTimeSample
 
 @Composable
 fun CardDemo() {
-    ScalingLazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    val context = LocalContext.current
+    ScalingLazyDemo {
         item { ListHeader { Text("Card") } }
         item { CardSample() }
+        item { CardWithOnLongClickSample { showOnLongClickToast(context) } }
         item { OutlinedCardSample() }
-
         item { ListHeader { Text("App card") } }
         item { AppCardSample() }
         item { AppCardWithIconSample() }
+        item { AppCardWithImageSample() }
         item { OutlinedAppCardSample() }
-
         item { ListHeader { Text("Title card") } }
         item { TitleCardSample() }
+        item { TitleCardWithSubtitleDemo() }
+        item { TitleCardWithSubtitleAndTimeSample() }
+        item { TitleCardWithContentSubtitleAndTimeDemo() }
+        item { TitleCardWithMultipleImagesSample() }
         item { OutlinedTitleCardSample() }
-
+        item { OutlinedTitleCardWithSubtitleDemo() }
+        item { OutlinedTitleCardWithSubtitleAndTimeDemo() }
         item { ListHeader { Text("Image card") } }
-        item {
-            AppCard(
-                onClick = { /* Do something */ },
-                appName = { Text("App name") },
-                appImage = {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        contentDescription = "favourites",
-                        modifier = Modifier.size(CardDefaults.AppImageSize)
-                    )
-                },
-                title = { Text("Card title") },
-                time = { Text("now") },
-                colors = CardDefaults.imageCardColors(
-                    containerPainter = CardDefaults.imageWithScrimBackgroundPainter(
-                        backgroundImagePainter = painterResource(id = R.drawable.backgroundimage)
-                    ),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    titleColor = MaterialTheme.colorScheme.onSurface
-                ),
-                modifier = Modifier.semantics { contentDescription = "Background image" }
-            ) {
-                Text("Card content")
-            }
-        }
-        item { TitleCardWithImageSample() }
+        item { TitleCardWithImageBackgroundSample() }
     }
+}
+
+@Composable
+private fun OutlinedTitleCardWithSubtitleAndTimeDemo() {
+    TitleCard(
+        onClick = { /* Do something */ },
+        time = { Text("now") },
+        title = { Text("Title card") },
+        subtitle = { Text("Subtitle") },
+        colors = CardDefaults.outlinedCardColors(),
+        border = CardDefaults.outlinedCardBorder(),
+    )
+}
+
+@Composable
+fun TitleCardWithSubtitleDemo() {
+    TitleCard(
+        onClick = { /* Do something */ },
+        title = { Text("Title card") },
+        subtitle = { Text("Subtitle") }
+    )
+}
+
+@Composable
+fun TitleCardWithContentSubtitleAndTimeDemo() {
+    TitleCard(
+        onClick = { /* Do something */ },
+        time = { Text("now") },
+        title = { Text("Title card") },
+        subtitle = { Text("Subtitle") }
+    ) {
+        Text("Card content")
+    }
+}
+
+@Composable
+fun OutlinedTitleCardWithSubtitleDemo() {
+    TitleCard(
+        onClick = { /* Do something */ },
+        title = { Text("Title card") },
+        subtitle = { Text("Subtitle") },
+        colors = CardDefaults.outlinedCardColors(),
+        border = CardDefaults.outlinedCardBorder(),
+    )
 }

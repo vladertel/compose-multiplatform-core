@@ -17,51 +17,59 @@
 package androidx.compose.foundation.lazy
 
 import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.lazy.layout.LazyAnimateScrollScope
-import androidx.compose.ui.unit.Density
+import androidx.compose.foundation.lazy.grid.LazyLayoutAnimateScrollScope
+import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateScrollScope
+import androidx.compose.foundation.pager.LazyLayoutAnimateScrollScope
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastSumBy
-import kotlin.math.abs
 
-internal class LazyListAnimateScrollScope(
-    private val state: LazyListState
-) : LazyAnimateScrollScope {
-    override val density: Density get() = state.density
+/**
+ * An implementation of [LazyLayoutAnimateScrollScope] that can be used with LazyLists. Please refer
+ * to the sample to learn how to use this API.
+ *
+ * @param state The [LazyListState] associated with the layout where this animated scroll should be
+ *   performed.
+ * @return An implementation of [LazyLayoutAnimateScrollScope] that works with [LazyRow] and
+ *   [LazyColumn].
+ * @sample androidx.compose.foundation.samples.CustomLazyListAnimateToItemScrollSample
+ */
+fun LazyLayoutAnimateScrollScope(state: LazyListState): LazyLayoutAnimateScrollScope {
 
-    override val firstVisibleItemIndex: Int get() = state.firstVisibleItemIndex
+    return object : LazyLayoutAnimateScrollScope {
+        override val firstVisibleItemIndex: Int
+            get() = state.firstVisibleItemIndex
 
-    override val firstVisibleItemScrollOffset: Int get() = state.firstVisibleItemScrollOffset
+        override val firstVisibleItemScrollOffset: Int
+            get() = state.firstVisibleItemScrollOffset
 
-    override val lastVisibleItemIndex: Int
-        get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        override val lastVisibleItemIndex: Int
+            get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-    override val itemCount: Int
-        get() = state.layoutInfo.totalItemsCount
+        override val itemCount: Int
+            get() = state.layoutInfo.totalItemsCount
 
-    override val numOfItemsForTeleport: Int = 100
+        override fun ScrollScope.snapToItem(index: Int, offset: Int) {
+            state.snapToItemIndexInternal(index, offset, forceRemeasure = true)
+        }
 
-    override fun getTargetItemOffset(index: Int): Int? =
-        state.layoutInfo.visibleItemsInfo.fastFirstOrNull {
-            it.index == index
-        }?.offset
+        override fun calculateDistanceTo(targetIndex: Int, targetOffset: Int): Int {
+            val layoutInfo = state.layoutInfo
+            if (layoutInfo.visibleItemsInfo.isEmpty()) return 0
+            val visibleItem =
+                layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == targetIndex }
+            return if (visibleItem == null) {
+                val averageSize = calculateVisibleItemsAverageSize(layoutInfo)
+                val indexesDiff = targetIndex - firstVisibleItemIndex
+                (averageSize * indexesDiff) - firstVisibleItemScrollOffset
+            } else {
+                visibleItem.offset
+            } + targetOffset
+        }
 
-    override fun ScrollScope.snapToItem(index: Int, scrollOffset: Int) {
-        state.snapToItemIndexInternal(index, scrollOffset)
-    }
-
-    override fun expectedDistanceTo(index: Int, targetScrollOffset: Int): Float {
-        val layoutInfo = state.layoutInfo
-        val visibleItems = layoutInfo.visibleItemsInfo
-        val averageSize =
-            visibleItems.fastSumBy { it.size } / visibleItems.size + layoutInfo.mainAxisItemSpacing
-        val indexesDiff = index - firstVisibleItemIndex
-        var coercedOffset = minOf(abs(targetScrollOffset), averageSize)
-        if (targetScrollOffset < 0) coercedOffset *= -1
-        return (averageSize * indexesDiff).toFloat() +
-            coercedOffset - firstVisibleItemScrollOffset
-    }
-
-    override suspend fun scroll(block: suspend ScrollScope.() -> Unit) {
-        state.scroll(block = block)
+        private fun calculateVisibleItemsAverageSize(layoutInfo: LazyListLayoutInfo): Int {
+            val visibleItems = layoutInfo.visibleItemsInfo
+            val itemsSum = visibleItems.fastSumBy { it.size }
+            return itemsSum / visibleItems.size + layoutInfo.mainAxisItemSpacing
+        }
     }
 }

@@ -21,7 +21,6 @@ import static androidx.core.util.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import android.annotation.SuppressLint;
-import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,6 +32,8 @@ import androidx.car.app.model.Action;
 import androidx.car.app.model.CarIcon;
 import androidx.car.app.model.CarText;
 import androidx.car.app.model.Item;
+import androidx.car.app.model.Row;
+import androidx.car.app.model.Template;
 import androidx.car.app.model.constraints.ActionsConstraints;
 import androidx.car.app.utils.CollectionUtils;
 import androidx.core.app.Person;
@@ -42,8 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/** Represents a conversation */
-@ExperimentalCarApi
+/** Represents a text-based conversation (e.g. IM/SMS messages). */
 @CarProtocol
 @KeepFields
 @RequiresCarApi(7)
@@ -53,7 +53,7 @@ public class ConversationItem implements Item {
     @NonNull
     private final CarText mTitle;
     @NonNull
-    private final Bundle mSelf;
+    private final Person mSelf;
     @Nullable
     private final CarIcon mIcon;
     private final boolean mIsGroupConversation;
@@ -63,6 +63,7 @@ public class ConversationItem implements Item {
     private final ConversationCallbackDelegate mConversationCallbackDelegate;
     @NonNull
     private final List<Action> mActions;
+    private final boolean mIndexable;
 
     @Override
     public int hashCode() {
@@ -73,7 +74,8 @@ public class ConversationItem implements Item {
                 mIcon,
                 mIsGroupConversation,
                 mMessages,
-                mActions
+                mActions,
+                mIndexable
         );
     }
 
@@ -96,26 +98,28 @@ public class ConversationItem implements Item {
                         && mIsGroupConversation == otherConversationItem.mIsGroupConversation
                         && Objects.equals(mMessages, otherConversationItem.mMessages)
                         && Objects.equals(mActions, otherConversationItem.mActions)
+                        && mIndexable == otherConversationItem.mIndexable
                 ;
     }
 
     ConversationItem(@NonNull Builder builder) {
         this.mId = requireNonNull(builder.mId);
         this.mTitle = requireNonNull(builder.mTitle);
-        this.mSelf = validateSender(builder.mSelf).toBundle();
+        this.mSelf = validateSender(builder.mSelf);
         this.mIcon = builder.mIcon;
         this.mIsGroupConversation = builder.mIsGroupConversation;
         this.mMessages = requireNonNull(CollectionUtils.unmodifiableCopy(builder.mMessages));
         checkState(!mMessages.isEmpty(), "Message list cannot be empty.");
         this.mConversationCallbackDelegate = requireNonNull(builder.mConversationCallbackDelegate);
         this.mActions = CollectionUtils.unmodifiableCopy(builder.mActions);
+        this.mIndexable = builder.mIndexable;
     }
 
     /** Default constructor for serialization. */
     private ConversationItem() {
         mId = "";
         mTitle = new CarText.Builder("").build();
-        mSelf = new Person.Builder().setName("").build().toBundle();
+        mSelf = new Person.Builder().setName("").build();
         mIcon = null;
         mIsGroupConversation = false;
         mMessages = new ArrayList<>();
@@ -132,6 +136,7 @@ public class ConversationItem implements Item {
                     }
                 });
         mActions = Collections.emptyList();
+        mIndexable = true;
     }
 
     /**
@@ -153,7 +158,7 @@ public class ConversationItem implements Item {
     /** Returns a {@link Person} for the conversation */
     @NonNull
     public Person getSelf() {
-        return Person.fromBundle(mSelf);
+        return mSelf;
     }
 
     /** Returns a {@link CarIcon} for the conversation, or {@code null} if not set */
@@ -194,6 +199,24 @@ public class ConversationItem implements Item {
     }
 
     /**
+     * Returns whether this item should be included in an indexed list.
+     *
+     * <p>"Indexing" refers to the process of examining list contents (e.g. item titles) to sort,
+     * partition, or filter a list. Indexing is generally used for features called "Accelerators",
+     * which allow a user to quickly find a particular {@link Item} in a long list.
+     *
+     * <p>To exclude a single item from indexed lists and accelerator features, use
+     * {@link Row.Builder#setIndexable(boolean)}.
+     *
+     * <p>To enable/disable accelerators for the entire list, see the API for the particular
+     * list-like {@link Template} that you are using.
+     */
+    @ExperimentalCarApi
+    public boolean isIndexable() {
+        return mIndexable;
+    }
+
+    /**
      * Verifies that a given {@link Person} has the required fields to be a message sender. Returns
      * the input {@link Person} if valid, or throws an exception if invalid.
      *
@@ -222,6 +245,7 @@ public class ConversationItem implements Item {
         @Nullable
         ConversationCallbackDelegate mConversationCallbackDelegate;
         final List<Action> mActions;
+        boolean mIndexable = true;
 
         /**
          * Specifies a unique identifier for the conversation
@@ -282,7 +306,11 @@ public class ConversationItem implements Item {
             return this;
         }
 
-        /** Specifies a list of messages for the conversation */
+        /**
+         * Specifies a list of messages for the conversation
+         *
+         * <p> The messages should be sorted from oldest to newest.
+         */
         @NonNull
         public Builder setMessages(@NonNull List<CarMessage> messages) {
             mMessages = messages;
@@ -312,6 +340,14 @@ public class ConversationItem implements Item {
             mActionsCopy.add(requireNonNull(action));
             ActionsConstraints.ACTIONS_CONSTRAINTS_CONVERSATION_ITEM.validateOrThrow(mActionsCopy);
             mActions.add(action);
+            return this;
+        }
+
+        /** @see #isIndexable */
+        @ExperimentalCarApi
+        @NonNull
+        public Builder setIndexable(boolean indexable) {
+            mIndexable = indexable;
             return this;
         }
 

@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.text.modifiers
 
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.text.DefaultMinLines
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ColorProducer
@@ -55,29 +56,32 @@ internal class SelectableTextAnnotatedStringNode(
     minLines: Int = DefaultMinLines,
     placeholders: List<AnnotatedString.Range<Placeholder>>? = null,
     onPlaceholderLayout: ((List<Rect?>) -> Unit)? = null,
-    private val selectionController: SelectionController? = null,
-    overrideColor: ColorProducer? = null
+    private var selectionController: SelectionController? = null,
+    overrideColor: ColorProducer? = null,
+    private var onShowTranslation: ((TextAnnotatedStringNode.TextSubstitutionValue) -> Unit)? = null
 ) : DelegatingNode(), LayoutModifierNode, DrawModifierNode, GlobalPositionAwareModifierNode {
 
-    private val delegate = delegate(
-        TextAnnotatedStringNode(
-            text = text,
-            style = style,
-            fontFamilyResolver = fontFamilyResolver,
-            onTextLayout = onTextLayout,
-            overflow = overflow,
-            softWrap = softWrap,
-            maxLines = maxLines,
-            minLines = minLines,
-            placeholders = placeholders,
-            onPlaceholderLayout = onPlaceholderLayout,
-            selectionController = selectionController,
-            overrideColor = overrideColor
+    private val delegate =
+        delegate(
+            TextAnnotatedStringNode(
+                text = text,
+                style = style,
+                fontFamilyResolver = fontFamilyResolver,
+                onTextLayout = onTextLayout,
+                overflow = overflow,
+                softWrap = softWrap,
+                maxLines = maxLines,
+                minLines = minLines,
+                placeholders = placeholders,
+                onPlaceholderLayout = onPlaceholderLayout,
+                selectionController = selectionController,
+                overrideColor = overrideColor,
+                onShowTranslation = onShowTranslation
+            )
         )
-    )
 
     init {
-        requireNotNull(selectionController) {
+        requirePreconditionNotNull(selectionController) {
             "Do not use SelectionCapableStaticTextModifier unless selectionController != null"
         }
     }
@@ -129,24 +133,26 @@ internal class SelectableTextAnnotatedStringNode(
     ) {
         delegate.doInvalidations(
             drawChanged = delegate.updateDraw(color, style),
-            textChanged = delegate.updateText(
-                text = text
-            ),
-            layoutChanged = delegate.updateLayoutRelatedArgs(
-                style = style,
-                placeholders = placeholders,
-                minLines = minLines,
-                maxLines = maxLines,
-                softWrap = softWrap,
-                fontFamilyResolver = fontFamilyResolver,
-                overflow = overflow
-            ),
-            callbacksChanged = delegate.updateCallbacks(
-                onTextLayout = onTextLayout,
-                onPlaceholderLayout = onPlaceholderLayout,
-                selectionController = selectionController
-            ),
+            textChanged = delegate.updateText(text = text),
+            layoutChanged =
+                delegate.updateLayoutRelatedArgs(
+                    style = style,
+                    placeholders = placeholders,
+                    minLines = minLines,
+                    maxLines = maxLines,
+                    softWrap = softWrap,
+                    fontFamilyResolver = fontFamilyResolver,
+                    overflow = overflow
+                ),
+            callbacksChanged =
+                delegate.updateCallbacks(
+                    onTextLayout = onTextLayout,
+                    onPlaceholderLayout = onPlaceholderLayout,
+                    selectionController = selectionController,
+                    onShowTranslation = onShowTranslation
+                ),
         )
+        this.selectionController = selectionController
         // we always relayout when we're selectable
         invalidateMeasurement()
     }

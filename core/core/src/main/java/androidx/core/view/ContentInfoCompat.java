@@ -24,7 +24,6 @@ import android.os.Bundle;
 import android.util.Pair;
 import android.view.ContentInfo;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -310,6 +309,7 @@ public final class ContentInfoCompat {
      * <p>Except for the {@link ClipData} items, the returned objects will contain all the same
      * metadata as the passed-in {@link ContentInfo}.
      *
+     * @param payload payload to add to returned pair.
      * @param itemPredicate The predicate to test each {@link ClipData.Item} to determine which
      *                      partition to place it into.
      * @return A pair containing the partitioned content. The pair's first object will have the
@@ -328,7 +328,6 @@ public final class ContentInfoCompat {
     private static final class Api31Impl {
         private Api31Impl() {}
 
-        @DoNotInline
         @NonNull
         public static Pair<ContentInfo, ContentInfo> partition(@NonNull ContentInfo payload,
                 @NonNull Predicate<ClipData.Item> itemPredicate) {

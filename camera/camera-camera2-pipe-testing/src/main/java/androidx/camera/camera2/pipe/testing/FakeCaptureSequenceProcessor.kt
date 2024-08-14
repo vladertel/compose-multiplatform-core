@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.testing
 
 import android.hardware.camera2.CaptureRequest
 import android.view.Surface
 import androidx.annotation.GuardedBy
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CaptureSequence.CaptureSequenceListener
 import androidx.camera.camera2.pipe.CaptureSequenceProcessor
@@ -43,7 +40,7 @@ import kotlinx.coroutines.withTimeout
  * This allows kotlin tests to check sequences of interactions that dispatch in the background
  * without blocking between events.
  */
-class FakeCaptureSequenceProcessor(
+public class FakeCaptureSequenceProcessor(
     private val cameraId: CameraId = CameraId("test-camera"),
     private val defaultTemplate: RequestTemplate = RequestTemplate(1)
 ) : CaptureSequenceProcessor<Request, FakeCaptureSequence> {
@@ -52,36 +49,28 @@ class FakeCaptureSequenceProcessor(
     private val eventChannel = Channel<Event>(Channel.UNLIMITED)
     private val requestCounter = atomic(0L)
 
-    @GuardedBy("lock")
-    private var pendingSequence: CompletableDeferred<FakeCaptureSequence>? = null
+    @GuardedBy("lock") private var pendingSequence: CompletableDeferred<FakeCaptureSequence>? = null
 
-    @GuardedBy("lock")
-    private val queue: MutableList<FakeCaptureSequence> = mutableListOf()
+    @GuardedBy("lock") private val queue: MutableList<FakeCaptureSequence> = mutableListOf()
 
-    @GuardedBy("lock")
-    private var repeatingRequestSequence: FakeCaptureSequence? = null
+    @GuardedBy("lock") private var repeatingRequestSequence: FakeCaptureSequence? = null
 
-    @GuardedBy("lock")
-    private var _rejectRequests = false
+    @GuardedBy("lock") private var _rejectRequests = false
 
-    var rejectRequests: Boolean
-        get() = synchronized(lock) {
-            _rejectRequests
-        }
+    public var rejectRequests: Boolean
+        get() = synchronized(lock) { _rejectRequests }
         set(value) {
-            synchronized(lock) {
-                _rejectRequests = value
-            }
+            synchronized(lock) { _rejectRequests = value }
         }
 
     private var _surfaceMap: Map<StreamId, Surface> = emptyMap()
-    var surfaceMap: Map<StreamId, Surface>
-        get() = synchronized(lock) {
-            _surfaceMap
-        }
-        set(value) = synchronized(lock) {
-            _surfaceMap = value
-        }
+    public var surfaceMap: Map<StreamId, Surface>
+        get() = synchronized(lock) { _surfaceMap }
+        set(value) =
+            synchronized(lock) {
+                _surfaceMap = value
+                println("Configured surfaceMap for $this")
+            }
 
     override fun build(
         isRepeating: Boolean,
@@ -101,6 +90,7 @@ class FakeCaptureSequenceProcessor(
     }
 
     override fun submit(captureSequence: FakeCaptureSequence): Int {
+        println("submit $captureSequence")
         synchronized(lock) {
             if (rejectRequests) {
                 check(
@@ -141,12 +131,11 @@ class FakeCaptureSequenceProcessor(
     }
 
     override fun stopRepeating() {
-        val requestSequence = synchronized(lock) {
-            check(eventChannel.trySend(Event(stop = true)).isSuccess)
-            repeatingRequestSequence.also {
-                repeatingRequestSequence = null
+        val requestSequence =
+            synchronized(lock) {
+                check(eventChannel.trySend(Event(stop = true)).isSuccess)
+                repeatingRequestSequence.also { repeatingRequestSequence = null }
             }
-        }
         requestSequence?.invokeOnSequenceAborted()
     }
 
@@ -157,14 +146,11 @@ class FakeCaptureSequenceProcessor(
         }
     }
 
-    /**
-     * Get the next event from queue with an option to specify a timeout for tests.
-     */
-    suspend fun nextEvent(timeMillis: Long = 500): Event = withTimeout(timeMillis) {
-        eventChannel.receive()
-    }
+    /** Get the next event from queue with an option to specify a timeout for tests. */
+    public suspend fun nextEvent(timeMillis: Long = 500): Event =
+        withTimeout(timeMillis) { eventChannel.receive() }
 
-    suspend fun nextRequestSequence(): FakeCaptureSequence {
+    public suspend fun nextRequestSequence(): FakeCaptureSequence {
         while (true) {
             val pending: Deferred<FakeCaptureSequence>
             synchronized(lock) {
@@ -194,6 +180,11 @@ class FakeCaptureSequenceProcessor(
         defaultListeners: List<Request.Listener>,
     ): FakeCaptureSequence? {
         val surfaceMap = surfaceMap
+        if (surfaceMap.isEmpty()) {
+            println("No surfaces configured for $this! Cannot build CaptureSequence for $requests")
+            return null
+        }
+
         val requestInfoMap = mutableMapOf<Request, RequestMetadata>()
         val requestInfoList = mutableListOf<RequestMetadata>()
         for (request in requests) {
@@ -223,24 +214,32 @@ class FakeCaptureSequenceProcessor(
 
             val requestNumber = RequestNumber(requestCounter.incrementAndGet())
             val streamMap = mutableMapOf<StreamId, Surface>()
+            var hasSurface = false
             for (stream in request.streams) {
                 val surface = surfaceMap[stream]
                 if (surface == null) {
-                    println("No surface was set for $stream while building request $request")
-                    return null
+                    println("Failed to find surface for $stream on $request")
+                    continue
                 }
+                hasSurface = true
                 streamMap[stream] = surface
             }
 
-            val requestMetadata = FakeRequestMetadata(
-                request = request,
-                requestParameters = captureParameters,
-                metadata = metadataParameters,
-                template = request.template ?: defaultTemplate,
-                streams = streamMap,
-                repeating = repeating,
-                requestNumber = requestNumber
-            )
+            if (!hasSurface) {
+                println("No surfaces configured for $request! Cannot build CaptureSequence.")
+                return null
+            }
+
+            val requestMetadata =
+                FakeRequestMetadata(
+                    request = request,
+                    requestParameters = captureParameters,
+                    metadata = metadataParameters,
+                    template = request.template ?: defaultTemplate,
+                    streams = streamMap,
+                    repeating = repeating,
+                    requestNumber = requestNumber
+                )
             requestInfoList.add(requestMetadata)
             requestInfoMap[request] = requestMetadata
         }
@@ -260,10 +259,8 @@ class FakeCaptureSequenceProcessor(
         )
     }
 
-    /**
-     * TODO: It's probably better to model this as a sealed class.
-     */
-    data class Event(
+    /** TODO: It's probably better to model this as a sealed class. */
+    public data class Event(
         val requestSequence: FakeCaptureSequence? = null,
         val rejected: Boolean = false,
         val abort: Boolean = false,
@@ -272,8 +269,8 @@ class FakeCaptureSequenceProcessor(
         val submit: Boolean = false
     )
 
-    companion object {
-        suspend fun FakeCaptureSequenceProcessor.awaitEvent(
+    public companion object {
+        public suspend fun FakeCaptureSequenceProcessor.awaitEvent(
             request: Request? = null,
             filter: (event: Event) -> Boolean
         ): Event {

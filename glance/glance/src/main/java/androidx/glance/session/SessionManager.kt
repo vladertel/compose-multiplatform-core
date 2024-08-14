@@ -16,117 +16,133 @@
 
 package androidx.glance.session
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RestrictTo
+import androidx.concurrent.futures.await
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ListenableWorker
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import androidx.work.await
 import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @JvmDefaultWithCompatibility
 /**
  * [SessionManager] is the entrypoint for Glance surfaces to start a session worker that will handle
  * their composition.
- *
- * @suppress
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface SessionManager {
     /**
-     * Start a session for the Glance in [session].
+     * [runWithLock] provides a scope in which to run operations on SessionManager.
+     *
+     * The implementation must ensure that concurrent calls to [runWithLock] are mutually exclusive.
+     * Because this function holds a lock while running [block], clients should not run any
+     * long-running operations in [block]. The client should not maintain a reference to the
+     * [SessionManagerScope] after [block] returns.
      */
-    suspend fun startSession(context: Context, session: Session)
+    suspend fun <T> runWithLock(block: suspend SessionManagerScope.() -> T): T
 
     /**
-     * Closes the channel for the session corresponding to [key].
+     * The name of the session key parameter, which is used to set the session key in the Worker's
+     * input data.
+     *
+     * TODO: consider using a typealias instead
      */
-    suspend fun closeSession(key: String)
-
-    /**
-     * Returns true if a session is active with the given [key].
-     */
-    suspend fun isSessionRunning(context: Context, key: String): Boolean
-
-    /**
-     * Gets the session corresponding to [key] if it exists
-     */
-    fun getSession(key: String): Session?
-
     val keyParam: String
         get() = "KEY"
 }
 
-/** @suppress */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+interface SessionManagerScope {
+    /** Start a session for the Glance in [session]. */
+    suspend fun startSession(context: Context, session: Session)
+
+    /** Closes the channel for the session corresponding to [key]. */
+    suspend fun closeSession(key: String)
+
+    /** Returns true if a session is active with the given [key]. */
+    suspend fun isSessionRunning(context: Context, key: String): Boolean
+
+    /** Gets the session corresponding to [key] if it exists */
+    fun getSession(key: String): Session?
+}
+
+@get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 val GlanceSessionManager: SessionManager = SessionManagerImpl(SessionWorker::class.java)
 
-internal class SessionManagerImpl(
-    private val workerClass: Class<out ListenableWorker>
-) : SessionManager {
-    private val sessions = mutableMapOf<String, Session>()
-    companion object {
-        private const val TAG = "GlanceSessionManager"
-        private const val DEBUG = false
+internal class SessionManagerImpl(private val workerClass: Class<out ListenableWorker>) :
+    SessionManager {
+    private companion object {
+        const val TAG = "GlanceSessionManager"
+        const val DEBUG = false
     }
 
-    override suspend fun startSession(context: Context, session: Session) {
-        if (DEBUG) Log.d(TAG, "startSession(${session.key})")
-        synchronized(sessions) {
-            sessions.put(session.key, session)
-        }?.close()
-        val workRequest = OneTimeWorkRequest.Builder(workerClass)
-            .setInputData(
-                workDataOf(
-                    keyParam to session.key
-                )
-            )
-            .build()
-        WorkManager.getInstance(context)
-            .enqueueUniqueWork(session.key, ExistingWorkPolicy.REPLACE, workRequest)
-            .result.await()
-        enqueueDelayedWorker(context)
-    }
+    // This mutex guards access to the SessionManagerScope, to prevent multiple clients from
+    // performing SessionManagerScope operations at the same time.
+    private val mutex = Mutex()
 
-    override fun getSession(key: String): Session? = synchronized(sessions) {
-        sessions[key]
-    }
+    // All external access to this object is protected with a mutex, so there is no need for any
+    // internal synchronization.
+    private val scope =
+        object : SessionManagerScope {
+            private val sessions = mutableMapOf<String, Session>()
 
-    override suspend fun isSessionRunning(context: Context, key: String) =
-        (WorkManager.getInstance(context).getWorkInfosForUniqueWork(key).await()
-            .any { it.state == WorkInfo.State.RUNNING } && synchronized(sessions) {
-            sessions.containsKey(key)
-        }).also {
-            if (DEBUG) Log.d(TAG, "isSessionRunning($key) == $it")
+            override suspend fun startSession(context: Context, session: Session) {
+                if (DEBUG) Log.d(TAG, "startSession(${session.key})")
+                sessions.put(session.key, session)?.let { previousSession ->
+                    previousSession.close()
+                }
+                val workRequest =
+                    OneTimeWorkRequest.Builder(workerClass)
+                        .setInputData(workDataOf(keyParam to session.key))
+                        .build()
+                WorkManager.getInstance(context)
+                    .enqueueUniqueWork(session.key, ExistingWorkPolicy.REPLACE, workRequest)
+                    .result
+                    .await()
+                enqueueDelayedWorker(context)
+            }
+
+            override fun getSession(key: String): Session? = sessions[key]
+
+            @SuppressLint("ListIterator")
+            override suspend fun isSessionRunning(context: Context, key: String): Boolean {
+                val workerIsRunningOrEnqueued =
+                    WorkManager.getInstance(context).getWorkInfosForUniqueWork(key).await().any {
+                        it.state in listOf(WorkInfo.State.RUNNING, WorkInfo.State.ENQUEUED)
+                    }
+                val hasOpenSession = sessions[key]?.isOpen ?: false
+                val isRunning = hasOpenSession && workerIsRunningOrEnqueued
+                if (DEBUG) Log.d(TAG, "isSessionRunning($key) == $isRunning")
+                return isRunning
+            }
+
+            override suspend fun closeSession(key: String) {
+                if (DEBUG) Log.d(TAG, "closeSession($key)")
+                sessions.remove(key)?.close()
+            }
         }
 
-    override suspend fun closeSession(key: String) {
-        if (DEBUG) Log.d(TAG, "closeSession($key)")
-        synchronized(sessions) {
-            sessions.remove(key)
-        }?.close()
-    }
+    override suspend fun <T> runWithLock(block: suspend SessionManagerScope.() -> T): T =
+        mutex.withLock { scope.block() }
 
-    /**
-     * Workaround worker to fix b/119920965
-     */
+    /** Workaround worker to fix b/119920965 */
     private fun enqueueDelayedWorker(context: Context) {
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "sessionWorkerKeepEnabled",
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequest.Builder(workerClass)
-                .setInitialDelay(10 * 365, TimeUnit.DAYS)
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiresCharging(true)
-                        .build()
-                )
-                .build()
-        )
+        WorkManager.getInstance(context)
+            .enqueueUniqueWork(
+                "sessionWorkerKeepEnabled",
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequest.Builder(workerClass)
+                    .setInitialDelay(10 * 365, TimeUnit.DAYS)
+                    .setConstraints(Constraints.Builder().setRequiresCharging(true).build())
+                    .build()
+            )
     }
 }

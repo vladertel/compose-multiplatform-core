@@ -18,6 +18,9 @@ package androidx.appsearch.annotation;
 
 import androidx.annotation.NonNull;
 import androidx.appsearch.app.AppSearchSchema;
+import androidx.appsearch.app.EmbeddingVector;
+import androidx.appsearch.app.LongSerializer;
+import androidx.appsearch.app.StringSerializer;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -71,8 +74,8 @@ import java.lang.annotation.Target;
  *
  * <p>Properties contain the document's data. They may be indexed or non-indexed (the default).
  * Only indexed properties can be searched for in queries. There is a limit of
- * {@link androidx.appsearch.app.GenericDocument#getMaxIndexedProperties} indexed properties in
- * one document.
+ * {@link androidx.appsearch.app.Features#getMaxIndexedProperties} indexed properties in one
+ * document.
  */
 @Documented
 @Retention(RetentionPolicy.CLASS)
@@ -226,7 +229,6 @@ public @interface Document {
          * <p>If not specified, defaults to {@link
          * AppSearchSchema.StringPropertyConfig#INDEXING_TYPE_NONE} (the field will not be indexed
          * and cannot be queried).
-         * TODO(b/171857731) renamed to TermMatchType when using String-specific indexing config.
          */
         @AppSearchSchema.StringPropertyConfig.IndexingType int indexingType()
                 default AppSearchSchema.StringPropertyConfig.INDEXING_TYPE_NONE;
@@ -259,18 +261,7 @@ public @interface Document {
          * <p>Useful for representing properties using rich types that boil down to simple string
          * values in the database.
          *
-         * <p>The referenced class must satisfy the following:
-         *
-         * <ol>
-         *     <li>
-         *         Have a static method called {@code serialize} that converts the property's Java
-         *         type to a {@link String}.
-         *     </li>
-         *     <li>
-         *         Have a static method called {@code deserialize} that converts a {@link String} to
-         *         the property's Java type or returns null if deserialization failed.
-         *     </li>
-         * </ol>
+         * <p>The referenced class must have a public zero params constructor.
          *
          * <p>For example:
          *
@@ -282,17 +273,21 @@ public @interface Document {
          *     @Document.StringProperty(serializer = SomeRichTypeSerializer.class)
          *     public SomeRichType getMyProperty();
          *
-         *     public final class SomeRichTypeSerializer {
-         *       public static String serialize(SomeRichType instance) {...}
+         *     public final class SomeRichTypeSerializer implements StringSerializer<SomeRichType> {
          *
+         *       @Override
+         *       @NonNull
+         *       public String serialize(@NonNull SomeRichType instance) {...}
+         *
+         *       @Override
          *       @Nullable
-         *       public static SomeRichType deserialize(String string) {...}
+         *       public SomeRichType deserialize(@NonNull String string) {...}
          *     }
          * }
          * }
          * </pre>
          */
-        Class<?> serializer() default DefaultSerializer.class;
+        Class<? extends StringSerializer<?>> serializer() default DefaultSerializer.class;
 
         /**
          * Configures whether this property must be specified for the document to be valid.
@@ -305,16 +300,16 @@ public @interface Document {
          */
         boolean required() default false;
 
-        final class DefaultSerializer {
-            private DefaultSerializer() {}
-
+        final class DefaultSerializer implements StringSerializer<String> {
+            @Override
             @NonNull
-            public static String serialize(@NonNull String value) {
-                return value;
+            public String serialize(@NonNull String instance) {
+                return instance;
             }
 
+            @Override
             @NonNull
-            public static String deserialize(@NonNull String string) {
+            public String deserialize(@NonNull String string) {
                 return string;
             }
         }
@@ -337,12 +332,62 @@ public @interface Document {
         String name() default "";
 
         /**
-         * Configures whether fields in the nested document should be indexed.
+         * Configures whether all fields in the nested document should be indexed.
          *
          * <p>If false, the nested document's properties are not indexed regardless of its own
-         * schema.
+         * schema, unless {@link #indexableNestedPropertiesList()} is used to index a subset of
+         * properties from the nested document.
+         *
+         * <p>{@link IllegalArgumentException} will be thrown during setSchema if set to true and
+         * defining a non-empty list for {@link #indexableNestedPropertiesList()}
          */
         boolean indexNestedProperties() default false;
+
+        /**
+         * The list of properties in the nested document to index. The property will be indexed
+         * according to its indexing configurations in the document's schema definition.
+         *
+         * <p>{@link #indexNestedProperties} is required to be false if this list is non-empty.
+         * {@link IllegalArgumentException} will be thrown during setSchema if this condition is
+         * not met.
+         *
+         * @see
+         * AppSearchSchema.DocumentPropertyConfig.Builder#addIndexableNestedProperties(Collection)
+         */
+        String[] indexableNestedPropertiesList() default {};
+
+        /**
+         * Configures whether to inherit the indexable nested properties list from the Document's
+         * superclass type definition. When set to true, the indexable property paths will be
+         * a union of the paths specified in {@link #indexableNestedPropertiesList()} and any
+         * path specified in the document class's superclass or inherited interfaces.
+         * Effectively, this is a no-op if none of the document superclasses specify a path for
+         * this document property.
+         *
+         * <p>Ex. Consider the following Document classes:
+         * <pre>
+         * {@code
+         * @Document
+         * class Person {
+         *   @Document.DocumentProperty(indexableNestedPropertiesList = {"streetName", "zipcode"})
+         *   Address livesAt;
+         * }
+         * @Document
+         * class Artist extends Person {
+         *   @Document.DocumentProperty(
+         *     indexableNestedPropertiesList = {"country"},
+         *     inheritIndexableNestedPropertiesFromSuperclass = true
+         *   )
+         *   Address livesAt;
+         * }
+         * }
+         * </pre>
+         *
+         * <p>By setting 'inheritIndexableNestedPropertiesFromSuperclass = true', Artist.livesAt
+         * inherits the indexable nested properties defined by its parent class's livesAt field
+         * (Person.livesAt) and indexes all three fields: {streetName, zipCode, country}
+         */
+        boolean inheritIndexableNestedPropertiesFromSuperclass() default false;
 
         /**
          * Configures whether this property must be specified for the document to be valid.
@@ -387,22 +432,11 @@ public @interface Document {
          * <p>Useful for representing properties using rich types that boil down to simple 64-bit
          * integer values in the database.
          *
-         * <p>The referenced class must satisfy the following:
-         *
-         * <ol>
-         *     <li>
-         *         Have a static method called {@code serialize} that converts the property's Java
-         *         type to a {@link Long}.
-         *     </li>
-         *     <li>
-         *         Have a static method called {@code deserialize} that converts a {@link Long} to
-         *         the property's Java type or returns null if deserialization failed.
-         *     </li>
-         * </ol>
+         * <p>The referenced class must have a public zero params constructor.
          *
          * <p>See {@link StringProperty#serializer()} for an example of a serializer.
          */
-        Class<?> serializer() default DefaultSerializer.class;
+        Class<? extends LongSerializer<?>> serializer() default DefaultSerializer.class;
 
         /**
          * Configures whether this property must be specified for the document to be valid.
@@ -415,15 +449,17 @@ public @interface Document {
          */
         boolean required() default false;
 
-        final class DefaultSerializer {
-            private DefaultSerializer() {}
-
-            public static long serialize(long value) {
+        final class DefaultSerializer implements LongSerializer<Long> {
+            @Override
+            public long serialize(@NonNull @SuppressWarnings("AutoBoxing") Long value) {
                 return value;
             }
 
-            public static long deserialize(long l) {
-                return l;
+            @Override
+            @NonNull
+            @SuppressWarnings("AutoBoxing")
+            public Long deserialize(long value) {
+                return value;
             }
         }
     }
@@ -444,29 +480,6 @@ public @interface Document {
         String name() default "";
 
         /**
-         * Configures how a property should be converted to and from a {@link Double}.
-         *
-         * <p>Useful for representing properties using rich types that boil down to simple
-         * double-precision decimal values in the database.
-         *
-         * <p>The referenced class must satisfy the following:
-         *
-         * <ol>
-         *     <li>
-         *         Have a static method called {@code serialize} that converts the property's Java
-         *         type to a {@link Double}.
-         *     </li>
-         *     <li>
-         *         Have a static method called {@code deserialize} that converts a {@link Double} to
-         *         the property's Java type or returns null if deserialization failed.
-         *     </li>
-         * </ol>
-         *
-         * <p>See {@link StringProperty#serializer()} for an example of a serializer.
-         */
-        Class<?> serializer() default DefaultSerializer.class;
-
-        /**
          * Configures whether this property must be specified for the document to be valid.
          *
          * <p>This attribute does not apply to properties of a repeated type (e.g. a list).
@@ -476,18 +489,6 @@ public @interface Document {
          * this attribute to {@code true}.
          */
         boolean required() default false;
-
-        final class DefaultSerializer {
-            private DefaultSerializer() {}
-
-            public static double serialize(double value) {
-                return value;
-            }
-
-            public static double deserialize(double d) {
-                return d;
-            }
-        }
     }
 
     /** Configures a boolean member field of a class as a property known to AppSearch. */
@@ -539,15 +540,60 @@ public @interface Document {
     }
 
     /**
-     * Marks a method as a builder producer.
-     *
-     * <p>A builder producer is a static method that returns a builder, which contains a "build()"
-     * method to construct the AppSearch document object and setter methods to set field values.
-     * Once a builder producer is specified, AppSearch will be forced to use the builder pattern to
-     * construct the document object.
+     * Configures an {@link EmbeddingVector} field of a class as a property known to AppSearch.
      */
     @Documented
     @Retention(RetentionPolicy.CLASS)
-    @Target(ElementType.METHOD)
+    @Target({ElementType.FIELD, ElementType.METHOD})
+    @interface EmbeddingProperty {
+        /**
+         * The name of this property. This string is used to query against this property.
+         *
+         * <p>If not specified, the name of the field in the code will be used instead.
+         */
+        String name() default "";
+
+        /**
+         * Configures how a property should be indexed so that it can be retrieved by queries.
+         *
+         * <p>If not specified, defaults to
+         * {@link AppSearchSchema.EmbeddingPropertyConfig#INDEXING_TYPE_NONE} (the field will not be
+         * indexed and cannot be queried).
+         */
+        @AppSearchSchema.EmbeddingPropertyConfig.IndexingType int indexingType()
+                default AppSearchSchema.EmbeddingPropertyConfig.INDEXING_TYPE_NONE;
+
+        /**
+         * Configures whether this property must be specified for the document to be valid.
+         *
+         * <p>This attribute does not apply to properties of a repeated type (e.g. a list).
+         *
+         * <p>Please make sure you understand the consequences of required fields on
+         * {@link androidx.appsearch.app.AppSearchSession#setSchemaAsync schema migration} before
+         * setting this attribute to {@code true}.
+         */
+        boolean required() default false;
+    }
+
+    /**
+     * Marks a static method or a builder class directly as a builder producer. A builder class
+     * should contain a "build()" method to construct the AppSearch document object and setter
+     * methods to set field values.
+     *
+     * <p>When a static method is marked as a builder producer, the method should return a
+     * builder instance for AppSearch to construct the document object. When a builder class is
+     * marked as a builder producer directly, AppSearch will use the constructor of the builder
+     * class to create a builder instance.
+     *
+     * <p>The annotated static method or the constructor of the annotated builder class is allowed
+     * to accept parameters to set a part of field values. In this case, AppSearch will only use
+     * setters to set values for the remaining fields.
+     *
+     * <p>Once a builder producer is specified, AppSearch will be forced to use the builder
+     * pattern to construct the document object.
+     */
+    @Documented
+    @Retention(RetentionPolicy.CLASS)
+    @Target({ElementType.METHOD, ElementType.TYPE})
     @interface BuilderProducer {}
 }

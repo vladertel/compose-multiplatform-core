@@ -16,234 +16,242 @@
 
 package androidx.compose.foundation.demos.text2
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.demos.text.Language
+import androidx.compose.foundation.demos.text.RainbowColors
 import androidx.compose.foundation.demos.text.TagLine
-import androidx.compose.foundation.demos.text.fontSize8
 import androidx.compose.foundation.demos.text.loremIpsum
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text2.BasicTextField2
-import androidx.compose.foundation.text2.input.TextFieldLineLimits.MultiLine
-import androidx.compose.foundation.text2.input.TextFieldLineLimits.SingleLine
-import androidx.compose.foundation.text2.input.TextFieldState
-import androidx.compose.material.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldDecorator
+import androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine
+import androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.material.Checkbox
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.coerceIn
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+private val LocalDecoration = compositionLocalOf { false }
+
 @Composable
 fun ScrollableDemos() {
-    LazyColumn(Modifier.padding(16.dp)) {
-        item {
-            TagLine(tag = "SingleLine Horizontal Scroll")
-            SingleLineHorizontalScrollableTextField()
-        }
+    var isDecorated by remember { mutableStateOf(false) }
+    CompositionLocalProvider(value = LocalDecoration provides isDecorated) {
+        LazyColumn(Modifier.padding(16.dp)) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = isDecorated, onCheckedChange = { isDecorated = it })
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Decorated")
+                }
+            }
 
-        item {
-            TagLine(tag = "SingleLine Horizontal Scroll with newlines")
-            SingleLineHorizontalScrollableTextFieldWithNewlines()
-        }
+            item {
+                TagLine(tag = "SingleLine Horizontal Scroll")
+                SingleLineHorizontalScrollableTextField()
+            }
 
-        item {
-            TagLine(tag = "SingleLine Vertical Scroll")
-            SingleLineVerticalScrollableTextField()
-        }
+            item {
+                TagLine(tag = "SingleLine Horizontal Scroll with newlines")
+                SingleLineHorizontalScrollableTextFieldWithNewlines()
+            }
 
-        item {
-            TagLine(tag = "MultiLine Vertical Scroll")
-            MultiLineVerticalScrollableTextField()
-        }
+            item {
+                Box(
+                    modifier =
+                        Modifier.padding(vertical = 16.dp)
+                            .height(120.dp)
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = RainbowColors,
+                                    tileMode = TileMode.Mirror
+                                )
+                            )
+                ) {
+                    Text("Left empty for demo purposes", Modifier.align(Alignment.Center))
+                }
+            }
 
-        item {
-            TagLine(tag = "Hoisted ScrollState")
-            HoistedHorizontalScroll()
-        }
+            item {
+                TagLine(tag = "MultiLine Vertical Scroll")
+                MultiLineVerticalScrollableTextField()
+            }
 
-        item {
-            TagLine(tag = "Shared Hoisted ScrollState")
-            SharedHoistedScroll()
-        }
+            item {
+                TagLine(tag = "Hoisted ScrollState")
+                HoistedHorizontalScroll()
+            }
 
-        item {
-            TagLine(tag = "Selectable with no interaction")
-            SelectionWithNoInteraction()
+            item {
+                TagLine(tag = "Shared Hoisted ScrollState")
+                SharedHoistedScroll()
+            }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ScrollableDemosRtl() {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        ScrollableDemos()
+    }
+}
+
 @Composable
 fun SingleLineHorizontalScrollableTextField() {
-    val state = remember {
-        TextFieldState(loremIpsum(wordCount = 100))
-    }
-    BasicTextField2(
+    val layoutDirection = LocalLayoutDirection.current
+    val language = if (layoutDirection == LayoutDirection.Ltr) Language.Latin else Language.Hebrew
+    val state =
+        remember(language) { TextFieldState(loremIpsum(wordCount = 100, language = language)) }
+    BasicTextField(
         state = state,
         lineLimits = SingleLine,
         textStyle = TextStyle(fontSize = 24.sp),
-        modifier = Modifier.padding(horizontal = 32.dp)
+        modifier = Modifier.padding(horizontal = 32.dp),
+        decorator = simpleDecoration()
     )
 }
 
-// TODO this is not supported currently. Add tests for this when supported.
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SingleLineHorizontalScrollableTextFieldWithNewlines() {
-    val state = remember {
-        TextFieldState("This \ntext \ncontains \nnewlines \nbut \nis \nsingle-line.")
-    }
-    BasicTextField2(
+    val layoutDirection = LocalLayoutDirection.current
+    val language = if (layoutDirection == LayoutDirection.Ltr) Language.Latin else Language.Hebrew
+    val state =
+        remember(language) {
+            TextFieldState(loremIpsum(wordCount = 20, language = language, separator = "\n"))
+        }
+    BasicTextField(
         state = state,
         lineLimits = SingleLine,
-        textStyle = TextStyle(fontSize = 24.sp)
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun SingleLineVerticalScrollableTextField() {
-    val state = remember {
-        TextFieldState("When content gets long, this field should scroll vertically\n".repeat(10))
-    }
-    BasicTextField2(
-        state = state,
         textStyle = TextStyle(fontSize = 24.sp),
-        lineLimits = MultiLine(maxHeightInLines = 1)
+        decorator = simpleDecoration()
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MultiLineVerticalScrollableTextField() {
-    val state = remember {
-        TextFieldState(loremIpsum(wordCount = 200))
-    }
-    BasicTextField2(
+    val layoutDirection = LocalLayoutDirection.current
+    val language = if (layoutDirection == LayoutDirection.Ltr) Language.Latin else Language.Hebrew
+    val state =
+        remember(language) { TextFieldState(loremIpsum(wordCount = 200, language = language)) }
+    BasicTextField(
         state = state,
         textStyle = TextStyle(fontSize = 24.sp),
         modifier = Modifier.heightIn(max = 200.dp),
-        lineLimits = MultiLine()
+        lineLimits = MultiLine(),
+        decorator = simpleDecoration()
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HoistedHorizontalScroll() {
-    val state = remember {
-        TextFieldState("When content gets long, this field should scroll horizontally")
-    }
+    val layoutDirection = LocalLayoutDirection.current
+    val language = if (layoutDirection == LayoutDirection.Ltr) Language.Latin else Language.Hebrew
+    val state =
+        remember(language) { TextFieldState(loremIpsum(wordCount = 20, language = language)) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     Column {
         Slider(
             value = scrollState.value.toFloat(),
-            onValueChange = {
-                coroutineScope.launch { scrollState.scrollTo(it.roundToInt()) }
-            },
+            onValueChange = { coroutineScope.launch { scrollState.scrollTo(it.roundToInt()) } },
             valueRange = 0f..scrollState.maxValue.toFloat()
         )
-        BasicTextField2(
+        BasicTextField(
             state = state,
             scrollState = scrollState,
             textStyle = TextStyle(fontSize = 24.sp),
             modifier = Modifier.height(200.dp),
-            lineLimits = SingleLine
+            lineLimits = SingleLine,
+            decorator = simpleDecoration()
         )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SharedHoistedScroll() {
-    val state1 = remember {
-        TextFieldState("When content gets long, this field should scroll horizontally")
-    }
-    val state2 = remember {
-        TextFieldState("When content gets long, this field should scroll horizontally")
-    }
+    val layoutDirection = LocalLayoutDirection.current
+    val language = if (layoutDirection == LayoutDirection.Ltr) Language.Latin else Language.Hebrew
+    val state1 =
+        remember(language) { TextFieldState(loremIpsum(wordCount = 20, language = language)) }
+    val state2 =
+        remember(language) { TextFieldState(loremIpsum(wordCount = 20, language = language)) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     Column {
         Slider(
             value = scrollState.value.toFloat(),
-            onValueChange = {
-                coroutineScope.launch { scrollState.scrollTo(it.roundToInt()) }
-            },
+            onValueChange = { coroutineScope.launch { scrollState.scrollTo(it.roundToInt()) } },
             valueRange = 0f..scrollState.maxValue.toFloat()
         )
-        BasicTextField2(
+        BasicTextField(
             state = state1,
             scrollState = scrollState,
             textStyle = TextStyle(fontSize = 24.sp),
             modifier = Modifier.fillMaxWidth(),
-            lineLimits = SingleLine
+            lineLimits = SingleLine,
+            decorator = simpleDecoration()
         )
-        BasicTextField2(
+        BasicTextField(
             state = state2,
             scrollState = scrollState,
             textStyle = TextStyle(fontSize = 24.sp),
             modifier = Modifier.fillMaxWidth(),
-            lineLimits = SingleLine
+            lineLimits = SingleLine,
+            decorator = simpleDecoration()
         )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SelectionWithNoInteraction() {
-    val state =
-        remember { TextFieldState("Hello, World!", initialSelectionInChars = TextRange(1, 5)) }
-    val focusRequester = remember { FocusRequester() }
-    Column {
-        Button(onClick = { focusRequester.requestFocus() }) {
-            Text("Focus")
-        }
-        Button(onClick = {
-            state.edit {
-                selectCharsIn(
-                    TextRange(
-                        state.text.selectionInChars.start - 1,
-                        state.text.selectionInChars.end
-                    ).coerceIn(0, state.text.length)
-                )
+fun simpleDecoration(): TextFieldDecorator {
+    return remember {
+        TextFieldDecorator {
+            val isDecorated = LocalDecoration.current
+            if (isDecorated) {
+                Box(
+                    modifier =
+                        Modifier.border(1.dp, Color.DarkGray, RoundedCornerShape(4.dp))
+                            .padding(8.dp)
+                ) {
+                    it()
+                }
+            } else {
+                it()
             }
-        }) {
-            Text("Increase Selection to Left")
         }
-        Button(onClick = {
-            state.edit {
-                selectCharsIn(
-                    TextRange(
-                        state.text.selectionInChars.start,
-                        state.text.selectionInChars.end + 1
-                    ).coerceIn(0, state.text.length)
-                )
-            }
-        }) {
-            Text("Increase Selection to Right")
-        }
-        BasicTextField2(
-            state = state,
-            modifier = demoTextFieldModifiers.focusRequester(focusRequester),
-            textStyle = TextStyle(fontSize = fontSize8),
-            lineLimits = SingleLine
-        )
     }
 }

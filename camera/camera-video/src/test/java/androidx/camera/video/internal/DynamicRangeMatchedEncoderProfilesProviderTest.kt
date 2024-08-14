@@ -35,11 +35,11 @@ import androidx.camera.core.impl.EncoderProfilesProxy.ImmutableEncoderProfilesPr
 import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy
 import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy.BIT_DEPTH_10
 import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy.BIT_DEPTH_8
-import androidx.camera.testing.EncoderProfilesUtil
-import androidx.camera.testing.EncoderProfilesUtil.RESOLUTION_1080P
-import androidx.camera.testing.EncoderProfilesUtil.createFakeAudioProfileProxy
-import androidx.camera.testing.EncoderProfilesUtil.createFakeVideoProfileProxy
-import androidx.camera.testing.fakes.FakeEncoderProfilesProvider
+import androidx.camera.testing.impl.EncoderProfilesUtil
+import androidx.camera.testing.impl.EncoderProfilesUtil.RESOLUTION_1080P
+import androidx.camera.testing.impl.EncoderProfilesUtil.createFakeAudioProfileProxy
+import androidx.camera.testing.impl.EncoderProfilesUtil.createFakeVideoProfileProxy
+import androidx.camera.testing.impl.fakes.FakeEncoderProfilesProvider
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,9 +52,10 @@ import org.robolectric.annotation.internal.DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class DynamicRangeMatchedEncoderProfilesProviderTest {
 
-    private val defaultProvider = createFakeEncoderProfilesProvider(
-        arrayOf(Pair(QUALITY_1080P, PROFILES_1080P_FULL_DYNAMIC_RANGE))
-    )
+    private val defaultProvider =
+        createFakeEncoderProfilesProvider(
+            arrayOf(Pair(QUALITY_1080P, PROFILES_1080P_FULL_DYNAMIC_RANGE))
+        )
 
     @Test
     fun hasNoProfile_canNotGetProfiles() {
@@ -161,11 +162,13 @@ class DynamicRangeMatchedEncoderProfilesProviderTest {
     private fun createFakeEncoderProfilesProvider(
         qualityToProfilesPairs: Array<Pair<Int, EncoderProfilesProxy>> = emptyArray()
     ): EncoderProfilesProvider {
-        return FakeEncoderProfilesProvider.Builder().also { builder ->
-            for (pair in qualityToProfilesPairs) {
-                builder.add(pair.first, pair.second)
+        return FakeEncoderProfilesProvider.Builder()
+            .also { builder ->
+                for (pair in qualityToProfilesPairs) {
+                    builder.add(pair.first, pair.second)
+                }
             }
-        }.build()
+            .build()
     }
 
     companion object {
@@ -179,18 +182,19 @@ class DynamicRangeMatchedEncoderProfilesProviderTest {
             VIDEO_PROFILES_1080P_SDR.modifyDynamicRangeInfo(HDR_HDR10PLUS, BIT_DEPTH_10)
         private val VIDEO_PROFILES_1080P_DOLBY_VISION =
             VIDEO_PROFILES_1080P_SDR.modifyDynamicRangeInfo(HDR_DOLBY_VISION, BIT_DEPTH_10)
-        private val PROFILES_1080P_FULL_DYNAMIC_RANGE = ImmutableEncoderProfilesProxy.create(
-            EncoderProfilesUtil.DEFAULT_DURATION,
-            EncoderProfilesUtil.DEFAULT_OUTPUT_FORMAT,
-            listOf(createFakeAudioProfileProxy()),
-            listOf(
-                VIDEO_PROFILES_1080P_SDR,
-                VIDEO_PROFILES_1080P_HLG,
-                VIDEO_PROFILES_1080P_HDR10,
-                VIDEO_PROFILES_1080P_HDR10_PLUS,
-                VIDEO_PROFILES_1080P_DOLBY_VISION
+        private val PROFILES_1080P_FULL_DYNAMIC_RANGE =
+            ImmutableEncoderProfilesProxy.create(
+                EncoderProfilesUtil.DEFAULT_DURATION,
+                EncoderProfilesUtil.DEFAULT_OUTPUT_FORMAT,
+                listOf(createFakeAudioProfileProxy()),
+                listOf(
+                    VIDEO_PROFILES_1080P_SDR,
+                    VIDEO_PROFILES_1080P_HLG,
+                    VIDEO_PROFILES_1080P_HDR10,
+                    VIDEO_PROFILES_1080P_HDR10_PLUS,
+                    VIDEO_PROFILES_1080P_DOLBY_VISION
+                )
             )
-        )
 
         private fun VideoProfileProxy.modifyDynamicRangeInfo(
             hdrFormat: Int,

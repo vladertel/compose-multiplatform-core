@@ -14,42 +14,44 @@
  * limitations under the License.
  */
 
-import androidx.build.AndroidXComposePlugin
-import androidx.build.KmpPlatformsKt
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("AndroidXComposePlugin")
-    id("AndroidXPaparazziPlugin")
 }
-
-def desktopEnabled = KmpPlatformsKt.enableDesktop(project)
 
 androidXMultiplatform {
     android()
-    if (desktopEnabled) desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinStdlib)
+                // Keep pinned unless there is a need for tip of tree behavior
+                implementation("androidx.collection:collection:1.4.2")
                 implementation(project(":compose:animation:animation-core"))
-
+                implementation(project(":compose:ui:ui-util"))
                 api(project(":compose:foundation:foundation"))
                 api(project(":compose:foundation:foundation-layout"))
-                api(project(":compose:material:material-icons-core"))
                 api(project(":compose:material:material-ripple"))
                 api(project(":compose:runtime:runtime"))
-                api(project(":compose:ui:ui-graphics"))
+                api(project(":compose:ui:ui"))
                 api(project(":compose:ui:ui-text"))
-
-                implementation(project(":compose:ui:ui-util"))
+                api(project(":graphics:graphics-shapes"))
             }
         }
 
@@ -64,59 +66,30 @@ androidXMultiplatform {
             }
         }
 
-        if (desktopEnabled) {
-            skikoMain {
-                dependsOn(commonMain)
-                dependencies {
-                    api(project(":compose:animation:animation-core"))
-                    api(project(":compose:runtime:runtime"))
-                    api(project(":compose:ui:ui"))
-                    api(project(":compose:ui:ui-text"))
-                    api(project(":compose:foundation:foundation-layout"))
-
-                    implementation(project(":compose:animation:animation"))
-                    implementation(project(":compose:ui:ui-util"))
-                }
-            }
-        }
-
         androidMain {
             dependsOn(jvmMain)
             dependencies {
-                api("androidx.annotation:annotation:1.1.0")
-                implementation("androidx.activity:activity-compose:1.5.0")
-
-                // TODO: remove next 3 dependencies when b/202810604 is fixed
-                implementation("androidx.savedstate:savedstate-ktx:1.2.1")
-                implementation("androidx.lifecycle:lifecycle-runtime:2.6.1")
-                implementation("androidx.lifecycle:lifecycle-viewmodel:2.6.1")
-
+                api("androidx.annotation:annotation:1.8.1")
+                api("androidx.annotation:annotation-experimental:1.4.1")
+                implementation("androidx.activity:activity-compose:1.8.2")
                 implementation("androidx.lifecycle:lifecycle-common-java8:2.6.1")
             }
         }
 
-        if (desktopEnabled) {
-            desktopMain {
-                dependsOn(skikoMain)
-                dependsOn(jvmMain)
-                dependencies {
-                    implementation(libs.kotlinStdlib)
-                }
-            }
+        commonStubsMain {
+            dependsOn(commonMain)
         }
 
-        jvmTest {
+        jvmStubsMain {
+            dependsOn(commonStubsMain)
+        }
+
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
+        }
+
+        androidUnitTest {
             dependsOn(commonTest)
-            dependencies {
-            }
-        }
-
-        // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
-        //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
-        //  level dependencies block instead:
-        //  `dependencies { testImplementation(libs.robolectric) }`
-        androidTest {
-            dependsOn(jvmTest)
             dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
@@ -125,14 +98,16 @@ androidXMultiplatform {
             }
         }
 
-        androidAndroidTest {
-            dependsOn(jvmTest)
+        androidInstrumentedTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(project(":compose:material3:material3:material3-samples"))
                 implementation(project(":compose:test-utils"))
                 implementation(project(':compose:foundation:foundation-layout'))
+                implementation(project(':compose:foundation:foundation'))
+                implementation("androidx.compose.material:material-icons-core:1.6.8")
                 implementation(project(":test:screenshot:screenshot"))
-                implementation(project(":core:core"))
+                implementation(projectOrArtifact(":core:core"))
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.junit)
@@ -140,18 +115,6 @@ androidXMultiplatform {
                 implementation(libs.dexmakerMockitoInlineExtended)
                 implementation(libs.mockitoKotlin)
                 implementation(libs.testUiautomator)
-            }
-        }
-
-        if (desktopEnabled) {
-            desktopTest {
-                dependsOn(jvmTest)
-                dependencies {
-                    implementation(project(":compose:ui:ui-test-junit4"))
-                    implementation(libs.truth)
-                    implementation(libs.junit)
-                    implementation(libs.skikoCurrentOs)
-                }
             }
         }
     }
@@ -164,14 +127,20 @@ dependencies {
 
 androidx {
     name = "Compose Material3 Components"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2021"
     description = "Compose Material You Design Components library"
+    legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = false
+    samples(project(":compose:material3:material3:material3-samples"))
 }
 
 // Screenshot tests related setup
 android {
+    compileSdk 35
     sourceSets.androidTest.assets.srcDirs +=
             project.rootDir.absolutePath + "/../../golden/compose/material3/material3"
     namespace "androidx.compose.material3"
+    // TODO(b/345531033)
+    experimentalProperties["android.lint.useK2Uast"] = false
 }

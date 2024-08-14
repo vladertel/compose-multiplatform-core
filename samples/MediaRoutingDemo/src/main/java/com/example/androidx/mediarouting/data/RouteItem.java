@@ -153,8 +153,8 @@ public final class RouteItem {
 
     public enum DeviceType {
         TV(MediaRouter.RouteInfo.DEVICE_TYPE_TV),
-        SPEAKER(MediaRouter.RouteInfo.DEVICE_TYPE_SPEAKER),
-        BLUETOOTH(MediaRouter.RouteInfo.DEVICE_TYPE_BLUETOOTH),
+        SPEAKER(MediaRouter.RouteInfo.DEVICE_TYPE_REMOTE_SPEAKER),
+        BLUETOOTH(MediaRouter.RouteInfo.DEVICE_TYPE_BLUETOOTH_A2DP),
         AUDIO_VIDEO_RECEIVER(MediaRouter.RouteInfo.DEVICE_TYPE_AUDIO_VIDEO_RECEIVER),
         TABLET(MediaRouter.RouteInfo.DEVICE_TYPE_TABLET),
         TABLET_DOCKED(MediaRouter.RouteInfo.DEVICE_TYPE_TABLET_DOCKED),
@@ -162,6 +162,7 @@ public final class RouteItem {
         GAME_CONSOLE(MediaRouter.RouteInfo.DEVICE_TYPE_GAME_CONSOLE),
         CAR(MediaRouter.RouteInfo.DEVICE_TYPE_CAR),
         SMARTWATCH(MediaRouter.RouteInfo.DEVICE_TYPE_SMARTWATCH),
+        SMARTPHONE(MediaRouter.RouteInfo.DEVICE_TYPE_SMARTPHONE),
         GROUP(MediaRouter.RouteInfo.DEVICE_TYPE_GROUP),
         UNKNOWN(MediaRouter.RouteInfo.DEVICE_TYPE_UNKNOWN);
 

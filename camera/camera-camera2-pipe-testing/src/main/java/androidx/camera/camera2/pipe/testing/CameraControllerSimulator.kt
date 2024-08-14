@@ -17,10 +17,10 @@
 package androidx.camera.camera2.pipe.testing
 
 import android.view.Surface
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraContext
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraStatusMonitor
 import androidx.camera.camera2.pipe.GraphState.GraphStateError
@@ -40,41 +40,41 @@ import androidx.camera.camera2.pipe.graph.GraphRequestProcessor
  * actively submit requests. This mirrors the underlying behavior of an actual Camera, which may
  * take time to configure and become ready.
  */
-@RequiresApi(21)
-class CameraControllerSimulator(
-    private val cameraContext: CameraContext,
+public class CameraControllerSimulator(
+    cameraContext: CameraContext,
+    private val graphId: CameraGraphId,
     private val graphConfig: CameraGraph.Config,
     private val graphListener: GraphListener,
-    private val streamGraph: StreamGraph
+    private val streamGraph: StreamGraph,
 ) : CameraController {
     override val cameraId: CameraId
         get() = graphConfig.camera
-    override var isForeground = false
+
+    override val cameraGraphId: CameraGraphId
+        get() = graphId
+
+    override var isForeground: Boolean = false
 
     private val lock = Any()
     private var currentSurfaceMap: Map<StreamId, Surface> = emptyMap()
     private var currentGraphRequestProcessor: GraphRequestProcessor? = null
 
     private var _closed = false
-    var closed: Boolean
+    public var closed: Boolean
         get() = _closed
         private set(value) {
             _closed = value
         }
 
     private var _started = false
-    var started: Boolean
+    public var started: Boolean
         get() = _started
         private set(value) {
             _started = value
         }
 
-    private var _currentCaptureSequenceProcessor: FakeCaptureSequenceProcessor? = null
-    var currentCaptureSequenceProcessor: FakeCaptureSequenceProcessor?
-        get() = _currentCaptureSequenceProcessor
-        private set(value) {
-            _currentCaptureSequenceProcessor = value
-        }
+    public var currentCaptureSequenceProcessor: FakeCaptureSequenceProcessor? = null
+        private set
 
     init {
         check(cameraContext.cameraBackends.allIds.isNotEmpty()) {
@@ -89,17 +89,16 @@ class CameraControllerSimulator(
         }
     }
 
-    fun simulateCameraStarted() {
+    public fun simulateCameraStarted() {
         synchronized(lock) {
             check(!closed) {
                 "Attempted to invoke simulateStarted after the CameraController was closed."
             }
 
-            val captureSequenceProcessor = FakeCaptureSequenceProcessor(
-                graphConfig.camera,
-                graphConfig.defaultTemplate
-            )
+            val captureSequenceProcessor =
+                FakeCaptureSequenceProcessor(graphConfig.camera, graphConfig.defaultTemplate)
             val graphRequestProcessor = GraphRequestProcessor.from(captureSequenceProcessor)
+            captureSequenceProcessor.surfaceMap = currentSurfaceMap
             currentCaptureSequenceProcessor = captureSequenceProcessor
             currentGraphRequestProcessor = graphRequestProcessor
 
@@ -107,12 +106,12 @@ class CameraControllerSimulator(
         }
     }
 
-    fun simulateCameraStopped() {
+    public fun simulateCameraStopped() {
         synchronized(lock) {
             check(!closed) {
                 "Attempted to invoke simulateCameraStopped after the CameraController was closed."
             }
-            val captureSequenceProcessor = _currentCaptureSequenceProcessor
+            val captureSequenceProcessor = currentCaptureSequenceProcessor
             val graphRequestProcessor = currentGraphRequestProcessor
 
             currentCaptureSequenceProcessor = null
@@ -124,9 +123,9 @@ class CameraControllerSimulator(
         }
     }
 
-    fun simulateCameraModified() {
+    public fun simulateCameraModified() {
         synchronized(lock) {
-            val captureSequenceProcessor = _currentCaptureSequenceProcessor
+            val captureSequenceProcessor = currentCaptureSequenceProcessor
             val graphRequestProcessor = currentGraphRequestProcessor
 
             currentCaptureSequenceProcessor = null
@@ -138,7 +137,7 @@ class CameraControllerSimulator(
         }
     }
 
-    fun simulateCameraError(graphStateError: GraphStateError) {
+    public fun simulateCameraError(graphStateError: GraphStateError) {
         synchronized(lock) {
             check(!closed) {
                 "Attempted to invoke simulateCameraError after the CameraController was closed."
@@ -149,27 +148,21 @@ class CameraControllerSimulator(
 
     override fun start() {
         synchronized(lock) {
-            check(!closed) {
-                "Attempted to invoke start after close."
-            }
+            check(!closed) { "Attempted to invoke start after close." }
             started = true
         }
     }
 
     override fun stop() {
         synchronized(lock) {
-            check(!closed) {
-                "Attempted to invoke stop after close."
-            }
+            check(!closed) { "Attempted to invoke stop after close." }
             started = false
         }
     }
 
     override fun tryRestart(cameraStatus: CameraStatusMonitor.CameraStatus) {
         synchronized(lock) {
-            check(!closed) {
-                "Attempted to invoke restart after close."
-            }
+            check(!closed) { "Attempted to invoke restart after close." }
             stop()
             start()
         }
@@ -188,7 +181,7 @@ class CameraControllerSimulator(
         synchronized(lock) {
             currentSurfaceMap = surfaceMap
 
-            val captureSequenceProcessor = _currentCaptureSequenceProcessor
+            val captureSequenceProcessor = currentCaptureSequenceProcessor
             val graphRequestProcessor = currentGraphRequestProcessor
             if (captureSequenceProcessor != null && graphRequestProcessor != null) {
                 captureSequenceProcessor.surfaceMap = surfaceMap

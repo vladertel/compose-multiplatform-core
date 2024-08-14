@@ -22,19 +22,20 @@ import androidx.compose.ui.util.fastForEachIndexed
  * This method finds the sticky header in composedItems list or composes the header item if needed.
  *
  * @param composedVisibleItems list of items already composed and expected to be visible. if the
- * header wasn't in this list but is needed the header will be added as the first item in this list.
+ *   header wasn't in this list but is needed the header will be added as the first item in this
+ *   list.
  * @param itemProvider the provider so we can compose a header if it wasn't composed already
  * @param headerIndexes list of indexes of headers. Must be sorted.
  * @param beforeContentPadding the padding before the first item in the list
  */
 internal fun findOrComposeLazyListHeader(
-    composedVisibleItems: MutableList<LazyListPositionedItem>,
-    itemProvider: LazyMeasuredItemProvider,
+    composedVisibleItems: MutableList<LazyListMeasuredItem>,
+    itemProvider: LazyListMeasuredItemProvider,
     headerIndexes: List<Int>,
     beforeContentPadding: Int,
     layoutWidth: Int,
     layoutHeight: Int,
-): LazyListPositionedItem? {
+): LazyListMeasuredItem? {
     var currentHeaderOffset: Int = Int.MIN_VALUE
     var nextHeaderOffset: Int = Int.MIN_VALUE
 
@@ -70,24 +71,25 @@ internal fun findOrComposeLazyListHeader(
         return null
     }
 
-    val measuredHeaderItem = itemProvider.getAndMeasure(DataIndex(currentHeaderListPosition))
+    val measuredHeaderItem = itemProvider.getAndMeasure(currentHeaderListPosition)
 
-    var headerOffset = if (currentHeaderOffset != Int.MIN_VALUE) {
-        maxOf(-beforeContentPadding, currentHeaderOffset)
-    } else {
-        -beforeContentPadding
-    }
+    var headerOffset =
+        if (currentHeaderOffset != Int.MIN_VALUE) {
+            maxOf(-beforeContentPadding, currentHeaderOffset)
+        } else {
+            -beforeContentPadding
+        }
     // if we have a next header overlapping with the current header, the next one will be
     // pushing the current one away from the viewport.
     if (nextHeaderOffset != Int.MIN_VALUE) {
         headerOffset = minOf(headerOffset, nextHeaderOffset - measuredHeaderItem.size)
     }
 
-    return measuredHeaderItem.position(headerOffset, layoutWidth, layoutHeight).also {
-        if (indexInComposedVisibleItems != -1) {
-            composedVisibleItems[indexInComposedVisibleItems] = it
-        } else {
-            composedVisibleItems.add(0, it)
-        }
+    measuredHeaderItem.position(headerOffset, layoutWidth, layoutHeight)
+    if (indexInComposedVisibleItems != -1) {
+        composedVisibleItems[indexInComposedVisibleItems] = measuredHeaderItem
+    } else {
+        composedVisibleItems.add(0, measuredHeaderItem)
     }
+    return measuredHeaderItem
 }

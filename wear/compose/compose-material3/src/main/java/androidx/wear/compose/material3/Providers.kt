@@ -21,6 +21,40 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+
+internal fun <T> provideScopeContent(
+    contentColor: Color,
+    textStyle: TextStyle,
+    content: (@Composable T.() -> Unit)
+): (@Composable T.() -> Unit) = {
+    CompositionLocalProvider(
+        LocalContentColor provides contentColor,
+        LocalTextStyle provides textStyle,
+    ) {
+        content()
+    }
+}
+
+internal fun <T> provideScopeContent(
+    contentColor: Color,
+    textStyle: TextStyle,
+    overflow: TextOverflow,
+    maxLines: Int,
+    textAlign: TextAlign,
+    content: (@Composable T.() -> Unit)
+): (@Composable T.() -> Unit) = {
+    CompositionLocalProvider(
+        LocalContentColor provides contentColor,
+        LocalTextStyle provides textStyle,
+        LocalTextOverflow provides overflow,
+        LocalTextMaxLines provides maxLines,
+        LocalTextAlign provides textAlign
+    ) {
+        content()
+    }
+}
 
 internal fun <T> provideScopeContent(
     contentColor: State<Color>,
@@ -30,8 +64,38 @@ internal fun <T> provideScopeContent(
     val color = contentColor.value
     CompositionLocalProvider(
         LocalContentColor provides color,
-        LocalContentAlpha provides color.alpha,
         LocalTextStyle provides textStyle,
+    ) {
+        content()
+    }
+}
+
+internal fun <T> provideScopeContent(
+    contentColor: State<Color>,
+    textStyle: TextStyle,
+    overflow: TextOverflow,
+    maxLines: Int,
+    textAlign: TextAlign,
+    content: (@Composable T.() -> Unit)
+): (@Composable T.() -> Unit) = {
+    val color = contentColor.value
+    CompositionLocalProvider(
+        LocalContentColor provides color,
+        LocalTextStyle provides textStyle,
+        LocalTextOverflow provides overflow,
+        LocalTextMaxLines provides maxLines,
+        LocalTextAlign provides textAlign
+    ) {
+        content()
+    }
+}
+
+internal fun <T> provideScopeContent(
+    color: Color,
+    content: (@Composable T.() -> Unit)
+): (@Composable T.() -> Unit) = {
+    CompositionLocalProvider(
+        LocalContentColor provides color,
     ) {
         content()
     }
@@ -43,8 +107,84 @@ internal fun <T> provideScopeContent(
 ): (@Composable T.() -> Unit) = {
     CompositionLocalProvider(
         LocalContentColor provides color.value,
-        LocalContentAlpha provides color.value.alpha,
     ) {
         content()
     }
 }
+
+internal fun <T> provideNullableScopeContent(
+    contentColor: State<Color>,
+    textStyle: TextStyle,
+    content: (@Composable T.() -> Unit)?
+): (@Composable T.() -> Unit)? =
+    content?.let {
+        {
+            val color = contentColor.value
+            CompositionLocalProvider(
+                LocalContentColor provides color,
+                LocalTextStyle provides textStyle
+            ) {
+                content()
+            }
+        }
+    }
+
+internal fun <T> provideNullableScopeContent(
+    contentColor: State<Color>,
+    textStyle: TextStyle,
+    overflow: TextOverflow,
+    maxLines: Int,
+    textAlign: TextAlign,
+    content: (@Composable T.() -> Unit)?
+): (@Composable T.() -> Unit)? =
+    content?.let {
+        {
+            val color = contentColor.value
+            CompositionLocalProvider(
+                LocalContentColor provides color,
+                LocalTextStyle provides textStyle,
+                LocalTextOverflow provides overflow,
+                LocalTextMaxLines provides maxLines,
+                LocalTextAlign provides textAlign,
+            ) {
+                content()
+            }
+        }
+    }
+
+internal fun <T> provideNullableScopeContent(
+    contentColor: State<Color>,
+    content: (@Composable T.() -> Unit)?
+): (@Composable T.() -> Unit)? =
+    content?.let {
+        {
+            val color = contentColor.value
+            CompositionLocalProvider(
+                LocalContentColor provides color,
+            ) {
+                content()
+            }
+        }
+    }
+
+internal fun <T> provideNullableScopeContent(
+    contentColor: Color,
+    textStyle: TextStyle,
+    overflow: TextOverflow,
+    maxLines: Int,
+    textAlign: TextAlign,
+    content: (@Composable T.() -> Unit)?
+): (@Composable T.() -> Unit)? =
+    content?.let {
+        {
+            CompositionLocalProvider(
+                LocalContentColor provides contentColor,
+                LocalTextStyle provides textStyle,
+                LocalTextOverflow provides overflow,
+                LocalTextMaxLines provides maxLines,
+                LocalTextAlign provides textAlign,
+            ) {
+                content()
+            }
+        }
+    }

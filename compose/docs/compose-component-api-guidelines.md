@@ -57,6 +57,7 @@ App development is often subject to strong organizational priorities and norms a
     - [Semantics merging](#semantics-merging)
     - [Accessibility related parameters](#accessibility-related-parameters)
     - [Accessibility tuning](#accessibility-tuning)
+- [Tooling support](#tooling-support)
 - [Evolution of the Component APIs](#evolution-of-the-component-apis)
 
 ## Note on vocabulary in this doc
@@ -631,7 +632,7 @@ fun ColoredCanvas(
 The order of parameters in a component must be as follows:
 
 1. Required parameters.
-2. Single` modifier: Modifier = Modifier`.
+2. Single `modifier: Modifier = Modifier`.
 3. Optional parameters.
 4. (optional) trailing `@Composable` lambda.
 
@@ -944,7 +945,7 @@ If in need to make structural changes internally that affect slot composables li
 ```
 @Composable
 fun PreferenceItem(
-    checked: Boolean
+    checked: Boolean,
     content: @Composable () -> Unit
 ) {
     // don't: this logic will dispose and compose again from scratch the content() composable on the `checked` boolean change
@@ -966,10 +967,13 @@ fun PreferenceItem(
 ```
 @Composable
 fun PreferenceItem(
-    checked: Boolean
+    checked: Boolean,
     content: @Composable () -> Unit
 ) {
-    Layout({ Text("Preference item"), content }) {
+    Layout({
+        Text("Preference item")
+        content()
+    }) {
         // custom layout that relayouts the same instance of `content`
         // when `checked` changes
     }
@@ -1153,7 +1157,7 @@ class ButtonColors(
 object ButtonDefaults {
     // default factory for the class
     // can be @Composable to access the theme composition locals
-    fun buttonColors(
+    fun colors(
         backgroundColor: Color = ...,
         disabledBackgroundColor: Color = ...,
         contentColor: Color = ...,
@@ -1165,7 +1169,7 @@ object ButtonDefaults {
 fun Button(
     onClick: () -> Unit,
     enabled: Boolean = true,
-    buttonColors: ButtonColors = ButtonDefaults.buttonColors(),
+    colors: ButtonColors = ButtonDefaults.colors(),
     content: @Composable RowScope.() -> Unit
 ) {
     val resolvedBackgroundColor = colors.backgroundColor(enabled)
@@ -1194,7 +1198,7 @@ Every component should have following documentation structure:
 
 1. One-liner paragraph summarizing the component and what it does.
 2. Paragraphs going more into the detail of components, outlining the capabilities, behavior and might include one or more of:
-    * `@sample` tag providing an example of the usage for this components and its states, default, etc. if you don't have access to `@sample` functionality, consider inline examples in the ktdoc.
+    * `@sample` tag providing an example of the usage for this components and its states, default, etc. If you don't have access to `@sample` functionality, consider inline examples in the ktdoc.
     * `@see` tags pointing to other related apis.
     * Links to design or other materials to help to use the components to its full potential.
 3. Description for each parameter of the component, starting with `@param paramname`.
@@ -1226,7 +1230,7 @@ Every component should have following documentation structure:
 fun BadgedBox(
     badge: @Composable BoxScope.() -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit
 )
 ```
 
@@ -1253,6 +1257,53 @@ Therefore, you don’t need to add a parameter for every possible semantics your
 While basic accessibility capabilities will be granted by using foundation layer building blocks, there’s a potential for developers to make the component more accessible.
 
 There are specific semantics expected for individual categories of components: simple components typically require 1-3 semantics, whereas more complex components like text fields, scroll containers or time/date pickers require a very rich set of semantics to function correctly with screenreaders.  When developing a new custom component, first consider which of the existing standard Compose components it’s most similar to, and imitating the semantics provided by that component’s implementation, and the exact foundation building blocks it uses. Go from there to fine-tune and add more semantical actions and/or properties when needed.
+
+## Tooling support
+
+**Jetpack Compose framework development** SHOULD follow the rules in this
+section below.
+
+**Compose library development** MAY follow the rules in the sections below.
+
+**App development** MAY follow.
+
+Consider component behaviour in app developer tooling including Android Studio
+Previews and test infrastructure. Components are expected to behave correctly in
+those environments to make the developer experience productive.
+
+### Compose Preview tooling
+
+Components are expected to display initial state when used in non-interactive
+preview mode.
+
+Components should avoid patterns that delay the initial render to a subsequent
+frame. Avoid using LaunchedEffects or asynchronous logic for initial component
+state set up.
+
+If required use `LocalInspectionMode.current` to detect when running as a
+preview, and do the minimal change to ensure Previews are functional. Avoid
+replacing a complex component with some placeholder image in Previews. Ensure
+your component works correctly with various parameters provided via the preview
+tooling.
+
+In interactive mode, Previews should allow direct use of the component with the
+same interactive experience as when running in an application.
+
+### Screenshot testing
+
+Components should support screenshot testing.
+
+Prefer stateless components where state is passed as a parameter to make sure
+the component is screenshot-testable in various states. Alternatively, support
+use of
+[Compose testing APIs](https://developer.android.com/develop/ui/compose/testing/apis)
+such as SemanticsMatcher to affect the internal state.
+
+Android specific components should ideally support both
+[Compose Preview Screenshot Testing](https://developer.android.com/studio/preview/compose-screenshot-testing)
+and Robolectric
+([RNG](https://github.com/robolectric/robolectric/releases/tag/robolectric-4.10))
+to enable effective screenshot testing.
 
 ## Evolution of the Component APIs
 

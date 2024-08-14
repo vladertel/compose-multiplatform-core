@@ -31,9 +31,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,48 +43,39 @@ import androidx.tv.material3.CarouselDefaults
 import androidx.tv.material3.CarouselState
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
+import androidx.tv.material3.rememberCarouselState
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun FeaturedCarousel(
-    movies: List<Movie> = featuredCarouselMovies,
-    modifier: Modifier = Modifier
-) {
-    val carouselState: CarouselState = remember { CarouselState() }
+fun FeaturedCarousel(movies: List<Movie> = featuredCarouselMovies, modifier: Modifier = Modifier) {
+    val carouselState: CarouselState = rememberCarouselState()
     val slidesCount = movies.size
 
     Carousel(
         itemCount = slidesCount,
         carouselState = carouselState,
-        modifier = modifier
-            .height(340.dp)
-            .fillMaxWidth(),
+        modifier = modifier.height(340.dp).fillMaxWidth(),
         carouselIndicator = {
             CarouselDefaults.IndicatorRow(
                 itemCount = slidesCount,
                 activeItemIndex = carouselState.activeItemIndex,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 58.dp, bottom = 16.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 58.dp, bottom = 16.dp),
             )
         },
-        contentTransformEndToStart =
-            fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000))),
-        contentTransformStartToEnd =
-            fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000)))
+        contentTransformEndToStart = fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000))),
+        contentTransformStartToEnd = fadeIn(tween(1000)).togetherWith(fadeOut(tween(1000)))
     ) { itemIndex ->
         val movie = movies[itemIndex]
 
         CarouselSlide(
             title = movie.name,
             description = movie.description,
-            background = {
-                LandscapeImageBackground(movie)
-            },
+            background = { LandscapeImageBackground(movie) },
             actions = {
+                @Suppress("DEPRECATION")
                 AppButton(
                     text = "Watch on YouTube",
-                    icon = Icons.Outlined.ArrowRight,
+                    icon = Icons.AutoMirrored.Outlined.ArrowForward,
                 )
             },
         )
@@ -103,18 +93,14 @@ private fun AnimatedContentScope.CarouselSlide(
     Box {
         background()
         Column(
-            modifier = Modifier
-                .padding(start = 58.dp, top = 150.dp)
-                .animateEnterExit(
-                    enter = slideInHorizontally(animationSpec = tween(1000)) { it / 2 },
-                    exit = slideOutHorizontally(animationSpec = tween(1000))
-                )
+            modifier =
+                Modifier.padding(start = 58.dp, top = 150.dp)
+                    .animateEnterExit(
+                        enter = slideInHorizontally(animationSpec = tween(1000)) { it / 2 },
+                        exit = slideOutHorizontally(animationSpec = tween(1000))
+                    )
         ) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 40.sp
-            )
+            Text(text = title, color = Color.White, fontSize = 40.sp)
 
             AppSpacer(height = 16.dp)
 

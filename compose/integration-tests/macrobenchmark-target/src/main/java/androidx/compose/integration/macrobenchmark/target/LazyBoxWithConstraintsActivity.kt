@@ -16,7 +16,6 @@
 
 package androidx.compose.integration.macrobenchmark.target
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,25 +43,16 @@ class LazyBoxWithConstraintsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val itemCount = intent.getIntExtra(EXTRA_ITEM_COUNT, 3000)
-        val items = List(itemCount) { entryIndex ->
-            NestedListEntry(
-                buildList {
-                    repeat(10) {
-                        add("${entryIndex}x$it")
-                    }
-                }
-            )
-        }
+        val items =
+            List(itemCount) { entryIndex ->
+                NestedListEntry(buildList { repeat(10) { add("${entryIndex}x$it") } })
+            }
 
         setContent {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = "IamLazy" }
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "IamLazy" }
             ) {
-                items(items) { entry ->
-                    NonLazyRow(entry)
-                }
+                items(items) { entry -> NonLazyRow(entry) }
             }
         }
 
@@ -74,19 +64,14 @@ class LazyBoxWithConstraintsActivity : ComponentActivity() {
     }
 }
 
-@SuppressLint("UnusedBoxWithConstraintsScope") // Need the nested subcompose layout for testing
 @Composable
 private fun NonLazyRow(entry: NestedListEntry) {
+    // Need the nested subcompose layout for testing
+    @Suppress("UnusedBoxWithConstraintsScope")
     BoxWithConstraints {
-        Row(
-            Modifier
-                .padding(16.dp)
-                .horizontalScroll(rememberScrollState())
-        ) {
+        Row(Modifier.padding(16.dp).horizontalScroll(rememberScrollState())) {
             entry.list.forEach {
-                Card(Modifier.size(80.dp)) {
-                    Text(text = it)
-                }
+                Card(Modifier.size(80.dp)) { Text(text = it) }
                 Spacer(Modifier.size(16.dp))
             }
         }

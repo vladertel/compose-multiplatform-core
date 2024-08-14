@@ -16,12 +16,10 @@
 
 package androidx.test.uiautomator;
 
-import android.accessibilityservice.AccessibilityService;
 import android.app.Service;
 import android.app.UiAutomation;
 import android.app.UiAutomation.AccessibilityEventFilter;
 import android.graphics.Point;
-import android.os.Build;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -53,9 +51,6 @@ class InteractionController {
     // Duration of a long press (with multiplier to ensure detection).
     private static final long LONG_PRESS_DURATION_MS =
             (long) (ViewConfiguration.getLongPressTimeout() * 1.5f);
-
-    private final KeyCharacterMap mKeyCharacterMap =
-            KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
 
     private final UiDevice mDevice;
 
@@ -288,7 +283,7 @@ class InteractionController {
                 condition,
                 Configurator.getInstance().getScrollAcknowledgmentTimeout());
 
-        return !condition.getResult();
+        return Boolean.FALSE.equals(condition.getResult());
     }
 
     /**
@@ -394,29 +389,6 @@ class InteractionController {
         return ret;
     }
 
-
-    public boolean sendText(String text) {
-        KeyEvent[] events = mKeyCharacterMap.getEvents(text.toCharArray());
-
-        if (events != null) {
-            long keyDelay = Configurator.getInstance().getKeyInjectionDelay();
-            for (KeyEvent event2 : events) {
-                // We have to change the time of an event before injecting it because
-                // all KeyEvents returned by KeyCharacterMap.getEvents() have the same
-                // time stamp and the system rejects too old events. Hence, it is
-                // possible for an event to become stale before it is injected if it
-                // takes too long to inject the preceding ones.
-                KeyEvent event = KeyEvent.changeTimeRepeat(event2,
-                        SystemClock.uptimeMillis(), 0);
-                if (!injectEventSync(event)) {
-                    return false;
-                }
-                SystemClock.sleep(keyDelay);
-            }
-        }
-        return true;
-    }
-
     public boolean sendKey(int keyCode, int metaState) {
         return sendKeys(new int[]{keyCode}, metaState);
     }
@@ -458,8 +430,7 @@ class InteractionController {
      */
     public boolean wakeDevice() throws RemoteException {
         if(!isScreenOn()) {
-            boolean supportsWakeButton = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH;
-            sendKey(supportsWakeButton ? KeyEvent.KEYCODE_WAKEUP : KeyEvent.KEYCODE_POWER, 0);
+            sendKey(KeyEvent.KEYCODE_WAKEUP, 0);
             return true;
         }
         return false;
@@ -474,8 +445,7 @@ class InteractionController {
      */
     public boolean sleepDevice() throws RemoteException {
         if(isScreenOn()) {
-            boolean supportsSleepButton = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH;
-            sendKey(supportsSleepButton ? KeyEvent.KEYCODE_SLEEP : KeyEvent.KEYCODE_POWER, 0);
+            sendKey(KeyEvent.KEYCODE_SLEEP , 0);
             return true;
         }
         return false;
@@ -596,33 +566,6 @@ class InteractionController {
                 properties, pointerCoords, 0, 0, 1, 1, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0);
         ret &= injectEventSync(event);
         return ret;
-    }
-
-    /**
-     * Simulates a short press on the Recent Apps button.
-     *
-     * @return true if successful, else return false
-     */
-    public boolean toggleRecentApps() {
-        return getUiAutomation().performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
-    }
-
-    /**
-     * Opens the notification shade
-     *
-     * @return true if successful, else return false
-     */
-    public boolean openNotification() {
-        return getUiAutomation().performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
-    }
-
-    /**
-     * Opens the quick settings shade
-     *
-     * @return true if successful, else return false
-     */
-    public boolean openQuickSettings() {
-        return getUiAutomation().performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS);
     }
 
     /** Helper function to obtain a MotionEvent. */

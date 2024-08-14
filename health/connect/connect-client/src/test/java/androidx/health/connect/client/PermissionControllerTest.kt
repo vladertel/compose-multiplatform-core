@@ -41,7 +41,8 @@ class PermissionControllerTest {
     }
 
     @Test
-    fun createIntent_permissionStrings() {
+    @Config(maxSdk = VERSION_CODES.TIRAMISU)
+    fun createIntent_permissionStrings_tiramisuAndBelow() {
         val requestPermissionContract =
             PermissionController.createRequestPermissionResultContract(PROVIDER_PACKAGE_NAME)
         val intent =
@@ -56,7 +57,7 @@ class PermissionControllerTest {
 
     @Test
     @Config(minSdk = VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun createIntent_UpsideDownCake() {
+    fun createIntent_permissionStrings_udcAndAbove() {
         val requestPermissionContract =
             PermissionController.createRequestPermissionResultContract(PROVIDER_PACKAGE_NAME)
         val intent =
@@ -70,20 +71,5 @@ class PermissionControllerTest {
             .asList()
             .containsExactly(HealthPermission.WRITE_STEPS, HealthPermission.READ_DISTANCE)
         assertThat(intent.`package`).isNull()
-    }
-
-    @Test
-    @Config(minSdk = VERSION_CODES.UPSIDE_DOWN_CAKE)
-    fun createIntentLegacy_UpsideDownCake() {
-        val requestPermissionContract =
-            PermissionController.createRequestPermissionResultContractLegacy(PROVIDER_PACKAGE_NAME)
-        val intent =
-            requestPermissionContract.createIntent(
-                context,
-                setOf(HealthPermission.WRITE_STEPS, HealthPermission.READ_DISTANCE)
-            )
-
-        assertThat(intent.action).isEqualTo("androidx.health.ACTION_REQUEST_PERMISSIONS")
-        assertThat(intent.`package`).isEqualTo(PROVIDER_PACKAGE_NAME)
     }
 }

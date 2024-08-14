@@ -16,14 +16,8 @@
 
 package androidx.wear.compose.material
 
-import android.provider.Settings
-import android.text.format.DateFormat
-import android.view.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 
 internal enum class ImageResources {
@@ -43,34 +37,3 @@ internal fun imageResource(image: ImageResources): Painter =
             ImageResources.RectangularVignetteTop -> R.drawable.rectangular_vignette_top
         }
     )
-
-@Composable
-internal fun isRoundDevice(): Boolean {
-    val configuration = LocalConfiguration.current
-    return remember(configuration) {
-        configuration.isScreenRound
-    }
-}
-
-@Composable
-internal fun is24HourFormat(): Boolean = DateFormat.is24HourFormat(LocalContext.current)
-
-internal fun currentTimeMillis(): Long = System.currentTimeMillis()
-
-@Composable
-internal fun isLeftyModeEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember(context) {
-        Settings.System.getInt(
-            context.contentResolver,
-            Settings.System.USER_ROTATION,
-            Surface.ROTATION_0
-        ) == Surface.ROTATION_180
-    }
-}
-
-@Composable
-internal fun screenHeightDp() = LocalContext.current.resources.configuration.screenHeightDp
-
-@Composable
-internal fun screenWidthDp() = LocalContext.current.resources.configuration.screenWidthDp

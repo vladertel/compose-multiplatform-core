@@ -26,17 +26,54 @@ import java.util.List;
 /**
  * Abstracts different route sources.
  */
-public interface SystemRoutesSource {
+public abstract class SystemRoutesSource {
+
+    @NonNull protected Runnable mOnRoutesChangedListener = () -> {};
+
+    /** Sets a {@link Runnable} to invoke whenever routes change. */
+    public void setOnRoutesChangedListener(@NonNull Runnable onRoutesChangedListener) {
+        mOnRoutesChangedListener = onRoutesChangedListener;
+    }
+
+    /**
+     * Starts the source. The source may use this opportunity to subscribe to changes that
+     * happen in the abstractions at a lower level.
+     */
+    public void start() {
+        // Empty on purpose.
+    }
+
+    /**
+     * Stops the source. The source releases resources if applicable.
+     */
+    public void stop() {
+        // Empty on purpose.
+    }
+
+    /** Returns a string that uniquely identifies this source. */
+    @NonNull
+    public final String getSourceId() {
+        return getClass().getSimpleName();
+    }
 
     /**
      * Gets a source item containing source type.
      */
     @NonNull
-    SystemRoutesSourceItem getSourceItem();
+    public abstract SystemRoutesSourceItem getSourceItem();
 
     /**
      * Fetches a list of {@link SystemRouteItem} discovered by this source.
      */
     @NonNull
-    List<SystemRouteItem> fetchSourceRouteItems();
+    public abstract List<SystemRouteItem> fetchSourceRouteItems();
+
+    /**
+     * Selects the route that corresponds to the given item.
+     *
+     * @param item An item with {@link SystemRouteItem#mSelectionSupportState} {@link
+     *     SystemRouteItem.SelectionSupportState#SELECTABLE}.
+     * @return Whether the selection was successful.
+     */
+    public abstract boolean select(@NonNull SystemRouteItem item);
 }

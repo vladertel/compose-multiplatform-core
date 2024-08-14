@@ -19,14 +19,16 @@ package androidx.camera.camera2.pipe.integration.compat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Size
-import androidx.annotation.RequiresApi
 import androidx.camera.core.impl.ImageFormatConstants
 
-@RequiresApi(21)
 internal open class StreamConfigurationMapCompatBaseImpl(
     val streamConfigurationMap: StreamConfigurationMap?
-) :
-    StreamConfigurationMapCompat.StreamConfigurationMapCompatImpl {
+) : StreamConfigurationMapCompat.StreamConfigurationMapCompatImpl {
+
+    override fun getOutputFormats(): Array<Int>? {
+        return streamConfigurationMap?.outputFormats?.toTypedArray()
+    }
+
     override fun getOutputSizes(format: Int): Array<Size>? {
         val sizes: Array<Size> =
             if (format == ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE) {
@@ -48,6 +50,10 @@ internal open class StreamConfigurationMapCompatBaseImpl(
 
     override fun getHighResolutionOutputSizes(format: Int): Array<Size>? {
         return null
+    }
+
+    override fun getOutputMinFrameDuration(format: Int, size: Size?): Long? {
+        return streamConfigurationMap?.getOutputMinFrameDuration(format, size)
     }
 
     override fun unwrap(): StreamConfigurationMap? {

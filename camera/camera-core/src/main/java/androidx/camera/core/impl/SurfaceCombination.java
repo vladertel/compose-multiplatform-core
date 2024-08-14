@@ -18,7 +18,6 @@ package androidx.camera.core.impl;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +31,6 @@ import java.util.List;
  * of surface configuration type and size pairs can be supported for different hardware level camera
  * devices. This structure is used to store a list of surface configuration as a combination.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class SurfaceCombination {
 
     private final List<SurfaceConfig> mSurfaceConfigList = new ArrayList<>();
@@ -98,13 +96,9 @@ public final class SurfaceCombination {
             return new ArrayList<>();
         }
 
-        /**
-         * Sublist of this surfaceConfig may be able to support the desired configuration.
-         * For example, (PRIV, PREVIEW) + (PRIV, ANALYSIS) + (JPEG, MAXIMUM) can supported by the
-         * following level3 camera device combination - (PRIV, PREVIEW) + (PRIV, ANALYSIS) + (JPEG,
-         * MAXIMUM) + (RAW, MAXIMUM).
-         */
-        if (configList.size() > mSurfaceConfigList.size()) {
+        // Subsets of guaranteed supported configurations are not guaranteed to be supported.
+        // Directly returns null if the list size is not the same.
+        if (configList.size() != mSurfaceConfigList.size()) {
             return null;
         }
 

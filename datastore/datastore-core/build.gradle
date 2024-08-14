@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-import androidx.build.KmpPlatformsKt
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("com.google.protobuf")
+    id ("kotlin-parcelize")
 }
-
-def enableNative = KmpPlatformsKt.enableNative(project)
 
 android {
     externalNativeBuild {
@@ -42,9 +46,6 @@ protobuf {
     protoc {
         artifact = libs.protobufCompiler.get()
     }
-    // Generates the java proto-lite code for the protos in this project. See
-    // https://github.com/google/protobuf-gradle-plugin#customizing-protobuf-compilation
-    // for more information.
     generateProtoTasks {
         all().each { task ->
             task.builtins {
@@ -56,17 +57,24 @@ protobuf {
     }
 }
 
+def protoDir = project.layout.projectDirectory.dir("src/androidInstrumentedTest/proto")
+tasks.named("extractAndroidTestProto").configure {
+    it.inputFiles.from(project.files(protoDir))
+}
+
 androidXMultiplatform {
     jvm()
     mac()
     linux()
     ios()
+    watchos()
+    tvos()
     android()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
-        all {
+        configureEach {
             languageSettings.optIn("kotlin.RequiresOptIn")
         }
 
@@ -74,15 +82,20 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
+                api("androidx.annotation:annotation:1.8.1")
             }
         }
-        jvmMain {
-            dependencies {
-                api("androidx.annotation:annotation:1.3.0")
-            }
+
+        commonJvmMain {
+            dependsOn(commonMain)
         }
+
         androidMain {
-            dependsOn(jvmMain)
+            dependsOn(commonJvmMain)
+        }
+
+        jvmMain {
+            dependsOn(commonJvmMain)
         }
 
         commonTest {
@@ -91,13 +104,14 @@ androidXMultiplatform {
                 implementation(libs.kotlinTestAnnotationsCommon)
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.okio)
-                api(project(":datastore:datastore-core-okio"))
+                implementation(project(":datastore:datastore-core-okio"))
                 implementation(project(":kruth:kruth"))
                 implementation(project(":internal-testutils-datastore"))
             }
         }
 
-        jvmTest {
+        commonJvmTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.junit)
                 implementation(libs.kotlinTest)
@@ -109,37 +123,43 @@ androidXMultiplatform {
             }
         }
 
-        androidTest {
-            dependsOn(jvmTest)
+        jvmTest {
+            dependsOn(commonJvmTest)
+        }
+
+        androidUnitTest {
+            dependsOn(commonJvmTest)
+            dependencies {
+                implementation(libs.protobufLite)
+            }
+        }
+
+        androidInstrumentedTest {
+            dependsOn(commonJvmTest)
             dependencies {
                 implementation(libs.protobufLite)
                 implementation(libs.truth)
                 implementation(project(":internal-testutils-truth"))
                 implementation(libs.testRunner)
                 implementation(libs.testCore)
+                implementation("androidx.lifecycle:lifecycle-service:2.6.1")
 
                 // Workaround bug in 1.8.0, was supposed be fixed in RC2/final, but apparently not.
                 implementation(libs.kotlinTestJunit)
             }
         }
 
-        androidAndroidTest {
-            dependsOn(androidTest)
-        }
-
-        if (enableNative) {
-            nativeMain {
-                dependsOn(commonMain)
-                dependencies {
-                    implementation(libs.atomicFu)
-                }
-            }
-            nativeTest {
-                dependsOn(commonTest)
+        nativeMain {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.atomicFu)
             }
         }
+        nativeTest {
+            dependsOn(commonTest)
+        }
 
-        targets.all { target ->
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nativeMain)
@@ -158,4 +178,5 @@ androidx {
     inceptionYear = "2020"
     description = "Android DataStore Core - contains the underlying store used by each serialization method"
     legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = false
 }

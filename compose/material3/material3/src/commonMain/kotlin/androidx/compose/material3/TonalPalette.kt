@@ -22,8 +22,8 @@ import androidx.compose.ui.graphics.Color
 /**
  * Tonal Palette structure in Material.
  *
- * A tonal palette is comprised of 5 tonal ranges. Each tonal range includes the 13 stops, or
- * tonal swatches.
+ * A tonal palette is comprised of 5 tonal ranges. Each tonal range includes the 13 stops, or tonal
+ * swatches.
  *
  * Tonal range names are:
  * - Neutral (N)
@@ -65,16 +65,27 @@ internal class TonalPalette(
     // Ordered from the lightest shade [neutralVariant100] to the darkest shade [neutralVariant0].
     val neutralVariant100: Color,
     val neutralVariant99: Color,
+    val neutralVariant98: Color,
+    val neutralVariant96: Color,
     val neutralVariant95: Color,
+    val neutralVariant94: Color,
+    val neutralVariant92: Color,
     val neutralVariant90: Color,
+    val neutralVariant87: Color,
     val neutralVariant80: Color,
     val neutralVariant70: Color,
     val neutralVariant60: Color,
     val neutralVariant50: Color,
     val neutralVariant40: Color,
     val neutralVariant30: Color,
+    val neutralVariant24: Color,
+    val neutralVariant22: Color,
     val neutralVariant20: Color,
+    val neutralVariant17: Color,
+    val neutralVariant12: Color,
     val neutralVariant10: Color,
+    val neutralVariant6: Color,
+    val neutralVariant4: Color,
     val neutralVariant0: Color,
 
     // The primary tonal range from the generated dynamic color palette.
@@ -126,9 +137,7 @@ internal class TonalPalette(
     val tertiary0: Color,
 )
 
-/**
- * Baseline colors in Material.
- */
+/** Baseline colors in Material. */
 internal val BaselineTonalPalette =
     TonalPalette(
         neutral100 = PaletteTokens.Neutral100,
@@ -207,4 +216,17 @@ internal val BaselineTonalPalette =
         tertiary20 = PaletteTokens.Tertiary20,
         tertiary10 = PaletteTokens.Tertiary10,
         tertiary0 = PaletteTokens.Tertiary0,
+
+        // Currently unused baseline palette values
+        neutralVariant98 = Color.Unspecified,
+        neutralVariant96 = Color.Unspecified,
+        neutralVariant94 = Color.Unspecified,
+        neutralVariant92 = Color.Unspecified,
+        neutralVariant87 = Color.Unspecified,
+        neutralVariant24 = Color.Unspecified,
+        neutralVariant22 = Color.Unspecified,
+        neutralVariant17 = Color.Unspecified,
+        neutralVariant12 = Color.Unspecified,
+        neutralVariant6 = Color.Unspecified,
+        neutralVariant4 = Color.Unspecified
     )

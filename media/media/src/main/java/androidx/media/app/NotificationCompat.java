@@ -33,14 +33,12 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.view.View;
 import android.widget.RemoteViews;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresPermission;
 import androidx.annotation.RestrictTo;
-import androidx.core.app.BundleCompat;
 import androidx.core.app.NotificationBuilderWithBuilderAccessor;
 import androidx.media.R;
 
@@ -117,7 +115,7 @@ public class NotificationCompat {
                         return MediaSessionCompat.Token.fromToken(tokenInner);
                     }
                 } else {
-                    IBinder tokenInner = BundleCompat.getBinder(extras,
+                    IBinder tokenInner = extras.getBinder(
                             androidx.core.app.NotificationCompat.EXTRA_MEDIA_SESSION);
                     if (tokenInner != null) {
                         Parcel p = Parcel.obtain();
@@ -321,9 +319,8 @@ public class NotificationCompat {
             if (!tombstone) {
                 button.setOnClickPendingIntent(R.id.action0, action.getActionIntent());
             }
-            if (Build.VERSION.SDK_INT >= 15) {
-                Api15Impl.setContentDescription(button, R.id.action0, action.getTitle());
-            }
+            CharSequence contentDescription = action.getTitle();
+            button.setContentDescription(R.id.action0, contentDescription);
             return button;
         }
 
@@ -540,32 +537,18 @@ public class NotificationCompat {
         }
     }
 
-    @RequiresApi(15)
-    private static class Api15Impl {
-        private Api15Impl() {}
-
-        @DoNotInline
-        static void setContentDescription(RemoteViews remoteViews, int viewId,
-                CharSequence contentDescription) {
-            remoteViews.setContentDescription(viewId, contentDescription);
-        }
-    }
-
     @RequiresApi(21)
     private static class Api21Impl {
         private Api21Impl() {}
 
-        @DoNotInline
         static void setMediaStyle(Notification.Builder builder, Notification.MediaStyle style) {
             builder.setStyle(style);
         }
 
-        @DoNotInline
         static Notification.MediaStyle createMediaStyle() {
             return new Notification.MediaStyle();
         }
 
-        @DoNotInline
         static Notification.MediaStyle fillInMediaStyle(Notification.MediaStyle style,
                 int[] actionsToShowInCompact, MediaSessionCompat.Token token) {
             if (actionsToShowInCompact != null) {
@@ -577,12 +560,10 @@ public class NotificationCompat {
             return style;
         }
 
-        @DoNotInline
         static void setShowActionsInCompactView(Notification.MediaStyle style, int... actions) {
             style.setShowActionsInCompactView(actions);
         }
 
-        @DoNotInline
         static void setMediaSession(Notification.MediaStyle style, MediaSession.Token token) {
             style.setMediaSession(token);
         }
@@ -592,7 +573,6 @@ public class NotificationCompat {
     private static class Api24Impl {
         private Api24Impl() {}
 
-        @DoNotInline
         static Notification.MediaStyle createDecoratedMediaCustomViewStyle() {
             return new Notification.DecoratedMediaCustomViewStyle();
         }
@@ -604,7 +584,6 @@ public class NotificationCompat {
         private Api34Impl() {}
 
         @SuppressLint({"MissingPermission"})
-        @DoNotInline
         static Notification.MediaStyle setRemotePlaybackInfo(Notification.MediaStyle style,
                 @NonNull CharSequence deviceName, @DrawableRes int iconResource,
                 @Nullable PendingIntent chipIntent, Boolean showRemotePlaybackInfo) {

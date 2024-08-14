@@ -16,20 +16,22 @@
 
 package androidx.wear.compose.material
 
+import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -40,6 +42,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.screenshot.AndroidXScreenshotTestRule
+import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestName
@@ -48,17 +51,13 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-@OptIn(ExperimentalTestApi::class)
 class SwipeToDismissBoxScreenshotTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-    @get:Rule
-    val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
+    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(SCREENSHOT_GOLDEN_PATH)
 
-    @get:Rule
-    val testName = TestName()
+    @get:Rule val testName = TestName()
 
     @Test
     fun swiped_to_right_25_percent_ltr() {
@@ -82,26 +81,22 @@ class SwipeToDismissBoxScreenshotTest {
 
     @Test
     fun on_dismiss_overload_swiped_to_right_25_percent_ltr() {
-        verifySwipedScreenshot(LayoutDirection.Ltr, 0.25f, true,
-            "swiped_to_right_25_percent_ltr")
+        verifySwipedScreenshot(LayoutDirection.Ltr, 0.25f, true, "swiped_to_right_25_percent_ltr")
     }
 
     @Test
     fun on_dismiss_overload_swiped_to_right_25_percent_rtl() {
-        verifySwipedScreenshot(LayoutDirection.Rtl, 0.25f, true,
-            "swiped_to_right_25_percent_rtl")
+        verifySwipedScreenshot(LayoutDirection.Rtl, 0.25f, true, "swiped_to_right_25_percent_rtl")
     }
 
     @Test
     fun on_dismiss_overload_swiped_to_right_50_percent_ltr() {
-        verifySwipedScreenshot(LayoutDirection.Ltr, 0.5f, true,
-            "swiped_to_right_50_percent_ltr")
+        verifySwipedScreenshot(LayoutDirection.Ltr, 0.5f, true, "swiped_to_right_50_percent_ltr")
     }
 
     @Test
     fun on_dismiss_overload_swiped_to_right_50_percent_rtl() {
-        verifySwipedScreenshot(LayoutDirection.Rtl, 0.5f, true,
-            "swiped_to_right_50_percent_rtl")
+        verifySwipedScreenshot(LayoutDirection.Rtl, 0.5f, true, "swiped_to_right_50_percent_rtl")
     }
 
     private fun verifySwipedScreenshot(
@@ -110,24 +105,33 @@ class SwipeToDismissBoxScreenshotTest {
         isOnDismissOverload: Boolean = false,
         goldenIdentifier: String = testName.methodName
     ) {
+        val screenShotSizeDp = SCREENSHOT_SIZE.dp
         rule.setContentWithTheme {
-            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+            val originalConfiguration = LocalConfiguration.current
+            val fixedScreenSizeConfiguration =
+                remember(originalConfiguration) {
+                    Configuration(originalConfiguration).apply {
+                        screenWidthDp = SCREENSHOT_SIZE
+                        screenHeightDp = SCREENSHOT_SIZE
+                    }
+                }
+
+            CompositionLocalProvider(
+                LocalLayoutDirection provides layoutDirection,
+                LocalConfiguration provides fixedScreenSizeConfiguration
+            ) {
                 val state = rememberSwipeToDismissBoxState()
                 if (isOnDismissOverload) {
                     SwipeToDismissBox(
                         onDismissed = {},
-                        modifier = Modifier
-                            .testTag(TEST_TAG)
-                            .size(106.dp),
+                        modifier = Modifier.testTag(TEST_TAG).size(screenShotSizeDp),
                         state = state
                     ) { isBackground ->
                         boxContent(isBackground = isBackground)
                     }
                 } else {
                     SwipeToDismissBox(
-                        modifier = Modifier
-                            .testTag(TEST_TAG)
-                            .size(106.dp),
+                        modifier = Modifier.testTag(TEST_TAG).size(screenShotSizeDp),
                         state = state
                     ) { isBackground ->
                         boxContent(isBackground = isBackground)
@@ -140,7 +144,8 @@ class SwipeToDismissBoxScreenshotTest {
             moveTo(Offset(x = width * swipedPercentage, y = height / 2f))
         }
 
-        rule.onNodeWithTag(TEST_TAG)
+        rule
+            .onNodeWithTag(TEST_TAG)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenIdentifier)
     }
@@ -157,4 +162,6 @@ class SwipeToDismissBoxScreenshotTest {
             }
         }
     }
+
+    private val SCREENSHOT_SIZE = 106
 }

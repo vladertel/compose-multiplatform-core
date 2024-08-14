@@ -16,8 +16,9 @@
 
 package androidx.compose.foundation.pager
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.internal.requirePrecondition
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.IntOffset
@@ -25,13 +26,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 
-@OptIn(ExperimentalFoundationApi::class)
 internal class MeasuredPage(
     override val index: Int,
     val size: Int,
     private val placeables: List<Placeable>,
     private val visualOffset: IntOffset,
-    val key: Any,
+    override val key: Any,
     orientation: Orientation,
     private val horizontalAlignment: Alignment.Horizontal?,
     private val verticalAlignment: Alignment.Vertical?,
@@ -50,10 +50,7 @@ internal class MeasuredPage(
     init {
         var maxCrossAxis = 0
         placeables.fastForEach {
-            maxCrossAxis = maxOf(
-                maxCrossAxis,
-                if (!isVertical) it.height else it.width
-            )
+            maxCrossAxis = maxOf(maxCrossAxis, if (!isVertical) it.height else it.width)
         }
         crossAxisSize = maxCrossAxis
         placeableOffsets = IntArray(placeables.size * 2)
@@ -64,55 +61,66 @@ internal class MeasuredPage(
 
     private var mainAxisLayoutSize: Int = Unset
 
-    fun position(
-        offset: Int,
-        layoutWidth: Int,
-        layoutHeight: Int
-    ) {
+    fun position(offset: Int, layoutWidth: Int, layoutHeight: Int) {
         this.offset = offset
-        mainAxisLayoutSize =
-            if (isVertical) layoutHeight else layoutWidth
+        mainAxisLayoutSize = if (isVertical) layoutHeight else layoutWidth
         var mainAxisOffset = offset
         placeables.fastForEachIndexed { index, placeable ->
             val indexInArray = index * 2
             if (isVertical) {
                 placeableOffsets[indexInArray] =
-                    requireNotNull(horizontalAlignment) { "null horizontalAlignment" }
-                    .align(placeable.width, layoutWidth, layoutDirection)
+                    requirePreconditionNotNull(horizontalAlignment) { "null horizontalAlignment" }
+                        .align(placeable.width, layoutWidth, layoutDirection)
                 placeableOffsets[indexInArray + 1] = mainAxisOffset
                 mainAxisOffset += placeable.height
             } else {
                 placeableOffsets[indexInArray] = mainAxisOffset
                 placeableOffsets[indexInArray + 1] =
-                    requireNotNull(verticalAlignment) { "null verticalAlignment" }
-                    .align(placeable.height, layoutHeight)
+                    requirePreconditionNotNull(verticalAlignment) { "null verticalAlignment" }
+                        .align(placeable.height, layoutHeight)
                 mainAxisOffset += placeable.width
             }
         }
     }
 
-    fun place(scope: Placeable.PlacementScope) = with(scope) {
-        require(mainAxisLayoutSize != Unset) { "position() should be called first" }
-        repeat(placeables.size) { index ->
-            val placeable = placeables[index]
-            var offset = getOffset(index)
-            if (reverseLayout) {
-                offset = offset.copy { mainAxisOffset ->
-                    mainAxisLayoutSize - mainAxisOffset - placeable.mainAxisSize
+    fun place(scope: Placeable.PlacementScope) =
+        with(scope) {
+            requirePrecondition(mainAxisLayoutSize != Unset) { "position() should be called first" }
+            repeat(placeables.size) { index ->
+                val placeable = placeables[index]
+                var offset = getOffset(index)
+                if (reverseLayout) {
+                    offset =
+                        offset.copy { mainAxisOffset ->
+                            mainAxisLayoutSize - mainAxisOffset - placeable.mainAxisSize
+                        }
+                }
+                offset += visualOffset
+                if (isVertical) {
+                    placeable.placeWithLayer(offset)
+                } else {
+                    placeable.placeRelativeWithLayer(offset)
                 }
             }
-            offset += visualOffset
-            if (isVertical) {
-                placeable.placeWithLayer(offset)
-            } else {
-                placeable.placeRelativeWithLayer(offset)
+        }
+
+    fun applyScrollDelta(delta: Int) {
+        offset += delta
+        repeat(placeableOffsets.size) { index ->
+            // placeableOffsets consist of x and y pairs for each placeable.
+            // if isVertical is true then the main axis offsets are located at indexes 1, 3, 5 etc.
+            if ((isVertical && index % 2 == 1) || (!isVertical && index % 2 == 0)) {
+                placeableOffsets[index] += delta
             }
         }
     }
 
     private fun getOffset(index: Int) =
         IntOffset(placeableOffsets[index * 2], placeableOffsets[index * 2 + 1])
-    private val Placeable.mainAxisSize get() = if (isVertical) height else width
+
+    private val Placeable.mainAxisSize
+        get() = if (isVertical) height else width
+
     private inline fun IntOffset.copy(mainAxisMap: (Int) -> Int): IntOffset =
         IntOffset(if (isVertical) x else mainAxisMap(x), if (isVertical) mainAxisMap(y) else y)
 }

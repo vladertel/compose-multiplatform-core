@@ -914,7 +914,6 @@ public final class TvContractCompat {
     /**
      * Common columns for the tables of preview programs.
      */
-    @RestrictTo(LIBRARY_GROUP_PREFIX)
     public interface PreviewProgramColumns {
         /**
          * The program type for movie.
@@ -2385,6 +2384,7 @@ public final class TvContractCompat {
      * <p>By default, the query results will be sorted by
      * {@link Programs#COLUMN_START_TIME_UTC_MILLIS} in ascending order.
      */
+    @SuppressWarnings("HiddenSuperclass")
     public static final class Programs implements BaseTvColumns, ProgramColumns {
 
         /**
@@ -2735,6 +2735,7 @@ public final class TvContractCompat {
      * <p>By default, the query results will be sorted by {@link #COLUMN_START_TIME_UTC_MILLIS} in
      * ascending order.
      */
+    @SuppressWarnings("HiddenSuperclass")
     public static final class RecordedPrograms implements BaseTvColumns, ProgramColumns {
 
         /**
@@ -2862,6 +2863,7 @@ public final class TvContractCompat {
     /**
      * Column definitions for the preview TV programs table.
      */
+    @SuppressWarnings("HiddenSuperclass")
     public static final class PreviewPrograms implements BaseTvColumns, ProgramColumns,
             PreviewProgramColumns {
 
@@ -2911,6 +2913,7 @@ public final class TvContractCompat {
     /**
      * Column definitions for the "watch next" TV programs table.
      */
+    @SuppressWarnings("HiddenSuperclass")
     public static final class WatchNextPrograms implements BaseTvColumns, ProgramColumns,
             PreviewProgramColumns {
 

@@ -29,13 +29,17 @@ import java.util.UUID
  * Constructor for a [CallEndpointCompat] object.
  *
  * @param name Human-readable name associated with the endpoint
- * @param type The type of endpoint through which call media being routed
- *   Allowed values: [TYPE_EARPIECE] , [TYPE_BLUETOOTH] , [TYPE_WIRED_HEADSET] , [TYPE_SPEAKER]
- *      , [TYPE_STREAMING] , [TYPE_UNKNOWN]
+ * @param type The type of endpoint through which call media being routed Allowed values:
+ *   [TYPE_EARPIECE] , [TYPE_BLUETOOTH] , [TYPE_WIRED_HEADSET] , [TYPE_SPEAKER] , [TYPE_STREAMING] ,
+ *   [TYPE_UNKNOWN]
  * @param identifier A unique identifier for this endpoint on the device
  */
 @RequiresApi(VERSION_CODES.O)
-class CallEndpointCompat(val name: CharSequence, val type: Int, val identifier: ParcelUuid) {
+public class CallEndpointCompat(
+    public val name: CharSequence,
+    public val type: Int,
+    public val identifier: ParcelUuid
+) {
     internal var mMackAddress: String = "-1"
 
     override fun toString(): String {
@@ -56,8 +60,8 @@ class CallEndpointCompat(val name: CharSequence, val type: Int, val identifier: 
         return Objects.hash(name, type, identifier)
     }
 
-    companion object {
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public companion object {
+        @RestrictTo(RestrictTo.Scope.LIBRARY)
         @Retention(AnnotationRetention.SOURCE)
         @IntDef(
             TYPE_UNKNOWN,
@@ -68,35 +72,39 @@ class CallEndpointCompat(val name: CharSequence, val type: Int, val identifier: 
             TYPE_STREAMING
         )
         @Target(AnnotationTarget.TYPE, AnnotationTarget.PROPERTY, AnnotationTarget.VALUE_PARAMETER)
-        annotation class EndpointType
+        public annotation class EndpointType
 
-        /** Indicates that the type of endpoint through which call media flows is unknown type.  */
-        const val TYPE_UNKNOWN = -1
+        /** Indicates that the type of endpoint through which call media flows is unknown type. */
+        public const val TYPE_UNKNOWN: Int = -1
 
-        /** Indicates that the type of endpoint through which call media flows is an earpiece.  */
-        const val TYPE_EARPIECE = 1
+        /** Indicates that the type of endpoint through which call media flows is an earpiece. */
+        public const val TYPE_EARPIECE: Int = 1
 
-        /** Indicates that the type of endpoint through which call media flows is a Bluetooth.  */
-        const val TYPE_BLUETOOTH = 2
+        /** Indicates that the type of endpoint through which call media flows is a Bluetooth. */
+        public const val TYPE_BLUETOOTH: Int = 2
 
-        /** Indicates that the type of endpoint through which call media flows is a wired headset. */
-        const val TYPE_WIRED_HEADSET = 3
+        /**
+         * Indicates that the type of endpoint through which call media flows is a wired headset.
+         */
+        public const val TYPE_WIRED_HEADSET: Int = 3
 
         /** Indicates that the type of endpoint through which call media flows is a speakerphone. */
-        const val TYPE_SPEAKER = 4
+        public const val TYPE_SPEAKER: Int = 4
 
-        /** Indicates that the type of endpoint through which call media flows is an external.  */
-        const val TYPE_STREAMING = 5
+        /** Indicates that the type of endpoint through which call media flows is an external. */
+        public const val TYPE_STREAMING: Int = 5
     }
 
-    internal constructor(name: String, @EndpointType type: Int) :
-        this(name, type, ParcelUuid(UUID.randomUUID())) {
-    }
+    internal constructor(
+        name: String,
+        @EndpointType type: Int
+    ) : this(name, type, ParcelUuid(UUID.randomUUID())) {}
 
-    internal constructor(name: String, @EndpointType type: Int, address: String) : this(
-        name,
-        type
-    ) {
+    internal constructor(
+        name: String,
+        @EndpointType type: Int,
+        address: String
+    ) : this(name, type) {
         mMackAddress = address
     }
 }

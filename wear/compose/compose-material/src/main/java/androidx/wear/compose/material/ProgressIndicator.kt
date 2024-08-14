@@ -1,5 +1,6 @@
 package androidx.wear.compose.material
 
+import androidx.annotation.FloatRange
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -12,20 +13,20 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.ProgressIndicatorDefaults.BaseRotationAngle
@@ -44,42 +45,44 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Determinate <a href="https://material.io/components/progress-indicators#circular-progress-indicators" class="external" target="_blank">Material Design circular progress indicator</a>.
+ * Determinate <a
+ * href="https://material.io/components/progress-indicators#circular-progress-indicators"
+ * class="external" target="_blank">Material Design circular progress indicator</a>.
  *
  * Progress indicators express the proportion of completion of an ongoing task.
  *
- * [Progress Indicator doc](https://developer.android.com/training/wearables/components/progress-indicator)
- * ![Progress indicator image](https://developer.android.com/images/reference/androidx/compose/material/circular-progress-indicator.png)
+ * [Progress Indicator
+ * doc](https://developer.android.com/training/wearables/components/progress-indicator) ![Progress
+ * indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material/circular-progress-indicator.png)
  *
- * There is no animation between [progress] values by default, but progress can be animated
- * with the recommended [ProgressIndicatorDefaults.ProgressAnimationSpec],
- * as in the following example:
+ * There is no animation between [progress] values by default, but progress can be animated with the
+ * recommended [ProgressIndicatorDefaults.ProgressAnimationSpec], as in the following example:
+ *
  * @sample androidx.wear.compose.material.samples.CircularProgressIndicatorWithAnimation
  *
- * [CircularProgressIndicator] supports a gap in the circular track between
- * [endAngle] and [startAngle], which leaves room for other content,
- * such as [TimeText] at the top of the screen. Example:
- * @sample androidx.wear.compose.material.samples.CircularProgressIndicatorFullscreenWithGap
+ * [CircularProgressIndicator] supports a gap in the circular track between [endAngle] and
+ * [startAngle], which leaves room for other content, such as [TimeText] at the top of the screen.
+ * This sample also shows how to disable accessibility semantics for the fullscreen
+ * [CircularProgressIndicator]:
  *
+ * @sample androidx.wear.compose.material.samples.CircularProgressIndicatorFullscreenWithGap
  * @param modifier Modifier to be applied to the CircularProgressIndicator
  * @param progress The progress of this progress indicator where 0.0 represents no progress and 1.0
- * represents completion. Values outside of this range are coerced into the range 0..1.
- * @param startAngle The starting position of the progress arc,
- * measured clockwise in degrees (0 to 360) from the 3 o'clock position. For example, 0 and 360
- * represent 3 o'clock, 90 and 180 represent 6 o'clock and 9 o'clock respectively.
- * Default is 270 degrees (top of the screen)
- * @param endAngle The ending position of the progress arc,
- * measured clockwise in degrees (0 to 360) from the 3 o'clock position. For example, 0 and 360
- * represent 3 o'clock, 90 and 180 represent 6 o'clock and 9 o'clock respectively.
- * By default equal to [startAngle]
+ *   represents completion. Values outside of this range are coerced into the range 0..1.
+ * @param startAngle The starting position of the progress arc, measured clockwise in degrees (0
+ *   to 360) from the 3 o'clock position. For example, 0 and 360 represent 3 o'clock, 90 and 180
+ *   represent 6 o'clock and 9 o'clock respectively. Default is 270 degrees (top of the screen)
+ * @param endAngle The ending position of the progress arc, measured clockwise in degrees (0 to 360)
+ *   from the 3 o'clock position. For example, 0 and 360 represent 3 o'clock, 90 and 180 represent 6
+ *   o'clock and 9 o'clock respectively. By default equal to [startAngle]
  * @param indicatorColor The color of the progress indicator bar.
  * @param trackColor The color of the background progress track.
  * @param strokeWidth The stroke width for the progress indicator.
  */
 @Composable
 public fun CircularProgressIndicator(
-    /* @FloatRange(fromInclusive = true, from = 0.0, toInclusive = true, to = 1.0) */
-    progress: Float,
+    @FloatRange(from = 0.0, to = 1.0) progress: Float,
     modifier: Modifier = Modifier,
     startAngle: Float = 270f,
     endAngle: Float = startAngle,
@@ -87,52 +90,49 @@ public fun CircularProgressIndicator(
     trackColor: Color = MaterialTheme.colors.onBackground.copy(alpha = 0.1f),
     strokeWidth: Dp = ProgressIndicatorDefaults.StrokeWidth,
 ) {
-    val stroke = with(LocalDensity.current) {
-        Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-    }
-
-    Canvas(
+    // Canvas internally uses Spacer.drawBehind.
+    // Using Spacer.drawWithCache to optimize the stroke allocations.
+    Spacer(
         modifier
-            .progressSemantics(progress)
+            // trimming progress to 2 decimal digits
+            .progressSemantics(Math.round(progress * 100) / 100.0f)
             .size(ButtonCircularIndicatorDiameter)
             .focusable()
-    ) {
-        val backgroundSweep = 360f - ((startAngle - endAngle) % 360 + 360) % 360
-        val progressSweep = backgroundSweep * progress.coerceIn(0f..1f)
-        // Draw a background
-        drawCircularIndicator(
-            startAngle,
-            backgroundSweep,
-            trackColor,
-            stroke
-        )
+            .drawWithCache {
+                val backgroundSweep = 360f - ((startAngle - endAngle) % 360 + 360) % 360
+                val progressSweep = backgroundSweep * progress.coerceIn(0f..1f)
+                val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
 
-        // Draw a progress
-        drawCircularIndicator(
-            startAngle,
-            progressSweep,
-            indicatorColor,
-            stroke
-        )
-    }
+                onDrawWithContent {
+                    // Draw a background
+                    drawCircularIndicator(startAngle, backgroundSweep, trackColor, stroke)
+
+                    // Draw a progress
+                    drawCircularIndicator(startAngle, progressSweep, indicatorColor, stroke)
+                }
+            }
+    )
 }
 
 /**
- * Indeterminate <a href="https://material.io/components/progress-indicators#circular-progress-indicators" class="external" target="_blank">Material Design circular progress indicator</a>.
+ * Indeterminate <a
+ * href="https://material.io/components/progress-indicators#circular-progress-indicators"
+ * class="external" target="_blank">Material Design circular progress indicator</a>.
  *
  * Indeterminate progress indicator expresses an unspecified wait time and spins indefinitely.
  *
- * [Progress Indicator doc](https://developer.android.com/training/wearables/components/progress-indicator)
- * ![Progress indicator image](https://developer.android.com/images/reference/androidx/compose/material/circular-progress-indicator.png)
+ * [Progress Indicator
+ * doc](https://developer.android.com/training/wearables/components/progress-indicator) ![Progress
+ * indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material/circular-progress-indicator.png)
  *
  * Example of indeterminate progress indicator:
- * @sample androidx.wear.compose.material.samples.IndeterminateCircularProgressIndicator
  *
+ * @sample androidx.wear.compose.material.samples.IndeterminateCircularProgressIndicator
  * @param modifier Modifier to be applied to the CircularProgressIndicator
- * @param startAngle The starting position of the progress arc,
- * measured clockwise in degrees (0 to 360) from the 3 o'clock position. For example, 0 and 360
- * represent 3 o'clock, 90 and 180 represent 6 o'clock and 9 o'clock respectively.
- * Default is 270 degrees (top of the screen)
+ * @param startAngle The starting position of the progress arc, measured clockwise in degrees (0
+ *   to 360) from the 3 o'clock position. For example, 0 and 360 represent 3 o'clock, 90 and 180
+ *   represent 6 o'clock and 9 o'clock respectively. Default is 270 degrees (top of the screen)
  * @param indicatorColor The color of the progress indicator bar.
  * @param trackColor The color of the background progress track
  * @param strokeWidth The stroke width for the progress indicator.
@@ -142,89 +142,93 @@ public fun CircularProgressIndicator(
     modifier: Modifier = Modifier,
     startAngle: Float = 270f,
     indicatorColor: Color = MaterialTheme.colors.onBackground,
-    trackColor: Color = MaterialTheme.colors.onBackground
-        .copy(alpha = 0.3f),
+    trackColor: Color = MaterialTheme.colors.onBackground.copy(alpha = 0.3f),
     strokeWidth: Dp = IndeterminateStrokeWidth,
 ) {
-    val stroke = with(LocalDensity.current) {
-        Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
-    }
-
     val transition = rememberInfiniteTransition()
     // The current rotation around the circle, so we know where to start the rotation from
-    val currentRotation by transition.animateValue(
-        0,
-        RotationsPerCycle,
-        Int.VectorConverter,
-        infiniteRepeatable(
-            animation = tween(
-                durationMillis = RotationDuration * RotationsPerCycle,
-                easing = LinearEasing
+    val currentRotation by
+        transition.animateValue(
+            0,
+            RotationsPerCycle,
+            Int.VectorConverter,
+            infiniteRepeatable(
+                animation =
+                    tween(
+                        durationMillis = RotationDuration * RotationsPerCycle,
+                        easing = LinearEasing
+                    )
             )
         )
-    )
     // How far forward (degrees) the base point should be from the start point
-    val baseRotation by transition.animateFloat(
-        0f,
-        BaseRotationAngle,
-        infiniteRepeatable(
-            animation = tween(
-                durationMillis = RotationDuration,
-                easing = LinearEasing
+    val baseRotation by
+        transition.animateFloat(
+            0f,
+            BaseRotationAngle,
+            infiniteRepeatable(
+                animation = tween(durationMillis = RotationDuration, easing = LinearEasing)
             )
         )
-    )
     // How far forward (degrees) both the head and tail should be from the base point
-    val endAngle by transition.animateFloat(
-        0f,
-        JumpRotationAngle,
-        infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = HeadAndTailAnimationDuration + HeadAndTailDelayDuration
-                0f at 0 with CircularEasing
-                JumpRotationAngle at HeadAndTailAnimationDuration
-            }
+    val endAngle by
+        transition.animateFloat(
+            0f,
+            JumpRotationAngle,
+            infiniteRepeatable(
+                animation =
+                    keyframes {
+                        durationMillis = HeadAndTailAnimationDuration + HeadAndTailDelayDuration
+                        0f at 0 using CircularEasing
+                        JumpRotationAngle at HeadAndTailAnimationDuration
+                    }
+            )
         )
-    )
 
-    val startProgressAngle by transition.animateFloat(
-        0f,
-        JumpRotationAngle,
-        infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = HeadAndTailAnimationDuration + HeadAndTailDelayDuration
-                0f at HeadAndTailDelayDuration with CircularEasing
-                JumpRotationAngle at durationMillis
-            }
+    val startProgressAngle by
+        transition.animateFloat(
+            0f,
+            JumpRotationAngle,
+            infiniteRepeatable(
+                animation =
+                    keyframes {
+                        durationMillis = HeadAndTailAnimationDuration + HeadAndTailDelayDuration
+                        0f at HeadAndTailDelayDuration using CircularEasing
+                        JumpRotationAngle at durationMillis
+                    }
+            )
         )
-    )
-    Canvas(
+
+    // Canvas internally uses Spacer.drawBehind.
+    // Using Spacer.drawWithCache to optimize the stroke allocations.
+    Spacer(
         modifier
             .progressSemantics()
             .size(IndeterminateCircularIndicatorDiameter)
             .focusable()
-    ) {
+            .drawWithCache {
+                val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
 
-        val currentRotationAngleOffset = (currentRotation * RotationAngleOffset) % 360f
+                val currentRotationAngleOffset = (currentRotation * RotationAngleOffset) % 360f
+                // How long a line to draw using the start angle as a reference point
+                val sweep = abs(endAngle - startProgressAngle)
 
-        // How long a line to draw using the start angle as a reference point
-        val sweep = abs(endAngle - startProgressAngle)
+                // Offset by the constant offset and the per rotation offset
+                val offset = (startAngle + currentRotationAngleOffset + baseRotation) % 360f
 
-        // Offset by the constant offset and the per rotation offset
-        val offset = (startAngle + currentRotationAngleOffset + baseRotation) % 360f
-        drawCircularIndicator(0f, 360f, trackColor, stroke)
-        drawIndeterminateCircularIndicator(
-            startProgressAngle + offset,
-            sweep,
-            indicatorColor,
-            stroke
-        )
-    }
+                onDrawWithContent {
+                    drawCircularIndicator(0f, 360f, trackColor, stroke)
+                    drawIndeterminateCircularIndicator(
+                        startProgressAngle + offset,
+                        sweep,
+                        indicatorColor,
+                        stroke
+                    )
+                }
+            }
+    )
 }
 
-/**
- * Contains the default values used for [CircularProgressIndicator].
- */
+/** Contains the default values used for [CircularProgressIndicator]. */
 public object ProgressIndicatorDefaults {
     /**
      * Default stroke width for [CircularProgressIndicator]
@@ -238,26 +242,27 @@ public object ProgressIndicatorDefaults {
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    internal val IndeterminateStrokeWidth = 3.dp
+    public val IndeterminateStrokeWidth = 3.dp
 
     /**
      * Stroke width for full screen [CircularProgressIndicator]
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    internal val FullScreenStrokeWidth = 5.dp
+    public val FullScreenStrokeWidth = 5.dp
 
     /**
      * The default [AnimationSpec] that should be used when animating between progress in a
      * determinate progress indicator.
      */
-    public val ProgressAnimationSpec = SpringSpec(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessVeryLow,
-        // The default threshold is 0.01, or 1% of the overall progress range, which is quite
-        // large and noticeable.
-        visibilityThreshold = 1 / 1000f
-    )
+    public val ProgressAnimationSpec =
+        SpringSpec(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessVeryLow,
+            // The default threshold is 0.01, or 1% of the overall progress range, which is quite
+            // large and noticeable.
+            visibilityThreshold = 1 / 1000f
+        )
 
     // CircularProgressIndicator Material specs
     // Diameter of the indicator circle
@@ -310,10 +315,11 @@ private fun DrawScope.drawCircularIndicator(
         startAngle = startAngle,
         sweepAngle = sweep,
         useCenter = false,
-        topLeft = Offset(
-            diameterOffset + (size.width - diameter) / 2,
-            diameterOffset + (size.height - diameter) / 2
-        ),
+        topLeft =
+            Offset(
+                diameterOffset + (size.width - diameter) / 2,
+                diameterOffset + (size.height - diameter) / 2
+            ),
         size = Size(arcDimen, arcDimen),
         style = stroke
     )

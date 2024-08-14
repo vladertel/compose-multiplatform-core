@@ -1,4 +1,10 @@
-import androidx.build.KmpPlatformsKt
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import androidx.build.KotlinTarget
@@ -10,10 +16,15 @@ plugins {
 }
 
 androidXMultiplatform {
+    androidNative()
     jvm()
     mac()
+    mingwX64()
     linux()
     ios()
+    watchos()
+    tvos()
+    wasmJs()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -24,16 +35,21 @@ androidXMultiplatform {
             }
         }
 
-        if (KmpPlatformsKt.enableNative(project)) {
-            nonJvmMain {
-                dependsOn commonMain
-            }
+        nonJvmMain {
+            dependsOn(commonMain)
+        }
 
-            targets.all { target ->
-                if (target.platformType !in [KotlinPlatformType.jvm, KotlinPlatformType.common]) {
-                    target.compilations["main"].defaultSourceSet {
-                        dependsOn(nonJvmMain)
-                    }
+        wasmJsMain {
+            dependsOn(nonJvmMain)
+            dependencies {
+                api(libs.kotlinStdlibJs)
+            }
+        }
+
+        targets.configureEach { target ->
+            if (target.platformType !in [KotlinPlatformType.jvm, KotlinPlatformType.common]) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(nonJvmMain)
                 }
             }
         }

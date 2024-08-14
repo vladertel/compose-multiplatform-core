@@ -1,6 +1,8 @@
 // This file applies dependencies common to projects in buildSrc
 
 apply from: "${buildscript.sourceFile.parent}/kotlin-dsl-dependency.gradle"
+// copy findGradleKotlinDsl to a local variable: https://github.com/gradle/gradle/issues/26057
+def findGradleKotlinDsl = project.findGradleKotlinDsl
 dependencies {
 
     // Gradle APIs
@@ -8,19 +10,27 @@ dependencies {
     compileOnly(findGradleKotlinDsl())
 
     // Android Gradle Plugin APIs used by Stable AIDL
-    implementation(libs.androidGradlePluginApi)
+    api(libs.androidGradlePluginApi)
 
     // Plugins we use and configure
+    api(libs.kotlinGradlePluginz)
+    api(libs.kotlinCompilerEmbeddable) // for clang compiler
     implementation(libs.androidGradlePluginz)
     implementation(libs.androidToolsCommon) // for com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
     implementation(libs.androidToolsRepository) // com.android.repository for Stable AIDL plugin
     implementation(libs.androidToolsSdkCommon) // com.android.ide.common for Stable AIDL plugin
-    implementation(libs.kotlinGradlePluginz)
     implementation(libs.spdxGradlePluginz)
+    implementation(libs.androidKotlinMultiplatform)
+    implementation(libs.binaryCompatibilityValidator)
 
-    // variety of json parsers
+    // For Room Gradle Plugin
+    implementation(libs.kspGradlePluginz)
+
+    // Force jsoup upgrade on spdx (b/309773103)
+    implementation(libs.jsoup)
+
+    // json parser
     implementation(libs.gson)
-    implementation(libs.jsonSimple)
 
     // XML parsers used in MavenUploadHelper.kt
     implementation(libs.dom4j) {
@@ -32,14 +42,12 @@ dependencies {
     implementation(libs.ktfmt)
     implementation(libs.kotlinCoroutinesCore)
     implementation(libs.shadow) // used by BundleInsideHelper.kt
-    implementation(libs.apacheAnt) // used in AarManifestTransformerTask.kt for unziping
+    api(libs.apacheAnt) // used in AarManifestTransformerTask.kt for unziping
     implementation(libs.toml)
     implementation(libs.apacheCommonIo) // used in CheckApiEquivalenceTask.kt
-    implementation(libs.dexMemberList) // used in ReportLibraryMetricsTask.kt
 
     implementation(libs.protobufGradlePlugin) // needed to compile inspection plugin
-    implementation(libs.kotlinPoet) // needed to compile material-icon-generator
-    implementation(libs.xmlpull) // needed to compile material-icon-generator
+    implementation(libs.kotlinPoet) // needed to compile glance-layout-generator
 
     implementation(libs.protobuf) // needed to compile baseline-profile gradle plugins
     implementation(libs.agpTestingPlatformCoreProto) // needed to compile baseline-profile gradle plugins
@@ -48,6 +56,8 @@ dependencies {
     // root project doesn't need to re-resolve them and their dependencies on every build
     runtimeOnly(libs.hiltAndroidGradlePluginz)
     runtimeOnly(libs.javapoet) // for hiltAndroidGradlePluginz to workaround https://github.com/google/dagger/issues/3068
-    runtimeOnly(libs.kspGradlePluginz)
     runtimeOnly(libs.wireGradlePluginz)
+
+    // Plugin for analyzing dependencies
+    implementation(libs.dependency.analysis.gradle.plugin)
 }

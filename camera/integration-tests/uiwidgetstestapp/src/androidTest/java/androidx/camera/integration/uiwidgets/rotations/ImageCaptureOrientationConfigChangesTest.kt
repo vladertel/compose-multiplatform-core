@@ -19,7 +19,7 @@ package androidx.camera.integration.uiwidgets.rotations
 import android.os.Build
 import android.view.Surface
 import android.view.View
-import androidx.camera.testing.CoreAppTestUtil
+import androidx.camera.testing.impl.CoreAppTestUtil
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -44,28 +44,30 @@ class ImageCaptureOrientationConfigChangesTest(
 ) : ImageCaptureBaseTest<OrientationConfigChangesOverriddenActivity>(cameraXConfig) {
 
     companion object {
-        private val rotations = arrayOf(
-            Surface.ROTATION_0,
-            Surface.ROTATION_90,
-            Surface.ROTATION_180,
-            Surface.ROTATION_270
-        )
+        private val rotations =
+            arrayOf(
+                Surface.ROTATION_0,
+                Surface.ROTATION_90,
+                Surface.ROTATION_180,
+                Surface.ROTATION_270
+            )
 
         @JvmStatic
         @Parameterized.Parameters(
             name = "lensFacing={0}, rotation={1}, captureMode={2}, cameraXConfig={3}"
         )
-        fun data() = mutableListOf<Array<Any?>>().apply {
-            lensFacingList.forEach { lens ->
-                rotations.forEach { rotation ->
-                    captureModes.forEach { mode ->
-                        cameraXConfigList.forEach { cameraXConfig ->
-                            add(arrayOf(lens, rotation, mode, cameraXConfig))
+        fun data() =
+            mutableListOf<Array<Any?>>().apply {
+                lensFacingList.forEach { lens ->
+                    rotations.forEach { rotation ->
+                        captureModes.forEach { mode ->
+                            cameraXConfigList.forEach { cameraXConfig ->
+                                add(arrayOf(lens, rotation, mode, cameraXConfig))
+                            }
                         }
                     }
                 }
             }
-        }
     }
 
     @Before
@@ -73,9 +75,13 @@ class ImageCaptureOrientationConfigChangesTest(
         Assume.assumeFalse(
             "Known issue on this device. Please see b/198744779",
             listOf(
-                "redmi note 9s",
-                "redmi note 8"
-            ).contains(Build.MODEL.lowercase(Locale.US)) && rotation == Surface.ROTATION_180
+                    "redmi note 9s",
+                    "redmi note 8",
+                    "m2003j15sc", // Redmi Note 9
+                    "m2006c3lg", // Redmi 9A
+                    "m2006c3mg" // Redmi 9C
+                )
+                .contains(Build.MODEL.lowercase(Locale.US)) && rotation == Surface.ROTATION_180
         )
         CoreAppTestUtil.assumeCompatibleDevice()
         setUp(lensFacing)
@@ -101,15 +107,16 @@ class ImageCaptureOrientationConfigChangesTest(
         }
     }
 
-    private fun ActivityScenario<OrientationConfigChangesOverriddenActivity>.rotate(rotation: Int):
-        Boolean {
-            val currentRotation = withActivity {
-                val root = findViewById<View>(android.R.id.content)
-                root.display.rotation
-            }
-            InstrumentationRegistry.getInstrumentation().uiAutomation.setRotation(rotation)
-            return currentRotation != rotation
+    private fun ActivityScenario<OrientationConfigChangesOverriddenActivity>.rotate(
+        rotation: Int
+    ): Boolean {
+        val currentRotation = withActivity {
+            val root = findViewById<View>(android.R.id.content)
+            root.display.rotation
         }
+        InstrumentationRegistry.getInstrumentation().uiAutomation.setRotation(rotation)
+        return currentRotation != rotation
+    }
 
     private fun ActivityScenario<OrientationConfigChangesOverriddenActivity>.waitForRotation() {
         val displayChanged = withActivity { mDisplayChanged }

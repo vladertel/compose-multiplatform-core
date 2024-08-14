@@ -16,18 +16,14 @@
 
 package androidx.core.performance
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.runBlocking
-
 @JvmDefaultWithCompatibility
 /**
  * Reports the media performance class of the device.
  *
- * Create an instance of DevicePerformance in your [android.app.Application.onCreate] and use
- * the [mediaPerformanceClass] value any time it is needed.
- * @sample androidx.core.performance.samples.usage
+ * Create an instance of DevicePerformance in your [android.app.Application.onCreate] and use the
+ * [mediaPerformanceClass] value any time it is needed.
  *
+ * @sample androidx.core.performance.samples.usage
  */
 interface DevicePerformance {
 
@@ -35,56 +31,14 @@ interface DevicePerformance {
      * The media performance class of the device or 0 if none.
      *
      * If this value is not <code>0</code>, the device conforms to the media performance class
-     * definition of the SDK version of this value. This value is stable for the duration of
-     * the process.
+     * definition of the SDK version of this value. This value is stable for the duration of the
+     * process.
      *
-     * Possible non-zero values are defined in
-     * [Build.VERSION_CODES][android.os.Build.VERSION_CODES] starting with
-     * [VERSION_CODES.R][android.os.Build.VERSION_CODES.R].
+     * Possible non-zero values are defined in [Build.VERSION_CODES][android.os.Build.VERSION_CODES]
+     * starting with [VERSION_CODES.R][android.os.Build.VERSION_CODES.R].
      *
      * Defaults to
      * [VERSION.MEDIA_PERFORMANCE_CLASS][android.os.Build.VERSION.MEDIA_PERFORMANCE_CLASS]
-     *
      */
     val mediaPerformanceClass: Int
-
-    companion object {
-        /**
-         * Create PerformanceClass from the context.
-         *
-         * This should be done in [android.app.Application.onCreate].
-         *
-         * Developers should call the createDevicePerformance companion method of
-         * the desired DevicePerformanceSupplier implementation.
-         *
-         * @param devicePerformanceSupplier Supplies device performance.
-         */
-        @JvmStatic
-        fun create(
-            devicePerformanceSupplier: DevicePerformanceSupplier
-        ): DevicePerformance = DefaultDevicePerformanceImpl(devicePerformanceSupplier)
-    }
-}
-
-/**
- * Supplies a flow of mediaPerformanceClass
- */
-interface DevicePerformanceSupplier {
-
-    val mediaPerformanceClassFlow: Flow<Int>
-}
-
-/**
- * Lazy caches the mediaPerformanceClass
- */
-private class DefaultDevicePerformanceImpl(
-    val devicePerformanceSupplier: DevicePerformanceSupplier
-) : DevicePerformance {
-    private val logTag = "DefaultDevicePerformanceImpl"
-
-    override val mediaPerformanceClass by lazy(mode = LazyThreadSafetyMode.PUBLICATION) {
-        runBlocking {
-            devicePerformanceSupplier.mediaPerformanceClassFlow.last()
-        }
-    }
 }

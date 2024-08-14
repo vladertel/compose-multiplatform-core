@@ -18,13 +18,10 @@ package androidx.camera.camera2.internal;
 
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.CaptureResult;
-import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.compat.params.DynamicRangesCompat;
 import androidx.camera.camera2.interop.CaptureRequestOptions;
@@ -41,13 +38,16 @@ import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.core.impl.DeferrableSurfaces;
 import androidx.camera.core.impl.OutputSurface;
+import androidx.camera.core.impl.OutputSurfaceConfiguration;
 import androidx.camera.core.impl.SessionConfig;
 import androidx.camera.core.impl.SessionProcessor;
 import androidx.camera.core.impl.SessionProcessorSurface;
+import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.FutureCallback;
 import androidx.camera.core.impl.utils.futures.FutureChain;
 import androidx.camera.core.impl.utils.futures.Futures;
+import androidx.camera.core.streamsharing.StreamSharing;
 import androidx.core.util.Preconditions;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -79,7 +79,6 @@ import java.util.concurrent.ScheduledExecutorService;
  * </pre>
  * <p>This class is not thread-safe. All methods must be executed sequentially.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @OptIn(markerClass = ExperimentalCamera2Interop.class)
 final class ProcessingCaptureSession implements CaptureSessionInterface {
     private static final String TAG = "ProcessingCaptureSession";
@@ -102,8 +101,6 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
     private static List<DeferrableSurface> sHeldProcessorSurfaces = new ArrayList<>();
     @Nullable
     private volatile List<CaptureConfig> mPendingCaptureConfigs = null;
-    @SuppressWarnings("WeakerAccess") /* synthetic accessor */
-    volatile boolean mIsExecutingStillCaptureRequest = false;
     private final SessionProcessorCaptureCallback mSessionProcessorCaptureCallback;
 
     private CaptureRequestOptions mSessionOptions = new CaptureRequestOptions.Builder().build();
@@ -142,7 +139,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
     @NonNull
     @Override
     public ListenableFuture<Void> open(@NonNull SessionConfig sessionConfig,
-            @NonNull CameraDevice cameraDevice, @NonNull SynchronizedCaptureSessionOpener opener) {
+            @NonNull CameraDevice cameraDevice, @NonNull SynchronizedCaptureSession.Opener opener) {
         Preconditions.checkArgument(mProcessorState == ProcessorState.UNINITIALIZED,
                 "Invalid state state:" + mProcessorState);
         Preconditions.checkArgument(!sessionConfig.getSurfaces().isEmpty(),
@@ -176,36 +173,49 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                             OutputSurface previewOutputSurface = null;
                             OutputSurface captureOutputSurface = null;
                             OutputSurface analysisOutputSurface = null;
+                            OutputSurface postviewOutputSurface = null;
 
                             for (int i = 0; i < sessionConfig.getSurfaces().size(); i++) {
                                 DeferrableSurface dSurface = sessionConfig.getSurfaces().get(i);
-                                if (Objects.equals(dSurface.getContainerClass(),
-                                        Preview.class)) {
+                                if (isPreview(dSurface) || isStreamSharing(dSurface)) {
                                     previewOutputSurface = OutputSurface.create(
                                             dSurface.getSurface().get(),
-                                            new Size(dSurface.getPrescribedSize().getWidth(),
-                                                    dSurface.getPrescribedSize().getHeight()),
+                                            dSurface.getPrescribedSize(),
                                             dSurface.getPrescribedStreamFormat());
-                                } else if (Objects.equals(dSurface.getContainerClass(),
-                                        ImageCapture.class)) {
+                                } else if (isImageCapture(dSurface)) {
                                     captureOutputSurface = OutputSurface.create(
                                             dSurface.getSurface().get(),
-                                            new Size(dSurface.getPrescribedSize().getWidth(),
-                                                    dSurface.getPrescribedSize().getHeight()),
+                                            dSurface.getPrescribedSize(),
                                             dSurface.getPrescribedStreamFormat());
-                                } else if (Objects.equals(dSurface.getContainerClass(),
-                                        ImageAnalysis.class)) {
+                                } else if (isImageAnalysis(dSurface)) {
                                     analysisOutputSurface = OutputSurface.create(
                                             dSurface.getSurface().get(),
-                                            new Size(dSurface.getPrescribedSize().getWidth(),
-                                                    dSurface.getPrescribedSize().getHeight()),
+                                            dSurface.getPrescribedSize(),
                                             dSurface.getPrescribedStreamFormat());
                                 }
                             }
 
+                            DeferrableSurface postviewDeferrableSurface;
+                            if (sessionConfig.getPostviewOutputConfig() != null) {
+                                postviewDeferrableSurface =
+                                        sessionConfig.getPostviewOutputConfig().getSurface();
+                                postviewOutputSurface = OutputSurface.create(
+                                        postviewDeferrableSurface.getSurface().get(),
+                                        postviewDeferrableSurface.getPrescribedSize(),
+                                        postviewDeferrableSurface.getPrescribedStreamFormat()
+                                );
+                            } else {
+                                postviewDeferrableSurface = null;
+                            }
+
                             mProcessorState = ProcessorState.SESSION_INITIALIZED;
                             try {
-                                DeferrableSurfaces.incrementAll(mOutputSurfaces);
+                                List<DeferrableSurface> surfacesToIncrement =
+                                        new ArrayList<>(mOutputSurfaces);
+                                if (postviewDeferrableSurface != null) {
+                                    surfacesToIncrement.add(postviewDeferrableSurface);
+                                }
+                                DeferrableSurfaces.incrementAll(surfacesToIncrement);
                             } catch (DeferrableSurface.SurfaceClosedException e) {
                                 return Futures.immediateFailedFuture(e);
                             }
@@ -213,13 +223,20 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                             try {
                                 mProcessorSessionConfig = mSessionProcessor.initSession(
                                         mCamera2CameraInfoImpl,
-                                        previewOutputSurface,
-                                        captureOutputSurface,
-                                        analysisOutputSurface
+                                        OutputSurfaceConfiguration.create(
+                                                previewOutputSurface,
+                                                captureOutputSurface,
+                                                analysisOutputSurface,
+                                                postviewOutputSurface
+                                        )
                                 );
                             } catch (Throwable e) {
+                                Logger.e(TAG, "initSession failed", e);
                                 // Ensure we decrement the output surfaces if initSession failed.
                                 DeferrableSurfaces.decrementAll(mOutputSurfaces);
+                                if (postviewDeferrableSurface != null) {
+                                    postviewDeferrableSurface.decrementUseCount();
+                                }
                                 throw e;
                             }
 
@@ -228,6 +245,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                             mProcessorSessionConfig.getSurfaces().get(0).getTerminationFuture()
                                     .addListener(() -> {
                                         DeferrableSurfaces.decrementAll(mOutputSurfaces);
+                                        if (postviewDeferrableSurface != null) {
+                                            postviewDeferrableSurface.decrementUseCount();
+                                        }
                                     }, CameraXExecutors.directExecutor());
 
                             // Holding the Processor surfaces in case they are GCed
@@ -284,7 +304,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         for (CaptureConfig captureConfig : captureConfigs) {
             for (CameraCaptureCallback cameraCaptureCallback :
                     captureConfig.getCameraCaptureCallbacks()) {
-                cameraCaptureCallback.onCaptureCancelled();
+                cameraCaptureCallback.onCaptureCancelled(captureConfig.getId());
             }
         }
     }
@@ -314,29 +334,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             cancelRequests(Arrays.asList(captureConfig));
             return;
         }
-        mSessionProcessor.startTrigger(options, new SessionProcessor.CaptureCallback() {
-            @Override
-            public void onCaptureFailed(int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureFailed(new CameraCaptureFailure(
-                                CameraCaptureFailure.Reason.ERROR));
-                    }
-                });
-            }
-
-            @Override
-            public void onCaptureSequenceCompleted(int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureCompleted(
-                                new CameraCaptureResult.EmptyCameraCaptureResult());
-                    }
-                });
-            }
-        });
+        mSessionProcessor.startTrigger(options, captureConfig.getTagBundle(),
+                new CaptureCallbackAdapter(captureConfig.getId(),
+                        captureConfig.getCameraCaptureCallbacks()));
     }
 
     /**
@@ -373,6 +373,11 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         switch (mProcessorState) {
             case UNINITIALIZED:
             case SESSION_INITIALIZED:
+                if (mPendingCaptureConfigs != null) {
+                    cancelRequests(captureConfigs);
+                    Logger.d(TAG, "cancel the request because are pending un-submitted request");
+                    break;
+                }
                 mPendingCaptureConfigs = captureConfigs;
                 break;
             case ON_CAPTURE_SESSION_STARTED:
@@ -413,30 +418,60 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
 
         mStillCaptureOptions = builder.build();
         updateParameters(mSessionOptions, mStillCaptureOptions);
-        mSessionProcessor.startCapture(new SessionProcessor.CaptureCallback() {
-            @Override
-            public void onCaptureFailed(
-                    int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureFailed(new CameraCaptureFailure(
-                                CameraCaptureFailure.Reason.ERROR));
-                    }
-                });
-            }
+        mSessionProcessor.startCapture(captureConfig.isPostviewEnabled(),
+                captureConfig.getTagBundle(),
+                new CaptureCallbackAdapter(captureConfig.getId(),
+                          captureConfig.getCameraCaptureCallbacks()));
+    }
 
-            @Override
-            public void onCaptureSequenceCompleted(int captureSequenceId) {
-                mExecutor.execute(() -> {
-                    for (CameraCaptureCallback cameraCaptureCallback :
-                            captureConfig.getCameraCaptureCallbacks()) {
-                        cameraCaptureCallback.onCaptureCompleted(
-                                new CameraCaptureResult.EmptyCameraCaptureResult());
-                    }
-                });
+    private static class CaptureCallbackAdapter implements SessionProcessor.CaptureCallback {
+        private List<CameraCaptureCallback> mCameraCaptureCallbacks;
+        private final int mCaptureConfigId;
+        private CameraCaptureResult mCaptureResult = null;
+
+        private CaptureCallbackAdapter(int captureConfigId,
+                List<CameraCaptureCallback> cameraCaptureCallbacks) {
+            mCaptureConfigId = captureConfigId;
+            mCameraCaptureCallbacks = cameraCaptureCallbacks;
+        }
+
+        @Override
+        public void onCaptureStarted(int captureSequenceId, long timestamp) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureStarted(mCaptureConfigId);
             }
-        });
+        }
+
+        @Override
+        public void onCaptureFailed(
+                int captureSequenceId) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureFailed(mCaptureConfigId, new CameraCaptureFailure(
+                        CameraCaptureFailure.Reason.ERROR));
+            }
+        }
+
+        @Override
+        public void onCaptureCompleted(long timestamp, int captureSequenceId,
+                @NonNull CameraCaptureResult captureResult) {
+            mCaptureResult = captureResult;
+        }
+
+        @Override
+        public void onCaptureSequenceCompleted(int captureSequenceId) {
+            CameraCaptureResult cameraCaptureResult = mCaptureResult != null
+                    ? mCaptureResult : new CameraCaptureResult.EmptyCameraCaptureResult();
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureCompleted(mCaptureConfigId, cameraCaptureResult);
+            }
+        }
+
+        @Override
+        public void onCaptureProcessProgressed(int progress) {
+            for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
+                cameraCaptureCallback.onCaptureProcessProgressed(mCaptureConfigId, progress);
+            }
+        }
     }
 
     /**
@@ -452,7 +487,12 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         switch (mProcessorState) {
             case ON_CAPTURE_SESSION_ENDED:
             case SESSION_INITIALIZED:
-                future.addListener(() -> mSessionProcessor.deInitSession(), mExecutor);
+                future.addListener(() -> {
+                    Logger.d(TAG, "== deInitSession (id=" + mInstanceId + ")");
+                    mSessionProcessor.deInitSession();
+                    // Use direct executor to ensure deInitSession is invoked as soon as session is
+                    // closed.
+                }, CameraXExecutors.directExecutor());
                 break;
             default:
                 break;
@@ -473,11 +513,12 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
     }
 
     void onConfigured(@NonNull CaptureSession captureSession) {
-        Preconditions.checkArgument(mProcessorState == ProcessorState.SESSION_INITIALIZED,
-                "Invalid state state:" + mProcessorState);
-
+        if (mProcessorState != ProcessorState.SESSION_INITIALIZED) {
+            return;
+        }
         mRequestProcessor = new Camera2RequestProcessor(captureSession,
                 getSessionProcessorSurfaceList(mProcessorSessionConfig.getSurfaces()));
+        Logger.d(TAG, "== onCaptureSessinStarted (id = " + mInstanceId + ")");
         mSessionProcessor.onCaptureSessionStart(mRequestProcessor);
         mProcessorState = ProcessorState.ON_CAPTURE_SESSION_STARTED;
 
@@ -519,7 +560,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             for (CaptureConfig captureConfig : mPendingCaptureConfigs) {
                 for (CameraCaptureCallback cameraCaptureCallback :
                         captureConfig.getCameraCaptureCallbacks()) {
-                    cameraCaptureCallback.onCaptureCancelled();
+                    cameraCaptureCallback.onCaptureCancelled(captureConfig.getId());
                 }
             }
             mPendingCaptureConfigs = null;
@@ -534,6 +575,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         Logger.d(TAG, "close (id=" + mInstanceId + ") state=" + mProcessorState);
 
         if (mProcessorState == ProcessorState.ON_CAPTURE_SESSION_STARTED) {
+            Logger.d(TAG, "== onCaptureSessionEnd (id = " + mInstanceId + ")");
             mSessionProcessor.onCaptureSessionEnd();
             if (mRequestProcessor != null) {
                 mRequestProcessor.close();
@@ -551,9 +593,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
      * surface of repeating request is determined by {@link SessionProcessor}.
      * {@link SessionProcessor#setParameters(Config)} will be called to update the request
      * parameters retrieved from {@link SessionConfig#getImplementationOptions()}. It will also
-     * invoke {@link SessionProcessor#startRepeating(SessionProcessor.CaptureCallback)} if it is not
-     * started yet. {@link SessionConfig#getRepeatingCameraCaptureCallbacks()} will be invoked
-     * but it is unable to invoke callbacks of {@link CaptureCallbackContainer} type.
+     * invoke {@link SessionProcessor#startRepeating(TagBundle, SessionProcessor.CaptureCallback)}
+     * if it is not started yet. {@link SessionConfig#getRepeatingCameraCaptureCallbacks()} will be
+     * invoked but it is unable to invoke callbacks of {@link CaptureCallbackContainer} type.
      *
      * @param sessionConfig has the configuration that will currently active in issuing capture
      *                      request.
@@ -584,14 +626,27 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             if (!hasPreviewSurface(sessionConfig.getRepeatingCaptureConfig())) {
                 mSessionProcessor.stopRepeating();
             } else {
-                mSessionProcessor.startRepeating(mSessionProcessorCaptureCallback);
+                mSessionProcessor.startRepeating(
+                        sessionConfig.getRepeatingCaptureConfig().getTagBundle(),
+                        mSessionProcessorCaptureCallback);
             }
         }
     }
 
-    private boolean hasPreviewSurface(CaptureConfig captureConfig) {
+    @Override
+    public boolean isInOpenState() {
+        return mCaptureSession.isInOpenState();
+    }
+
+    /**
+     * Checks if the CaptureConfig has a preview surface.
+     *
+     * <p> Note that {@link StreamSharing} provides preview output surface and is therefore
+     * considered a {@link Preview}.
+     */
+    private static boolean hasPreviewSurface(@NonNull CaptureConfig captureConfig) {
         for (DeferrableSurface surface : captureConfig.getSurfaces()) {
-            if (Objects.equals(surface.getContainerClass(), Preview.class)) {
+            if (isPreview(surface) || isStreamSharing(surface)) {
                 return true;
             }
         }
@@ -609,6 +664,22 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         builder.insertAllOptions(sessionOptions);
         builder.insertAllOptions(stillCaptureOptions);
         mSessionProcessor.setParameters(builder.build());
+    }
+
+    private static boolean isPreview(@NonNull DeferrableSurface dSurface) {
+        return Objects.equals(dSurface.getContainerClass(), Preview.class);
+    }
+
+    private static boolean isImageCapture(@NonNull DeferrableSurface dSurface) {
+        return Objects.equals(dSurface.getContainerClass(), ImageCapture.class);
+    }
+
+    private static boolean isImageAnalysis(@NonNull DeferrableSurface dSurface) {
+        return Objects.equals(dSurface.getContainerClass(), ImageAnalysis.class);
+    }
+
+    private static boolean isStreamSharing(@NonNull DeferrableSurface dSurface) {
+        return Objects.equals(dSurface.getContainerClass(), StreamSharing.class);
     }
 
     private static class SessionProcessorCaptureCallback
@@ -639,7 +710,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
 
         @Override
         public void onCaptureCompleted(long timestamp, int captureSequenceId,
-                @NonNull Map<CaptureResult.Key, Object> result) {
+                @NonNull CameraCaptureResult result) {
 
         }
     }

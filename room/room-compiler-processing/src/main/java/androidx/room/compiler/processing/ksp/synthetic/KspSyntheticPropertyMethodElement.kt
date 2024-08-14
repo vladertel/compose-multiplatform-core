@@ -60,12 +60,12 @@ internal sealed class KspSyntheticPropertyMethodElement(
     val field: KspFieldElement,
     val isSyntheticStatic: Boolean,
     open val accessor: KSPropertyAccessor
-) : XMethodElement,
+) :
+    XMethodElement,
     XEquality,
-    XHasModifiers by KspHasModifiers.createForSyntheticAccessor(
-        field.declaration,
-        accessor
-    ) {
+    XHasModifiers by KspHasModifiers.createForSyntheticAccessor(field.declaration, accessor) {
+
+    override val propertyName = field.name
 
     @OptIn(KspExperimental::class)
     override val jvmName: String by lazy {
@@ -88,12 +88,12 @@ internal sealed class KspSyntheticPropertyMethodElement(
     final override fun isExtensionFunction() = false
 
     final override val enclosingElement: KspMemberContainer
-        get() = if (isSyntheticStatic) {
-          actualEnclosingElement.declaration!!
-            .requireEnclosingMemberContainer(env)
-        } else {
-          actualEnclosingElement
-        }
+        get() =
+            if (isSyntheticStatic) {
+                actualEnclosingElement.declaration!!.requireEnclosingMemberContainer(env)
+            } else {
+                actualEnclosingElement
+            }
 
     private val actualEnclosingElement: KspMemberContainer
         get() = this.field.enclosingElement
@@ -121,21 +121,21 @@ internal sealed class KspSyntheticPropertyMethodElement(
 
     @OptIn(KspExperimental::class)
     override val thrownTypes: List<XType> by lazy {
-        env.resolver.getJvmCheckedException(accessor).map {
-            env.wrap(
-                ksType = it,
-                allowPrimitives = false
-            )
-        }.toList()
+        env.resolver
+            .getJvmCheckedException(accessor)
+            .map {
+                env.wrap(
+                    // Thrown exception types are never nullable
+                    ksType = it.makeNotNullable(),
+                    allowPrimitives = false
+                )
+            }
+            .toList()
     }
 
     final override fun asMemberOf(other: XType): XMethodType {
         check(other is KspType)
-        return KspSyntheticPropertyMethodType.create(
-            env = env,
-            element = this,
-            container = other
-        )
+        return KspSyntheticPropertyMethodType.create(env = env, element = this, container = other)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -161,18 +161,22 @@ internal sealed class KspSyntheticPropertyMethodElement(
         field: KspFieldElement,
         override val accessor: KSPropertyGetter,
         isSyntheticStatic: Boolean
-    ) : KspSyntheticPropertyMethodElement(
-        env = env,
-        field = field,
-        accessor = accessor,
-        isSyntheticStatic = isSyntheticStatic
-
-    ),
+    ) :
+        KspSyntheticPropertyMethodElement(
+            env = env,
+            field = field,
+            accessor = accessor,
+            isSyntheticStatic = isSyntheticStatic
+        ),
         XAnnotated by KspAnnotated.create(
             env = env,
             delegate = accessor,
             filter = NO_USE_SITE_OR_GETTER
         ) {
+
+        override fun isKotlinPropertySetter() = false
+
+        override fun isKotlinPropertyGetter() = true
 
         override val name: String by lazy {
             JvmAbi.computeGetterName(field.declaration.simpleName.asString())
@@ -206,17 +210,22 @@ internal sealed class KspSyntheticPropertyMethodElement(
         field: KspFieldElement,
         override val accessor: KSPropertySetter,
         isSyntheticStatic: Boolean
-    ) : KspSyntheticPropertyMethodElement(
-        env = env,
-        field = field,
-        accessor = accessor,
-        isSyntheticStatic = isSyntheticStatic
-    ),
+    ) :
+        KspSyntheticPropertyMethodElement(
+            env = env,
+            field = field,
+            accessor = accessor,
+            isSyntheticStatic = isSyntheticStatic
+        ),
         XAnnotated by KspAnnotated.create(
             env = env,
             delegate = field.declaration.setter,
             filter = NO_USE_SITE_OR_SETTER
         ) {
+
+        override fun isKotlinPropertySetter() = true
+
+        override fun isKotlinPropertyGetter() = false
 
         override val name by lazy {
             JvmAbi.computeSetterName(field.declaration.simpleName.asString())
@@ -225,30 +234,24 @@ internal sealed class KspSyntheticPropertyMethodElement(
         override val jvmDescriptor: String
             get() = this.jvmDescriptor()
 
-        override val returnType: XType by lazy {
-            env.voidType
-        }
+        override val returnType: XType by lazy { env.voidType }
 
         override val typeParameters: List<XTypeParameterElement>
             get() = emptyList()
 
         override val parameters: List<XExecutableParameterElement> by lazy {
-            listOf(
-                SyntheticExecutableParameterElement(
-                    env = env,
-                    enclosingElement = this
-                )
-            )
+            listOf(SyntheticExecutableParameterElement(env = env, enclosingElement = this))
         }
 
         override fun kindName(): String {
             return "synthetic property getter"
         }
 
-        private class SyntheticExecutableParameterElement(
-            private val env: KspProcessingEnv,
+        internal class SyntheticExecutableParameterElement(
+            internal val env: KspProcessingEnv,
             override val enclosingElement: Setter
-        ) : XExecutableParameterElement,
+        ) :
+            XExecutableParameterElement,
             XAnnotated by KspAnnotated.create(
                 env = env,
                 delegate = enclosingElement.field.declaration.setter?.parameter,
@@ -263,9 +266,16 @@ internal sealed class KspSyntheticPropertyMethodElement(
             override fun isVarArgs() = false
 
             override val name: String by lazy {
-                val originalName = enclosingElement.accessor.parameter.name?.asString()
-                originalName.sanitizeAsJavaParameterName(0)
+                enclosingElement.accessor.parameter.name?.asString().let {
+                    if (it == "<set-?>") {
+                        "p0"
+                    } else {
+                        it
+                    }
+                } ?: "_no_param_name"
             }
+
+            override val jvmName: String by lazy { name.sanitizeAsJavaParameterName(0) }
 
             override val type: KspType by lazy {
                 enclosingElement.field.type.copyWithScope(
@@ -291,7 +301,8 @@ internal sealed class KspSyntheticPropertyMethodElement(
                     return type
                 }
                 check(other is KspType)
-                return enclosingElement.field.asMemberOf(other)
+                return enclosingElement.field
+                    .asMemberOf(other)
                     .copyWithScope(
                         KSTypeVarianceResolverScope.PropertySetterParameterType(
                             setterMethod = enclosingElement,
@@ -326,10 +337,11 @@ internal sealed class KspSyntheticPropertyMethodElement(
                     "properties with KSP. Cannot process $accessor."
             }
 
-            val field = KspFieldElement(
-                env = env,
-                declaration = accessor.receiver,
-            )
+            val field =
+                KspFieldElement(
+                    env = env,
+                    declaration = accessor.receiver,
+                )
             return create(
                 env = env,
                 field = field,

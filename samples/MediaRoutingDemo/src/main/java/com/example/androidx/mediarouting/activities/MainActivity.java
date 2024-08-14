@@ -47,7 +47,6 @@ import android.widget.TabHost.TabSpec;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -137,11 +136,14 @@ public class MainActivity extends AppCompatActivity {
         routesManager.reloadDialogType();
 
         // Create a route selector for the type of routes that we care about.
-        mSelector = new MediaRouteSelector.Builder()
-                .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
-                .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO)
-                .addControlCategory(SampleMediaRouteProvider.CATEGORY_SAMPLE_ROUTE)
-                .build();
+        mSelector =
+                new MediaRouteSelector.Builder()
+                        .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
+                        .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_AUDIO_PLAYBACK)
+                        .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_VIDEO_PLAYBACK)
+                        .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO)
+                        .addControlCategory(SampleMediaRouteProvider.CATEGORY_SAMPLE_ROUTE)
+                        .build();
 
         mMediaRouter.setOnPrepareTransferListener(mOnPrepareTransferListener);
 
@@ -265,8 +267,9 @@ public class MainActivity extends AppCompatActivity {
         mMediaRouter.setMediaSessionCompat(mMediaSession);
 
         // Set up playback manager and player
-        mPlayer = Player.create(MainActivity.this,
-                mMediaRouter.getSelectedRoute(), mMediaSession);
+        mPlayer =
+                Player.createPlayerForActivity(
+                        MainActivity.this, mMediaRouter.getSelectedRoute(), mMediaSession);
 
         mSessionManager.setPlayer(mPlayer);
         mSessionManager.setCallback(new SampleSessionManagerCallback());
@@ -646,6 +649,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onRouteChanged(@NonNull MediaRouter router, @NonNull RouteInfo route) {
             Log.d(TAG, "onRouteChanged: route=" + route);
+            if (route.isSelected()) {
+                updateRouteDescription();
+            }
         }
 
         @Override
@@ -660,10 +666,10 @@ public class MainActivity extends AppCompatActivity {
                     + ", route=" + selectedRoute + ", reason=" + reason);
 
             if (reason != MediaRouter.UNSELECT_REASON_ROUTE_CHANGED) {
-                mPlayer = Player.create(MainActivity.this, selectedRoute, mMediaSession);
-                if (isPresentationApiSupported()) {
-                    mPlayer.updatePresentation();
-                }
+                mPlayer =
+                        Player.createPlayerForActivity(
+                                MainActivity.this, selectedRoute, mMediaSession);
+                mPlayer.updatePresentation();
                 mSessionManager.setPlayer(mPlayer);
             }
             updateUi();
@@ -678,9 +684,7 @@ public class MainActivity extends AppCompatActivity {
                 mMediaSession.setActive(false);
                 mSessionManager.stop();
 
-                if (isPresentationApiSupported()) {
-                    mPlayer.updatePresentation();
-                }
+                mPlayer.updatePresentation();
                 mPlayer.release();
             }
         }
@@ -694,9 +698,7 @@ public class MainActivity extends AppCompatActivity {
         public void onRoutePresentationDisplayChanged(
                 @NonNull MediaRouter router, @NonNull RouteInfo route) {
             Log.d(TAG, "onRoutePresentationDisplayChanged: route=" + route);
-            if (isPresentationApiSupported()) {
-                mPlayer.updatePresentation();
-            }
+            mPlayer.updatePresentation();
         }
 
         @Override
@@ -712,10 +714,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onProviderChanged(@NonNull MediaRouter router, @NonNull ProviderInfo provider) {
             Log.d(TAG, "onRouteProviderChanged: provider=" + provider);
-        }
-
-        private boolean isPresentationApiSupported() {
-            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1;
         }
     }
 
@@ -779,17 +777,14 @@ public class MainActivity extends AppCompatActivity {
             // This class is not instantiable.
         }
 
-        @DoNotInline
         static boolean canDrawOverlays(Context context) {
             return Settings.canDrawOverlays(context);
         }
 
-        @DoNotInline
         static boolean shouldShowRequestPermissionRationale(Activity activity, String permission) {
             return activity.shouldShowRequestPermissionRationale(permission);
         }
 
-        @DoNotInline
         static void requestPermissions(Activity activity, String[] permissions, int requestCode) {
             activity.requestPermissions(permissions, requestCode);
         }
@@ -827,7 +822,9 @@ public class MainActivity extends AppCompatActivity {
             mMediaSession.setActive(false);
             mPlayer.release();
 
-            mPlayer = Player.create(MainActivity.this, destinationRoute, mMediaSession);
+            mPlayer =
+                    Player.createPlayerForActivity(
+                            MainActivity.this, destinationRoute, mMediaSession);
             mPlayer.updatePresentation();
             mSessionManager.setPlayer(mPlayer);
             mSessionManager.unsuspend();

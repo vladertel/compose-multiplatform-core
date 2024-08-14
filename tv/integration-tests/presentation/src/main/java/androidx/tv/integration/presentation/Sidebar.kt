@@ -16,7 +16,6 @@
 
 package androidx.tv.integration.presentation
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -49,39 +48,34 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun Sidebar(
     selectedIndex: Int,
     onIndexChange: (index: Int) -> Unit,
 ) {
     val fr = remember { FocusRequester() }
-    val drawIcon: @Composable (
-        imageVector: ImageVector,
-        index: Int,
-        modifier: Modifier
-    ) -> Unit =
+    val drawIcon: @Composable (imageVector: ImageVector, index: Int, modifier: Modifier) -> Unit =
         { imageVector, index, modifier ->
             var isFocused by remember { mutableStateOf(false) }
             val isSelected = selectedIndex == index
 
             IconButton(
-                onClick = { },
-                modifier = modifier
-                    .onFocusChanged {
-                        isFocused = it.isFocused
-                        if (it.isFocused) {
-                            onIndexChange(index)
+                onClick = {},
+                modifier =
+                    modifier
+                        .onFocusChanged {
+                            isFocused = it.isFocused
+                            if (it.isFocused) {
+                                onIndexChange(index)
+                            }
                         }
-                    }
-                    .focusRequester(if (index == 0) fr else FocusRequester()),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor =
-                    if (isSelected && isFocused)
-                        Color.White
-                    else
-                        Color.Transparent,
-                )
+                        .focusRequester(if (index == 0) fr else FocusRequester()),
+                colors =
+                    IconButtonDefaults.filledIconButtonColors(
+                        containerColor =
+                            if (isSelected && isFocused) Color.White else Color.Transparent,
+                    )
             ) {
                 Box(modifier = Modifier) {
                     Icon(
@@ -91,27 +85,20 @@ fun Sidebar(
                     )
                     if (isSelected) {
                         Box(
-                            modifier = Modifier
-                                .width(10.dp)
-                                .height(3.dp)
-                                .offset(y = 4.dp)
-                                .align(Alignment.BottomCenter)
-                                .background(Color.Red)
+                            modifier =
+                                Modifier.width(10.dp)
+                                    .height(3.dp)
+                                    .offset(y = 4.dp)
+                                    .align(Alignment.BottomCenter)
+                                    .background(Color.Red)
                         )
                     }
                 }
             }
         }
 
-    val focusRestorerModifiers = createCustomInitialFocusRestorerModifiers()
-
     Column(
-        modifier = Modifier
-            .width(60.dp)
-            .fillMaxHeight()
-            .background(pageColor)
-            .then(focusRestorerModifiers.parentModifier)
-            .focusGroup(),
+        modifier = Modifier.width(60.dp).fillMaxHeight().background(pageColor).focusGroup(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -119,7 +106,7 @@ fun Sidebar(
             drawIcon(
                 Icons.Outlined.Home,
                 0,
-                focusRestorerModifiers.childModifier,
+                Modifier,
             )
         }
         key(1) {

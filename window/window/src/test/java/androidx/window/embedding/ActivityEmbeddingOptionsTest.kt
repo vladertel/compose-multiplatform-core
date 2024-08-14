@@ -17,98 +17,69 @@
 package androidx.window.embedding
 
 import android.app.Activity
-import android.app.ActivityOptions
 import android.content.Context
-import androidx.window.core.ExtensionsUtil
-import androidx.window.extensions.WindowExtensions
+import android.os.Bundle
+import androidx.window.extensions.embedding.ActivityStack.Token as ActivityStackToken
 import org.junit.After
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
+import org.mockito.Mock
+import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 /**
- * The unit tests for activity embedding extension functions to [ActivityOptions]
+ * The unit tests for activity embedding extension functions to [Bundle]
  *
- * @see [ActivityOptions.setLaunchingActivityStack]
- * @see [ActivityOptions.isSetLaunchingActivityStackSupported]
+ * @see Bundle.setLaunchingActivityStack
+ * @see Bundle.setOverlayCreateParams
  */
-@OptIn(androidx.window.core.ExperimentalWindowApi::class)
 class ActivityEmbeddingOptionsTest {
 
-    private lateinit var mockEmbeddingBackend: EmbeddingBackend
-    private lateinit var mockContext: Context
-    private lateinit var mockActivity: Activity
+    @Mock private lateinit var mockEmbeddingBackend: EmbeddingBackend
+    @Mock private lateinit var mockContext: Context
+    @Mock private lateinit var mockActivity: Activity
+    @Mock private lateinit var mockOptions: Bundle
+
+    private lateinit var annotationClosable: AutoCloseable
+
     private lateinit var mockActivityStack: ActivityStack
-    private lateinit var mockActivityOptions: ActivityOptions
 
     @Before
     fun setUp() {
-        mockEmbeddingBackend = mock()
-        mockContext = mock()
-        mockActivity = mock()
-        mockActivityOptions = mock()
-        mockActivityStack = ActivityStack(listOf(), true, mock())
+        annotationClosable = MockitoAnnotations.openMocks(this)
 
+        mockActivityStack =
+            ActivityStack(listOf(), true, ActivityStackToken.INVALID_ACTIVITY_STACK_TOKEN)
         whenever(mockActivity.applicationContext).doReturn(mockContext)
-        whenever(mockEmbeddingBackend.getActivityStack(mockActivity)).doReturn(mockActivityStack)
 
-        EmbeddingBackend.overrideDecorator(object : EmbeddingBackendDecorator {
-            override fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend =
-                mockEmbeddingBackend
-        })
-
-        // ActivityEmbeddingOptions is only supported since level 3
-        ExtensionsUtil.setOverrideVendorApiLevel(WindowExtensions.VENDOR_API_LEVEL_3)
+        EmbeddingBackend.overrideDecorator(
+            object : EmbeddingBackendDecorator {
+                override fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend =
+                    mockEmbeddingBackend
+            }
+        )
     }
 
     @After
     fun tearDown() {
         EmbeddingBackend.reset()
-        ExtensionsUtil.resetOverrideVendorApiLevel()
+        annotationClosable.close()
     }
 
     @Test
     fun testSetLaunchingActivityStack() {
-        mockActivityOptions.setLaunchingActivityStack(mockActivity, mockActivityStack)
+        mockOptions.setLaunchingActivityStack(mockActivity, mockActivityStack)
 
-        verify(mockEmbeddingBackend).setLaunchingActivityStack(
-            mockActivityOptions, mockActivityStack.token)
+        verify(mockEmbeddingBackend).setLaunchingActivityStack(mockOptions, mockActivityStack)
     }
 
     @Test
-    fun testSetLaunchingActivityStack_byActivity() {
-        mockActivityOptions.setLaunchingActivityStack(mockActivity)
+    fun testSetOverlayCreateParams() {
+        val overlayCreateParams = OverlayCreateParams(overlayAttributes = OverlayAttributes())
+        mockOptions.setOverlayCreateParams(mockActivity, overlayCreateParams)
 
-        verify(mockEmbeddingBackend).setLaunchingActivityStack(
-            mockActivityOptions, mockActivityStack.token)
-    }
-
-    @Test
-    fun testSetLaunchingActivityStack_unsupportedApiLevel() {
-        ExtensionsUtil.setOverrideVendorApiLevel(WindowExtensions.VENDOR_API_LEVEL_2)
-
-        assertThrows(UnsupportedOperationException::class.java) {
-            mockActivityOptions.setLaunchingActivityStack(mockActivity, mockActivityStack)
-        }
-        verify(mockEmbeddingBackend, never()).setLaunchingActivityStack(any(), any())
-    }
-
-    @Test
-    fun testIsSetLaunchingActivityStackSupported() {
-        ExtensionsUtil.setOverrideVendorApiLevel(WindowExtensions.VENDOR_API_LEVEL_2)
-
-        assertFalse(mockActivityOptions.isSetLaunchingActivityStackSupported())
-
-        ExtensionsUtil.setOverrideVendorApiLevel(WindowExtensions.VENDOR_API_LEVEL_3)
-
-        assertTrue(mockActivityOptions.isSetLaunchingActivityStackSupported())
+        verify(mockEmbeddingBackend).setOverlayCreateParams(mockOptions, overlayCreateParams)
     }
 }

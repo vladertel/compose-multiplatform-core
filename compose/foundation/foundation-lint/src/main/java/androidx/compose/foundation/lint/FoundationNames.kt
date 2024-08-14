@@ -42,5 +42,6 @@ object FoundationNames {
         val Offset = Name(PackageName, "offset")
         val AbsoluteOffset = Name(PackageName, "absoluteOffset")
         val BoxWithConstraints = Name(PackageName, "BoxWithConstraints")
+        val BoxWithConstraintsScope = Name(PackageName, "BoxWithConstraintsScope")
     }
 }

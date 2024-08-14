@@ -32,35 +32,40 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class CreateLibraryBuildInfoFileTaskTest {
-    @get:Rule
-    val distDir = TemporaryFolder()
+    @get:Rule val distDir = TemporaryFolder()
 
-    @get:Rule
-    val projectSetup = ProjectSetupRule()
+    @get:Rule val projectSetup = ProjectSetupRule()
     private lateinit var gradleRunner: GradleRunner
 
     @Before
     fun setUp() {
-        gradleRunner = GradleRunner.create()
-            .withProjectDir(projectSetup.rootDir)
-            .withPluginClasspath()
-            .withEnvironment(mapOf("DIST_DIR" to distDir.root.absolutePath))
+        gradleRunner =
+            GradleRunner.create()
+                .withProjectDir(projectSetup.rootDir)
+                .withPluginClasspath()
+                .withEnvironment(mapOf("DIST_DIR" to distDir.root.absolutePath))
     }
 
     @Test
     fun buildInfoDependencies() {
         val deps: List<ModuleDependency> =
             listOf(DefaultExternalModuleDependency("androidx.group", "artifact", "version"))
-        deps.asBuildInfoDependencies().single().check { it.groupId == "androidx.group" }
-            .check { it.artifactId == "artifact" }.check { it.version == "version" }
+        deps
+            .asBuildInfoDependencies()
+            .single()
+            .check { it.groupId == "androidx.group" }
+            .check { it.artifactId == "artifact" }
+            .check { it.version == "version" }
             .check { !it.isTipOfTree }
     }
 
     @Test
     fun suffix() {
-        computeTaskSuffix("cubane").check { it == "" }
-        computeTaskSuffix("cubane-jvm").check { it == "Jvm" }
-        computeTaskSuffix("cubane-jvm-linux-x64").check { it == "JvmLinuxX64" }
+        computeTaskSuffix(projectName = "cubane", artifactId = "cubane").check { it == "" }
+        computeTaskSuffix(projectName = "cubane", artifactId = "cubane-jvm").check { it == "Jvm" }
+        computeTaskSuffix(projectName = "cubane", artifactId = "cubane-jvm-linux-x64").check {
+            it == "JvmLinuxX64"
+        }
     }
 
     @Test
@@ -68,9 +73,8 @@ class CreateLibraryBuildInfoFileTaskTest {
         setupBuildInfoProject()
         gradleRunner.withArguments("createLibraryBuildInfoFiles").build()
 
-        val buildInfoFile = distDir.root.resolve(
-            "build-info/androidx.build_info_test_test_build_info.txt"
-        )
+        val buildInfoFile =
+            distDir.root.resolve("build-info/androidx.build_info_test_test_build_info.txt")
         assertThat(buildInfoFile.exists()).isTrue()
 
         val buildInfo = parseBuildInfo(buildInfoFile)
@@ -84,15 +88,23 @@ class CreateLibraryBuildInfoFileTaskTest {
         assertThat(buildInfo.dependencies.single().groupId).isEqualTo("androidx.core")
         assertThat(buildInfo.dependencies.single().artifactId).isEqualTo("core")
         assertThat(buildInfo.dependencyConstraints).hasSize(1)
-        assertThat(buildInfo.dependencyConstraints.single().groupId)
-            .isEqualTo("androidx.core")
-        assertThat(buildInfo.dependencyConstraints.single().artifactId)
-            .isEqualTo("core-ktx")
+        assertThat(buildInfo.dependencyConstraints.single().groupId).isEqualTo("androidx.core")
+        assertThat(buildInfo.dependencyConstraints.single().artifactId).isEqualTo("core-ktx")
+        assertThat(buildInfo.shouldPublishDocs).isFalse()
+        assertThat(buildInfo.isKmp).isFalse()
+        assertThat(buildInfo.target).isEqualTo("androidx")
+    }
+
+    @Test
+    fun resolveTarget_succeeds() {
+        assertThat(resolveTarget(false)).isEqualTo("androidx")
+        assertThat(resolveTarget(true)).isEqualTo("androidx_multiplatform_mac")
     }
 
     fun setupBuildInfoProject() {
         projectSetup.writeDefaultBuildGradle(
-            prefix = """
+            prefix =
+                """
                 import androidx.build.buildInfo.CreateLibraryBuildInfoFileTaskKt
                 plugins {
                     id("com.android.library")
@@ -102,8 +114,10 @@ class CreateLibraryBuildInfoFileTaskTest {
                 ext {
                     supportRootFolder = new File("${projectSetup.rootDir}")
                 }
-            """.trimIndent(),
-            suffix = """
+            """
+                    .trimIndent(),
+            suffix =
+                """
             version = "0.0.1"
             dependencies {
                 constraints {
@@ -131,12 +145,15 @@ class CreateLibraryBuildInfoFileTaskTest {
                             it,
                             null,
                             it.artifactId,
-                            project.provider { "fakeSha" }
+                            project.provider { "fakeSha" },
+                            false,
+                            false
                         )
                     }
                 }
             }
-            """.trimIndent()
+            """
+                    .trimIndent()
         )
     }
 

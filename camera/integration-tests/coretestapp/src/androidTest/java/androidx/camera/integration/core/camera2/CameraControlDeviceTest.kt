@@ -28,11 +28,11 @@ import androidx.camera.core.UseCase
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.core.internal.CameraUseCaseAdapter
 import androidx.camera.core.internal.CameraUseCaseAdapter.CameraException
-import androidx.camera.testing.CameraAvailabilityUtil
-import androidx.camera.testing.CameraPipeConfigTestRule
-import androidx.camera.testing.CameraUtil
-import androidx.camera.testing.CameraUtil.PreTestCameraIdList
-import androidx.camera.testing.CameraXUtil
+import androidx.camera.testing.impl.CameraAvailabilityUtil
+import androidx.camera.testing.impl.CameraPipeConfigTestRule
+import androidx.camera.testing.impl.CameraUtil
+import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
+import androidx.camera.testing.impl.CameraXUtil
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
@@ -63,14 +63,14 @@ class CameraControlDeviceTest(
     private val cameraConfig: CameraXConfig
 ) {
     @get:Rule
-    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
-        active = implName == CameraPipeConfig::class.simpleName,
-    )
+    val cameraPipeConfigTestRule =
+        CameraPipeConfigTestRule(
+            active = implName == CameraPipeConfig::class.simpleName,
+        )
 
     @get:Rule
-    val cameraRule = CameraUtil.grantCameraPermissionAndPreTest(
-        PreTestCameraIdList(cameraConfig)
-    )
+    val cameraRule =
+        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(PreTestCameraIdList(cameraConfig))
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private var camera: CameraUseCaseAdapter? = null
@@ -84,18 +84,17 @@ class CameraControlDeviceTest(
         CameraXUtil.initialize(context, cameraConfig).get()
         val cameraX = CameraXUtil.getOrCreateInstance(context, null).get()
         Assume.assumeTrue(
-            CameraAvailabilityUtil.hasCamera(
-                cameraX.cameraRepository,
-                cameraSelector
-            )
+            CameraAvailabilityUtil.hasCamera(cameraX.cameraRepository, cameraSelector)
         )
         val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
         meteringPoint1 = factory.createPoint(0f, 0f)
         val useCase = ImageAnalysis.Builder().build()
-        camera = CameraUtil.createCameraAndAttachUseCase(context, cameraSelector,
-            useCase.also {
-                boundUseCase = it
-            })
+        camera =
+            CameraUtil.createCameraAndAttachUseCase(
+                context,
+                cameraSelector,
+                useCase.also { boundUseCase = it }
+            )
         useCase.setAnalyzer(CameraXExecutors.ioExecutor(), analyzer)
     }
 
@@ -137,31 +136,32 @@ class CameraControlDeviceTest(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "selector={0},config={2}")
-        fun data() = listOf(
-            arrayOf(
-                "back",
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                Camera2Config::class.simpleName,
-                Camera2Config.defaultConfig()
-            ),
-            arrayOf(
-                "back",
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                CameraPipeConfig::class.simpleName,
-                CameraPipeConfig.defaultConfig()
-            ),
-            arrayOf(
-                "front",
-                CameraSelector.DEFAULT_FRONT_CAMERA,
-                Camera2Config::class.simpleName,
-                Camera2Config.defaultConfig()
-            ),
-            arrayOf(
-                "front",
-                CameraSelector.DEFAULT_FRONT_CAMERA,
-                CameraPipeConfig::class.simpleName,
-                CameraPipeConfig.defaultConfig()
+        fun data() =
+            listOf(
+                arrayOf(
+                    "back",
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    Camera2Config::class.simpleName,
+                    Camera2Config.defaultConfig()
+                ),
+                arrayOf(
+                    "back",
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    CameraPipeConfig::class.simpleName,
+                    CameraPipeConfig.defaultConfig()
+                ),
+                arrayOf(
+                    "front",
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    Camera2Config::class.simpleName,
+                    Camera2Config.defaultConfig()
+                ),
+                arrayOf(
+                    "front",
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    CameraPipeConfig::class.simpleName,
+                    CameraPipeConfig.defaultConfig()
+                )
             )
-        )
     }
 }

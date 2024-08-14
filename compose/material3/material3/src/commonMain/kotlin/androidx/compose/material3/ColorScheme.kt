@@ -19,14 +19,12 @@ package androidx.compose.material3
 import androidx.compose.material3.tokens.ColorDarkTokens
 import androidx.compose.material3.tokens.ColorLightTokens
 import androidx.compose.material3.tokens.ColorSchemeKeyTokens
+import androidx.compose.material3.tokens.PaletteTokens
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.takeOrElse
@@ -37,120 +35,171 @@ import kotlin.math.ln
 /**
  * A color scheme holds all the named color parameters for a [MaterialTheme].
  *
- * Color schemes are designed to be harmonious, ensure accessible text, and distinguish UI
- * elements and surfaces from one another. There are two built-in baseline schemes,
- * [lightColorScheme] and a [darkColorScheme], that can be used as-is or customized.
+ * Color schemes are designed to be harmonious, ensure accessible text, and distinguish UI elements
+ * and surfaces from one another. There are two built-in baseline schemes, [lightColorScheme] and a
+ * [darkColorScheme], that can be used as-is or customized.
  *
  * The Material color system and custom schemes provide default values for color as a starting point
  * for customization.
  *
- * To learn more about colors, see [Material Design colors](https://m3.material.io/styles/color/overview).
+ * Example of extending color scheme, including implementing Fixed Accent colors:
+ *
+ * @sample androidx.compose.material3.samples.ColorSchemeFixedAccentColorSample
+ *
+ * To learn more about colors, see
+ * [Material Design colors](https://m3.material.io/styles/color/overview).
  *
  * @property primary The primary color is the color displayed most frequently across your app’s
- * screens and components.
+ *   screens and components.
  * @property onPrimary Color used for text and icons displayed on top of the primary color.
  * @property primaryContainer The preferred tonal color of containers.
  * @property onPrimaryContainer The color (and state variants) that should be used for content on
- * top of [primaryContainer].
+ *   top of [primaryContainer].
  * @property inversePrimary Color to be used as a "primary" color in places where the inverse color
- * scheme is needed, such as the button on a SnackBar.
+ *   scheme is needed, such as the button on a SnackBar.
  * @property secondary The secondary color provides more ways to accent and distinguish your
- * product. Secondary colors are best for:
+ *   product. Secondary colors are best for:
  * - Floating action buttons
  * - Selection controls, like checkboxes and radio buttons
  * - Highlighting selected text
  * - Links and headlines
+ *
  * @property onSecondary Color used for text and icons displayed on top of the secondary color.
  * @property secondaryContainer A tonal color to be used in containers.
  * @property onSecondaryContainer The color (and state variants) that should be used for content on
- * top of [secondaryContainer].
- * @property tertiary The tertiary color that can be used to balance primary and secondary
- * colors, or bring heightened attention to an element such as an input field.
+ *   top of [secondaryContainer].
+ * @property tertiary The tertiary color that can be used to balance primary and secondary colors,
+ *   or bring heightened attention to an element such as an input field.
  * @property onTertiary Color used for text and icons displayed on top of the tertiary color.
  * @property tertiaryContainer A tonal color to be used in containers.
  * @property onTertiaryContainer The color (and state variants) that should be used for content on
- * top of [tertiaryContainer].
+ *   top of [tertiaryContainer].
  * @property background The background color that appears behind scrollable content.
  * @property onBackground Color used for text and icons displayed on top of the background color.
  * @property surface The surface color that affect surfaces of components, such as cards, sheets,
- * and menus.
+ *   and menus.
  * @property onSurface Color used for text and icons displayed on top of the surface color.
  * @property surfaceVariant Another option for a color with similar uses of [surface].
  * @property onSurfaceVariant The color (and state variants) that can be used for content on top of
- * [surface].
+ *   [surface].
  * @property surfaceTint This color will be used by components that apply tonal elevation and is
- * applied on top of [surface]. The higher the elevation the more this color is used.
+ *   applied on top of [surface]. The higher the elevation the more this color is used.
  * @property inverseSurface A color that contrasts sharply with [surface]. Useful for surfaces that
- * sit on top of other surfaces with [surface] color.
+ *   sit on top of other surfaces with [surface] color.
  * @property inverseOnSurface A color that contrasts well with [inverseSurface]. Useful for content
- * that sits on top of containers that are [inverseSurface].
+ *   that sits on top of containers that are [inverseSurface].
  * @property error The error color is used to indicate errors in components, such as invalid text in
- * a text field.
+ *   a text field.
  * @property onError Color used for text and icons displayed on top of the error color.
  * @property errorContainer The preferred tonal color of error containers.
- * @property onErrorContainer The color (and state variants) that should be used for content on
- * top of [errorContainer].
+ * @property onErrorContainer The color (and state variants) that should be used for content on top
+ *   of [errorContainer].
  * @property outline Subtle color used for boundaries. Outline color role adds contrast for
- * accessibility purposes.
+ *   accessibility purposes.
  * @property outlineVariant Utility color used for boundaries for decorative elements when strong
- * contrast is not required.
+ *   contrast is not required.
  * @property scrim Color of a scrim that obscures content.
  * @property surfaceBright A [surface] variant that is always brighter than [surface], whether in
- * light or dark mode.
- * @property surfaceDim A [surface] variant that is always dimmer than [surface], whether in light or
- * dark mode.
+ *   light or dark mode.
+ * @property surfaceDim A [surface] variant that is always dimmer than [surface], whether in light
+ *   or dark mode.
  * @property surfaceContainer A [surface] variant that affects containers of components, such as
- * cards, sheets, and menus.
+ *   cards, sheets, and menus.
  * @property surfaceContainerHigh A [surface] variant for containers with higher emphasis than
- * [surfaceContainer]. Use this role for content which requires more emphasis than [surfaceContainer].
+ *   [surfaceContainer]. Use this role for content which requires more emphasis than
+ *   [surfaceContainer].
  * @property surfaceContainerHighest A [surface] variant for containers with higher emphasis than
- * [surfaceContainerHigh]. Use this role for content which requires more emphasis than
- * [surfaceContainerHigh].
+ *   [surfaceContainerHigh]. Use this role for content which requires more emphasis than
+ *   [surfaceContainerHigh].
  * @property surfaceContainerLow A [surface] variant for containers with lower emphasis than
- * [surfaceContainer]. Use this role for content which requires less emphasis than [surfaceContainer].
+ *   [surfaceContainer]. Use this role for content which requires less emphasis than
+ *   [surfaceContainer].
  * @property surfaceContainerLowest A [surface] variant for containers with lower emphasis than
- * [surfaceContainerLow]. Use this role for content which requires less emphasis than
- * [surfaceContainerLow].
+ *   [surfaceContainerLow]. Use this role for content which requires less emphasis than
+ *   [surfaceContainerLow].
  */
-@Stable
+@Immutable
 class ColorScheme(
-    primary: Color,
-    onPrimary: Color,
-    primaryContainer: Color,
-    onPrimaryContainer: Color,
-    inversePrimary: Color,
-    secondary: Color,
-    onSecondary: Color,
-    secondaryContainer: Color,
-    onSecondaryContainer: Color,
-    tertiary: Color,
-    onTertiary: Color,
-    tertiaryContainer: Color,
-    onTertiaryContainer: Color,
-    background: Color,
-    onBackground: Color,
-    surface: Color,
-    onSurface: Color,
-    surfaceVariant: Color,
-    onSurfaceVariant: Color,
-    surfaceTint: Color,
-    inverseSurface: Color,
-    inverseOnSurface: Color,
-    error: Color,
-    onError: Color,
-    errorContainer: Color,
-    onErrorContainer: Color,
-    outline: Color,
-    outlineVariant: Color,
-    scrim: Color,
-    surfaceBright: Color,
-    surfaceDim: Color,
-    surfaceContainer: Color,
-    surfaceContainerHigh: Color,
-    surfaceContainerHighest: Color,
-    surfaceContainerLow: Color,
-    surfaceContainerLowest: Color,
+    val primary: Color,
+    val onPrimary: Color,
+    val primaryContainer: Color,
+    val onPrimaryContainer: Color,
+    val inversePrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val tertiaryContainer: Color,
+    val onTertiaryContainer: Color,
+    val background: Color,
+    val onBackground: Color,
+    val surface: Color,
+    val onSurface: Color,
+    val surfaceVariant: Color,
+    val onSurfaceVariant: Color,
+    val surfaceTint: Color,
+    val inverseSurface: Color,
+    val inverseOnSurface: Color,
+    val error: Color,
+    val onError: Color,
+    val errorContainer: Color,
+    val onErrorContainer: Color,
+    val outline: Color,
+    val outlineVariant: Color,
+    val scrim: Color,
+    val surfaceBright: Color,
+    val surfaceDim: Color,
+    val surfaceContainer: Color,
+    val surfaceContainerHigh: Color,
+    val surfaceContainerHighest: Color,
+    val surfaceContainerLow: Color,
+    val surfaceContainerLowest: Color,
 ) {
+    @Deprecated(
+        level = DeprecationLevel.WARNING,
+        message = "Use constructor with additional 'surfaceContainer' roles.",
+        replaceWith =
+            ReplaceWith(
+                "ColorScheme(primary,\n" +
+                    "onPrimary,\n" +
+                    "primaryContainer,\n" +
+                    "onPrimaryContainer,\n" +
+                    "inversePrimary,\n" +
+                    "secondary,\n" +
+                    "onSecondary,\n" +
+                    "secondaryContainer,\n" +
+                    "onSecondaryContainer,\n" +
+                    "tertiary,\n" +
+                    "onTertiary,\n" +
+                    "tertiaryContainer,\n" +
+                    "onTertiaryContainer,\n" +
+                    "background,\n" +
+                    "onBackground,\n" +
+                    "surface,\n" +
+                    "onSurface,\n" +
+                    "surfaceVariant,\n" +
+                    "onSurfaceVariant,\n" +
+                    "surfaceTint,\n" +
+                    "inverseSurface,\n" +
+                    "inverseOnSurface,\n" +
+                    "error,\n" +
+                    "onError,\n" +
+                    "errorContainer,\n" +
+                    "onErrorContainer,\n" +
+                    "outline,\n" +
+                    "outlineVariant,\n" +
+                    "scrim,\n" +
+                    "surfaceBright,\n" +
+                    "surfaceDim,\n" +
+                    "surfaceContainer,\n" +
+                    "surfaceContainerHigh,\n" +
+                    "surfaceContainerHighest,\n" +
+                    "surfaceContainerLow,\n" +
+                    "surfaceContainerLowest,)"
+            )
+    )
     constructor(
         primary: Color,
         onPrimary: Color,
@@ -219,79 +268,6 @@ class ColorScheme(
         surfaceContainerLow = Color.Unspecified,
         surfaceContainerLowest = Color.Unspecified,
     )
-    var primary by mutableStateOf(primary, structuralEqualityPolicy())
-        internal set
-    var onPrimary by mutableStateOf(onPrimary, structuralEqualityPolicy())
-        internal set
-    var primaryContainer by mutableStateOf(primaryContainer, structuralEqualityPolicy())
-        internal set
-    var onPrimaryContainer by mutableStateOf(onPrimaryContainer, structuralEqualityPolicy())
-        internal set
-    var inversePrimary by mutableStateOf(inversePrimary, structuralEqualityPolicy())
-        internal set
-    var secondary by mutableStateOf(secondary, structuralEqualityPolicy())
-        internal set
-    var onSecondary by mutableStateOf(onSecondary, structuralEqualityPolicy())
-        internal set
-    var secondaryContainer by mutableStateOf(secondaryContainer, structuralEqualityPolicy())
-        internal set
-    var onSecondaryContainer by mutableStateOf(onSecondaryContainer, structuralEqualityPolicy())
-        internal set
-    var tertiary by mutableStateOf(tertiary, structuralEqualityPolicy())
-        internal set
-    var onTertiary by mutableStateOf(onTertiary, structuralEqualityPolicy())
-        internal set
-    var tertiaryContainer by mutableStateOf(tertiaryContainer, structuralEqualityPolicy())
-        internal set
-    var onTertiaryContainer by mutableStateOf(onTertiaryContainer, structuralEqualityPolicy())
-        internal set
-    var background by mutableStateOf(background, structuralEqualityPolicy())
-        internal set
-    var onBackground by mutableStateOf(onBackground, structuralEqualityPolicy())
-        internal set
-    var surface by mutableStateOf(surface, structuralEqualityPolicy())
-        internal set
-    var onSurface by mutableStateOf(onSurface, structuralEqualityPolicy())
-        internal set
-    var surfaceVariant by mutableStateOf(surfaceVariant, structuralEqualityPolicy())
-        internal set
-    var onSurfaceVariant by mutableStateOf(onSurfaceVariant, structuralEqualityPolicy())
-        internal set
-    var surfaceTint by mutableStateOf(surfaceTint, structuralEqualityPolicy())
-        internal set
-    var inverseSurface by mutableStateOf(inverseSurface, structuralEqualityPolicy())
-        internal set
-    var inverseOnSurface by mutableStateOf(inverseOnSurface, structuralEqualityPolicy())
-        internal set
-    var error by mutableStateOf(error, structuralEqualityPolicy())
-        internal set
-    var onError by mutableStateOf(onError, structuralEqualityPolicy())
-        internal set
-    var errorContainer by mutableStateOf(errorContainer, structuralEqualityPolicy())
-        internal set
-    var onErrorContainer by mutableStateOf(onErrorContainer, structuralEqualityPolicy())
-        internal set
-    var outline by mutableStateOf(outline, structuralEqualityPolicy())
-        internal set
-    var outlineVariant by mutableStateOf(outlineVariant, structuralEqualityPolicy())
-        internal set
-    var scrim by mutableStateOf(scrim, structuralEqualityPolicy())
-        internal set
-    var surfaceBright by mutableStateOf(surfaceBright, structuralEqualityPolicy())
-        internal set
-    var surfaceDim by mutableStateOf(surfaceDim, structuralEqualityPolicy())
-        internal set
-    var surfaceContainer by mutableStateOf(surfaceContainer, structuralEqualityPolicy())
-        internal set
-    var surfaceContainerHigh by mutableStateOf(surfaceContainerHigh, structuralEqualityPolicy())
-        internal set
-    var surfaceContainerHighest by mutableStateOf(
-        surfaceContainerHighest, structuralEqualityPolicy())
-        internal set
-    var surfaceContainerLow by mutableStateOf(surfaceContainerLow, structuralEqualityPolicy())
-        internal set
-    var surfaceContainerLowest by mutableStateOf(surfaceContainerLowest, structuralEqualityPolicy())
-        internal set
 
     /** Returns a copy of this ColorScheme, optionally overriding some of the values. */
     fun copy(
@@ -480,11 +456,84 @@ class ColorScheme(
             "surfaceContainerLowest=$surfaceContainerLowest" +
             ")"
     }
+
+    internal var defaultButtonColorsCached: ButtonColors? = null
+    internal var defaultElevatedButtonColorsCached: ButtonColors? = null
+    internal var defaultFilledTonalButtonColorsCached: ButtonColors? = null
+    internal var defaultOutlinedButtonColorsCached: ButtonColors? = null
+    internal var defaultTextButtonColorsCached: ButtonColors? = null
+
+    internal var defaultCardColorsCached: CardColors? = null
+    internal var defaultElevatedCardColorsCached: CardColors? = null
+    internal var defaultOutlinedCardColorsCached: CardColors? = null
+
+    internal var defaultAssistChipColorsCached: ChipColors? = null
+    internal var defaultElevatedAssistChipColorsCached: ChipColors? = null
+    internal var defaultSuggestionChipColorsCached: ChipColors? = null
+    internal var defaultElevatedSuggestionChipColorsCached: ChipColors? = null
+    internal var defaultFilterChipColorsCached: SelectableChipColors? = null
+    internal var defaultElevatedFilterChipColorsCached: SelectableChipColors? = null
+    internal var defaultInputChipColorsCached: SelectableChipColors? = null
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultTopAppBarColorsCached: TopAppBarColors? = null
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultCenterAlignedTopAppBarColorsCached: TopAppBarColors? = null
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultMediumTopAppBarColorsCached: TopAppBarColors? = null
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultLargeTopAppBarColorsCached: TopAppBarColors? = null
+
+    internal var defaultCheckboxColorsCached: CheckboxColors? = null
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultDatePickerColorsCached: DatePickerColors? = null
+
+    internal var defaultIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultIconToggleButtonColorsCached: IconToggleButtonColors? = null
+    internal var defaultFilledIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultFilledIconToggleButtonColorsCached: IconToggleButtonColors? = null
+    internal var defaultFilledTonalIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultFilledTonalIconToggleButtonColorsCached: IconToggleButtonColors? = null
+    internal var defaultOutlinedIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultOutlinedIconToggleButtonColorsCached: IconToggleButtonColors? = null
+
+    internal var defaultToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultElevatedToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultTonalToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultOutlinedToggleButtonColorsCached: ToggleButtonColors? = null
+
+    internal var defaultListItemColorsCached: ListItemColors? = null
+
+    internal var defaultMenuItemColorsCached: MenuItemColors? = null
+
+    internal var defaultNavigationBarItemColorsCached: NavigationBarItemColors? = null
+    internal var defaultShortNavigationBarItemColorsCached: NavigationItemColors? = null
+
+    internal var defaultNavigationRailItemColorsCached: NavigationRailItemColors? = null
+    internal var mDefaultWideWideNavigationRailColorsCached: WideNavigationRailColors? = null
+    internal var defaultWideNavigationRailItemColorsCached: NavigationItemColors? = null
+
+    internal var defaultRadioButtonColorsCached: RadioButtonColors? = null
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultSegmentedButtonColorsCached: SegmentedButtonColors? = null
+
+    internal var defaultSliderColorsCached: SliderColors? = null
+
+    internal var defaultSwitchColorsCached: SwitchColors? = null
+
+    internal var defaultOutlinedTextFieldColorsCached: TextFieldColors? = null
+    internal var defaultTextFieldColorsCached: TextFieldColors? = null
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultTimePickerColorsCached: TimePickerColors? = null
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    internal var defaultRichTooltipColorsCached: RichTooltipColors? = null
 }
 
-/**
- * Returns a light Material color scheme.
- */
+/** Returns a light Material color scheme. */
 fun lightColorScheme(
     primary: Color = ColorLightTokens.Primary,
     onPrimary: Color = ColorLightTokens.OnPrimary,
@@ -630,9 +679,7 @@ fun lightColorScheme(
         scrim = scrim,
     )
 
-/**
- * Returns a dark Material color scheme.
- */
+/** Returns a dark Material color scheme. */
 fun darkColorScheme(
     primary: Color = ColorDarkTokens.Primary,
     onPrimary: Color = ColorDarkTokens.OnPrimary,
@@ -666,7 +713,7 @@ fun darkColorScheme(
     surfaceBright: Color = ColorDarkTokens.SurfaceBright,
     surfaceContainer: Color = ColorDarkTokens.SurfaceContainer,
     surfaceContainerHigh: Color = ColorDarkTokens.SurfaceContainerHigh,
-    surfaceContainerHighest: Color = ColorLightTokens.SurfaceContainerHighest,
+    surfaceContainerHighest: Color = ColorDarkTokens.SurfaceContainerHighest,
     surfaceContainerLow: Color = ColorDarkTokens.SurfaceContainerLow,
     surfaceContainerLowest: Color = ColorDarkTokens.SurfaceContainerLowest,
     surfaceDim: Color = ColorDarkTokens.SurfaceDim,
@@ -791,10 +838,10 @@ fun darkColorScheme(
  * [Color.Unspecified].
  *
  * @return the matching content color for [backgroundColor]. If [backgroundColor] is not present in
- * the theme's [ColorScheme], then returns [Color.Unspecified].
- *
+ *   the theme's [ColorScheme], then returns [Color.Unspecified].
  * @see contentColorFor
  */
+@Stable
 fun ColorScheme.contentColorFor(backgroundColor: Color): Color =
     when (backgroundColor) {
         primary -> onPrimary
@@ -831,8 +878,7 @@ fun ColorScheme.contentColorFor(backgroundColor: Color): Color =
  * value of [LocalContentColor] as a best-effort color.
  *
  * @return the matching content color for [backgroundColor]. If [backgroundColor] is not present in
- * the theme's [ColorScheme], then returns the current value of [LocalContentColor].
- *
+ *   the theme's [ColorScheme], then returns the current value of [LocalContentColor].
  * @see ColorScheme.contentColorFor
  */
 @Composable
@@ -849,10 +895,9 @@ fun contentColorFor(backgroundColor: Color) =
  *
  * @param backgroundColor The background color to compare to [ColorScheme.surface]
  * @param elevation The elevation provided to [ColorScheme.surfaceColorAtElevation] if
- * [backgroundColor] matches surface.
- *
+ *   [backgroundColor] matches surface.
  * @return [ColorScheme.surfaceColorAtElevation] at [elevation] if [backgroundColor] ==
- * [ColorScheme.surface] and [LocalTonalElevationEnabled] is set to true. Else [backgroundColor]
+ *   [ColorScheme.surface] and [LocalTonalElevationEnabled] is set to true. Else [backgroundColor]
  */
 @Composable
 @ReadOnlyComposable
@@ -869,10 +914,10 @@ internal fun ColorScheme.applyTonalElevation(backgroundColor: Color, elevation: 
  * Computes the surface tonal color at different elevation levels e.g. surface1 through surface5.
  *
  * @param elevation Elevation value used to compute alpha of the color overlay layer.
- *
  * @return the [ColorScheme.surface] color with an alpha of the [ColorScheme.surfaceTint] color
- * overlaid on top of it.
+ *   overlaid on top of it.
  */
+@Stable
 fun ColorScheme.surfaceColorAtElevation(
     elevation: Dp,
 ): Color {
@@ -882,63 +927,29 @@ fun ColorScheme.surfaceColorAtElevation(
 }
 
 /**
- * Updates the internal values of a given [ColorScheme] with values from the [other]
- * [ColorScheme].
- * This allows efficiently updating a subset of [ColorScheme], without recomposing every
- * composable that consumes values from [LocalColorScheme].
+ * Returns a light Material color scheme.
  *
- * Because [ColorScheme] is very wide-reaching, and used by many expensive composables in the
- * hierarchy, providing a new value to [LocalColorScheme] causes every composable consuming
- * [LocalColorScheme] to recompose, which is prohibitively expensive in cases such as animating one
- * color in the theme. Instead, [ColorScheme] is internally backed by [mutableStateOf], and this
- * function mutates the internal state of [this] to match values in [other]. This means that any
- * changes will mutate the internal state of [this], and only cause composables that are reading the
- * specific changed value to recompose.
+ * The default color scheme for [MaterialExpressiveTheme]. For dark mode, use [darkColorScheme].
+ *
+ * Example of MaterialExpressiveTheme toggling expressiveLightColorScheme and darkTheme.
+ *
+ * @sample androidx.compose.material3.samples.MaterialExpressiveThemeColorSchemeSample
  */
-internal fun ColorScheme.updateColorSchemeFrom(other: ColorScheme) {
-    primary = other.primary
-    onPrimary = other.onPrimary
-    primaryContainer = other.primaryContainer
-    onPrimaryContainer = other.onPrimaryContainer
-    inversePrimary = other.inversePrimary
-    secondary = other.secondary
-    onSecondary = other.onSecondary
-    secondaryContainer = other.secondaryContainer
-    onSecondaryContainer = other.onSecondaryContainer
-    tertiary = other.tertiary
-    onTertiary = other.onTertiary
-    tertiaryContainer = other.tertiaryContainer
-    onTertiaryContainer = other.onTertiaryContainer
-    background = other.background
-    onBackground = other.onBackground
-    surface = other.surface
-    onSurface = other.onSurface
-    surfaceVariant = other.surfaceVariant
-    onSurfaceVariant = other.onSurfaceVariant
-    surfaceTint = other.surfaceTint
-    inverseSurface = other.inverseSurface
-    inverseOnSurface = other.inverseOnSurface
-    error = other.error
-    onError = other.onError
-    errorContainer = other.errorContainer
-    onErrorContainer = other.onErrorContainer
-    outline = other.outline
-    outlineVariant = other.outlineVariant
-    scrim = other.scrim
-    surfaceBright = other.surfaceBright
-    surfaceDim = other.surfaceDim
-    surfaceContainer = other.surfaceContainer
-    surfaceContainerHigh = other.surfaceContainerHigh
-    surfaceContainerHighest = other.surfaceContainerHighest
-    surfaceContainerLow = other.surfaceContainerLow
-    surfaceContainerLowest = other.surfaceContainerLowest
-}
+@ExperimentalMaterial3ExpressiveApi
+fun expressiveLightColorScheme() =
+    lightColorScheme(
+        // TODO: Replace palette references with color token references when available.
+        onPrimaryContainer = PaletteTokens.Primary30,
+        onSecondaryContainer = PaletteTokens.Secondary30,
+        onTertiaryContainer = PaletteTokens.Tertiary30,
+        onErrorContainer = PaletteTokens.Error30
+    )
 
 /**
  * Helper function for component color tokens. Here is an example on how to use component color
- * tokens:
- * ``MaterialTheme.colorScheme.fromToken(ExtendedFabBranded.BrandedContainerColor)``
+ * tokens: ``MaterialTheme.colorScheme.fromToken(ExtendedFabBranded.BrandedContainerColor)``
  */
+@Stable
 internal fun ColorScheme.fromToken(value: ColorSchemeKeyTokens): Color {
     return when (value) {
         ColorSchemeKeyTokens.Background -> background
@@ -984,10 +995,8 @@ internal fun ColorScheme.fromToken(value: ColorSchemeKeyTokens): Color {
 /**
  * CompositionLocal used to pass [ColorScheme] down the tree.
  *
- * Setting the value here is typically done as part of [MaterialTheme], which will automatically
- * handle efficiently updating any changed colors without causing unnecessary recompositions, using
- * [ColorScheme.updateColorSchemeFrom]. To retrieve the current value of this CompositionLocal, use
- * [MaterialTheme.colorScheme].
+ * Setting the value here is typically done as part of [MaterialTheme]. To retrieve the current
+ * value of this CompositionLocal, use [MaterialTheme.colorScheme].
  */
 internal val LocalColorScheme = staticCompositionLocalOf { lightColorScheme() }
 
@@ -1006,10 +1015,8 @@ val LocalTonalElevationEnabled = staticCompositionLocalOf { true }
 internal const val DisabledAlpha = 0.38f
 
 /**
- * Converts a color token key to the local color scheme provided by the theme
- * The color is subscribed to [LocalColorScheme] changes.
+ * Converts a color token key to the local color scheme provided by the theme The color is
+ * subscribed to [LocalColorScheme] changes.
  */
 internal val ColorSchemeKeyTokens.value: Color
-    @ReadOnlyComposable
-    @Composable
-    get() = MaterialTheme.colorScheme.fromToken(this)
+    @ReadOnlyComposable @Composable get() = MaterialTheme.colorScheme.fromToken(this)

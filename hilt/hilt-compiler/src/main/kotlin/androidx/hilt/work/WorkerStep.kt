@@ -20,13 +20,12 @@ import androidx.hilt.ClassNames
 import androidx.room.compiler.codegen.toJavaPoet
 import androidx.room.compiler.processing.XElement
 import androidx.room.compiler.processing.XProcessingEnv
+import androidx.room.compiler.processing.XProcessingEnvConfig
 import androidx.room.compiler.processing.XProcessingStep
 import androidx.room.compiler.processing.XTypeElement
 import javax.tools.Diagnostic
 
-/**
- * Processing step that generates code enabling assisted injection of Workers using Hilt.
- */
+/** Processing step that generates code enabling assisted injection of Workers using Hilt. */
 class WorkerStep : XProcessingStep {
 
     override fun annotations() = setOf(ClassNames.HILT_WORKER.canonicalName())
@@ -43,6 +42,8 @@ class WorkerStep : XProcessingStep {
         return emptySet()
     }
 
+    // usage of findTypeElement and requireType with -Pandroidx.maxDepVersions=true
+    @Suppress("DEPRECATION")
     private fun parse(env: XProcessingEnv, workerTypeElement: XTypeElement): WorkerElement? {
         var valid = true
 
@@ -65,17 +66,18 @@ class WorkerStep : XProcessingStep {
             valid = false
         }
 
-        val constructors = workerTypeElement.getConstructors().filter {
-            if (it.hasAnnotation(ClassNames.INJECT)) {
-                env.error(
-                    "Worker constructor should be annotated with @AssistedInject instead of " +
-                        "@Inject.",
-                    it
-                )
-                valid = false
+        val constructors =
+            workerTypeElement.getConstructors().filter {
+                if (it.hasAnnotation(ClassNames.INJECT)) {
+                    env.error(
+                        "Worker constructor should be annotated with @AssistedInject instead of " +
+                            "@Inject.",
+                        it
+                    )
+                    valid = false
+                }
+                it.hasAnnotation(ClassNames.ASSISTED_INJECT)
             }
-            it.hasAnnotation(ClassNames.ASSISTED_INJECT)
-        }
         if (constructors.size != 1) {
             env.error(
                 "@HiltWorker annotated class should contain exactly one @AssistedInject " +
@@ -84,10 +86,12 @@ class WorkerStep : XProcessingStep {
             )
             valid = false
         }
-        constructors.filter { it.isPrivate() }.forEach {
-            env.error("@AssistedInject annotated constructors must not be private.", it)
-            valid = false
-        }
+        constructors
+            .filter { it.isPrivate() }
+            .forEach {
+                env.error("@AssistedInject annotated constructors must not be private.", it)
+                valid = false
+            }
 
         if (workerTypeElement.isNested() && !workerTypeElement.isStatic()) {
             env.error(
@@ -138,5 +142,9 @@ class WorkerStep : XProcessingStep {
         } else {
             messager.printMessage(Diagnostic.Kind.ERROR, message)
         }
+    }
+
+    companion object {
+        val ENV_CONFIG = XProcessingEnvConfig.DEFAULT.copy(disableAnnotatedElementValidation = true)
     }
 }

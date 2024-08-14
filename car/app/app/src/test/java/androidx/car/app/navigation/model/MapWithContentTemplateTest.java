@@ -24,10 +24,15 @@ import androidx.car.app.TestUtils;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.ActionStrip;
 import androidx.car.app.model.GridTemplate;
+import androidx.car.app.model.Header;
 import androidx.car.app.model.ItemList;
 import androidx.car.app.model.ListTemplate;
 import androidx.car.app.model.MessageTemplate;
+import androidx.car.app.model.Pane;
+import androidx.car.app.model.PaneTemplate;
 import androidx.car.app.model.Row;
+import androidx.car.app.model.signin.PinSignInMethod;
+import androidx.car.app.model.signin.SignInTemplate;
 import androidx.test.core.app.ApplicationProvider;
 
 import org.junit.Test;
@@ -45,30 +50,54 @@ public class MapWithContentTemplateTest {
                             "ic_test_1")))
             .build();
 
-    private static MessageTemplate getMessageTemplate() {
+    private static MessageTemplate createMessageTemplate() {
         return new MessageTemplate.Builder("foo")
-                .setTitle("bar")
+                .setHeader(new Header.Builder().setTitle("bar").build())
                 .build();
     }
 
-    private static GridTemplate getGridTemplate() {
+    private static GridTemplate createGridTemplate() {
         ItemList list = TestUtils.getGridItemList(2);
         return new GridTemplate.Builder()
-                .setTitle("Title")
+                .setHeader(new Header.Builder().setTitle("Title").build())
                 .setSingleList(list)
                 .build();
     }
 
-    private static ListTemplate getListTemplate() {
+    private static ListTemplate createListTemplate() {
         Row row1 = new Row.Builder().setTitle("Bananas").build();
         return new ListTemplate.Builder()
-                .setTitle("Title")
+                .setHeader(
+                        new Header.Builder()
+                                .setTitle("Title")
+                                .build())
                 .setSingleList(new ItemList.Builder().addItem(row1).build())
                 .build();
     }
 
+    private static PaneTemplate createPaneTemplate() {
+        Row row1 = new Row.Builder().setTitle("Bananas").build();
+        return new PaneTemplate.Builder(new Pane.Builder()
+                .addRow(row1)
+                .build())
+                .setHeader(
+                        new Header.Builder()
+                                .setTitle("Title")
+                                .setStartHeaderAction(Action.BACK)
+                                .build())
+                .build();
+    }
+
+    private static SignInTemplate createSignInTemplate() {
+        PinSignInMethod pinSignInMethod = new PinSignInMethod("123456789ABC");
+        return new SignInTemplate.Builder(pinSignInMethod)
+                .setTitle("Title")
+                .setHeaderAction(Action.BACK)
+                .build();
+    }
+
     @Test
-    public void createInstance_noTemplate_throws() {
+    public void createInstance_noContentTemplate_throws() {
         assertThrows(IllegalArgumentException.class, () -> new MapWithContentTemplate.Builder()
                 .build());
     }
@@ -77,21 +106,35 @@ public class MapWithContentTemplateTest {
     public void createInstance_unsupportedTemplate_throws() {
         assertThrows(IllegalArgumentException.class, () ->
                 new MapWithContentTemplate.Builder()
-                .setContentTemplate(getListTemplate())
+                .setContentTemplate(createSignInTemplate())
                 .build());
+    }
+
+    @Test
+    public void createInstance_listTemplate_doesNotThrow() {
+        new MapWithContentTemplate.Builder()
+                .setContentTemplate(createListTemplate())
+                .build();
+    }
+
+    @Test
+    public void createInstance_paneTemplate_doesNotThrow() {
+        new MapWithContentTemplate.Builder()
+                .setContentTemplate(createPaneTemplate())
+                .build();
     }
 
     @Test
     public void createInstance_gridTemplate_doesNotThrow() {
         new MapWithContentTemplate.Builder()
-            .setContentTemplate(getGridTemplate())
+            .setContentTemplate(createGridTemplate())
             .build();
     }
 
     @Test
     public void createInstance_messageTemplate_doesNotThrow() {
         new MapWithContentTemplate.Builder()
-            .setContentTemplate(getMessageTemplate())
+            .setContentTemplate(createMessageTemplate())
             .build();
     }
 
@@ -104,10 +147,10 @@ public class MapWithContentTemplateTest {
         MapWithContentTemplate template = new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(actionStrip)
-                .setContentTemplate(getMessageTemplate())
+                .setContentTemplate(createMessageTemplate())
                 .build();
 
-        assertThat(template.getContentTemplate()).isEqualTo(getMessageTemplate());
+        assertThat(template.getContentTemplate()).isEqualTo(createMessageTemplate());
         assertThat(template.getActionStrip()).isEqualTo(actionStrip);
         assertThat(template.getMapController().getMapActionStrip()).isEqualTo(mMapActionStrip);
     }
@@ -121,10 +164,10 @@ public class MapWithContentTemplateTest {
         MapWithContentTemplate template = new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(actionStrip)
-                .setContentTemplate(getGridTemplate())
+                .setContentTemplate(createGridTemplate())
                 .build();
 
-        assertThat(template.getContentTemplate()).isEqualTo(getGridTemplate());
+        assertThat(template.getContentTemplate()).isEqualTo(createGridTemplate());
         assertThat(template.getActionStrip()).isEqualTo(actionStrip);
         assertThat(template.getMapController().getMapActionStrip()).isEqualTo(mMapActionStrip);
     }
@@ -138,13 +181,13 @@ public class MapWithContentTemplateTest {
         MapWithContentTemplate template = new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(actionStrip)
-                .setContentTemplate(getGridTemplate())
+                .setContentTemplate(createGridTemplate())
                 .build();
 
         assertThat(template).isNotEqualTo(new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(new ActionStrip.Builder().addAction(Action.APP_ICON).build())
-                .setContentTemplate(getGridTemplate())
+                .setContentTemplate(createGridTemplate())
                 .build());
     }
 
@@ -157,13 +200,13 @@ public class MapWithContentTemplateTest {
         MapWithContentTemplate template = new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(actionStrip)
-                .setContentTemplate(getGridTemplate())
+                .setContentTemplate(createGridTemplate())
                 .build();
 
         assertThat(template).isNotEqualTo(new MapWithContentTemplate.Builder()
                 .setMapController(mapController)
                 .setActionStrip(actionStrip)
-                .setContentTemplate(getMessageTemplate())
+                .setContentTemplate(createMessageTemplate())
                 .build());
     }
 }

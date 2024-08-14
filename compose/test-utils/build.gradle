@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.Publish
 
@@ -23,11 +30,9 @@ plugins {
     id("AndroidXComposePlugin")
 }
 
-def desktopEnabled = false // b/276387374 TODO: KmpPlatformsKt.enableDesktop(project)
-
 androidXMultiplatform {
     android()
-    if (desktopEnabled) desktop()
+    desktop()
 
     sourceSets {
         commonMain {
@@ -71,44 +76,24 @@ androidXMultiplatform {
             }
         }
 
-        if (desktopEnabled) {
-            desktopMain {
-                dependsOn(jvmMain)
-                dependencies {
-                }
-            }
-        }
-
-        jvmTest {
-            dependsOn(commonTest)
+        desktopMain {
+            dependsOn(jvmMain)
             dependencies {
             }
         }
 
-        androidAndroidTest {
-            dependsOn(jvmTest)
+        androidInstrumentedTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.truth)
                 implementation(projectOrArtifact(":compose:material:material"))
             }
         }
 
-        // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you
-        //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
-        //  level dependencies block instead:
-        //  `dependencies { testImplementation(libs.robolectric) }`
-        androidTest {
-            dependsOn(jvmTest)
+        androidUnitTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.truth)
-            }
-        }
-
-        if (desktopEnabled) {
-            desktopTest {
-                dependsOn(jvmTest)
-                dependencies {
-                }
             }
         }
     }
@@ -117,11 +102,11 @@ androidXMultiplatform {
 androidx {
     name = "Compose Internal Test Utils"
     type = LibraryType.INTERNAL_TEST_LIBRARY
-    publish = Publish.NONE
     inceptionYear = "2020"
     description = "Compose internal test utils."
 }
 
 android {
+    compileSdk 35
     namespace "androidx.compose.testutils"
 }

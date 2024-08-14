@@ -88,6 +88,9 @@ const val PLAYGROUND_SNAPSHOT_BUILD_ID = "androidx.playground.snapshotBuildId"
 /** Build Id used to pull SNAPSHOT version of Metalava for Playground projects */
 const val PLAYGROUND_METALAVA_BUILD_ID = "androidx.playground.metalavaBuildId"
 
+/** Specifies to prepend the current time to each Gradle log message */
+const val PRINT_TIMESTAMPS = "androidx.printTimestamps"
+
 /**
  * Filepath to the java agent of YourKit for profiling If this value is set, profiling via YourKit
  * will automatically be enabled
@@ -112,6 +115,12 @@ const val VERIFY_UP_TO_DATE = "androidx.verifyUpToDate"
  */
 const val KMP_GITHUB_BUILD = "androidx.github.build"
 
+/** Specifies to give as much memory to Gradle as in a typical CI run */
+const val HIGH_MEMORY = "androidx.highMemory"
+
+/** Negates the HIGH_MEMORY flag */
+const val LOW_MEMORY = "androidx.lowMemory"
+
 /**
  * If true, don't require lint-checks project to exist. This should only be set in integration
  * tests, to allow them to save time by not configuring extra projects.
@@ -127,20 +136,19 @@ const val XCODEGEN_DOWNLOAD_URI = "androidx.benchmark.darwin.xcodeGenDownloadUri
 /** If true, don't restrict usage of compileSdk property. */
 const val ALLOW_CUSTOM_COMPILE_SDK = "androidx.allowCustomCompileSdk"
 
-/** Whether to update gradle signature verification metadata */
-const val UPDATE_SIGNATURES = "androidx.update.signatures"
+/** If true, include Jetpack library projects that live outside of `frameworks/support`. */
+const val INCLUDE_OPTIONAL_PROJECTS = "androidx.includeOptionalProjects"
 
 /**
- * Comma-delimited list of project path prefixes which have been opted-out of the Suppress
- * Compatibility migration.
+ * If true, enable the ArrayNullnessMigration lint check to transition to type-use nullness
+ * annotations. Defaults to false.
  */
-const val SUPPRESS_COMPATIBILITY_OPT_OUT = "androidx.suppress.compatibility.optout"
+const val MIGRATE_ARRAY_ANNOTATIONS = "androidx.migrateArrayAnnotations"
 
-/**
- * Comma-delimited list of project path prefixes which have been opted-in to the Suppress
- * Compatibility migration.
- */
-const val SUPPRESS_COMPATIBILITY_OPT_IN = "androidx.suppress.compatibility.optin"
+/** If true, yarn dependencies are fetched from an offline mirror */
+const val YARN_OFFLINE_MODE = "androidx.yarnOfflineMode"
+
+const val FORCE_KOTLIN_2_0_TARGET = "androidx.forceKotlin20Target"
 
 val ALL_ANDROIDX_PROPERTIES =
     setOf(
@@ -152,6 +160,8 @@ val ALL_ANDROIDX_PROPERTIES =
         ENABLE_COMPOSE_COMPILER_REPORTS,
         DISPLAY_TEST_OUTPUT,
         ENABLE_DOCUMENTATION,
+        HIGH_MEMORY,
+        LOW_MEMORY,
         STUDIO_TYPE,
         SUMMARIZE_STANDARD_ERROR,
         USE_MAX_DEP_VERSIONS,
@@ -163,22 +173,23 @@ val ALL_ANDROIDX_PROPERTIES =
         AffectedModuleDetector.BASE_COMMIT_ARG,
         PLAYGROUND_SNAPSHOT_BUILD_ID,
         PLAYGROUND_METALAVA_BUILD_ID,
+        PRINT_TIMESTAMPS,
         PROFILE_YOURKIT_AGENT_PATH,
         KMP_GITHUB_BUILD,
         ENABLED_KMP_TARGET_PLATFORMS,
         ALLOW_MISSING_LINT_CHECKS_PROJECT,
         XCODEGEN_DOWNLOAD_URI,
         ALLOW_CUSTOM_COMPILE_SDK,
-        UPDATE_SIGNATURES,
         FilteredAnchorTask.PROP_TASK_NAME,
         FilteredAnchorTask.PROP_PATH_PREFIX,
+        INCLUDE_OPTIONAL_PROJECTS,
+        MIGRATE_ARRAY_ANNOTATIONS,
+        YARN_OFFLINE_MODE,
+        FORCE_KOTLIN_2_0_TARGET,
     ) + AndroidConfigImpl.GRADLE_PROPERTIES
 
-val PREFIXED_ANDROIDX_PROPERTIES =
-    setOf(
-        SUPPRESS_COMPATIBILITY_OPT_OUT,
-        SUPPRESS_COMPATIBILITY_OPT_IN,
-    )
+fun Project.shouldForceKotlin20Target() =
+    project.providers.gradleProperty(FORCE_KOTLIN_2_0_TARGET).map { it.toBoolean() }.orElse(false)
 
 /**
  * Whether to enable constraints for projects in same-version groups See the property definition for
@@ -193,7 +204,7 @@ fun Project.shouldAddGroupConstraints() = booleanPropertyProvider(ADD_GROUP_CONS
  * Returns null if there is no alternative project url.
  */
 fun Project.getAlternativeProjectUrl(): String? =
-    project.findProperty(ALTERNATIVE_PROJECT_URL) as? String
+    project.providers.gradleProperty(ALTERNATIVE_PROJECT_URL).getOrNull()
 
 /**
  * Check that version extra meets the specified rules (version is in format major.minor.patch-extra)
@@ -211,10 +222,7 @@ fun Project.isValidateProjectStructureEnabled(): Boolean =
 fun Project.validateAllAndroidxArgumentsAreRecognized() {
     for (propertyName in project.properties.keys) {
         if (propertyName.startsWith("androidx")) {
-            if (
-                !ALL_ANDROIDX_PROPERTIES.contains(propertyName) &&
-                    PREFIXED_ANDROIDX_PROPERTIES.none { propertyName.startsWith(it) }
-            ) {
+            if (!ALL_ANDROIDX_PROPERTIES.contains(propertyName)) {
                 val message =
                     "Unrecognized Androidx property '$propertyName'.\n" +
                         "\n" +
@@ -249,19 +257,21 @@ fun Project.isDisplayTestOutput(): Boolean = findBooleanProperty(DISPLAY_TEST_OU
 fun Project.isWriteVersionedApiFilesEnabled(): Boolean =
     findBooleanProperty(WRITE_VERSIONED_API_FILES) ?: true
 
-/** Returns whether the project should generate documentation. */
-fun Project.isDocumentationEnabled(): Boolean {
-    if (System.getenv().containsKey("ANDROIDX_PROJECTS")) {
-        val projects = System.getenv()["ANDROIDX_PROJECTS"] as String
-        if (projects != "ALL") return false
-    }
-    return (project.findProperty(ENABLE_DOCUMENTATION) as? String)?.toBoolean() ?: true
-}
-
 /** Returns whether the build is for checking forward compatibility across projects */
 fun Project.usingMaxDepVersions(): Boolean {
-    return project.hasProperty(USE_MAX_DEP_VERSIONS)
+    return project.providers.gradleProperty(USE_MAX_DEP_VERSIONS).isPresent()
 }
+
+/** Returns whether we export compose compiler metrics */
+fun Project.enableComposeCompilerMetrics() =
+    findBooleanProperty(ENABLE_COMPOSE_COMPILER_METRICS) ?: false
+
+/** Returns whether we export compose compiler reports */
+fun Project.enableComposeCompilerReports() =
+    findBooleanProperty(ENABLE_COMPOSE_COMPILER_REPORTS) ?: false
+
+/** Returns whether we should use the offline mirror for dependencies */
+fun Project.useYarnOffline() = findBooleanProperty(YARN_OFFLINE_MODE) ?: false
 
 /**
  * Returns whether this is an integration test that is allowing lint checks to be skipped to save
@@ -274,29 +284,14 @@ fun Project.allowMissingLintProject() =
 fun Project.isCustomCompileSdkAllowed(): Boolean =
     findBooleanProperty(ALLOW_CUSTOM_COMPILE_SDK) ?: true
 
-fun Project.findBooleanProperty(propName: String) = (findProperty(propName) as? String)?.toBoolean()
+/**
+ * Whether to enable the ArrayNullnessMigration lint check for moving nullness annotations on arrays
+ * when switching a project to type-use nullness annotations.
+ */
+fun Project.migrateArrayAnnotations() = findBooleanProperty(MIGRATE_ARRAY_ANNOTATIONS) ?: false
+
+fun Project.findBooleanProperty(propName: String) = booleanPropertyProvider(propName).get()
 
 fun Project.booleanPropertyProvider(propName: String): Provider<Boolean> {
     return project.providers.gradleProperty(propName).map { s -> s.toBoolean() }.orElse(false)
 }
-
-/**
- * List of project path prefixes which have been opted-in to the Suppress Compatibility migration.
- */
-fun Project.getSuppressCompatibilityOptInPathPrefixes(): List<String> =
-    aggregatePropertyPrefix(SUPPRESS_COMPATIBILITY_OPT_IN)
-
-/**
- * List of project path prefixes which have been opted out of the Suppress Compatibility migration.
- */
-fun Project.getSuppressCompatibilityOptOutPathPrefixes(): List<String> =
-    aggregatePropertyPrefix(SUPPRESS_COMPATIBILITY_OPT_OUT)
-
-internal fun Project.aggregatePropertyPrefix(prefix: String): List<String> =
-    properties.flatMap { (name, value) ->
-        if (name.startsWith(prefix)) {
-            (value as? String)?.split(",") ?: emptyList()
-        } else {
-            emptyList()
-        }
-    }

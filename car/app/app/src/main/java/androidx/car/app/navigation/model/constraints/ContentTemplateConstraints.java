@@ -18,7 +18,6 @@ package androidx.car.app.navigation.model.constraints;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
-import androidx.car.app.annotations.ExperimentalCarApi;
 import androidx.car.app.annotations.RequiresCarApi;
 import androidx.car.app.model.GridTemplate;
 import androidx.car.app.model.ListTemplate;
@@ -34,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
  * template.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
-@ExperimentalCarApi
 @RequiresCarApi(7)
 public class ContentTemplateConstraints {
     /** Allowed templates for Map with Content Templates */
@@ -42,7 +40,9 @@ public class ContentTemplateConstraints {
     public static final ContentTemplateConstraints MAP_WITH_CONTENT_TEMPLATE_CONSTRAINTS =
             new ContentTemplateConstraints(ImmutableSet.of(
                     GridTemplate.class,
-                    MessageTemplate.class
+                    MessageTemplate.class,
+                    ListTemplate.class,
+                    PaneTemplate.class
             ));
 
     /** Allowed templates for TabContents */
@@ -58,7 +58,7 @@ public class ContentTemplateConstraints {
     private ImmutableSet<Class<? extends Template>> mAllowedTemplateTypes;
 
     /**
-     * Checks if the {@link ContentTemplate} meets the constraint's requirement(s).
+     * Checks if the {@link Template} meets the constraint's requirement(s).
      *
      * @throws IllegalArgumentException if any types are not allowed
      */

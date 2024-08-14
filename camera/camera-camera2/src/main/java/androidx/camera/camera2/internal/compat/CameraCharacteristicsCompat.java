@@ -23,7 +23,6 @@ import android.os.Build;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.internal.compat.workaround.OutputSizesCorrector;
 
@@ -35,7 +34,6 @@ import java.util.Set;
  * A wrapper for {@link CameraCharacteristics} which caches the retrieved values to optimize
  * the latency and might contain backward compatible fixes for certain parameters.
  */
-@RequiresApi(21)
 public class CameraCharacteristicsCompat {
     @NonNull
     @GuardedBy("this")
@@ -129,7 +127,16 @@ public class CameraCharacteristicsCompat {
     @NonNull
     public StreamConfigurationMapCompat getStreamConfigurationMapCompat() {
         if (mStreamConfigurationMapCompat == null) {
-            StreamConfigurationMap map = get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            StreamConfigurationMap map;
+            try {
+                map = get(
+                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            } catch (NullPointerException | AssertionError e) {
+                // Some devices may throw AssertionError when querying stream configuration map
+                // from CameraCharacteristics during bindToLifecycle. Catch the AssertionError and
+                // throw IllegalArgumentException so app level can decide how to handle.
+                throw new IllegalArgumentException(e.getMessage());
+            }
             if (map == null) {
                 throw new IllegalArgumentException("StreamConfigurationMap is null!");
             }
@@ -148,6 +155,14 @@ public class CameraCharacteristicsCompat {
     @NonNull
     public CameraCharacteristics toCameraCharacteristics() {
         return mCameraCharacteristicsImpl.unwrap();
+    }
+
+    /**
+     * Returns the camera id associated with the camera characteristics.
+     */
+    @NonNull
+    public String getCameraId() {
+        return mCameraId;
     }
 
     /**

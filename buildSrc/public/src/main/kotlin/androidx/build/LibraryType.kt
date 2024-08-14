@@ -35,8 +35,7 @@ package androidx.build
  * The possible values of LibraryType are as follows: PUBLISHED_LIBRARY: a conventional library,
  * published, sourced, documented, and versioned. PUBLISHED_TEST_LIBRARY: PUBLISHED_LIBRARY, but
  * allows calling @VisibleForTesting API. Used for libraries that allow developers to test code that
- * uses your library. Often provides test fakes. PUBLISHED_NATIVE_LIBRARY: PUBLISHED_LIBRARY, but
- * uses native API tracking instead of Java INTERNAL_TEST_LIBRARY: unpublished, untracked,
+ * uses your library. Often provides test fakes. INTERNAL_TEST_LIBRARY: unpublished, untracked,
  * undocumented. Used in internal tests. Usually contains integration tests, but is _not_ an app.
  * Runs device tests. INTERNAL_HOST_TEST_LIBRARY: as INTERNAL_TEST_LIBRARY, but runs host tests
  * instead. Avoid mixing host tests and device tests in the same library, for performance /
@@ -57,24 +56,25 @@ package androidx.build
  * b/281843422 UNSET: a library that has not yet been migrated to using LibraryType. Should never be
  * used. APP: an app, such as an example app or integration testsapp. Should never be used; apps
  * should not apply the AndroidX plugin or have an androidx block in their build.gradle files.
- *
- * TODO: potential future LibraryTypes: KOTLIN_ONLY_LIBRARY: like PUBLISHED_LIBRARY, but not
- *   intended for use from java. ktx and compose. INTERNAL_TEST DEMO IDE_PLUGIN
  */
 sealed class LibraryType(
     val publish: Publish = Publish.NONE,
     val sourceJars: Boolean = false,
     val checkApi: RunApiTasks = RunApiTasks.No("Unknown Library Type"),
     val compilationTarget: CompilationTarget = CompilationTarget.DEVICE,
-    val allowCallingVisibleForTestsApis: Boolean = false
+    val allowCallingVisibleForTestsApis: Boolean = false,
+    val targetsKotlinConsumersOnly: Boolean = false
 ) {
     val name: String
         get() = javaClass.simpleName
 
     companion object {
         val PUBLISHED_LIBRARY = PublishedLibrary()
+        val PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS =
+            PublishedLibrary(targetsKotlinConsumersOnly = true)
         val PUBLISHED_TEST_LIBRARY = PublishedTestLibrary()
-        val PUBLISHED_NATIVE_LIBRARY = PublishedNativeLibrary()
+        val PUBLISHED_KOTLIN_ONLY_TEST_LIBRARY =
+            PublishedTestLibrary(targetsKotlinConsumersOnly = true)
         val INTERNAL_TEST_LIBRARY = InternalTestLibrary()
         val INTERNAL_HOST_TEST_LIBRARY = InternalHostTestLibrary()
         val SAMPLES = Samples()
@@ -95,8 +95,10 @@ sealed class LibraryType(
         private val allTypes =
             mapOf(
                 "PUBLISHED_LIBRARY" to PUBLISHED_LIBRARY,
+                "PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS" to
+                    PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS,
                 "PUBLISHED_TEST_LIBRARY" to PUBLISHED_TEST_LIBRARY,
-                "PUBLISHED_NATIVE_LIBRARY" to PUBLISHED_NATIVE_LIBRARY,
+                "PUBLISHED_KOTLIN_ONLY_TEST_LIBRARY" to PUBLISHED_KOTLIN_ONLY_TEST_LIBRARY,
                 "INTERNAL_TEST_LIBRARY" to INTERNAL_TEST_LIBRARY,
                 "INTERNAL_HOST_TEST_LIBRARY" to INTERNAL_HOST_TEST_LIBRARY,
                 "SAMPLES" to SAMPLES,
@@ -120,12 +122,16 @@ sealed class LibraryType(
         }
     }
 
-    open class PublishedLibrary(allowCallingVisibleForTestsApis: Boolean = false) :
+    open class PublishedLibrary(
+        allowCallingVisibleForTestsApis: Boolean = false,
+        targetsKotlinConsumersOnly: Boolean = false
+    ) :
         LibraryType(
             publish = Publish.SNAPSHOT_AND_RELEASE,
             sourceJars = true,
             checkApi = RunApiTasks.Yes(),
-            allowCallingVisibleForTestsApis = allowCallingVisibleForTestsApis
+            allowCallingVisibleForTestsApis = allowCallingVisibleForTestsApis,
+            targetsKotlinConsumersOnly = targetsKotlinConsumersOnly
         )
 
     open class InternalLibrary(
@@ -138,13 +144,15 @@ sealed class LibraryType(
             allowCallingVisibleForTestsApis = allowCallingVisibleForTestsApis
         )
 
-    class PublishedTestLibrary() : PublishedLibrary(allowCallingVisibleForTestsApis = true)
+    class PublishedTestLibrary(targetsKotlinConsumersOnly: Boolean = false) :
+        PublishedLibrary(
+            allowCallingVisibleForTestsApis = true,
+            targetsKotlinConsumersOnly = targetsKotlinConsumersOnly
+        )
 
     class InternalTestLibrary() : InternalLibrary(allowCallingVisibleForTestsApis = true)
 
     class InternalHostTestLibrary() : InternalLibrary(CompilationTarget.HOST)
-
-    class PublishedNativeLibrary : PublishedLibrary()
 
     class Samples :
         LibraryType(
@@ -264,8 +272,10 @@ enum class Publish {
 sealed class RunApiTasks {
     /** Automatically determine whether API tasks should be run. */
     object Auto : RunApiTasks()
+
     /** Always run API tasks regardless of other project properties. */
     data class Yes(val reason: String? = null) : RunApiTasks()
+
     /** Do not run any API tasks. */
     data class No(val reason: String) : RunApiTasks()
 }

@@ -32,22 +32,20 @@ internal object LocalSdkActivityHandlerRegistry {
     private val mapsLock = Any()
 
     @GuardedBy("mapsLock")
-    private val handlerToToken =
-        hashMapOf<SdkSandboxActivityHandlerCompat, IBinder>()
+    private val handlerToHandlerInfo = hashMapOf<SdkSandboxActivityHandlerCompat, HandlerInfo>()
 
     @GuardedBy("mapsLock")
-    private val tokenToHandler =
-        hashMapOf<IBinder, SdkSandboxActivityHandlerCompat>()
+    private val tokenToHandler = hashMapOf<IBinder, SdkSandboxActivityHandlerCompat>()
 
-    fun register(handler: SdkSandboxActivityHandlerCompat): IBinder =
+    fun register(sdkPackageName: String, handler: SdkSandboxActivityHandlerCompat): IBinder =
         synchronized(mapsLock) {
-            val existingToken = handlerToToken[handler]
-            if (existingToken != null) {
-                return existingToken
+            val existingInfo = handlerToHandlerInfo[handler]
+            if (existingInfo != null) {
+                return existingInfo.token
             }
 
             val token = Binder()
-            handlerToToken[handler] = token
+            handlerToHandlerInfo[handler] = HandlerInfo(token, sdkPackageName)
             tokenToHandler[token] = handler
 
             return token
@@ -55,9 +53,21 @@ internal object LocalSdkActivityHandlerRegistry {
 
     fun unregister(handler: SdkSandboxActivityHandlerCompat) =
         synchronized(mapsLock) {
-            val unregisteredToken = handlerToToken.remove(handler)
-            if (unregisteredToken != null) {
-                tokenToHandler.remove(unregisteredToken)
+            val unregisteredInfo = handlerToHandlerInfo.remove(handler)
+            if (unregisteredInfo != null) {
+                tokenToHandler.remove(unregisteredInfo.token)
+            }
+        }
+
+    fun unregisterAllActivityHandlersForSdk(sdkPackageName: String) =
+        synchronized(mapsLock) {
+            val it = handlerToHandlerInfo.values.iterator()
+            while (it.hasNext()) {
+                val next = it.next()
+                if (next.sdkPackageName == sdkPackageName) {
+                    it.remove()
+                    tokenToHandler.remove(next.token)
+                }
             }
         }
 
@@ -72,12 +82,13 @@ internal object LocalSdkActivityHandlerRegistry {
             return tokenToHandler[token]
         }
 
-    fun notifyOnActivityCreation(
-        token: IBinder,
-        activityHolder: ActivityHolder
-    ) = synchronized(mapsLock) {
-        val handler = tokenToHandler[token]
-            ?: throw IllegalStateException("There is no registered handler to notify")
-        handler.onActivityCreated(activityHolder)
-    }
+    fun notifyOnActivityCreation(token: IBinder, activityHolder: ActivityHolder) =
+        synchronized(mapsLock) {
+            val handler =
+                tokenToHandler[token]
+                    ?: throw IllegalStateException("There is no registered handler to notify")
+            handler.onActivityCreated(activityHolder)
+        }
+
+    private data class HandlerInfo(val token: IBinder, val sdkPackageName: String)
 }

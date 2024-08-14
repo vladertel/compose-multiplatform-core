@@ -20,6 +20,7 @@ import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_EXTERNAL_FLASH;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_AUTO;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF;
@@ -30,11 +31,14 @@ import static android.hardware.camera2.CameraMetadata.FLASH_MODE_TORCH;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeThat;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -75,9 +79,9 @@ import androidx.camera.core.impl.Quirks;
 import androidx.camera.core.impl.SessionConfig;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
-import androidx.camera.testing.CameraUtil;
-import androidx.camera.testing.CameraXUtil;
-import androidx.camera.testing.HandlerUtil;
+import androidx.camera.testing.impl.CameraUtil;
+import androidx.camera.testing.impl.CameraXUtil;
+import androidx.camera.testing.impl.HandlerUtil;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 import androidx.core.os.HandlerCompat;
 import androidx.test.core.app.ApplicationProvider;
@@ -87,6 +91,7 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.SmallTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.google.common.truth.BooleanSubject;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import org.junit.After;
@@ -113,7 +118,7 @@ import java.util.concurrent.TimeoutException;
 @SdkSuppress(minSdkVersion = 21)
 public final class Camera2CameraControlImplDeviceTest {
     @Rule
-    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTest(
+    public TestRule mUseCamera = CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
             new CameraUtil.PreTestCameraIdList(Camera2Config.defaultConfig())
     );
 
@@ -124,6 +129,8 @@ public final class Camera2CameraControlImplDeviceTest {
             ArgumentCaptor.forClass(List.class);
     private HandlerThread mHandlerThread;
     private Handler mHandler;
+    private ScheduledExecutorService mExecutorService;
+
     private CameraCharacteristics mCameraCharacteristics;
     private CameraCharacteristicsCompat mCameraCharacteristicsCompat;
     private boolean mHasFlashUnit;
@@ -133,29 +140,33 @@ public final class Camera2CameraControlImplDeviceTest {
 
     @Before
     public void setUp() throws InterruptedException {
-        assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK));
+        mHandlerThread = new HandlerThread("ControlThread");
+        mHandlerThread.start();
+        mHandler = HandlerCompat.createAsync(mHandlerThread.getLooper());
 
         Context context = ApplicationProvider.getApplicationContext();
         CameraXConfig config = Camera2Config.defaultConfig();
         CameraXUtil.initialize(context, config);
 
-        mCameraCharacteristics = CameraUtil.getCameraCharacteristics(
-                CameraSelector.LENS_FACING_BACK);
+        setUp(CameraSelector.LENS_FACING_BACK);
+    }
+
+    private void setUp(int lensFacing) throws InterruptedException {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(lensFacing));
+
+        mCameraCharacteristics = CameraUtil.getCameraCharacteristics(lensFacing);
         Boolean hasFlashUnit =
                 mCameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
         mHasFlashUnit = hasFlashUnit != null && hasFlashUnit.booleanValue();
 
         mControlUpdateCallback = mock(CameraControlInternal.ControlUpdateCallback.class);
-        mHandlerThread = new HandlerThread("ControlThread");
-        mHandlerThread.start();
-        mHandler = HandlerCompat.createAsync(mHandlerThread.getLooper());
 
-        ScheduledExecutorService executorService = CameraXExecutors.newHandlerExecutor(mHandler);
-        String cameraId = CameraUtil.getCameraIdWithLensFacing(CameraSelector.LENS_FACING_BACK);
+        mExecutorService = CameraXExecutors.newHandlerExecutor(mHandler);
+        String cameraId = CameraUtil.getCameraIdWithLensFacing(lensFacing);
         mCameraCharacteristicsCompat = CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
                 mCameraCharacteristics, cameraId);
         mCamera2CameraControlImpl = new Camera2CameraControlImpl(mCameraCharacteristicsCompat,
-                executorService, executorService, mControlUpdateCallback);
+                mExecutorService, mExecutorService, mControlUpdateCallback);
         mCameraQuirks = CameraQuirks.get(cameraId, mCameraCharacteristicsCompat);
 
         mCamera2CameraControlImpl.incrementUseCount();
@@ -331,6 +342,58 @@ public final class Camera2CameraControlImplDeviceTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 28)
+    public void enableExternalFlashAeMode_aeModeSetAndRequestUpdated() throws InterruptedException {
+        setUp(CameraSelector.LENS_FACING_FRONT);
+
+        assumeThat("CONTROL_AE_MODE_ON_EXTERNAL_FLASH not supported",
+                mCamera2CameraControlImpl.getSupportedAeMode(CONTROL_AE_MODE_ON_EXTERNAL_FLASH),
+                equalTo(CONTROL_AE_MODE_ON_EXTERNAL_FLASH));
+        // Other flash modes may override the external flash AE mode
+        mCamera2CameraControlImpl.setFlashMode(ImageCapture.FLASH_MODE_SCREEN);
+        Mockito.reset(mControlUpdateCallback);
+
+        mCamera2CameraControlImpl.getFocusMeteringControl().enableExternalFlashAeMode(true);
+
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verify(mControlUpdateCallback, times(1)).onCameraControlUpdateSessionConfig();
+        SessionConfig sessionConfig = mCamera2CameraControlImpl.getSessionConfig();
+        Camera2ImplConfig camera2Config = new Camera2ImplConfig(
+                sessionConfig.getImplementationOptions());
+
+        assertAeMode(camera2Config, CONTROL_AE_MODE_ON_EXTERNAL_FLASH);
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 28)
+    public void disableExternalFlashAeMode_aeModeUnsetAndRequestUpdated()
+            throws InterruptedException {
+        setUp(CameraSelector.LENS_FACING_FRONT);
+
+        assumeThat("CONTROL_AE_MODE_ON_EXTERNAL_FLASH not supported",
+                mCamera2CameraControlImpl.getSupportedAeMode(CONTROL_AE_MODE_ON_EXTERNAL_FLASH),
+                equalTo(CONTROL_AE_MODE_ON_EXTERNAL_FLASH));
+        mCamera2CameraControlImpl.setFlashMode(ImageCapture.FLASH_MODE_SCREEN);
+        Mockito.reset(mControlUpdateCallback);
+
+        mCamera2CameraControlImpl.getFocusMeteringControl().enableExternalFlashAeMode(true);
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        mCamera2CameraControlImpl.getFocusMeteringControl().enableExternalFlashAeMode(false);
+
+        HandlerUtil.waitForLooperToIdle(mHandler);
+
+        verify(mControlUpdateCallback, times(2)).onCameraControlUpdateSessionConfig();
+        SessionConfig sessionConfig = mCamera2CameraControlImpl.getSessionConfig();
+        Camera2ImplConfig camera2Config = new Camera2ImplConfig(
+                sessionConfig.getImplementationOptions());
+
+        assertThat(camera2Config.getCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE,
+                null)).isNotEqualTo(CONTROL_AE_MODE_ON_EXTERNAL_FLASH);
+    }
+
+    @Test
     public void enableTorch_aeModeSetAndRequestUpdated() throws InterruptedException {
         assumeTrue(mHasFlashUnit);
         mCamera2CameraControlImpl.enableTorch(true);
@@ -447,7 +510,7 @@ public final class Camera2CameraControlImplDeviceTest {
         future.get(10, TimeUnit.SECONDS);
         // CameraCaptureCallback.onCaptureCompleted() should be called to signal a capture attempt.
         verify(captureCallback, timeout(3000).times(1))
-                .onCaptureCompleted(any(CameraCaptureResult.class));
+                .onCaptureCompleted(anyInt(), any(CameraCaptureResult.class));
     }
 
     private Camera2CameraControlImpl createCamera2CameraControlWithPhysicalCamera() {
@@ -981,11 +1044,59 @@ public final class Camera2CameraControlImplDeviceTest {
         executor.assertExecutorIsCalled(5000);
     }
 
+    @Test
+    public void canUseVideoUsage() {
+        // No recording initially.
+        verifyIfInVideoUsage(false);
+
+        // Case 1: Single video usage.
+        mCamera2CameraControlImpl.incrementVideoUsage();
+        verifyIfInVideoUsage(true);
+
+        mCamera2CameraControlImpl.decrementVideoUsage();
+        verifyIfInVideoUsage(false);
+
+        // Case 2: Multiple video usages.
+        mCamera2CameraControlImpl.incrementVideoUsage();
+        mCamera2CameraControlImpl.incrementVideoUsage();
+        verifyIfInVideoUsage(true);
+
+        mCamera2CameraControlImpl.decrementVideoUsage();
+        // There should still be a video usage remaining two were set as true before
+        verifyIfInVideoUsage(true);
+
+        mCamera2CameraControlImpl.decrementVideoUsage();
+        verifyIfInVideoUsage(false);
+
+        // Case 3: video usage clearing when inactive.
+        mCamera2CameraControlImpl.incrementVideoUsage();
+
+        mExecutorService.execute(() -> mCamera2CameraControlImpl.setActive(false));
+        verifyIfInVideoUsage(false);
+    }
+
+    private void verifyIfInVideoUsage(boolean expected) {
+        try {
+            HandlerUtil.waitForLooperToIdle(mHandler);
+        } catch (InterruptedException e) {
+            throw new AssertionError("Waiting for background thread idle failed!", e);
+        }
+
+        BooleanSubject assertSubject = assertThat(mCamera2CameraControlImpl.isInVideoUsage());
+
+        if (expected) {
+            assertSubject.isTrue();
+        } else {
+            assertSubject.isFalse();
+        }
+    }
+
     private static class TestCameraCaptureCallback extends CameraCaptureCallback {
         private CountDownLatch mLatchForOnCaptureCompleted;
 
         @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureResult cameraCaptureResult) {
+        public void onCaptureCompleted(int captureConfigId,
+                @NonNull CameraCaptureResult cameraCaptureResult) {
             synchronized (this) {
                 if (mLatchForOnCaptureCompleted != null) {
                     mLatchForOnCaptureCompleted.countDown();

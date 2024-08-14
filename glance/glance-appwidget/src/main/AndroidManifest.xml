@@ -19,6 +19,7 @@
         <activity
             android:name=".action.ActionTrampolineActivity"
             android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay"
             android:exported="false"
             android:enabled="true" />
         <activity
@@ -33,7 +34,10 @@
             android:name=".action.ActionCallbackBroadcastReceiver"
             android:exported="false"
             android:enabled="true" />
-
+        <receiver
+            android:name=".UnmanagedSessionReceiver"
+            android:exported="false"
+            android:enabled="true" />
         <receiver
             android:name=".MyPackageReplacedReceiver"
             android:exported="false"
