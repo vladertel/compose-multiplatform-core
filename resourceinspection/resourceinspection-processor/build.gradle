@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.SdkHelperKt
 
@@ -39,7 +46,7 @@ dependencies {
     testImplementation(libs.truth)
 
     testRuntimeOnly(project(":resourceinspection:resourceinspection-annotation"))
-    testRuntimeOnly(project(":annotation:annotation"))
+    testRuntimeOnly("androidx.annotation:annotation:1.8.1")
     testRuntimeOnly(SdkHelperKt.getSdkDependency(project))
     testRuntimeOnly(libs.intellijAnnotations)
     testRuntimeOnly(libs.jsr250)

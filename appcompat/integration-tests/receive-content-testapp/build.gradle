@@ -20,14 +20,12 @@ plugins {
 }
 
 android {
-    defaultConfig {
-        minSdkVersion 21
-    }
+    compileSdk 35
     namespace "androidx.appcompat.demo.receivecontent"
 }
 
 dependencies {
-    api("androidx.annotation:annotation:1.1.0")
+    api("androidx.annotation:annotation:1.8.1")
     implementation(project(":appcompat:appcompat"))
     implementation(libs.constraintLayout)
     implementation(libs.guavaAndroid)

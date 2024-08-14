@@ -65,14 +65,12 @@ import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.ViewConfiguration;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
-import androidx.core.app.BundleCompat;
 import androidx.media.MediaSessionManager;
 import androidx.media.MediaSessionManager.RemoteUserInfo;
 import androidx.media.VolumeProviderCompat;
@@ -554,15 +552,9 @@ public class MediaSessionCompat {
                     ? Looper.myLooper() : Looper.getMainLooper());
             setCallback(new Callback() {}, handler);
             mImpl.setMediaButtonReceiver(mbrIntent);
-        } else if (android.os.Build.VERSION.SDK_INT >= 19) {
+        } else {
             mImpl = new MediaSessionImplApi19(context, tag, mbrComponent, mbrIntent,
                     session2Token, sessionInfo);
-        } else if (android.os.Build.VERSION.SDK_INT >= 18) {
-            mImpl = new MediaSessionImplApi18(context, tag, mbrComponent, mbrIntent,
-                    session2Token, sessionInfo);
-        } else {
-            mImpl = new MediaSessionImplBase(context, tag, mbrComponent, mbrIntent, session2Token,
-                    sessionInfo);
         }
         mController = new MediaControllerCompat(context, this);
 
@@ -1535,7 +1527,7 @@ public class MediaSessionCompat {
                         Bundle result = new Bundle();
                         Token token = sessionImpl.getSessionToken();
                         IMediaSession extraBinder = token.getExtraBinder();
-                        BundleCompat.putBinder(result, KEY_EXTRA_BINDER,
+                        result.putBinder(KEY_EXTRA_BINDER,
                                 extraBinder == null ? null : extraBinder.asBinder());
                         ParcelUtils.putVersionedParcelable(result,
                                 KEY_SESSION2_TOKEN, token.getSession2Token());
@@ -2077,7 +2069,7 @@ public class MediaSessionCompat {
             bundle.putParcelable(KEY_TOKEN, this);
             synchronized (mLock) {
                 if (mExtraBinder != null) {
-                    BundleCompat.putBinder(bundle, KEY_EXTRA_BINDER, mExtraBinder.asBinder());
+                    bundle.putBinder(KEY_EXTRA_BINDER, mExtraBinder.asBinder());
                 }
                 if (mSession2Token != null) {
                     ParcelUtils.putVersionedParcelable(bundle, KEY_SESSION2_TOKEN, mSession2Token);
@@ -2100,7 +2092,7 @@ public class MediaSessionCompat {
             }
             tokenBundle.setClassLoader(Token.class.getClassLoader());
             IMediaSession extraSession = IMediaSession.Stub.asInterface(
-                    BundleCompat.getBinder(tokenBundle, KEY_EXTRA_BINDER));
+                    tokenBundle.getBinder(KEY_EXTRA_BINDER));
             VersionedParcelable session2Token = ParcelUtils.getVersionedParcelable(tokenBundle,
                     KEY_SESSION2_TOKEN);
             Token token = tokenBundle.getParcelable(KEY_TOKEN);
@@ -2288,17 +2280,14 @@ public class MediaSessionCompat {
         private static class Api21Impl {
             private Api21Impl() {}
 
-            @DoNotInline
             static MediaSession.QueueItem createQueueItem(MediaDescription description, long id) {
                 return new MediaSession.QueueItem(description, id);
             }
 
-            @DoNotInline
             static MediaDescription getDescription(MediaSession.QueueItem queueItem) {
                 return queueItem.getDescription();
             }
 
-            @DoNotInline
             static long getQueueId(MediaSession.QueueItem queueItem) {
                 return queueItem.getQueueId();
             }
@@ -3759,7 +3748,6 @@ public class MediaSessionCompat {
         }
     }
 
-    @RequiresApi(18)
     static class MediaSessionImplApi18 extends MediaSessionImplBase {
         private static boolean sIsMbrPendingIntentSupported = true;
 
@@ -3845,7 +3833,6 @@ public class MediaSessionCompat {
         }
     }
 
-    @RequiresApi(19)
     static class MediaSessionImplApi19 extends MediaSessionImplApi18 {
         MediaSessionImplApi19(Context context, String tag, ComponentName mbrComponent,
                 PendingIntent mbrIntent, VersionedParcelable session2Token, Bundle sessionInfo) {
@@ -4317,9 +4304,9 @@ public class MediaSessionCompat {
             @Override
             public Bundle getSessionInfo() {
                 MediaSessionImplApi21 mediaSessionImpl = mMediaSessionImplRef.get();
-                return mediaSessionImpl.mSessionInfo == null
-                        ? null
-                        : new Bundle(mediaSessionImpl.mSessionInfo);
+                return mediaSessionImpl != null && mediaSessionImpl.mSessionInfo != null
+                        ? new Bundle(mediaSessionImpl.mSessionInfo)
+                        : null;
             }
 
             @Override

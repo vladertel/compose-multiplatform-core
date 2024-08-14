@@ -13,7 +13,6 @@ You can start contributing to any of the following library groups from GitHub:
   - [AppCompat](https://developer.android.com/jetpack/androidx/releases/appcompat)
   - [Biometric](https://developer.android.com/training/sign-in/biometric-auth)
   - [Collection](https://developer.android.com/jetpack/androidx/releases/collection)
-  - [Compose Compiler](https://developer.android.com/jetpack/androidx/releases/compose-compiler)
   - [Compose Runtime](https://developer.android.com/jetpack/androidx/releases/compose-runtime)
   - [Core](https://developer.android.com/jetpack/androidx/releases/core)
   - [DataStore](https://developer.android.com/topic/libraries/architecture/datastore)
@@ -39,7 +38,7 @@ creating a fork of the [androidx/androidx](https://github.com/androidx/androidx)
 
 - Download and install JDK 17, if you don’t have it already.
 
-  Note the installation directory. If you already have JDK 17 installed and set as default, you can 
+  Note the installation directory. If you already have JDK 17 installed and set as default, you can
   find this with `which javac`.
 
 - Download and install [Android Studio](https://developer.android.com/studio) if you don't have it
@@ -85,6 +84,9 @@ androidx
   -- work
 ```
 
+To avoid conflict with the main project, these sub project groups are located under the
+`playground-projects` folder.
+
 **Note:** For other projects, you will still need to use the Gerrit workflow used by the Android Open Source Project (AOSP). For more information, please look at the [README](https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:README.md).
 
 Fork the [androidx/androidx](https://github.com/androidx/androidx) repository.
@@ -109,7 +111,7 @@ Let’s assume that you want to make a contribution to Room. The first step is t
 First launch Android Studio using:
 
 ```bash
-cd androidx/room
+cd playground-projects/room-playground
 # This will automatically launch the `room` project in Android Studio.
 ./gradlew studio
 ```

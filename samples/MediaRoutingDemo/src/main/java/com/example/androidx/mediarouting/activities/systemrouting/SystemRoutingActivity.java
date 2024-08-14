@@ -44,7 +44,9 @@ import com.example.androidx.mediarouting.activities.systemrouting.source.MediaRo
 import com.example.androidx.mediarouting.activities.systemrouting.source.SystemRoutesSource;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Shows available system routes gathered from different sources.
@@ -53,8 +55,12 @@ public final class SystemRoutingActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_BLUETOOTH_CONNECT = 4199;
 
-    private final SystemRoutesAdapter mSystemRoutesAdapter = new SystemRoutesAdapter();
-    private final List<SystemRoutesSource> mSystemRoutesSources = new ArrayList<>();
+    @NonNull
+    private final SystemRoutesAdapter mSystemRoutesAdapter =
+            new SystemRoutesAdapter(this::onRouteItemClicked);
+
+    @NonNull private final Map<String, SystemRoutesSource> mSystemRoutesSources = new HashMap<>();
+    @NonNull private SwipeRefreshLayout mSwipeRefreshLayout;
 
     /**
      * Creates and launches an intent to start current activity.
@@ -70,16 +76,12 @@ public final class SystemRoutingActivity extends AppCompatActivity {
         setContentView(R.layout.activity_system_routing);
 
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
-        SwipeRefreshLayout swipeRefreshLayout = findViewById(R.id.pull_to_refresh_layout);
+        mSwipeRefreshLayout = findViewById(R.id.pull_to_refresh_layout);
 
         recyclerView.setAdapter(mSystemRoutesAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        swipeRefreshLayout.setOnRefreshListener(
-                () -> {
-                    refreshSystemRoutesList();
-                    swipeRefreshLayout.setRefreshing(false);
-                });
+        mSwipeRefreshLayout.setOnRefreshListener(this::refreshSystemRoutesList);
 
         if (hasBluetoothPermission()) {
             initializeSystemRoutesSources();
@@ -87,6 +89,15 @@ public final class SystemRoutingActivity extends AppCompatActivity {
         } else {
             requestBluetoothPermission();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        for (SystemRoutesSource source : mSystemRoutesSources.values()) {
+            source.stop();
+        }
+
+        super.onDestroy();
     }
 
     @Override
@@ -106,11 +117,26 @@ public final class SystemRoutingActivity extends AppCompatActivity {
 
     private void refreshSystemRoutesList() {
         List<SystemRoutesAdapterItem> systemRoutesSourceItems = new ArrayList<>();
-        for (SystemRoutesSource source : mSystemRoutesSources) {
+        for (SystemRoutesSource source : mSystemRoutesSources.values()) {
             systemRoutesSourceItems.add(source.getSourceItem());
             systemRoutesSourceItems.addAll(source.fetchSourceRouteItems());
         }
         mSystemRoutesAdapter.setItems(systemRoutesSourceItems);
+        mSwipeRefreshLayout.setRefreshing(false);
+    }
+
+    private void onRouteItemClicked(SystemRouteItem item) {
+        SystemRoutesSource systemRoutesSource = mSystemRoutesSources.get(item.mSourceId);
+        if (systemRoutesSource == null) {
+            throw new IllegalStateException("Couldn't find source with id: " + item.mSourceId);
+        }
+        if (!systemRoutesSource.select(item)) {
+            Toast.makeText(
+                            /* context= */ this,
+                            "Something went wrong with route selection",
+                            Toast.LENGTH_LONG)
+                    .show();
+        }
     }
 
     private boolean hasBluetoothPermission() {
@@ -136,26 +162,28 @@ public final class SystemRoutingActivity extends AppCompatActivity {
     }
 
     private void initializeSystemRoutesSources() {
-        mSystemRoutesSources.clear();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            mSystemRoutesSources.add(MediaRouterSystemRoutesSource.create(/* context= */ this));
-        }
+        ArrayList<SystemRoutesSource> sources = new ArrayList<>();
+        sources.add(MediaRouterSystemRoutesSource.create(/* context= */ this));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            mSystemRoutesSources.add(MediaRouter2SystemRoutesSource.create(/* context= */ this));
+            sources.add(MediaRouter2SystemRoutesSource.create(/* context= */ this));
         }
 
-        mSystemRoutesSources.add(AndroidXMediaRouterSystemRoutesSource.create(/* context= */ this));
+        sources.add(AndroidXMediaRouterSystemRoutesSource.create(/* context= */ this));
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-                && hasBluetoothPermission()) {
-            mSystemRoutesSources.add(
-                    BluetoothManagerSystemRoutesSource.create(/* context= */ this));
+        if (hasBluetoothPermission()) {
+            sources.add(BluetoothManagerSystemRoutesSource.create(/* context= */ this));
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            mSystemRoutesSources.add(AudioManagerSystemRoutesSource.create(/* context= */ this));
+            sources.add(AudioManagerSystemRoutesSource.create(/* context= */ this));
+        }
+
+        mSystemRoutesSources.clear();
+        for (SystemRoutesSource source : sources) {
+            source.setOnRoutesChangedListener(this::refreshSystemRoutesList);
+            mSystemRoutesSources.put(source.getSourceId(), source);
+            source.start();
         }
     }
 }

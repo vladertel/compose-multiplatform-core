@@ -17,25 +17,23 @@
 package androidx.privacysandbox.ads.adservices.measurement
 
 import android.net.Uri
-import android.view.InputEvent
+import android.view.KeyEvent
 import androidx.privacysandbox.ads.adservices.common.ExperimentalFeatures
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
 
 @ExperimentalFeatures.RegisterSourceOptIn
 @SmallTest
 @RunWith(AndroidJUnit4::class)
-@SdkSuppress(minSdkVersion = 33)
 class SourceRegistrationRequestTest {
     @Test
     fun testToString() {
-        val result = "AppSourcesRegistrationRequest { RegistrationUris=" +
-            "[[www.abc.com, www.xyz.com]], InputEvent=null }"
+        val result =
+            "AppSourcesRegistrationRequest { RegistrationUris=" +
+                "[[www.abc.com, www.xyz.com]], InputEvent=null }"
 
         val uri1 = Uri.parse("www.abc.com")
         val uri2 = Uri.parse("www.xyz.com")
@@ -49,10 +47,8 @@ class SourceRegistrationRequestTest {
         val uri1 = Uri.parse("www.abc.com")
         val uri2 = Uri.parse("www.xyz.com")
         val params = listOf(uri1, uri2)
-        val inputEvent = mock(InputEvent::class.java)
-        val request1 = SourceRegistrationRequest.Builder(params)
-            .setInputEvent(inputEvent)
-            .build()
+        val inputEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER)
+        val request1 = SourceRegistrationRequest.Builder(params).setInputEvent(inputEvent).build()
         val request2 = SourceRegistrationRequest(params, inputEvent)
         val request3 = SourceRegistrationRequest.Builder(params).build()
 

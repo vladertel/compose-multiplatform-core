@@ -25,13 +25,11 @@ import static androidx.core.util.Preconditions.checkState;
 
 import static java.util.Objects.requireNonNull;
 
-import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.ForwardingImageProxy.OnImageCloseListener;
 import androidx.camera.core.ImageCapture;
@@ -42,6 +40,7 @@ import androidx.camera.core.impl.utils.futures.FutureCallback;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.core.util.Pair;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayDeque;
@@ -63,7 +62,6 @@ import java.util.List;
  *
  * <p>The thread safety is guaranteed by using the main thread.
  */
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class TakePictureManager implements OnImageCloseListener, TakePictureRequest.RetryControl {
 
     private static final String TAG = "TakePictureManager";
@@ -262,13 +260,16 @@ public class TakePictureManager implements OnImageCloseListener, TakePictureRequ
                     // early if the request has been aborted.
                     return;
                 } else {
+                    int requestId = cameraRequest.getCaptureConfigs().get(0).getId();
                     if (throwable instanceof ImageCaptureException) {
-                        mImagePipeline.notifyCaptureError((ImageCaptureException) throwable);
+                        mImagePipeline.notifyCaptureError(
+                                CaptureError.of(requestId, (ImageCaptureException) throwable));
                     } else {
-                        mImagePipeline.notifyCaptureError(new ImageCaptureException(
-                                ERROR_CAPTURE_FAILED,
-                                "Failed to submit capture request",
-                                throwable));
+                        mImagePipeline.notifyCaptureError(
+                                CaptureError.of(requestId, new ImageCaptureException(
+                                        ERROR_CAPTURE_FAILED,
+                                        "Failed to submit capture request",
+                                        throwable)));
                     }
                 }
                 mImageCaptureControl.unlockFlashMode();
@@ -280,6 +281,12 @@ public class TakePictureManager implements OnImageCloseListener, TakePictureRequ
     @VisibleForTesting
     boolean hasCapturingRequest() {
         return mCapturingRequest != null;
+    }
+
+    @VisibleForTesting
+    @Nullable
+    public RequestWithCallback getCapturingRequest() {
+        return mCapturingRequest;
     }
 
     @VisibleForTesting
@@ -297,4 +304,18 @@ public class TakePictureManager implements OnImageCloseListener, TakePictureRequ
     public void onImageClose(@NonNull ImageProxy image) {
         mainThreadExecutor().execute(this::issueNextRequest);
     }
+
+    @AutoValue
+    abstract static class CaptureError {
+        abstract int getRequestId();
+
+        @NonNull
+        abstract ImageCaptureException getImageCaptureException();
+
+        static CaptureError of(int requestId,
+                @NonNull ImageCaptureException imageCaptureException) {
+            return new AutoValue_TakePictureManager_CaptureError(requestId, imageCaptureException);
+        }
+    }
+
 }

@@ -40,7 +40,6 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -135,11 +134,8 @@ public abstract class BaseCarAppActivity extends FragmentActivity {
                     // cause a mismatch between the insets applied to the content on the hosts side
                     // vs. the actual visible window available on the client side.
                     Insets insets;
-                    // Android U+ (SDK 34+) introduced SYSTEM_OVERLAYS insets, which we pass to the
-                    // host to adjust padding.
-                    if (Build.VERSION.SDK_INT >= 34) {
-                        // TODO(b/287700349): Add tests once Robolectric supports SDK 34.
-                        insets = Api34Impl.getInsets(windowInsets);
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        insets = Api30Impl.getInsets(windowInsets);
                     } else {
                         insets = WindowInsetsCompat.toWindowInsetsCompat(windowInsets)
                                 .getInsets(WindowInsetsCompat.Type.systemBars()
@@ -252,30 +248,20 @@ public abstract class BaseCarAppActivity extends FragmentActivity {
                 }
             };
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private static class Api34Impl {
-
-        private Api34Impl() {
-        }
-
-        static Insets getInsets(WindowInsets windowInsets) {
-            return windowInsets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime()
-                    | WindowInsets.Type.systemOverlays());
-        }
-    }
-
     @RequiresApi(Build.VERSION_CODES.R)
     private static class Api30Impl {
         private Api30Impl() {
         }
 
-        @DoNotInline
+        static Insets getInsets(WindowInsets windowInsets) {
+            return windowInsets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.ime());
+        }
+
         static WindowInsets getDecorViewInsets(WindowInsets insets) {
             return new WindowInsets.Builder(insets).setInsets(
                     WindowInsets.Type.displayCutout(), Insets.NONE).build();
         }
 
-        @DoNotInline
         static void setDecorFitsSystemWindows(BaseCarAppActivity activity, Window window,
                 boolean decorFitsSystemWindows) {
             // Set mDecorFitsSystemWindows so we can retrieve its value for testing.
@@ -488,9 +474,15 @@ public abstract class BaseCarAppActivity extends FragmentActivity {
 
     @Override
     protected void onDestroy() {
-        requireNonNull(mHostUpdateReceiver).unregister(this);
-        requireNonNull(mSurfaceHolderListener).setSurfaceListener(null);
-        requireNonNull(mViewModel).setActivity(null);
+        if (mHostUpdateReceiver != null) {
+            mHostUpdateReceiver.unregister(this);
+        }
+        if (mSurfaceHolderListener != null) {
+            mSurfaceHolderListener.setSurfaceListener(null);
+        }
+        if (mViewModel != null) {
+            mViewModel.setActivity(null);
+        }
         super.onDestroy();
     }
 

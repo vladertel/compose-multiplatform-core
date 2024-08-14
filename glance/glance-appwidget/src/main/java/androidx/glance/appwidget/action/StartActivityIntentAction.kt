@@ -19,13 +19,15 @@ package androidx.glance.appwidget.action
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import androidx.annotation.RestrictTo
 import androidx.glance.ExperimentalGlanceApi
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.StartActivityAction
 import androidx.glance.action.actionParametersOf
 
-internal class StartActivityIntentAction(
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+class StartActivityIntentAction(
     val intent: Intent,
     override val parameters: ActionParameters = actionParametersOf(),
     override val activityOptions: Bundle?,
@@ -49,7 +51,7 @@ internal class StartActivityIntentAction(
  *
  * @param intent the intent used to launch the activity
  * @param parameters the parameters associated with the action. Parameter values will be added to
- * the activity intent, keyed by the parameter key name string.
+ *   the activity intent, keyed by the parameter key name string.
  */
 fun actionStartActivity(
     intent: Intent,
@@ -74,9 +76,9 @@ fun actionStartActivity(
  *
  * @param intent the intent used to launch the activity
  * @param parameters the parameters associated with the action. Parameter values will be added to
- * the activity intent, keyed by the parameter key name string.
+ *   the activity intent, keyed by the parameter key name string.
  * @param activityOptions Additional options built from an [android.app.ActivityOptions] to apply to
- * an activity start.
+ *   an activity start.
  */
 @ExperimentalGlanceApi
 fun actionStartActivity(

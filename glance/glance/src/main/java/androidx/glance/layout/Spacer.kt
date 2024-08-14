@@ -22,14 +22,11 @@ import androidx.glance.Emittable
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceNode
 
-/** @suppress */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class EmittableSpacer : Emittable {
     override var modifier: GlanceModifier = GlanceModifier
 
-    override fun copy(): Emittable = EmittableSpacer().also {
-        it.modifier = modifier
-    }
+    override fun copy(): Emittable = EmittableSpacer().also { it.modifier = modifier }
 
     override fun toString(): String = "EmittableSpacer(modifier=$modifier)"
 }
@@ -42,10 +39,5 @@ class EmittableSpacer : Emittable {
  */
 @Composable
 fun Spacer(modifier: GlanceModifier = GlanceModifier) {
-    GlanceNode(
-        factory = :: EmittableSpacer,
-        update = {
-          this.set(modifier) { this.modifier = it }
-        }
-    )
+    GlanceNode(factory = ::EmittableSpacer, update = { this.set(modifier) { this.modifier = it } })
 }

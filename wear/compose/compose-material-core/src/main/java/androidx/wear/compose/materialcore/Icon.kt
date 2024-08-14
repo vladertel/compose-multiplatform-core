@@ -20,6 +20,7 @@ import androidx.annotation.RestrictTo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.geometry.Size
@@ -36,42 +37,37 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Icon component that draws a [painter] using [tint].
- * TODO:// Add link to Chip for a clickable icon
  *
  * @param painter [Painter] to draw inside this Icon
  * @param contentDescription Text used by accessibility services to describe what this icon
- * represents. This should always be provided unless this icon is used for decorative purposes,
- * and does not represent a meaningful action that a user can take. This text should be
- * localized, such as by using [androidx.compose.ui.res.stringResource] or similar
+ *   represents. This should always be provided unless this icon is used for decorative purposes,
+ *   and does not represent a meaningful action that a user can take. This text should be localized,
+ *   such as by using [androidx.compose.ui.res.stringResource] or similar
  * @param modifier Optional [Modifier] for this Icon
- * @param tint Tint to be applied to [painter]. If [Color.Unspecified] is provided, then no
- *  tint is applied
+ * @param tint Tint to be applied to [painter]. If [Color.Unspecified] is provided, then no tint is
+ *   applied
+ *
+ * TODO:// Add link to Chip for a clickable icon
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @Composable
-fun Icon(
-    painter: Painter,
-    contentDescription: String?,
-    modifier: Modifier,
-    tint: Color
-) {
-    // TODO: b/149735981 semantics for content description
-    val colorFilter = if (tint == Color.Unspecified) null else ColorFilter.tint(tint)
-    val semantics = if (contentDescription != null) {
-        Modifier.semantics {
-            this.contentDescription = contentDescription
-            this.role = Role.Image
+fun Icon(painter: Painter, contentDescription: String?, modifier: Modifier, tint: Color) {
+    val colorFilter =
+        remember(tint) { if (tint == Color.Unspecified) null else ColorFilter.tint(tint) }
+    val semantics =
+        if (contentDescription != null) {
+            Modifier.semantics {
+                this.contentDescription = contentDescription
+                this.role = Role.Image
+            }
+        } else {
+            Modifier
         }
-    } else {
-        Modifier
-    }
     Box(
-        modifier.toolingGraphicsLayer().defaultSizeFor(painter)
-            .paint(
-                painter,
-                colorFilter = colorFilter,
-                contentScale = ContentScale.Fit
-            )
+        modifier
+            .toolingGraphicsLayer()
+            .defaultSizeFor(painter)
+            .paint(painter, colorFilter = colorFilter, contentScale = ContentScale.Fit)
             .then(semantics)
     )
 }

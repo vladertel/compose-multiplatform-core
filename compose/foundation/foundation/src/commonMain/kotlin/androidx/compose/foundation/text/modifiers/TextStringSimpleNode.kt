@@ -16,14 +16,9 @@
 
 package androidx.compose.foundation.text.modifiers
 
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.text.DefaultMinLines
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.Shadow
@@ -50,10 +45,10 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.clearTextSubstitution
 import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.isShowingTextSubstitution
-import androidx.compose.ui.semantics.originalText
 import androidx.compose.ui.semantics.setTextSubstitution
 import androidx.compose.ui.semantics.showTextSubstitution
 import androidx.compose.ui.semantics.text
+import androidx.compose.ui.semantics.textSubstitution
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -61,8 +56,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Constraints.Companion.fitPrioritizingWidth
 import androidx.compose.ui.unit.Density
-import kotlin.math.roundToInt
+import androidx.compose.ui.util.fastRoundToInt
 
 /**
  * Node that implements Text for [String].
@@ -81,25 +77,36 @@ internal class TextStringSimpleNode(
     private var minLines: Int = DefaultMinLines,
     private var overrideColor: ColorProducer? = null
 ) : Modifier.Node(), LayoutModifierNode, DrawModifierNode, SemanticsModifierNode {
+    @Suppress("PrimitiveInCollection") // Map required for use in public API.
+    // Usages of this collection are so few that the gains of using
+    // MutableObjectIntMap<AlignmentLine> and then converting to a Map<AlignmentLine, Int>
+    // as needed for the public API is not worth the performance benefit.
     private var baselineCache: MutableMap<AlignmentLine, Int>? = null
 
     private var _layoutCache: ParagraphLayoutCache? = null
     private val layoutCache: ParagraphLayoutCache
         get() {
             if (_layoutCache == null) {
-                _layoutCache = ParagraphLayoutCache(
-                    text,
-                    style,
-                    fontFamilyResolver,
-                    overflow,
-                    softWrap,
-                    maxLines,
-                    minLines,
-                )
+                _layoutCache =
+                    ParagraphLayoutCache(
+                        text,
+                        style,
+                        fontFamilyResolver,
+                        overflow,
+                        softWrap,
+                        maxLines,
+                        minLines,
+                    )
             }
             return _layoutCache!!
         }
 
+    /**
+     * Get the layout cache for the current state of the node.
+     *
+     * If text substitution is active, this will return the layout cache for the substitution.
+     * Otherwise, it will return the layout cache for the original text.
+     */
     private fun getLayoutCache(density: Density): ParagraphLayoutCache {
         textSubstitution?.let { textSubstitutionValue ->
             if (textSubstitutionValue.isShowingSubstitution) {
@@ -121,9 +128,7 @@ internal class TextStringSimpleNode(
         return changed
     }
 
-    /**
-     * Element has text params to update
-     */
+    /** Element has text params to update */
     fun updateText(text: String): Boolean {
         if (this.text == text) return false
         this.text = text
@@ -131,9 +136,7 @@ internal class TextStringSimpleNode(
         return true
     }
 
-    /**
-     * Element has layout related params to update
-     */
+    /** Element has layout related params to update */
     fun updateLayoutRelatedArgs(
         style: TextStyle,
         minLines: Int,
@@ -175,20 +178,9 @@ internal class TextStringSimpleNode(
         return changed
     }
 
-    /**
-     * request invalidate based on the results of [updateText] and [updateLayoutRelatedArgs]
-     */
-    fun doInvalidations(
-        drawChanged: Boolean,
-        textChanged: Boolean,
-        layoutChanged: Boolean
-    ) {
-        if (textChanged || (drawChanged && semanticsTextLayoutResult != null)) {
-            if (isAttached) {
-                invalidateSemantics()
-            }
-        }
-
+    /** request invalidate based on the results of [updateText] and [updateLayoutRelatedArgs] */
+    fun doInvalidations(drawChanged: Boolean, textChanged: Boolean, layoutChanged: Boolean) {
+        // bring caches up to date even if the node is detached in case it is used again later
         if (textChanged || layoutChanged) {
             layoutCache.update(
                 text = text,
@@ -199,9 +191,18 @@ internal class TextStringSimpleNode(
                 maxLines = maxLines,
                 minLines = minLines
             )
-            if (isAttached) {
-                invalidateMeasurement()
-            }
+        }
+
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
+        if (textChanged || (drawChanged && semanticsTextLayoutResult != null)) {
+            invalidateSemantics()
+        }
+
+        if (textChanged || layoutChanged) {
+            invalidateMeasurement()
             invalidateDraw()
         }
         if (drawChanged) {
@@ -216,10 +217,17 @@ internal class TextStringSimpleNode(
         var substitution: String,
         var isShowingSubstitution: Boolean = false,
         var layoutCache: ParagraphLayoutCache? = null,
-        // TODO(klikli): add animation
-    )
+        // TODO(b/283944749): add animation
 
-    private var textSubstitution: TextSubstitutionValue? by mutableStateOf(null)
+    ) {
+        // don't emit any user strings in toString
+        override fun toString(): String =
+            "TextSubstitution(" +
+                "layoutCache=$layoutCache, isShowingSubstitution=$isShowingSubstitution" +
+                ")"
+    }
+
+    private var textSubstitution: TextSubstitutionValue? = null
 
     private fun setSubstitution(updatedText: String): Boolean {
         val currentTextSubstitution = textSubstitution
@@ -239,15 +247,16 @@ internal class TextStringSimpleNode(
             ) ?: return false
         } else {
             val newTextSubstitution = TextSubstitutionValue(text, updatedText)
-            val substitutionLayoutCache = ParagraphLayoutCache(
-                updatedText,
-                style,
-                fontFamilyResolver,
-                overflow,
-                softWrap,
-                maxLines,
-                minLines,
-            )
+            val substitutionLayoutCache =
+                ParagraphLayoutCache(
+                    updatedText,
+                    style,
+                    fontFamilyResolver,
+                    overflow,
+                    softWrap,
+                    maxLines,
+                    minLines,
+                )
             substitutionLayoutCache.density = layoutCache.density
             newTextSubstitution.layoutCache = substitutionLayoutCache
             textSubstitution = newTextSubstitution
@@ -263,64 +272,61 @@ internal class TextStringSimpleNode(
         var localSemanticsTextLayoutResult = semanticsTextLayoutResult
         if (localSemanticsTextLayoutResult == null) {
             localSemanticsTextLayoutResult = { textLayoutResult ->
-                val layout = layoutCache.slowCreateTextLayoutResultOrNull(
-                    style = style.merge(
-                        color = overrideColor?.invoke() ?: Color.Unspecified
-                    )
-                )?.also {
-                    textLayoutResult.add(it)
-                }
+                val layout =
+                    layoutCache
+                        .slowCreateTextLayoutResultOrNull(
+                            style =
+                                style.merge(color = overrideColor?.invoke() ?: Color.Unspecified)
+                        )
+                        ?.also { textLayoutResult.add(it) }
                 layout != null
             }
             semanticsTextLayoutResult = localSemanticsTextLayoutResult
         }
 
-        val currentTextSubstitution = textSubstitution
-        if (currentTextSubstitution == null) {
-            text = AnnotatedString(this@TextStringSimpleNode.text)
-        } else {
+        text = AnnotatedString(this@TextStringSimpleNode.text)
+        val currentTextSubstitution = this@TextStringSimpleNode.textSubstitution
+        if (currentTextSubstitution != null) {
             isShowingTextSubstitution = currentTextSubstitution.isShowingSubstitution
-            if (currentTextSubstitution.isShowingSubstitution) {
-                text = AnnotatedString(currentTextSubstitution.substitution)
-                originalText = AnnotatedString(currentTextSubstitution.original)
-            } else {
-                text = AnnotatedString(currentTextSubstitution.original)
-            }
+            textSubstitution = AnnotatedString(currentTextSubstitution.substitution)
         }
 
         setTextSubstitution { updatedText ->
             setSubstitution(updatedText.text)
 
+            invalidateForTranslate()
+
             true
         }
         showTextSubstitution {
-            if (textSubstitution == null) {
+            if (this@TextStringSimpleNode.textSubstitution == null) {
                 return@showTextSubstitution false
             }
 
-            textSubstitution?.isShowingSubstitution = it
+            this@TextStringSimpleNode.textSubstitution?.isShowingSubstitution = it
 
-            invalidateSemantics()
-            invalidateMeasurement()
-            invalidateDraw()
+            invalidateForTranslate()
 
             true
         }
         clearTextSubstitution {
             clearSubstitution()
 
-            invalidateSemantics()
-            invalidateMeasurement()
-            invalidateDraw()
+            invalidateForTranslate()
 
             true
         }
         getTextLayoutResult(action = localSemanticsTextLayoutResult)
     }
 
-    /**
-     * Text layout happens here
-     */
+    /** Call whenever text substitution changes state */
+    private fun invalidateForTranslate() {
+        invalidateSemantics()
+        invalidateMeasurement()
+        invalidateDraw()
+    }
+
+    /** Text layout happens here */
     override fun MeasureScope.measure(
         measurable: Measurable,
         constraints: Constraints
@@ -335,29 +341,28 @@ internal class TextStringSimpleNode(
 
         if (didChangeLayout) {
             invalidateLayer()
-            var cache = baselineCache
+            // Map<AlignmentLine, Int> required for use in public API `layout` below
+            @Suppress("PrimitiveInCollection") var cache = baselineCache
             if (cache == null) {
-                cache = LinkedHashMap(2)
+                cache = HashMap(2)
+                baselineCache = cache
             }
-            cache[FirstBaseline] = paragraph.firstBaseline.roundToInt()
-            cache[LastBaseline] = paragraph.lastBaseline.roundToInt()
-            baselineCache = cache
+            cache[FirstBaseline] = paragraph.firstBaseline.fastRoundToInt()
+            cache[LastBaseline] = paragraph.lastBaseline.fastRoundToInt()
         }
 
         // then allow children to measure _inside_ our final box, with the above placeholders
-        val placeable = measurable.measure(
-            Constraints.fixed(
-                layoutSize.width,
-                layoutSize.height
+        val placeable =
+            measurable.measure(
+                fitPrioritizingWidth(
+                    minWidth = layoutSize.width,
+                    maxWidth = layoutSize.width,
+                    minHeight = layoutSize.height,
+                    maxHeight = layoutSize.height
+                )
             )
-        )
 
-        return layout(
-            layoutSize.width,
-            layoutSize.height,
-            baselineCache!!
-        ) {
-            // this is basically a graphicsLayer
+        return layout(layoutSize.width, layoutSize.height, baselineCache!!) {
             placeable.place(0, 0)
         }
     }
@@ -384,19 +389,26 @@ internal class TextStringSimpleNode(
         width: Int
     ): Int = getLayoutCache(this).intrinsicHeight(width, layoutDirection)
 
-    /**
-     * Optimized Text draw.
-     */
+    /** Optimized Text draw. */
     override fun ContentDrawScope.draw() {
-        val localParagraph = requireNotNull(layoutCache.paragraph) { "no paragraph" }
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
+
+        val layoutCache = getLayoutCache(this)
+        val localParagraph =
+            requirePreconditionNotNull(layoutCache.paragraph) {
+                "no paragraph (layoutCache=$_layoutCache, textSubstitution=$textSubstitution)"
+            }
+
         drawIntoCanvas { canvas ->
             val willClip = layoutCache.didOverflow
             if (willClip) {
                 val width = layoutCache.layoutSize.width.toFloat()
                 val height = layoutCache.layoutSize.height.toFloat()
-                val bounds = Rect(Offset.Zero, Size(width, height))
                 canvas.save()
-                canvas.clipRect(bounds)
+                canvas.clipRect(left = 0f, top = 0f, right = width, bottom = height)
             }
             try {
                 val textDecoration = style.textDecoration ?: TextDecoration.None
@@ -415,13 +427,14 @@ internal class TextStringSimpleNode(
                     )
                 } else {
                     val overrideColorVal = overrideColor?.invoke() ?: Color.Unspecified
-                    val color = if (overrideColorVal.isSpecified) {
-                        overrideColorVal
-                    } else if (style.color.isSpecified) {
-                        style.color
-                    } else {
-                        Color.Black
-                    }
+                    val color =
+                        if (overrideColorVal.isSpecified) {
+                            overrideColorVal
+                        } else if (style.color.isSpecified) {
+                            style.color
+                        } else {
+                            Color.Black
+                        }
                     localParagraph.paint(
                         canvas = canvas,
                         color = color,

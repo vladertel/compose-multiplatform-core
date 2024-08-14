@@ -21,10 +21,11 @@ import static androidx.camera.video.internal.audio.AudioUtils.sizeToFrameCount;
 import static androidx.core.util.Preconditions.checkArgument;
 import static androidx.core.util.Preconditions.checkState;
 
+import android.annotation.SuppressLint;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.annotation.ExecutedBy;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
@@ -49,12 +50,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>This class is not thread safe, it should be used on the same thread.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class BufferedAudioStream implements AudioStream {
 
     private static final String TAG = "BufferedAudioStream";
     private static final int DEFAULT_BUFFER_SIZE_IN_FRAME = 1024;
     private static final int DEFAULT_QUEUE_SIZE = 500;
+    private static final int DATA_WAITING_TIME_MILLIS = 1;
 
     private final AtomicBoolean mIsStarted = new AtomicBoolean(false);
     private final AtomicBoolean mIsReleased = new AtomicBoolean(false);
@@ -151,6 +152,7 @@ public class BufferedAudioStream implements AudioStream {
         });
     }
 
+    @SuppressLint("BanThreadSleep")
     @NonNull
     @Override
     public PacketInfo read(@NonNull ByteBuffer byteBuffer) {
@@ -160,24 +162,40 @@ public class BufferedAudioStream implements AudioStream {
         // Match collection buffer size and read buffer size to improve read efficiency.
         updateCollectionBufferSizeAsync(byteBuffer.remaining());
 
+        // Block the thread till the audio data is actually read.
+        boolean isWaitingForData;
         PacketInfo packetInfo = PacketInfo.of(0, 0);
-        synchronized (mLock) {
-            AudioData audioData = mAudioDataNotFullyRead;
-            mAudioDataNotFullyRead = null;
-            if (audioData == null) {
-                audioData = mAudioDataQueue.poll();
-            }
-
-            if (audioData != null) {
-                packetInfo = audioData.read(byteBuffer);
-
-                if (audioData.getRemainingBufferSizeInBytes() > 0) {
-                    mAudioDataNotFullyRead = audioData;
+        do {
+            synchronized (mLock) {
+                AudioData audioData = mAudioDataNotFullyRead;
+                mAudioDataNotFullyRead = null;
+                if (audioData == null) {
+                    audioData = mAudioDataQueue.poll();
                 }
-            } else {
-                Logger.d(TAG, "No data to read.");
+
+                if (audioData != null) {
+                    packetInfo = audioData.read(byteBuffer);
+
+                    if (audioData.getRemainingBufferSizeInBytes() > 0) {
+                        mAudioDataNotFullyRead = audioData;
+                    }
+                }
             }
-        }
+
+            // Wait for data collection if no data to read and the audio stream is still running.
+            isWaitingForData =
+                    packetInfo.getSizeInBytes() <= 0 && mIsStarted.get() && !mIsReleased.get();
+
+            // Sleep to prevent busy accessing to variables.
+            if (isWaitingForData) {
+                try {
+                    Thread.sleep(DATA_WAITING_TIME_MILLIS);
+                } catch (InterruptedException e) {
+                    Logger.w(TAG, "Interruption while waiting for audio data", e);
+                    break;
+                }
+            }
+        } while (isWaitingForData);
 
         return packetInfo;
     }
@@ -256,7 +274,6 @@ public class BufferedAudioStream implements AudioStream {
         }
     }
 
-    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     private static class AudioData {
 
         private final int mBytesPerFrame;

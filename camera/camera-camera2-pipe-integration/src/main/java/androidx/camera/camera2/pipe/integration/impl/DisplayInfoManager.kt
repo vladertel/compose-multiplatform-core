@@ -24,19 +24,17 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Size
 import android.view.Display
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.compat.workaround.MaxPreviewSize
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Suppress("DEPRECATION") // getRealSize
 @Singleton
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-class DisplayInfoManager @Inject constructor(context: Context) {
+public class DisplayInfoManager @Inject constructor(context: Context) {
     private val MAX_PREVIEW_SIZE = Size(1920, 1080)
     private val maxPreviewSize: MaxPreviewSize = MaxPreviewSize()
 
-    companion object {
+    public companion object {
         private var lazyMaxDisplay: Display? = null
         private var lazyPreviewSize: Size? = null
 
@@ -68,15 +66,13 @@ class DisplayInfoManager @Inject constructor(context: Context) {
         }
     }
 
-    val defaultDisplay: Display
+    public val defaultDisplay: Display
         get() = getMaxSizeDisplay()
 
     private var previewSize: Size? = null
 
-    /**
-     * Update the preview size according to current display size.
-     */
-    fun refresh() {
+    /** Update the preview size according to current display size. */
+    public fun refresh() {
         previewSize = calculatePreviewSize()
     }
 
@@ -84,7 +80,7 @@ class DisplayInfoManager @Inject constructor(context: Context) {
      * PREVIEW refers to the best size match to the device's screen resolution, or to 1080p
      * (1920x1080), whichever is smaller.
      */
-    fun getPreviewSize(): Size {
+    public fun getPreviewSize(): Size {
         // Use cached value to speed up since this would be called multiple times.
         if (previewSize != null) {
             return previewSize as Size
@@ -94,7 +90,9 @@ class DisplayInfoManager @Inject constructor(context: Context) {
     }
 
     private fun getMaxSizeDisplay(): Display {
-        lazyMaxDisplay?.let { return it }
+        lazyMaxDisplay?.let {
+            return it
+        }
 
         val displays = displayManager.displays
 
@@ -124,16 +122,14 @@ class DisplayInfoManager @Inject constructor(context: Context) {
 
         lazyMaxDisplay = maxDisplayWhenStateNotOff ?: maxDisplay
 
-        return checkNotNull(lazyMaxDisplay) {
-            "No displays found from ${displayManager.displays}!"
-        }
+        return checkNotNull(lazyMaxDisplay) { "No displays found from ${displayManager.displays}!" }
     }
 
-    /**
-     * Calculates the device's screen resolution, or MAX_PREVIEW_SIZE, whichever is smaller.
-     */
+    /** Calculates the device's screen resolution, or MAX_PREVIEW_SIZE, whichever is smaller. */
     private fun calculatePreviewSize(): Size {
-        lazyPreviewSize?.let { return it }
+        lazyPreviewSize?.let {
+            return it
+        }
 
         val displaySize = Point()
         val display: Display = defaultDisplay
@@ -141,13 +137,15 @@ class DisplayInfoManager @Inject constructor(context: Context) {
         //  is deprecated since API level 31.
         display.getRealSize(displaySize)
         var displayViewSize: Size
-        displayViewSize = if (displaySize.x > displaySize.y) {
-            Size(displaySize.x, displaySize.y)
-        } else {
-            Size(displaySize.y, displaySize.x)
-        }
-        if (displayViewSize.width * displayViewSize.height
-            > MAX_PREVIEW_SIZE.width * MAX_PREVIEW_SIZE.height
+        displayViewSize =
+            if (displaySize.x > displaySize.y) {
+                Size(displaySize.x, displaySize.y)
+            } else {
+                Size(displaySize.y, displaySize.x)
+            }
+        if (
+            displayViewSize.width * displayViewSize.height >
+                MAX_PREVIEW_SIZE.width * MAX_PREVIEW_SIZE.height
         ) {
             displayViewSize = MAX_PREVIEW_SIZE
         }

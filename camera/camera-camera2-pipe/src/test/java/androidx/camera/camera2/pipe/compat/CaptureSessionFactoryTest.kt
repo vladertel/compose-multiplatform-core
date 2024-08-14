@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-
 package androidx.camera.camera2.pipe.compat
 
 import android.content.Context
@@ -24,7 +22,7 @@ import android.os.Build
 import android.os.Looper
 import android.util.Size
 import android.view.Surface
-import androidx.annotation.RequiresApi
+import androidx.camera.camera2.pipe.CameraExtensionMetadata
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraGraph.Flags.FinalizeSessionOnCloseBehavior
 import androidx.camera.camera2.pipe.CameraId
@@ -56,7 +54,6 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -67,7 +64,6 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricCameraPipeTestRunner::class)
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class CaptureSessionFactoryTest {
     private val context = ApplicationProvider.getApplicationContext() as Context
     private val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
@@ -122,24 +118,25 @@ internal class CaptureSessionFactoryTest {
                 ),
                 mapOf(stream1.id to surface),
                 captureSessionState =
-                CaptureSessionState(
-                    FakeGraphProcessor(),
-                    sessionFactory,
-                    object : Camera2CaptureSequenceProcessorFactory {
-                        override fun create(
-                            session: CameraCaptureSessionWrapper,
-                            surfaceMap: Map<StreamId, Surface>
-                        ): CaptureSequenceProcessor<Request, FakeCaptureSequence> =
-                            FakeCaptureSequenceProcessor()
-                    },
-                    CameraSurfaceManager(),
-                    SystemTimeSource(),
-                    CameraGraph.Flags(
-                        quirkFinalizeSessionOnCloseBehavior = FinalizeSessionOnCloseBehavior.OFF,
-                        quirkCloseCaptureSessionOnDisconnect = false,
-                    ),
-                    this
-                )
+                    CaptureSessionState(
+                        FakeGraphProcessor(),
+                        sessionFactory,
+                        object : Camera2CaptureSequenceProcessorFactory {
+                            override fun create(
+                                session: CameraCaptureSessionWrapper,
+                                surfaceMap: Map<StreamId, Surface>
+                            ): CaptureSequenceProcessor<Request, FakeCaptureSequence> =
+                                FakeCaptureSequenceProcessor()
+                        },
+                        CameraSurfaceManager(),
+                        SystemTimeSource(),
+                        CameraGraph.Flags(
+                            quirkFinalizeSessionOnCloseBehavior =
+                                FinalizeSessionOnCloseBehavior.OFF,
+                            quirkCloseCaptureSessionOnDisconnect = false,
+                        ),
+                        this
+                    )
             )
 
         assertThat(pendingOutputs).isNotNull()
@@ -153,15 +150,18 @@ internal class CaptureSessionFactoryTest {
 @Camera2ControllerScope
 @Component(
     modules =
-    [
-        FakeCameraGraphModule::class,
-        FakeCameraPipeModule::class,
-        Camera2CaptureSessionsModule::class,
-        FakeCamera2Module::class]
+        [
+            FakeCameraGraphModule::class,
+            FakeCameraPipeModule::class,
+            Camera2CaptureSessionsModule::class,
+            FakeCamera2Module::class
+        ]
 )
 internal interface Camera2CaptureSessionTestComponent {
     fun graphConfig(): CameraGraph.Config
+
     fun sessionFactory(): CaptureSessionFactory
+
     fun streamMap(): StreamGraphImpl
 }
 
@@ -171,12 +171,9 @@ class FakeCameraPipeModule(
     private val context: Context,
     private val fakeCamera: RobolectricCameras.FakeCamera
 ) {
-    @Provides
-    fun provideFakeCamera() = fakeCamera
+    @Provides fun provideFakeCamera() = fakeCamera
 
-    @Provides
-    @Singleton
-    fun provideFakeCameraPipeConfig() = CameraPipe.Config(context)
+    @Provides @Singleton fun provideFakeCameraPipeConfig() = CameraPipe.Config(context)
 }
 
 @Module(includes = [SharedCameraGraphModules::class])
@@ -202,13 +199,32 @@ class FakeCamera2Module {
     @Singleton
     internal fun provideFakeCamera2MetadataProvider(
         fakeCamera: RobolectricCameras.FakeCamera
-    ): Camera2MetadataProvider = object : Camera2MetadataProvider {
-        override suspend fun getCameraMetadata(cameraId: CameraId): CameraMetadata {
-            return fakeCamera.metadata
-        }
+    ): Camera2MetadataProvider =
+        object : Camera2MetadataProvider {
+            override suspend fun getCameraMetadata(cameraId: CameraId): CameraMetadata {
+                return fakeCamera.metadata
+            }
 
-        override fun awaitCameraMetadata(cameraId: CameraId): CameraMetadata {
-            return fakeCamera.metadata
+            override fun awaitCameraMetadata(cameraId: CameraId): CameraMetadata {
+                return fakeCamera.metadata
+            }
+
+            override suspend fun getCameraExtensionMetadata(
+                cameraId: CameraId,
+                extension: Int
+            ): CameraExtensionMetadata {
+                throw UnsupportedOperationException("Unused for internal tests")
+            }
+
+            override fun awaitCameraExtensionMetadata(
+                cameraId: CameraId,
+                extension: Int
+            ): CameraExtensionMetadata {
+                throw UnsupportedOperationException("Unused for internal tests")
+            }
+
+            override fun getSupportedCameraExtensions(cameraId: CameraId): Set<Int> {
+                throw UnsupportedOperationException("Unused for internal tests")
+            }
         }
-    }
 }

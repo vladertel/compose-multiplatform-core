@@ -16,6 +16,8 @@
 
 package androidx.core.telecom.test
 
+import android.media.AudioManager.AudioRecordingCallback
+import android.media.AudioRecord
 import android.telecom.CallEndpoint
 import android.telecom.DisconnectCause
 import android.view.LayoutInflater
@@ -24,16 +26,20 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
+import androidx.core.telecom.CallControlResult
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @RequiresApi(34)
-class CallListAdapter(private var mList: ArrayList<CallRow>?) :
-    RecyclerView.Adapter<CallListAdapter.ViewHolder>() {
-
+class CallListAdapter(
+    private var mList: ArrayList<CallRow>?,
+    private var mAudioRecord: AudioRecord? = null
+) : RecyclerView.Adapter<CallListAdapter.ViewHolder>() {
     var mCallIdToViewHolder: MutableMap<String, ViewHolder> = mutableMapOf()
+    private val CONTROL_ACTION_FAILED_MSG = "CurrentState=[FAILED-T]"
+    internal var mAudioRecordingCallback: AudioRecordingCallback? = null
 
     class ViewHolder(ItemView: View) : RecyclerView.ViewHolder(ItemView) {
         // TextViews
@@ -55,8 +61,7 @@ class CallListAdapter(private var mList: ArrayList<CallRow>?) :
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         // inflates the card_view_design view that is used to hold list item
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.call_row, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.call_row, parent, false)
 
         return ViewHolder(view)
     }
@@ -78,26 +83,42 @@ class CallListAdapter(private var mList: ArrayList<CallRow>?) :
 
             holder.activeButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
-                    if (ItemsViewModel.callObject.mCallControl!!.setActive()) {
-                        holder.currentState.text = "CurrentState=[active]"
+                    // If the audio is not already recording, start it up (i.e. if call was set
+                    // to inactive just before).
+                    if (mAudioRecord?.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                        mAudioRecord?.startRecording()
+                    }
+                    when (ItemsViewModel.callObject.mCallControl!!.setActive()) {
+                        is CallControlResult.Success -> {
+                            holder.currentState.text = "CurrentState=[active]"
+                        }
+                        is CallControlResult.Error -> {
+                            holder.currentState.text = CONTROL_ACTION_FAILED_MSG
+                        }
                     }
                 }
             }
 
             holder.holdButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
-                    if (ItemsViewModel.callObject.mCallControl!!.setInactive()) {
-                        holder.currentState.text = "CurrentState=[onHold]"
+                    // Pause recording but don't clear callback
+                    mAudioRecord?.stop()
+                    when (ItemsViewModel.callObject.mCallControl!!.setInactive()) {
+                        is CallControlResult.Success -> {
+                            holder.currentState.text = "CurrentState=[onHold]"
+                        }
+                        is CallControlResult.Error -> {
+                            holder.currentState.text = CONTROL_ACTION_FAILED_MSG
+                        }
                     }
                 }
             }
 
             holder.disconnectButton.setOnClickListener {
                 CoroutineScope(Dispatchers.IO).launch {
+                    endAudioRecording()
                     ItemsViewModel.callObject.mCallControl?.disconnect(
-                        DisconnectCause(
-                            DisconnectCause.LOCAL
-                        )
+                        DisconnectCause(DisconnectCause.LOCAL)
                     )
                 }
                 holder.currentState.text = "CurrentState=[null]"
@@ -118,14 +139,20 @@ class CallListAdapter(private var mList: ArrayList<CallRow>?) :
             }
             holder.speakerButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
-                    val speakerEndpoint = ItemsViewModel.callObject
-                        .getEndpointType(CallEndpoint.TYPE_SPEAKER)
+                    val speakerEndpoint =
+                        ItemsViewModel.callObject.getEndpointType(CallEndpoint.TYPE_SPEAKER)
                     if (speakerEndpoint != null) {
-                        val success = ItemsViewModel.callObject.mCallControl?.requestEndpointChange(
-                            speakerEndpoint
-                        )
-                        if (success == true) {
-                            holder.currentEndpoint.text = "currentEndpoint=[speaker]"
+                        when (
+                            ItemsViewModel.callObject.mCallControl!!.requestEndpointChange(
+                                speakerEndpoint
+                            )
+                        ) {
+                            is CallControlResult.Success -> {
+                                holder.currentState.text = "CurrentState=[speaker]"
+                            }
+                            is CallControlResult.Error -> {
+                                holder.currentState.text = CONTROL_ACTION_FAILED_MSG
+                            }
                         }
                     }
                 }
@@ -133,15 +160,22 @@ class CallListAdapter(private var mList: ArrayList<CallRow>?) :
 
             holder.bluetoothButton.setOnClickListener {
                 CoroutineScope(Dispatchers.Main).launch {
-                    val bluetoothEndpoint = ItemsViewModel.callObject
-                        .getEndpointType(CallEndpoint.TYPE_BLUETOOTH)
+                    val bluetoothEndpoint =
+                        ItemsViewModel.callObject.getEndpointType(CallEndpoint.TYPE_BLUETOOTH)
                     if (bluetoothEndpoint != null) {
-                        val success = ItemsViewModel.callObject.mCallControl?.requestEndpointChange(
-                            bluetoothEndpoint
-                        )
-                        if (success == true) {
-                            holder.currentEndpoint.text =
-                                "currentEndpoint=[BT:${bluetoothEndpoint.name}]"
+                        when (
+                            ItemsViewModel.callObject.mCallControl!!.requestEndpointChange(
+                                bluetoothEndpoint
+                            )
+                        ) {
+                            is CallControlResult.Success -> {
+                                holder.currentEndpoint.text =
+                                    "currentEndpoint=[BT:${bluetoothEndpoint.name}]"
+                            }
+                            is CallControlResult.Error -> {
+                                // e.g. tear down call and
+                                holder.currentState.text = CONTROL_ACTION_FAILED_MSG
+                            }
                         }
                     }
                 }
@@ -160,6 +194,18 @@ class CallListAdapter(private var mList: ArrayList<CallRow>?) :
         CoroutineScope(Dispatchers.Main).launch {
             val holder = mCallIdToViewHolder[callId]
             holder?.currentEndpoint?.text = "currentEndpoint=[$endpoint]"
+        }
+    }
+
+    private fun endAudioRecording() {
+        try {
+            // Stop audio recording
+            mAudioRecord?.stop()
+            mAudioRecord?.unregisterAudioRecordingCallback(mAudioRecordingCallback!!)
+        } catch (e: java.lang.Exception) {
+            // pass through
+        } finally {
+            mAudioRecordingCallback = null
         }
     }
 }

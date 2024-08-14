@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.material.Text
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material.ripple
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -47,26 +47,29 @@ class RippleTestActivity : ComponentActivity() {
                 val interactionSource = remember {
                     object : MutableInteractionSource {
                         override suspend fun emit(interaction: Interaction) {}
+
                         override fun tryEmit(interaction: Interaction) = true
+
                         override val interactions: Flow<Interaction>
                             get() = flowOf(PressInteraction.Press(Offset.Zero))
                     }
                 }
                 Text(
                     text = "Click me with indication",
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = rememberRipple()
-                        ) { /* do something */ }
-                        .padding(10.dp)
+                    modifier =
+                        Modifier.clickable(
+                                interactionSource = interactionSource,
+                                indication = ripple()
+                            ) { /* do something */
+                            }
+                            .padding(10.dp)
                 )
                 Spacer(Modifier.requiredHeight(10.dp))
                 Text(
                     text = "I show indication with clicking on other Text composable",
-                    modifier = Modifier
-                        .indication(interactionSource, LocalIndication.current)
-                        .padding(10.dp)
+                    modifier =
+                        Modifier.indication(interactionSource, LocalIndication.current)
+                            .padding(10.dp)
                 )
             }
         }

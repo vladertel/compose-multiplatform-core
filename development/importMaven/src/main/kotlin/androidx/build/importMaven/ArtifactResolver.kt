@@ -18,6 +18,7 @@ package androidx.build.importMaven
 
 import androidx.build.importMaven.ArtifactResolver.resolveArtifacts
 import androidx.build.importMaven.KmpConfig.SUPPORTED_KONAN_TARGETS
+import java.net.URI
 import org.apache.logging.log4j.kotlin.logger
 import org.gradle.api.Named
 import org.gradle.api.Project
@@ -28,7 +29,6 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
-import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
@@ -40,8 +40,8 @@ import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinUsages
+import org.jetbrains.kotlin.gradle.targets.js.KotlinWasmTargetAttribute
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import java.net.URI
 
 /**
  * Provides functionality to resolve and download artifacts.
@@ -53,7 +53,8 @@ internal object ArtifactResolver {
     internal val jetbrainsRepositories = listOf(
         "https://maven.pkg.jetbrains.space/kotlin/p/dokka/dev/",
         "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev",
-        "https://maven.pkg.jetbrains.space/public/p/compose/dev"
+        "https://maven.pkg.jetbrains.space/public/p/compose/dev",
+        "https://maven.pkg.jetbrains.space/kotlin/p/dokka/test"
     )
 
     internal val gradlePluginPortalRepo = "https://plugins.gradle.org/m2/"
@@ -170,14 +171,18 @@ ${
                     }
                     pendingComponentIds.addAll(newComponentIds)
                 } while (explicitlyFetchInheritedDependencies && pendingComponentIds.isNotEmpty())
-                ArtifactsResolutionResult(allResolvedArtifacts.toList(), dependenciesPassedVerification)
+                ArtifactsResolutionResult(
+                    allResolvedArtifacts.toList(),
+                    dependenciesPassedVerification
+                )
             }.also { result ->
                 val artifacts = result.artifacts
                 logger.trace {
                     "Resolved files: ${artifacts.size}"
                 }
                 check(artifacts.isNotEmpty()) {
-                    "Didn't resolve any artifacts from $artifacts . Try --verbose for more information"
+                    "Didn't resolve any artifacts from $artifacts. Try --verbose for more " +
+                      "information"
                 }
                 artifacts.forEach { artifact ->
                     logger.trace {
@@ -201,13 +206,13 @@ ${
                     addAll(createKmpConfigurations(dep))
                 }
             }
-            val resolution = configurations.map { configuration ->
+            val resolutionList = configurations.map { configuration ->
                 resolveArtifacts(configuration, disableVerificationOnFailure = true)
             }
-            val artifacts = resolution.flatMap { resolution ->
+            val artifacts = resolutionList.flatMap { resolution ->
                 resolution.artifacts
             }
-            val dependenciesPassedVerification = resolution.map { resolution ->
+            val dependenciesPassedVerification = resolutionList.map { resolution ->
                 resolution.dependenciesPassedVerification
             }.all { it == true }
             return ArtifactsResolutionResult(artifacts, dependenciesPassedVerification)
@@ -229,7 +234,7 @@ ${
                     // We need to be lenient because we are requesting files that might not exist.
                     // For example source.jar or .asc.
                     it.lenient(true)
-                }.artifacts.artifacts?.toList() ?: emptyList()
+                }.artifacts.artifacts.toList()
                 ArtifactsResolutionResult(artifacts.toList(), dependenciesPassedVerification = true)
             } catch (verificationException: DependencyVerificationException) {
                 if (disableVerificationOnFailure) {
@@ -243,7 +248,10 @@ ${verificationException.message?.prependIndent("    ")}
                         """
                     }
                     val artifacts = resolveArtifacts(copy, disableVerificationOnFailure = false)
-                    return ArtifactsResolutionResult(artifacts.artifacts, dependenciesPassedVerification = false)
+                    return ArtifactsResolutionResult(
+                        artifacts.artifacts,
+                        dependenciesPassedVerification = false
+                    )
                 } else {
                     throw verificationException
                 }
@@ -300,15 +308,19 @@ ${verificationException.message?.prependIndent("    ")}
             vararg dependencies: Dependency
         ): List<Configuration> {
             return listOf(
-                LibraryElements.JAR,
-                "aar"
-            ).map { libraryElement ->
+                LibraryElements.JAR to TargetJvmEnvironment.STANDARD_JVM,
+                LibraryElements.JAR to TargetJvmEnvironment.ANDROID,
+                "aar" to TargetJvmEnvironment.ANDROID,
+            ).map { (libraryElement, jvmEnvironment) ->
                 createConfiguration(*dependencies) {
                     attributes.apply {
                         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, libraryElement)
                         attribute(Usage.USAGE_ATTRIBUTE, Usage.JAVA_RUNTIME)
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
+                        attribute(
+                            TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                            jvmEnvironment
+                        )
                     }
                 }
             }
@@ -326,7 +338,6 @@ ${verificationException.message?.prependIndent("    ")}
                 createConfiguration(*dependencies) {
                     attributes.apply {
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
                         attribute(
                             TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
                             TargetJvmEnvironment.STANDARD_JVM
@@ -361,7 +372,6 @@ ${verificationException.message?.prependIndent("    ")}
                         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, libraryElement)
                         attribute(Usage.USAGE_ATTRIBUTE, Usage.JAVA_API)
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
                     }
                 }
             }
@@ -402,6 +412,22 @@ ${verificationException.message?.prependIndent("    ")}
                     }
                 }
             }
+
+            val wasmJs = KOTlIN_USAGES.map { kotlinUsage ->
+                createConfiguration(*dependencies) {
+                    attributes.apply {
+                        attribute(KotlinPlatformType.attribute, KotlinPlatformType.wasm)
+                        attribute(Usage.USAGE_ATTRIBUTE, kotlinUsage)
+                        attribute(
+                            KotlinWasmTargetAttribute.wasmTargetAttribute,
+                            KotlinWasmTargetAttribute.js
+                        )
+                        attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
+                        attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, "non-jvm")
+                    }
+                }
+            }
+
             val commonArtifacts = KOTlIN_USAGES.map { kotlinUsage ->
                 createConfiguration(*dependencies) {
                     attributes.apply {
@@ -411,7 +437,7 @@ ${verificationException.message?.prependIndent("    ")}
                     }
                 }
             }
-            return jvmAndAndroid + konanTargetConfigurations + commonArtifacts
+            return jvmAndAndroid + wasmJs + konanTargetConfigurations + commonArtifacts
         }
 
         private fun createKonanTargetConfiguration(

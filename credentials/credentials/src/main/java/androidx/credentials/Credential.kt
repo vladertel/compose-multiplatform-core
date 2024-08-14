@@ -24,19 +24,19 @@ import androidx.credentials.internal.FrameworkClassParsingException
  * Base class for a credential with which the user consented to authenticate to the app.
  *
  * @sample androidx.credentials.samples.processCredential
- *
  * @property type the credential type determined by the credential-type-specific subclass (e.g.
- * [PasswordCredential.TYPE_PASSWORD_CREDENTIAL] for `PasswordCredential` or
- * [PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL] for `PublicKeyCredential`)
+ *   [PasswordCredential.TYPE_PASSWORD_CREDENTIAL] for `PasswordCredential` or
+ *   [PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL] for `PublicKeyCredential`)
  * @property data the credential data in the [Bundle] format
  */
-abstract class Credential internal constructor(
+abstract class Credential
+internal constructor(
     val type: String,
     val data: Bundle,
 ) {
-    internal companion object {
+    companion object {
         @JvmStatic
-        @RestrictTo(RestrictTo.Scope.LIBRARY) // used from java tests
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // used from java tests
         fun createFrom(type: String, data: Bundle): Credential {
             return try {
                 when (type) {
@@ -44,6 +44,7 @@ abstract class Credential internal constructor(
                         PasswordCredential.createFrom(data)
                     PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL ->
                         PublicKeyCredential.createFrom(data)
+                    RestoreCredential.TYPE_RESTORE_CREDENTIAL -> RestoreCredential.createFrom(data)
                     else -> throw FrameworkClassParsingException()
                 }
             } catch (e: FrameworkClassParsingException) {

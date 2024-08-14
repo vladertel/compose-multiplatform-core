@@ -106,13 +106,42 @@ abstract class ListTaskOutputsTask : DefaultTask() {
 // TODO(149103692): remove all elements of this set
 val taskNamesKnownToDuplicateOutputs =
     setOf(
-        "kotlinSourcesJar",
-        "releaseSourcesJar",
-        "sourceJarRelease",
-        "sourceJar",
+        // Instead of adding new elements to this set, prefer to disable unused tasks when possible
+
+        // b/308798582
+        "transformNonJvmMainCInteropDependenciesMetadataForIde",
+        "transformDarwinTestCInteropDependenciesMetadataForIde",
+        "transformDarwinMainCInteropDependenciesMetadataForIde",
+        "transformCommonMainCInteropDependenciesMetadataForIde",
+        "transformCommonTestCInteropDependenciesMetadataForIde",
+        "transformIosMainCInteropDependenciesMetadataForIde",
+        "transformIosTestCInteropDependenciesMetadataForIde",
+        "transformNativeTestCInteropDependenciesMetadataForIde",
+        "transformNativeMainCInteropDependenciesMetadataForIde",
+        "transformLinuxMainCInteropDependenciesMetadataForIde",
+        "transformNonJvmCommonMainCInteropDependenciesMetadataForIde",
+
         // The following tests intentionally have the same output of golden images
         "updateGoldenDesktopTest",
-        "updateGoldenDebugUnitTest"
+        "updateGoldenDebugUnitTest",
+
+        // The following tasks have the same output file:
+        // ../../prebuilts/androidx/external/wasm/yarn-offline-mirror/yarn.lock
+        "kotlinRestoreYarnLock",
+        "kotlinNpmInstall",
+        "kotlinUpgradePackageLock",
+        "kotlinUpgradeYarnLock",
+        "kotlinStorePackageLock",
+        "kotlinStoreYarnLock",
+
+        // The following tasks have the same output configFile file:
+        // projectBuildDir/js/packages/projectName-wasm-js/webpack.config.js
+        // Remove when https://youtrack.jetbrains.com/issue/KT-70029 is resolved
+        // and set configFile location for each task
+        "wasmJsBrowserDevelopmentWebpack",
+        "wasmJsBrowserDevelopmentRun",
+        "wasmJsBrowserProductionWebpack",
+        "wasmJsBrowserProductionRun",
     )
 
 fun shouldValidateTaskOutput(task: Task): Boolean {

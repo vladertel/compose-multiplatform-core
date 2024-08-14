@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package androidx.core.widget
+
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Color
@@ -49,7 +50,6 @@ import org.robolectric.annotation.internal.DoNotInstrument
 
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
-@Config(minSdk = 14)
 class RemoteViewsTest {
     private val mContext = ApplicationProvider.getApplicationContext<Context>()
     private lateinit var mRemoteViews: RemoteViews
@@ -96,8 +96,6 @@ class RemoteViewsTest {
         assertThat(mTextView.error).isNull()
     }
 
-    @Config(minSdk = 16)
-    @SdkSuppress(minSdkVersion = 16)
     @Test
     fun setTextViewMaxLines() {
         mRemoteViews.setTextViewMaxLines(R.id.text, 7)

@@ -14,27 +14,29 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.list
 
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.unit.IntSize
 
-/**
- * The result of the measure pass for lazy list layout.
- */
+/** The result of the measure pass for lazy list layout. */
 internal class LazyListMeasureResult(
     // properties defining the scroll position:
-    /** The new first visible item.*/
-    val firstVisibleItem: LazyMeasuredItem?,
-    /** The new value for [TvLazyListState.firstVisibleItemScrollOffset].*/
+    /** The new first visible item. */
+    val firstVisibleItem: LazyListMeasuredItem?,
+    /** The new value for [TvLazyListState.firstVisibleItemScrollOffset]. */
     val firstVisibleItemScrollOffset: Int,
-    /** True if there is some space available to continue scrolling in the forward direction.*/
+    /** True if there is some space available to continue scrolling in the forward direction. */
     val canScrollForward: Boolean,
-    /** The amount of scroll consumed during the measure pass.*/
+    /** The amount of scroll consumed during the measure pass. */
     val consumedScroll: Float,
-    /** MeasureResult defining the layout.*/
+    /** MeasureResult defining the layout. */
     measureResult: MeasureResult,
+    /** The amount of scroll-back that happened due to reaching the end of the list. */
+    val scrollBackAmount: Float,
     // properties representing the info needed for LazyListLayoutInfo:
     /** see [TvLazyListLayoutInfo.visibleItemsInfo] */
     override val visibleItemsInfo: List<TvLazyListItemInfo>,
@@ -55,5 +57,7 @@ internal class LazyListMeasureResult(
 ) : TvLazyListLayoutInfo, MeasureResult by measureResult {
     override val viewportSize: IntSize
         get() = IntSize(width, height)
-    override val beforeContentPadding: Int get() = -viewportStartOffset
+
+    override val beforeContentPadding: Int
+        get() = -viewportStartOffset
 }

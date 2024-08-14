@@ -61,7 +61,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -90,9 +89,13 @@ import java.util.Set;
  * <p>Slices are constructed using {@link androidx.slice.builders.TemplateSliceBuilder}s
  * in a tree structure that provides the OS some information about how the content should be
  * displayed.
+ *
+ * @deprecated Slice framework has been deprecated, it will not receive any updates moving
+ * forward. If you are looking for a framework that handles communication across apps,
+ * consider using {@link android.app.appsearch.AppSearchManager}.
  */
 @VersionedParcelize(allowSerialization = true, isCustom = true)
-@RequiresApi(19)
+@Deprecated
 public final class Slice extends CustomVersionedParcelable implements VersionedParcelable {
 
     /**
@@ -649,7 +652,6 @@ public final class Slice extends CustomVersionedParcelable implements VersionedP
             // This class is not instantiable.
         }
 
-        @DoNotInline
         static <T> T getSystemService(Context context, Class<T> serviceClass) {
             return context.getSystemService(serviceClass);
         }
@@ -662,7 +664,6 @@ public final class Slice extends CustomVersionedParcelable implements VersionedP
             // This class is not instantiable.
         }
 
-        @DoNotInline
         static android.app.slice.Slice bindSlice(SliceManager sliceManager, Uri uri,
                 Set<android.app.slice.SliceSpec> supportedSpecs) {
             return sliceManager.bindSlice(uri, supportedSpecs);

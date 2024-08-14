@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.wear.compose.material3.ExperimentalWearMaterial3Api
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Stepper
 import androidx.wear.compose.material3.StepperDefaults
@@ -30,6 +31,7 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.rangeSemantics
 
 @Sampled
+@OptIn(ExperimentalWearMaterial3Api::class)
 @Composable
 fun StepperSample() {
     var value by remember { mutableStateOf(2f) }
@@ -40,10 +42,13 @@ fun StepperSample() {
         increaseIcon = { Icon(StepperDefaults.Increase, "Increase") },
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         steps = 7
-    ) { Text("Value: $value") }
+    ) {
+        Text("Value: $value")
+    }
 }
 
 @Sampled
+@OptIn(ExperimentalWearMaterial3Api::class)
 @Composable
 fun StepperWithIntegerSample() {
     var value by remember { mutableStateOf(2) }
@@ -53,10 +58,13 @@ fun StepperWithIntegerSample() {
         increaseIcon = { Icon(StepperDefaults.Increase, "Increase") },
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         valueProgression = 1..10
-    ) { Text("Value: $value") }
+    ) {
+        Text("Value: $value")
+    }
 }
 
 @Sampled
+@OptIn(ExperimentalWearMaterial3Api::class)
 @Composable
 fun StepperWithRangeSemanticsSample() {
     var value by remember { mutableStateOf(2f) }
@@ -72,5 +80,7 @@ fun StepperWithRangeSemanticsSample() {
         increaseIcon = { Icon(StepperDefaults.Increase, "Increase") },
         decreaseIcon = { Icon(StepperDefaults.Decrease, "Decrease") },
         steps = steps,
-    ) { Text("Value: $value") }
+    ) {
+        Text("Value: $value")
+    }
 }

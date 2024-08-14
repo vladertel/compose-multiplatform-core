@@ -19,9 +19,10 @@ package androidx.test.uiautomator;
 import android.os.Build;
 import android.util.Log;
 import android.util.Xml;
+import android.view.Display;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.RequiresApi;
 import androidx.test.uiautomator.util.Traces;
 import androidx.test.uiautomator.util.Traces.Section;
@@ -85,6 +86,10 @@ class AccessibilityNodeInfoDumper {
         serializer.attribute("", "visible-to-user", Boolean.toString(node.isVisibleToUser()));
         serializer.attribute("", "bounds", AccessibilityNodeInfoHelper.getVisibleBoundsInScreen(
                 node, width, height, false).toShortString());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            serializer.attribute("", "drawing-order",
+                    Integer.toString(Api24Impl.getDrawingOrder(node)));
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             serializer.attribute("", "hint", safeCharSeqToString(Api26Impl.getHintText(node)));
         }
@@ -205,12 +210,21 @@ class AccessibilityNodeInfoDumper {
         return ret.toString();
     }
 
+    @RequiresApi(24)
+    static class Api24Impl {
+        private Api24Impl() {
+        }
+
+        static int getDrawingOrder(AccessibilityNodeInfo accessibilityNodeInfo) {
+            return accessibilityNodeInfo.getDrawingOrder();
+        }
+    }
+
     @RequiresApi(26)
     static class Api26Impl {
         private Api26Impl() {
         }
 
-        @DoNotInline
         static String getHintText(AccessibilityNodeInfo accessibilityNodeInfo) {
             CharSequence chars = accessibilityNodeInfo.getHintText();
             return chars != null ? chars.toString() : null;
@@ -222,9 +236,10 @@ class AccessibilityNodeInfoDumper {
         private Api30Impl() {
         }
 
-        @DoNotInline
         static int getDisplayId(AccessibilityNodeInfo accessibilityNodeInfo) {
-            return accessibilityNodeInfo.getWindow().getDisplayId();
+            AccessibilityWindowInfo accessibilityWindowInfo = accessibilityNodeInfo.getWindow();
+            return accessibilityWindowInfo == null ? Display.DEFAULT_DISPLAY :
+                    accessibilityWindowInfo.getDisplayId();
         }
     }
 }

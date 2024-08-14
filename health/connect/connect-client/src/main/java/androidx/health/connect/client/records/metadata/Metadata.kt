@@ -108,7 +108,11 @@ public class Metadata(
         return result
     }
 
-    internal companion object {
+    override fun toString(): String {
+        return "Metadata(id='$id', dataOrigin=$dataOrigin, lastModifiedTime=$lastModifiedTime, clientRecordId=$clientRecordId, clientRecordVersion=$clientRecordVersion, device=$device, recordingMethod=$recordingMethod)"
+    }
+
+    companion object {
         internal const val EMPTY_ID: String = ""
 
         /** A default instance of metadata with no fields initialised. */

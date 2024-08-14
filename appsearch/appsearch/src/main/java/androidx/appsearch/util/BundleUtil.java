@@ -70,7 +70,7 @@ public final class BundleUtil {
      *
      * <p>Values of type Bundle are compared using {@link #deepEquals}.
      */
-    private static boolean bundleValueEquals(@Nullable Object one, @Nullable Object two) {
+    public static boolean bundleValueEquals(@Nullable Object one, @Nullable Object two) {
         if (one == null && two == null) {
             return true;
         }
@@ -248,7 +248,7 @@ public final class BundleUtil {
             // Read bundle from bytes
             parcel.unmarshall(serializedMessage, 0, serializedMessage.length);
             parcel.setDataPosition(0);
-            return parcel.readBundle();
+            return parcel.readBundle(BundleUtil.class.getClassLoader());
         } finally {
             parcel.recycle();
         }

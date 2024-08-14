@@ -22,6 +22,7 @@ import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XMethodType
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
+import androidx.room.compiler.processing.ksp.KspProcessingEnv.JvmDefaultMode
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticContinuationParameterElement
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticReceiverParameterElement
 import com.google.devtools.ksp.KspExperimental
@@ -34,7 +35,8 @@ internal sealed class KspMethodElement(
     env: KspProcessingEnv,
     declaration: KSFunctionDeclaration,
     val isSyntheticStatic: Boolean
-) : KspExecutableElement(env, declaration),
+) :
+    KspExecutableElement(env, declaration),
     XAnnotated by KspAnnotated.create(
         env = env,
         delegate = declaration,
@@ -45,13 +47,16 @@ internal sealed class KspMethodElement(
     override val name: String
         get() = declaration.simpleName.asString()
 
+    override val propertyName = null
+
     @OptIn(KspExperimental::class)
     override val jvmName: String by lazy {
-        val jvmName = runCatching {
+        if (!isKotlinPropertyMethod()) {
             // see https://github.com/google/ksp/issues/716
-            env.resolver.getJvmName(declaration)
+            env.resolver.getJvmName(declaration) ?: name
+        } else {
+            name
         }
-        jvmName.getOrNull() ?: declaration.simpleName.asString()
     }
 
     override val parameters: List<XExecutableParameterElement> by lazy {
@@ -67,11 +72,12 @@ internal sealed class KspMethodElement(
                     )
                 )
             }
-            val startIndex = if (extensionReceiver == null) {
-                0
-            } else {
-                1
-            }
+            val startIndex =
+                if (extensionReceiver == null) {
+                    0
+                } else {
+                    1
+                }
             addAll(
                 declaration.parameters.mapIndexed { index, param ->
                     KspExecutableParameterElement(
@@ -98,25 +104,23 @@ internal sealed class KspMethodElement(
     }
 
     override val executableType: XMethodType by lazy {
-        KspMethodType.create(
-            env = env,
-            origin = this,
-            containing = this.enclosingElement.type
-        )
+        KspMethodType.create(env = env, origin = this, containing = this.enclosingElement.type)
     }
 
     override fun isJavaDefault(): Boolean {
+        val parentDeclaration = declaration.parentDeclaration
         return declaration.modifiers.contains(Modifier.JAVA_DEFAULT) ||
-            declaration.hasJvmDefaultAnnotation()
+            declaration.hasJvmDefaultAnnotation() ||
+            (parentDeclaration is KSClassDeclaration &&
+                parentDeclaration.classKind == ClassKind.INTERFACE &&
+                !declaration.isAbstract &&
+                !isPrivate() &&
+                env.jvmDefaultMode != JvmDefaultMode.DISABLE)
     }
 
     override fun asMemberOf(other: XType): XMethodType {
         check(other is KspType)
-        return KspMethodType.create(
-            env = env,
-            origin = this,
-            containing = other
-        )
+        return KspMethodType.create(env = env, origin = this, containing = other)
     }
 
     override fun hasKotlinDefaultImpl(): Boolean {
@@ -126,7 +130,8 @@ internal sealed class KspMethodElement(
         return parentDeclaration is KSClassDeclaration &&
             parentDeclaration.classKind == ClassKind.INTERFACE &&
             !declaration.isAbstract &&
-            !isPrivate()
+            !isPrivate() &&
+            env.jvmDefaultMode != JvmDefaultMode.ALL_INCOMPATIBLE
     }
 
     override fun isExtensionFunction() = declaration.extensionReceiver != null
@@ -134,6 +139,10 @@ internal sealed class KspMethodElement(
     override fun overrides(other: XMethodElement, owner: XTypeElement): Boolean {
         return env.resolver.overrides(this, other)
     }
+
+    override fun isKotlinPropertySetter() = false
+
+    override fun isKotlinPropertyGetter() = false
 
     override fun isKotlinPropertyMethod() = false
 
@@ -145,16 +154,16 @@ internal sealed class KspMethodElement(
         isSyntheticStatic: Boolean
     ) : KspMethodElement(env, declaration, isSyntheticStatic) {
         override val returnType: KspType by lazy {
-            declaration.returnKspType(
-                env = env,
-                containing = enclosingElement.type
-            ).copyWithScope(
-                KSTypeVarianceResolverScope.MethodReturnType(
-                    method = this,
-                    asMemberOf = enclosingElement.type,
+            declaration
+                .returnKspType(env = env, containing = enclosingElement.type)
+                .copyWithScope(
+                    KSTypeVarianceResolverScope.MethodReturnType(
+                        method = this,
+                        asMemberOf = enclosingElement.type,
+                    )
                 )
-            )
         }
+
         override fun isSuspendFunction() = false
     }
 
@@ -166,22 +175,19 @@ internal sealed class KspMethodElement(
         override fun isSuspendFunction() = true
 
         override val returnType: KspType by lazy {
-            env.wrap(
-                ksType = env.resolver.builtIns.anyType.makeNullable(),
-                allowPrimitives = false
-            ).copyWithScope(
-                KSTypeVarianceResolverScope.MethodReturnType(
-                    method = this,
-                    asMemberOf = enclosingElement.type
+            env.wrap(ksType = env.resolver.builtIns.anyType.makeNullable(), allowPrimitives = false)
+                .copyWithScope(
+                    KSTypeVarianceResolverScope.MethodReturnType(
+                        method = this,
+                        asMemberOf = enclosingElement.type
+                    )
                 )
-            )
         }
 
         override val parameters: List<XExecutableParameterElement>
-            get() = super.parameters + KspSyntheticContinuationParameterElement(
-                env = env,
-                enclosingElement = this
-            )
+            get() =
+                super.parameters +
+                    KspSyntheticContinuationParameterElement(env = env, enclosingElement = this)
     }
 
     companion object {

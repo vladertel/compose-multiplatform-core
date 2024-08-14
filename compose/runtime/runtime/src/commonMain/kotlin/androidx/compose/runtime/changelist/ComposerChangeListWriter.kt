@@ -29,31 +29,28 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.SlotReader
 import androidx.compose.runtime.SlotTable
 import androidx.compose.runtime.Stack
+import androidx.compose.runtime.internal.IntRef
 import androidx.compose.runtime.runtimeCheck
 
 internal class ComposerChangeListWriter(
     /**
-     * The [Composer][ComposerImpl] that is building this ChangeList. The Composer's state
-     * may be used to determine how the ChangeList should be written to.
+     * The [Composer][ComposerImpl] that is building this ChangeList. The Composer's state may be
+     * used to determine how the ChangeList should be written to.
      */
     private val composer: ComposerImpl,
-    /**
-     * The ChangeList that will be written to
-     */
+    /** The ChangeList that will be written to */
     var changeList: ChangeList
 ) {
     private val reader: SlotReader
         get() = composer.reader
 
     /**
-     * Record whether any groups were stared. If no groups were started then the root group
-     * doesn't need to be started or ended either.
+     * Record whether any groups were stared. If no groups were started then the root group doesn't
+     * need to be started or ended either.
      */
     private var startedGroup: Boolean = false
 
-    /**
-     * A stack of the location of the groups that were started.
-     */
+    /** A stack of the location of the groups that were started. */
     private val startedGroups = IntStack()
 
     /**
@@ -81,10 +78,10 @@ internal class ComposerChangeListWriter(
     // groups that must be closed before we can move past the started group.
 
     /**
-     * The skew or delta between where the writer will be and where the reader is now. This can
-     * be thought of as the unrealized distance the writer must move to match the current slot in
-     * the reader. When an operation affects the slot table the writer location must be realized
-     * by moving the writer slot table the unrealized distance.
+     * The skew or delta between where the writer will be and where the reader is now. This can be
+     * thought of as the unrealized distance the writer must move to match the current slot in the
+     * reader. When an operation affects the slot table the writer location must be realized by
+     * moving the writer slot table the unrealized distance.
      */
     private var writersReaderDelta: Int = 0
 
@@ -115,9 +112,7 @@ internal class ComposerChangeListWriter(
         realizeOperationLocation(useParentSlot)
     }
 
-    /**
-     * Called when reader current is moved directly, such as when a group moves, to [location].
-     */
+    /** Called when reader current is moved directly, such as when a group moves, to [location]. */
     fun moveReaderRelativeTo(location: Int) {
         // Ensure the next skip will account for the distance we have already travelled.
         writersReaderDelta += location - reader.currentGroup
@@ -163,19 +158,17 @@ internal class ComposerChangeListWriter(
     private fun realizeOperationLocation(forParent: Boolean = false) {
         val location = if (forParent) reader.parent else reader.currentGroup
         val distance = location - writersReaderDelta
-        runtimeCheck(distance >= 0) {
-            "Tried to seek backward"
-        }
+        runtimeCheck(distance >= 0) { "Tried to seek backward" }
         if (distance > 0) {
             changeList.pushAdvanceSlotsBy(distance)
             writersReaderDelta = location
         }
     }
 
-    inline fun withChangeList(
-        newChangeList: ChangeList,
-        block: () -> Unit
-    ) {
+    val pastParent: Boolean
+        get() = reader.parent - writersReaderDelta < 0
+
+    inline fun withChangeList(newChangeList: ChangeList, block: () -> Unit) {
         val previousChangeList = changeList
         try {
             changeList = newChangeList
@@ -202,6 +195,23 @@ internal class ComposerChangeListWriter(
     fun updateValue(value: Any?, groupSlotIndex: Int) {
         pushSlotTableOperationPreamble(useParentSlot = true)
         changeList.pushUpdateValue(value, groupSlotIndex)
+    }
+
+    fun updateAnchoredValue(value: Any?, anchor: Anchor, groupSlotIndex: Int) {
+        // Because this uses an anchor, it can be performed without positioning the writer.
+        changeList.pushUpdateAnchoredValue(value, anchor, groupSlotIndex)
+    }
+
+    fun appendValue(anchor: Anchor, value: Any?) {
+        // Because this uses an anchor, it can be performed without positioning the writer.
+        changeList.pushAppendValue(anchor, value)
+    }
+
+    fun trimValues(count: Int) {
+        if (count > 0) {
+            pushSlotEditingOperationPreamble()
+            changeList.pushTrimValues(count)
+        }
     }
 
     fun resetSlots() {
@@ -239,45 +249,35 @@ internal class ComposerChangeListWriter(
 
     fun removeCurrentGroup() {
         /*
-           When a group is removed the reader will move but the writer will not so to ensure both
-           the writer and reader are tracking the same slot we advance `writersReaderDelta` to
-           account for the removal.
-         */
+          When a group is removed the reader will move but the writer will not so to ensure both
+          the writer and reader are tracking the same slot we advance `writersReaderDelta` to
+          account for the removal.
+        */
         pushSlotEditingOperationPreamble()
         changeList.pushRemoveCurrentGroup()
         writersReaderDelta += reader.groupSize
     }
 
-    fun insertSlots(
-        anchor: Anchor,
-        from: SlotTable
-    ) {
+    fun insertSlots(anchor: Anchor, from: SlotTable) {
         pushPendingUpsAndDowns()
         pushSlotEditingOperationPreamble()
+        realizeNodeMovementOperations()
         changeList.pushInsertSlots(anchor, from)
     }
 
-    fun insertSlots(
-        anchor: Anchor,
-        from: SlotTable,
-        fixups: FixupList
-    ) {
+    fun insertSlots(anchor: Anchor, from: SlotTable, fixups: FixupList) {
         pushPendingUpsAndDowns()
         pushSlotEditingOperationPreamble()
+        realizeNodeMovementOperations()
         changeList.pushInsertSlots(anchor, from, fixups)
     }
 
-    fun moveCurrentGroup(
-        offset: Int
-    ) {
+    fun moveCurrentGroup(offset: Int) {
         pushSlotEditingOperationPreamble()
         changeList.pushMoveCurrentGroup(offset)
     }
 
-    fun endCompositionScope(
-        action: (Composition) -> Unit,
-        composition: Composition
-    ) {
+    fun endCompositionScope(action: (Composition) -> Unit, composition: Composition) {
         changeList.pushEndCompositionScope(action, composition)
     }
 
@@ -364,6 +364,7 @@ internal class ComposerChangeListWriter(
     }
 
     fun moveUp() {
+        realizeNodeMovementOperations()
         if (pendingDownNodes.isNotEmpty()) {
             pendingDownNodes.pop()
         } else {
@@ -372,6 +373,7 @@ internal class ComposerChangeListWriter(
     }
 
     fun moveDown(node: Any?) {
+        realizeNodeMovementOperations()
         pendingDownNodes.push(node)
     }
 
@@ -391,18 +393,12 @@ internal class ComposerChangeListWriter(
         changeList.pushSideEffect(effect)
     }
 
-    fun determineMovableContentNodeIndex(
-        effectiveNodeIndexOut: IntRef,
-        anchor: Anchor
-    ) {
+    fun determineMovableContentNodeIndex(effectiveNodeIndexOut: IntRef, anchor: Anchor) {
         pushPendingUpsAndDowns()
         changeList.pushDetermineMovableContentNodeIndex(effectiveNodeIndexOut, anchor)
     }
 
-    fun copyNodesToNewAnchorLocation(
-        nodes: List<Any?>,
-        effectiveNodeIndex: IntRef
-    ) {
+    fun copyNodesToNewAnchorLocation(nodes: List<Any?>, effectiveNodeIndex: IntRef) {
         changeList.pushCopyNodesToNewAnchorLocation(nodes, effectiveNodeIndex)
     }
 
@@ -430,10 +426,7 @@ internal class ComposerChangeListWriter(
         writersReaderDelta = 0
     }
 
-    fun includeOperationsIn(
-        other: ChangeList,
-        effectiveNodeIndex: IntRef? = null
-    ) {
+    fun includeOperationsIn(other: ChangeList, effectiveNodeIndex: IntRef? = null) {
         changeList.pushExecuteOperationsIn(other, effectiveNodeIndex)
     }
 

@@ -1,5 +1,3 @@
 // Baseline format: 1.0
-RemovedMethod: androidx.wear.protolayout.LayoutElementBuilders.Arc#getLayoutConstraintsForDynamicAnchorAngle():
-    Removed method androidx.wear.protolayout.LayoutElementBuilders.Arc.getLayoutConstraintsForDynamicAnchorAngle()
-RemovedMethod: androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder#setLayoutConstraintsForDynamicAnchorAngle(androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint):
-    Removed method androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder.setLayoutConstraintsForDynamicAnchorAngle(androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint)
+InvalidNullConversion: androidx.wear.protolayout.StateBuilders.State#getKeyToValueMapping():
+    Attempted to remove nullability from java.lang.Object (was NONNULL) in method androidx.wear.protolayout.StateBuilders.State.getKeyToValueMapping()

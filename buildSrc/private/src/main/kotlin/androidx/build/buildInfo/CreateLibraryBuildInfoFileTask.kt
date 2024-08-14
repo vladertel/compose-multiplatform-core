@@ -17,19 +17,23 @@
 package androidx.build.buildInfo
 
 import androidx.build.AndroidXExtension
+import androidx.build.AndroidXMultiplatformExtension
 import androidx.build.LibraryGroup
-import androidx.build.buildInfo.CreateLibraryBuildInfoFileTask.Companion.getFrameworksSupportCommitShaAtHead
+import androidx.build.addToBuildOnServer
+import androidx.build.buildInfo.CreateLibraryBuildInfoFileTask.Companion.TASK_NAME
+import androidx.build.docs.CheckTipOfTreeDocsTask.Companion.requiresDocs
 import androidx.build.getBuildInfoDirectory
-import androidx.build.getGroupZipPath
 import androidx.build.getProjectZipPath
 import androidx.build.getSupportRootFolder
-import androidx.build.gitclient.GitClient
+import androidx.build.gitclient.getHeadShaProvider
 import androidx.build.jetpad.LibraryBuildInfoFile
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.google.common.annotations.VisibleForTesting
 import com.google.gson.GsonBuilder
 import java.io.File
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ModuleVersionIdentifier
@@ -91,16 +95,25 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
 
     @get:Input abstract val groupIdRequiresSameVersion: Property<Boolean>
 
-    @get:Input abstract val groupZipPath: Property<String>
-
     @get:Input abstract val projectZipPath: Property<String>
 
-    @get:Input abstract val dependencyList: ListProperty<LibraryBuildInfoFile.Dependency>
+    @get:[Input Optional]
+    abstract val dependencyList: ListProperty<LibraryBuildInfoFile.Dependency>
 
-    @get:Input abstract val dependencyConstraintList: ListProperty<LibraryBuildInfoFile.Dependency>
+    @get:[Input Optional]
+    abstract val dependencyConstraintList: ListProperty<LibraryBuildInfoFile.Dependency>
 
     /** the local project directory without the full framework/support root directory path */
     @get:Input abstract val projectSpecificDirectory: Property<String>
+
+    /** Whether the project should be included in docs-public/build.gradle. */
+    @get:Input abstract val shouldPublishDocs: Property<Boolean>
+
+    /** Whether the artifact is from a KMP project. */
+    @get:Input abstract val kmp: Property<Boolean>
+
+    /** The project's build target */
+    @get:Input abstract val target: Property<String>
 
     private fun writeJsonToFile(info: LibraryBuildInfoFile) {
         val resolvedOutputFile: File = outputFile.get()
@@ -130,12 +143,17 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
         libraryBuildInfoFile.path = projectDir.get()
         libraryBuildInfoFile.sha = commit.get()
         libraryBuildInfoFile.groupIdRequiresSameVersion = groupIdRequiresSameVersion.get()
-        libraryBuildInfoFile.groupZipPath = groupZipPath.get()
         libraryBuildInfoFile.projectZipPath = projectZipPath.get()
         libraryBuildInfoFile.kotlinVersion = kotlinVersion.orNull
         libraryBuildInfoFile.checks = ArrayList()
-        libraryBuildInfoFile.dependencies = ArrayList(dependencyList.get())
-        libraryBuildInfoFile.dependencyConstraints = ArrayList(dependencyConstraintList.get())
+        libraryBuildInfoFile.dependencies =
+            if (dependencyList.isPresent) ArrayList(dependencyList.get()) else ArrayList()
+        libraryBuildInfoFile.dependencyConstraints =
+            if (dependencyConstraintList.isPresent) ArrayList(dependencyConstraintList.get())
+            else ArrayList()
+        libraryBuildInfoFile.shouldPublishDocs = shouldPublishDocs.get()
+        libraryBuildInfoFile.isKmp = kmp.get()
+        libraryBuildInfoFile.target = target.get()
         return libraryBuildInfoFile
     }
 
@@ -158,7 +176,10 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
             project: Project,
             mavenGroup: LibraryGroup?,
             variant: VariantPublishPlan,
-            shaProvider: Provider<String>
+            shaProvider: Provider<String>,
+            shouldPublishDocs: Boolean,
+            isKmp: Boolean,
+            target: String,
         ): TaskProvider<CreateLibraryBuildInfoFileTask> {
             return project.tasks.register(
                 TASK_NAME + variant.taskSuffix,
@@ -180,7 +201,6 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
                 )
                 task.commit.set(shaProvider)
                 task.groupIdRequiresSameVersion.set(mavenGroup?.requireSameVersion ?: false)
-                task.groupZipPath.set(project.getGroupZipPath())
                 task.projectZipPath.set(project.getProjectZipPath())
 
                 // Note:
@@ -198,6 +218,9 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
                 task.dependencyConstraintList.set(
                     variant.dependencyConstraints.map { it.asBuildInfoDependencies() }
                 )
+                task.shouldPublishDocs.set(shouldPublishDocs)
+                task.kmp.set(isKmp)
+                task.target.set(target)
             }
         }
 
@@ -230,34 +253,36 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
                 .sortedWith(compareBy({ it.groupId }, { it.artifactId }, { it.version }))
 
         private fun String?.isAndroidXDependency() =
-            this != null && startsWith("androidx.") && !startsWith("androidx.test")
-
-        /* For androidx release notes, the most common use case is to track and publish the last sha
-         * of the build that is released.  Thus, we use frameworks/support to get the sha
-         */
-        fun Project.getFrameworksSupportCommitShaAtHead(): String {
-            val gitClient = GitClient.forProject(project)
-            return gitClient.getHeadSha()
-        }
+            this != null &&
+                startsWith("androidx.") &&
+                !startsWith("androidx.test") &&
+                !startsWith("androidx.databinding")
     }
 }
 
 // Tasks that create a json files of a project's variant's dependencies
-fun Project.addCreateLibraryBuildInfoFileTasks(extension: AndroidXExtension) {
-    extension.ifReleasing {
+fun Project.addCreateLibraryBuildInfoFileTasks(
+    androidXExtension: AndroidXExtension,
+    androidXKmpExtension: AndroidXMultiplatformExtension,
+) {
+    androidXExtension.ifReleasing {
+        val anchorTask = tasks.register("${TASK_NAME}Anchor")
+        addToBuildOnServer(anchorTask)
         configure<PublishingExtension> {
             // Unfortunately, dependency information is only available through internal API
             // (See https://github.com/gradle/gradle/issues/21345).
             publications.withType(MavenPublicationInternal::class.java).configureEach { mavenPub ->
-                // Ideally we would be able to inspect each publication after initial configuration
-                // without using afterEvaluate, but there is not a clean gradle API for doing
-                // that (see https://github.com/gradle/gradle/issues/21424)
-                afterEvaluate {
-                    // java-gradle-plugin creates marker publications that are aliases of the
-                    // main publication.  We do not track these aliases.
-                    if (!mavenPub.isAlias) {
-                        createTaskForComponent(mavenPub, extension.mavenGroup, mavenPub.artifactId)
-                    }
+                // java-gradle-plugin creates marker publications that are aliases of the
+                // main publication.  We do not track these aliases.
+                if (!mavenPub.isAlias) {
+                    createTaskForComponent(
+                        anchorTask = anchorTask,
+                        pub = mavenPub,
+                        libraryGroup = androidXExtension.mavenGroup,
+                        artifactId = mavenPub.artifactId,
+                        shouldPublishDocs = androidXExtension.requiresDocs(),
+                        isKmp = androidXKmpExtension.supportedPlatforms.isNotEmpty(),
+                    )
                 }
             }
         }
@@ -265,20 +290,23 @@ fun Project.addCreateLibraryBuildInfoFileTasks(extension: AndroidXExtension) {
 }
 
 private fun Project.createTaskForComponent(
+    anchorTask: TaskProvider<Task>,
     pub: ProjectComponentPublication,
     libraryGroup: LibraryGroup?,
-    artifactId: String
+    artifactId: String,
+    shouldPublishDocs: Boolean,
+    isKmp: Boolean,
 ) {
     val task =
         createBuildInfoTask(
             pub,
             libraryGroup,
             artifactId,
-            project.provider { project.getFrameworksSupportCommitShaAtHead() }
+            getHeadShaProvider(project),
+            shouldPublishDocs,
+            isKmp
         )
-    rootProject.tasks.named(CreateLibraryBuildInfoFileTask.TASK_NAME).configure {
-        it.dependsOn(task)
-    }
+    anchorTask.dependsOn(task)
     addTaskToAggregateBuildInfoFileTask(task)
 }
 
@@ -286,35 +314,35 @@ private fun Project.createBuildInfoTask(
     pub: ProjectComponentPublication,
     libraryGroup: LibraryGroup?,
     artifactId: String,
-    shaProvider: Provider<String>
+    shaProvider: Provider<String>,
+    shouldPublishDocs: Boolean,
+    isKmp: Boolean,
 ): TaskProvider<CreateLibraryBuildInfoFileTask> {
+    val kmpTaskSuffix = computeTaskSuffix(name, artifactId)
     return CreateLibraryBuildInfoFileTask.setup(
         project = project,
         mavenGroup = libraryGroup,
         variant =
             VariantPublishPlan(
                 artifactId = artifactId,
-                taskSuffix = computeTaskSuffix(artifactId),
+                taskSuffix = kmpTaskSuffix,
                 dependencies =
-                    project.provider {
-                        pub.component
-                            ?.let { component ->
-                                val usageDependencies =
-                                    component.usages.orEmpty().flatMap { it.dependencies }
-                                usageDependencies + dependenciesOnKmpVariants(component)
-                            }
-                            .orEmpty()
+                    pub.component.map { component ->
+                        val usageDependencies =
+                            component.usages.orEmpty().flatMap { it.dependencies }
+                        usageDependencies + dependenciesOnKmpVariants(component)
                     },
                 dependencyConstraints =
-                    project.provider {
-                        pub.component
-                            ?.let { component ->
-                                component.usages.orEmpty().flatMap { it.dependencyConstraints }
-                            }
-                            .orEmpty()
+                    pub.component.map { component ->
+                        component.usages.orEmpty().flatMap { it.dependencyConstraints }
                     }
             ),
-        shaProvider = shaProvider
+        shaProvider = shaProvider,
+        // There's a build_info file for each KMP platform, but only the artifact without a platform
+        // suffix is listed in docs-public/build.gradle.
+        shouldPublishDocs = shouldPublishDocs && kmpTaskSuffix == "",
+        isKmp = isKmp,
+        target = resolveTarget(isKmp),
     )
 }
 
@@ -331,7 +359,20 @@ class BuildInfoVariantDependency(group: String, name: String, version: String) :
 
 // For examples, see CreateLibraryBuildInfoFileTaskTest
 @VisibleForTesting
-fun computeTaskSuffix(artifactId: String) =
-    artifactId.split("-").drop(1).joinToString("") { word ->
+fun computeTaskSuffix(projectName: String, artifactId: String) =
+    artifactId.substringAfter(projectName).split("-").joinToString("") { word ->
         word.replaceFirstChar { it.uppercase() }
     }
+
+/**
+ * Select the appropriate target based on if the project is KMP
+ *
+ * All non-Kotlin multiplatform projects use the `androidx` target. Projects that are KMP are built
+ * for various platforms; specifically, the `iosarm64` and `iosx64` platforms can only be built on
+ * the `androidx_multiplatform_mac` target.
+ *
+ * @param isKmp indicates if the project is KMP
+ * @return target
+ */
+@VisibleForTesting
+fun resolveTarget(isKmp: Boolean) = if (isKmp) "androidx_multiplatform_mac" else "androidx"

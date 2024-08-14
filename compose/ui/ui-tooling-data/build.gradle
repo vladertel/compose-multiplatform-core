@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-
-import androidx.build.KmpPlatformsKt
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
@@ -25,11 +30,9 @@ plugins {
     id("AndroidXComposePlugin")
 }
 
-def desktopEnabled = KmpPlatformsKt.enableDesktop(project)
-
 androidXMultiplatform {
     android()
-    if (desktopEnabled) desktop()
+    jvmStubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -52,44 +55,25 @@ androidXMultiplatform {
         jvmMain {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.kotlinStdlib)
-            }
-        }
-
-        if (desktopEnabled) {
-            skikoMain {
-                dependsOn(commonMain)
-                dependencies {
-
-                }
             }
         }
 
         androidMain {
             dependsOn(jvmMain)
             dependencies {
-                api("androidx.annotation:annotation:1.1.0")
+                api("androidx.annotation:annotation:1.8.1")
+                api("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
 
-        if (desktopEnabled) {
-            desktopMain {
-                dependsOn(skikoMain)
-                dependsOn(jvmMain)
-                dependencies {
-
-                }
-            }
-        }
-
-        jvmTest {
-            dependsOn(commonTest)
+        jvmStubsMain {
+            dependsOn(jvmMain)
             dependencies {
             }
         }
 
-        androidAndroidTest {
-            dependsOn(jvmTest)
+        androidInstrumentedTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(project(":compose:ui:ui-test-junit4"))
 
@@ -106,19 +90,10 @@ androidXMultiplatform {
             }
         }
 
-        androidTest {
-            dependsOn(jvmTest)
+        androidUnitTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.truth)
-            }
-        }
-
-        if (desktopEnabled) {
-            desktopTest {
-                dependsOn(jvmTest)
-                dependencies {
-
-                }
             }
         }
     }
@@ -126,7 +101,7 @@ androidXMultiplatform {
 
 androidx {
     name = "Compose Tooling Data"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2021"
     description = "Compose tooling library data. This library provides data about compose" +
             " for different tooling purposes."
@@ -134,5 +109,6 @@ androidx {
 }
 
 android {
+    compileSdk 35
     namespace "androidx.compose.ui.tooling.data"
 }

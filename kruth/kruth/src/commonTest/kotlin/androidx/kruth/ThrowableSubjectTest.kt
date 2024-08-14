@@ -47,9 +47,7 @@ class ThrowableSubjectTest {
     @Test
     fun hasMessageThat_failure() {
         val actual = NullPointerException("message")
-        assertFailsWith<AssertionError> {
-            assertThat(actual).hasMessageThat().isEqualTo("foobar")
-        }
+        assertFailsWith<AssertionError> { assertThat(actual).hasMessageThat().isEqualTo("foobar") }
     }
 
     @Test
@@ -62,8 +60,58 @@ class ThrowableSubjectTest {
     @Test
     fun hasMessageThat_NullMessageHasMessage_failure() {
         val npe = NullPointerException(null)
+        assertFailsWith<AssertionError> { assertThat(npe).hasMessageThat().isEqualTo("message") }
+    }
+
+    @Test
+    fun hasCauseThat_message() {
+        assertThat(Exception("foobar", IllegalStateException("barfoo")))
+            .hasCauseThat()
+            .hasMessageThat()
+            .isEqualTo("barfoo")
+    }
+
+    @Test
+    fun hasCauseThat_instanceOf() {
+        assertThat(Exception("foobar", IllegalStateException("barfoo")))
+            .hasCauseThat()
+            .isInstanceOf<IllegalStateException>()
+    }
+
+    @Test
+    fun hasCauseThat_null() {
+        assertThat(Exception("foobar")).hasCauseThat().isNull()
+    }
+
+    @Test
+    fun hasCauseThat_message_failure() {
+        val actual = Exception("foobar", IllegalStateException("barfoo"))
         assertFailsWith<AssertionError> {
-            assertThat(npe).hasMessageThat().isEqualTo("message")
+            assertThat(actual).hasCauseThat().hasMessageThat().isEqualTo("message")
+        }
+    }
+
+    @Test
+    fun hasCauseThat_instanceOf_failure() {
+        val actual = Exception("foobar", IllegalStateException("barfoo"))
+        assertFailsWith<AssertionError> {
+            assertThat(actual).hasCauseThat().isInstanceOf<NullPointerException>()
+        }
+    }
+
+    @Test
+    fun hasCauseThat_tooDeep_failure() {
+        val actual = Exception("foobar")
+        assertFailsWith<AssertionError> {
+            assertThat(actual).hasCauseThat().hasCauseThat().isNull()
+        }
+    }
+
+    @Test
+    fun hasCauseThat_deepNull_failure() {
+        val actual = Exception("foobar", RuntimeException("barfoo", IllegalStateException("buzz")))
+        assertFailsWith<AssertionError> {
+            assertThat(actual).hasCauseThat().hasCauseThat().hasMessageThat().isEqualTo("message")
         }
     }
 }

@@ -21,9 +21,11 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.window.WindowSdkExtensions
 import androidx.window.core.ExperimentalWindowApi
 import androidx.window.demo.R
 import androidx.window.embedding.ActivityStack
@@ -32,8 +34,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalWindowApi::class)
-class SplitAttributesTogglePrimaryActivity : SplitAttributesToggleMainActivity(),
-    View.OnClickListener {
+class SplitAttributesTogglePrimaryActivity :
+    SplitAttributesToggleMainActivity(), View.OnClickListener {
 
     private lateinit var secondaryActivityIntent: Intent
     private var activityStacks: Set<ActivityStack> = emptySet()
@@ -43,13 +45,9 @@ class SplitAttributesTogglePrimaryActivity : SplitAttributesToggleMainActivity()
 
         viewBinding.rootSplitActivityLayout.setBackgroundColor(Color.parseColor("#e8f5e9"))
 
-        val isRuntimeApiSupported = activityEmbeddingController
-            .isFinishingActivityStacksSupported()
+        val isRuntimeApiSupported = WindowSdkExtensions.getInstance().extensionVersion >= 3
 
-        secondaryActivityIntent = Intent(
-            this,
-            SplitAttributesToggleSecondaryActivity::class.java
-        )
+        secondaryActivityIntent = Intent(this, SplitAttributesToggleSecondaryActivity::class.java)
 
         if (intent.getBooleanExtra(EXTRA_LAUNCH_SECONDARY, false)) {
             startActivity(secondaryActivityIntent)
@@ -70,6 +68,21 @@ class SplitAttributesTogglePrimaryActivity : SplitAttributesToggleMainActivity()
                 }
             }
 
+        // Animation background
+        if (WindowSdkExtensions.getInstance().extensionVersion >= 5) {
+            val animationBackgroundDropdown = viewBinding.animationBackgroundDropdown
+            animationBackgroundDropdown.visibility = View.VISIBLE
+            viewBinding.animationBackgroundDivider.visibility = View.VISIBLE
+            viewBinding.animationBackgroundTextView.visibility = View.VISIBLE
+            animationBackgroundDropdown.adapter =
+                ArrayAdapter(
+                    this,
+                    android.R.layout.simple_spinner_dropdown_item,
+                    DemoActivityEmbeddingController.ANIMATION_BACKGROUND_TEXTS
+                )
+            animationBackgroundDropdown.onItemSelectedListener = this
+        }
+
         lifecycleScope.launch {
             // The block passed to repeatOnLifecycle is executed when the lifecycle
             // is at least STARTED and is cancelled when the lifecycle is STOPPED.
@@ -80,11 +93,12 @@ class SplitAttributesTogglePrimaryActivity : SplitAttributesToggleMainActivity()
                     .onEach { updateUiFromRules() }
                     .collect { splitInfoList ->
                         finishSecondaryActivitiesButton.isEnabled = splitInfoList.isNotEmpty()
-                        activityStacks = splitInfoList.mapTo(mutableSetOf()) { splitInfo ->
-                            splitInfo.getTheOtherActivityStack(
-                                this@SplitAttributesTogglePrimaryActivity
-                            )
-                        }
+                        activityStacks =
+                            splitInfoList.mapTo(mutableSetOf()) { splitInfo ->
+                                splitInfo.getTheOtherActivityStack(
+                                    this@SplitAttributesTogglePrimaryActivity
+                                )
+                            }
                     }
             }
         }

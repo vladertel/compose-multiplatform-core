@@ -28,6 +28,9 @@ import androidx.glance.GlanceModifier
 import androidx.glance.ImageProvider
 import androidx.glance.action.ActionModifier
 import androidx.glance.action.LambdaAction
+import androidx.glance.action.NoRippleOverride
+import androidx.glance.addChild
+import androidx.glance.addChildIfNotNull
 import androidx.glance.appwidget.action.CompoundButtonAction
 import androidx.glance.extractModifier
 import androidx.glance.findModifier
@@ -94,17 +97,19 @@ private fun EmittableWithChildren.normalizeSizes() {
             child.normalizeSizes()
         }
     }
-    if ((modifier.findModifier<HeightModifier>()?.height ?: Dimension.Wrap) is Dimension.Wrap &&
-        children.any { child ->
-            child.modifier.findModifier<HeightModifier>()?.height is Dimension.Fill
-        }
+    if (
+        (modifier.findModifier<HeightModifier>()?.height ?: Dimension.Wrap) is Dimension.Wrap &&
+            children.any { child ->
+                child.modifier.findModifier<HeightModifier>()?.height is Dimension.Fill
+            }
     ) {
         modifier = modifier.fillMaxHeight()
     }
-    if ((modifier.findModifier<WidthModifier>()?.width ?: Dimension.Wrap) is Dimension.Wrap &&
-        children.any { child ->
-            child.modifier.findModifier<WidthModifier>()?.width is Dimension.Fill
-        }
+    if (
+        (modifier.findModifier<WidthModifier>()?.width ?: Dimension.Wrap) is Dimension.Wrap &&
+            children.any { child ->
+                child.modifier.findModifier<WidthModifier>()?.width is Dimension.Fill
+            }
     ) {
         modifier = modifier.fillMaxWidth()
     }
@@ -134,14 +139,13 @@ private fun EmittableWithChildren.transformTree(block: (Emittable) -> Emittable)
  * for each key, even after de-duping.
  */
 internal fun EmittableWithChildren.updateLambdaActionKeys(): Map<String, List<LambdaAction>> =
-    children.foldIndexed(
-        mutableMapOf<String, MutableList<LambdaAction>>()
-    ) { index, actions, child ->
+    children.foldIndexed(mutableMapOf<String, MutableList<LambdaAction>>()) { index, actions, child
+        ->
         val (action: LambdaAction?, modifiers: GlanceModifier) =
             child.modifier.extractLambdaAction()
-        if (action != null &&
-            child !is EmittableSizeBox &&
-            child !is EmittableLazyItemWithChildren) {
+        if (
+            action != null && child !is EmittableSizeBox && child !is EmittableLazyItemWithChildren
+        ) {
             val newKey = action.key + "+$index"
             val newAction = LambdaAction(newKey, action.block)
             actions.getOrPut(newKey) { mutableListOf() }.add(newAction)
@@ -193,17 +197,50 @@ private fun Emittable.transformBackgroundImageAndActionRipple(): Emittable {
     var target = this
     val isButton = target is EmittableButton
 
-    val shouldWrapTargetInABox = target.modifier.any {
-        // Background images (i.e. BitMap or drawable resources) are emulated by placing the image
-        // before the target in the wrapper box. This allows us to support content scale as well as
-        // can help support additional processing on background images. Note: Button's don't support
-        // bg image modifier.
-        (it is BackgroundModifier && it.imageProvider != null) ||
-        // R- buttons are implemented using box, images and text.
-        (isButton && Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) ||
-         // Ripples are implemented by placing a drawable after the target in the wrapper box.
-        (it is ActionModifier && !hasBuiltinRipple())
+    // Button ignores background modifiers.
+    if (isButton && Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
+        // Buttons cannot have a background image modifier. Remove BackgroundModifier.Image from
+        // the button if it exists.
+        val (maybeBgImageModifier, modifiersMinusBgImage) =
+            target.modifier.extractModifier<BackgroundModifier.Image>()
+        if (maybeBgImageModifier != null) {
+            Log.w(
+                GlanceAppWidgetTag,
+                "Glance Buttons should not have a background image modifier. " +
+                    "Consider an image with a clickable modifier."
+            )
+            target.modifier = modifiersMinusBgImage
+        }
+
+        // Buttons ignore background color modifier. Remove it.
+        val (maybeBgColorModifier, modifiersMinusBgColor) =
+            target.modifier.extractModifier<BackgroundModifier.Image>()
+        if (maybeBgColorModifier != null) {
+            Log.w(
+                GlanceAppWidgetTag,
+                "Glance Buttons should not have a background color modifier. " +
+                    "Consider a tinted image with a clickable modifier"
+            )
+            target.modifier = modifiersMinusBgColor
+        }
     }
+
+    val shouldWrapTargetInABox =
+        target.modifier.any {
+            // Background images (i.e. BitMap or drawable resources) are emulated by placing the
+            // image
+            // before the target in the wrapper box. This allows us to support content scale as well
+            // as
+            // can help support additional processing on background images. Note: Button's don't
+            // support
+            // bg image modifier.
+            (it is BackgroundModifier.Image) ||
+                // R- buttons are implemented using box, images and text.
+                (isButton && Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) ||
+                // Ripples are implemented by placing a drawable after the target in the wrapper
+                // box.
+                (it is ActionModifier && !hasBuiltinRipple())
+        }
     if (!shouldWrapTargetInABox) return target
 
     // Hoisted modifiers are subtracted from the target one by one and added to the box and the
@@ -214,37 +251,46 @@ private fun Emittable.transformBackgroundImageAndActionRipple(): Emittable {
     var rippleImage: EmittableImage? = null
 
     val (bgModifier, targetModifiersMinusBg) = target.modifier.extractModifier<BackgroundModifier>()
+
     if (bgModifier != null) {
         if (isButton) {
             // Emulate rounded corners (fixed radius) using a drawable and apply background colors
             // to it. Note: Currently, button doesn't support bg image modifier, but only button
             // colors.
-            backgroundImage = EmittableImage().apply {
-                modifier = GlanceModifier.fillMaxSize()
-                provider = ImageProvider(R.drawable.glance_button_outline)
-                // Without setting alpha, if this drawable's base was transparent, solid color won't
-                // be applied as the default blending mode uses alpha from base. And if this
-                // drawable's base was white/none, applying transparent tint will lead to black
-                // color. This shouldn't be issue for icon type drawables, but in this case we are
-                // emulating colored outline. So, we apply tint as well as alpha.
-                bgModifier.colorProvider?.let {
-                    colorFilterParams = TintAndAlphaColorFilterParams(it)
+            backgroundImage =
+                EmittableImage().apply {
+                    modifier = GlanceModifier.fillMaxSize()
+                    provider = ImageProvider(R.drawable.glance_button_outline)
+                    // Without setting alpha, if this drawable's base was transparent, solid color
+                    // won't
+                    // be applied as the default blending mode uses alpha from base. And if this
+                    // drawable's base was white/none, applying transparent tint will lead to black
+                    // color. This shouldn't be issue for icon type drawables, but in this case we
+                    // are
+                    // emulating colored outline. So, we apply tint as well as alpha.
+                    (bgModifier as? BackgroundModifier.Color)?.colorProvider?.let {
+                        colorFilterParams = TintAndAlphaColorFilterParams(it)
+                    }
+                    contentScale = ContentScale.FillBounds
                 }
-                contentScale = ContentScale.FillBounds
-            }
         } else {
             // bgModifier.imageProvider is converted to an actual image but bgModifier.colorProvider
             // is applied back to the target. Note: We could have hoisted the bg color to box
             // instead of adding it back to the target, but for buttons, we also add an outline
             // background to the box.
-            if (bgModifier.imageProvider != null) {
-                backgroundImage = EmittableImage().apply {
-                    modifier = GlanceModifier.fillMaxSize()
-                    provider = bgModifier.imageProvider
-                    contentScale = bgModifier.contentScale
+            when (bgModifier) {
+                is BackgroundModifier.Image -> {
+                    backgroundImage =
+                        EmittableImage().apply {
+                            modifier = GlanceModifier.fillMaxSize()
+                            provider = bgModifier.imageProvider
+                            contentScale = bgModifier.contentScale
+                            colorFilterParams = bgModifier.colorFilter?.colorFilterParams
+                        }
                 }
-            } else { // is a background color modifier
-                targetModifiers += bgModifier
+                is BackgroundModifier.Color -> {
+                    targetModifiers += bgModifier
+                }
             }
         }
     }
@@ -256,13 +302,20 @@ private fun Emittable.transformBackgroundImageAndActionRipple(): Emittable {
         targetModifiersMinusBg.extractModifier<ActionModifier>()
     boxModifiers += actionModifier
     if (actionModifier != null && !hasBuiltinRipple()) {
+        val maybeRippleOverride = actionModifier.rippleOverride
         val rippleImageProvider =
-            if (isButton) ImageProvider(R.drawable.glance_button_ripple)
-            else ImageProvider(R.drawable.glance_ripple)
-        rippleImage = EmittableImage().apply {
-            modifier = GlanceModifier.fillMaxSize()
-            provider = rippleImageProvider
-        }
+            if (maybeRippleOverride != NoRippleOverride) {
+                ImageProvider(maybeRippleOverride)
+            } else if (isButton) {
+                ImageProvider(R.drawable.glance_button_ripple)
+            } else {
+                ImageProvider(R.drawable.glance_ripple)
+            }
+        rippleImage =
+            EmittableImage().apply {
+                modifier = GlanceModifier.fillMaxSize()
+                provider = rippleImageProvider
+            }
     }
 
     // Hoist the size and corner radius modifiers to the wrapping Box, then set the target element
@@ -282,51 +335,64 @@ private fun Emittable.transformBackgroundImageAndActionRipple(): Emittable {
 
     return EmittableBox().apply {
         modifier = boxModifiers.collect()
+        target.modifier = targetModifiers.collect()
+
         if (isButton) contentAlignment = Alignment.Center
 
-        backgroundImage?.let { children += it }
-        children += target.apply { modifier = targetModifiers.collect() }
-        rippleImage?.let { children += it }
+        addChildIfNotNull(backgroundImage)
+        addChild(target)
+        addChildIfNotNull(rippleImage)
     }
 }
 
 private fun Emittable.hasBuiltinRipple() =
     this is EmittableSwitch ||
-    this is EmittableRadioButton ||
-    this is EmittableCheckBox ||
-     // S+ versions use a native button with fixed rounded corners and matching ripple set in
-     // layout xml. In R- versions, buttons are implemented using a background drawable with
-     // rounded corners and an EmittableText in R- versions.
-    (this is EmittableButton && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        this is EmittableRadioButton ||
+        this is EmittableCheckBox ||
+        // S+ versions use a native button with fixed rounded corners and matching ripple set in
+        // layout xml. In R- versions, buttons are implemented using a background drawable with
+        // rounded corners and an EmittableText in R- versions.
+        (this is EmittableButton && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
 
-private data class ExtractedSizeModifiers(
-    val sizeModifiers: GlanceModifier = GlanceModifier,
-    val nonSizeModifiers: GlanceModifier = GlanceModifier,
+private data class ExtractedSizeAndCornerModifiers(
+    val sizeAndCornerModifiers: GlanceModifier = GlanceModifier,
+    val nonSizeOrCornerModifiers: GlanceModifier = GlanceModifier,
 )
 
 /**
- * Split the [GlanceModifier] into one that contains the [WidthModifier]s, [HeightModifier]s and
- * and [CornerRadiusModifier]s and one that contains the rest.
+ * Split the [GlanceModifier] into one that contains the [WidthModifier]s, [HeightModifier]s,
+ * [CornerRadiusModifier]s, [AppWidgetBackgroundModifier] and one that contains the rest.
+ *
+ * The [AppWidgetBackgroundModifier] is relevant to corner radius.
  */
 private fun GlanceModifier.extractSizeAndCornerRadiusModifiers() =
-    if (any { it is WidthModifier || it is HeightModifier || it is CornerRadiusModifier }) {
-        foldIn(ExtractedSizeModifiers()) { acc, modifier ->
-            if (modifier is WidthModifier ||
-                modifier is HeightModifier ||
-                modifier is CornerRadiusModifier) {
-                acc.copy(sizeModifiers = acc.sizeModifiers.then(modifier))
+    if (
+        any {
+            it is WidthModifier ||
+                it is HeightModifier ||
+                it is CornerRadiusModifier ||
+                it is AppWidgetBackgroundModifier
+        }
+    ) {
+        foldIn(ExtractedSizeAndCornerModifiers()) { acc, modifier ->
+            if (
+                modifier is WidthModifier ||
+                    modifier is HeightModifier ||
+                    modifier is CornerRadiusModifier ||
+                    modifier is AppWidgetBackgroundModifier
+            ) {
+                acc.copy(sizeAndCornerModifiers = acc.sizeAndCornerModifiers.then(modifier))
             } else {
-                acc.copy(nonSizeModifiers = acc.nonSizeModifiers.then(modifier))
+                acc.copy(nonSizeOrCornerModifiers = acc.nonSizeOrCornerModifiers.then(modifier))
             }
         }
     } else {
-        ExtractedSizeModifiers(nonSizeModifiers = this)
+        ExtractedSizeAndCornerModifiers(nonSizeOrCornerModifiers = this)
     }
 
 private fun GlanceModifier.warnIfMultipleClickableActions() {
-    val actionCount = foldIn(0) { count, modifier ->
-        if (modifier is ActionModifier) count + 1 else count
-    }
+    val actionCount =
+        foldIn(0) { count, modifier -> if (modifier is ActionModifier) count + 1 else count }
     if (actionCount > 1) {
         Log.w(
             GlanceAppWidgetTag,

@@ -25,6 +25,8 @@ import android.view.MotionEvent;
 import android.view.MotionEvent.PointerCoords;
 import android.view.MotionEvent.PointerProperties;
 
+import androidx.annotation.NonNull;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -127,12 +129,14 @@ class GestureController {
         // Record the start time
         final long startTime = SystemClock.uptimeMillis();
 
-        // Update motion event delay to twice of the display refresh rate
+        // Update motion event delay to twice of the maximum display refresh rate
         long injectionDelay = MOTION_EVENT_INJECTION_DELAY_MILLIS;
         try {
             int displayId = pending.peek().displayId();
             Display display = mDevice.getDisplayById(displayId);
-            float displayRefreshRate = display.getRefreshRate();
+            float[] refreshRates = display.getSupportedRefreshRates();
+            Arrays.sort(refreshRates);
+            float displayRefreshRate = refreshRates[refreshRates.length - 1];
             injectionDelay = (long) (500 / displayRefreshRate);
         } catch (Exception e) {
             Log.e(TAG, "Fail to update motion event delay", e);
@@ -281,6 +285,12 @@ class GestureController {
         @Override
         public void run() {
             performGesture(mGestures);
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return Arrays.toString(mGestures);
         }
     }
 

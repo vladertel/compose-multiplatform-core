@@ -16,6 +16,7 @@
 package androidx.privacysandbox.sdkruntime.client.loader
 
 import android.os.Build
+import androidx.privacysandbox.sdkruntime.client.TestSdkConfigs
 import androidx.privacysandbox.sdkruntime.client.config.LocalSdkConfig
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
 import androidx.test.core.app.ApplicationProvider
@@ -38,33 +39,20 @@ class InMemorySdkClassLoaderFactoryTest {
 
     @Before
     fun setUp() {
-        factoryUnderTest = InMemorySdkClassLoaderFactory.create(
-            ApplicationProvider.getApplicationContext()
-        )
-        singleDexSdkInfo = LocalSdkConfig(
-            packageName = "androidx.privacysandbox.sdkruntime.test.v1",
-            dexPaths = listOf("RuntimeEnabledSdks/V1/classes.dex"),
-            entryPoint = "androidx.privacysandbox.sdkruntime.test.v1.CompatProvider",
-            javaResourcesRoot = "RuntimeEnabledSdks/V1/"
-        )
-        multipleDexSdkInfo = LocalSdkConfig(
-            packageName = "androidx.privacysandbox.sdkruntime.test.v1",
-            dexPaths = listOf(
-                "RuntimeEnabledSdks/V1/classes.dex",
-                "RuntimeEnabledSdks/RPackage.dex",
-            ),
-            entryPoint = "androidx.privacysandbox.sdkruntime.test.v1.CompatProvider",
-            javaResourcesRoot = "RuntimeEnabledSdks/V1/"
-        )
+        factoryUnderTest =
+            InMemorySdkClassLoaderFactory.create(ApplicationProvider.getApplicationContext())
+        singleDexSdkInfo = TestSdkConfigs.CURRENT
+        assertThat(singleDexSdkInfo.dexPaths.size).isEqualTo(1)
+
+        multipleDexSdkInfo = TestSdkConfigs.CURRENT_WITH_RESOURCES
+        assertThat(multipleDexSdkInfo.dexPaths.size).isEqualTo(2)
     }
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O_MR1)
     fun createClassLoaderFor_whenApi27AndMultipleDex_returnClassloader() {
-        val classLoader = factoryUnderTest.createClassLoaderFor(
-            multipleDexSdkInfo,
-            javaClass.classLoader!!
-        )
+        val classLoader =
+            factoryUnderTest.createClassLoaderFor(multipleDexSdkInfo, javaClass.classLoader!!)
         val loadedEntryPointClass = classLoader.loadClass(multipleDexSdkInfo.entryPoint)
         assertThat(loadedEntryPointClass.classLoader).isEqualTo(classLoader)
     }
@@ -72,10 +60,8 @@ class InMemorySdkClassLoaderFactoryTest {
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun createClassLoaderFor_whenApi26AndSingleDex_returnClassloader() {
-        val classLoader = factoryUnderTest.createClassLoaderFor(
-            singleDexSdkInfo,
-            javaClass.classLoader!!
-        )
+        val classLoader =
+            factoryUnderTest.createClassLoaderFor(singleDexSdkInfo, javaClass.classLoader!!)
         val loadedEntryPointClass = classLoader.loadClass(singleDexSdkInfo.entryPoint)
         assertThat(loadedEntryPointClass.classLoader).isEqualTo(classLoader)
     }
@@ -83,34 +69,26 @@ class InMemorySdkClassLoaderFactoryTest {
     @Test
     @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O)
     fun createClassLoaderFor_whenApiPre27AndMultipleDex_throwsSandboxDisabledException() {
-        val ex = assertThrows(LoadSdkCompatException::class.java) {
-            factoryUnderTest.createClassLoaderFor(
-                multipleDexSdkInfo,
-                javaClass.classLoader!!
-            )
-        }
+        val ex =
+            assertThrows(LoadSdkCompatException::class.java) {
+                factoryUnderTest.createClassLoaderFor(multipleDexSdkInfo, javaClass.classLoader!!)
+            }
 
         assertThat(ex.loadSdkErrorCode)
             .isEqualTo(LoadSdkCompatException.LOAD_SDK_SDK_SANDBOX_DISABLED)
-        assertThat(ex)
-            .hasMessageThat()
-            .startsWith("Can't use InMemoryDexClassLoader")
+        assertThat(ex).hasMessageThat().startsWith("Can't use InMemoryDexClassLoader")
     }
 
     @Test
     @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.N_MR1)
     fun createClassLoaderFor_whenApiPre26AndSingleDex_throwsSandboxDisabledException() {
-        val ex = assertThrows(LoadSdkCompatException::class.java) {
-            factoryUnderTest.createClassLoaderFor(
-                singleDexSdkInfo,
-                javaClass.classLoader!!
-            )
-        }
+        val ex =
+            assertThrows(LoadSdkCompatException::class.java) {
+                factoryUnderTest.createClassLoaderFor(singleDexSdkInfo, javaClass.classLoader!!)
+            }
 
         assertThat(ex.loadSdkErrorCode)
             .isEqualTo(LoadSdkCompatException.LOAD_SDK_SDK_SANDBOX_DISABLED)
-        assertThat(ex)
-            .hasMessageThat()
-            .isEqualTo("Can't use InMemoryDexClassLoader")
+        assertThat(ex).hasMessageThat().isEqualTo("Can't use InMemoryDexClassLoader")
     }
 }

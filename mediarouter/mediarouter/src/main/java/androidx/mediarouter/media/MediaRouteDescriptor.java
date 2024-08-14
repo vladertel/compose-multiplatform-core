@@ -53,6 +53,7 @@ public final class MediaRouteDescriptor {
     static final String KEY_DESCRIPTION = "status";
     static final String KEY_ICON_URI = "iconUri";
     static final String KEY_ENABLED = "enabled";
+    static final String KEY_IS_SYSTEM_ROUTE = "isSystemRoute";
     static final String IS_DYNAMIC_GROUP_ROUTE = "isDynamicGroupRoute";
     static final String KEY_CONNECTING = "connecting";
     static final String KEY_CONNECTION_STATE = "connectionState";
@@ -152,19 +153,32 @@ public final class MediaRouteDescriptor {
     }
 
     /**
+     * Returns {@code true} if this route is a system route.
+     *
+     * <p>System routes are routes controlled by the system, like the device's built-in speakers,
+     * wired headsets, and bluetooth devices.
+     *
+     * <p>To use system routes, your application should write media sample data to a media framework
+     * API, typically via <a
+     * href="https://developer.android.com/reference/androidx/media3/exoplayer/ExoPlayer">Exoplayer</a>.
+     */
+    public boolean isSystemRoute() {
+        return mBundle.getBoolean(KEY_IS_SYSTEM_ROUTE, false);
+    }
+
+    /**
      * Returns if this route is a dynamic group route.
-     * <p>
-     * {@link MediaRouteProvider} creates a dynamic group route when
-     * {@link MediaRouteProvider#onCreateDynamicGroupRouteController(String)} is called.
-     * It happens when a single route or a single static group is selected.
-     * </p>
-     * <p>
-     * If a single device or a static group is selected, the associated dynamic group route
-     * should not be seen by any client app because there is already one for the device.
-     * After user added more devices into the session, it should be seen by the client app.
-     * The provider can treat this by not setting the media intent for the dynamic group route
-     * if it contains only one member.
-     * </p>>
+     *
+     * <p>{@link MediaRouteProvider} creates a dynamic group route when {@link
+     * MediaRouteProvider#onCreateDynamicGroupRouteController(String, Bundle)} is called. It happens
+     * when a single route or a single static group is selected.
+     *
+     * <p>If a single device or a static group is selected, the associated dynamic group route
+     * should not be seen by any client app because there is already one for the device. After user
+     * added more devices into the session, it should be seen by the client app. The provider can
+     * treat this by not setting the media intent for the dynamic group route if it contains only
+     * one member.
+     *
      * @return {@code true} if this route is a dynamic group route.
      */
     public boolean isDynamicGroupRoute() {
@@ -378,6 +392,7 @@ public final class MediaRouteDescriptor {
                 + ", description=" + getDescription()
                 + ", iconUri=" + getIconUri()
                 + ", isEnabled=" + isEnabled()
+                + ", isSystemRoute=" + isSystemRoute()
                 + ", connectionState=" + getConnectionState()
                 + ", controlFilters=" + Arrays.toString(getControlFilters().toArray())
                 + ", playbackType=" + getPlaybackType()
@@ -603,6 +618,18 @@ public final class MediaRouteDescriptor {
         @NonNull
         public Builder setEnabled(boolean enabled) {
             mBundle.putBoolean(KEY_ENABLED, enabled);
+            return this;
+        }
+
+        /**
+         * Sets whether the route is a system route.
+         *
+         * @see MediaRouteDescriptor#isSystemRoute()
+         */
+        @RestrictTo(LIBRARY)
+        @NonNull
+        public Builder setIsSystemRoute(boolean isSystemRoute) {
+            mBundle.putBoolean(KEY_IS_SYSTEM_ROUTE, isSystemRoute);
             return this;
         }
 

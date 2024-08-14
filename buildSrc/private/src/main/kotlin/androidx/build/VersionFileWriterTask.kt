@@ -16,7 +16,7 @@
 
 package androidx.build
 
-import com.android.build.gradle.LibraryExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import java.io.File
 import java.io.PrintWriter
 import org.gradle.api.DefaultTask
@@ -26,7 +26,9 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.work.DisableCachingByDefault
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /** Task that allows to write a version to a given output file. */
 @DisableCachingByDefault(because = "Doesn't benefit from caching")
@@ -44,48 +46,71 @@ abstract class VersionFileWriterTask : DefaultTask() {
         writer.println(version.get())
         writer.close()
     }
+
+    internal companion object {
+        const val TASK_NAME = "writeVersionFile"
+    }
 }
 
 /**
- * Sets up Android Library project to have a task that generates a version file. It must be called
- * after [LibraryExtension] has been resolved.
+ * Sets up Android Library project to have a task that generates a version file.
  *
  * @receiver an Android Library project.
  */
 fun Project.configureVersionFileWriter(
-    library: LibraryExtension,
+    libraryAndroidComponentsExtension: LibraryAndroidComponentsExtension,
     androidXExtension: AndroidXExtension
 ) {
-    val writeVersionFile = tasks.register("writeVersionFile", VersionFileWriterTask::class.java)
+    val writeVersionFile =
+        tasks.register(VersionFileWriterTask.TASK_NAME, VersionFileWriterTask::class.java)
 
-    afterEvaluate {
-        writeVersionFile.configure {
-            val group = findProperty("group") as String
-            val artifactId = findProperty("name") as String
-            val version =
-                if (androidXExtension.shouldPublish()) {
-                    version().toString()
-                } else {
-                    "0.0.0"
-                }
-
-            it.version.set(version)
-            it.relativePath.set(String.format("META-INF/%s_%s.version", group, artifactId))
-            it.outputDir.set(layout.buildDirectory.dir("generatedVersionFile"))
-
-            // We only add version file if is a library that is publishing.
-            it.enabled = androidXExtension.shouldPublish()
-        }
-        val resources = library.sourceSets.getByName("main").resources
-        resources.srcDir(writeVersionFile.map { it.outputDir })
-        val includes = resources.includes
-        if (includes.isNotEmpty()) {
-            includes.add("META-INF/*.version")
-            resources.setIncludes(includes)
-        }
+    afterEvaluate { configureVersionFile(writeVersionFile, androidXExtension) }
+    libraryAndroidComponentsExtension.onVariants {
+        it.sources.resources!!.addGeneratedSourceDirectory(
+            writeVersionFile,
+            VersionFileWriterTask::outputDir
+        )
     }
+}
 
-    library.libraryVariants.all { variant ->
-        variant.processJavaResourcesProvider.configure { it.dependsOn(writeVersionFile) }
+fun Project.configureVersionFileWriter(
+    kmpExtension: KotlinMultiplatformExtension,
+    androidXExtension: AndroidXExtension
+) {
+    val writeVersionFile =
+        tasks.register(VersionFileWriterTask.TASK_NAME, VersionFileWriterTask::class.java)
+    writeVersionFile.configure {
+        it.outputDir.set(layout.buildDirectory.dir("generatedVersionFile"))
+    }
+    val sourceSet = kmpExtension.sourceSets.getByName("androidMain")
+    val resources = sourceSet.resources
+    val includes = resources.includes
+    resources.srcDir(writeVersionFile.map { it.outputDir })
+    if (includes.isNotEmpty()) {
+        includes.add("META-INF/*.version")
+        resources.setIncludes(includes)
+    }
+    afterEvaluate { configureVersionFile(writeVersionFile, androidXExtension) }
+}
+
+private fun Project.configureVersionFile(
+    writeVersionFile: TaskProvider<VersionFileWriterTask>,
+    androidXExtension: AndroidXExtension
+) {
+    writeVersionFile.configure {
+        val group = project.getGroup() as String
+        val artifactId = project.getName() as String
+        val version =
+            if (androidXExtension.shouldPublish()) {
+                version().toString()
+            } else {
+                "0.0.0"
+            }
+
+        it.version.set(version)
+        it.relativePath.set(String.format("META-INF/%s_%s.version", group, artifactId))
+
+        // We only add version file if is a library that is publishing.
+        it.enabled = androidXExtension.shouldPublish()
     }
 }

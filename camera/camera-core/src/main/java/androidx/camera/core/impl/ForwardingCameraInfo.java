@@ -20,7 +20,8 @@ import android.util.Range;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
+import androidx.annotation.Nullable;
+import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.CameraState;
 import androidx.camera.core.DynamicRange;
@@ -38,7 +39,6 @@ import java.util.concurrent.Executor;
  * A {@link CameraInfoInternal} that forwards all the calls into the given
  * {@link CameraInfoInternal}.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class ForwardingCameraInfo implements CameraInfoInternal {
 
     private final CameraInfoInternal mCameraInfoInternal;
@@ -128,6 +128,11 @@ public class ForwardingCameraInfo implements CameraInfoInternal {
         return mCameraInfoInternal.isPrivateReprocessingSupported();
     }
 
+    @Override
+    public boolean isLogicalMultiCameraSupported() {
+        return mCameraInfoInternal.isLogicalMultiCameraSupported();
+    }
+
     @NonNull
     @Override
     public String getCameraId() {
@@ -165,6 +170,12 @@ public class ForwardingCameraInfo implements CameraInfoInternal {
 
     @NonNull
     @Override
+    public Set<Integer> getSupportedOutputFormats() {
+        return mCameraInfoInternal.getSupportedOutputFormats();
+    }
+
+    @NonNull
+    @Override
     public List<Size> getSupportedResolutions(int format) {
         return mCameraInfoInternal.getSupportedResolutions(format);
     }
@@ -183,6 +194,13 @@ public class ForwardingCameraInfo implements CameraInfoInternal {
 
     @NonNull
     @Override
+    public Set<DynamicRange> querySupportedDynamicRanges(
+            @NonNull Set<DynamicRange> candidateDynamicRanges) {
+        return mCameraInfoInternal.querySupportedDynamicRanges(candidateDynamicRanges);
+    }
+
+    @NonNull
+    @Override
     public CameraInfoInternal getImplementation() {
         return mCameraInfoInternal.getImplementation();
     }
@@ -191,5 +209,33 @@ public class ForwardingCameraInfo implements CameraInfoInternal {
     @Override
     public CameraSelector getCameraSelector() {
         return mCameraInfoInternal.getCameraSelector();
+    }
+
+    @Override
+    public boolean isPreviewStabilizationSupported() {
+        return mCameraInfoInternal.isPreviewStabilizationSupported();
+    }
+
+    @Override
+    public boolean isVideoStabilizationSupported() {
+        return mCameraInfoInternal.isVideoStabilizationSupported();
+    }
+
+    @NonNull
+    @Override
+    public Object getCameraCharacteristics() {
+        return mCameraInfoInternal.getCameraCharacteristics();
+    }
+
+    @Nullable
+    @Override
+    public Object getPhysicalCameraCharacteristics(@NonNull String physicalCameraId) {
+        return mCameraInfoInternal.getPhysicalCameraCharacteristics(physicalCameraId);
+    }
+
+    @NonNull
+    @Override
+    public Set<CameraInfo> getPhysicalCameraInfos() {
+        return mCameraInfoInternal.getPhysicalCameraInfos();
     }
 }

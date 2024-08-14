@@ -22,10 +22,11 @@ import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.CameraXConfig
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Logger
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.testing.CameraPipeConfigTestRule
-import androidx.camera.testing.CameraUtil
-import androidx.camera.testing.CoreAppTestUtil
+import androidx.camera.testing.impl.CameraPipeConfigTestRule
+import androidx.camera.testing.impl.CameraUtil
+import androidx.camera.testing.impl.CoreAppTestUtil
 import androidx.camera.view.PreviewView
 import androidx.fragment.app.testing.FragmentScenario
 import androidx.lifecycle.Lifecycle
@@ -38,15 +39,12 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/**
- * Instrument tests for [EffectsFragment].
- */
+/** Instrument tests for [EffectsFragment]. */
 @LargeTest
 @RunWith(Parameterized::class)
 class EffectsFragmentDeviceTest(
@@ -54,21 +52,24 @@ class EffectsFragmentDeviceTest(
     private val cameraConfig: CameraXConfig
 ) {
     @get:Rule
-    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
-        active = implName == CameraPipeConfig::class.simpleName,
-    )
+    val cameraPipeConfigTestRule =
+        CameraPipeConfigTestRule(
+            active = implName == CameraPipeConfig::class.simpleName,
+        )
 
     @get:Rule
-    val useCameraRule = CameraUtil.grantCameraPermissionAndPreTest(
-        CameraControllerFragmentTest.testCameraRule,
-        CameraUtil.PreTestCameraIdList(cameraConfig)
-    )
+    val useCameraRule =
+        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+            CameraControllerFragmentTest.testCameraRule,
+            CameraUtil.PreTestCameraIdList(cameraConfig)
+        )
 
     @get:Rule
-    val grantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
-        android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        android.Manifest.permission.RECORD_AUDIO
-    )
+    val grantPermissionRule: GrantPermissionRule =
+        GrantPermissionRule.grant(
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            android.Manifest.permission.RECORD_AUDIO
+        )
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private lateinit var cameraProvider: ProcessCameraProvider
     private lateinit var fragment: EffectsFragment
@@ -80,13 +81,16 @@ class EffectsFragmentDeviceTest(
         // window before start the test.
         CoreAppTestUtil.prepareDeviceUI(instrumentation)
         ProcessCameraProvider.configureInstance(cameraConfig)
-        cameraProvider = ProcessCameraProvider.getInstance(
-            ApplicationProvider.getApplicationContext()
-        )[10000, TimeUnit.MILLISECONDS]
-        fragmentScenario = FragmentScenario.launchInContainer(
-            EffectsFragment::class.java, null, R.style.AppTheme,
-            null
-        )
+        cameraProvider =
+            ProcessCameraProvider.getInstance(ApplicationProvider.getApplicationContext())[
+                    10000, TimeUnit.MILLISECONDS]
+        fragmentScenario =
+            FragmentScenario.launchInContainer(
+                EffectsFragment::class.java,
+                null,
+                R.style.AppTheme,
+                null
+            )
         fragment = fragmentScenario.getFragment()
     }
 
@@ -96,24 +100,46 @@ class EffectsFragmentDeviceTest(
             fragmentScenario.moveToState(Lifecycle.State.DESTROYED)
         }
         if (::cameraProvider.isInitialized) {
-            cameraProvider.shutdown()[10000, TimeUnit.MILLISECONDS]
+            cameraProvider.shutdownAsync()[10000, TimeUnit.MILLISECONDS]
         }
+    }
+
+    @Test
+    fun toggleCameraLatencyTest() {
+        // Arrange: use COMPATIBLE mode to get an accurate measurement.
+        instrumentation.runOnMainSync {
+            fragment.previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+        val startTimeMillis = System.currentTimeMillis()
+        fragment.assertPreviewStreamingState(PreviewView.StreamState.STREAMING)
+
+        // Act: toggle camera for 10 times.
+        val numberOfToggles = 10
+        for (i in 0 until numberOfToggles) {
+            instrumentation.runOnMainSync { fragment.toggleCamera() }
+            fragment.assertPreviewStreamingState(PreviewView.StreamState.IDLE)
+            fragment.assertPreviewStreamingState(PreviewView.StreamState.STREAMING)
+        }
+
+        // Record the average duration of the test.
+        val averageDuration = (System.currentTimeMillis() - startTimeMillis) / numberOfToggles
+        val tag = "toggleCameraLatencyTest"
+        Logger.d(tag, "Effects pipeline performance profiling. duration: [$averageDuration]")
     }
 
     @Test
     fun launchFragment_surfaceProcessorIsActive() {
         // Arrange.
-        fragment.assertPreviewStreaming()
+        fragment.assertPreviewStreamingState(PreviewView.StreamState.STREAMING)
         // Assert.
         assertThat(fragment.getSurfaceProcessor().isSurfaceRequestedAndProvided()).isTrue()
     }
 
-    @Ignore("b/285396965")
     @Test
     fun takePicture_imageEffectInvoked() {
         // Arrange.
         fragment.run {
-            assertPreviewStreaming()
+            assertPreviewStreamingState(PreviewView.StreamState.STREAMING)
             // Act.
             assertCanTakePicture()
         }
@@ -121,15 +147,12 @@ class EffectsFragmentDeviceTest(
         assertThat(fragment.getImageEffect()!!.isInvoked()).isTrue()
     }
 
-    @Ignore("b/285396965")
     @Test
     fun shareToImageCapture_canTakePicture() {
         // Act.
-        instrumentation.runOnMainSync {
-            fragment.surfaceEffectForImageCapture.isChecked = true
-        }
+        instrumentation.runOnMainSync { fragment.surfaceEffectForImageCapture.isChecked = true }
         // Assert.
-        fragment.assertPreviewStreaming()
+        fragment.assertPreviewStreamingState(PreviewView.StreamState.STREAMING)
         fragment.assertCanTakePicture()
         assertThat(fragment.getImageEffect()).isNull()
     }
@@ -144,28 +167,28 @@ class EffectsFragmentDeviceTest(
         val imageCallbackSemaphore = Semaphore(0)
         var uri: Uri? = null
         instrumentation.runOnMainSync {
-            this.takePicture(object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    uri = outputFileResults.savedUri
-                    imageCallbackSemaphore.release()
-                }
+            this.takePicture(
+                object : ImageCapture.OnImageSavedCallback {
+                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        uri = outputFileResults.savedUri
+                        imageCallbackSemaphore.release()
+                    }
 
-                override fun onError(exception: ImageCaptureException) {
-                    imageCallbackSemaphore.release()
+                    override fun onError(exception: ImageCaptureException) {
+                        imageCallbackSemaphore.release()
+                    }
                 }
-            })
+            )
         }
         assertThat(imageCallbackSemaphore.tryAcquire(TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue()
         assertThat(uri).isNotNull()
     }
 
-    private fun EffectsFragment.assertPreviewStreaming() {
+    private fun EffectsFragment.assertPreviewStreamingState(streamState: PreviewView.StreamState) {
         val previewStreaming = Semaphore(0)
         instrumentation.runOnMainSync {
-            previewView.previewStreamState.observe(
-                this
-            ) {
-                if (it == PreviewView.StreamState.STREAMING) {
+            previewView.previewStreamState.observe(this) {
+                if (it == streamState) {
                     previewStreaming.release()
                 }
             }
@@ -178,9 +201,10 @@ class EffectsFragmentDeviceTest(
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun data() = listOf(
-            arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
-            arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
-        )
+        fun data() =
+            listOf(
+                arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
+                arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
+            )
     }
 }

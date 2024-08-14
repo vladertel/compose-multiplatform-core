@@ -28,6 +28,7 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
         }
     }
+    compileSdkVersion 35
     namespace "androidx.benchmark.integration.macrobenchmark.target"
 }
 
@@ -45,4 +46,5 @@ dependencies {
     implementation(project(":work:work-runtime"))
     implementation(project(":work:work-runtime-ktx"))
     implementation(project(":room:room-runtime"))
+    implementation(project(":room:room-ktx"))
 }

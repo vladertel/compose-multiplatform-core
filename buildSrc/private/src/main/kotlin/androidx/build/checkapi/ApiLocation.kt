@@ -21,6 +21,10 @@ import androidx.build.version
 import java.io.File
 import java.io.Serializable
 import org.gradle.api.Project
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
+
+private const val BCV_DIR_NAME = "bcv"
 
 /**
  * Contains information about the files used to record a library's API surfaces. This class may
@@ -40,19 +44,10 @@ data class ApiLocation(
     val apiFileDirectory: File,
     // File where the library's public API surface is recorded
     val publicApiFile: File,
-    // File where the library's removed API surface is recorded.
-    // The removed API surface contains APIs that used to be public, and are still
-    // available for linking against, but have been removed from the set of APIs that may be
-    // compiled against.
-    // The publicApiFile and the removedApiFile together provide the set of APIs that
-    // dependents may link against
-    val removedApiFile: File,
     // File where the library's public plus restricted (see @RestrictTo) API surfaces are recorded
     val restrictedApiFile: File,
     // File where the library's public resources are recorded
     val resourceFile: File,
-    // Directory where native API files are stored
-    val nativeApiDirectory: File,
     // Directory where the library's stable AIDL surface is recorded
     val aidlApiDirectory: File,
     // File where the API version history is recorded, for use in docs
@@ -92,10 +87,8 @@ data class ApiLocation(
             return ApiLocation(
                 apiFileDirectory = apiFileDir,
                 publicApiFile = File(apiFileDir, "$baseName$EXTENSION"),
-                removedApiFile = File(apiFileDir, "$PREFIX_REMOVED$baseName$EXTENSION"),
                 restrictedApiFile = File(apiFileDir, "$PREFIX_RESTRICTED$baseName$EXTENSION"),
                 resourceFile = File(apiFileDir, "$PREFIX_RESOURCE$baseName$EXTENSION"),
-                nativeApiDirectory = File(apiFileDir, NATIVE_API_DIRECTORY_NAME).resolve(baseName),
                 aidlApiDirectory = File(apiFileDir, AIDL_API_DIRECTORY_NAME).resolve(baseName),
                 apiLevelsFile = File(apiFileDir, API_LEVELS)
             )
@@ -107,17 +100,11 @@ data class ApiLocation(
         /** Base file name used by current API files. */
         private const val CURRENT = "current"
 
-        /** Prefix used for removed API surface files. */
-        private const val PREFIX_REMOVED = "removed_"
-
         /** Prefix used for restricted API surface files. */
         private const val PREFIX_RESTRICTED = "restricted_"
 
         /** Prefix used for resource-type API files. */
         private const val PREFIX_RESOURCE = "res-"
-
-        /** Directory name for location of native API files */
-        private const val NATIVE_API_DIRECTORY_NAME = "native"
 
         /** Directory name for location of AIDL API files */
         private const val AIDL_API_DIRECTORY_NAME = "aidl"
@@ -132,6 +119,9 @@ private fun Version.toApiFileBaseName(): String {
     return getApiFileVersion(this).toString()
 }
 
+/** Returns the directory containing the project's versioned and current ABI files. */
+fun Project.getBcvFileDirectory(): Directory = project.layout.projectDirectory.dir(BCV_DIR_NAME)
+
 /** Returns the directory containing the project's versioned and current API files. */
 fun Project.getApiFileDirectory(): File {
     return File(project.projectDir, "api")
@@ -144,8 +134,12 @@ fun Project.hasApiFileDirectory(): Boolean {
 
 /** Returns the directory containing the project's built current API file. */
 private fun Project.getBuiltApiFileDirectory(): File {
-    return File(project.buildDir, "api")
+    @Suppress("DEPRECATION") return File(project.buildDir, "api")
 }
+
+/** Returns the directory containing the project's built current ABI file. */
+fun Project.getBuiltBcvFileDirectory(): Provider<Directory> =
+    project.layout.buildDirectory.dir(BCV_DIR_NAME)
 
 /**
  * Returns an ApiLocation with the given version, or with the project's current version if not

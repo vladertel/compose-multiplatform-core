@@ -27,13 +27,12 @@ import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 
-@ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 internal interface LazyGridItemProvider : LazyLayoutItemProvider {
     val keyIndexMap: LazyLayoutKeyIndexMap
     val spanLayoutProvider: LazyGridSpanLayoutProvider
 }
 
-@ExperimentalFoundationApi
 @Composable
 internal fun rememberLazyGridItemProviderLambda(
     state: LazyGridState,
@@ -41,30 +40,32 @@ internal fun rememberLazyGridItemProviderLambda(
 ): () -> LazyGridItemProvider {
     val latestContent = rememberUpdatedState(content)
     return remember(state) {
-        val intervalContentState = derivedStateOf(referentialEqualityPolicy()) {
-            LazyGridIntervalContent(latestContent.value)
-        }
-        val itemProviderState = derivedStateOf(referentialEqualityPolicy()) {
-            val intervalContent = intervalContentState.value
-            val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
-            LazyGridItemProviderImpl(
-                state = state,
-                intervalContent = intervalContent,
-                keyIndexMap = map
-            )
-        }
+        val intervalContentState =
+            derivedStateOf(referentialEqualityPolicy()) {
+                LazyGridIntervalContent(latestContent.value)
+            }
+        val itemProviderState =
+            derivedStateOf(referentialEqualityPolicy()) {
+                val intervalContent = intervalContentState.value
+                val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
+                LazyGridItemProviderImpl(
+                    state = state,
+                    intervalContent = intervalContent,
+                    keyIndexMap = map
+                )
+            }
         itemProviderState::value
     }
 }
 
-@ExperimentalFoundationApi
 private class LazyGridItemProviderImpl(
     private val state: LazyGridState,
     private val intervalContent: LazyGridIntervalContent,
     override val keyIndexMap: LazyLayoutKeyIndexMap,
 ) : LazyGridItemProvider {
 
-    override val itemCount: Int get() = intervalContent.itemCount
+    override val itemCount: Int
+        get() = intervalContent.itemCount
 
     override fun getKey(index: Int): Any =
         keyIndexMap.getKey(index) ?: intervalContent.getKey(index)

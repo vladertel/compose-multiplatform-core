@@ -24,14 +24,12 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageCapture.CaptureMode;
 import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.ImageAnalysisConfig;
 import androidx.camera.core.impl.MutableOptionsBundle;
 import androidx.camera.core.impl.OptionsBundle;
 import androidx.camera.core.impl.UseCaseConfigFactory;
-import androidx.camera.extensions.ExtensionMode;
 
 import java.util.List;
 
@@ -39,17 +37,14 @@ import java.util.List;
  * Implementation of UseCaseConfigFactory to provide the default extensions configurations for use
  * cases.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ExtensionsUseCaseConfigFactory implements UseCaseConfigFactory {
     private final ImageCaptureConfigProvider mImageCaptureConfigProvider;
     private final PreviewConfigProvider mPreviewConfigProvider;
     private final ImageAnalysisConfigProvider mImageAnalysisConfigProvider;
 
-    public ExtensionsUseCaseConfigFactory(
-            @ExtensionMode.Mode int mode,
-            @NonNull VendorExtender vendorExtender) {
-        mImageCaptureConfigProvider = new ImageCaptureConfigProvider(mode, vendorExtender);
-        mPreviewConfigProvider = new PreviewConfigProvider(mode, vendorExtender);
+    public ExtensionsUseCaseConfigFactory(@NonNull VendorExtender vendorExtender) {
+        mImageCaptureConfigProvider = new ImageCaptureConfigProvider(vendorExtender);
+        mPreviewConfigProvider = new PreviewConfigProvider(vendorExtender);
         mImageAnalysisConfigProvider = new ImageAnalysisConfigProvider(vendorExtender);
     }
 
@@ -108,8 +103,8 @@ public final class ExtensionsUseCaseConfigFactory implements UseCaseConfigFactor
                 mutableOptionsBundle = MutableOptionsBundle.from(config);
                 break;
             case VIDEO_CAPTURE:
-                throw new IllegalArgumentException("CameraX Extensions doesn't support "
-                        + "VideoCapture!");
+                throw new IllegalArgumentException("Should not go here. VideoCapture is supported"
+                        + " by recording the preview stream when Extension is enabled.");
             default:
                 return null;
         }

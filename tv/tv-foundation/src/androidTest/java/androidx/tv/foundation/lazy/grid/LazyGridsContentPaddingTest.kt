@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.grid
 
 import androidx.compose.animation.core.snap
@@ -56,8 +58,7 @@ class LazyGridsContentPaddingTest {
     private val ItemTag = "item"
     private val ContainerTag = "container"
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private var itemSize: Dp = Dp.Infinity
     private var smallPaddingSize: Dp = Dp.Infinity
@@ -80,23 +81,22 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(containerSize)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(containerSize).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    start = smallPaddingSize,
-                    top = largePaddingSize,
-                    end = smallPaddingSize,
-                    bottom = largePaddingSize
-                )
+                contentPadding =
+                    PaddingValues(
+                        start = smallPaddingSize,
+                        top = largePaddingSize,
+                        end = smallPaddingSize,
+                        bottom = largePaddingSize
+                    )
             ) {
-                items(listOf(1)) {
-                    Spacer(Modifier.height(itemSize).testTag(ItemTag))
-                }
+                items(listOf(1)) { Spacer(Modifier.height(itemSize).testTag(ItemTag)) }
             }
         }
 
-        rule.onNodeWithTag(ItemTag)
+        rule
+            .onNodeWithTag(ItemTag)
             .assertLeftPositionInRootIsEqualTo(smallPaddingSize)
             .assertTopPositionInRootIsEqualTo(largePaddingSize)
             .assertWidthIsEqualTo(containerSize - smallPaddingSize * 2)
@@ -104,7 +104,8 @@ class LazyGridsContentPaddingTest {
 
         state.scrollBy(largePaddingSize)
 
-        rule.onNodeWithTag(ItemTag)
+        rule
+            .onNodeWithTag(ItemTag)
             .assertTopPositionInRootIsEqualTo(0.dp)
             .assertHeightIsEqualTo(itemSize)
     }
@@ -115,17 +116,11 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(itemSize * 2)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(itemSize * 2).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    top = itemSize,
-                    bottom = itemSize
-                )
+                contentPadding = PaddingValues(top = itemSize, bottom = itemSize)
             ) {
-                items(listOf(1)) {
-                    Spacer(Modifier.height(itemSize).testTag(ItemTag))
-                }
+                items(listOf(1)) { Spacer(Modifier.height(itemSize).testTag(ItemTag)) }
             }
         }
 
@@ -143,13 +138,9 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(padding * 2 + itemSize)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    top = padding,
-                    bottom = padding
-                )
+                contentPadding = PaddingValues(top = padding, bottom = padding)
             ) {
                 items((0..3).toList()) {
                     Spacer(Modifier.requiredSize(itemSize).testTag(it.toString()))
@@ -157,25 +148,18 @@ class LazyGridsContentPaddingTest {
             }
         }
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(padding)
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize + padding)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2 + padding)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(padding)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize + padding)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 2 + padding)
 
         state.scrollBy(padding)
 
         state.assertScrollPosition(1, padding - itemSize)
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(0.dp)
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2)
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize * 3)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 2)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize * 3)
     }
 
     @Test
@@ -185,13 +169,9 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(itemSize + padding * 2)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(itemSize + padding * 2).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    top = padding,
-                    bottom = padding
-                )
+                contentPadding = PaddingValues(top = padding, bottom = padding)
             ) {
                 items((0..3).toList()) {
                     Spacer(Modifier.requiredSize(itemSize).testTag(it.toString()))
@@ -204,14 +184,10 @@ class LazyGridsContentPaddingTest {
 
         state.assertScrollPosition(1, itemSize * 0.5f)
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(itemSize * 1.5f - padding)
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2.5f - padding)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 3.5f - padding)
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize * 4.5f - padding)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize * 1.5f - padding)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize * 2.5f - padding)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 3.5f - padding)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize * 4.5f - padding)
     }
 
     @Test
@@ -221,13 +197,9 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(padding * 2 + itemSize)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    top = padding,
-                    bottom = padding
-                )
+                contentPadding = PaddingValues(top = padding, bottom = padding)
             ) {
                 items((0..3).toList()) {
                     Spacer(Modifier.requiredSize(itemSize).testTag(it.toString()))
@@ -239,24 +211,18 @@ class LazyGridsContentPaddingTest {
 
         state.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize - padding)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2 - padding)
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize * 3 - padding)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize - padding)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 2 - padding)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize * 3 - padding)
 
         // there are no space to scroll anymore, so it should change nothing
         state.scrollBy(10.dp)
 
         state.assertScrollPosition(3, 0.dp)
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize - padding)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2 - padding)
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize * 3 - padding)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize - padding)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 2 - padding)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize * 3 - padding)
     }
 
     @Test
@@ -266,13 +232,9 @@ class LazyGridsContentPaddingTest {
         rule.setContent {
             TvLazyVerticalGrid(
                 columns = TvGridCells.Fixed(1),
-                modifier = Modifier.requiredSize(padding * 2 + itemSize)
-                    .testTag(LazyListTag),
+                modifier = Modifier.requiredSize(padding * 2 + itemSize).testTag(LazyListTag),
                 state = rememberTvLazyGridState().also { state = it },
-                contentPadding = PaddingValues(
-                    top = padding,
-                    bottom = padding
-                )
+                contentPadding = PaddingValues(top = padding, bottom = padding)
             ) {
                 items((0..3).toList()) {
                     Spacer(Modifier.requiredSize(itemSize).testTag(it.toString()))
@@ -285,12 +247,9 @@ class LazyGridsContentPaddingTest {
 
         state.assertScrollPosition(2, itemSize / 2)
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize * 1.5f - padding)
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize * 2.5f - padding)
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize * 3.5f - padding)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize * 1.5f - padding)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize * 2.5f - padding)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize * 3.5f - padding)
     }
 
     @Test
@@ -299,27 +258,23 @@ class LazyGridsContentPaddingTest {
             Box(modifier = Modifier.testTag(ContainerTag).width(itemSize + 8.dp)) {
                 TvLazyVerticalGrid(
                     columns = TvGridCells.Fixed(1),
-                    contentPadding = PaddingValues(
-                        start = 2.dp,
-                        top = 4.dp,
-                        end = 6.dp,
-                        bottom = 8.dp
-                    )
+                    contentPadding =
+                        PaddingValues(start = 2.dp, top = 4.dp, end = 6.dp, bottom = 8.dp)
                 ) {
-                    items(listOf(1)) {
-                        Spacer(Modifier.size(itemSize).testTag(ItemTag))
-                    }
+                    items(listOf(1)) { Spacer(Modifier.size(itemSize).testTag(ItemTag)) }
                 }
             }
         }
 
-        rule.onNodeWithTag(ItemTag)
+        rule
+            .onNodeWithTag(ItemTag)
             .assertLeftPositionInRootIsEqualTo(2.dp)
             .assertTopPositionInRootIsEqualTo(4.dp)
             .assertWidthIsEqualTo(itemSize)
             .assertHeightIsEqualTo(itemSize)
 
-        rule.onNodeWithTag(ContainerTag)
+        rule
+            .onNodeWithTag(ContainerTag)
             .assertLeftPositionInRootIsEqualTo(0.dp)
             .assertTopPositionInRootIsEqualTo(0.dp)
             .assertWidthIsEqualTo(itemSize + 2.dp + 6.dp)
@@ -332,17 +287,14 @@ class LazyGridsContentPaddingTest {
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 TvLazyVerticalGrid(
                     columns = TvGridCells.Fixed(1),
-                    contentPadding = PaddingValues(
-                        start = 2.dp,
-                        top = 4.dp,
-                        end = 6.dp,
-                        bottom = 8.dp
-                    )
-                ) { }
+                    contentPadding =
+                        PaddingValues(start = 2.dp, top = 4.dp, end = 6.dp, bottom = 8.dp)
+                ) {}
             }
         }
 
-        rule.onNodeWithTag(ContainerTag)
+        rule
+            .onNodeWithTag(ContainerTag)
             .assertLeftPositionInRootIsEqualTo(0.dp)
             .assertTopPositionInRootIsEqualTo(0.dp)
             .assertWidthIsEqualTo(8.dp)
@@ -355,19 +307,16 @@ class LazyGridsContentPaddingTest {
             Box(modifier = Modifier.testTag(ContainerTag)) {
                 TvLazyVerticalGrid(
                     columns = TvGridCells.Fixed(1),
-                    contentPadding = PaddingValues(
-                        start = 2.dp,
-                        top = 4.dp,
-                        end = 6.dp,
-                        bottom = 8.dp
-                    )
+                    contentPadding =
+                        PaddingValues(start = 2.dp, top = 4.dp, end = 6.dp, bottom = 8.dp)
                 ) {
-                    items(0) { }
+                    items(0) {}
                 }
             }
         }
 
-        rule.onNodeWithTag(ContainerTag)
+        rule
+            .onNodeWithTag(ContainerTag)
             .assertLeftPositionInRootIsEqualTo(0.dp)
             .assertTopPositionInRootIsEqualTo(0.dp)
             .assertWidthIsEqualTo(8.dp)
@@ -388,19 +337,18 @@ class LazyGridsContentPaddingTest {
                 modifier = Modifier.size(listSize),
                 contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding),
             ) {
-                items(3) { index ->
-                    Box(Modifier.size(itemSize).testTag("$index"))
-                }
+                items(3) { index -> Box(Modifier.size(itemSize).testTag("$index")) }
             }
         }
 
-        rule.onNodeWithTag("0")
+        rule
+            .onNodeWithTag("0")
             .assertTopPositionInRootIsEqualTo(listSize - bottomPadding - itemSize)
-        rule.onNodeWithTag("1")
+        rule
+            .onNodeWithTag("1")
             .assertTopPositionInRootIsEqualTo(listSize - bottomPadding - itemSize * 2)
         // Partially visible.
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(-itemSize / 2)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(-itemSize / 2)
 
         // Scroll to the top.
         state.scrollBy(itemSize * 2.5f)
@@ -420,22 +368,20 @@ class LazyGridsContentPaddingTest {
                 TvLazyVerticalGrid(
                     TvGridCells.Fixed(1),
                     state = state,
-                    contentPadding = PaddingValues(
-                        vertical = smallPaddingSize
-                    )
+                    contentPadding = PaddingValues(vertical = smallPaddingSize)
                 ) {
-                    items(2) {
-                        Box(Modifier.testTag("$it").height(itemSize))
-                    }
+                    items(2) { Box(Modifier.testTag("$it").height(itemSize)) }
                 }
             }
         }
 
-        rule.onNodeWithTag("0")
+        rule
+            .onNodeWithTag("0")
             .assertTopPositionInRootIsEqualTo(smallPaddingSize)
             .assertHeightIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("1")
+        rule
+            .onNodeWithTag("1")
             .assertTopPositionInRootIsEqualTo(smallPaddingSize + itemSize)
             .assertHeightIsEqualTo(itemSize)
 
@@ -448,11 +394,13 @@ class LazyGridsContentPaddingTest {
             }
         }
 
-        rule.onNodeWithTag("1")
+        rule
+            .onNodeWithTag("1")
             .assertTopPositionInRootIsEqualTo(smallPaddingSize)
             .assertHeightIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("0")
+        rule
+            .onNodeWithTag("0")
             .assertTopPositionInRootIsEqualTo(smallPaddingSize - itemSize)
             .assertHeightIsEqualTo(itemSize)
     }
@@ -468,18 +416,14 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("1")
-            .assertDoesNotExist()
+        rule.onNodeWithTag("1").assertDoesNotExist()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -499,23 +443,18 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollBy(itemSize)
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("2")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("2").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(1, 0.dp)
@@ -534,23 +473,18 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollTo(3)
 
-        rule.onNodeWithTag("1")
-            .assertDoesNotExist()
+        rule.onNodeWithTag("1").assertDoesNotExist()
 
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -569,23 +503,18 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollBy(itemSize * 3)
 
-        rule.onNodeWithTag("1")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("1").assertIsNotDisplayed()
 
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(itemSize)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -605,20 +534,16 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollBy(itemSize * 4.5f)
 
-        rule.onNodeWithTag("2")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("2").assertIsNotDisplayed()
 
-        rule.onNodeWithTag("3")
-            .assertTopPositionInRootIsEqualTo(-itemSize * 0.5f)
+        rule.onNodeWithTag("3").assertTopPositionInRootIsEqualTo(-itemSize * 0.5f)
 
         rule.runOnIdle {
             state.assertScrollPosition(3, itemSize * 1.5f)
@@ -637,15 +562,12 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize * 2)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
-        rule.onNodeWithTag("0")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("0").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(0, 0.dp)
@@ -665,23 +587,18 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize * 2)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollBy(itemSize * 2)
 
-        rule.onNodeWithTag("0")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("0").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("2")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("2").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(2, 0.dp)
@@ -700,26 +617,20 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize * 2)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollTo(3)
 
-        rule.onNodeWithTag("0")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("0").assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("3")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("3").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -738,26 +649,20 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize * 2)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
 
         state.scrollBy(itemSize * 3)
 
-        rule.onNodeWithTag("0")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("0").assertIsNotDisplayed()
 
-        rule.onNodeWithTag("1")
-            .assertTopPositionInRootIsEqualTo(0.dp)
+        rule.onNodeWithTag("1").assertTopPositionInRootIsEqualTo(0.dp)
 
-        rule.onNodeWithTag("2")
-            .assertTopPositionInRootIsEqualTo(itemSize)
+        rule.onNodeWithTag("2").assertTopPositionInRootIsEqualTo(itemSize)
 
-        rule.onNodeWithTag("3")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("3").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, 0.dp)
@@ -777,9 +682,7 @@ class LazyGridsContentPaddingTest {
                     state = state,
                     contentPadding = PaddingValues(vertical = itemSize * 2)
                 ) {
-                    items(4) {
-                        Box(Modifier.testTag("$it").size(itemSize))
-                    }
+                    items(4) { Box(Modifier.testTag("$it").size(itemSize)) }
                 }
             }
         }
@@ -790,8 +693,7 @@ class LazyGridsContentPaddingTest {
                 itemSize * 3 // all items
         )
 
-        rule.onNodeWithTag("3")
-            .assertIsNotDisplayed()
+        rule.onNodeWithTag("3").assertIsNotDisplayed()
 
         rule.runOnIdle {
             state.assertScrollPosition(3, itemSize * 3.5f)
@@ -1136,7 +1038,8 @@ class LazyGridsContentPaddingTest {
     //     lateinit var state: LazyListState
     //     rule.setContent {
     //         state = rememberLazyListState()
-    //         Box(modifier = Modifier.testTag(ContainerTag).size(itemSize + smallPaddingSize * 2)) {
+    //         Box(modifier = Modifier.testTag(ContainerTag).size(itemSize + smallPaddingSize * 2))
+    // {
     //             LazyRow(
     //                 state = state,
     //                 contentPadding = PaddingValues(
@@ -1182,15 +1085,17 @@ class LazyGridsContentPaddingTest {
         }
     }
 
-    private fun TvLazyGridState.assertScrollPosition(index: Int, offset: Dp) = with(rule.density) {
-        assertThat(this@assertScrollPosition.firstVisibleItemIndex).isEqualTo(index)
-        assertThat(firstVisibleItemScrollOffset.toDp().value).isWithin(0.5f).of(offset.value)
-    }
+    private fun TvLazyGridState.assertScrollPosition(index: Int, offset: Dp) =
+        with(rule.density) {
+            assertThat(this@assertScrollPosition.firstVisibleItemIndex).isEqualTo(index)
+            assertThat(firstVisibleItemScrollOffset.toDp().value).isWithin(0.5f).of(offset.value)
+        }
 
-    private fun TvLazyGridState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) = with(rule.density) {
-        assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
-            .isEqualTo(from.roundToPx() to to.roundToPx())
-    }
+    private fun TvLazyGridState.assertLayoutInfoOffsetRange(from: Dp, to: Dp) =
+        with(rule.density) {
+            assertThat(layoutInfo.viewportStartOffset to layoutInfo.viewportEndOffset)
+                .isEqualTo(from.roundToPx() to to.roundToPx())
+        }
 
     private fun TvLazyGridState.assertVisibleItems(vararg expected: Pair<Int, Dp>) =
         with(rule.density) {
@@ -1199,8 +1104,6 @@ class LazyGridsContentPaddingTest {
         }
 
     fun TvLazyGridState.scrollTo(index: Int) {
-        runBlocking(Dispatchers.Main + AutoTestFrameClock()) {
-            scrollToItem(index)
-        }
+        runBlocking(Dispatchers.Main + AutoTestFrameClock()) { scrollToItem(index) }
     }
 }

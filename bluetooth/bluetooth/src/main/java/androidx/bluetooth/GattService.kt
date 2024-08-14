@@ -16,35 +16,45 @@
 
 package androidx.bluetooth
 
-import android.bluetooth.BluetoothGattService
-import androidx.annotation.RestrictTo
+import android.bluetooth.BluetoothGattService as FwkBluetoothGattService
 import java.util.UUID
 
-/**
- * Represents a Bluetooth GATT service.
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY)
-class GattService internal constructor(
-    internal val fwkService: BluetoothGattService,
+/** Represents a Bluetooth GATT service. */
+class GattService
+internal constructor(
+    internal val fwkService: FwkBluetoothGattService,
     characteristics: List<GattCharacteristic>? = null
 ) {
+    /** the UUID of the service */
     val uuid: UUID
         get() = fwkService.uuid
+
+    /** a list of characteristics included in the service */
     val characteristics: List<GattCharacteristic>
 
+    constructor(
+        uuid: UUID,
+        characteristics: List<GattCharacteristic>
+    ) : this(
+        FwkBluetoothGattService(uuid, FwkBluetoothGattService.SERVICE_TYPE_PRIMARY),
+        characteristics
+    ) {
+        characteristics.forEach { fwkService.addCharacteristic(it.fwkCharacteristic) }
+    }
+
     init {
-        this.characteristics = characteristics?.toList()
-            ?: fwkService.characteristics.map { GattCharacteristic(it) }
+        this.characteristics =
+            characteristics?.toList() ?: fwkService.characteristics.map { GattCharacteristic(it) }
         this.characteristics.forEach { it.service = this }
     }
-}
 
-/**
- * Creates a [GattService] instance for a GATT server.
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY)
-fun GattService(uuid: UUID, characteristics: List<GattCharacteristic>): GattService {
-    val fwkService = BluetoothGattService(uuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-    characteristics.forEach { fwkService.addCharacteristic(it.fwkCharacteristic) }
-    return GattService(fwkService, characteristics)
+    /**
+     * Gets a [GattCharacteristic] in the service with the given UUID.
+     *
+     * If the service includes multiple characteristics with the same UUID, the first instance is
+     * returned.
+     */
+    fun getCharacteristic(uuid: UUID): GattCharacteristic? {
+        return this.characteristics.firstOrNull { it.uuid == uuid }
+    }
 }

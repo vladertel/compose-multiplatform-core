@@ -17,7 +17,6 @@
 package androidx.camera.core;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.CameraConfig;
 import androidx.camera.core.impl.ExtendedCameraConfigProviderStore;
@@ -28,7 +27,6 @@ import java.util.List;
 /**
  * An interface for filtering cameras.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraFilter {
     /**
      * Default identifier of camera filter.
@@ -52,6 +50,9 @@ public interface CameraFilter {
      * @param cameraInfos An unmodifiable list of {@link CameraInfo}s being filtered.
      * @return The output list of {@link CameraInfo}s that match the requirements. Users are
      * expected to create a new list to return with.
+     *
+     * @throws IllegalArgumentException If the device cannot return a valid lens facing value,
+     *                                  it will throw this exception.
      */
     @NonNull
     List<CameraInfo> filter(@NonNull List<CameraInfo> cameraInfos);

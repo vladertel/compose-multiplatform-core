@@ -21,13 +21,11 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.util.Size;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.ImageFormatConstants;
 
-@RequiresApi(21)
 class StreamConfigurationMapCompatBaseImpl
         implements StreamConfigurationMapCompat.StreamConfigurationMapCompatImpl {
 
@@ -35,6 +33,12 @@ class StreamConfigurationMapCompatBaseImpl
 
     StreamConfigurationMapCompatBaseImpl(@NonNull StreamConfigurationMap map) {
         mStreamConfigurationMap = map;
+    }
+
+    @Nullable
+    @Override
+    public int[] getOutputFormats() {
+        return mStreamConfigurationMap.getOutputFormats();
     }
 
     @Nullable
@@ -81,7 +85,6 @@ class StreamConfigurationMapCompatBaseImpl
             // This class is not instantiable.
         }
 
-        @DoNotInline
         static Size[] getHighResolutionOutputSizes(StreamConfigurationMap streamConfigurationMap,
                 int format) {
             return streamConfigurationMap.getHighResolutionOutputSizes(format);

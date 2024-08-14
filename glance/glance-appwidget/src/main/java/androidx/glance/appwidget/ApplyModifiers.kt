@@ -25,7 +25,6 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.RemoteViews
-import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.widget.RemoteViewsCompat.setTextViewHeight
@@ -94,7 +93,7 @@ internal fun applyModifiers(
                 if (!translationContext.canUseSelectableGroup) {
                     error(
                         "GlanceModifier.selectableGroup() can only be used on Row or Column " +
-                        "composables."
+                            "composables."
                     )
                 }
             }
@@ -123,14 +122,12 @@ internal fun applyModifiers(
             absolutePadding.bottom.toPixels(displayMetrics)
         )
     }
-    clipToOutline?.let {
+    clipToOutline?.let { clipModifier ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            rv.setBoolean(viewDef.mainViewId, "setClipToOutline", true)
+            rv.setBoolean(viewDef.mainViewId, "setClipToOutline", clipModifier.clip)
         }
     }
-    enabled?.let {
-        rv.setBoolean(viewDef.mainViewId, "setEnabled", it.enabled)
-    }
+    enabled?.let { rv.setBoolean(viewDef.mainViewId, "setEnabled", it.enabled) }
     semanticsModifier?.let { semantics ->
         val contentDescription: List<String>? =
             semantics.configuration.getOrNull(SemanticsProperties.ContentDescription)
@@ -176,12 +173,13 @@ private fun applySizeModifiers(
 
     val useMatchSizeWidth = width is Dimension.Fill || width is Dimension.Expand
     val useMatchSizeHeight = height is Dimension.Fill || height is Dimension.Expand
-    val sizeViewLayout = when {
-        useMatchSizeWidth && useMatchSizeHeight -> R.layout.size_match_match
-        useMatchSizeWidth -> R.layout.size_match_wrap
-        useMatchSizeHeight -> R.layout.size_wrap_match
-        else -> R.layout.size_wrap_wrap
-    }
+    val sizeViewLayout =
+        when {
+            useMatchSizeWidth && useMatchSizeHeight -> R.layout.size_match_match
+            useMatchSizeWidth -> R.layout.size_match_wrap
+            useMatchSizeHeight -> R.layout.size_wrap_match
+            else -> R.layout.size_wrap_wrap
+        }
 
     val sizeTargetViewId = rv.inflateViewStub(translationContext, R.id.sizeViewStub, sizeViewLayout)
 
@@ -190,14 +188,18 @@ private fun applySizeModifiers(
     when (width) {
         is Dimension.Dp -> rv.setTextViewWidth(sizeTargetViewId, width.toPixels())
         is Dimension.Resource -> rv.setTextViewWidth(sizeTargetViewId, width.toPixels())
-        Dimension.Expand, Dimension.Fill, Dimension.Wrap, null -> {
-        }
+        Dimension.Expand,
+        Dimension.Fill,
+        Dimension.Wrap,
+        null -> {}
     }.let {}
     when (height) {
         is Dimension.Dp -> rv.setTextViewHeight(sizeTargetViewId, height.toPixels())
         is Dimension.Resource -> rv.setTextViewHeight(sizeTargetViewId, height.toPixels())
-        Dimension.Expand, Dimension.Fill, Dimension.Wrap, null -> {
-        }
+        Dimension.Expand,
+        Dimension.Fill,
+        Dimension.Wrap,
+        null -> {}
     }.let {}
 }
 
@@ -212,11 +214,8 @@ internal fun applySimpleWidthModifier(
         // Prior to Android S, these layouts already have the appropriate attribute in the xml, so
         // no action is needed.
         if (
-            width.resolveDimension(context) in listOf(
-                Dimension.Wrap,
-                Dimension.Fill,
-                Dimension.Expand
-            )
+            width.resolveDimension(context) in
+                listOf(Dimension.Wrap, Dimension.Fill, Dimension.Expand)
         ) {
             return
         }
@@ -225,8 +224,7 @@ internal fun applySimpleWidthModifier(
         )
     }
     // Wrap and Expand are done in XML on Android S & Sv2
-    if (Build.VERSION.SDK_INT < 33 &&
-        width in listOf(Dimension.Wrap, Dimension.Expand)) return
+    if (Build.VERSION.SDK_INT < 33 && width in listOf(Dimension.Wrap, Dimension.Expand)) return
     ApplyModifiersApi31Impl.setViewWidth(rv, viewId, width)
 }
 
@@ -242,11 +240,8 @@ internal fun applySimpleHeightModifier(
         // Prior to Android S, these layouts already have the appropriate attribute in the xml, so
         // no action is needed.
         if (
-            height.resolveDimension(context) in listOf(
-                Dimension.Wrap,
-                Dimension.Fill,
-                Dimension.Expand
-            )
+            height.resolveDimension(context) in
+                listOf(Dimension.Wrap, Dimension.Fill, Dimension.Expand)
         ) {
             return
         }
@@ -255,8 +250,7 @@ internal fun applySimpleHeightModifier(
         )
     }
     // Wrap and Expand are done in XML on Android S & Sv2
-    if (Build.VERSION.SDK_INT < 33 &&
-        height in listOf(Dimension.Wrap, Dimension.Expand)) return
+    if (Build.VERSION.SDK_INT < 33 && height in listOf(Dimension.Wrap, Dimension.Expand)) return
     ApplyModifiersApi31Impl.setViewHeight(rv, viewId, height)
 }
 
@@ -267,8 +261,9 @@ private fun applyBackgroundModifier(
     viewDef: InsertedViewInfo
 ) {
     val viewId = viewDef.mainViewId
-    val imageProvider = modifier.imageProvider
-    if (imageProvider != null) {
+
+    fun applyBackgroundImageModifier(modifier: BackgroundModifier.Image) {
+        val imageProvider = modifier.imageProvider
         if (imageProvider is AndroidResourceImageProvider) {
             rv.setViewBackgroundResource(viewId, imageProvider.resId)
         }
@@ -276,32 +271,44 @@ private fun applyBackgroundModifier(
         // (removing modifiers is not really possible).
         return
     }
-    when (val colorProvider = modifier.colorProvider) {
-        is FixedColorProvider -> rv.setViewBackgroundColor(viewId, colorProvider.color.toArgb())
-        is ResourceColorProvider -> rv.setViewBackgroundColorResource(
-            viewId,
-            colorProvider.resId
-        )
-        is DayNightColorProvider -> {
-            if (Build.VERSION.SDK_INT >= 31) {
-                rv.setViewBackgroundColor(
-                    viewId,
-                    colorProvider.day.toArgb(),
-                    colorProvider.night.toArgb()
-                )
-            } else {
-                rv.setViewBackgroundColor(viewId, colorProvider.getColor(context).toArgb())
+
+    fun applyBackgroundColorModifier(modifier: BackgroundModifier.Color) {
+        when (val colorProvider = modifier.colorProvider) {
+            is FixedColorProvider -> rv.setViewBackgroundColor(viewId, colorProvider.color.toArgb())
+            is ResourceColorProvider ->
+                rv.setViewBackgroundColorResource(viewId, colorProvider.resId)
+            is DayNightColorProvider -> {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    rv.setViewBackgroundColor(
+                        viewId,
+                        colorProvider.day.toArgb(),
+                        colorProvider.night.toArgb()
+                    )
+                } else {
+                    rv.setViewBackgroundColor(viewId, colorProvider.getColor(context).toArgb())
+                }
             }
+            else ->
+                Log.w(GlanceAppWidgetTag, "Unexpected background color modifier: $colorProvider")
         }
-        else -> Log.w(GlanceAppWidgetTag, "Unexpected background color modifier: $colorProvider")
+    }
+
+    when (modifier) {
+        is BackgroundModifier.Image -> applyBackgroundImageModifier(modifier)
+        is BackgroundModifier.Color -> applyBackgroundColorModifier(modifier)
     }
 }
 
 private val Dimension?.isFixed: Boolean
-    get() = when (this) {
-        is Dimension.Dp, is Dimension.Resource -> true
-        Dimension.Expand, Dimension.Fill, Dimension.Wrap, null -> false
-    }
+    get() =
+        when (this) {
+            is Dimension.Dp,
+            is Dimension.Resource -> true
+            Dimension.Expand,
+            Dimension.Fill,
+            Dimension.Wrap,
+            null -> false
+        }
 
 private fun applyRoundedCorners(rv: RemoteViews, viewId: Int, radius: Dimension) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -313,7 +320,6 @@ private fun applyRoundedCorners(rv: RemoteViews, viewId: Int, radius: Dimension)
 
 @RequiresApi(Build.VERSION_CODES.S)
 private object ApplyModifiersApi31Impl {
-    @DoNotInline
     fun setViewWidth(rv: RemoteViews, viewId: Int, width: Dimension) {
         when (width) {
             is Dimension.Wrap -> {
@@ -328,7 +334,6 @@ private object ApplyModifiersApi31Impl {
         }.let {}
     }
 
-    @DoNotInline
     fun setViewHeight(rv: RemoteViews, viewId: Int, height: Dimension) {
         when (height) {
             is Dimension.Wrap -> {
@@ -343,7 +348,6 @@ private object ApplyModifiersApi31Impl {
         }.let {}
     }
 
-    @DoNotInline
     fun applyRoundedCorners(rv: RemoteViews, viewId: Int, radius: Dimension) {
         rv.setViewClipToOutline(viewId, true)
         when (radius) {

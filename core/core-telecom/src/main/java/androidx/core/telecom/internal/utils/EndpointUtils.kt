@@ -21,7 +21,6 @@ import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.telecom.CallAudioState
-import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.core.telecom.CallEndpointCompat
 
@@ -29,6 +28,39 @@ import androidx.core.telecom.CallEndpointCompat
 internal class EndpointUtils {
 
     companion object {
+        fun getSpeakerEndpoint(endpoints: List<CallEndpointCompat>): CallEndpointCompat? {
+            for (e in endpoints) {
+                if (e.type == CallEndpointCompat.TYPE_SPEAKER) {
+                    return e
+                }
+            }
+            return null
+        }
+
+        fun isBluetoothAvailable(endpoints: List<CallEndpointCompat>): Boolean {
+            for (e in endpoints) {
+                if (e.type == CallEndpointCompat.TYPE_BLUETOOTH) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        fun isEarpieceEndpoint(endpoint: CallEndpointCompat?): Boolean {
+            if (endpoint == null) {
+                return false
+            }
+            return endpoint.type == CallEndpointCompat.TYPE_EARPIECE
+        }
+
+        fun isWiredHeadsetOrBtEndpoint(endpoint: CallEndpointCompat?): Boolean {
+            if (endpoint == null) {
+                return false
+            }
+            return endpoint.type == CallEndpointCompat.TYPE_BLUETOOTH ||
+                endpoint.type == CallEndpointCompat.TYPE_WIRED_HEADSET
+        }
+
         fun toCallEndpointCompat(state: CallAudioState): CallEndpointCompat {
             val type: Int = mapRouteToType(state.route)
             return if (type == CallEndpointCompat.TYPE_BLUETOOTH && SDK_INT >= P) {
@@ -97,8 +129,8 @@ internal class EndpointUtils {
         }
 
         fun hasWiredHeadsetType(bitMap: Int): Boolean {
-            return (bitMap.and(CallAudioState.ROUTE_WIRED_HEADSET)
-                ) == CallAudioState.ROUTE_WIRED_HEADSET
+            return (bitMap.and(CallAudioState.ROUTE_WIRED_HEADSET)) ==
+                CallAudioState.ROUTE_WIRED_HEADSET
         }
 
         fun hasSpeakerType(bitMap: Int): Boolean {
@@ -146,9 +178,7 @@ internal class EndpointUtils {
     @RequiresApi(34)
     object Api34PlusImpl {
         @JvmStatic
-        @DoNotInline
-        fun toCallEndpointCompat(endpoint: android.telecom.CallEndpoint):
-            CallEndpointCompat {
+        fun toCallEndpointCompat(endpoint: android.telecom.CallEndpoint): CallEndpointCompat {
             return CallEndpointCompat(
                 endpoint.endpointName,
                 endpoint.endpointType,
@@ -157,9 +187,9 @@ internal class EndpointUtils {
         }
 
         @JvmStatic
-        @DoNotInline
-        fun toCallEndpointsCompat(endpoints: List<android.telecom.CallEndpoint>):
-            List<CallEndpointCompat> {
+        fun toCallEndpointsCompat(
+            endpoints: List<android.telecom.CallEndpoint>
+        ): List<CallEndpointCompat> {
             val res = ArrayList<CallEndpointCompat>()
             for (e in endpoints) {
                 res.add(CallEndpointCompat(e.endpointName, e.endpointType, e.identifier))
@@ -168,7 +198,6 @@ internal class EndpointUtils {
         }
 
         @JvmStatic
-        @DoNotInline
         fun toCallEndpoint(e: CallEndpointCompat): android.telecom.CallEndpoint {
             return android.telecom.CallEndpoint(e.name, e.type, e.identifier)
         }
@@ -177,9 +206,7 @@ internal class EndpointUtils {
     @RequiresApi(28)
     object BluetoothApi28PlusImpl {
         @JvmStatic
-        @DoNotInline
-        fun getBluetoothEndpoints(state: CallAudioState):
-            ArrayList<CallEndpointCompat> {
+        fun getBluetoothEndpoints(state: CallAudioState): ArrayList<CallEndpointCompat> {
             val endpoints: ArrayList<CallEndpointCompat> = ArrayList()
             val supportedBluetoothDevices = state.supportedBluetoothDevices
             for (bluetoothDevice in supportedBluetoothDevices) {
@@ -189,7 +216,6 @@ internal class EndpointUtils {
         }
 
         @JvmStatic
-        @DoNotInline
         fun getCallEndpointFromBluetoothDevice(btDevice: BluetoothDevice?): CallEndpointCompat {
             var endpointName: String = "Bluetooth Device"
             var endpointIdentity: String = "Unknown Address"
@@ -209,7 +235,6 @@ internal class EndpointUtils {
         }
 
         @JvmStatic
-        @DoNotInline
         fun getCallEndpointFromAudioState(state: CallAudioState): CallEndpointCompat {
             return getCallEndpointFromBluetoothDevice(state.activeBluetoothDevice)
         }

@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-
-//import androidx.build.LibraryType
-//import androidx.build.LibraryGroups
-
 plugins {
     id("AndroidXPlugin")
     id("com.android.application")
@@ -25,9 +21,9 @@ plugins {
 }
 
 android {
+    compileSdkVersion 35
     defaultConfig {
         applicationId "androidx.core.graphics.sample"
-        minSdkVersion 17
     }
     namespace "androidx.core.graphics.sample"
 }
@@ -35,7 +31,7 @@ android {
 dependencies {
     implementation(project(":core:core-ktx"))
     implementation(projectOrArtifact(":appcompat:appcompat"))
-    implementation projectOrArtifact(":annotation:annotation")
+    implementation("androidx.annotation:annotation:1.8.1")
     compileOnly(project(":annotation:annotation-sampled"))
 }
 

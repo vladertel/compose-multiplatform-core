@@ -33,13 +33,12 @@ abstract class UnlockClocksTask : DefaultTask() {
         description = "unlocks clocks of device by rebooting"
     }
 
-    @get:Input
-    abstract val adbPath: Property<String>
+    @get:Input abstract val adbPath: Property<String>
 
     @TaskAction
     fun exec() {
         val adb = Adb(adbPath.get(), logger)
-        project.logger.log(LogLevel.LIFECYCLE, "Rebooting device to reset clocks")
+        logger.log(LogLevel.LIFECYCLE, "Rebooting device to reset clocks")
         adb.execSync("reboot")
     }
 }

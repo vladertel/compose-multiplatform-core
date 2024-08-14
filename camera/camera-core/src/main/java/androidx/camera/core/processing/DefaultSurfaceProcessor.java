@@ -26,7 +26,6 @@ import static java.util.Objects.requireNonNull;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
-import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Size;
@@ -35,7 +34,6 @@ import android.view.Surface;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 import androidx.arch.core.util.Function;
@@ -47,6 +45,7 @@ import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.impl.utils.MatrixExt;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
+import androidx.camera.core.processing.util.GLUtils.InputFormat;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 
 import com.google.auto.value.AutoValue;
@@ -57,6 +56,7 @@ import kotlin.Triple;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,7 +72,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p> This implementation simply copies the frame from the source to the destination with the
  * transformation defined in {@link SurfaceOutput#updateTransformMatrix}.
  */
-@RequiresApi(21)
 public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
         SurfaceTexture.OnFrameAvailableListener {
     private static final String TAG = "DefaultSurfaceProcessor";
@@ -99,24 +98,25 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
 
     /** Constructs {@link DefaultSurfaceProcessor} with default shaders. */
     DefaultSurfaceProcessor(@NonNull DynamicRange dynamicRange) {
-        this(dynamicRange, ShaderProvider.DEFAULT);
+        this(dynamicRange, Collections.emptyMap());
     }
 
     /**
      * Constructs {@link DefaultSurfaceProcessor} with custom shaders.
      *
-     * @param shaderProvider custom shader provider for OpenGL rendering.
-     * @throws IllegalArgumentException if the shaderProvider provides invalid shader.
+     * @param shaderProviderOverrides custom shader providers for OpenGL rendering, for each input
+     *                                format.
+     * @throws IllegalArgumentException if any shaderProvider override provides invalid shader.
      */
     DefaultSurfaceProcessor(@NonNull DynamicRange dynamicRange,
-            @NonNull ShaderProvider shaderProvider) {
+            @NonNull Map<InputFormat, ShaderProvider> shaderProviderOverrides) {
         mGlThread = new HandlerThread("GL Thread");
         mGlThread.start();
         mGlHandler = new Handler(mGlThread.getLooper());
         mGlExecutor = CameraXExecutors.newHandlerExecutor(mGlHandler);
         mGlRenderer = new OpenGlRenderer();
         try {
-            initGlRenderer(dynamicRange, shaderProvider);
+            initGlRenderer(dynamicRange, shaderProviderOverrides);
         } catch (RuntimeException e) {
             release();
             throw e;
@@ -138,7 +138,17 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
             surfaceTexture.setDefaultBufferSize(surfaceRequest.getResolution().getWidth(),
                     surfaceRequest.getResolution().getHeight());
             Surface surface = new Surface(surfaceTexture);
+            surfaceRequest.setTransformationInfoListener(mGlExecutor, transformationInfo -> {
+                InputFormat inputFormat = InputFormat.DEFAULT;
+                if (surfaceRequest.getDynamicRange().is10BitHdr()
+                        && transformationInfo.hasCameraTransform()) {
+                    inputFormat = InputFormat.YUV;
+                }
+
+                mGlRenderer.setInputFormat(inputFormat);
+            });
             surfaceRequest.provideSurface(surface, mGlExecutor, result -> {
+                surfaceRequest.clearTransformationInfoListener();
                 surfaceTexture.setOnFrameAvailableListener(null);
                 surfaceTexture.release();
                 surface.release();
@@ -211,7 +221,6 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
             // Ignore frame update if released.
             return;
         }
-
         surfaceTexture.updateTexImage();
         surfaceTexture.getTransformMatrix(mTextureMatrix);
         // Surface, size and transform matrix for JPEG Surface if exists
@@ -223,7 +232,14 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
             surfaceOutput.updateTransformMatrix(mSurfaceOutputMatrix, mTextureMatrix);
             if (surfaceOutput.getFormat() == INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE) {
                 // Render GPU output directly.
-                mGlRenderer.render(surfaceTexture.getTimestamp(), mSurfaceOutputMatrix, surface);
+                try {
+                    mGlRenderer.render(surfaceTexture.getTimestamp(), mSurfaceOutputMatrix,
+                            surface);
+                } catch (RuntimeException e) {
+                    // This should not happen. However, when it happens, we catch the exception
+                    // to prevent the crash.
+                    Logger.e(TAG, "Failed to render with OpenGL.", e);
+                }
             } else {
                 checkState(surfaceOutput.getFormat() == ImageFormat.JPEG,
                         "Unsupported format: " + surfaceOutput.getFormat());
@@ -308,17 +324,13 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
     private Bitmap getBitmap(@NonNull Size size,
             @NonNull float[] textureTransform,
             int rotationDegrees) {
-        float[] snapshotTransform = new float[16];
-        Matrix.setIdentityM(snapshotTransform, 0);
-
-        // Flip the snapshot. This is for reverting the GL transform added in SurfaceOutputImpl.
-        MatrixExt.preVerticalFlip(snapshotTransform, 0.5f);
+        float[] snapshotTransform = textureTransform.clone();
 
         // Rotate the output if requested.
         MatrixExt.preRotate(snapshotTransform, rotationDegrees, 0.5f, 0.5f);
 
-        // Apply the texture transform.
-        Matrix.multiplyMM(snapshotTransform, 0, snapshotTransform, 0, textureTransform, 0);
+        // Flip the snapshot. This is for reverting the GL transform added in SurfaceOutputImpl.
+        MatrixExt.preVerticalFlip(snapshotTransform, 0.5f);
 
         // Update the size based on the rotation degrees.
         size = rotateSize(size, rotationDegrees);
@@ -345,11 +357,11 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
     }
 
     private void initGlRenderer(@NonNull DynamicRange dynamicRange,
-            @NonNull ShaderProvider shaderProvider) {
+            @NonNull Map<InputFormat, ShaderProvider> shaderProviderOverrides) {
         ListenableFuture<Void> initFuture = CallbackToFutureAdapter.getFuture(completer -> {
             executeSafely(() -> {
                 try {
-                    mGlRenderer.init(dynamicRange, shaderProvider);
+                    mGlRenderer.init(dynamicRange, shaderProviderOverrides);
                     completer.set(null);
                 } catch (RuntimeException e) {
                     completer.setException(e);

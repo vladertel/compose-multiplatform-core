@@ -1,44 +1,61 @@
 <script lang="ts">
-  import type { LegendItem } from "chart.js";
+  import type { ChartType, LegendItem, Point, TooltipItem } from "chart.js";
   import { Chart } from "chart.js/auto";
-  import { onMount } from "svelte";
-  import type { Readable, Writable } from "svelte/store";
-  import { derived, writable } from "svelte/store";
-  import { chartData } from "../chart-transforms.js";
-  import { saveToClipboard } from "../clipboard.js";
+  import { createEventDispatcher, onMount } from "svelte";
+  import { writable, type Writable } from "svelte/store";
+  import { saveToClipboard as save } from "../clipboard.js";
   import { LegendPlugin } from "../plugins.js";
-  import { expressionFilter } from "../regexp.js";
-  import type { Benchmarks } from "../schema.js";
-  import { benchmarksDataset } from "../transforms.js";
-  type FilterFn = (label: string) => boolean;
+  import type { Data } from "../types/chart.js";
+  import type { Controls, ControlsEvent } from "../types/events.js";
+  import Legend from "./Legend.svelte";
+  import { isSampled } from "../transforms/standard-mappers.js";
 
-  export let containers: Readable<Array<Benchmarks>>;
+  export let data: Data;
+  export let chartType: ChartType = "line";
+  export let isExperimental: boolean = false;
+  export let showHistogramControls: boolean = false;
 
-  let canvas: HTMLCanvasElement;
-  let filter: Writable<FilterFn> = writable((_: string) => true);
-
-  let data = derived([containers, filter], ([$containers, $filter]) => {
-    return chartData(benchmarksDataset($containers, $filter));
-  });
-
-  let chart: Writable<Chart | undefined> = writable(null);
-  let legendLabels: Writable<Array<LegendItem> | undefined> = writable(null);
-
-  data.subscribe(($data) => {
+  $: {
     if ($chart) {
-      $chart.data = $data;
+      $chart.data = data;
       $chart.update();
     }
-  });
+  }
 
+  // State
+  let controlsDispatcher = createEventDispatcher<ControlsEvent>();
+  let element: HTMLCanvasElement;
+  let buckets: Writable<number> = writable(100);
+  let chart: Writable<Chart | null> = writable(null);
+  let items: Writable<LegendItem[] | null> = writable(null);
+
+  // Effects
   onMount(() => {
-    const onUpdate = (updated: Chart) => {
-      chart.set(updated);
-      legendLabels.set(
-        updated.options.plugins.legend.labels.generateLabels(updated)
-      );
+    const onUpdate = (chart: Chart) => {
+      $chart = chart;
+      // Bad typings.
+      const legend = chart.options.plugins?.legend as any;
+      $items = legend.labels.generateLabels(chart);
     };
     const plugins = {
+      tooltip: {
+        callbacks: {
+          label: (context: TooltipItem<typeof chartType>): string | void | string[] => {
+            // TODO: Configure Tooltips
+            // https://www.chartjs.org/docs/latest/configuration/tooltip.html
+            const label = context.dataset.label;
+            const rp = context.raw as Point;
+            const frequency = context.parsed.y;
+            if (isSampled(label)) {
+              const fx = rp.x.toFixed(2);
+              return `${label}: ${fx} F(${frequency})`;
+            } else {
+              // Fallback to default behavior
+              return;
+            }
+          },
+        },
+      },
       legend: {
         display: false,
       },
@@ -46,119 +63,107 @@
         onUpdate: onUpdate,
       },
     };
-    chart.set(
-      new Chart(canvas, {
-        type: "line",
-        data: $data,
-        plugins: [LegendPlugin],
-        options: {
-          plugins: plugins,
-        },
-      })
-    );
+    $chart = new Chart(element, {
+      data: data,
+      type: chartType,
+      plugins: [LegendPlugin],
+      options: {
+        plugins: plugins,
+      },
+    });
   });
 
-  function onItemClick(item: LegendItem) {
-    return (_: Event) => {
-      // https://www.chartjs.org/docs/latest/samples/legend/html.html
-      $chart.setDatasetVisibility(
-        item.datasetIndex,
-        !$chart.isDatasetVisible(item.datasetIndex)
-      );
-      // Update chart
-      $chart.update();
-    };
-  }
-
-  function onFilterChanged(event: Event) {
-    const target = event.currentTarget as HTMLInputElement;
-    const value = target.value;
-    $filter = expressionFilter(value);
-  }
-
-  async function onCopy(_: Event) {
+  // Copy to clip board
+  async function copy(event: Event) {
     if ($chart) {
-      await saveToClipboard($chart);
+      await save($chart);
+    }
+  }
+
+  function onHistogramChanged(event: Event) {
+    const element = event.target as EventTarget & HTMLInputElement;
+    const oldValue = $buckets;
+    $buckets = parseInt(element.value, 10);
+    if (oldValue != $buckets) {
+      let controls: Controls = {
+        buckets: $buckets,
+      };
+      controlsDispatcher("controls", controls);
     }
   }
 </script>
 
 <article>
-  <button
-    class="copy outline"
-    data-tooltip="Copy chart to clipboard."
-    on:click={onCopy}
-  >
-    ⎘
-  </button>
-  <canvas id="chart" class="chart" bind:this={canvas} />
-</article>
-
-{#if $legendLabels && $legendLabels.length >= 0}
-  <article>
-    <div class="filter">
-      <label for="metricFilter">
+  <div class="toolbar">
+    <button
+      class="btn outline"
+      data-tooltip="Copy chart to clipboard."
+      on:click={copy}
+    >
+      ⎘
+    </button>
+  </div>
+  <canvas class="chart" bind:this={element} />
+  {#if showHistogramControls}
+    <div class="controls">
+      <label for="buckets">
+        Histogram
         <input
-          type="text"
-          id="metricFilter"
-          name="metricFilter"
-          placeholder="Filter metrics (regular expressions)"
-          autocomplete="off"
-          on:input={onFilterChanged}
+          type="range"
+          data-tooltip={$buckets}
+          data-placement="right"
+          min="10"
+          max="250"
+          value={$buckets}
+          id="buckets"
+          name="buckets"
+          on:change={onHistogramChanged}
         />
       </label>
     </div>
-    <div class="legend">
-      {#each $legendLabels as label, index}
-        <div
-          class="item"
-          on:dblclick={onItemClick(label)}
-          aria-label="legend"
-          role="listitem"
-        >
-          <span
-            class="box"
-            style="background: {label.fillStyle}; border-color: {label.strokeStyle}; border-width: {label.lineWidth}px;"
-          />
-          <span
-            class="label"
-            style="text-decoration: {label.hidden ? 'line-through' : ''};"
-          >
-            {label.text}
-          </span>
-        </div>
-      {/each}
-    </div>
-  </article>
+  {/if}
+  {#if isExperimental}
+    <footer class="slim">
+      <section class="experimental">
+        <kbd>Experimental</kbd>
+      </section>
+    </footer>
+  {/if}
+</article>
+
+{#if $chart && $items}
+  <Legend chart={$chart} items={$items} />
 {/if}
 
 <style>
-  .copy {
-    width: 4%;
-    position: relative;
-    padding: 0;
-    border: none;
-    /* Looked okay on my machine. */
-    right: -52rem;
-    top: -3rem;
-  }
   .chart {
     width: 100%;
   }
-  .legend {
-    display: flex;
-    flex-direction: column;
-    row-gap: 3px;
-  }
-  .item {
+  .toolbar {
+    padding: 0;
     display: flex;
     flex-direction: row;
-    column-gap: 10px;
-    align-items: center;
+    justify-content: flex-end;
   }
-  .item .box {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
+  .toolbar .btn {
+    width: auto;
+    height: auto;
+    border: none;
+    padding: 5px;
+  }
+  .controls {
+    margin-top: 20px;
+    width: 100%;
+  }
+  .slim {
+    margin-bottom: 0px;
+    padding: 0;
+  }
+  .experimental {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    margin-bottom: 0px;
   }
 </style>

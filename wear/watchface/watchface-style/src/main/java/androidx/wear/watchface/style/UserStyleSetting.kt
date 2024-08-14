@@ -421,7 +421,7 @@ private constructor(
             val id =
                 getStringRefAttribute(resources, parser, "id")
                     ?: parent?.id?.value
-                        ?: throw IllegalArgumentException("$settingType must have id")
+                    ?: throw IllegalArgumentException("$settingType must have id")
             val displayName =
                 createDisplayText(resources, parser, "displayName", parent?.displayNameInternal)
             val description =
@@ -1114,8 +1114,7 @@ private constructor(
                         perComplicationTypeBounds.mapKeys { ComplicationType.fromWireType(it.key) },
                         perComplicationTypeMargins?.let { margins ->
                             margins.mapKeys { ComplicationType.fromWireType(it.key) }
-                        }
-                            ?: emptyMap()
+                        } ?: emptyMap()
                     )
                 },
                 wireFormat.accessibilityTraversalIndex,
@@ -1390,7 +1389,7 @@ private constructor(
         internal companion object {
             private fun <T> bindScale(
                 function:
-                    ( // ktlint-disable parameter-list-wrapping
+                    (
                         resources: Resources,
                         parser: XmlResourceParser,
                         complicationScaleX: Float,
@@ -1466,7 +1465,7 @@ private constructor(
                 get() = displayNameInternal.toCharSequence()
 
             /** Backing field for [screenReaderName]. */
-            override var screenReaderNameInternal: DisplayText?
+            final override var screenReaderNameInternal: DisplayText?
 
             /**
              * Optional localized human readable name for the setting, used by screen readers. This
@@ -1678,8 +1677,7 @@ private constructor(
                         PerComplicationTypeMargins(
                             overlay.complicationSlotBounds?.perComplicationTypeMargins?.mapKeys {
                                 it.key.toWireComplicationType()
-                            }
-                                ?: emptyMap()
+                            } ?: emptyMap()
                         )
                     },
                     complicationSlotOverlays.map { it.nameResourceId ?: 0 },
@@ -2187,7 +2185,7 @@ private constructor(
         internal companion object {
             private fun <T> bindIdToSetting(
                 function:
-                    ( // ktlint-disable parameter-list-wrapping
+                    (
                         resources: Resources,
                         parser: XmlResourceParser,
                         idToSetting: Map<String, UserStyleSetting>
@@ -2250,7 +2248,7 @@ private constructor(
                 get() = displayNameInternal.toCharSequence()
 
             /** Backing field for [screenReaderName]. */
-            override var screenReaderNameInternal: DisplayText?
+            final override var screenReaderNameInternal: DisplayText?
 
             /**
              * Optional localized human readable name for the setting, used by screen readers. This
@@ -2898,6 +2896,8 @@ private constructor(
             override fun write(dos: DataOutputStream) {
                 dos.write(id.value)
             }
+
+            override fun toString(): String = "[binary data, length: ${customValue.size}]"
         }
 
         override fun getOptionForId(optionId: Option.Id): Option =

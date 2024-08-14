@@ -16,8 +16,8 @@
 
 package androidx.camera.view
 
-import androidx.annotation.RequiresApi
 import androidx.camera.core.Camera
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.UseCaseGroup
@@ -29,10 +29,9 @@ import com.google.common.util.concurrent.ListenableFuture
 /**
  * Fake [ProcessCameraProviderWrapper].
  *
- * @param bindToLifecycleException the [Exception] to throw when [bindToLifecycle] is called.
- * If null, [bindToLifecycle] will not throw any error.
+ * @param bindToLifecycleException the [Exception] to throw when [bindToLifecycle] is called. If
+ *   null, [bindToLifecycle] will not throw any error.
  */
-@RequiresApi(21)
 class FakeProcessCameraProviderWrapper(
     private val camera: Camera = FakeCamera(),
     private val bindToLifecycleException: Throwable? = null
@@ -67,7 +66,11 @@ class FakeProcessCameraProviderWrapper(
         return camera
     }
 
-    override fun shutdown(): ListenableFuture<Void> {
+    override fun shutdownAsync(): ListenableFuture<Void> {
         return Futures.immediateFuture(null)
+    }
+
+    override fun getCameraInfo(cameraSelector: CameraSelector?): CameraInfo {
+        return camera.cameraInfo
     }
 }

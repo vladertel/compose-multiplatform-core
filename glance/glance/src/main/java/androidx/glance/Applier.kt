@@ -20,10 +20,7 @@ import androidx.annotation.RestrictTo
 import androidx.compose.runtime.AbstractApplier
 import java.lang.IllegalStateException
 
-/**
- * Applier for the Glance composition.
- * @suppress
- */
+/** Applier for the Glance composition. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class Applier(root: EmittableWithChildren) : AbstractApplier<Emittable>(root) {
     private val newRootMaxDepth = root.maxDepth
@@ -43,11 +40,12 @@ class Applier(root: EmittableWithChildren) : AbstractApplier<Emittable>(root) {
                 "${(root as EmittableWithChildren).maxDepth}"
         }
         if (instance is EmittableWithChildren) {
-            instance.maxDepth = if (instance.resetsDepthForChildren) {
-                newRootMaxDepth
-            } else {
-                parent.maxDepth - 1
-            }
+            instance.maxDepth =
+                if (instance.resetsDepthForChildren) {
+                    newRootMaxDepth
+                } else {
+                    parent.maxDepth - 1
+                }
         }
         currentChildren.add(index, instance)
     }

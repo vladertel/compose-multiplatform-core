@@ -36,7 +36,7 @@ public interface IcingOptionsConfig {
 
     boolean DEFAULT_DOCUMENT_STORE_NAMESPACE_ID_FINGERPRINT = false;
 
-    float DEFAULT_OPTIMIZE_REBUILD_INDEX_THRESHOLD = 0.0f;
+    float DEFAULT_OPTIMIZE_REBUILD_INDEX_THRESHOLD = 0.9f;
 
     /**
      * The default compression level in IcingSearchEngineOptions proto matches the
@@ -61,6 +61,18 @@ public interface IcingOptionsConfig {
      * </ul>
      */
     int DEFAULT_INTEGER_INDEX_BUCKET_SPLIT_THRESHOLD = 65536;
+
+    boolean DEFAULT_LITE_INDEX_SORT_AT_INDEXING = true;
+
+    /**
+     * The default sort threshold for the lite index when sort at indexing is enabled.
+     * 8192 is picked based on Icing microbenchmarks (icing-search-engine_benchmarks.cc).
+     */
+    int DEFAULT_LITE_INDEX_SORT_SIZE = 8192;   // 8Kib
+
+    boolean DEFAULT_USE_NEW_QUALIFIED_ID_JOIN_INDEX = false;
+
+    boolean DEFAULT_BUILD_PROPERTY_EXISTENCE_METADATA_HITS = false;
 
     /**
      * The maximum allowable token length. All tokens in excess of this size will be truncated to
@@ -175,4 +187,42 @@ public interface IcingOptionsConfig {
      * list).
      */
     int getIntegerIndexBucketSplitThreshold();
+
+    /**
+     * Flag for {@link com.google.android.icing.proto.IcingSearchEngineOptions}.
+     *
+     * <p>Whether Icing should sort and merge its lite index HitBuffer unsorted tail at indexing
+     * time.
+     *
+     * <p>If set to true, the HitBuffer will be sorted at indexing time after exceeding the sort
+     * threshold. If false, the HifBuffer will be sorted at querying time, before the first query
+     * after inserting new elements into the HitBuffer.
+     */
+    boolean getLiteIndexSortAtIndexing();
+
+    /**
+     * Flag for {@link com.google.android.icing.proto.IcingSearchEngineOptions}.
+     *
+     * <p>Size (in bytes) at which Icing's lite index should sort and merge the HitBuffer's
+     * unsorted tail into the sorted head for sorting at indexing time. Size specified here is
+     * unsorted tail section.
+     *
+     * <p>Setting a lower sort size reduces querying latency at the expense of indexing latency.
+     */
+    int getLiteIndexSortSize();
+
+    /**
+     * Flag for {@link com.google.android.icing.proto.IcingSearchEngineOptions}.
+     *
+     * <p>Whether to use the new qualified Id join index.
+     */
+    boolean getUseNewQualifiedIdJoinIndex();
+
+    /**
+     * Flag for {@link com.google.android.icing.proto.IcingSearchEngineOptions}.
+     *
+     * <p>Whether to build the metadata hits used for property existence check, which is required
+     * to support the hasProperty function in advanced query.
+     */
+    boolean getBuildPropertyExistenceMetadataHits();
 }

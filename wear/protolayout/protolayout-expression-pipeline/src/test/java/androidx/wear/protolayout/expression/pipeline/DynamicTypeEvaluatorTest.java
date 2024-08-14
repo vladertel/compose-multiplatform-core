@@ -28,11 +28,14 @@ import android.icu.util.ULocale;
 
 import androidx.annotation.NonNull;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.wear.protolayout.expression.AppDataKey;
 import androidx.wear.protolayout.expression.DynamicBuilders;
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicBool;
 import androidx.wear.protolayout.expression.PlatformDataKey;
 import androidx.wear.protolayout.expression.PlatformHealthSources;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeEvaluator.EvaluationException;
+import androidx.wear.protolayout.expression.proto.DynamicProto;
+import androidx.wear.protolayout.expression.proto.FixedProto;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +55,17 @@ public class DynamicTypeEvaluatorTest {
         ArrayList<Boolean> results = new ArrayList<>();
         DynamicTypeBindingRequest request = createSingleNodeDynamicBoolRequest(results);
         BoundDynamicType boundDynamicType = evaluator.bind(request);
-        assertThat(boundDynamicType.getDynamicNodeCount()).isEqualTo(1);
+        assertThat(boundDynamicType.getDynamicNodeCost()).isEqualTo(1);
+    }
+
+    @Test
+    public void evaluateBindingRequest_nodeThrows_propagateTheException() {
+        DynamicTypeEvaluator evaluator = createEvaluator();
+        ArrayList<Integer> results = new ArrayList<>();
+        DynamicTypeBindingRequest request = createExpressionWithUnrecognizedEnum(results);
+
+        assertThrows(
+                IllegalArgumentException.class, () -> evaluator.bind(request).startEvaluation());
     }
 
     @Test
@@ -78,17 +91,10 @@ public class DynamicTypeEvaluatorTest {
         notifier.callReceiver();
         assertThat(results).isEmpty();
 
-        // Start evaluation.
+        // Start evaluation. This will send the initial result.
         boundDynamicType.startEvaluation();
 
-        // Trigger reevaluation, which should send a result.
-        for (int i = 0; i < 5; i++) {
-            notifier.callReceiver();
-            assertThat(results).hasSize(i + 1);
-            assertThat(Integer.parseInt(results.get(i))).isAtLeast(0);
-            assertThat(Integer.parseInt(results.get(i))).isLessThan(60);
-        }
-
+        assertThat(results).hasSize(1);
         boundDynamicType.close();
     }
 
@@ -109,7 +115,7 @@ public class DynamicTypeEvaluatorTest {
         boundDynamicType1.close();
         // Retry binding request2
         BoundDynamicType boundDynamicType2 = evaluator.bind(request2);
-        assertThat(boundDynamicType2.getDynamicNodeCount()).isEqualTo(1);
+        assertThat(boundDynamicType2.getDynamicNodeCost()).isEqualTo(1);
     }
 
     @Test
@@ -117,11 +123,10 @@ public class DynamicTypeEvaluatorTest {
         AddToListCallback<Integer> results = new AddToListCallback<>(new ArrayList<>());
         DynamicTypeBindingRequest request =
                 DynamicTypeBindingRequest.forDynamicInt32(
-                        PlatformHealthSources.dailySteps(),
-                        new MainThreadExecutor(), results);
+                        PlatformHealthSources.dailySteps(), new MainThreadExecutor(), results);
         PlatformDataProvider provider = mock(PlatformDataProvider.class);
-        DynamicTypeEvaluator evaluator = createEvaluatorWithProvider(provider,
-                PlatformHealthSources.Keys.DAILY_STEPS);
+        DynamicTypeEvaluator evaluator =
+                createEvaluatorWithProvider(provider, PlatformHealthSources.Keys.DAILY_STEPS);
 
         BoundDynamicType boundDynamicType = evaluator.bind(request);
         boundDynamicType.startEvaluation();
@@ -132,22 +137,63 @@ public class DynamicTypeEvaluatorTest {
         verify(provider).clearReceiver();
     }
 
+    @Test
+    public void closeCalledMultipleTimesOnBoundDynamicType_doesNotThrow()
+            throws EvaluationException {
+        DynamicTypeEvaluator evaluator =
+                createEvaluatorWithQuota(
+                        /* animationQuota= */ unlimitedQuota(),
+                        /* dynamicTypesQuota= */ new FixedQuotaManagerImpl(1));
+        ArrayList<Boolean> results = new ArrayList<>();
+        BoundDynamicType boundDynamicType =
+                evaluator.bind(createSingleNodeDynamicBoolRequest(results));
+
+        for (int i = 0; i < 10; i++) {
+            boundDynamicType.close();
+        }
+    }
+
     @NonNull
     private static DynamicTypeBindingRequest createSingleNodeDynamicBoolRequest(
             ArrayList<Boolean> results) {
+        return createDynamicBoolRequest(DynamicBool.from(new AppDataKey<>("key")), results);
+    }
+
+    @NonNull
+    private static DynamicTypeBindingRequest createDynamicBoolRequest(
+            DynamicBuilders.DynamicBool dynamicBool, ArrayList<Boolean> results) {
         return DynamicTypeBindingRequest.forDynamicBool(
-                DynamicBool.constant(false),
-                new MainThreadExecutor(),
-                new AddToListCallback<>(results));
+                dynamicBool, new MainThreadExecutor(), new AddToListCallback<>(results));
+    }
+
+    @NonNull
+    private static DynamicTypeBindingRequest createExpressionWithUnrecognizedEnum(
+            ArrayList<Integer> results) {
+        return DynamicTypeBindingRequest.forDynamicInt32Internal(
+                DynamicProto.DynamicInt32.newBuilder()
+                        .setFloatToInt(
+                                DynamicProto.FloatToInt32Op.newBuilder()
+                                        .setInput(
+                                                DynamicProto.DynamicFloat.newBuilder()
+                                                        .setFixed(
+                                                                FixedProto.FixedFloat
+                                                                        .getDefaultInstance())
+                                                        .build())
+                                        .setRoundModeValue(-1)
+                                        .build())
+                        .build(),
+                new AddToListCallback<Integer>(results));
     }
 
     @NonNull
     private static DynamicTypeBindingRequest createSingleNodeDynamicStringFromTimePlatformRequest(
             ArrayList<String> results) {
         return DynamicTypeBindingRequest.forDynamicString(
-                DynamicBuilders.DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(
-                        DynamicBuilders.DynamicInstant
-                                .withSecondsPrecision(Instant.now())).getSecondsPart().format(),
+                DynamicBuilders.DynamicInstant.platformTimeWithSecondsPrecision()
+                        .durationUntil(
+                                DynamicBuilders.DynamicInstant.withSecondsPrecision(Instant.now()))
+                        .getSecondsPart()
+                        .format(),
                 ULocale.ENGLISH,
                 new MainThreadExecutor(),
                 new AddToListCallback<>(results));
@@ -157,8 +203,8 @@ public class DynamicTypeEvaluatorTest {
         return createEvaluatorWithQuota(unlimitedQuota(), unlimitedQuota());
     }
 
-    private static DynamicTypeEvaluator createEvaluatorWithProvider(PlatformDataProvider provider
-            , PlatformDataKey<?> key) {
+    private static DynamicTypeEvaluator createEvaluatorWithProvider(
+            PlatformDataProvider provider, PlatformDataKey<?> key) {
         return new DynamicTypeEvaluator(
                 new DynamicTypeEvaluator.Config.Builder()
                         .setAnimationQuotaManager(unlimitedQuota())
@@ -207,8 +253,7 @@ public class DynamicTypeEvaluatorTest {
         }
 
         @Override
-        public void setReceiver(
-                @NonNull Executor executor, @NonNull Runnable tick) {
+        public void setReceiver(@NonNull Executor executor, @NonNull Runnable tick) {
             super.setReceiver(executor, tick);
 
             mRegisteredReceiver = tick;

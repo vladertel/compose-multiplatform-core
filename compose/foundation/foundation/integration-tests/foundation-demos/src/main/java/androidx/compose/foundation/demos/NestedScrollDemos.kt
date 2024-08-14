@@ -18,6 +18,8 @@ package androidx.compose.foundation.demos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,36 +52,30 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun NestedScrollDemo() {
     Column(
-        Modifier
-            .fillMaxSize()
+        Modifier.fillMaxSize()
             .background(Color.Red)
             .verticalScroll(rememberScrollState())
             .padding(PaddingValues(30.dp))
     ) {
-        repeat(6) { outerOuterIndex ->
-            OuterLvl1(outerOuterIndex)
-        }
+        repeat(6) { outerOuterIndex -> OuterLvl1(outerOuterIndex) }
     }
 }
 
 @Composable
 private fun OuterLvl1(outerOuterIndex: Int) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize()
-            .border(3.dp, Color.Black)
-            .height(350.dp)
-            .background(Color.Yellow),
+        modifier =
+            Modifier.fillMaxSize()
+                .border(3.dp, Color.Black)
+                .height(350.dp)
+                .background(Color.Yellow),
         reverseLayout = true,
         contentPadding = PaddingValues(60.dp)
     ) {
         repeat(3) { outerIndex ->
-            item {
-                InnerColumn(outerOuterIndex, outerIndex)
-            }
+            item { InnerColumn(outerOuterIndex, outerIndex) }
 
-            item {
-                Spacer(Modifier.height(5.dp))
-            }
+            item { Spacer(Modifier.height(5.dp)) }
         }
     }
     Spacer(Modifier.height(5.dp))
@@ -88,8 +84,7 @@ private fun OuterLvl1(outerOuterIndex: Int) {
 @Composable
 private fun InnerColumn(outerOuterIndex: Int, outerIndex: Int) {
     Column(
-        Modifier
-            .fillMaxSize()
+        Modifier.fillMaxSize()
             .border(3.dp, Color.Blue)
             .height(150.dp)
             .background(Color.White)
@@ -98,14 +93,14 @@ private fun InnerColumn(outerOuterIndex: Int, outerIndex: Int) {
     ) {
         repeat(10) { innerIndex ->
             Box(
-                Modifier
-                    .height(38.dp)
+                Modifier.height(38.dp)
                     .fillMaxWidth()
                     .background(Color.Magenta)
                     .border(2.dp, Color.Yellow),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
+                    modifier = Modifier.focusable(),
                     text = "$outerOuterIndex : $outerIndex : $innerIndex",
                     fontSize = 24.sp
                 )
@@ -130,24 +125,60 @@ fun NestedScrollConnectionSample() {
         }
     }
     Box(
-        Modifier
-            .fillMaxSize()
+        Modifier.fillMaxSize()
             // attach as a parent to the nested scroll system
             .nestedScroll(nestedScrollConnection)
     ) {
         Column {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Scroll Connection PreScroll available: $availableOffset")
+                text = "Scroll Connection PreScroll available: $availableOffset"
+            )
 
             // our list with build in nested scroll support that will notify us about its scroll
             LazyColumn {
                 items(100) { index ->
-                    Text("I'm item $index", modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp))
+                    Text(
+                        "I'm item $index",
+                        modifier = Modifier.fillMaxWidth().focusable().padding(16.dp)
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SimpleColumnNestedScrollSample() {
+    val scrollState = rememberScrollState()
+
+    Column(
+        Modifier.fillMaxWidth().background(Color.Red).verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Text(modifier = Modifier.fillMaxWidth(), text = "Outer Scrollable Column")
+
+        for (i in 0 until 4) {
+            SimpleColumn("Inner Scrollable Column: $i")
+        }
+    }
+}
+
+@Composable
+fun SimpleColumn(label: String) {
+    Column(
+        Modifier.fillMaxWidth()
+            .height(200.dp)
+            .background(Color.Green)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(modifier = Modifier.fillMaxWidth(), text = "$label INNER, scrollable only")
+
+        for (i in 0 until 20) {
+            Text(
+                modifier = Modifier.fillMaxWidth().focusable(),
+                text = "Text $i",
+            )
         }
     }
 }

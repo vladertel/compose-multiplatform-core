@@ -23,7 +23,6 @@ import android.hardware.camera2.CaptureRequest;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.camera.camera2.interop.CaptureRequestOptions;
@@ -38,7 +37,6 @@ import androidx.camera.core.impl.OptionsBundle;
  * Internal shared implementation details for camera 2 interop.
  */
 @OptIn(markerClass = ExperimentalCamera2Interop.class)
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class Camera2ImplConfig extends CaptureRequestOptions {
 
     @RestrictTo(Scope.LIBRARY)
@@ -66,11 +64,6 @@ public final class Camera2ImplConfig extends CaptureRequestOptions {
             SESSION_CAPTURE_CALLBACK_OPTION =
             Option.create("camera2.cameraCaptureSession.captureCallback",
                     CameraCaptureSession.CaptureCallback.class);
-
-    @RestrictTo(Scope.LIBRARY)
-    public static final Option<CameraEventCallbacks> CAMERA_EVENT_CALLBACK_OPTION =
-            Option.create("camera2.cameraEvent.callback", CameraEventCallbacks.class);
-
     @RestrictTo(Scope.LIBRARY)
     public static final Option<Object> CAPTURE_REQUEST_TAG_OPTION = Option.create(
             "camera2.captureRequest.tag", Object.class);
@@ -180,19 +173,6 @@ public final class Camera2ImplConfig extends CaptureRequestOptions {
     }
 
     /**
-     * Returns the stored CameraEventCallbacks instance.
-     *
-     * @param valueIfMissing The value to return if this configuration option has not been set.
-     * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
-     * configuration.
-     */
-    @Nullable
-    public CameraEventCallbacks getCameraEventCallback(
-            @Nullable CameraEventCallbacks valueIfMissing) {
-        return getConfig().retrieveOption(CAMERA_EVENT_CALLBACK_OPTION, valueIfMissing);
-    }
-
-    /**
      * Returns the capture request tag.
      *
      * @param valueIfMissing The value to return if this configuration option has not been set.
@@ -262,10 +242,19 @@ public final class Camera2ImplConfig extends CaptureRequestOptions {
         /** Inserts options from other {@link Config} object. */
         @NonNull
         public Camera2ImplConfig.Builder insertAllOptions(@NonNull Config config) {
+            insertAllOptions(config, OptionPriority.OPTIONAL);
+            return this;
+        }
+
+        /** Inserts options from other {@link Config} object with the given option priority. */
+        @NonNull
+        public Camera2ImplConfig.Builder insertAllOptions(@NonNull Config config,
+                @NonNull OptionPriority optionPriority) {
             for (Option<?> option : config.listOptions()) {
                 @SuppressWarnings("unchecked") // Options/values are being copied directly
                 Option<Object> objectOpt = (Option<Object>) option;
-                mMutableOptionsBundle.insertOption(objectOpt, config.retrieveOption(objectOpt));
+                mMutableOptionsBundle.insertOption(objectOpt, optionPriority,
+                        config.retrieveOption(objectOpt));
             }
             return this;
         }
@@ -279,40 +268,6 @@ public final class Camera2ImplConfig extends CaptureRequestOptions {
         @NonNull
         public Camera2ImplConfig build() {
             return new Camera2ImplConfig(OptionsBundle.from(mMutableOptionsBundle));
-        }
-    }
-
-    /**
-     * Extends a {@link ExtendableBuilder} to add Camera2 implementation options.
-     *
-     * @param <T> the type being built by the extendable builder.
-     */
-    public static final class Extender<T> {
-
-        ExtendableBuilder<T> mBaseBuilder;
-
-        /**
-         * Creates an Extender that can be used to add Camera2 implementation options to another
-         * Builder.
-         *
-         * @param baseBuilder The builder being extended.
-         */
-        public Extender(@NonNull ExtendableBuilder<T> baseBuilder) {
-            mBaseBuilder = baseBuilder;
-        }
-
-        /**
-         * Sets a CameraEventCallbacks instance.
-         *
-         * @param cameraEventCallbacks The CameraEventCallbacks.
-         * @return The current Extender.
-         */
-        @NonNull
-        public Extender<T> setCameraEventCallback(
-                @NonNull CameraEventCallbacks cameraEventCallbacks) {
-            mBaseBuilder.getMutableConfig().insertOption(CAMERA_EVENT_CALLBACK_OPTION,
-                    cameraEventCallbacks);
-            return this;
         }
     }
 }

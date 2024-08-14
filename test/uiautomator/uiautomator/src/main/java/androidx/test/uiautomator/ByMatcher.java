@@ -18,9 +18,10 @@ package androidx.test.uiautomator;
 
 import android.os.Build;
 import android.util.Log;
+import android.view.Display;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
-import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.test.uiautomator.util.Traces;
@@ -363,7 +364,6 @@ class ByMatcher {
             private Api26Impl() {
             }
 
-            @DoNotInline
             static String getHintText(AccessibilityNodeInfo accessibilityNodeInfo) {
                 CharSequence chars = accessibilityNodeInfo.getHintText();
                 return chars != null ? chars.toString() : null;
@@ -425,9 +425,10 @@ class ByMatcher {
         private Api30Impl() {
         }
 
-        @DoNotInline
         static int getDisplayId(AccessibilityNodeInfo accessibilityNodeInfo) {
-            return accessibilityNodeInfo.getWindow().getDisplayId();
+            AccessibilityWindowInfo accessibilityWindowInfo = accessibilityNodeInfo.getWindow();
+            return accessibilityWindowInfo == null ? Display.DEFAULT_DISPLAY :
+                    accessibilityWindowInfo.getDisplayId();
         }
     }
 }

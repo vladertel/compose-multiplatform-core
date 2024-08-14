@@ -20,14 +20,16 @@ import android.net.NetworkRequest
 
 /**
  * A specification of the requirements that need to be met before a [UserInitiatedTaskRequest] can
- * run. By default, UserInitiatedTaskRequest only require a network constraint to be specified.
- * By adding additional constraints, you can make sure that work only runs in certain situations -
- * for example, when you have an unmetered network and are charging.
+ * run. By default, UserInitiatedTaskRequest only require a network constraint to be specified. By
+ * adding additional constraints, you can make sure that work only runs in certain situations - for
+ * example, when you have an unmetered network and are charging.
  */
-class Constraints constructor(
+class Constraints
+constructor(
     /**
      * The network request required for the work to run.
-     * The default value assumes a requirement of any internet.
+     *
+     * **The default value assumes a requirement of any internet.**
      */
     private val requiredNetwork: NetworkRequest = getDefaultNetworkRequest()
 ) {
@@ -35,9 +37,7 @@ class Constraints constructor(
         get() = requiredNetwork
 
     companion object {
-        /**
-         * Copies an existing [Constraints] object.
-         */
+        /** Copies an existing [Constraints] object. */
         @JvmStatic
         fun copyFrom(constraints: Constraints): Constraints {
             return Constraints(constraints.requiredNetwork)

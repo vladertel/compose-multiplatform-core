@@ -23,10 +23,13 @@ import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
 import androidx.camera.core.DynamicRange.SDR
-import androidx.camera.testing.AndroidUtil
-import androidx.camera.testing.CameraPipeConfigTestRule
-import androidx.camera.testing.CameraUtil
-import androidx.camera.testing.CameraXUtil
+import androidx.camera.core.impl.CameraInfoInternal
+import androidx.camera.testing.impl.AndroidUtil
+import androidx.camera.testing.impl.CameraPipeConfigTestRule
+import androidx.camera.testing.impl.CameraUtil
+import androidx.camera.testing.impl.CameraXUtil
+import androidx.camera.video.Recorder.VIDEO_CAPABILITIES_SOURCE_CAMCORDER_PROFILE
+import androidx.camera.video.internal.encoder.VideoEncoderInfoImpl
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
@@ -50,22 +53,25 @@ class RecorderVideoCapabilitiesTest(
 ) {
 
     @get:Rule
-    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
-        active = implName == CameraPipeConfig::class.simpleName,
-    )
+    val cameraPipeConfigTestRule =
+        CameraPipeConfigTestRule(
+            active = implName == CameraPipeConfig::class.simpleName,
+        )
 
     @get:Rule
-    val cameraRule = CameraUtil.grantCameraPermissionAndPreTest(
-        CameraUtil.PreTestCameraIdList(cameraConfig)
-    )
+    val cameraRule =
+        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+            CameraUtil.PreTestCameraIdList(cameraConfig)
+        )
 
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun data() = listOf(
-            arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
-            arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
-        )
+        fun data() =
+            listOf(
+                arrayOf(Camera2Config::class.simpleName, Camera2Config.defaultConfig()),
+                arrayOf(CameraPipeConfig::class.simpleName, CameraPipeConfig.defaultConfig())
+            )
     }
 
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -79,8 +85,15 @@ class RecorderVideoCapabilitiesTest(
 
         CameraXUtil.initialize(context, cameraConfig).get()
 
-        val cameraInfo = CameraUtil.createCameraUseCaseAdapter(context, cameraSelector).cameraInfo
-        videoCapabilities = RecorderVideoCapabilities.from(cameraInfo)
+        val cameraInfo =
+            CameraUtil.createCameraUseCaseAdapter(context, cameraSelector).cameraInfo
+                as CameraInfoInternal
+        videoCapabilities =
+            RecorderVideoCapabilities(
+                VIDEO_CAPABILITIES_SOURCE_CAMCORDER_PROFILE,
+                cameraInfo,
+                VideoEncoderInfoImpl.FINDER
+            )
     }
 
     @After
@@ -104,10 +117,10 @@ class RecorderVideoCapabilitiesTest(
 
     private fun isSpecificSkippedDevice(): Boolean {
         // skip for b/231903433
-        val isNokia2Point1 = "nokia".equals(Build.BRAND, true) &&
-            "nokia 2.1".equals(Build.MODEL, true)
-        val isMotoE5Play = "motorola".equals(Build.BRAND, true) &&
-            "moto e5 play".equals(Build.MODEL, true)
+        val isNokia2Point1 =
+            "nokia".equals(Build.BRAND, true) && "nokia 2.1".equals(Build.MODEL, true)
+        val isMotoE5Play =
+            "motorola".equals(Build.BRAND, true) && "moto e5 play".equals(Build.MODEL, true)
 
         return isNokia2Point1 || isMotoE5Play
     }

@@ -25,18 +25,19 @@ import android.view.ViewGroup
 import android.view.ViewParent
 import androidx.compose.runtime.ComposeNodeLifecycleCallback
 import androidx.compose.runtime.CompositionContext
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollDispatcher
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.internal.checkPrecondition
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Measurable
@@ -56,6 +57,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.util.fastRoundToInt
 import androidx.core.view.NestedScrollingParent3
 import androidx.core.view.NestedScrollingParentHelper
 import androidx.core.view.ViewCompat
@@ -63,18 +65,16 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
- * A base class used to host a [View] inside Compose.
- * This API is not designed to be used directly, but rather using the [AndroidView] and
- * `AndroidViewBinding` APIs, which are built on top of [AndroidViewHolder].
+ * A base class used to host a [View] inside Compose. This API is not designed to be used directly,
+ * but rather using the [AndroidView] and `AndroidViewBinding` APIs, which are built on top of
+ * [AndroidViewHolder].
  *
  * @param view The view hosted by this holder.
  * @param owner The [Owner] of the composition that this holder lives in.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 internal open class AndroidViewHolder(
     context: Context,
     parentContext: CompositionContext?,
@@ -88,29 +88,24 @@ internal open class AndroidViewHolder(
         // Any [Abstract]ComposeViews that are descendants of this view will host
         // subcompositions of the host composition.
         // UiApplier doesn't supply this, only AndroidView.
-        parentContext?.let {
-            compositionContext = it
-        }
+        parentContext?.let { compositionContext = it }
         // We save state ourselves, depending on composition.
         isSaveFromParentEnabled = false
 
-        @Suppress("LeakingThis")
-        addView(view)
+        @Suppress("LeakingThis") addView(view)
     }
 
     // Keep nullable to match the `expect` declaration of InteropViewFactoryHolder
-    @Suppress("RedundantNullableReturnType")
-    fun getInteropView(): InteropView? = view
+    @Suppress("RedundantNullableReturnType") fun getInteropView(): InteropView? = view
 
-    /**
-     * The update logic of the [View].
-     */
+    /** The update logic of the [View]. */
     var update: () -> Unit = {}
         protected set(value) {
             field = value
             hasUpdateBlock = true
             runUpdate()
         }
+
     private var hasUpdateBlock = false
 
     var reset: () -> Unit = {}
@@ -119,9 +114,7 @@ internal open class AndroidViewHolder(
     var release: () -> Unit = {}
         protected set
 
-    /**
-     * The modifier of the `LayoutNode` corresponding to this [View].
-     */
+    /** The modifier of the `LayoutNode` corresponding to this [View]. */
     var modifier: Modifier = Modifier
         set(value) {
             if (value !== field) {
@@ -132,9 +125,7 @@ internal open class AndroidViewHolder(
 
     internal var onModifierChanged: ((Modifier) -> Unit)? = null
 
-    /**
-     * The screen density of the layout.
-     */
+    /** The screen density of the layout. */
     var density: Density = Density(1f)
         set(value) {
             if (value !== field) {
@@ -169,27 +160,23 @@ internal open class AndroidViewHolder(
      */
     private val snapshotObserver: OwnerSnapshotObserver
         get() {
-            check(isAttachedToWindow) {
+            checkPrecondition(isAttachedToWindow) {
                 "Expected AndroidViewHolder to be attached when observing reads."
             }
             return owner.snapshotObserver
         }
 
-    private val onCommitAffectingUpdate: (AndroidViewHolder) -> Unit = {
-        handler.post(runUpdate)
-    }
-
     private val runUpdate: () -> Unit = {
         // If we're not attached, the observer isn't started, so don't bother running it.
         // onAttachedToWindow will run an update the next time the view is attached.
-        if (hasUpdateBlock && isAttachedToWindow) {
-            snapshotObserver.observeReads(this, onCommitAffectingUpdate, update)
+        // Also, the view will have no parent when the node is deactivated. when the node will
+        // be reactivated the update block will be re-executed.
+        if (hasUpdateBlock && isAttachedToWindow && view.parent === this) {
+            snapshotObserver.observeReads(this, OnCommitAffectingUpdate, update)
         }
     }
 
-    private val runInvalidate: () -> Unit = {
-        layoutNode.invalidateLayer()
-    }
+    private val runInvalidate: () -> Unit = { layoutNode.invalidateLayer() }
 
     internal var onRequestDisallowInterceptTouchEvent: ((Boolean) -> Unit)? = null
 
@@ -205,6 +192,10 @@ internal open class AndroidViewHolder(
 
     override val isValidOwnerScope: Boolean
         get() = isAttachedToWindow
+
+    override fun getAccessibilityClassName(): CharSequence {
+        return javaClass.name
+    }
 
     override fun onReuse() {
         // We reset at the same time we remove the view. So if the view was removed, we can just
@@ -334,34 +325,47 @@ internal open class AndroidViewHolder(
     }
 
     /**
-     * A [LayoutNode] tree representation for this Android [View] holder.
-     * The [LayoutNode] will proxy the Compose core calls to the [View].
+     * A [LayoutNode] tree representation for this Android [View] holder. The [LayoutNode] will
+     * proxy the Compose core calls to the [View].
      */
     val layoutNode: LayoutNode = run {
         // Prepare layout node that proxies measure and layout passes to the View.
         val layoutNode = LayoutNode()
+
+        // there is an issue in how SurfaceViews being drawn into the new layers. this flag is
+        // a workaround until we find a better solution. it allows us to create an extra rendernode
+        // wrapping android views using the old implementation of layers, where we don't do
+        // layer persistence logic, as it causes SurfaceView flickering.
+        // we should find a better fix as part of b/348144529
+        layoutNode.forceUseOldLayers = true
+
         @OptIn(InternalComposeUiApi::class)
         layoutNode.interopViewFactoryHolder = this@AndroidViewHolder
 
-        val coreModifier = Modifier
-            .nestedScroll(NoOpScrollConnection, dispatcher)
-            .semantics(true) {}
-            .pointerInteropFilter(this)
-            .drawBehind {
-                drawIntoCanvas { canvas ->
-                    if (view.visibility != GONE) {
-                        isDrawing = true
-                        (layoutNode.owner as? AndroidComposeView)
-                            ?.drawAndroidView(this@AndroidViewHolder, canvas.nativeCanvas)
-                        isDrawing = false
+        val coreModifier =
+            Modifier.nestedScroll(NoOpScrollConnection, dispatcher)
+                .semantics(true) {}
+                .pointerInteropFilter(this)
+                // we don't normally need an extra layer here, it is a workaround for b/348144529
+                .graphicsLayer()
+                .drawBehind {
+                    drawIntoCanvas { canvas ->
+                        if (view.visibility != GONE) {
+                            isDrawing = true
+                            (layoutNode.owner as? AndroidComposeView)?.drawAndroidView(
+                                this@AndroidViewHolder,
+                                canvas.nativeCanvas
+                            )
+                            isDrawing = false
+                        }
                     }
                 }
-            }
-            .onGloballyPositioned {
-                // The global position of this LayoutNode can change with it being replaced. For
-                // these cases, we need to inform the View.
-                layoutAccordingTo(layoutNode)
-            }
+                .onGloballyPositioned {
+                    // The global position of this LayoutNode can change with it being replaced. For
+                    // these cases, we need to inform the View.
+                    layoutAccordingTo(layoutNode)
+                    @OptIn(InternalComposeUiApi::class) owner.onInteropViewLayoutChange(this)
+                }
         layoutNode.compositeKeyHash = compositeKeyHash
         layoutNode.modifier = modifier.then(coreModifier)
         onModifierChanged = { layoutNode.modifier = it.then(coreModifier) }
@@ -378,75 +382,74 @@ internal open class AndroidViewHolder(
             removeAllViewsInLayout()
         }
 
-        layoutNode.measurePolicy = object : MeasurePolicy {
-            override fun MeasureScope.measure(
-                measurables: List<Measurable>,
-                constraints: Constraints
-            ): MeasureResult {
-                if (childCount == 0) {
-                    return layout(constraints.minWidth, constraints.minHeight) {}
-                }
+        layoutNode.measurePolicy =
+            object : MeasurePolicy {
+                override fun MeasureScope.measure(
+                    measurables: List<Measurable>,
+                    constraints: Constraints
+                ): MeasureResult {
+                    if (childCount == 0) {
+                        return layout(constraints.minWidth, constraints.minHeight) {}
+                    }
 
-                if (constraints.minWidth != 0) {
-                    getChildAt(0).minimumWidth = constraints.minWidth
-                }
-                if (constraints.minHeight != 0) {
-                    getChildAt(0).minimumHeight = constraints.minHeight
-                }
+                    if (constraints.minWidth != 0) {
+                        getChildAt(0).minimumWidth = constraints.minWidth
+                    }
+                    if (constraints.minHeight != 0) {
+                        getChildAt(0).minimumHeight = constraints.minHeight
+                    }
 
-                measure(
-                    obtainMeasureSpec(
-                        constraints.minWidth,
-                        constraints.maxWidth,
-                        layoutParams!!.width
-                    ),
-                    obtainMeasureSpec(
-                        constraints.minHeight,
-                        constraints.maxHeight,
-                        layoutParams!!.height
+                    measure(
+                        obtainMeasureSpec(
+                            constraints.minWidth,
+                            constraints.maxWidth,
+                            layoutParams!!.width
+                        ),
+                        obtainMeasureSpec(
+                            constraints.minHeight,
+                            constraints.maxHeight,
+                            layoutParams!!.height
+                        )
                     )
-                )
-                return layout(measuredWidth, measuredHeight) {
-                    layoutAccordingTo(layoutNode)
+                    return layout(measuredWidth, measuredHeight) { layoutAccordingTo(layoutNode) }
+                }
+
+                override fun IntrinsicMeasureScope.minIntrinsicWidth(
+                    measurables: List<IntrinsicMeasurable>,
+                    height: Int
+                ) = intrinsicWidth(height)
+
+                override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+                    measurables: List<IntrinsicMeasurable>,
+                    height: Int
+                ) = intrinsicWidth(height)
+
+                private fun intrinsicWidth(height: Int): Int {
+                    measure(
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+                        obtainMeasureSpec(0, height, layoutParams!!.height)
+                    )
+                    return measuredWidth
+                }
+
+                override fun IntrinsicMeasureScope.minIntrinsicHeight(
+                    measurables: List<IntrinsicMeasurable>,
+                    width: Int
+                ) = intrinsicHeight(width)
+
+                override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+                    measurables: List<IntrinsicMeasurable>,
+                    width: Int
+                ) = intrinsicHeight(width)
+
+                private fun intrinsicHeight(width: Int): Int {
+                    measure(
+                        obtainMeasureSpec(0, width, layoutParams!!.width),
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+                    )
+                    return measuredHeight
                 }
             }
-
-            override fun IntrinsicMeasureScope.minIntrinsicWidth(
-                measurables: List<IntrinsicMeasurable>,
-                height: Int
-            ) = intrinsicWidth(height)
-
-            override fun IntrinsicMeasureScope.maxIntrinsicWidth(
-                measurables: List<IntrinsicMeasurable>,
-                height: Int
-            ) = intrinsicWidth(height)
-
-            private fun intrinsicWidth(height: Int): Int {
-                measure(
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
-                    obtainMeasureSpec(0, height, layoutParams!!.height)
-                )
-                return measuredWidth
-            }
-
-            override fun IntrinsicMeasureScope.minIntrinsicHeight(
-                measurables: List<IntrinsicMeasurable>,
-                width: Int
-            ) = intrinsicHeight(width)
-
-            override fun IntrinsicMeasureScope.maxIntrinsicHeight(
-                measurables: List<IntrinsicMeasurable>,
-                width: Int
-            ) = intrinsicHeight(width)
-
-            private fun intrinsicHeight(width: Int): Int {
-                measure(
-                    obtainMeasureSpec(0, width, layoutParams!!.width),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                )
-                return measuredHeight
-            }
-        }
         layoutNode
     }
 
@@ -454,29 +457,27 @@ internal open class AndroidViewHolder(
      * Intersects [Constraints] and [View] LayoutParams to obtain the suitable [View.MeasureSpec]
      * for measuring the [View].
      */
-    private fun obtainMeasureSpec(
-        min: Int,
-        max: Int,
-        preferred: Int
-    ): Int = when {
-        preferred >= 0 || min == max -> {
-            // Fixed size due to fixed size layout param or fixed constraints.
-            MeasureSpec.makeMeasureSpec(preferred.coerceIn(min, max), MeasureSpec.EXACTLY)
+    private fun obtainMeasureSpec(min: Int, max: Int, preferred: Int): Int =
+        when {
+            preferred >= 0 || min == max -> {
+                // Fixed size due to fixed size layout param or fixed constraints.
+                MeasureSpec.makeMeasureSpec(preferred.coerceIn(min, max), MeasureSpec.EXACTLY)
+            }
+            preferred == LayoutParams.WRAP_CONTENT && max != Constraints.Infinity -> {
+                // Wrap content layout param with finite max constraint. If max constraint is
+                // infinite,
+                // we will measure the child with UNSPECIFIED.
+                MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST)
+            }
+            preferred == LayoutParams.MATCH_PARENT && max != Constraints.Infinity -> {
+                // Match parent layout param, so we force the child to fill the available space.
+                MeasureSpec.makeMeasureSpec(max, MeasureSpec.EXACTLY)
+            }
+            else -> {
+                // max constraint is infinite and layout param is WRAP_CONTENT or MATCH_PARENT.
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+            }
         }
-        preferred == LayoutParams.WRAP_CONTENT && max != Constraints.Infinity -> {
-            // Wrap content layout param with finite max constraint. If max constraint is infinite,
-            // we will measure the child with UNSPECIFIED.
-            MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST)
-        }
-        preferred == LayoutParams.MATCH_PARENT && max != Constraints.Infinity -> {
-            // Match parent layout param, so we force the child to fill the available space.
-            MeasureSpec.makeMeasureSpec(max, MeasureSpec.EXACTLY)
-        }
-        else -> {
-            // max constraint is infinite and layout param is WRAP_CONTENT or MATCH_PARENT.
-            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-        }
-    }
 
     // TODO: b/203141462 - consume whether the AndroidView() is inside a scrollable container, and
     //  use that to set this. In the meantime set true as the defensive default.
@@ -557,15 +558,9 @@ internal open class AndroidViewHolder(
         val viewVelocity = Velocity(velocityX.toComposeVelocity(), velocityY.toComposeVelocity())
         dispatcher.coroutineScope.launch {
             if (!consumed) {
-                dispatcher.dispatchPostFling(
-                    consumed = Velocity.Zero,
-                    available = viewVelocity
-                )
+                dispatcher.dispatchPostFling(consumed = Velocity.Zero, available = viewVelocity)
             } else {
-                dispatcher.dispatchPostFling(
-                    consumed = viewVelocity,
-                    available = Velocity.Zero
-                )
+                dispatcher.dispatchPostFling(consumed = viewVelocity, available = Velocity.Zero)
             }
         }
         return false
@@ -574,29 +569,33 @@ internal open class AndroidViewHolder(
     override fun onNestedPreFling(target: View, velocityX: Float, velocityY: Float): Boolean {
         if (!isNestedScrollingEnabled) return false
         val toBeConsumed = Velocity(velocityX.toComposeVelocity(), velocityY.toComposeVelocity())
-        dispatcher.coroutineScope.launch {
-            dispatcher.dispatchPreFling(toBeConsumed)
-        }
+        dispatcher.coroutineScope.launch { dispatcher.dispatchPreFling(toBeConsumed) }
         return false
     }
 
     override fun isNestedScrollingEnabled(): Boolean {
         return view.isNestedScrollingEnabled
     }
+
+    companion object {
+        private val OnCommitAffectingUpdate: (AndroidViewHolder) -> Unit = {
+            it.handler.post(it.runUpdate)
+        }
+    }
 }
 
 private fun View.layoutAccordingTo(layoutNode: LayoutNode) {
     val position = layoutNode.coordinates.positionInRoot()
-    val x = position.x.roundToInt()
-    val y = position.y.roundToInt()
+    val x = position.x.fastRoundToInt()
+    val y = position.y.fastRoundToInt()
     layout(x, y, x + measuredWidth, y + measuredHeight)
 }
 
 private const val Unmeasured = Int.MIN_VALUE
 
 /**
- * No-op Connection required by nested scroll modifier. This is No-op because we don't want
- * to influence nested scrolling with it and it is required by [Modifier.nestedScroll].
+ * No-op Connection required by nested scroll modifier. This is No-op because we don't want to
+ * influence nested scrolling with it and it is required by [Modifier.nestedScroll].
  */
 private val NoOpScrollConnection = object : NestedScrollConnection {}
 
@@ -604,7 +603,8 @@ private fun Int.toComposeOffset() = toFloat() * -1
 
 private fun Float.toComposeVelocity(): Float = this * -1f
 
-private fun toNestedScrollSource(type: Int): NestedScrollSource = when (type) {
-    ViewCompat.TYPE_TOUCH -> NestedScrollSource.Drag
-    else -> NestedScrollSource.Fling
-}
+private fun toNestedScrollSource(type: Int): NestedScrollSource =
+    when (type) {
+        ViewCompat.TYPE_TOUCH -> NestedScrollSource.UserInput
+        else -> NestedScrollSource.SideEffect
+    }

@@ -20,9 +20,7 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
-import androidx.camera.camera2.impl.CameraEventCallbacks;
 import androidx.camera.camera2.internal.compat.params.OutputConfigurationCompat;
 import androidx.camera.camera2.internal.compat.workaround.PreviewPixelHDRnet;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
@@ -37,7 +35,6 @@ import androidx.camera.core.impl.UseCaseConfig;
  * A {@link SessionConfig.OptionUnpacker} implementation for unpacking Camera2 options into a
  * {@link SessionConfig.Builder}.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class Camera2SessionOptionUnpacker implements SessionConfig.OptionUnpacker {
 
     static final Camera2SessionOptionUnpacker INSTANCE = new Camera2SessionOptionUnpacker();
@@ -90,10 +87,12 @@ final class Camera2SessionOptionUnpacker implements SessionConfig.OptionUnpacker
                         camera2Config.getSessionCaptureCallback(
                                 Camera2CaptureCallbacks.createNoOpCallback())));
 
+        // Set video stabilization mode
+        builder.setVideoStabilization(config.getVideoStabilizationMode());
+        builder.setPreviewStabilization(config.getPreviewStabilizationMode());
+
         // Copy extended Camera2 configurations
         MutableOptionsBundle extendedConfig = MutableOptionsBundle.create();
-        extendedConfig.insertOption(Camera2ImplConfig.CAMERA_EVENT_CALLBACK_OPTION,
-                camera2Config.getCameraEventCallback(CameraEventCallbacks.createEmptyCallback()));
         extendedConfig.insertOption(Camera2ImplConfig.SESSION_PHYSICAL_CAMERA_ID_OPTION,
                 camera2Config.getPhysicalCameraId(null));
         extendedConfig.insertOption(Camera2ImplConfig.STREAM_USE_CASE_OPTION,
