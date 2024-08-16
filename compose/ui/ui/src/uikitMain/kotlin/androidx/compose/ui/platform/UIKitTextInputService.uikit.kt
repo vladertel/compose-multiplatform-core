@@ -132,7 +132,7 @@ internal class UIKitTextInputService(
             reset(value.toTextFieldValue(), null)
         }
         currentImeOptions = imeOptions
-        currentImeActionHandler = onImeActionPerformed
+        currentImeActionHandler = onImeActionPerformed ?: { }
 
         attachIntermediateTextInputView()
         textUIView?.input = createSkikoInput()
