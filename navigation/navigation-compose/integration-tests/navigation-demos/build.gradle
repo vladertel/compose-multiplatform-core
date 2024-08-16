@@ -51,6 +51,5 @@ androidx {
 }
 
 android {
-    compileSdk 35
     namespace "androidx.navigation.compose.demos"
 }
