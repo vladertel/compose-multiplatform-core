@@ -167,7 +167,7 @@ internal class UIKitTextInputService(
 
     override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
         val internalOldValue = _tempCurrentInputSession?.toTextFieldValue()
-        val textChanged = internalOldValue == null || internalOldValue.text != newValue.text
+        val textChanged = internalOldValue == null || internalOldValue.text != newValue.text.toString()
         val selectionChanged =
             textChanged || internalOldValue == null || internalOldValue.selection != newValue.selection
         if (textChanged) {
@@ -246,9 +246,7 @@ internal class UIKitTextInputService(
     private fun sendEditCommand(vararg commands: EditCommand) {
         val commandList = commands.toList()
         _tempCurrentInputSession?.apply(commandList)
-        currentInput?.let { input ->
-            input.onEditCommand(commandList)
-        }
+        currentInput?.onEditCommand?.invoke(commandList)
     }
 
     private fun getCursorPos(): Int? {

@@ -147,7 +147,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
     private class Session(
         var imeOptions: ImeOptions,
         var onEditCommand: (List<EditCommand>) -> Unit,
-        var onImeActionPerformed: (ImeAction) -> Unit,
+        var onImeActionPerformed: ((ImeAction) -> Unit)?,
     )
 
     private val composeRootRegistry = ComposeRootRegistry()
