@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
@@ -394,8 +395,17 @@ internal class ComposeViewController(
         lifecycleOwner.dispose()
         mediator?.dispose()
         mediator = null
-        layers.fastForEach {
-            it.close()
+
+        // `dispose` is called instead of `close`, because `close` is also used imperatively
+        // to remove the layer from the array.
+        while (layers.isNotEmpty()) {
+            val layer = layers.removeLast()
+
+            if (isViewAppeared) {
+                layer.sceneWillDisappear()
+            }
+
+            layer.dispose()
         }
     }
 
