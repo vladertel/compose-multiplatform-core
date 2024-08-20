@@ -671,10 +671,6 @@ internal class ComposeSceneMediator(
         keyboardManager.stop()
     }
 
-    fun getViewHeight(): Double = renderingView.frame.useContents {
-        size.height
-    }
-
     private var _onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
     private var _onKeyEvent: (KeyEvent) -> Boolean = { false }
     fun setKeyEventListener(
