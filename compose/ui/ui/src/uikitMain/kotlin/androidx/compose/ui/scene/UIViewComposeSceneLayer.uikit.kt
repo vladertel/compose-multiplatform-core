@@ -71,7 +71,14 @@ internal class UIViewComposeSceneLayer(
         eventType: PointerEventType,
         button: PointerButton?
     ) -> Unit)? = null
-    private val rootView = composeContainer.view.window ?: composeContainer.view
+
+    /**
+     * The view to which [UIViewComposeSceneLayer]-managed view hierarchy is attached.
+     */
+    private val rootView = requireNotNull(composeContainer.view.window) {
+        "ComposeContainer view must be attached to a window when a new layer is created."
+    }
+
     private val backgroundView: UIView = object : UIView(
         frame = CGRectZero.readValue()
     ) {
