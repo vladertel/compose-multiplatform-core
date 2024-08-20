@@ -37,9 +37,7 @@ import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
-import androidx.compose.ui.window.ComposeViewController
 import androidx.compose.ui.window.FocusStack
-import androidx.compose.ui.window.ProvideContainerCompositionLocals
 import androidx.compose.ui.window.RenderingUIView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
@@ -59,7 +57,8 @@ import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 internal class UIKitComposeSceneLayer(
     private val parentView: UIView,
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
-    private val composeViewController: ComposeViewController,
+    private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
+    private val providingCompositionLocals: (@Composable () -> Unit) -> Unit,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
@@ -171,7 +170,7 @@ internal class UIKitComposeSceneLayer(
             density = initDensity, // We should use the local density already set for the current layer.
             layoutDirection = initLayoutDirection,
             coroutineContext = coroutineContext,
-            composeSceneContext = composeViewController.createComposeSceneContext(platformContext),
+            composeSceneContext = createComposeSceneContext(platformContext),
             invalidate = invalidate,
         )
 
@@ -205,7 +204,7 @@ internal class UIKitComposeSceneLayer(
 
     override fun setContent(content: @Composable () -> Unit) {
         mediator.setContent {
-            ProvideContainerCompositionLocals(composeViewController) {
+            providingCompositionLocals {
                 content()
             }
         }

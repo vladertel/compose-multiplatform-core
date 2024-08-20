@@ -438,7 +438,10 @@ internal class ComposeViewController(
                 onClosed = {
                     detachLayer(it)
                 },
-                composeViewController = this@ComposeViewController,
+                createComposeSceneContext = ::createComposeSceneContext,
+                providingCompositionLocals = {
+                    ProvideContainerCompositionLocals(this@ComposeViewController, it)
+                },
                 initDensity = density,
                 initLayoutDirection = layoutDirection,
                 configuration = configuration,
