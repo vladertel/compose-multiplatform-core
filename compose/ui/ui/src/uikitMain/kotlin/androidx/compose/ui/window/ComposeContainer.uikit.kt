@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
@@ -116,7 +115,7 @@ internal class ComposeViewController(
     private var mediator: ComposeSceneMediator? = null
     private val layers: MutableList<UIKitComposeSceneLayer> = mutableListOf()
     private val layoutDirection get() = getLayoutDirection()
-    private var isViewAppeared: Boolean = false
+    private var hasViewAppeared: Boolean = false
 
     fun hasInvalidations(): Boolean {
         return mediator?.hasInvalidations() == true || layers.any { it.hasInvalidations() }
@@ -281,7 +280,7 @@ internal class ComposeViewController(
 
     override fun viewDidAppear(animated: Boolean) {
         super.viewDidAppear(animated)
-        isViewAppeared = true
+        hasViewAppeared = true
         mediator?.sceneDidAppear()
         layers.fastForEach {
             it.sceneDidAppear()
@@ -292,7 +291,7 @@ internal class ComposeViewController(
 
     override fun viewWillDisappear(animated: Boolean) {
         super.viewWillDisappear(animated)
-        isViewAppeared = false
+        hasViewAppeared = false
         mediator?.sceneWillDisappear()
         layers.fastForEach {
             it.sceneWillDisappear()
@@ -401,7 +400,7 @@ internal class ComposeViewController(
         while (layers.isNotEmpty()) {
             val layer = layers.removeLast()
 
-            if (isViewAppeared) {
+            if (hasViewAppeared) {
                 layer.sceneWillDisappear()
             }
 
@@ -411,13 +410,13 @@ internal class ComposeViewController(
 
     fun attachLayer(layer: UIKitComposeSceneLayer) {
         layers.add(layer)
-        if (isViewAppeared) {
+        if (hasViewAppeared) {
             layer.sceneDidAppear()
         }
     }
 
     fun detachLayer(layer: UIKitComposeSceneLayer) {
-        if (isViewAppeared) {
+        if (hasViewAppeared) {
             layer.sceneWillDisappear()
         }
         layers.remove(layer)
@@ -435,6 +434,9 @@ internal class ComposeViewController(
             val layer = UIKitComposeSceneLayer(
                 parentView = checkNotNull(view.window) {
                     "Can't create a layer when the view is not attached to a window"
+                },
+                onClosed = {
+                    detachLayer(it)
                 },
                 composeViewController = this@ComposeViewController,
                 initDensity = density,

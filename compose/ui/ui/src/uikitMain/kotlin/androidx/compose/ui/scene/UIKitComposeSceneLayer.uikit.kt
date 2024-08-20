@@ -58,6 +58,7 @@ import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class UIKitComposeSceneLayer(
     private val parentView: UIView,
+    private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val composeViewController: ComposeViewController,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
@@ -192,7 +193,7 @@ internal class UIKitComposeSceneLayer(
         }
 
     override fun close() {
-        composeViewController.detachLayer(this)
+        onClosed(this)
 
         dispose()
     }
