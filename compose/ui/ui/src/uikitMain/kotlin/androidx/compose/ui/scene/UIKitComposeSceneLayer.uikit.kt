@@ -120,7 +120,7 @@ internal class UIKitComposeSceneLayer(
 
     private val mediator by lazy {
         ComposeSceneMediator(
-            container = this.parentView,
+            parentView = parentView,
             configuration = configuration,
             focusStack = focusStack,
             windowContext = windowContext,
@@ -143,9 +143,9 @@ internal class UIKitComposeSceneLayer(
 
     init {
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
-        this.parentView.addSubview(backgroundView)
+        parentView.addSubview(backgroundView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(backgroundView, this.parentView)
+            getConstraintsToFillParent(backgroundView, parentView)
         )
     }
 
