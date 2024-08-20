@@ -49,7 +49,7 @@ import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
-import androidx.compose.ui.uikit.systemDensity
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
@@ -268,7 +268,7 @@ internal abstract class ComposeSceneMediator(
             onGestureEvent = ::onGestureEvent,
             inInteractionBounds = { point ->
                 val positionInContainer = point.useContents {
-                    asDpOffset().toOffset(parentView.systemDensity).round()
+                    asDpOffset().toOffset(density = parentView.density).round()
                 }
                 interactionBounds.contains(positionInContainer)
             },
@@ -332,8 +332,7 @@ internal abstract class ComposeSceneMediator(
                 metalView.setNeedsDisplay() // redraw on next frame
                 CATransaction.flush() // clear all animations
             },
-            rootViewProvider = { rootView },
-            densityProvider = { rootView.systemDensity },
+            getRootView = { rootView },
             viewConfiguration = viewConfiguration,
             focusStack = focusStack,
             onKeyboardPresses = ::onKeyboardPresses
@@ -548,7 +547,7 @@ internal abstract class ComposeSceneMediator(
             }
 
             is SceneLayout.Bounds -> {
-                val density = parentView.systemDensity.density
+                val density = parentView.density.density
                 metalView.translatesAutoresizingMaskIntoConstraints = true
                 metalView.setFrame(
                     with(value.renderBounds) {
@@ -568,7 +567,7 @@ internal abstract class ComposeSceneMediator(
     }
 
     fun viewWillLayoutSubviews() {
-        val density = parentView.systemDensity
+        val density = parentView.density
         scene.density = density
 
         // TODO: it should be updated on any container size change
@@ -604,7 +603,7 @@ internal abstract class ComposeSceneMediator(
         }
 
     private val metalViewBoundsInPx: IntRect
-        get() = with(parentView.systemDensity) {
+        get() = with(parentView.density) {
             metalView.frame.useContents { asDpRect().toRect().roundToIntRect() }
         }
 

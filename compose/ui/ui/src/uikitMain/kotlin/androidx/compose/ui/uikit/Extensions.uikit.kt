@@ -22,15 +22,20 @@ import androidx.compose.ui.window.uiContentSizeCategoryToFontScaleMap
 import platform.UIKit.UIColor
 import platform.UIKit.UIContentSizeCategoryUnspecified
 import platform.UIKit.UIScreen
-import platform.UIKit.UITraitEnvironmentProtocol
+import platform.UIKit.UIView
 
-internal val UITraitEnvironmentProtocol.systemDensity: Density
+internal val UIView.density: Density
     get() {
-        val contentSizeCategory =
-            traitCollection.preferredContentSizeCategory ?: UIContentSizeCategoryUnspecified
+        // TODO: It's a code smell that we have to retrive a default UIScreen here.
+        //   We probably should reorder the code so that density is either injected from outside
+        //   or view is attached to a window before this is called.
+        val screen = window?.screen
+            ?: UIScreen.mainScreen
+
+        val contentSizeCategory = traitCollection.preferredContentSizeCategory ?: UIContentSizeCategoryUnspecified
+
         return Density(
-            // TODO: refactor to avoid mainScreen scale, window can be attached to different screens
-            density = UIScreen.mainScreen.scale.toFloat(),
+            density = screen.nativeScale.toFloat(),
             fontScale = uiContentSizeCategoryToFontScaleMap[contentSizeCategory] ?: 1.0f
         )
     }

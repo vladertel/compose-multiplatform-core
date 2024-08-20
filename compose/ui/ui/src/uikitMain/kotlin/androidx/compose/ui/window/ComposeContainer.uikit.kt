@@ -44,7 +44,7 @@ import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
 import androidx.compose.ui.uikit.PlistSanityCheck
-import androidx.compose.ui.uikit.systemDensity
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.utils.CMPViewController
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -218,7 +218,7 @@ internal class ComposeViewController(
     }
 
     private fun updateWindowContainer() {
-        val scale = windowContainer.systemDensity.density
+        val scale = windowContainer.density.density
         val size = windowContainer.frame.useContents<CGRect, IntSize> {
             IntSize(
                 width = (size.width * scale).roundToInt(),
@@ -340,7 +340,7 @@ internal class ComposeViewController(
         coroutineContext: CoroutineContext,
     ): ComposeScene = if (configuration.platformLayers) {
         PlatformLayersComposeScene(
-            density = systemDensity,
+            density = view.density,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
             composeSceneContext = ComposeSceneContextImpl(
@@ -350,7 +350,7 @@ internal class ComposeViewController(
         )
     } else {
         CanvasLayersComposeScene(
-            density = systemDensity,
+            density = view.density,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
             composeSceneContext = ComposeSceneContextImpl(

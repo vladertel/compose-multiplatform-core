@@ -38,7 +38,7 @@ import androidx.compose.ui.text.input.SetComposingRegionCommand
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.Density
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
@@ -57,8 +57,7 @@ import platform.UIKit.reloadInputViews
 
 internal class UIKitTextInputService(
     private val updateView: () -> Unit,
-    private val rootViewProvider: () -> UIView,
-    private val densityProvider: () -> Density,
+    private val getRootView: () -> UIView,
     private val viewConfiguration: ViewConfiguration,
     private val focusStack: FocusStack?,
     /**
@@ -68,7 +67,7 @@ internal class UIKitTextInputService(
     private val onKeyboardPresses: (Set<*>) -> Unit,
 ) : PlatformTextInputService, TextToolbar {
 
-    private val rootView get() = rootViewProvider()
+    private val rootView get() = getRootView()
     private var currentInput: CurrentInput? = null
     private var currentImeOptions: ImeOptions? = null
     private var currentImeActionHandler: ((ImeAction) -> Unit)? = null
@@ -307,7 +306,7 @@ internal class UIKitTextInputService(
             updateView()
         }
         textUIView?.showTextMenu(
-            targetRect = rect.toDpRect(densityProvider()).asCGRect(),
+            targetRect = rect.toDpRect(rootView.density).asCGRect(),
             textActions = object : TextActions {
                 override val copy: (() -> Unit)? = onCopyRequested
                 override val cut: (() -> Unit)? = onCutRequested
@@ -365,12 +364,12 @@ internal class UIKitTextInputService(
         override fun beginFloatingCursor(offset: DpOffset) {
             val cursorPos = getCursorPos() ?: getState()?.selection?.start ?: return
             val cursorRect = textLayoutResult?.getCursorRect(cursorPos) ?: return
-            floatingCursorTranslation = cursorRect.center - offset.toOffset(densityProvider())
+            floatingCursorTranslation = cursorRect.center - offset.toOffset(rootView.density)
         }
 
         override fun updateFloatingCursor(offset: DpOffset) {
             val translation = floatingCursorTranslation ?: return
-            val offsetPx = offset.toOffset(densityProvider())
+            val offsetPx = offset.toOffset(rootView.density)
             val pos = textLayoutResult
                 ?.getOffsetForPosition(offsetPx + translation) ?: return
 

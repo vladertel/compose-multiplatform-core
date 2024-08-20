@@ -18,7 +18,7 @@ package androidx.compose.ui.platform
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.uikit.systemDensity
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.asCGPoint
 import androidx.compose.ui.unit.asCGRect
@@ -76,7 +76,7 @@ internal class PlatformWindowContext {
     fun convertLocalToScreenPosition(container: UIView, localPosition: Offset): Offset {
         val nativeWindow = container.window ?:
             return convertLocalToWindowPosition(container, localPosition)
-        val density = container.systemDensity
+        val density = container.density
         val positionInNativeWindow = container.convertPoint(
             point = localPosition.toDpOffset(density).asCGPoint(),
             toView = nativeWindow,
@@ -93,7 +93,7 @@ internal class PlatformWindowContext {
     fun convertScreenToLocalPosition(container: UIView, positionOnScreen: Offset): Offset {
         val nativeWindow = container.window ?:
             return convertWindowToLocalPosition(container, positionOnScreen)
-        val density = container.systemDensity
+        val density = container.density
         val positionInNativeWindow = nativeWindow.convertPoint(
             point = positionOnScreen.toDpOffset(density).asCGPoint(),
             fromWindow = null
@@ -121,7 +121,7 @@ internal class PlatformWindowContext {
 
     private fun convertRect(rect: Rect, fromView: UIView, toView: UIView): Rect {
         return if (fromView != toView) {
-            val density = fromView.systemDensity
+            val density = fromView.density
 
             fromView.convertRect(
                 rect = rect.toDpRect(density).asCGRect(),
@@ -136,7 +136,7 @@ internal class PlatformWindowContext {
 
     private fun convertPoint(point: Offset, fromView: UIView, toView: UIView): Offset {
         return if (fromView != toView) {
-            val density = fromView.systemDensity
+            val density = fromView.density
             fromView.convertPoint(
                 point = point.toDpOffset(density).asCGPoint(),
                 toView = toView,
