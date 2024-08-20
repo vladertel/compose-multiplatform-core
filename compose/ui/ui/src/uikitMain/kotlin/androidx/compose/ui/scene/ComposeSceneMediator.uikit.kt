@@ -203,7 +203,7 @@ internal abstract class ComposeSceneMediator(
     ) -> ComposeScene
 ) {
     private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
-    private var _layout: SceneLayout = SceneLayout.Undefined
+    private var sceneLayout: SceneLayout = SceneLayout.Undefined
     private var constraints: List<NSLayoutConstraint> = emptyList()
         set(value) {
             if (field.isNotEmpty()) {
@@ -285,7 +285,7 @@ internal abstract class ComposeSceneMediator(
 
     private val interactionBounds: IntRect
         get() {
-            val boundsLayout = _layout as? SceneLayout.Bounds
+            val boundsLayout = sceneLayout as? SceneLayout.Bounds
             return boundsLayout?.interactionBounds ?: metalViewBoundsInPx
         }
 
@@ -531,7 +531,7 @@ internal abstract class ComposeSceneMediator(
     private fun onComposeSceneInvalidate() = metalView.needRedraw()
 
     fun setLayout(value: SceneLayout) {
-        _layout = value
+        sceneLayout = value
         when (value) {
             SceneLayout.UseConstraintsToFillContainer -> {
                 metalView.setFrame(CGRectZero.readValue())
@@ -611,7 +611,7 @@ internal abstract class ComposeSceneMediator(
         targetSize: CValue<CGSize>,
         coordinator: UIViewControllerTransitionCoordinatorProtocol
     ) {
-        if (_layout is SceneLayout.Bounds) {
+        if (sceneLayout is SceneLayout.Bounds) {
             //TODO Add logic to SceneLayout.Bounds too
             return
         }
@@ -657,14 +657,14 @@ internal abstract class ComposeSceneMediator(
         keyboardManager.stop()
     }
 
-    private var _onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
-    private var _onKeyEvent: (KeyEvent) -> Boolean = { false }
+    private var onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
+    private var onKeyEvent: (KeyEvent) -> Boolean = { false }
     fun setKeyEventListener(
         onPreviewKeyEvent: ((KeyEvent) -> Boolean)?,
         onKeyEvent: ((KeyEvent) -> Boolean)?
     ) {
-        this._onPreviewKeyEvent = onPreviewKeyEvent ?: { false }
-        this._onKeyEvent = onKeyEvent ?: { false }
+        this.onPreviewKeyEvent = onPreviewKeyEvent ?: { false }
+        this.onKeyEvent = onKeyEvent ?: { false }
     }
 
     /**
@@ -680,9 +680,9 @@ internal abstract class ComposeSceneMediator(
 
     private fun onKeyboardEvent(keyEvent: KeyEvent): Boolean =
         uiKitTextInputService.onPreviewKeyEvent(keyEvent) // TODO: fix redundant call
-            || _onPreviewKeyEvent(keyEvent)
+            || onPreviewKeyEvent(keyEvent)
             || scene.sendKeyEvent(keyEvent)
-            || _onKeyEvent(keyEvent)
+            || onKeyEvent(keyEvent)
 
     @OptIn(ExperimentalComposeApi::class)
     private var viewForKeyboardOffsetTransform = if (configuration.platformLayers) {
