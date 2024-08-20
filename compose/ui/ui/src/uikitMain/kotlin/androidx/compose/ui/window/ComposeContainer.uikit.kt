@@ -131,7 +131,7 @@ internal class ComposeContainer(
         InterfaceOrientation.Portrait
     )
     val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
-    private val focusStack: FocusStack<UIView> = FocusStackImpl()
+    private val focusStack = FocusStack()
     private val windowContext = PlatformWindowContext().apply {
         setWindowFocused(true)
     }

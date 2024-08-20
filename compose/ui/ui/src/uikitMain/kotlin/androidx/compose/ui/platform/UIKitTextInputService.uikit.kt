@@ -60,7 +60,7 @@ internal class UIKitTextInputService(
     private val rootViewProvider: () -> UIView,
     private val densityProvider: () -> Density,
     private val viewConfiguration: ViewConfiguration,
-    private val focusStack: FocusStack<UIView>?,
+    private val focusStack: FocusStack?,
     /**
      * Callback to handle keyboard presses. The parameter is a [Set] of [UIPress] objects.
      * Erasure happens due to K/N not supporting Obj-C lightweight generics.

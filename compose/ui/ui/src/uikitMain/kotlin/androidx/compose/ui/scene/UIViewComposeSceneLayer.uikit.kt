@@ -61,7 +61,7 @@ internal class UIViewComposeSceneLayer(
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
-    focusStack: FocusStack<UIView>?,
+    focusStack: FocusStack?,
     windowContext: PlatformWindowContext,
     compositionContext: CompositionContext,
 ) : ComposeSceneLayer {
