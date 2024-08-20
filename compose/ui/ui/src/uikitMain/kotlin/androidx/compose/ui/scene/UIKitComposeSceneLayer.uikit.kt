@@ -57,6 +57,7 @@ import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class UIKitComposeSceneLayer(
+    private val parentView: UIView,
     private val composeViewController: ComposeViewController,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
@@ -71,13 +72,6 @@ internal class UIKitComposeSceneLayer(
     private var onOutsidePointerEvent: ((
         eventType: PointerEventType
     ) -> Unit)? = null
-
-    /**
-     * The view to which [UIKitComposeSceneLayer]-managed view hierarchy is attached.
-     */
-    private val rootView = requireNotNull(composeViewController.view.window) {
-        "ComposeContainer view must be attached to a window when a new layer is created."
-    }
 
     private val backgroundView: UIView = object : UIView(
         frame = CGRectZero.readValue()
@@ -126,7 +120,7 @@ internal class UIKitComposeSceneLayer(
 
     private val mediator by lazy {
         ComposeSceneMediator(
-            container = rootView,
+            container = this.parentView,
             configuration = configuration,
             focusStack = focusStack,
             windowContext = windowContext,
@@ -149,11 +143,10 @@ internal class UIKitComposeSceneLayer(
 
     init {
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(backgroundView)
+        this.parentView.addSubview(backgroundView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(backgroundView, rootView)
+            getConstraintsToFillParent(backgroundView, this.parentView)
         )
-        composeViewController.attachLayer(this)
     }
 
     private fun createSkikoUIView(
@@ -199,8 +192,13 @@ internal class UIKitComposeSceneLayer(
         }
 
     override fun close() {
-        mediator.dispose()
         composeViewController.detachLayer(this)
+
+        dispose()
+    }
+
+    internal fun dispose() {
+        mediator.dispose()
         backgroundView.removeFromSuperview()
     }
 

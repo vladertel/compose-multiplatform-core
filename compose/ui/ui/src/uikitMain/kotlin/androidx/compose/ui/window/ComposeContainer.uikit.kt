@@ -421,8 +421,11 @@ internal class ComposeViewController(
             layoutDirection: LayoutDirection,
             focusable: Boolean,
             compositionContext: CompositionContext
-        ): ComposeSceneLayer =
-            UIKitComposeSceneLayer(
+        ): ComposeSceneLayer {
+            val layer = UIKitComposeSceneLayer(
+                parentView = checkNotNull(view.window) {
+                    "Can't create a layer when the view is not attached to a window"
+                },
                 composeViewController = this@ComposeViewController,
                 initDensity = density,
                 initLayoutDirection = layoutDirection,
@@ -431,6 +434,11 @@ internal class ComposeViewController(
                 windowContext = windowContext,
                 compositionContext = compositionContext,
             )
+
+            attachLayer(layer)
+
+            return layer
+        }
     }
 }
 
