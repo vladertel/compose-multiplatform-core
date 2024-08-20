@@ -448,7 +448,7 @@ internal abstract class ComposeSceneMediator(
         metalView.onAttachedToWindow = {
             metalView.onAttachedToWindow = null
             viewWillLayoutSubviews()
-            this.onAttachedToWindow?.invoke()
+            onAttachedToWindow?.invoke()
             focusStack?.pushAndFocus(interactionView)
         }
 
