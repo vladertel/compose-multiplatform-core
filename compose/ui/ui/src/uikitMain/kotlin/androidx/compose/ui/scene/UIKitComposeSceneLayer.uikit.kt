@@ -126,7 +126,7 @@ internal class UIKitComposeSceneLayer(
             windowContext = windowContext,
             measureDrawLayerBounds = true,
             coroutineContext = compositionContext.effectCoroutineContext,
-            metalViewFactory = ::createSkikoUIView,
+            metalViewFactory = ::createMetalView,
             composeSceneFactory = ::createComposeScene
         )
     }
@@ -149,7 +149,7 @@ internal class UIKitComposeSceneLayer(
         )
     }
 
-    private fun createSkikoUIView(
+    private fun createMetalView(
         interopContainer: UIKitInteropContainer,
         renderDelegate: SkikoRenderDelegate
     ) = MetalView(
