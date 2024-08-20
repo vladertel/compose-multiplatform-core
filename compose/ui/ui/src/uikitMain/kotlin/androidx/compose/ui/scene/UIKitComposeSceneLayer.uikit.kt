@@ -58,7 +58,7 @@ internal class UIKitComposeSceneLayer(
     private val parentView: UIView,
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
-    private val providingCompositionLocals: (@Composable () -> Unit) -> Unit,
+    private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
