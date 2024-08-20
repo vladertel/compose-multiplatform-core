@@ -257,7 +257,7 @@ internal abstract class ComposeSceneMediator(
         }
 
     /**
-     * View, that contains [interopContainer] and [interactionView] and is added to [parentView]
+     * View, that contains [interactionView] and is added to [parentView]
      */
     private val rootView = ComposeSceneMediatorView()
 
