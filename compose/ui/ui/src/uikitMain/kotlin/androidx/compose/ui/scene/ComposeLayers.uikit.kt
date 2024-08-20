@@ -16,19 +16,98 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.window.MetalView
+import kotlinx.cinterop.CValue
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
+import platform.CoreGraphics.CGSize
+import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class ComposeLayers: SkikoRenderDelegate {
-    val metalView: MetalView = MetalView(
+    val hasInvalidations: Boolean
+        get() = layers.any { it.hasInvalidations() }
+
+    private val layers = mutableListOf<UIKitComposeSceneLayer>()
+
+    private val metalView: MetalView = MetalView(
         renderDelegate = this,
         retrieveInteropTransaction = {
-            TODO()
+            // TODO: proper implementation
+            UIKitInteropMutableTransaction()
         }
     )
 
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
         TODO()
+    }
+
+    fun dispose(hasViewAppeared: Boolean) {
+        metalView.dispose()
+
+        // `dispose` is called instead of `close`, because `close` is also used imperatively
+        // to remove the layer from the array.
+        while (layers.isNotEmpty()) {
+            val layer = layers.removeLast()
+
+            if (hasViewAppeared) {
+                layer.sceneWillDisappear()
+            }
+
+            layer.dispose()
+        }
+    }
+
+    fun attach(layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
+        layers.add(layer)
+
+        if (hasViewAppeared) {
+            layer.sceneDidAppear()
+        }
+    }
+
+    fun detach(layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
+        if (hasViewAppeared) {
+            layer.sceneWillDisappear()
+        }
+        layers.remove(layer)
+    }
+
+    // TODO: investigate correctness of these implementations
+    fun viewSafeAreaInsetsDidChange() {
+        layers.fastForEach {
+            it.viewSafeAreaInsetsDidChange()
+        }
+    }
+
+    fun viewWillLayoutSubviews() {
+        layers.fastForEach {
+            it.viewWillLayoutSubviews()
+        }
+    }
+
+    fun viewWillTransitionToSize(
+        targetSize: CValue<CGSize>,
+        coordinator: UIViewControllerTransitionCoordinatorProtocol
+    ) {
+        layers.fastForEach {
+            it.viewWillTransitionToSize(
+                targetSize,
+                coordinator,
+            )
+        }
+    }
+
+    fun viewDidAppear() {
+        layers.fastForEach {
+            it.sceneDidAppear()
+        }
+    }
+
+    fun viewWillDisappear() {
+        layers.fastForEach {
+            it.sceneWillDisappear()
+        }
     }
 }
