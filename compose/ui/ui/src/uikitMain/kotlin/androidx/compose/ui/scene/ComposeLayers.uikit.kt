@@ -16,6 +16,19 @@
 
 package androidx.compose.ui.scene
 
-class ComposeLayers {
+import androidx.compose.ui.window.MetalView
+import org.jetbrains.skia.Canvas
+import org.jetbrains.skiko.SkikoRenderDelegate
 
+internal class ComposeLayers: SkikoRenderDelegate {
+    val metalView: MetalView = MetalView(
+        renderDelegate = this,
+        retrieveInteropTransaction = {
+            TODO()
+        }
+    )
+
+    override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+        TODO()
+    }
 }

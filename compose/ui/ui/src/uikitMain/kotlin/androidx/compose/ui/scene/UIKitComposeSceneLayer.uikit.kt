@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.compose.ui.window.FocusStack
-import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlinx.cinterop.CValue
@@ -126,7 +126,7 @@ internal class UIKitComposeSceneLayer(
             windowContext = windowContext,
             measureDrawLayerBounds = true,
             coroutineContext = compositionContext.effectCoroutineContext,
-            renderingUIViewFactory = ::createSkikoUIView,
+            metalViewFactory = ::createSkikoUIView,
             composeSceneFactory = ::createComposeScene
         )
     }
@@ -152,7 +152,7 @@ internal class UIKitComposeSceneLayer(
     private fun createSkikoUIView(
         interopContainer: UIKitInteropContainer,
         renderDelegate: SkikoRenderDelegate
-    ) = RenderingUIView(
+    ) = MetalView(
             renderDelegate = recordDrawBounds(renderDelegate),
             retrieveInteropTransaction = {
                 interopContainer.retrieveTransaction()

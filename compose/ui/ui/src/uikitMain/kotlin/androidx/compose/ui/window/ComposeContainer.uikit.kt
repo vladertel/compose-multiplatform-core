@@ -328,11 +328,11 @@ internal class ComposeViewController(
         ComposeSceneContextImpl(platformContext)
 
     @OptIn(ExperimentalComposeApi::class)
-    private fun createSkikoUIView(
+    private fun createMetalView(
         interopContainer: UIKitInteropContainer,
         renderRelegate: SkikoRenderDelegate
-    ): RenderingUIView =
-        RenderingUIView(
+    ): MetalView =
+        MetalView(
             renderDelegate = renderRelegate,
             retrieveInteropTransaction = {
                 interopContainer.retrieveTransaction()
@@ -381,7 +381,7 @@ internal class ComposeViewController(
             focusStack = focusStack,
             windowContext = windowContext,
             coroutineContext = coroutineContext,
-            renderingUIViewFactory = ::createSkikoUIView,
+            metalViewFactory = ::createMetalView,
             composeSceneFactory = ::createComposeScene,
         )
         mediator.setContent {

@@ -38,7 +38,7 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIView
 import platform.UIKit.UIViewMeta
 
-internal class RenderingUIView(
+internal class MetalView(
     private val renderDelegate: SkikoRenderDelegate,
     private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
 ) : UIView(
@@ -71,7 +71,7 @@ internal class RenderingUIView(
             }
 
             override fun retrieveInteropTransaction(): UIKitInteropTransaction =
-                this@RenderingUIView.retrieveInteropTransaction()
+                this@MetalView.retrieveInteropTransaction()
         }
     )
 

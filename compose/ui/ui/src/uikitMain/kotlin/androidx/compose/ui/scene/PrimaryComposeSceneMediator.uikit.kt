@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.compose.ui.window.FocusStack
-import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.UIKit.UIView
@@ -36,7 +36,7 @@ internal class PrimaryComposeSceneMediator(
     windowContext: PlatformWindowContext,
     measureDrawLayerBounds: Boolean = false,
     coroutineContext: CoroutineContext,
-    renderingUIViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> RenderingUIView,
+    metalViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> MetalView,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -49,7 +49,7 @@ internal class PrimaryComposeSceneMediator(
     windowContext,
     measureDrawLayerBounds,
     coroutineContext,
-    renderingUIViewFactory,
+    metalViewFactory,
     composeSceneFactory
 ) {
 }

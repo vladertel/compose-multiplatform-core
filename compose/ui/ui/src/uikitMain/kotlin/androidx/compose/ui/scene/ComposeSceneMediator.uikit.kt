@@ -71,7 +71,7 @@ import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.InteractionUIView
 import androidx.compose.ui.window.KeyboardVisibilityListener
-import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.MetalView
 import androidx.compose.ui.window.TouchesEventKind
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
@@ -166,7 +166,7 @@ private class SemanticsOwnerListenerImpl(
     }
 }
 
-private class RenderingUIViewDelegateImpl(
+private class MetalViewRenderer(
     private val scene: ComposeScene,
     private val sceneOffset: () -> Offset,
 ) : SkikoRenderDelegate {
@@ -195,7 +195,7 @@ internal abstract class ComposeSceneMediator(
      */
     private val measureDrawLayerBounds: Boolean = false,
     val coroutineContext: CoroutineContext,
-    private val renderingUIViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> RenderingUIView,
+    private val metalViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> MetalView,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -242,8 +242,8 @@ internal abstract class ComposeSceneMediator(
 
     val focusManager get() = scene.focusManager
 
-    private val renderingView: RenderingUIView by lazy {
-        renderingUIViewFactory(interopContainer, renderDelegate)
+    private val metalView: MetalView by lazy {
+        metalViewFactory(interopContainer, metalViewRenderer)
     }
 
     private val applicationForegroundStateListener =
@@ -253,7 +253,7 @@ internal abstract class ComposeSceneMediator(
             // mismatch between visual state and application state. This can be fixed by forcing
             // a redraw when app returns to foreground, which will ensure that the visual state is in
             // sync with the application state even if such sequence of events took a place.
-            renderingView.needRedraw()
+            metalView.needRedraw()
         }
 
     /**
@@ -286,7 +286,7 @@ internal abstract class ComposeSceneMediator(
     private val interactionBounds: IntRect
         get() {
             val boundsLayout = _layout as? SceneLayout.Bounds
-            return boundsLayout?.interactionBounds ?: renderingViewBoundsInPx
+            return boundsLayout?.interactionBounds ?: metalViewBoundsInPx
         }
 
     @OptIn(ExperimentalComposeApi::class)
@@ -329,7 +329,7 @@ internal abstract class ComposeSceneMediator(
     private val uiKitTextInputService: UIKitTextInputService by lazy {
         UIKitTextInputService(
             updateView = {
-                renderingView.setNeedsDisplay() // redraw on next frame
+                metalView.setNeedsDisplay() // redraw on next frame
                 CATransaction.flush() // clear all animations
             },
             rootViewProvider = { rootView },
@@ -355,7 +355,7 @@ internal abstract class ComposeSceneMediator(
                 GestureEvent.BEGAN -> true
                 GestureEvent.ENDED -> false
             }
-        renderingView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
+        metalView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
     }
 
     private fun hitTestInteropView(point: CValue<CGPoint>, event: UIEvent?): UIView? =
@@ -420,10 +420,10 @@ internal abstract class ComposeSceneMediator(
         )
     }
 
-    private val renderDelegate by lazy {
-        RenderingUIViewDelegateImpl(
+    private val metalViewRenderer by lazy {
+        MetalViewRenderer(
             scene = scene,
-            sceneOffset = { -renderingViewBoundsInPx.topLeft.toOffset() }
+            sceneOffset = { -metalViewBoundsInPx.topLeft.toOffset() }
         )
     }
 
@@ -432,7 +432,7 @@ internal abstract class ComposeSceneMediator(
 
     private var onAttachedToWindow: (() -> Unit)? = null
     private fun runOnceViewAttached(block: () -> Unit) {
-        if (renderingView.window == null) {
+        if (metalView.window == null) {
             onAttachedToWindow = {
                 onAttachedToWindow = null
                 block()
@@ -446,8 +446,8 @@ internal abstract class ComposeSceneMediator(
         interactionView.hitTest(point, withEvent)
 
     init {
-        renderingView.onAttachedToWindow = {
-            renderingView.onAttachedToWindow = null
+        metalView.onAttachedToWindow = {
+            metalView.onAttachedToWindow = null
             viewWillLayoutSubviews()
             this.onAttachedToWindow?.invoke()
             focusStack?.pushAndFocus(interactionView)
@@ -464,8 +464,8 @@ internal abstract class ComposeSceneMediator(
         NSLayoutConstraint.activateConstraints(
             getConstraintsToFillParent(interactionView, rootView)
         )
-        // FIXME: interactionView might be smaller than renderingView (shadows etc)
-        interactionView.addSubview(renderingView)
+        // FIXME: interactionView might be smaller than metalView (shadows etc)
+        interactionView.addSubview(metalView)
     }
 
     fun setContent(content: @Composable () -> Unit) {
@@ -480,7 +480,7 @@ internal abstract class ComposeSceneMediator(
                  *   https://developer.apple.com/documentation/uikit/uiviewcontroller/4195485-viewisappearing
                  *   It is public for iOS 17 and hope back ported for iOS 13 as well (but we need to check)
                  */
-                if (renderingView.isReadyToShowContent.value) {
+                if (metalView.isReadyToShowContent.value) {
                     ProvideComposeSceneMediatorCompositionLocals {
                         interopContainer.TrackInteropPlacementContainer(
                             content = content
@@ -518,39 +518,39 @@ internal abstract class ComposeSceneMediator(
     fun dispose() {
         uiKitTextInputService.stopInput()
         applicationForegroundStateListener.dispose()
-        focusStack?.popUntilNext(renderingView)
+        focusStack?.popUntilNext(metalView)
         keyboardManager.dispose()
-        renderingView.dispose()
+        metalView.dispose()
         interactionView.dispose()
         rootView.removeFromSuperview()
         interactionView.removeFromSuperview()
-        renderingView.removeFromSuperview()
+        metalView.removeFromSuperview()
         scene.close()
         interopContainer.dispose()
     }
 
-    private fun onComposeSceneInvalidate() = renderingView.needRedraw()
+    private fun onComposeSceneInvalidate() = metalView.needRedraw()
 
     fun setLayout(value: SceneLayout) {
         _layout = value
         when (value) {
             SceneLayout.UseConstraintsToFillContainer -> {
-                renderingView.setFrame(CGRectZero.readValue())
-                renderingView.translatesAutoresizingMaskIntoConstraints = false
-                constraints = getConstraintsToFillParent(renderingView, interactionView)
+                metalView.setFrame(CGRectZero.readValue())
+                metalView.translatesAutoresizingMaskIntoConstraints = false
+                constraints = getConstraintsToFillParent(metalView, interactionView)
             }
 
             is SceneLayout.UseConstraintsToCenter -> {
-                renderingView.setFrame(CGRectZero.readValue())
-                renderingView.translatesAutoresizingMaskIntoConstraints = false
+                metalView.setFrame(CGRectZero.readValue())
+                metalView.translatesAutoresizingMaskIntoConstraints = false
                 constraints =
-                    getConstraintsToCenterInParent(renderingView, interactionView, value.size)
+                    getConstraintsToCenterInParent(metalView, interactionView, value.size)
             }
 
             is SceneLayout.Bounds -> {
                 val density = parentView.systemDensity.density
-                renderingView.translatesAutoresizingMaskIntoConstraints = true
-                renderingView.setFrame(
+                metalView.translatesAutoresizingMaskIntoConstraints = true
+                metalView.setFrame(
                     with(value.renderBounds) {
                         CGRectMake(
                             x = left.toDouble() / density,
@@ -603,9 +603,9 @@ internal abstract class ComposeSceneMediator(
             )
         }
 
-    private val renderingViewBoundsInPx: IntRect
+    private val metalViewBoundsInPx: IntRect
         get() = with(parentView.systemDensity) {
-            renderingView.frame.useContents { asDpRect().toRect().roundToIntRect() }
+            metalView.frame.useContents { asDpRect().toRect().roundToIntRect() }
         }
 
     fun viewWillTransitionToSize(
@@ -617,7 +617,7 @@ internal abstract class ComposeSceneMediator(
             return
         }
 
-        val startSnapshotView = renderingView.snapshotViewAfterScreenUpdates(false) ?: return
+        val startSnapshotView = metalView.snapshotViewAfterScreenUpdates(false) ?: return
         startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(startSnapshotView)
         targetSize.useContents {
@@ -631,21 +631,21 @@ internal abstract class ComposeSceneMediator(
             )
         }
 
-        renderingView.isForcedToPresentWithTransactionEveryFrame = true
+        metalView.isForcedToPresentWithTransactionEveryFrame = true
 
         setLayout(SceneLayout.UseConstraintsToCenter(size = targetSize))
-        renderingView.transform = coordinator.targetTransform
+        metalView.transform = coordinator.targetTransform
 
         coordinator.animateAlongsideTransition(
             animation = {
                 startSnapshotView.alpha = 0.0
                 startSnapshotView.transform = CGAffineTransformInvert(coordinator.targetTransform)
-                renderingView.transform = CGAffineTransformIdentity.readValue()
+                metalView.transform = CGAffineTransformIdentity.readValue()
             },
             completion = {
                 startSnapshotView.removeFromSuperview()
                 setLayout(SceneLayout.UseConstraintsToFillContainer)
-                renderingView.isForcedToPresentWithTransactionEveryFrame = false
+                metalView.isForcedToPresentWithTransactionEveryFrame = false
             }
         )
     }
