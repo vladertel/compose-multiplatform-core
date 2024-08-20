@@ -387,13 +387,13 @@ internal class ComposeSceneMediator(
      * @param view the [UIView] that received the touches
      * @param touches a [Set] of [UITouch] objects. Erasure happens due to K/N not supporting Obj-C lightweight generics.
      * @param event the [UIEvent] associated with the touches
-     * @param phase the [TouchesEventKind] of the touches
+     * @param eventKind the [TouchesEventKind] of the touches
      */
     private fun onTouchesEvent(
         view: UIView,
         touches: Set<*>,
         event: UIEvent?,
-        phase: TouchesEventKind
+        eventKind: TouchesEventKind
     ) {
         val pointers = touches.map {
             val touch = it as UITouch
@@ -402,7 +402,7 @@ internal class ComposeSceneMediator(
             ComposeScenePointer(
                 id = PointerId(id),
                 position = position,
-                pressed = when (phase) {
+                pressed = when (eventKind) {
                     // When CMPGestureRecognizer fails, it means that all touches are now redirected
                     // to the interop view. They are still technically pressed, but Compose must
                     // treat them as lifted because it's the last event that Compose receives
@@ -426,7 +426,7 @@ internal class ComposeSceneMediator(
         val timestamp = event?.timestamp ?: CACurrentMediaTime()
 
         scene.sendPointerEvent(
-            eventType = phase.toPointerEventType(),
+            eventType = eventKind.toPointerEventType(),
             pointers = pointers,
             timeMillis = (timestamp * 1e3).toLong(),
             nativeEvent = event
