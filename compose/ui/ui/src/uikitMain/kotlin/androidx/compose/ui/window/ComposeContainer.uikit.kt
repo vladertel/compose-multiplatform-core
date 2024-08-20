@@ -37,7 +37,7 @@ import androidx.compose.ui.scene.ComposeSceneLayer
 import androidx.compose.ui.scene.ComposeSceneMediator
 import androidx.compose.ui.scene.PlatformLayersComposeScene
 import androidx.compose.ui.scene.SceneLayout
-import androidx.compose.ui.scene.UIViewComposeSceneLayer
+import androidx.compose.ui.scene.UIKitComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
@@ -109,7 +109,7 @@ internal class ComposeContainer(
 
     private var isInsideSwiftUI = false
     private var mediator: ComposeSceneMediator? = null
-    private val layers: MutableList<UIViewComposeSceneLayer> = mutableListOf()
+    private val layers: MutableList<UIKitComposeSceneLayer> = mutableListOf()
     private val layoutDirection get() = getLayoutDirection()
     private var isViewAppeared: Boolean = false
 
@@ -395,14 +395,14 @@ internal class ComposeContainer(
         }
     }
 
-    fun attachLayer(layer: UIViewComposeSceneLayer) {
+    fun attachLayer(layer: UIKitComposeSceneLayer) {
         layers.add(layer)
         if (isViewAppeared) {
             layer.sceneDidAppear()
         }
     }
 
-    fun detachLayer(layer: UIViewComposeSceneLayer) {
+    fun detachLayer(layer: UIKitComposeSceneLayer) {
         if (isViewAppeared) {
             layer.sceneWillDisappear()
         }
@@ -418,7 +418,7 @@ internal class ComposeContainer(
             focusable: Boolean,
             compositionContext: CompositionContext
         ): ComposeSceneLayer =
-            UIViewComposeSceneLayer(
+            UIKitComposeSceneLayer(
                 composeContainer = this@ComposeContainer,
                 initDensity = density,
                 initLayoutDirection = layoutDirection,

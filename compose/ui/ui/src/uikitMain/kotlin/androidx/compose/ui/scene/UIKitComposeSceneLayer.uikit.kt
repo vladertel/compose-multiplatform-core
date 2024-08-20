@@ -56,7 +56,7 @@ import platform.UIKit.UITouch
 import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
-internal class UIViewComposeSceneLayer(
+internal class UIKitComposeSceneLayer(
     private val composeContainer: ComposeContainer,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
@@ -73,7 +73,7 @@ internal class UIViewComposeSceneLayer(
     ) -> Unit)? = null
 
     /**
-     * The view to which [UIViewComposeSceneLayer]-managed view hierarchy is attached.
+     * The view to which [UIKitComposeSceneLayer]-managed view hierarchy is attached.
      */
     private val rootView = requireNotNull(composeContainer.view.window) {
         "ComposeContainer view must be attached to a window when a new layer is created."
