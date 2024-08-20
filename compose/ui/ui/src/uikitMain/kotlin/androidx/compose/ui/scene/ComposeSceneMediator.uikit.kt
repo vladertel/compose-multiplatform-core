@@ -376,7 +376,7 @@ internal class ComposeSceneMediator(
             val position = asDpOffset().toOffset(density)
             val interopView = scene.hitTestInteropView(position)
 
-            // Find a group of a holder assocaited with a given interop view or view controller
+            // Find a group of a holder associated with a given interop view or view controller
             interopView?.let {
                 interopContainer.groupForInteropView(it)
             }
