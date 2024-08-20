@@ -330,7 +330,7 @@ internal class ComposeViewController(
                 interopContainer.retrieveTransaction()
             }
         ).apply {
-            opaque = configuration.opaque
+            canBeOpaque = configuration.opaque
         }
 
     @OptIn(ExperimentalComposeApi::class)

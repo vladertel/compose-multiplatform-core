@@ -75,11 +75,10 @@ internal class MetalView(
         }
     )
 
-    override fun setOpaque(opaque: Boolean) {
-        super.setOpaque(opaque)
-
-        redrawer.opaque = opaque
-    }
+    /**
+     * @see [MetalRedrawer.canBeOpaque]
+     */
+    var canBeOpaque by redrawer::canBeOpaque
 
     init {
         userInteractionEnabled = false

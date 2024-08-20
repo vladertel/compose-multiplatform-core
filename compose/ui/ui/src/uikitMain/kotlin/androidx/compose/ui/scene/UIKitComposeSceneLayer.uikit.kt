@@ -158,7 +158,7 @@ internal class UIKitComposeSceneLayer(
                 interopContainer.retrieveTransaction()
             }
         ).apply {
-            opaque = false
+            canBeOpaque = false
         }
 
     private fun createComposeScene(

@@ -187,7 +187,14 @@ internal class MetalRedrawer(
             displayLinkConditions.needsToBeProactive = value
         }
 
-    var opaque: Boolean = true
+    /**
+     * True if Metal layer can be opaque. In this case if no interop views are present, Metal
+     * rendering will be optimized for direct-to-screen rendering.
+     *
+     * In some scenarios like using this layer as a canvas for dialog and popup layers, it's never the
+     * case.
+     */
+    var canBeOpaque: Boolean = true
         set(value) {
             field = value
 
@@ -208,7 +215,7 @@ internal class MetalRedrawer(
         }
 
     private fun updateLayerOpacity() {
-        metalLayer.setOpaque(!isInteropActive && opaque)
+        metalLayer.setOpaque(!isInteropActive && canBeOpaque)
     }
 
     /**
@@ -312,7 +319,7 @@ internal class MetalRedrawer(
                         height.toFloat()
                     )
                 ).also { canvas ->
-                    canvas.clear(if (metalLayer.opaque) Color.WHITE else Color.TRANSPARENT)
+                    canvas.clear(if (metalLayer.isOpaque()) Color.WHITE else Color.TRANSPARENT)
                     callbacks.render(canvas, lastRenderTimestamp)
                 }
 
