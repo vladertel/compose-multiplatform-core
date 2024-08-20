@@ -27,9 +27,10 @@ import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.UIKit.UIView
 
 /**
- * A mediator for the primary [ComposeScene], that owns its own rendering view.
+ * A mediator for the [ComposeScene] of a layer.
+ * It shares its rendering view with other [LayerComposeSceneMediator].
  */
-internal class PrimaryComposeSceneMediator(
+internal class LayerComposeSceneMediator(
     parentView: UIView,
     configuration: ComposeUIViewControllerConfiguration,
     focusStack: FocusStack?,

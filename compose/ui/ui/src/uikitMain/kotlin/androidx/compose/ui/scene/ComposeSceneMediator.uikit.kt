@@ -257,7 +257,7 @@ internal abstract class ComposeSceneMediator(
         }
 
     /**
-     * view, that contains [interopContainer] and [interactionView] and is added to [parentView]
+     * View, that contains [interopContainer] and [interactionView] and is added to [parentView]
      */
     private val rootView = ComposeSceneMediatorView()
 
@@ -278,7 +278,7 @@ internal abstract class ComposeSceneMediator(
     /**
      * Container for managing UIKitView and UIKitViewController
      */
-    private val interopContainer = UIKitInteropContainer(
+    protected val interopContainer = UIKitInteropContainer(
         root = interactionView,
         requestRedraw = ::onComposeSceneInvalidate
     )
