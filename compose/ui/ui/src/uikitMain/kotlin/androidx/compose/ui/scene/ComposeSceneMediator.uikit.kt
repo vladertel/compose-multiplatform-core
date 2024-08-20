@@ -194,7 +194,7 @@ internal abstract class ComposeSceneMediator(
      * @see PlatformContext.measureDrawLayerBounds
      */
     private val measureDrawLayerBounds: Boolean = false,
-    val coroutineContext: CoroutineContext,
+    private val coroutineContext: CoroutineContext,
     private val metalViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> MetalView,
     composeSceneFactory: (
         invalidate: () -> Unit,
