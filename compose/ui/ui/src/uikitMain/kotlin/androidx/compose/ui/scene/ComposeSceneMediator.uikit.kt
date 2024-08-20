@@ -479,7 +479,7 @@ internal abstract class ComposeSceneMediator(
                  *   https://developer.apple.com/documentation/uikit/uiviewcontroller/4195485-viewisappearing
                  *   It is public for iOS 17 and hope back ported for iOS 13 as well (but we need to check)
                  */
-                if (metalView.isReadyToShowContent.value) {
+                if (metalView.isReadyToShowContentState.value) {
                     ProvideComposeSceneMediatorCompositionLocals {
                         interopContainer.TrackInteropPlacementContainer(
                             content = content

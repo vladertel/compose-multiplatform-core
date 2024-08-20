@@ -54,20 +54,25 @@ internal class MetalView(
     }
 
     var onAttachedToWindow: (() -> Unit)? = null
-    private val _isReadyToShowContent: MutableState<Boolean> = mutableStateOf(false)
-    val isReadyToShowContent: State<Boolean> = _isReadyToShowContent
+    private val isReadyToShowContentMutableState: MutableState<Boolean> = mutableStateOf(false)
+    val isReadyToShowContentState: State<Boolean> = isReadyToShowContentMutableState
 
     private val device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice()
             ?: throw IllegalStateException("Metal is not supported on this system")
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
-    private var _width: CGFloat = 0.0
-    private var _height: CGFloat = 0.0
+    private var drawableWidth: CGFloat = 0.0
+    private var drawableHeight: CGFloat = 0.0
     internal val redrawer: MetalRedrawer = MetalRedrawer(
         metalLayer,
         callbacks = object : MetalRedrawerCallbacks {
             override fun render(canvas: Canvas, targetTimestamp: NSTimeInterval) {
-                renderDelegate.onRender(canvas, _width.toInt(), _height.toInt(), targetTimestamp.toNanoSeconds())
+                renderDelegate.onRender(
+                    canvas,
+                    width = drawableWidth.toInt(),
+                    height = drawableHeight.toInt(),
+                    nanoTime = targetTimestamp.toNanoSeconds()
+                )
             }
 
             override fun retrieveInteropTransaction(): UIKitInteropTransaction =
@@ -111,7 +116,7 @@ internal class MetalView(
         contentScaleFactor = screen.scale
         redrawer.maximumFramesPerSecond = screen.maximumFramesPerSecond
         onAttachedToWindow?.invoke()
-        _isReadyToShowContent.value = true
+        isReadyToShowContentMutableState.value = true
         updateMetalLayerSize()
     }
 
@@ -125,8 +130,8 @@ internal class MetalView(
             return
         }
         bounds.useContents {
-            _width = size.width * contentScaleFactor
-            _height = size.height * contentScaleFactor
+            drawableWidth = size.width * contentScaleFactor
+            drawableHeight = size.height * contentScaleFactor
         }
 
         // If drawableSize is zero in any dimension it means that it's a first layout
@@ -136,7 +141,7 @@ internal class MetalView(
             width == 0.0 || height == 0.0
         }
 
-        metalLayer.drawableSize = CGSizeMake(_width, _height)
+        metalLayer.drawableSize = CGSizeMake(drawableWidth, drawableHeight)
 
         if (needsSynchronousDraw) {
             redrawer.drawSynchronously()
