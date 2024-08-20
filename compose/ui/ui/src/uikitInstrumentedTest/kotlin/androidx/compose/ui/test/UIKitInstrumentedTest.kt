@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.ComposeContainer
+import androidx.compose.ui.window.ComposeViewController
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
@@ -64,7 +64,7 @@ internal class UIKitInstrumentedTest {
     val screenSize: DpSize = screen.bounds().useContents { DpSize(size.width.dp, size.height.dp) }
     var keyboardHeight: Dp = 0.dp
         private set
-    lateinit var composeContainer: ComposeContainer
+    lateinit var composeViewController: ComposeViewController
         private set
 
     private val infiniteAnimationPolicy = object : InfiniteAnimationPolicy {
@@ -80,7 +80,7 @@ internal class UIKitInstrumentedTest {
         content: @Composable () -> Unit
     ) {
         var onDraw = false
-        composeContainer = ComposeContainer(
+        composeViewController = ComposeViewController(
             configuration = ComposeUIViewControllerConfiguration().apply {
                 // Current instrumented test environment doesn't allow providing a plist.
                 enforceStrictPlistSanityCheck = false
@@ -107,7 +107,7 @@ internal class UIKitInstrumentedTest {
             coroutineContext = coroutineContext
         )
 
-        window.rootViewController = composeContainer
+        window.rootViewController = composeViewController
         window.makeKeyAndVisible()
         waitUntil { onDraw }
         waitForIdle()
@@ -168,7 +168,7 @@ internal class UIKitInstrumentedTest {
         get() {
             val hadSnapshotChanges = Snapshot.current.hasPendingChanges()
             val isApplyObserverNotificationPending = Snapshot.isApplyObserverNotificationPending
-            val containerInvalidations = composeContainer.hasInvalidations()
+            val containerInvalidations = composeViewController.hasInvalidations()
 
             return !hadSnapshotChanges && !isApplyObserverNotificationPending && !containerInvalidations
         }

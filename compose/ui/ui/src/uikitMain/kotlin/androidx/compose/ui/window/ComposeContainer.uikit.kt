@@ -95,10 +95,14 @@ import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
+// TODO: ComposeContainer is not the same thing as ComposeViewController, extract the actual
+//  part responsible for Compose instance management to a separate class.
+//  https://youtrack.jetbrains.com/issue/CMP-5950/iOS-extract-Compose-instance-management-from-ComposeContainer
+
 // TODO: Move to androidx.compose.ui.scene
 @OptIn(BetaInteropApi::class)
 @ExportObjCClass
-internal class ComposeContainer(
+internal class ComposeViewController(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
     private val coroutineContext: CoroutineContext = Dispatchers.Main
@@ -419,7 +423,7 @@ internal class ComposeContainer(
             compositionContext: CompositionContext
         ): ComposeSceneLayer =
             UIKitComposeSceneLayer(
-                composeContainer = this@ComposeContainer,
+                composeViewController = this@ComposeViewController,
                 initDensity = density,
                 initLayoutDirection = layoutDirection,
                 configuration = configuration,
@@ -468,9 +472,9 @@ private fun getLayoutDirection() =
 
 @Composable
 internal fun ProvideContainerCompositionLocals(
-    composeContainer: ComposeContainer,
+    composeViewController: ComposeViewController,
     content: @Composable () -> Unit,
-) = with(composeContainer) {
+) = with(composeViewController) {
     CompositionLocalProvider(
         LocalHapticFeedback provides hapticFeedback,
         LocalUIViewController provides this,

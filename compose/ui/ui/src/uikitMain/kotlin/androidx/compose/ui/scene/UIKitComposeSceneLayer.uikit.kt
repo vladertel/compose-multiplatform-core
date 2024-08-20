@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
-import androidx.compose.ui.window.ComposeContainer
+import androidx.compose.ui.window.ComposeViewController
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.ProvideContainerCompositionLocals
 import androidx.compose.ui.window.RenderingUIView
@@ -57,7 +57,7 @@ import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class UIKitComposeSceneLayer(
-    private val composeContainer: ComposeContainer,
+    private val composeViewController: ComposeViewController,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
@@ -75,7 +75,7 @@ internal class UIKitComposeSceneLayer(
     /**
      * The view to which [UIKitComposeSceneLayer]-managed view hierarchy is attached.
      */
-    private val rootView = requireNotNull(composeContainer.view.window) {
+    private val rootView = requireNotNull(composeViewController.view.window) {
         "ComposeContainer view must be attached to a window when a new layer is created."
     }
 
@@ -153,7 +153,7 @@ internal class UIKitComposeSceneLayer(
         NSLayoutConstraint.activateConstraints(
             getConstraintsToFillParent(backgroundView, rootView)
         )
-        composeContainer.attachLayer(this)
+        composeViewController.attachLayer(this)
     }
 
     private fun createSkikoUIView(
@@ -177,7 +177,7 @@ internal class UIKitComposeSceneLayer(
             density = initDensity, // We should use the local density already set for the current layer.
             layoutDirection = initLayoutDirection,
             coroutineContext = coroutineContext,
-            composeSceneContext = composeContainer.createComposeSceneContext(platformContext),
+            composeSceneContext = composeViewController.createComposeSceneContext(platformContext),
             invalidate = invalidate,
         )
 
@@ -200,13 +200,13 @@ internal class UIKitComposeSceneLayer(
 
     override fun close() {
         mediator.dispose()
-        composeContainer.detachLayer(this)
+        composeViewController.detachLayer(this)
         backgroundView.removeFromSuperview()
     }
 
     override fun setContent(content: @Composable () -> Unit) {
         mediator.setContent {
-            ProvideContainerCompositionLocals(composeContainer) {
+            ProvideContainerCompositionLocals(composeViewController) {
                 content()
             }
         }
