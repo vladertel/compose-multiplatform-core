@@ -67,9 +67,9 @@ internal class UIViewComposeSceneLayer(
 ) : ComposeSceneLayer {
 
     override var focusable: Boolean = focusStack != null
+
     private var onOutsidePointerEvent: ((
-        eventType: PointerEventType,
-        button: PointerButton?
+        eventType: PointerEventType
     ) -> Unit)? = null
 
     /**
@@ -88,7 +88,7 @@ internal class UIViewComposeSceneLayer(
             if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
                 // This workaround needs to send PointerEventType.Press just once
                 previousSuccessHitTestTimestamp = withEvent?.timestamp
-                onOutsidePointerEvent?.invoke(PointerEventType.Press, null)
+                onOutsidePointerEvent?.invoke(PointerEventType.Press)
             }
         }
 
@@ -103,7 +103,7 @@ internal class UIViewComposeSceneLayer(
                 val contains = boundsInWindow.contains(locationInView.toOffset(density).round())
                 if (!contains) {
                     // TODO: Send only for last pointer in case of multi-touch
-                    onOutsidePointerEvent?.invoke(PointerEventType.Release, null)
+                    onOutsidePointerEvent?.invoke(PointerEventType.Release)
                 }
             }
             super.touchesEnded(touches, withEvent)
@@ -222,7 +222,9 @@ internal class UIViewComposeSceneLayer(
     override fun setOutsidePointerEventListener(
         onOutsidePointerEvent: ((eventType: PointerEventType, button: PointerButton?) -> Unit)?
     ) {
-        this.onOutsidePointerEvent = onOutsidePointerEvent
+        this.onOutsidePointerEvent = {
+            onOutsidePointerEvent?.invoke(it, null)
+        }
     }
 
     override fun calculateLocalPosition(positionInWindow: IntOffset): IntOffset {
