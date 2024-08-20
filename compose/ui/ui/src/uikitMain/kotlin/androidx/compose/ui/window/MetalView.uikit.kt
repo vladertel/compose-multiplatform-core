@@ -63,7 +63,7 @@ internal class MetalView(
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
     private var drawableWidth: CGFloat = 0.0
     private var drawableHeight: CGFloat = 0.0
-    internal val redrawer: MetalRedrawer = MetalRedrawer(
+    private val redrawer: MetalRedrawer = MetalRedrawer(
         metalLayer,
         callbacks = object : MetalRedrawerCallbacks {
             override fun render(canvas: Canvas, targetTimestamp: NSTimeInterval) {
@@ -84,6 +84,11 @@ internal class MetalView(
      * @see [MetalRedrawer.canBeOpaque]
      */
     var canBeOpaque by redrawer::canBeOpaque
+
+    /**
+     * @see [MetalRedrawer.needsProactiveDisplayLink]
+     */
+    var needsProactiveDisplayLink by redrawer::needsProactiveDisplayLink
 
     init {
         userInteractionEnabled = false

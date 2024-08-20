@@ -354,7 +354,7 @@ internal abstract class ComposeSceneMediator(
                 GestureEvent.BEGAN -> true
                 GestureEvent.ENDED -> false
             }
-        metalView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
+        metalView.needsProactiveDisplayLink = needHighFrequencyPolling
     }
 
     private fun hitTestInteropView(point: CValue<CGPoint>, event: UIEvent?): UIView? =

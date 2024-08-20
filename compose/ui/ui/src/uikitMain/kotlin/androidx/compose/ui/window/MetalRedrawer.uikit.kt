@@ -176,16 +176,16 @@ internal class MetalRedrawer(
             caDisplayLink?.preferredFramesPerSecond = value
         }
 
+    private val displayLinkConditions = DisplayLinkConditions { paused ->
+        caDisplayLink?.paused = paused
+    }
+
     /**
      * Set to `true` if need always running invalidation-independent displayLink for forcing UITouch
      * events to come at the fastest possible cadence.
      * Otherwise, touch events can come at rate lower than actual display refresh rate.
      */
-    var needsProactiveDisplayLink: Boolean
-        get() = displayLinkConditions.needsToBeProactive
-        set(value) {
-            displayLinkConditions.needsToBeProactive = value
-        }
+    var needsProactiveDisplayLink by displayLinkConditions::needsToBeProactive
 
     /**
      * True if Metal layer can be opaque. In this case if no interop views are present, Metal
@@ -234,10 +234,6 @@ internal class MetalRedrawer(
 
     private val currentTargetTimestamp: NSTimeInterval?
         get() = caDisplayLink?.targetTimestamp
-
-    private val displayLinkConditions = DisplayLinkConditions { paused ->
-        caDisplayLink?.paused = paused
-    }
 
     private val applicationForegroundStateListener = ApplicationForegroundStateListener { isApplicationActive ->
         displayLinkConditions.isApplicationActive = isApplicationActive
@@ -342,8 +338,11 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
-            val renderTarget =
-                BackendRenderTarget.makeMetal(width, height, metalDrawablesHandler.drawableTexture(metalDrawable).rawValue)
+            val renderTarget = BackendRenderTarget.makeMetal(
+                width,
+                height,
+                texturePtr = metalDrawablesHandler.drawableTexture(metalDrawable).rawValue
+            )
 
             val surface = Surface.makeFromBackendRenderTarget(
                 context,
