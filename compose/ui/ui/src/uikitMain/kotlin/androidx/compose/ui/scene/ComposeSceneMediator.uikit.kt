@@ -185,7 +185,7 @@ private class RenderingUIViewDelegateImpl(
     }
 }
 
-internal class ComposeSceneMediator(
+internal abstract class ComposeSceneMediator(
     private val parentView: UIView,
     private val configuration: ComposeUIViewControllerConfiguration,
     private val focusStack: FocusStack?,

@@ -36,6 +36,7 @@ import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
 import androidx.compose.ui.scene.ComposeSceneMediator
 import androidx.compose.ui.scene.PlatformLayersComposeScene
+import androidx.compose.ui.scene.PrimaryComposeSceneMediator
 import androidx.compose.ui.scene.SceneLayout
 import androidx.compose.ui.scene.UIKitComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
@@ -374,7 +375,7 @@ internal class ComposeViewController(
     }
 
     private fun createMediator(): ComposeSceneMediator {
-        val mediator = ComposeSceneMediator(
+        val mediator = PrimaryComposeSceneMediator(
             parentView = view,
             configuration = configuration,
             focusStack = focusStack,

@@ -119,7 +119,7 @@ internal class UIKitComposeSceneLayer(
     }
 
     private val mediator by lazy {
-        ComposeSceneMediator(
+        PrimaryComposeSceneMediator(
             parentView = parentView,
             configuration = configuration,
             focusStack = focusStack,
