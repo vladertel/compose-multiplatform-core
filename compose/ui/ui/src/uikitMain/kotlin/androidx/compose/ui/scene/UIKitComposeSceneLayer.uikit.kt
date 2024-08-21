@@ -146,7 +146,8 @@ internal class UIKitComposeSceneLayer(
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(backgroundView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(backgroundView, parentView)
+            //getConstraintsToFillParent(backgroundView, parentView)
+            backgroundView.layoutConstraintsToMatch(parentView)
         )
     }
 
@@ -246,7 +247,7 @@ internal class UIKitComposeSceneLayer(
 
     private fun updateBounds() {
         mediator.setLayout(
-            SceneLayout.Bounds(
+            ComposeSceneMediatorLayout.Custom(
                 renderBounds = drawBounds,
                 interactionBounds = boundsInWindow
             )
@@ -267,13 +268,6 @@ internal class UIKitComposeSceneLayer(
 
     fun viewWillLayoutSubviews() {
         mediator.viewWillLayoutSubviews()
-    }
-
-    fun viewWillTransitionToSize(
-        targetSize: CValue<CGSize>,
-        coordinator: UIViewControllerTransitionCoordinatorProtocol
-    ) {
-        mediator.viewWillTransitionToSize(targetSize, coordinator)
     }
 }
 

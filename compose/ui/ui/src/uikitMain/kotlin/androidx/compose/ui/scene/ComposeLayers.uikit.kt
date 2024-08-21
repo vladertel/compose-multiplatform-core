@@ -87,18 +87,6 @@ internal class ComposeLayers: SkikoRenderDelegate {
         }
     }
 
-    fun viewWillTransitionToSize(
-        targetSize: CValue<CGSize>,
-        coordinator: UIViewControllerTransitionCoordinatorProtocol
-    ) {
-        layers.fastForEach {
-            it.viewWillTransitionToSize(
-                targetSize,
-                coordinator,
-            )
-        }
-    }
-
     fun viewDidAppear() {
         layers.fastForEach {
             it.sceneDidAppear()

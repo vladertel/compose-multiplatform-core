@@ -78,15 +78,11 @@ import androidx.compose.ui.window.TouchesEventKind
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
-import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import platform.CoreGraphics.CGAffineTransformIdentity
-import platform.CoreGraphics.CGAffineTransformInvert
 import platform.CoreGraphics.CGAffineTransformMakeTranslation
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSize
 import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
@@ -96,17 +92,16 @@ import platform.UIKit.UIPress
 import platform.UIKit.UITouch
 import platform.UIKit.UITouchPhase
 import platform.UIKit.UIView
-import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 import platform.UIKit.UIWindow
 
 /**
  * Layout of sceneView on the screen
  */
-internal sealed interface SceneLayout {
-    object Undefined : SceneLayout
-    object UseConstraintsToFillContainer : SceneLayout
-    class UseConstraintsToCenter(val size: CValue<CGSize>) : SceneLayout
-    class Bounds(val renderBounds: IntRect, val interactionBounds: IntRect) : SceneLayout
+internal sealed interface ComposeSceneMediatorLayout {
+    data object Undefined : ComposeSceneMediatorLayout
+    data object Fill : ComposeSceneMediatorLayout
+    class Center(val size: CValue<CGSize>) : ComposeSceneMediatorLayout
+    class Custom(val renderBounds: IntRect, val interactionBounds: IntRect) : ComposeSceneMediatorLayout
 }
 
 /**
@@ -167,7 +162,7 @@ private class SemanticsOwnerListenerImpl(
 }
 
 internal abstract class ComposeSceneMediator(
-    private val parentView: UIView,
+    protected val parentView: UIView,
     private val configuration: ComposeUIViewControllerConfiguration,
     private val focusStack: FocusStack?,
     private val windowContext: PlatformWindowContext,
@@ -183,8 +178,9 @@ internal abstract class ComposeSceneMediator(
     ) -> ComposeScene
 ) {
     private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
-    private var sceneLayout: SceneLayout = SceneLayout.Undefined
-    private var constraints: List<NSLayoutConstraint> = emptyList()
+    private var layout: ComposeSceneMediatorLayout = ComposeSceneMediatorLayout.Undefined
+
+    protected var constraints: List<NSLayoutConstraint> = emptyList()
         set(value) {
             if (field.isNotEmpty()) {
                 NSLayoutConstraint.deactivateConstraints(field)
@@ -233,7 +229,7 @@ internal abstract class ComposeSceneMediator(
     /**
      * View, that contains [interactionView] and is added to [parentView]
      */
-    private val rootView = ComposeSceneMediatorView()
+    protected val rootView = ComposeSceneMediatorView()
 
     protected val interactionView =
         InteractionUIView(
@@ -259,8 +255,8 @@ internal abstract class ComposeSceneMediator(
 
     private val interactionBounds: IntRect
         get() {
-            val boundsLayout = sceneLayout as? SceneLayout.Bounds
-            return boundsLayout?.interactionBounds ?: metalViewBoundsInPx
+            val customLayout = layout as? ComposeSceneMediatorLayout.Custom
+            return customLayout?.interactionBounds ?: metalViewBoundsInPx
         }
 
     @OptIn(ExperimentalComposeApi::class)
@@ -407,13 +403,13 @@ internal abstract class ComposeSceneMediator(
         rootView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(rootView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(rootView, parentView)
+            rootView.layoutConstraintsToMatch(parentView)
         )
 
         interactionView.translatesAutoresizingMaskIntoConstraints = false
         rootView.addSubview(interactionView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(interactionView, rootView)
+            interactionView.layoutConstraintsToMatch(rootView)
         )
     }
 
@@ -468,23 +464,20 @@ internal abstract class ComposeSceneMediator(
 
     private fun onComposeSceneInvalidate() = metalView.needRedraw()
 
-    fun setLayout(value: SceneLayout) {
-        sceneLayout = value
+    fun setLayout(value: ComposeSceneMediatorLayout) {
+        layout = value
         when (value) {
-            SceneLayout.UseConstraintsToFillContainer -> {
-                metalView.setFrame(CGRectZero.readValue())
+            ComposeSceneMediatorLayout.Fill -> {
                 metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints = getConstraintsToFillParent(metalView, interactionView)
+                constraints = metalView.layoutConstraintsToMatch(interactionView)
             }
 
-            is SceneLayout.UseConstraintsToCenter -> {
-                metalView.setFrame(CGRectZero.readValue())
+            is ComposeSceneMediatorLayout.Center -> {
                 metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints =
-                    getConstraintsToCenterInParent(metalView, interactionView, value.size)
+                constraints = metalView.layoutConstraintsToCenterInParent(parentView, value.size)
             }
 
-            is SceneLayout.Bounds -> {
+            is ComposeSceneMediatorLayout.Custom -> {
                 val density = parentView.density.density
                 metalView.translatesAutoresizingMaskIntoConstraints = true
                 metalView.setFrame(
@@ -500,7 +493,7 @@ internal abstract class ComposeSceneMediator(
                 constraints = emptyList()
             }
 
-            is SceneLayout.Undefined -> error("setLayout, SceneLayout.Undefined")
+            is ComposeSceneMediatorLayout.Undefined -> error("setLayout, SceneLayout.Undefined")
         }
     }
 
@@ -544,48 +537,6 @@ internal abstract class ComposeSceneMediator(
         get() = with(parentView.density) {
             metalView.frame.useContents { asDpRect().toRect().roundToIntRect() }
         }
-
-    fun viewWillTransitionToSize(
-        targetSize: CValue<CGSize>,
-        coordinator: UIViewControllerTransitionCoordinatorProtocol
-    ) {
-        if (sceneLayout is SceneLayout.Bounds) {
-            //TODO Add logic to SceneLayout.Bounds too
-            return
-        }
-
-        val startSnapshotView = rootView.snapshotViewAfterScreenUpdates(false) ?: return
-        startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(startSnapshotView)
-        targetSize.useContents {
-            NSLayoutConstraint.activateConstraints(
-                listOf(
-                    startSnapshotView.widthAnchor.constraintEqualToConstant(height),
-                    startSnapshotView.heightAnchor.constraintEqualToConstant(width),
-                    startSnapshotView.centerXAnchor.constraintEqualToAnchor(parentView.centerXAnchor),
-                    startSnapshotView.centerYAnchor.constraintEqualToAnchor(parentView.centerYAnchor)
-                )
-            )
-        }
-
-        metalView.isForcedToPresentWithTransactionEveryFrame = true
-
-        setLayout(SceneLayout.UseConstraintsToCenter(size = targetSize))
-        metalView.transform = coordinator.targetTransform
-
-        coordinator.animateAlongsideTransition(
-            animation = {
-                startSnapshotView.alpha = 0.0
-                startSnapshotView.transform = CGAffineTransformInvert(coordinator.targetTransform)
-                metalView.transform = CGAffineTransformIdentity.readValue()
-            },
-            completion = {
-                startSnapshotView.removeFromSuperview()
-                setLayout(SceneLayout.UseConstraintsToFillContainer)
-                metalView.isForcedToPresentWithTransactionEveryFrame = false
-            }
-        )
-    }
 
     fun sceneDidAppear() {
         keyboardManager.start()
@@ -672,6 +623,24 @@ internal fun getConstraintsToFillParent(view: UIView, parent: UIView) =
         view.topAnchor.constraintEqualToAnchor(parent.topAnchor),
         view.bottomAnchor.constraintEqualToAnchor(parent.bottomAnchor)
     )
+
+internal fun UIView.layoutConstraintsToMatch(other: UIView) =
+    listOf(
+        leftAnchor.constraintEqualToAnchor(other.leftAnchor),
+        rightAnchor.constraintEqualToAnchor(other.rightAnchor),
+        topAnchor.constraintEqualToAnchor(other.topAnchor),
+        bottomAnchor.constraintEqualToAnchor(other.bottomAnchor)
+    )
+
+private fun UIView.layoutConstraintsToCenterInParent(parent: UIView, size: CValue<CGSize>) =
+    size.useContents {
+        listOf(
+            centerXAnchor.constraintEqualToAnchor(parent.centerXAnchor),
+            centerYAnchor.constraintEqualToAnchor(parent.centerYAnchor),
+            widthAnchor.constraintEqualToConstant(width),
+            heightAnchor.constraintEqualToConstant(height)
+        )
+    }
 
 private fun getConstraintsToCenterInParent(
     view: UIView,

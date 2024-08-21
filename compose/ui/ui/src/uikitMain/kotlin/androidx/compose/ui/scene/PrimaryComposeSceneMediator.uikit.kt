@@ -21,15 +21,20 @@ import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
-import androidx.compose.ui.unit.toOffset
-import androidx.compose.ui.viewinterop.UIKitInteropContainer
-import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
+import kotlinx.cinterop.CValue
+import kotlinx.cinterop.readValue
+import kotlinx.cinterop.useContents
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
+import platform.CoreGraphics.CGAffineTransformIdentity
+import platform.CoreGraphics.CGAffineTransformInvert
+import platform.CoreGraphics.CGSize
+import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIView
+import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 private class MetalViewRenderer(
     private val scene: ComposeScene,
@@ -87,5 +92,44 @@ internal class PrimaryComposeSceneMediator(
 
     init {
         interactionView.addSubview(metalView)
+    }
+
+    fun performOrientationChangeAnimation(
+        targetSize: CValue<CGSize>,
+        coordinator: UIViewControllerTransitionCoordinatorProtocol
+    ) {
+        val startSnapshotView = rootView.snapshotViewAfterScreenUpdates(false) ?: return
+        startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(startSnapshotView)
+        targetSize.useContents {
+            NSLayoutConstraint.activateConstraints(
+                listOf(
+                    startSnapshotView.widthAnchor.constraintEqualToConstant(height),
+                    startSnapshotView.heightAnchor.constraintEqualToConstant(width),
+                    startSnapshotView.centerXAnchor.constraintEqualToAnchor(parentView.centerXAnchor),
+                    startSnapshotView.centerYAnchor.constraintEqualToAnchor(parentView.centerYAnchor)
+                )
+            )
+        }
+
+        metalView.isForcedToPresentWithTransactionEveryFrame = true
+
+        setLayout(ComposeSceneMediatorLayout.Center(size = targetSize))
+        metalView.transform = coordinator.targetTransform
+
+        coordinator.animateAlongsideTransition(
+            animation = {
+                startSnapshotView.alpha = 0.0
+                startSnapshotView.transform = CGAffineTransformInvert(coordinator.targetTransform)
+                metalView.transform = CGAffineTransformIdentity.readValue()
+            },
+            completion = {
+                startSnapshotView.removeFromSuperview()
+                setLayout(ComposeSceneMediatorLayout.Fill)
+                metalView.isForcedToPresentWithTransactionEveryFrame = false
+            }
+        )
+
+        rootView.layoutIfNeeded()
     }
 }

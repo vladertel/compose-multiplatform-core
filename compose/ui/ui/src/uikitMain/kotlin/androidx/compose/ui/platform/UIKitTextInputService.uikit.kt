@@ -24,7 +24,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.scene.getConstraintsToFillParent
+import androidx.compose.ui.scene.layoutConstraintsToMatch
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.text.input.EditCommand
@@ -342,7 +342,7 @@ internal class UIKitTextInputService(
             rootView.addSubview(it)
             it.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activateConstraints(
-                getConstraintsToFillParent(it, rootView)
+                it.layoutConstraintsToMatch(rootView)
             )
         }
     }

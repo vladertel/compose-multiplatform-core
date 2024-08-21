@@ -35,10 +35,9 @@ import androidx.compose.ui.scene.ComposeLayers
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
-import androidx.compose.ui.scene.ComposeSceneMediator
 import androidx.compose.ui.scene.PlatformLayersComposeScene
 import androidx.compose.ui.scene.PrimaryComposeSceneMediator
-import androidx.compose.ui.scene.SceneLayout
+import androidx.compose.ui.scene.ComposeSceneMediatorLayout
 import androidx.compose.ui.scene.UIKitComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
@@ -49,8 +48,6 @@ import androidx.compose.ui.uikit.utils.CMPViewController
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.viewinterop.UIKitInteropContainer
-import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
@@ -64,7 +61,6 @@ import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.OSVersion
-import org.jetbrains.skiko.SkikoRenderDelegate
 import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGSize
@@ -114,7 +110,7 @@ internal class ComposeViewController(
     val hapticFeedback = CupertinoHapticFeedback()
 
     private var isInsideSwiftUI = false
-    private var mediator: ComposeSceneMediator? = null
+    private var mediator: PrimaryComposeSceneMediator? = null
     private val layers = ComposeLayers()
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
@@ -240,7 +236,7 @@ internal class ComposeViewController(
             // SwiftUI will do full layout and scene constraints update on each frame of orientation change animation
             // This logic is not needed
 
-            // When presented modally, UIKit performs non-trivial hierarchy update durting orientation change,
+            // When presented modally, UIKit performs non-trivial hierarchy update during orientation change,
             // its logic is not feasible to integrate into
             return
         }
@@ -253,17 +249,10 @@ internal class ComposeViewController(
             return
         }
 
-        mediator?.viewWillTransitionToSize(
+        mediator?.performOrientationChangeAnimation(
             targetSize = size,
             coordinator = withTransitionCoordinator,
         )
-
-        layers.viewWillTransitionToSize(
-            targetSize = size,
-            coordinator = withTransitionCoordinator,
-        )
-
-        view.layoutIfNeeded()
     }
 
     override fun viewWillAppear(animated: Boolean) {
@@ -354,7 +343,7 @@ internal class ComposeViewController(
         }
     }
 
-    private fun createMediator(): ComposeSceneMediator {
+    private fun createMediator(): PrimaryComposeSceneMediator {
         val mediator = PrimaryComposeSceneMediator(
             parentView = view,
             configuration = configuration,
@@ -362,11 +351,14 @@ internal class ComposeViewController(
             windowContext = windowContext,
             coroutineContext = coroutineContext,
             composeSceneFactory = ::createComposeScene,
-        )
-        mediator.setContent {
-            ProvideContainerCompositionLocals(this, content)
+        ).also {
+            it.setContent {
+                ProvideContainerCompositionLocals(this, content)
+            }
+
+            it.setLayout(ComposeSceneMediatorLayout.Fill)
         }
-        mediator.setLayout(SceneLayout.UseConstraintsToFillContainer)
+
         return mediator
     }
 
