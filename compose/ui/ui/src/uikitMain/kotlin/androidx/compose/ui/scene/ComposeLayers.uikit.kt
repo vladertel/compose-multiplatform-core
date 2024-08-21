@@ -27,11 +27,11 @@ import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class ComposeLayers: SkikoRenderDelegate {
     val hasInvalidations: Boolean
-        get() = layers.any { it.hasInvalidations() }
+        get() = layers.any { it.hasInvalidations }
 
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
 
-    private val metalView: MetalView = MetalView(
+    val metalView: MetalView = MetalView(
         renderDelegate = this,
         retrieveInteropTransaction = {
             // TODO: proper implementation

@@ -22,12 +22,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.floor
 import kotlin.math.roundToLong
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGFloat
 import platform.CoreGraphics.CGRectIsEmpty
 import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSTimeInterval
 import platform.Metal.MTLCreateSystemDefaultDevice
@@ -41,21 +44,11 @@ import platform.UIKit.UIViewMeta
 internal class MetalView(
     private val renderDelegate: SkikoRenderDelegate,
     private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
-) : UIView(
-    frame = CGRectMake(
-        x = 0.0,
-        y = 0.0,
-        width = 1.0, // TODO: Non-zero size need to first render with ComposeSceneLayer
-        height = 1.0
-    )
-) {
+) : UIView(frame = CGRectZero.readValue()) {
     companion object : UIViewMeta() {
+        @BetaInteropApi
         override fun layerClass() = CAMetalLayer
     }
-
-    var onAttachedToWindow: (() -> Unit)? = null
-    private val isReadyToShowContentMutableState: MutableState<Boolean> = mutableStateOf(false)
-    val isReadyToShowContentState: State<Boolean> = isReadyToShowContentMutableState
 
     private val device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice()
@@ -94,9 +87,8 @@ internal class MetalView(
         userInteractionEnabled = false
 
         metalLayer.also {
-            // Workaround for KN compiler bug
+            // Workaround for cinterop issue
             // Type mismatch: inferred type is platform.Metal.MTLDeviceProtocol but objcnames.protocols.MTLDeviceProtocol? was expected
-            @Suppress("USELESS_CAST")
             it.device = device as objcnames.protocols.MTLDeviceProtocol?
 
             it.pixelFormat = MTLPixelFormatBGRA8Unorm
@@ -115,18 +107,19 @@ internal class MetalView(
 
     override fun didMoveToWindow() {
         super.didMoveToWindow()
+
         val window = window ?: return
 
         val screen = window.screen
         contentScaleFactor = screen.scale
         redrawer.maximumFramesPerSecond = screen.maximumFramesPerSecond
-        onAttachedToWindow?.invoke()
-        isReadyToShowContentMutableState.value = true
+
         updateMetalLayerSize()
     }
 
     override fun layoutSubviews() {
         super.layoutSubviews()
+
         updateMetalLayerSize()
     }
 

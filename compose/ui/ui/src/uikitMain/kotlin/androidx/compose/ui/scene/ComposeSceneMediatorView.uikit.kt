@@ -19,11 +19,41 @@ package androidx.compose.ui.scene
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import platform.CoreGraphics.CGPoint
+import platform.CoreGraphics.CGRectIsEmpty
 import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 
 internal class ComposeSceneMediatorView : UIView(CGRectZero.readValue()) {
+    private var onAppeared: (() -> Unit)? = null
+
+    fun runOnceOnAppeared(block: () -> Unit) {
+        onAppeared = {
+            block()
+            onAppeared = null
+        }
+
+        runOnAppearedIfEligible()
+    }
+
+    private fun runOnAppearedIfEligible() {
+        if (window != null && !CGRectIsEmpty(frame)) {
+            onAppeared?.invoke()
+        }
+    }
+
+    override fun layoutSubviews() {
+        super.layoutSubviews()
+
+        runOnAppearedIfEligible()
+    }
+
+    override fun didMoveToWindow() {
+        super.didMoveToWindow()
+
+        runOnAppearedIfEligible()
+    }
+
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         // forwards touches forward to the children, is never a target for a touch
         val result = super.hitTest(point, withEvent)

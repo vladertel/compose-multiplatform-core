@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
+import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
@@ -119,7 +120,7 @@ internal class ComposeViewController(
     private var hasViewAppeared: Boolean = false
 
     fun hasInvalidations(): Boolean {
-        return mediator?.hasInvalidations() == true || layers.hasInvalidations
+        return mediator?.hasInvalidations == true || layers.hasInvalidations
     }
 
     @OptIn(ExperimentalComposeApi::class)
@@ -319,19 +320,6 @@ internal class ComposeViewController(
     fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext =
         ComposeSceneContextImpl(platformContext)
 
-    @OptIn(ExperimentalComposeApi::class)
-    private fun createMetalView(
-        interopContainer: UIKitInteropContainer,
-        renderRelegate: SkikoRenderDelegate
-    ): MetalView =
-        MetalView(
-            renderDelegate = renderRelegate,
-            retrieveInteropTransaction = {
-                interopContainer.retrieveTransaction()
-            }
-        ).apply {
-            canBeOpaque = configuration.opaque
-        }
 
     @OptIn(ExperimentalComposeApi::class)
     private fun createComposeScene(
@@ -373,7 +361,6 @@ internal class ComposeViewController(
             focusStack = focusStack,
             windowContext = windowContext,
             coroutineContext = coroutineContext,
-            metalViewFactory = ::createMetalView,
             composeSceneFactory = ::createComposeScene,
         )
         mediator.setContent {
@@ -419,6 +406,7 @@ internal class ComposeViewController(
                 providingCompositionLocals = {
                     ProvideContainerCompositionLocals(this@ComposeViewController, it)
                 },
+                metalView = layers.metalView,
                 initDensity = density,
                 initLayoutDirection = layoutDirection,
                 configuration = configuration,

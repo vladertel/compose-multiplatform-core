@@ -24,6 +24,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -78,8 +80,6 @@ import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
 import platform.CoreGraphics.CGAffineTransformMakeTranslation
@@ -166,25 +166,6 @@ private class SemanticsOwnerListenerImpl(
     }
 }
 
-private class MetalViewRenderer(
-    private val scene: ComposeScene,
-    private val sceneOffset: () -> Offset,
-) : SkikoRenderDelegate {
-    override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-        canvas.withSceneOffset {
-            scene.render(asComposeCanvas(), nanoTime)
-        }
-    }
-
-    private inline fun Canvas.withSceneOffset(block: Canvas.() -> Unit) {
-        val sceneOffset = sceneOffset()
-        save()
-        translate(sceneOffset.x, sceneOffset.y)
-        block()
-        restore()
-    }
-}
-
 internal abstract class ComposeSceneMediator(
     private val parentView: UIView,
     private val configuration: ComposeUIViewControllerConfiguration,
@@ -195,7 +176,6 @@ internal abstract class ComposeSceneMediator(
      */
     private val measureDrawLayerBounds: Boolean = false,
     private val coroutineContext: CoroutineContext,
-    private val metalViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> MetalView,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -222,16 +202,12 @@ internal abstract class ComposeSceneMediator(
                 }
         }
 
-    private val scene: ComposeScene by lazy {
+    protected val scene: ComposeScene by lazy {
         composeSceneFactory(
             ::onComposeSceneInvalidate,
             IOSPlatformContext(),
             coroutineContext,
         )
-    }
-
-    fun hasInvalidations(): Boolean {
-        return scene.hasInvalidations() || keyboardManager.isAnimating
     }
 
     var compositionLocalContext
@@ -242,9 +218,7 @@ internal abstract class ComposeSceneMediator(
 
     val focusManager get() = scene.focusManager
 
-    private val metalView: MetalView by lazy {
-        metalViewFactory(interopContainer, metalViewRenderer)
-    }
+    protected abstract val metalView: MetalView
 
     private val applicationForegroundStateListener =
         ApplicationForegroundStateListener { isForeground ->
@@ -261,7 +235,7 @@ internal abstract class ComposeSceneMediator(
      */
     private val rootView = ComposeSceneMediatorView()
 
-    private val interactionView =
+    protected val interactionView =
         InteractionUIView(
             hitTestInteropView = ::hitTestInteropView,
             onTouchesEvent = ::onTouchesEvent,
@@ -348,14 +322,18 @@ internal abstract class ComposeSceneMediator(
      *
      * Otherwise [UIEvent]s will be dispatched with the 60hz frequency.
      */
+    // TODO: counting handler for layer compose scene mediator
     private fun onGestureEvent(gestureEvent: GestureEvent) {
         val needHighFrequencyPolling =
-            when(gestureEvent) {
+            when (gestureEvent) {
                 GestureEvent.BEGAN -> true
                 GestureEvent.ENDED -> false
             }
         metalView.needsProactiveDisplayLink = needHighFrequencyPolling
     }
+
+    val hasInvalidations: Boolean
+        get() = scene.hasInvalidations() || keyboardManager.isAnimating
 
     private fun hitTestInteropView(point: CValue<CGPoint>, event: UIEvent?): UIView? =
         point.useContents {
@@ -419,39 +397,13 @@ internal abstract class ComposeSceneMediator(
         )
     }
 
-    private val metalViewRenderer by lazy {
-        MetalViewRenderer(
-            scene = scene,
-            sceneOffset = { -metalViewBoundsInPx.topLeft.toOffset() }
-        )
-    }
-
     var density by scene::density
     var layoutDirection by scene::layoutDirection
-
-    private var onAttachedToWindow: (() -> Unit)? = null
-    private fun runOnceViewAttached(block: () -> Unit) {
-        if (metalView.window == null) {
-            onAttachedToWindow = {
-                onAttachedToWindow = null
-                block()
-            }
-        } else {
-            block()
-        }
-    }
 
     fun hitTestInteractionView(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? =
         interactionView.hitTest(point, withEvent)
 
     init {
-        metalView.onAttachedToWindow = {
-            metalView.onAttachedToWindow = null
-            viewWillLayoutSubviews()
-            onAttachedToWindow?.invoke()
-            focusStack?.pushAndFocus(interactionView)
-        }
-
         rootView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(rootView)
         NSLayoutConstraint.activateConstraints(
@@ -463,28 +415,15 @@ internal abstract class ComposeSceneMediator(
         NSLayoutConstraint.activateConstraints(
             getConstraintsToFillParent(interactionView, rootView)
         )
-        // FIXME: interactionView might be smaller than metalView (shadows etc)
-        interactionView.addSubview(metalView)
     }
 
     fun setContent(content: @Composable () -> Unit) {
-        runOnceViewAttached {
+        rootView.runOnceOnAppeared {
             scene.setContent {
-                /**
-                 * TODO isReadyToShowContent it is workaround we need to fix.
-                 *  https://github.com/JetBrains/compose-multiplatform-core/pull/861
-                 *  Density problem already was fixed.
-                 *  But there are still problem with safeArea.
-                 *  Elijah founded possible solution:
-                 *   https://developer.apple.com/documentation/uikit/uiviewcontroller/4195485-viewisappearing
-                 *   It is public for iOS 17 and hope back ported for iOS 13 as well (but we need to check)
-                 */
-                if (metalView.isReadyToShowContentState.value) {
-                    ProvideComposeSceneMediatorCompositionLocals {
-                        interopContainer.TrackInteropPlacementContainer(
-                            content = content
-                        )
-                    }
+                ProvideComposeSceneMediatorCompositionLocals {
+                    interopContainer.TrackInteropPlacementContainer(
+                        content = content
+                    )
                 }
             }
         }
@@ -514,16 +453,15 @@ internal abstract class ComposeSceneMediator(
             content = content
         )
 
-    fun dispose() {
+    open fun dispose() {
         uiKitTextInputService.stopInput()
         applicationForegroundStateListener.dispose()
         focusStack?.popUntilNext(metalView)
         keyboardManager.dispose()
-        metalView.dispose()
         interactionView.dispose()
+
         rootView.removeFromSuperview()
-        interactionView.removeFromSuperview()
-        metalView.removeFromSuperview()
+
         scene.close()
         interopContainer.dispose()
     }
@@ -602,7 +540,7 @@ internal abstract class ComposeSceneMediator(
             )
         }
 
-    private val metalViewBoundsInPx: IntRect
+    protected val metalViewBoundsInPx: IntRect
         get() = with(parentView.density) {
             metalView.frame.useContents { asDpRect().toRect().roundToIntRect() }
         }
@@ -616,7 +554,7 @@ internal abstract class ComposeSceneMediator(
             return
         }
 
-        val startSnapshotView = metalView.snapshotViewAfterScreenUpdates(false) ?: return
+        val startSnapshotView = rootView.snapshotViewAfterScreenUpdates(false) ?: return
         startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(startSnapshotView)
         targetSize.useContents {

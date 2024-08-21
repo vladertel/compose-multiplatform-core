@@ -59,6 +59,7 @@ internal class UIKitComposeSceneLayer(
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
     private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
+    private val metalView: MetalView,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
@@ -120,13 +121,13 @@ internal class UIKitComposeSceneLayer(
 
     private val mediator by lazy {
         LayerComposeSceneMediator(
-            parentView = parentView,
-            configuration = configuration,
-            focusStack = focusStack,
-            windowContext = windowContext,
+            parentView,
+            configuration,
+            focusStack,
+            windowContext,
             measureDrawLayerBounds = true,
             coroutineContext = compositionContext.effectCoroutineContext,
-            metalViewFactory = ::createMetalView,
+            metalView,
             composeSceneFactory = ::createComposeScene
         )
     }
@@ -174,7 +175,7 @@ internal class UIKitComposeSceneLayer(
             invalidate = invalidate,
         )
 
-    fun hasInvalidations() = mediator.hasInvalidations()
+    val hasInvalidations by mediator::hasInvalidations
 
     override var density by mediator::density
     override var layoutDirection by mediator::layoutDirection

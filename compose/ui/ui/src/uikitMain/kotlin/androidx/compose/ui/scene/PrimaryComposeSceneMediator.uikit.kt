@@ -16,15 +16,39 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
+import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.UIKit.UIView
+
+private class MetalViewRenderer(
+    private val scene: ComposeScene,
+    private val sceneOffset: () -> Offset,
+) : SkikoRenderDelegate {
+    override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+        canvas.withSceneOffset {
+            scene.render(asComposeCanvas(), nanoTime)
+        }
+    }
+
+    private inline fun Canvas.withSceneOffset(block: Canvas.() -> Unit) {
+        val sceneOffset = sceneOffset()
+        save()
+        translate(sceneOffset.x, sceneOffset.y)
+        block()
+        restore()
+    }
+}
 
 /**
  * A mediator for the primary [ComposeScene], that owns its own rendering view.
@@ -36,20 +60,32 @@ internal class PrimaryComposeSceneMediator(
     windowContext: PlatformWindowContext,
     measureDrawLayerBounds: Boolean = false,
     coroutineContext: CoroutineContext,
-    metalViewFactory: (UIKitInteropContainer, SkikoRenderDelegate) -> MetalView,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
         coroutineContext: CoroutineContext
     ) -> ComposeScene
-): ComposeSceneMediator(
+) : ComposeSceneMediator(
     parentView,
     configuration,
     focusStack,
     windowContext,
     measureDrawLayerBounds,
     coroutineContext,
-    metalViewFactory,
     composeSceneFactory
 ) {
+    override val metalView: MetalView = MetalView(
+        renderDelegate = object : SkikoRenderDelegate {
+            override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+                scene.render(canvas.asComposeCanvas(), nanoTime)
+            }
+        },
+        retrieveInteropTransaction = {
+            interopContainer.retrieveTransaction()
+        }
+    )
+
+    init {
+        interactionView.addSubview(metalView)
+    }
 }
