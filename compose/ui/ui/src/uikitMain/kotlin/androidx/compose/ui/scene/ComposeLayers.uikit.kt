@@ -87,6 +87,11 @@ internal class ComposeLayers: SkikoRenderDelegate {
 
         layers.add(layer)
 
+        view.insertSubview(layer.view, belowSubview = metalView)
+        NSLayoutConstraint.activateConstraints(
+            layer.view.layoutConstraintsToMatch(view)
+        )
+
         if (isFirstLayer) {
             // The content of previous layers drawn on the Metal view should be cleared and
             // redrawn synchronously after the new layer is attached to avoid flickering.

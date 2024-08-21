@@ -57,7 +57,6 @@ import platform.UIKit.UIView
 
 // TODO: make LayerComposeSceneMediator a ComposeSceneLayer
 internal class UIKitComposeSceneLayer(
-    parentView: UIView,
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
     private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
@@ -76,10 +75,14 @@ internal class UIKitComposeSceneLayer(
         eventType: PointerEventType
     ) -> Unit)? = null
 
-    private val touchesInterceptingView: UIView = object : UIView(
+    val view: UIView = object : UIView(
         frame = CGRectZero.readValue()
     ) {
         private var previousSuccessHitTestTimestamp: Double? = null
+
+        init {
+            translatesAutoresizingMaskIntoConstraints = false
+        }
 
         private fun touchStartedOutside(withEvent: UIEvent?) {
             if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
@@ -123,7 +126,7 @@ internal class UIKitComposeSceneLayer(
 
     private val mediator by lazy {
         LayerComposeSceneMediator(
-            touchesInterceptingView,
+            view,
             configuration,
             focusStack,
             windowContext,
@@ -143,15 +146,6 @@ internal class UIKitComposeSceneLayer(
      * The maximum amount to inflate the [drawBounds] comparing to [boundsInWindow].
      */
     private var maxDrawInflate = IntRect.Zero
-
-    init {
-        touchesInterceptingView.translatesAutoresizingMaskIntoConstraints = false
-
-        parentView.addSubview(touchesInterceptingView)
-        NSLayoutConstraint.activateConstraints(
-            touchesInterceptingView.layoutConstraintsToMatch(parentView)
-        )
-    }
 
     private fun createMetalView(
         interopContainer: UIKitInteropContainer,
@@ -232,7 +226,7 @@ internal class UIKitComposeSceneLayer(
 
     internal fun dispose() {
         mediator.dispose()
-        touchesInterceptingView.removeFromSuperview()
+        view.removeFromSuperview()
     }
 
     override fun setContent(content: @Composable () -> Unit) {

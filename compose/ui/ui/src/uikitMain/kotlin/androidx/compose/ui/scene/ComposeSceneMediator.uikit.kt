@@ -205,7 +205,7 @@ internal abstract class ComposeSceneMediator(
     /**
      * View wrapping the hierarchy managed by this Mediator.
      */
-    protected val view = ComposeSceneMediatorView()
+    internal val view = ComposeSceneMediatorView()
 
     protected val interactionView =
         InteractionUIView(
@@ -373,10 +373,6 @@ internal abstract class ComposeSceneMediator(
 
     init {
         view.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(view)
-        NSLayoutConstraint.activateConstraints(
-            view.layoutConstraintsToMatch(parentView)
-        )
 
         interactionView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(interactionView)

@@ -44,6 +44,7 @@ import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
 import androidx.compose.ui.uikit.PlistSanityCheck
 import androidx.compose.ui.uikit.density
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.uikit.utils.CMPViewController
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -66,6 +67,7 @@ import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeEqualToSize
 import platform.Foundation.NSStringFromClass
+import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIApplication
 import platform.UIKit.UIColor
 import platform.UIKit.UIContentSizeCategoryAccessibilityExtraExtraExtraLarge
@@ -317,7 +319,6 @@ internal class ComposeViewController(
                 compositionContext: CompositionContext
             ): ComposeSceneLayer {
                 val layer = UIKitComposeSceneLayer(
-                    parentView = layers.view,
                     onClosed = {
                         detachLayer(it)
                     },
@@ -388,6 +389,11 @@ internal class ComposeViewController(
             }
 
             it.setLayout(PrimaryComposeSceneMediatorLayout.Fill)
+
+            view.addSubview(it.view)
+            NSLayoutConstraint.activateConstraints(
+                it.view.layoutConstraintsToMatch(view)
+            )
         }
 
         return mediator
