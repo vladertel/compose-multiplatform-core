@@ -47,12 +47,10 @@ import kotlinx.cinterop.useContents
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectZero
-import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UITouch
 import platform.UIKit.UIView
-import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
 internal class UIKitComposeSceneLayer(
     private val parentView: UIView,
