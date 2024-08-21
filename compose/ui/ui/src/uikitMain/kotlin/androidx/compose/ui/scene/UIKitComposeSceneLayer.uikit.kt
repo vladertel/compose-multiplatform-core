@@ -124,7 +124,7 @@ internal class UIKitComposeSceneLayer(
         }
     }
 
-    private val mediator by lazy {
+    val mediator =
         LayerComposeSceneMediator(
             view,
             configuration,
@@ -134,6 +134,12 @@ internal class UIKitComposeSceneLayer(
             coroutineContext = compositionContext.effectCoroutineContext,
             metalView,
             composeSceneFactory = ::createComposeScene
+        )
+
+    init {
+        view.addSubview(mediator.view)
+        NSLayoutConstraint.activateConstraints(
+            mediator.view.layoutConstraintsToMatch(view)
         )
     }
 
@@ -146,18 +152,6 @@ internal class UIKitComposeSceneLayer(
      * The maximum amount to inflate the [drawBounds] comparing to [boundsInWindow].
      */
     private var maxDrawInflate = IntRect.Zero
-
-    private fun createMetalView(
-        interopContainer: UIKitInteropContainer,
-        renderDelegate: SkikoRenderDelegate
-    ) = MetalView(
-            renderDelegate = recordDrawBounds(renderDelegate),
-            retrieveInteropTransaction = {
-                interopContainer.retrieveTransaction()
-            }
-        ).apply {
-            canBeOpaque = false
-        }
 
     private fun createComposeScene(
         invalidate: () -> Unit,
