@@ -497,7 +497,7 @@ private class GestureRecognizerHandlerImpl(
  * @param hitTestInteropView A callback to find an [InteropView] at the given point.
  * @param onTouchesEvent A callback to notify the Compose runtime about touch events.
  * @param onGestureEvent A callback to notify that touches sequence state has began or ended.
- * @param inInteractionBounds A callback to check if the given point is within the interaction
+ * @param isPointInsideInteractionBounds A callback to check if the given point is within the interaction
  * bounds as defined by the owning implementation.
  * @param onKeyboardPresses A callback to notify the Compose runtime about keyboard presses.
  * The parameter is a [Set] of [UIPress] objects. Erasure happens due to K/N not supporting Obj-C
@@ -507,7 +507,7 @@ internal class InteractionUIView(
     private var hitTestInteropView: (point: CValue<CGPoint>, event: UIEvent?) -> UIView?,
     onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: TouchesEventKind) -> Unit,
     onGestureEvent: (GestureEvent) -> Unit,
-    private var inInteractionBounds: (CValue<CGPoint>) -> Boolean,
+    private var isPointInsideInteractionBounds: (CValue<CGPoint>) -> Boolean,
     private var onKeyboardPresses: (Set<*>) -> Unit,
 ) : UIView(CGRectZero.readValue()) {
     private val gestureRecognizerHandler = GestureRecognizerHandlerImpl(
@@ -549,7 +549,7 @@ internal class InteractionUIView(
 
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? =
         savingHitTestResult {
-            if (!inInteractionBounds(point)) {
+            if (!isPointInsideInteractionBounds(point)) {
                 null
             } else {
                 // Find if a scene contains an [InteropView]
@@ -582,7 +582,7 @@ internal class InteractionUIView(
 
         hitTestInteropView = { _, _ -> null }
 
-        inInteractionBounds = { false }
+        isPointInsideInteractionBounds = { false }
         onKeyboardPresses = {}
     }
 

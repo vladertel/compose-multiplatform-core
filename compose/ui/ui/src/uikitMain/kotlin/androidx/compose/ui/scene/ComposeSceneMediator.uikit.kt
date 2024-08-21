@@ -266,7 +266,7 @@ internal abstract class ComposeSceneMediator(
             hitTestInteropView = ::hitTestInteropView,
             onTouchesEvent = ::onTouchesEvent,
             onGestureEvent = ::onGestureEvent,
-            inInteractionBounds = { point ->
+            isPointInsideInteractionBounds = { point ->
                 val positionInContainer = point.useContents {
                     asDpOffset().toOffset(density = parentView.density).round()
                 }
