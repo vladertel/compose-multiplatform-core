@@ -227,9 +227,9 @@ internal abstract class ComposeSceneMediator(
         }
 
     /**
-     * View, that contains [interactionView] and is added to [parentView]
+     * View wrapping the hierarchy managed by this Mediator.
      */
-    protected val rootView = ComposeSceneMediatorView()
+    protected val view = ComposeSceneMediatorView()
 
     protected val interactionView =
         InteractionUIView(
@@ -262,7 +262,7 @@ internal abstract class ComposeSceneMediator(
     @OptIn(ExperimentalComposeApi::class)
     private val semanticsOwnerListener by lazy {
         SemanticsOwnerListenerImpl(
-            rootView,
+            view,
             coroutineContext,
             getAccessibilitySyncOptions = {
                 configuration.accessibilitySyncOptions
@@ -302,7 +302,7 @@ internal abstract class ComposeSceneMediator(
                 metalView.setNeedsDisplay() // redraw on next frame
                 CATransaction.flush() // clear all animations
             },
-            getRootView = { rootView },
+            getRootView = { view },
             viewConfiguration = viewConfiguration,
             focusStack = focusStack,
             onKeyboardPresses = ::onKeyboardPresses
@@ -400,21 +400,21 @@ internal abstract class ComposeSceneMediator(
         interactionView.hitTest(point, withEvent)
 
     init {
-        rootView.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(rootView)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        parentView.addSubview(view)
         NSLayoutConstraint.activateConstraints(
-            rootView.layoutConstraintsToMatch(parentView)
+            view.layoutConstraintsToMatch(parentView)
         )
 
         interactionView.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(interactionView)
+        view.addSubview(interactionView)
         NSLayoutConstraint.activateConstraints(
-            interactionView.layoutConstraintsToMatch(rootView)
+            interactionView.layoutConstraintsToMatch(view)
         )
     }
 
     fun setContent(content: @Composable () -> Unit) {
-        rootView.runOnceOnAppeared {
+        view.runOnceOnAppeared {
             scene.setContent {
                 ProvideComposeSceneMediatorCompositionLocals {
                     interopContainer.TrackInteropPlacementContainer(
@@ -456,7 +456,7 @@ internal abstract class ComposeSceneMediator(
         keyboardManager.dispose()
         interactionView.dispose()
 
-        rootView.removeFromSuperview()
+        view.removeFromSuperview()
 
         scene.close()
         interopContainer.dispose()
@@ -575,7 +575,7 @@ internal abstract class ComposeSceneMediator(
 
     @OptIn(ExperimentalComposeApi::class)
     private var viewForKeyboardOffsetTransform = if (configuration.platformLayers) {
-        rootView
+        view
     } else {
         parentView
     }

@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
@@ -50,4 +51,7 @@ internal class LayerComposeSceneMediator(
     coroutineContext,
     composeSceneFactory
 ) {
+    fun render(canvas: Canvas, nanoTime: Long) {
+        scene.render(canvas, nanoTime)
+    }
 }

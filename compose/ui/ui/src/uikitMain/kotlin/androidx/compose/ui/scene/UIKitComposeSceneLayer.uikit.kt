@@ -19,7 +19,9 @@ package androidx.compose.ui.scene
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalContext
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -44,6 +46,7 @@ import kotlin.math.max
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
+import org.jetbrains.skia.Paint
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectZero
@@ -52,6 +55,7 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UITouch
 import platform.UIKit.UIView
 
+// TODO: make LayerComposeSceneMediator a ComposeSceneLayer
 internal class UIKitComposeSceneLayer(
     private val parentView: UIView,
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
@@ -190,6 +194,17 @@ internal class UIKitComposeSceneLayer(
             field = value
             backgroundView.setBackgroundColor(value?.toUIColor())
         }
+
+    fun render(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+//        canvas.drawRect(
+//            left = 0f,
+//            top = 0f,
+//            right = width.toFloat(),
+//            bottom = width.toFloat(),
+//
+//        )
+        mediator.render(canvas, nanoTime)
+    }
 
     override fun close() {
         onClosed(this)

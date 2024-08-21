@@ -371,7 +371,11 @@ internal class ComposeViewController(
     }
 
     fun attachLayer(layer: UIKitComposeSceneLayer) {
-        layers.attach(layer, hasViewAppeared)
+        val window = checkNotNull(view.window) {
+            "Cannot attach layer if the view is not in the window hierarchy"
+        }
+
+        layers.attach(window, layer, hasViewAppeared)
     }
 
     fun detachLayer(layer: UIKitComposeSceneLayer) {
@@ -388,9 +392,7 @@ internal class ComposeViewController(
             compositionContext: CompositionContext
         ): ComposeSceneLayer {
             val layer = UIKitComposeSceneLayer(
-                parentView = checkNotNull(view.window) {
-                    "Can't create a layer when the view is not attached to a window"
-                },
+                parentView = layers.view,
                 onClosed = {
                     detachLayer(it)
                 },

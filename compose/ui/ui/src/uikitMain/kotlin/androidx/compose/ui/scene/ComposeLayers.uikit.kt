@@ -19,17 +19,23 @@ package androidx.compose.ui.scene
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.window.MetalView
-import kotlinx.cinterop.CValue
+import kotlinx.cinterop.readValue
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
-import platform.CoreGraphics.CGSize
-import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
+import platform.CoreGraphics.CGRectZero
+import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIView
+import platform.UIKit.UIWindow
+
+internal class ComposeLayersView: UIView(frame = CGRectZero.readValue())
 
 internal class ComposeLayers: SkikoRenderDelegate {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
 
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
+
+    val view = ComposeLayersView()
 
     val metalView: MetalView = MetalView(
         renderDelegate = this,
@@ -39,8 +45,21 @@ internal class ComposeLayers: SkikoRenderDelegate {
         }
     )
 
+    init {
+        view.translatesAutoresizingMaskIntoConstraints = false
+
+        metalView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(metalView)
+
+        NSLayoutConstraint.activateConstraints(
+            metalView.layoutConstraintsToMatch(view)
+        )
+    }
+
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-        TODO()
+        layers.fastForEach {
+            it.render()
+        }
     }
 
     fun dispose(hasViewAppeared: Boolean) {
@@ -57,10 +76,22 @@ internal class ComposeLayers: SkikoRenderDelegate {
 
             layer.dispose()
         }
+
+        view.removeFromSuperview()
     }
 
-    fun attach(layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
+    fun attach(window: UIWindow, layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
+        val isFirstLayer = layers.isEmpty()
+
         layers.add(layer)
+
+        if (isFirstLayer) {
+            window.addSubview(view)
+            NSLayoutConstraint.activateConstraints(
+                view.layoutConstraintsToMatch(window)
+            )
+            window.layoutIfNeeded()
+        }
 
         if (hasViewAppeared) {
             layer.sceneDidAppear()
@@ -72,6 +103,10 @@ internal class ComposeLayers: SkikoRenderDelegate {
             layer.sceneWillDisappear()
         }
         layers.remove(layer)
+
+        if (layers.isEmpty()) {
+            view.removeFromSuperview()
+        }
     }
 
     // TODO: investigate correctness of these implementations

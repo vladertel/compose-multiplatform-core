@@ -98,7 +98,7 @@ internal class PrimaryComposeSceneMediator(
         targetSize: CValue<CGSize>,
         coordinator: UIViewControllerTransitionCoordinatorProtocol
     ) {
-        val startSnapshotView = rootView.snapshotViewAfterScreenUpdates(false) ?: return
+        val startSnapshotView = view.snapshotViewAfterScreenUpdates(false) ?: return
         startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
         parentView.addSubview(startSnapshotView)
         targetSize.useContents {
@@ -130,6 +130,6 @@ internal class PrimaryComposeSceneMediator(
             }
         )
 
-        rootView.layoutIfNeeded()
+        view.layoutIfNeeded()
     }
 }
