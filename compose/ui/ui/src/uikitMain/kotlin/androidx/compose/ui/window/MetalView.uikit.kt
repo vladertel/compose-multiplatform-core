@@ -16,9 +16,6 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.floor
 import kotlin.math.roundToLong
@@ -29,7 +26,6 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGFloat
 import platform.CoreGraphics.CGRectIsEmpty
-import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSTimeInterval
@@ -83,6 +79,19 @@ internal class MetalView(
      */
     var needsProactiveDisplayLink by redrawer::needsProactiveDisplayLink
 
+    /**
+     * Indicates that the view needs to be drawn synchronously with the next layout pass to avoid
+     * flickering.
+     */
+    private var needsSynchronousDraw = true
+
+    /**
+     * Raise the flag to indicate that the view needs to be drawn synchronously with the next layout.
+     */
+    fun setNeedsSynchronousDraw() {
+        needsSynchronousDraw = true
+    }
+
     init {
         userInteractionEnabled = false
 
@@ -132,17 +141,12 @@ internal class MetalView(
             drawableHeight = size.height * contentScaleFactor
         }
 
-        // If drawableSize is zero in any dimension it means that it's a first layout
-        // we need to synchronously dispatch first draw and block until it's presented
-        // so user doesn't have a flicker
-        val needsSynchronousDraw = metalLayer.drawableSize.useContents {
-            width == 0.0 || height == 0.0
-        }
-
         metalLayer.drawableSize = CGSizeMake(drawableWidth, drawableHeight)
 
         if (needsSynchronousDraw) {
             redrawer.drawSynchronously()
+
+            needsSynchronousDraw = false
         }
     }
 

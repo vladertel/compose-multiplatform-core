@@ -306,9 +306,40 @@ internal class ComposeViewController(
         super.didReceiveMemoryWarning()
     }
 
-    fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext =
-        ComposeSceneContextImpl(platformContext)
+    fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext {
+        return object : ComposeSceneContext {
+            override val platformContext: PlatformContext = platformContext
 
+            override fun createPlatformLayer(
+                density: Density,
+                layoutDirection: LayoutDirection,
+                focusable: Boolean,
+                compositionContext: CompositionContext
+            ): ComposeSceneLayer {
+                val layer = UIKitComposeSceneLayer(
+                    parentView = layers.view,
+                    onClosed = {
+                        detachLayer(it)
+                    },
+                    createComposeSceneContext = ::createComposeSceneContext,
+                    providingCompositionLocals = {
+                        ProvideContainerCompositionLocals(this@ComposeViewController, it)
+                    },
+                    metalView = layers.metalView,
+                    initDensity = density,
+                    initLayoutDirection = layoutDirection,
+                    configuration = configuration,
+                    focusStack = if (focusable) focusStack else null,
+                    windowContext = windowContext,
+                    compositionContext = compositionContext,
+                )
+
+                attachLayer(layer)
+
+                return layer
+            }
+        }
+    }
 
     @OptIn(ExperimentalComposeApi::class)
     private fun createComposeScene(
@@ -320,7 +351,7 @@ internal class ComposeViewController(
             density = view.density,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
-            composeSceneContext = ComposeSceneContextImpl(
+            composeSceneContext = createComposeSceneContext(
                 platformContext = platformContext
             ),
             invalidate = invalidate,
@@ -330,7 +361,7 @@ internal class ComposeViewController(
             density = view.density,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
-            composeSceneContext = ComposeSceneContextImpl(
+            composeSceneContext = createComposeSceneContext(
                 platformContext = platformContext
             ),
             invalidate = invalidate,
@@ -380,39 +411,6 @@ internal class ComposeViewController(
 
     fun detachLayer(layer: UIKitComposeSceneLayer) {
         layers.detach(layer, hasViewAppeared)
-    }
-
-    private inner class ComposeSceneContextImpl(
-        override val platformContext: PlatformContext,
-    ) : ComposeSceneContext {
-        override fun createPlatformLayer(
-            density: Density,
-            layoutDirection: LayoutDirection,
-            focusable: Boolean,
-            compositionContext: CompositionContext
-        ): ComposeSceneLayer {
-            val layer = UIKitComposeSceneLayer(
-                parentView = layers.view,
-                onClosed = {
-                    detachLayer(it)
-                },
-                createComposeSceneContext = ::createComposeSceneContext,
-                providingCompositionLocals = {
-                    ProvideContainerCompositionLocals(this@ComposeViewController, it)
-                },
-                metalView = layers.metalView,
-                initDensity = density,
-                initLayoutDirection = layoutDirection,
-                configuration = configuration,
-                focusStack = if (focusable) focusStack else null,
-                windowContext = windowContext,
-                compositionContext = compositionContext,
-            )
-
-            attachLayer(layer)
-
-            return layer
-        }
     }
 }
 

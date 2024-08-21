@@ -16,8 +16,10 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
+import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.MetalView
 import kotlinx.cinterop.readValue
 import org.jetbrains.skia.Canvas
@@ -39,10 +41,7 @@ internal class ComposeLayers: SkikoRenderDelegate {
 
     val metalView: MetalView = MetalView(
         renderDelegate = this,
-        retrieveInteropTransaction = {
-            // TODO: proper implementation
-            UIKitInteropMutableTransaction()
-        }
+        retrieveInteropTransaction = ::retrieveAndMergeInteropTransactions
     )
 
     init {
@@ -57,8 +56,10 @@ internal class ComposeLayers: SkikoRenderDelegate {
     }
 
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+        val composeCanvas = canvas.asComposeCanvas()
+
         layers.fastForEach {
-            it.render()
+            it.render(composeCanvas, width, height, nanoTime)
         }
     }
 
@@ -86,6 +87,11 @@ internal class ComposeLayers: SkikoRenderDelegate {
         layers.add(layer)
 
         if (isFirstLayer) {
+            // The content of previous layers drawn on the Metal view should be cleared and
+            // redrawn synchronously after the new layer is attached to avoid flickering.
+
+            metalView.setNeedsSynchronousDraw()
+
             window.addSubview(view)
             NSLayoutConstraint.activateConstraints(
                 view.layoutConstraintsToMatch(window)
@@ -110,6 +116,7 @@ internal class ComposeLayers: SkikoRenderDelegate {
     }
 
     // TODO: investigate correctness of these implementations
+
     fun viewSafeAreaInsetsDidChange() {
         layers.fastForEach {
             it.viewSafeAreaInsetsDidChange()
@@ -132,5 +139,16 @@ internal class ComposeLayers: SkikoRenderDelegate {
         layers.fastForEach {
             it.sceneWillDisappear()
         }
+    }
+
+    // End of suspicious code
+
+    /**
+     * Iterate through existing layers and merge their interop transactions to be consumed by the
+     * [MetalView]
+     */
+    private fun retrieveAndMergeInteropTransactions(): UIKitInteropTransaction {
+        // TODO: proper implementation
+        return UIKitInteropMutableTransaction()
     }
 }
