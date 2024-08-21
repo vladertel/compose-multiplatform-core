@@ -21,7 +21,7 @@ import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.skiko.RecordDrawRectRenderDecorator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
-import androidx.compose.ui.uikit.toUIColor
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -46,7 +45,6 @@ import kotlin.math.max
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import org.jetbrains.skia.Paint
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectZero
@@ -191,18 +189,26 @@ internal class UIKitComposeSceneLayer(
 
     override var scrimColor: Color? = null
         set(value) {
-            field = value
-            backgroundView.setBackgroundColor(value?.toUIColor())
+            if (field != value) {
+                field = value
+                value?.let {
+                    scrimPaint.color = value
+                }
+            }
         }
 
+    private val scrimPaint = Paint()
+
     fun render(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-//        canvas.drawRect(
-//            left = 0f,
-//            top = 0f,
-//            right = width.toFloat(),
-//            bottom = width.toFloat(),
-//
-//        )
+        if (scrimColor != null) {
+            canvas.drawRect(
+                left = 0f,
+                top = 0f,
+                right = width.toFloat(),
+                bottom = height.toFloat(),
+                paint = scrimPaint
+            )
+        }
         mediator.render(canvas, nanoTime)
     }
 
