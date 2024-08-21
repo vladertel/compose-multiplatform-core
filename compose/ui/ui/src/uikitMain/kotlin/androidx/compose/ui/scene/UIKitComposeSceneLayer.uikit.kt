@@ -206,16 +206,7 @@ internal class UIKitComposeSceneLayer(
             )
         }
 
-        recordDrawBounds(object : SkikoRenderDelegate {
-            override fun onRender(
-                canvas: org.jetbrains.skia.Canvas,
-                width: Int,
-                height: Int,
-                nanoTime: Long
-            ) {
-                mediator.render(canvas.asComposeCanvas(), nanoTime)
-            }
-        })
+        mediator.render(canvas, nanoTime)
     }
 
     override fun close() {

@@ -43,7 +43,9 @@ internal class ComposeLayers: SkikoRenderDelegate {
     val metalView: MetalView = MetalView(
         renderDelegate = this,
         retrieveInteropTransaction = ::retrieveAndMergeInteropTransactions
-    )
+    ).apply {
+        canBeOpaque = false
+    }
 
     init {
         view.translatesAutoresizingMaskIntoConstraints = false
