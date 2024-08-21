@@ -17,6 +17,7 @@
 package androidx.compose.ui.scene
 
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction

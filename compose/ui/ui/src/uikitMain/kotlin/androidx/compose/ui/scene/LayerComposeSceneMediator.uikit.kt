@@ -20,10 +20,26 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.uikit.density
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.asCGRect
+import androidx.compose.ui.unit.toDpRect
+import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
+import kotlinx.cinterop.CValue
+import platform.CoreGraphics.CGPoint
+import platform.CoreGraphics.CGRectContainsPoint
 import platform.UIKit.UIView
+
+/**
+ * Layout of sceneView on the screen
+ */
+data class LayerComposeSceneMediatorLayout(
+    val renderRect: IntRect,
+    val interactionRect: IntRect
+)
 
 /**
  * A mediator for the [ComposeScene] of a layer.
@@ -51,7 +67,22 @@ internal class LayerComposeSceneMediator(
     coroutineContext,
     composeSceneFactory
 ) {
+    private var layout: LayerComposeSceneMediatorLayout? = null
+
+    override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
+        layout?.let {
+            val density = parentView.density
+
+            val cgRect = it.interactionRect.toRect().toDpRect(density).asCGRect()
+
+            CGRectContainsPoint(cgRect, point)
+        } ?: false
+
     fun render(canvas: Canvas, nanoTime: Long) {
         scene.render(canvas, nanoTime)
+    }
+
+    fun setLayout(layout: LayerComposeSceneMediatorLayout) {
+        this.layout = layout
     }
 }

@@ -52,16 +52,14 @@ import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
 import androidx.compose.ui.uikit.density
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.asDpRect
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.round
-import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.LocalInteropContainer
@@ -82,8 +80,6 @@ import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGAffineTransformMakeTranslation
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
-import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGSize
 import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
 import platform.UIKit.NSLayoutConstraint
@@ -93,16 +89,6 @@ import platform.UIKit.UITouch
 import platform.UIKit.UITouchPhase
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
-
-/**
- * Layout of sceneView on the screen
- */
-internal sealed interface ComposeSceneMediatorLayout {
-    data object Undefined : ComposeSceneMediatorLayout
-    data object Fill : ComposeSceneMediatorLayout
-    class Center(val size: CValue<CGSize>) : ComposeSceneMediatorLayout
-    class Custom(val renderBounds: IntRect, val interactionBounds: IntRect) : ComposeSceneMediatorLayout
-}
 
 /**
  * iOS specific-implementation of [PlatformContext.SemanticsOwnerListener] used to track changes in [SemanticsOwner].
@@ -178,16 +164,6 @@ internal abstract class ComposeSceneMediator(
     ) -> ComposeScene
 ) {
     private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
-    private var layout: ComposeSceneMediatorLayout = ComposeSceneMediatorLayout.Undefined
-
-    protected var constraints: List<NSLayoutConstraint> = emptyList()
-        set(value) {
-            if (field.isNotEmpty()) {
-                NSLayoutConstraint.deactivateConstraints(field)
-            }
-            field = value
-            NSLayoutConstraint.activateConstraints(value)
-        }
 
     private val viewConfiguration: ViewConfiguration =
         object : ViewConfiguration by EmptyViewConfiguration {
@@ -236,12 +212,7 @@ internal abstract class ComposeSceneMediator(
             hitTestInteropView = ::hitTestInteropView,
             onTouchesEvent = ::onTouchesEvent,
             onGestureEvent = ::onGestureEvent,
-            isPointInsideInteractionBounds = { point ->
-                val positionInContainer = point.useContents {
-                    asDpOffset().toOffset(density = parentView.density).round()
-                }
-                interactionBounds.contains(positionInContainer)
-            },
+            isPointInsideInteractionBounds = ::isPointInsideInteractionBounds,
             onKeyboardPresses = ::onKeyboardPresses
         )
 
@@ -253,11 +224,12 @@ internal abstract class ComposeSceneMediator(
         requestRedraw = ::onComposeSceneInvalidate
     )
 
-    private val interactionBounds: IntRect
-        get() {
-            val customLayout = layout as? ComposeSceneMediatorLayout.Custom
-            return customLayout?.interactionBounds ?: metalViewBoundsInPx
-        }
+    /**
+     * A callback to define whether precondition for interaction view hit test is met.
+     *
+     * @param point Point in the interaction view coordinate space.
+     */
+    abstract fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean
 
     @OptIn(ExperimentalComposeApi::class)
     private val semanticsOwnerListener by lazy {
@@ -296,7 +268,7 @@ internal abstract class ComposeSceneMediator(
         )
     }
 
-    private val uiKitTextInputService: UIKitTextInputService by lazy {
+    private val textInputService: UIKitTextInputService by lazy {
         UIKitTextInputService(
             updateView = {
                 metalView.setNeedsDisplay() // redraw on next frame
@@ -450,7 +422,7 @@ internal abstract class ComposeSceneMediator(
         )
 
     open fun dispose() {
-        uiKitTextInputService.stopInput()
+        textInputService.stopInput()
         applicationForegroundStateListener.dispose()
         focusStack?.popUntilNext(metalView)
         keyboardManager.dispose()
@@ -463,39 +435,6 @@ internal abstract class ComposeSceneMediator(
     }
 
     private fun onComposeSceneInvalidate() = metalView.needRedraw()
-
-    fun setLayout(value: ComposeSceneMediatorLayout) {
-        layout = value
-        when (value) {
-            ComposeSceneMediatorLayout.Fill -> {
-                metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints = metalView.layoutConstraintsToMatch(interactionView)
-            }
-
-            is ComposeSceneMediatorLayout.Center -> {
-                metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints = metalView.layoutConstraintsToCenterInParent(parentView, value.size)
-            }
-
-            is ComposeSceneMediatorLayout.Custom -> {
-                val density = parentView.density.density
-                metalView.translatesAutoresizingMaskIntoConstraints = true
-                metalView.setFrame(
-                    with(value.renderBounds) {
-                        CGRectMake(
-                            x = left.toDouble() / density,
-                            y = top.toDouble() / density,
-                            width = width.toDouble() / density,
-                            height = height.toDouble() / density
-                        )
-                    }
-                )
-                constraints = emptyList()
-            }
-
-            is ComposeSceneMediatorLayout.Undefined -> error("setLayout, SceneLayout.Undefined")
-        }
-    }
 
     fun viewWillLayoutSubviews() {
         val density = parentView.density
@@ -533,11 +472,6 @@ internal abstract class ComposeSceneMediator(
             )
         }
 
-    protected val metalViewBoundsInPx: IntRect
-        get() = with(parentView.density) {
-            metalView.frame.useContents { asDpRect().toRect().roundToIntRect() }
-        }
-
     fun sceneDidAppear() {
         keyboardManager.start()
     }
@@ -568,7 +502,7 @@ internal abstract class ComposeSceneMediator(
     }
 
     private fun onKeyboardEvent(keyEvent: KeyEvent): Boolean =
-        uiKitTextInputService.onPreviewKeyEvent(keyEvent) // TODO: fix redundant call
+        textInputService.onPreviewKeyEvent(keyEvent) // TODO: fix redundant call
             || onPreviewKeyEvent(keyEvent)
             || scene.sendKeyEvent(keyEvent)
             || onKeyEvent(keyEvent)
@@ -610,49 +544,10 @@ internal abstract class ComposeSceneMediator(
         override val measureDrawLayerBounds get() = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration get() = this@ComposeSceneMediator.viewConfiguration
         override val inputModeManager = DefaultInputModeManager(InputMode.Touch)
-        override val textInputService get() = this@ComposeSceneMediator.uiKitTextInputService
-        override val textToolbar get() = this@ComposeSceneMediator.uiKitTextInputService
+        override val textInputService get() = this@ComposeSceneMediator.textInputService
+        override val textToolbar get() = this@ComposeSceneMediator.textInputService
         override val semanticsOwnerListener get() = this@ComposeSceneMediator.semanticsOwnerListener
     }
-}
-
-internal fun getConstraintsToFillParent(view: UIView, parent: UIView) =
-    listOf(
-        view.leftAnchor.constraintEqualToAnchor(parent.leftAnchor),
-        view.rightAnchor.constraintEqualToAnchor(parent.rightAnchor),
-        view.topAnchor.constraintEqualToAnchor(parent.topAnchor),
-        view.bottomAnchor.constraintEqualToAnchor(parent.bottomAnchor)
-    )
-
-internal fun UIView.layoutConstraintsToMatch(other: UIView) =
-    listOf(
-        leftAnchor.constraintEqualToAnchor(other.leftAnchor),
-        rightAnchor.constraintEqualToAnchor(other.rightAnchor),
-        topAnchor.constraintEqualToAnchor(other.topAnchor),
-        bottomAnchor.constraintEqualToAnchor(other.bottomAnchor)
-    )
-
-private fun UIView.layoutConstraintsToCenterInParent(parent: UIView, size: CValue<CGSize>) =
-    size.useContents {
-        listOf(
-            centerXAnchor.constraintEqualToAnchor(parent.centerXAnchor),
-            centerYAnchor.constraintEqualToAnchor(parent.centerYAnchor),
-            widthAnchor.constraintEqualToConstant(width),
-            heightAnchor.constraintEqualToConstant(height)
-        )
-    }
-
-private fun getConstraintsToCenterInParent(
-    view: UIView,
-    parentView: UIView,
-    size: CValue<CGSize>,
-) = size.useContents {
-    listOf(
-        view.centerXAnchor.constraintEqualToAnchor(parentView.centerXAnchor),
-        view.centerYAnchor.constraintEqualToAnchor(parentView.centerYAnchor),
-        view.widthAnchor.constraintEqualToConstant(width),
-        view.heightAnchor.constraintEqualToConstant(height)
-    )
 }
 
 private fun TouchesEventKind.toPointerEventType(): PointerEventType =

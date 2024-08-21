@@ -22,6 +22,7 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -29,6 +30,7 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.skiko.RecordDrawRectRenderDecorator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -55,7 +57,7 @@ import platform.UIKit.UIView
 
 // TODO: make LayerComposeSceneMediator a ComposeSceneLayer
 internal class UIKitComposeSceneLayer(
-    private val parentView: UIView,
+    parentView: UIView,
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
     private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
@@ -74,7 +76,7 @@ internal class UIKitComposeSceneLayer(
         eventType: PointerEventType
     ) -> Unit)? = null
 
-    private val backgroundView: UIView = object : UIView(
+    private val touchesInterceptingView: UIView = object : UIView(
         frame = CGRectZero.readValue()
     ) {
         private var previousSuccessHitTestTimestamp: Double? = null
@@ -121,7 +123,7 @@ internal class UIKitComposeSceneLayer(
 
     private val mediator by lazy {
         LayerComposeSceneMediator(
-            parentView,
+            touchesInterceptingView,
             configuration,
             focusStack,
             windowContext,
@@ -143,11 +145,11 @@ internal class UIKitComposeSceneLayer(
     private var maxDrawInflate = IntRect.Zero
 
     init {
-        backgroundView.translatesAutoresizingMaskIntoConstraints = false
-        parentView.addSubview(backgroundView)
+        touchesInterceptingView.translatesAutoresizingMaskIntoConstraints = false
+
+        parentView.addSubview(touchesInterceptingView)
         NSLayoutConstraint.activateConstraints(
-            //getConstraintsToFillParent(backgroundView, parentView)
-            backgroundView.layoutConstraintsToMatch(parentView)
+            touchesInterceptingView.layoutConstraintsToMatch(parentView)
         )
     }
 
@@ -209,7 +211,17 @@ internal class UIKitComposeSceneLayer(
                 paint = scrimPaint
             )
         }
-        mediator.render(canvas, nanoTime)
+
+        recordDrawBounds(object : SkikoRenderDelegate {
+            override fun onRender(
+                canvas: org.jetbrains.skia.Canvas,
+                width: Int,
+                height: Int,
+                nanoTime: Long
+            ) {
+                mediator.render(canvas.asComposeCanvas(), nanoTime)
+            }
+        })
     }
 
     override fun close() {
@@ -220,7 +232,7 @@ internal class UIKitComposeSceneLayer(
 
     internal fun dispose() {
         mediator.dispose()
-        backgroundView.removeFromSuperview()
+        touchesInterceptingView.removeFromSuperview()
     }
 
     override fun setContent(content: @Composable () -> Unit) {
@@ -266,9 +278,9 @@ internal class UIKitComposeSceneLayer(
 
     private fun updateBounds() {
         mediator.setLayout(
-            ComposeSceneMediatorLayout.Custom(
-                renderBounds = drawBounds,
-                interactionBounds = boundsInWindow
+            LayerComposeSceneMediatorLayout(
+                renderRect = drawBounds,
+                interactionRect = boundsInWindow
             )
         )
     }

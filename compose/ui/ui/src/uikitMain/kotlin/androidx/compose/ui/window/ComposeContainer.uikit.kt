@@ -37,7 +37,7 @@ import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
 import androidx.compose.ui.scene.PlatformLayersComposeScene
 import androidx.compose.ui.scene.PrimaryComposeSceneMediator
-import androidx.compose.ui.scene.ComposeSceneMediatorLayout
+import androidx.compose.ui.scene.PrimaryComposeSceneMediatorLayout
 import androidx.compose.ui.scene.UIKitComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
@@ -387,7 +387,7 @@ internal class ComposeViewController(
                 ProvideContainerCompositionLocals(this, content)
             }
 
-            it.setLayout(ComposeSceneMediatorLayout.Fill)
+            it.setLayout(PrimaryComposeSceneMediatorLayout.Fill)
         }
 
         return mediator

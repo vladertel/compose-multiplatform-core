@@ -24,7 +24,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.scene.layoutConstraintsToMatch
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.text.input.EditCommand

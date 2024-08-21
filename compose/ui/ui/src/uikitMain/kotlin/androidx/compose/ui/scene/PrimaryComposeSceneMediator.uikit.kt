@@ -21,6 +21,10 @@ import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.uikit.ExclusiveLayoutConstraints
+import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
+import androidx.compose.ui.uikit.layoutConstraintsToMatch
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
@@ -31,6 +35,8 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
+import platform.CoreGraphics.CGPoint
+import platform.CoreGraphics.CGRectContainsPoint
 import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIView
@@ -53,6 +59,11 @@ private class MetalViewRenderer(
         block()
         restore()
     }
+}
+
+internal sealed interface PrimaryComposeSceneMediatorLayout {
+    data object Fill : PrimaryComposeSceneMediatorLayout
+    class Center(val size: CValue<CGSize>) : PrimaryComposeSceneMediatorLayout
 }
 
 /**
@@ -90,8 +101,31 @@ internal class PrimaryComposeSceneMediator(
         }
     )
 
+    private val constraints = ExclusiveLayoutConstraints()
+
     init {
         interactionView.addSubview(metalView)
+    }
+
+    override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
+        CGRectContainsPoint(interactionView.bounds, point)
+
+    fun setLayout(value: PrimaryComposeSceneMediatorLayout) {
+        when (value) {
+            PrimaryComposeSceneMediatorLayout.Fill -> {
+                metalView.translatesAutoresizingMaskIntoConstraints = false
+                constraints.set(
+                    metalView.layoutConstraintsToMatch(interactionView)
+                )
+            }
+
+            is PrimaryComposeSceneMediatorLayout.Center -> {
+                metalView.translatesAutoresizingMaskIntoConstraints = false
+                constraints.set(
+                    metalView.layoutConstraintsToCenterInParent(parentView, value.size)
+                )
+            }
+        }
     }
 
     fun performOrientationChangeAnimation(
@@ -114,7 +148,7 @@ internal class PrimaryComposeSceneMediator(
 
         metalView.isForcedToPresentWithTransactionEveryFrame = true
 
-        setLayout(ComposeSceneMediatorLayout.Center(size = targetSize))
+        setLayout(PrimaryComposeSceneMediatorLayout.Center(targetSize))
         metalView.transform = coordinator.targetTransform
 
         coordinator.animateAlongsideTransition(
@@ -125,7 +159,7 @@ internal class PrimaryComposeSceneMediator(
             },
             completion = {
                 startSnapshotView.removeFromSuperview()
-                setLayout(ComposeSceneMediatorLayout.Fill)
+                setLayout(PrimaryComposeSceneMediatorLayout.Fill)
                 metalView.isForcedToPresentWithTransactionEveryFrame = false
             }
         )
