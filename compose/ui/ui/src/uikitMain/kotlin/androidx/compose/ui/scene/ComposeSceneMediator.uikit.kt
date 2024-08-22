@@ -155,7 +155,7 @@ internal abstract class ComposeSceneMediator(
     /**
      * @see PlatformContext.measureDrawLayerBounds
      */
-    private val measureDrawLayerBounds: Boolean = false,
+    private val measureDrawLayerBounds: Boolean,
     private val coroutineContext: CoroutineContext,
     composeSceneFactory: (
         invalidate: () -> Unit,

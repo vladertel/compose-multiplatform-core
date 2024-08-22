@@ -76,7 +76,6 @@ internal class PrimaryComposeSceneMediator(
     configuration: ComposeUIViewControllerConfiguration,
     focusStack: FocusStack?,
     windowContext: PlatformWindowContext,
-    measureDrawLayerBounds: Boolean = false,
     coroutineContext: CoroutineContext,
     composeSceneFactory: (
         invalidate: () -> Unit,
@@ -88,7 +87,7 @@ internal class PrimaryComposeSceneMediator(
     configuration,
     focusStack,
     windowContext,
-    measureDrawLayerBounds,
+    measureDrawLayerBounds = false,
     coroutineContext,
     composeSceneFactory
 ) {
