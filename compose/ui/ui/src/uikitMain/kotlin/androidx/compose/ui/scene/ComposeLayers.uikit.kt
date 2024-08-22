@@ -23,16 +23,39 @@ import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
+import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectZero
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
-internal class ComposeLayersView: UIView(frame = CGRectZero.readValue())
+internal class ComposeLayersView(
+    private val onLayoutSubviews: () -> Unit,
+    private val onSafeAreasDidChange: () -> Unit
+): UIView(frame = CGRectZero.readValue()) {
+    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
+        val result = super.hitTest(point, withEvent)
+        println("Hit test: $result")
+        return result
+    }
+
+    override fun layoutSubviews() {
+        super.layoutSubviews()
+
+        onLayoutSubviews()
+    }
+
+    override fun safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+
+        onSafeAreasDidChange()
+    }
+}
 
 internal class ComposeLayers: SkikoRenderDelegate {
     val hasInvalidations: Boolean
@@ -41,7 +64,10 @@ internal class ComposeLayers: SkikoRenderDelegate {
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
     private var ongoingGesturesCount = 0
 
-    val view = ComposeLayersView()
+    val view = ComposeLayersView(
+        onLayoutSubviews = ::onLayoutSubviews,
+        onSafeAreasDidChange = ::onSafeAreasDidChange
+    )
 
     val metalView: MetalView = MetalView(
         renderDelegate = this,
@@ -156,13 +182,13 @@ internal class ComposeLayers: SkikoRenderDelegate {
 
     // TODO: investigate correctness of these implementations
 
-    fun viewSafeAreaInsetsDidChange() {
+    private fun onSafeAreasDidChange() {
         layers.fastForEach {
             it.viewSafeAreaInsetsDidChange()
         }
     }
 
-    fun viewWillLayoutSubviews() {
+    private fun onLayoutSubviews() {
         layers.fastForEach {
             it.viewWillLayoutSubviews()
         }

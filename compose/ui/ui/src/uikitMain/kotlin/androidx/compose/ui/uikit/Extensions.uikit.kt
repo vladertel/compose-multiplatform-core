@@ -23,14 +23,18 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIContentSizeCategoryUnspecified
 import platform.UIKit.UIScreen
 import platform.UIKit.UIView
+import platform.UIKit.UIWindow
 
 internal val UIView.density: Density
     get() {
         // TODO: It's a code smell that we have to retrive a default UIScreen here.
         //   We probably should reorder the code so that density is either injected from outside
         //   or view is attached to a window before this is called.
-        val screen = window?.screen
-            ?: UIScreen.mainScreen
+        val screen = if (this is UIWindow) {
+            screen
+        } else {
+            window?.screen ?: UIScreen.mainScreen
+        }
 
         val contentSizeCategory = traitCollection.preferredContentSizeCategory ?: UIContentSizeCategoryUnspecified
 

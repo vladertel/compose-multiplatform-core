@@ -92,6 +92,7 @@ import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
+import platform.UIKit.UIWindow
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
@@ -120,12 +121,6 @@ internal class ComposeViewController(
     fun hasInvalidations(): Boolean {
         return mediator?.hasInvalidations == true || layers.hasInvalidations
     }
-
-    @OptIn(ExperimentalComposeApi::class)
-    private val windowContainer: UIView
-        get() = if (configuration.platformLayers) {
-            view.window ?: view
-        } else view
 
     /*
      * Initial value is arbitrarily chosen to avoid propagating invalid value logic
@@ -175,16 +170,14 @@ internal class ComposeViewController(
         super.viewSafeAreaInsetsDidChange()
 
         mediator?.viewSafeAreaInsetsDidChange()
-        layers.viewSafeAreaInsetsDidChange()
     }
 
     @OptIn(ExperimentalComposeApi::class)
     override fun loadView() {
-        view = UIView().apply {
-            setClipsToBounds(true)
-            opaque = configuration.opaque
-            backgroundColor = if (configuration.opaque) UIColor.whiteColor else UIColor.clearColor
-        } // rootView needs to interop with UIKit
+        view = ComposeRootView(
+            onDidMoveToWindow = ::updateWindowContainer,
+            useOpaqueConfiguration = configuration.opaque
+        )
     }
 
     override fun viewDidLoad() {
@@ -211,14 +204,19 @@ internal class ComposeViewController(
             interfaceOrientationState.value = it
         }
 
-        updateWindowContainer()
         mediator?.viewWillLayoutSubviews()
-        layers.viewWillLayoutSubviews()
     }
 
-    private fun updateWindowContainer() {
+    @OptIn(ExperimentalComposeApi::class)
+    private fun updateWindowContainer(window: UIWindow?) {
+        val windowContainer = if (configuration.platformLayers) {
+            window ?: return
+        } else {
+            view
+        }
+
         val scale = windowContainer.density.density
-        val size = windowContainer.frame.useContents<CGRect, IntSize> {
+        val size = windowContainer.frame.useContents {
             IntSize(
                 width = (size.width * scale).roundToInt(),
                 height = (size.height * scale).roundToInt()
@@ -272,7 +270,6 @@ internal class ComposeViewController(
         hasViewAppeared = true
         mediator?.sceneDidAppear()
         layers.viewDidAppear()
-        updateWindowContainer()
         configuration.delegate.viewDidAppear(animated)
     }
 
