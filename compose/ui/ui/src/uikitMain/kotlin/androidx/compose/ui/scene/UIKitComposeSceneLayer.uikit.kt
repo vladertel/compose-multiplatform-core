@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.compose.ui.window.FocusStack
+import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
@@ -61,6 +62,7 @@ internal class UIKitComposeSceneLayer(
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
     private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
     metalView: MetalView,
+    onGestureEvent: (GestureEvent) -> Unit,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
     configuration: ComposeUIViewControllerConfiguration,
@@ -130,9 +132,9 @@ internal class UIKitComposeSceneLayer(
             configuration,
             focusStack,
             windowContext,
-            measureDrawLayerBounds = true,
             coroutineContext = compositionContext.effectCoroutineContext,
             metalView,
+            onGestureEvent = onGestureEvent,
             composeSceneFactory = ::createComposeScene
         )
 

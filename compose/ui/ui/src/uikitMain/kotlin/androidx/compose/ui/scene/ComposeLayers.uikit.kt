@@ -21,12 +21,14 @@ import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
+import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import kotlinx.cinterop.readValue
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGRectZero
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
@@ -37,6 +39,7 @@ internal class ComposeLayers: SkikoRenderDelegate {
         get() = layers.any { it.hasInvalidations }
 
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
+    private var ongoingGesturesCount = 0
 
     val view = ComposeLayersView()
 
@@ -63,6 +66,34 @@ internal class ComposeLayers: SkikoRenderDelegate {
 
         layers.fastForEach {
             it.render(composeCanvas, width, height, nanoTime)
+        }
+    }
+
+    /**
+     * When there is an ongoing gesture, we need notify redrawer about it. It should unconditionally
+     * unpause CADisplayLink which affects frequency of polling UITouch events on high frequency
+     * display and force it to match display refresh rate.
+     *
+     * Otherwise [UIEvent]s will be dispatched with the 60hz frequency.
+     */
+    fun onGestureEvent(event: GestureEvent) {
+        val hadAnyOngoingGestures = ongoingGesturesCount > 0
+
+        when (event) {
+            GestureEvent.BEGAN -> {
+                ongoingGesturesCount++
+
+                if (!hadAnyOngoingGestures && ongoingGesturesCount > 0) {
+                    metalView.needsProactiveDisplayLink = true
+                }
+            }
+            GestureEvent.ENDED -> {
+                ongoingGesturesCount--
+
+                if (hadAnyOngoingGestures && ongoingGesturesCount == 0) {
+                    metalView.needsProactiveDisplayLink = false
+                }
+            }
         }
     }
 

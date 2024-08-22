@@ -290,15 +290,7 @@ internal abstract class ComposeSceneMediator(
      *
      * Otherwise [UIEvent]s will be dispatched with the 60hz frequency.
      */
-    // TODO: counting handler for layer compose scene mediator
-    private fun onGestureEvent(gestureEvent: GestureEvent) {
-        val needHighFrequencyPolling =
-            when (gestureEvent) {
-                GestureEvent.BEGAN -> true
-                GestureEvent.ENDED -> false
-            }
-        metalView.needsProactiveDisplayLink = needHighFrequencyPolling
-    }
+    protected abstract fun onGestureEvent(gestureEvent: GestureEvent)
 
     val hasInvalidations: Boolean
         get() = scene.hasInvalidations() || keyboardManager.isAnimating

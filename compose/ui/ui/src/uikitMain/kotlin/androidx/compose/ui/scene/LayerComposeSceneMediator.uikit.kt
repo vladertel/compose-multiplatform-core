@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.window.FocusStack
+import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
@@ -50,9 +51,9 @@ internal class LayerComposeSceneMediator(
     configuration: ComposeUIViewControllerConfiguration,
     focusStack: FocusStack?,
     windowContext: PlatformWindowContext,
-    measureDrawLayerBounds: Boolean = false,
     coroutineContext: CoroutineContext,
     override val metalView: MetalView,
+    private val onGestureEvent: (GestureEvent) -> Unit,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -63,11 +64,13 @@ internal class LayerComposeSceneMediator(
     configuration,
     focusStack,
     windowContext,
-    measureDrawLayerBounds,
+    measureDrawLayerBounds = true,
     coroutineContext,
     composeSceneFactory
 ) {
     private var layout: LayerComposeSceneMediatorLayout? = null
+
+    override fun onGestureEvent(gestureEvent: GestureEvent) = onGestureEvent.invoke(gestureEvent)
 
     override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
         layout?.let {

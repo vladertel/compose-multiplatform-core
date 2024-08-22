@@ -26,6 +26,7 @@ import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.window.FocusStack
+import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
@@ -39,6 +40,7 @@ import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectContainsPoint
 import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
@@ -105,6 +107,22 @@ internal class PrimaryComposeSceneMediator(
 
     init {
         interactionView.addSubview(metalView)
+    }
+
+    /**
+     * When there is an ongoing gesture, we need notify redrawer about it. It should unconditionally
+     * unpause CADisplayLink which affects frequency of polling UITouch events on high frequency
+     * display and force it to match display refresh rate.
+     *
+     * Otherwise [UIEvent]s will be dispatched with the 60hz frequency.
+     */
+    override fun onGestureEvent(gestureEvent: GestureEvent) {
+        val needHighFrequencyPolling =
+            when (gestureEvent) {
+                GestureEvent.BEGAN -> true
+                GestureEvent.ENDED -> false
+            }
+        metalView.needsProactiveDisplayLink = needHighFrequencyPolling
     }
 
     override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =

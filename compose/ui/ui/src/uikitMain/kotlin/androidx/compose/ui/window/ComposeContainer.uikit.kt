@@ -327,6 +327,7 @@ internal class ComposeViewController(
                         ProvideContainerCompositionLocals(this@ComposeViewController, it)
                     },
                     metalView = layers.metalView,
+                    onGestureEvent = layers::onGestureEvent,
                     initDensity = density,
                     initLayoutDirection = layoutDirection,
                     configuration = configuration,
