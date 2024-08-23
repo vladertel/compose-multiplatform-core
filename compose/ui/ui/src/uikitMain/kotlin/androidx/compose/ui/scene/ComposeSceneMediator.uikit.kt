@@ -552,8 +552,7 @@ private fun UIEvent.historicalChangesForTouch(
     val touches = coalescedTouchesForTouch(touch) ?: return emptyList()
 
     return if (touches.size > 1) {
-        // subList last index is exclusive, so the last touch in the list is not included
-        // because it's the actual touch for which coalesced touches were requested
+        // the last touch is not included because it is the actual touch reported by the event
         touches.dropLast(1).map {
             val historicalTouch = it as UITouch
             val position = historicalTouch.offsetInView(view, density)
