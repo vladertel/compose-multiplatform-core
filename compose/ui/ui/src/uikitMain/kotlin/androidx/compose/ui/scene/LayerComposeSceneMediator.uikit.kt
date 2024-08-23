@@ -23,7 +23,10 @@ import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.asCGRect
+import androidx.compose.ui.unit.asDpOffset
+import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toDpRect
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
@@ -68,24 +71,19 @@ internal class LayerComposeSceneMediator(
     coroutineContext,
     composeSceneFactory
 ) {
-    private var layout: LayerComposeSceneMediatorLayout? = null
+    var boundsInWindow = IntRect.Zero
 
     override fun onGestureEvent(gestureEvent: GestureEvent) = onGestureEvent.invoke(gestureEvent)
 
     override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
-        layout?.let {
-            val density = parentView.density
-
-            val cgRect = it.interactionRect.toRect().toDpRect(density).asCGRect()
-
-            CGRectContainsPoint(cgRect, point)
-        } ?: false
+        boundsInWindow.contains(
+            point
+                .asDpOffset()
+                .toOffset(view.density)
+                .round()
+        )
 
     fun render(canvas: Canvas, nanoTime: Long) {
         scene.render(canvas, nanoTime)
-    }
-
-    fun setLayout(layout: LayerComposeSceneMediatorLayout) {
-        this.layout = layout
     }
 }

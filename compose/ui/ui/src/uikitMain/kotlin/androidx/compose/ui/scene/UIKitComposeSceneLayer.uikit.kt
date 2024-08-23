@@ -102,7 +102,6 @@ internal class UIKitComposeSceneLayer(
     /**
      * The maximum amount to inflate the [drawBounds] comparing to [boundsInWindow].
      */
-    private var maxDrawInflate = IntRect.Zero
 
     private fun createComposeScene(
         invalidate: () -> Unit,
@@ -120,13 +119,12 @@ internal class UIKitComposeSceneLayer(
     val hasInvalidations by mediator::hasInvalidations
 
     override var density by mediator::density
+
     override var layoutDirection by mediator::layoutDirection
-    override var boundsInWindow: IntRect = IntRect.Zero
-        set(value) {
-            field = value
-            updateBounds()
-        }
-    override var compositionLocalContext: CompositionLocalContext? by mediator::compositionLocalContext
+
+    override var boundsInWindow by mediator::boundsInWindow
+
+    override var compositionLocalContext by mediator::compositionLocalContext
 
     override var scrimColor: Color? = null
         set(value) {
@@ -188,32 +186,10 @@ internal class UIKitComposeSceneLayer(
         }
     }
 
-    override fun calculateLocalPosition(positionInWindow: IntOffset): IntOffset {
-        return positionInWindow
-    }
-
-    private fun recordDrawBounds(renderDelegate: SkikoRenderDelegate) =
-        RecordDrawRectRenderDecorator(renderDelegate) { canvasBoundsInPx ->
-            val currentCanvasOffset = drawBounds.topLeft
-            val drawBoundsInWindow = canvasBoundsInPx.roundToIntRect().translate(currentCanvasOffset)
-            maxDrawInflate = maxInflate(boundsInWindow, drawBoundsInWindow, maxDrawInflate)
-            drawBounds = IntRect(
-                left = boundsInWindow.left - maxDrawInflate.left,
-                top = boundsInWindow.top - maxDrawInflate.top,
-                right = boundsInWindow.right + maxDrawInflate.right,
-                bottom = boundsInWindow.bottom + maxDrawInflate.bottom
-            )
-            updateBounds()
-        }
-
-    private fun updateBounds() {
-        mediator.setLayout(
-            LayerComposeSceneMediatorLayout(
-                renderRect = drawBounds,
-                interactionRect = boundsInWindow
-            )
-        )
-    }
+    /**
+     * Since layer is assumed to be the same size as the window it is attached to, just return the same position.
+     */
+    override fun calculateLocalPosition(positionInWindow: IntOffset): IntOffset = positionInWindow
 
     fun sceneDidAppear() {
         mediator.sceneDidAppear()
