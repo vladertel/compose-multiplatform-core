@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.skiko.RecordDrawRectRenderDecorator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -43,6 +44,7 @@ import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
+import androidx.compose.ui.window.centroidLocationInView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlinx.cinterop.CValue
@@ -56,7 +58,91 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UITouch
 import platform.UIKit.UIView
 
-// TODO: make LayerComposeSceneMediator a ComposeSceneLayer
+/**
+ * A backing ComposeSceneLayer view for each Compose scene layer. Its task is to
+ * handle events that start outside the bounds of the layer content
+ */
+internal class ComposeSceneLayerView(
+    val isInteractionViewHitTestSuccessful: (point: CValue<CGPoint>, withEvent: UIEvent?) -> Boolean,
+    val isInsideInteractionBounds: (point: CValue<CGPoint>) -> Boolean,
+    val isFocusable: () -> Boolean
+): UIView(frame = CGRectZero.readValue()) {
+    private var touchesCount: Int = 0
+    private var previousSuccessHitTestTimestamp: Double? = null
+
+    internal var onOutsidePointerEvent: ((
+        eventType: PointerEventType
+    ) -> Unit)? = null
+
+    init {
+        translatesAutoresizingMaskIntoConstraints = false
+    }
+
+    private fun touchStartedOutside(withEvent: UIEvent?) {
+        println("touchStartedOutside event = $withEvent")
+        // hitTest call can happen multiple times for the same touch event, ensure we only send
+        // PointerEventType.Press once using the timestamp.
+        if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
+            // This workaround needs to send PointerEventType.Press just once
+            previousSuccessHitTestTimestamp = withEvent?.timestamp
+            onOutsidePointerEvent?.invoke(PointerEventType.Press)
+        }
+    }
+
+    override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
+        super.touchesBegan(touches, withEvent)
+
+        touchesCount += touches.size
+    }
+
+    override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
+        super.touchesCancelled(touches, withEvent)
+
+        touchesCount -= touches.size
+    }
+
+    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
+        touchesCount -= touches.size
+
+        // It was the last touch in the sequence, calculate the centroid and if it's outside
+        // the bounds, send `onOutsidePointerEvent`. Otherwise just return.
+        if (touchesCount > 0) {
+            return
+        }
+
+        val location = requireNotNull(
+            touches
+                .map { it as UITouch }
+                .centroidLocationInView(this)
+        ) {
+            "touchesEnded should not be called with an empty set of touches"
+        }
+
+        if (!isInsideInteractionBounds(location)) {
+            onOutsidePointerEvent?.invoke(PointerEventType.Release)
+        }
+
+        super.touchesEnded(touches, withEvent)
+    }
+
+    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
+        // TODO: why do we have two functions here?
+        val isInBounds = isInteractionViewHitTestSuccessful(point, withEvent) && isInsideInteractionBounds(point)
+
+        if (!isInBounds && super.hitTest(point, withEvent) == this) {
+            touchStartedOutside(withEvent)
+
+            if (isFocusable()) {
+                // Focusable layers don't let touches pass through
+                return this
+            }
+        }
+
+        return null
+    }
+}
+
+// TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
@@ -73,58 +159,11 @@ internal class UIKitComposeSceneLayer(
 
     override var focusable: Boolean = focusStack != null
 
-    private var onOutsidePointerEvent: ((
-        eventType: PointerEventType
-    ) -> Unit)? = null
-
-    val view: UIView = object : UIView(
-        frame = CGRectZero.readValue()
-    ) {
-        private var previousSuccessHitTestTimestamp: Double? = null
-
-        init {
-            translatesAutoresizingMaskIntoConstraints = false
-        }
-
-        private fun touchStartedOutside(withEvent: UIEvent?) {
-            if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
-                // This workaround needs to send PointerEventType.Press just once
-                previousSuccessHitTestTimestamp = withEvent?.timestamp
-                onOutsidePointerEvent?.invoke(PointerEventType.Press)
-            }
-        }
-
-        /**
-         * touchesEnded calls only when focused == true
-         */
-        override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
-            val touch = touches.firstOrNull() as? UITouch
-            val locationInView = touch?.locationInView(this)?.useContents { asDpOffset() }
-            if (locationInView != null) {
-                // This view's coordinate space is equal to [ComposeScene]'s
-                val contains = boundsInWindow.contains(locationInView.toOffset(density).round())
-                if (!contains) {
-                    // TODO: Send only for last pointer in case of multi-touch
-                    onOutsidePointerEvent?.invoke(PointerEventType.Release)
-                }
-            }
-            super.touchesEnded(touches, withEvent)
-        }
-
-        override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-            val positionInWindow = point.useContents { asDpOffset().toOffset(density).round() }
-            val inBounds = mediator.hitTestInteractionView(point, withEvent) != null &&
-                boundsInWindow.contains(positionInWindow) // canvas might be bigger than logical bounds
-            if (!inBounds && super.hitTest(point, withEvent) == this) {
-                touchStartedOutside(withEvent)
-                if (focusable) {
-                    // Focusable layers don't pass touches through, even if it's out of bounds.
-                    return this
-                }
-            }
-            return null // transparent for touches
-        }
-    }
+    val view = ComposeSceneLayerView(
+        ::isInteractionViewHitTestSuccessful,
+        ::isInsideInteractionBounds,
+        isFocusable = { focusable }
+    )
 
     val mediator =
         LayerComposeSceneMediator(
@@ -144,6 +183,12 @@ internal class UIKitComposeSceneLayer(
             mediator.view.layoutConstraintsToMatch(view)
         )
     }
+
+    private fun isInteractionViewHitTestSuccessful(point: CValue<CGPoint>, event: UIEvent?): Boolean =
+        mediator.hitTestInteractionView(point, event) != null
+
+    private fun isInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
+        boundsInWindow.contains(point.asDpOffset().toOffset(view.density).round())
 
     /**
      * Bounds of real drawings based on previous renders.
@@ -234,7 +279,7 @@ internal class UIKitComposeSceneLayer(
     override fun setOutsidePointerEventListener(
         onOutsidePointerEvent: ((eventType: PointerEventType, button: PointerButton?) -> Unit)?
     ) {
-        this.onOutsidePointerEvent = {
+        view.onOutsidePointerEvent = {
             onOutsidePointerEvent?.invoke(it, null)
         }
     }

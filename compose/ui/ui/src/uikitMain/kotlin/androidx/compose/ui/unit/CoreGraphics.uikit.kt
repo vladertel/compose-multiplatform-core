@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.unit
 
+import kotlinx.cinterop.CValue
+import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRect
@@ -24,6 +26,8 @@ import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeMake
 
 internal fun CGPoint.asDpOffset(): DpOffset = DpOffset(x.dp, y.dp)
+internal fun CValue<CGPoint>.asDpOffset(): DpOffset = useContents { asDpOffset() }
+
 internal fun DpOffset.asCGPoint() = CGPointMake(x.value.toDouble(), y.value.toDouble())
 
 internal fun CGSize.asDpSize(): DpSize = DpSize(width.dp, height.dp)
