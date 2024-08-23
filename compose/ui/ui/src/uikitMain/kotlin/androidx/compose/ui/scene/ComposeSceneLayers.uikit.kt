@@ -187,7 +187,10 @@ internal class ComposeSceneLayers {
     private fun render(canvas: Canvas, nanoTime: Long) {
         val composeCanvas = canvas.asComposeCanvas()
 
-        layers.fastForEach {
+        // Some layers may be removed during rendering, because recomposition will happen in the
+        // process, so we need to make a copy of the list
+        val layersCopy = layers.map { it }
+        layersCopy.fastForEach {
             it.render(composeCanvas, nanoTime)
         }
     }
