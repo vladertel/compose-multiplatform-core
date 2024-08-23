@@ -95,15 +95,18 @@ internal class ComposeSceneLayerView(
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         val isOutsideBounds = !isInsideInteractionBounds(point)
 
-        if (isOutsideBounds && super.hitTest(point, withEvent) == this) {
+        val result = super.hitTest(point, withEvent)
+
+        if (isOutsideBounds && result == this) {
             touchStartedOutside(withEvent)
 
-            if (isFocusable()) {
-                // Focusable layers don't let touches pass through
-                return this
+            return if (isFocusable()) {
+                this
+            } else {
+                null
             }
         }
 
-        return null
+        return result
     }
 }

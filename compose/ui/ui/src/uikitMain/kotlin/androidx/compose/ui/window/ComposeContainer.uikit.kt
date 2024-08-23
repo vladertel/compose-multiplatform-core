@@ -201,6 +201,8 @@ internal class ComposeViewController(
             interfaceOrientationState.value = it
         }
 
+        windowContext.updateWindowContainerSize()
+
         mediator?.viewWillLayoutSubviews()
     }
 
@@ -212,14 +214,6 @@ internal class ComposeViewController(
             view
         }
 
-        val scale = windowContainer.density.density
-        val size = windowContainer.frame.useContents {
-            IntSize(
-                width = (size.width * scale).roundToInt(),
-                height = (size.height * scale).roundToInt()
-            )
-        }
-        windowContext.setContainerSize(size)
         windowContext.setWindowContainer(windowContainer)
     }
 
