@@ -91,7 +91,7 @@ internal class ComposeSceneLayers {
         metalView.dispose()
 
         // `dispose` is called instead of `close`, because `close` is also used imperatively
-        // to remove the layer from the array.
+        // to remove the layer from the array based on user interaction.
         while (layers.isNotEmpty()) {
             val layer = layers.removeLast()
 
@@ -141,6 +141,9 @@ internal class ComposeSceneLayers {
 
         if (layers.isEmpty()) {
             view.removeFromSuperview()
+        } else {
+            // Redraw content with layer removed
+            metalView.needRedraw()
         }
     }
 
