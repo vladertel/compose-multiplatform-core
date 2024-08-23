@@ -91,7 +91,6 @@ internal class ComposeSceneLayerView(
         }
 
         if (!isInsideInteractionBounds(location)) {
-            println("Release outside")
             onOutsidePointerEvent?.invoke(PointerEventType.Release)
         }
 
