@@ -18,7 +18,6 @@ package androidx.compose.ui.scene
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
-import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
@@ -27,31 +26,24 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
-import androidx.compose.ui.skiko.RecordDrawRectRenderDecorator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.asDpSize
 import androidx.compose.ui.unit.round
-import androidx.compose.ui.unit.roundToIntRect
-import androidx.compose.ui.unit.roundToIntSize
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.max
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.useContents
-import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
 import platform.UIKit.NSLayoutConstraint
-import platform.UIKit.UIEvent
 
 // TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
@@ -72,7 +64,7 @@ internal class UIKitComposeSceneLayer(
 
     val view = ComposeSceneLayerView(
         ::isInsideInteractionBounds,
-        isFocusable = { focusable }
+        isInterceptingOutsideEvents = { focusable }
     )
 
     val mediator =

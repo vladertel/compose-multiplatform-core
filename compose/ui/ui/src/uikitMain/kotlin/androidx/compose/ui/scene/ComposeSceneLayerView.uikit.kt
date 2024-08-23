@@ -29,10 +29,15 @@ import platform.UIKit.UIView
 /**
  * A backing ComposeSceneLayer view for each Compose scene layer. Its task is to
  * handle events that start outside the bounds of the layer content
+ *
+ * @param isInsideInteractionBounds a function that returns true if the given point is inside the
+ * interactable content part of the layer.
+ * @param isInterceptingOutsideEvents a function that returns true if the layer should intercept
+ * events that start outside the bounds of the layer content or should let them pass through.
  */
 internal class ComposeSceneLayerView(
     val isInsideInteractionBounds: (point: CValue<CGPoint>) -> Boolean,
-    val isFocusable: () -> Boolean
+    val isInterceptingOutsideEvents: () -> Boolean
 ): UIView(frame = CGRectZero.readValue()) {
     private var touchesCount: Int = 0
     private var previousSuccessHitTestTimestamp: Double? = null
@@ -100,7 +105,7 @@ internal class ComposeSceneLayerView(
         if (isOutsideBounds && result == this) {
             touchStartedOutside(withEvent)
 
-            return if (isFocusable()) {
+            return if (isInterceptingOutsideEvents()) {
                 this
             } else {
                 null
