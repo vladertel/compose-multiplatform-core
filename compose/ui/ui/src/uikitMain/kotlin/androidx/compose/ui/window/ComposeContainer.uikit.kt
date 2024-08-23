@@ -31,7 +31,7 @@ import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.CanvasLayersComposeScene
-import androidx.compose.ui.scene.ComposeLayers
+import androidx.compose.ui.scene.ComposeSceneLayers
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
@@ -63,13 +63,11 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.OSVersion
 import org.jetbrains.skiko.available
-import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeEqualToSize
 import platform.Foundation.NSStringFromClass
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIApplication
-import platform.UIKit.UIColor
 import platform.UIKit.UIContentSizeCategoryAccessibilityExtraExtraExtraLarge
 import platform.UIKit.UIContentSizeCategoryAccessibilityExtraExtraLarge
 import platform.UIKit.UIContentSizeCategoryAccessibilityExtraLarge
@@ -89,7 +87,6 @@ import platform.UIKit.UITraitCollection
 import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
-import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 import platform.UIKit.UIWindow
@@ -114,7 +111,7 @@ internal class ComposeViewController(
 
     private var isInsideSwiftUI = false
     private var mediator: PrimaryComposeSceneMediator? = null
-    private val layers = ComposeLayers()
+    private val layers = ComposeSceneLayers()
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
 

@@ -23,41 +23,13 @@ import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
-import kotlinx.cinterop.CValue
-import kotlinx.cinterop.readValue
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
-import platform.CoreGraphics.CGPoint
-import platform.CoreGraphics.CGRectZero
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
-import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
-internal class ComposeLayersView(
-    private val onLayoutSubviews: () -> Unit,
-    private val onSafeAreasDidChange: () -> Unit
-): UIView(frame = CGRectZero.readValue()) {
-    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-        val result = super.hitTest(point, withEvent)
-        println("Hit test: $result")
-        return result
-    }
-
-    override fun layoutSubviews() {
-        super.layoutSubviews()
-
-        onLayoutSubviews()
-    }
-
-    override fun safeAreaInsetsDidChange() {
-        super.safeAreaInsetsDidChange()
-
-        onSafeAreasDidChange()
-    }
-}
-
-internal class ComposeLayers: SkikoRenderDelegate {
+internal class ComposeSceneLayers: SkikoRenderDelegate {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
 
@@ -65,13 +37,13 @@ internal class ComposeLayers: SkikoRenderDelegate {
     private var ongoingGesturesCount = 0
 
     val view = ComposeLayersView(
-        onLayoutSubviews = ::onLayoutSubviews,
-        onSafeAreasDidChange = ::onSafeAreasDidChange
+        ::onLayoutSubviews,
+        ::onSafeAreasDidChange
     )
 
     val metalView: MetalView = MetalView(
         renderDelegate = this,
-        retrieveInteropTransaction = ::retrieveAndMergeInteropTransactions
+        ::retrieveAndMergeInteropTransactions
     ).apply {
         canBeOpaque = false
     }

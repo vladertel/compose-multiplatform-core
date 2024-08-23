@@ -22,7 +22,6 @@ import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -40,107 +39,16 @@ import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
-import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
-import androidx.compose.ui.window.centroidLocationInView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlinx.cinterop.CValue
-import kotlinx.cinterop.readValue
-import kotlinx.cinterop.useContents
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
-import platform.CoreGraphics.CGRectZero
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
-import platform.UIKit.UITouch
-import platform.UIKit.UIView
-
-/**
- * A backing ComposeSceneLayer view for each Compose scene layer. Its task is to
- * handle events that start outside the bounds of the layer content
- */
-internal class ComposeSceneLayerView(
-    val isInteractionViewHitTestSuccessful: (point: CValue<CGPoint>, withEvent: UIEvent?) -> Boolean,
-    val isInsideInteractionBounds: (point: CValue<CGPoint>) -> Boolean,
-    val isFocusable: () -> Boolean
-): UIView(frame = CGRectZero.readValue()) {
-    private var touchesCount: Int = 0
-    private var previousSuccessHitTestTimestamp: Double? = null
-
-    internal var onOutsidePointerEvent: ((
-        eventType: PointerEventType
-    ) -> Unit)? = null
-
-    init {
-        translatesAutoresizingMaskIntoConstraints = false
-    }
-
-    private fun touchStartedOutside(withEvent: UIEvent?) {
-        println("touchStartedOutside event = $withEvent")
-        // hitTest call can happen multiple times for the same touch event, ensure we only send
-        // PointerEventType.Press once using the timestamp.
-        if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
-            // This workaround needs to send PointerEventType.Press just once
-            previousSuccessHitTestTimestamp = withEvent?.timestamp
-            onOutsidePointerEvent?.invoke(PointerEventType.Press)
-        }
-    }
-
-    override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesBegan(touches, withEvent)
-
-        touchesCount += touches.size
-    }
-
-    override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesCancelled(touches, withEvent)
-
-        touchesCount -= touches.size
-    }
-
-    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
-        touchesCount -= touches.size
-
-        // It was the last touch in the sequence, calculate the centroid and if it's outside
-        // the bounds, send `onOutsidePointerEvent`. Otherwise just return.
-        if (touchesCount > 0) {
-            return
-        }
-
-        val location = requireNotNull(
-            touches
-                .map { it as UITouch }
-                .centroidLocationInView(this)
-        ) {
-            "touchesEnded should not be called with an empty set of touches"
-        }
-
-        if (!isInsideInteractionBounds(location)) {
-            onOutsidePointerEvent?.invoke(PointerEventType.Release)
-        }
-
-        super.touchesEnded(touches, withEvent)
-    }
-
-    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-        // TODO: why do we have two functions here?
-        val isInBounds = isInteractionViewHitTestSuccessful(point, withEvent) && isInsideInteractionBounds(point)
-
-        if (!isInBounds && super.hitTest(point, withEvent) == this) {
-            touchStartedOutside(withEvent)
-
-            if (isFocusable()) {
-                // Focusable layers don't let touches pass through
-                return this
-            }
-        }
-
-        return null
-    }
-}
 
 // TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
