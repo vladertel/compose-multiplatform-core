@@ -35,28 +35,27 @@ import platform.UIKit.UIView
  * Tracking a state of window.
  */
 internal class PlatformWindowContext {
-    private val _windowInfo = WindowInfoImpl()
-    val windowInfo: WindowInfo get() = _windowInfo
+    val windowInfo = WindowInfoImpl()
 
     /**
      * A container used for additional layers and as reference for window coordinate space.
      */
-    private var _windowContainer: UIView? = null
+    private var windowContainer: UIView? = null
 
     fun setWindowFocused(focused: Boolean) {
-        _windowInfo.isWindowFocused = focused
+        windowInfo.isWindowFocused = focused
     }
 
     fun setWindowContainer(windowContainer: UIView) {
-        _windowContainer = windowContainer
+        this.windowContainer = windowContainer
     }
 
     fun setContainerSize(size: IntSize) {
-        _windowInfo.containerSize = size
+        windowInfo.containerSize = size
     }
 
     fun convertLocalToWindowPosition(container: UIView, localPosition: Offset): Offset {
-        val windowContainer = _windowContainer ?: return localPosition
+        val windowContainer = windowContainer ?: return localPosition
         return convertPoint(
             point = localPosition,
             fromView = container,
@@ -65,7 +64,7 @@ internal class PlatformWindowContext {
     }
 
     fun convertWindowToLocalPosition(container: UIView, positionInWindow: Offset): Offset {
-        val windowContainer = _windowContainer ?: return positionInWindow
+        val windowContainer = windowContainer ?: return positionInWindow
         return convertPoint(
             point = positionInWindow,
             fromView = windowContainer,
@@ -111,7 +110,7 @@ internal class PlatformWindowContext {
      * Converts the given [boundsInWindow] from the coordinate space of the container window to [toView] space.
      */
     fun convertWindowRect(boundsInWindow: Rect, toView: UIView): Rect {
-        val windowContainer = _windowContainer ?: return boundsInWindow
+        val windowContainer = windowContainer ?: return boundsInWindow
         return convertRect(
             rect = boundsInWindow,
             fromView = windowContainer,
