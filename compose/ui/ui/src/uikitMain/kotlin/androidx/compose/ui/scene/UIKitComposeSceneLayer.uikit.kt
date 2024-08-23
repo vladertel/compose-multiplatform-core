@@ -93,16 +93,7 @@ internal class UIKitComposeSceneLayer(
 
     private fun isInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
         boundsInWindow.contains(point.asDpOffset().toOffset(view.density).round())
-
-    /**
-     * Bounds of real drawings based on previous renders.
-     */
-    private var drawBounds = IntRect.Zero
-
-    /**
-     * The maximum amount to inflate the [drawBounds] comparing to [boundsInWindow].
-     */
-
+    
     private fun createComposeScene(
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -207,10 +198,3 @@ internal class UIKitComposeSceneLayer(
         mediator.viewWillLayoutSubviews()
     }
 }
-
-private fun maxInflate(baseBounds: IntRect, currentBounds: IntRect, maxInflate: IntRect) = IntRect(
-    left = max(baseBounds.left - currentBounds.left, maxInflate.left),
-    top = max(baseBounds.top - currentBounds.top, maxInflate.top),
-    right = max(currentBounds.right - baseBounds.right, maxInflate.right),
-    bottom = max(currentBounds.bottom - baseBounds.bottom, maxInflate.bottom)
-)

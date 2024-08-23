@@ -23,7 +23,10 @@ import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 
-internal class ComposeLayersView(
+/**
+ * A view that hosts the [ComposeScene] layers and a metal view shared by all of them.
+ */
+internal class ComposeSceneLayersView(
     private val onLayoutSubviews: () -> Unit,
     private val onSafeAreasDidChange: () -> Unit
 ): UIView(frame = CGRectZero.readValue()) {

@@ -36,7 +36,7 @@ internal class ComposeSceneLayers: SkikoRenderDelegate {
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
     private var ongoingGesturesCount = 0
 
-    val view = ComposeLayersView(
+    val view = ComposeSceneLayersView(
         ::onLayoutSubviews,
         ::onSafeAreasDidChange
     )
