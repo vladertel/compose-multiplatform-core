@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.unit.asDpSize
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.floor
 import kotlin.math.roundToLong
@@ -39,7 +40,7 @@ import platform.UIKit.UIViewMeta
 
 internal class MetalView(
     retrieveInteropTransaction: () -> UIKitInteropTransaction,
-    render: (Canvas, width: Int, height: Int, nanoTime: Long) -> Unit,
+    render: (Canvas, nanoTime: Long) -> Unit,
 ) : UIView(frame = CGRectZero.readValue()) {
     companion object : UIViewMeta() {
         @BetaInteropApi
@@ -52,18 +53,12 @@ internal class MetalView(
 
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
 
-    private var drawableWidth: CGFloat = 0.0
-
-    private var drawableHeight: CGFloat = 0.0
-
     private val redrawer = MetalRedrawer(
         metalLayer,
         retrieveInteropTransaction,
     ) { canvas, targetTimestamp ->
         render(
             canvas,
-            /*width = */drawableWidth.toInt(),
-            /*height = */drawableHeight.toInt(),
             /*nanoTime = */targetTimestamp.toNanoSeconds()
         )
     }
@@ -135,12 +130,13 @@ internal class MetalView(
         if (window == null || CGRectIsEmpty(bounds)) {
             return
         }
-        bounds.useContents {
-            drawableWidth = size.width * contentScaleFactor
-            drawableHeight = size.height * contentScaleFactor
-        }
 
-        metalLayer.drawableSize = CGSizeMake(drawableWidth, drawableHeight)
+        metalLayer.drawableSize = bounds.useContents {
+            CGSizeMake(
+                width = size.width * contentScaleFactor,
+                height = size.height * contentScaleFactor
+            )
+        }
 
         if (needsSynchronousDraw) {
             redrawer.drawSynchronously()

@@ -92,14 +92,11 @@ internal class PrimaryComposeSceneMediator(
     composeSceneFactory
 ) {
     override val metalView: MetalView = MetalView(
-        renderDelegate = object : SkikoRenderDelegate {
-            override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-                scene.render(canvas.asComposeCanvas(), nanoTime)
-            }
-        },
-        retrieveInteropTransaction = {
-            interopContainer.retrieveTransaction()
+        retrieveInteropTransaction = interopContainer::retrieveTransaction,
+        render = { canvas, _, _, nanoTime ->
+            scene.render(canvas.asComposeCanvas(), nanoTime)
         }
+
     )
 
     private val constraints = ExclusiveLayoutConstraints()

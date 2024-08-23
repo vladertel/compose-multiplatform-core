@@ -36,8 +36,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.asDpOffset
+import androidx.compose.ui.unit.asDpSize
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.roundToIntRect
+import androidx.compose.ui.unit.roundToIntSize
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
@@ -45,6 +47,7 @@ import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlinx.cinterop.CValue
+import kotlinx.cinterop.useContents
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGPoint
 import platform.UIKit.NSLayoutConstraint
@@ -129,13 +132,15 @@ internal class UIKitComposeSceneLayer(
 
     private val scrimPaint = Paint()
 
-    fun render(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+    fun render(canvas: Canvas, nanoTime: Long) {
         if (scrimColor != null) {
+            val size = view.bounds.useContents { with(density) { size.asDpSize().toSize() } }
+
             canvas.drawRect(
                 left = 0f,
                 top = 0f,
-                right = width.toFloat(),
-                bottom = height.toFloat(),
+                right = size.width,
+                bottom = size.height,
                 paint = scrimPaint
             )
         }

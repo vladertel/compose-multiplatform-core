@@ -181,11 +181,11 @@ internal class ComposeSceneLayers {
         return UIKitInteropMutableTransaction()
     }
 
-    private fun render(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+    private fun render(canvas: Canvas, nanoTime: Long) {
         val composeCanvas = canvas.asComposeCanvas()
 
         layers.fastForEach {
-            it.render(composeCanvas, width, height, nanoTime)
+            it.render(composeCanvas, nanoTime)
         }
     }
 }
