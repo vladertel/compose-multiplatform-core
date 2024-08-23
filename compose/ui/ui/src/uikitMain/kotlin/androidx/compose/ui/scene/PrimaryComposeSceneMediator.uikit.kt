@@ -105,6 +105,7 @@ internal class PrimaryComposeSceneMediator(
     private val constraints = ExclusiveLayoutConstraints()
 
     init {
+        // metalView layout is set in [setLayout] by the owning implementation
         interactionView.addSubview(metalView)
     }
 
@@ -124,8 +125,11 @@ internal class PrimaryComposeSceneMediator(
         metalView.needsProactiveDisplayLink = needHighFrequencyPolling
     }
 
-    override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
-        CGRectContainsPoint(interactionView.bounds, point)
+    /**
+     * In the primary mediator [InteractionUIView.hitTest] happens after default [UIView.pointInside]
+     * check, which is the only requirement.
+     */
+    override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean = true
 
     fun setLayout(value: PrimaryComposeSceneMediatorLayout) {
         when (value) {

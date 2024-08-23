@@ -68,7 +68,6 @@ internal class UIKitComposeSceneLayer(
     override var focusable: Boolean = focusStack != null
 
     val view = ComposeSceneLayerView(
-        ::isInteractionViewHitTestSuccessful,
         ::isInsideInteractionBounds,
         isFocusable = { focusable }
     )
@@ -91,9 +90,6 @@ internal class UIKitComposeSceneLayer(
             mediator.view.layoutConstraintsToMatch(view)
         )
     }
-
-    private fun isInteractionViewHitTestSuccessful(point: CValue<CGPoint>, event: UIEvent?): Boolean =
-        mediator.hitTestInteractionView(point, event) != null
 
     private fun isInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
         boundsInWindow.contains(point.asDpOffset().toOffset(view.density).round())

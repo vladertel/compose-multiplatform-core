@@ -209,11 +209,11 @@ internal abstract class ComposeSceneMediator(
 
     protected val interactionView =
         InteractionUIView(
-            hitTestInteropView = ::hitTestInteropView,
-            onTouchesEvent = ::onTouchesEvent,
-            onGestureEvent = ::onGestureEvent,
-            isPointInsideInteractionBounds = ::isPointInsideInteractionBounds,
-            onKeyboardPresses = ::onKeyboardPresses
+            ::hitTestInteropView,
+            ::onTouchesEvent,
+            ::onGestureEvent,
+            ::isPointInsideInteractionBounds,
+            ::onKeyboardPresses
         )
 
     /**

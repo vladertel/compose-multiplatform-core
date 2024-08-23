@@ -40,6 +40,10 @@ internal fun UIView.layoutConstraintsToCenterInParent(parent: UIView, size: CVal
         )
     }
 
+/**
+ * A box for a list of constraints which deactivates the old constraints and activates the new ones
+ * when new value is set.
+ */
 internal class ExclusiveLayoutConstraints {
     private var constraints: List<NSLayoutConstraint> = emptyList()
 

@@ -31,7 +31,6 @@ import platform.UIKit.UIView
  * handle events that start outside the bounds of the layer content
  */
 internal class ComposeSceneLayerView(
-    val isInteractionViewHitTestSuccessful: (point: CValue<CGPoint>, withEvent: UIEvent?) -> Boolean,
     val isInsideInteractionBounds: (point: CValue<CGPoint>) -> Boolean,
     val isFocusable: () -> Boolean
 ): UIView(frame = CGRectZero.readValue()) {
@@ -73,7 +72,7 @@ internal class ComposeSceneLayerView(
         touchesCount -= touches.size
 
         // It was the last touch in the sequence, calculate the centroid and if it's outside
-        // the bounds, send `onOutsidePointerEvent`. Otherwise just return.
+        // the bounds, send `onOutsidePointerEvent`. Otherwise, just return.
         if (touchesCount > 0) {
             return
         }
@@ -94,10 +93,9 @@ internal class ComposeSceneLayerView(
     }
 
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-        // TODO: why do we have two functions here?
-        val isInBounds = isInteractionViewHitTestSuccessful(point, withEvent) && isInsideInteractionBounds(point)
+        val isOutsideBounds = !isInsideInteractionBounds(point)
 
-        if (!isInBounds && super.hitTest(point, withEvent) == this) {
+        if (isOutsideBounds && super.hitTest(point, withEvent) == this) {
             touchStartedOutside(withEvent)
 
             if (isFocusable()) {
