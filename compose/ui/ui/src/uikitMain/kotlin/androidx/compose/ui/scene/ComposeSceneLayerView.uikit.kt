@@ -48,10 +48,10 @@ internal class ComposeSceneLayerView(
 
     init {
         translatesAutoresizingMaskIntoConstraints = false
+        setMultipleTouchEnabled(true)
     }
 
     private fun touchStartedOutside(withEvent: UIEvent?) {
-        println("touchStartedOutside event = $withEvent")
         // hitTest call can happen multiple times for the same touch event, ensure we only send
         // PointerEventType.Press once using the timestamp.
         if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
@@ -91,6 +91,7 @@ internal class ComposeSceneLayerView(
         }
 
         if (!isInsideInteractionBounds(location)) {
+            println("Release outside")
             onOutsidePointerEvent?.invoke(PointerEventType.Release)
         }
 
