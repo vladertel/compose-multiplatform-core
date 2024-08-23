@@ -38,8 +38,8 @@ import platform.UIKit.UIView
 import platform.UIKit.UIViewMeta
 
 internal class MetalView(
-    private val renderDelegate: SkikoRenderDelegate,
-    private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
+    retrieveInteropTransaction: () -> UIKitInteropTransaction,
+    render: (Canvas, width: Int, height: Int, nanoTime: Long) -> Unit,
 ) : UIView(frame = CGRectZero.readValue()) {
     companion object : UIViewMeta() {
         @BetaInteropApi
@@ -49,25 +49,24 @@ internal class MetalView(
     private val device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice()
             ?: throw IllegalStateException("Metal is not supported on this system")
-    private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
-    private var drawableWidth: CGFloat = 0.0
-    private var drawableHeight: CGFloat = 0.0
-    private val redrawer: MetalRedrawer = MetalRedrawer(
-        metalLayer,
-        callbacks = object : MetalRedrawerCallbacks {
-            override fun render(canvas: Canvas, targetTimestamp: NSTimeInterval) {
-                renderDelegate.onRender(
-                    canvas,
-                    width = drawableWidth.toInt(),
-                    height = drawableHeight.toInt(),
-                    nanoTime = targetTimestamp.toNanoSeconds()
-                )
-            }
 
-            override fun retrieveInteropTransaction(): UIKitInteropTransaction =
-                this@MetalView.retrieveInteropTransaction()
-        }
-    )
+    private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
+
+    private var drawableWidth: CGFloat = 0.0
+
+    private var drawableHeight: CGFloat = 0.0
+
+    private val redrawer = MetalRedrawer(
+        metalLayer,
+        retrieveInteropTransaction,
+    ) { canvas, targetTimestamp ->
+        render(
+            canvas,
+            /*width = */drawableWidth.toInt(),
+            /*height = */drawableHeight.toInt(),
+            /*nanoTime = */targetTimestamp.toNanoSeconds()
+        )
+    }
 
     /**
      * @see [MetalRedrawer.canBeOpaque]

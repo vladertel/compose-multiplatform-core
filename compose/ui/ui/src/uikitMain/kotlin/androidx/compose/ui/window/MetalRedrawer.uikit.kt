@@ -143,7 +143,8 @@ internal class InflightCommandBuffers(
 
 internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,
-    private val callbacks: MetalRedrawerCallbacks
+    private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
+    private val render: (Canvas, targetTimestamp: NSTimeInterval) -> Unit
 ) {
     /**
      * A wrapper around CAMetalLayer that allows to perform operations on its drawables without
@@ -291,6 +292,7 @@ internal class MetalRedrawer(
         draw(waitUntilCompletion = true, CACurrentMediaTime())
     }
 
+    @OptIn(BetaInteropApi::class)
     private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) = trace("MetalRedrawer:draw") {
         check(NSThread.isMainThread)
 
@@ -316,7 +318,7 @@ internal class MetalRedrawer(
                     )
                 ).also { canvas ->
                     canvas.clear(if (metalLayer.isOpaque()) Color.WHITE else Color.TRANSPARENT)
-                    callbacks.render(canvas, lastRenderTimestamp)
+                    render(canvas, lastRenderTimestamp)
                 }
 
                 pictureRecorder.finishRecordingAsPicture()
@@ -363,7 +365,7 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
-            val interopTransaction = callbacks.retrieveInteropTransaction()
+            val interopTransaction = retrieveInteropTransaction()
             if (interopTransaction.state == UIKitInteropState.BEGAN) {
                 isInteropActive = true
             }
@@ -493,6 +495,7 @@ internal class MetalRedrawer(
 private class DisplayLinkProxy(
     private val callback: () -> Unit
 ) : NSObject() {
+    @OptIn(BetaInteropApi::class)
     @ObjCAction
     fun handleDisplayLinkTick() {
         callback()

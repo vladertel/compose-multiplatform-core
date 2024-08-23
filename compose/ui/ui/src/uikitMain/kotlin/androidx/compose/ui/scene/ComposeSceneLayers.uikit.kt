@@ -29,7 +29,7 @@ import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
 
-internal class ComposeSceneLayers: SkikoRenderDelegate {
+internal class ComposeSceneLayers {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
 
@@ -42,8 +42,8 @@ internal class ComposeSceneLayers: SkikoRenderDelegate {
     )
 
     val metalView: MetalView = MetalView(
-        renderDelegate = this,
-        ::retrieveAndMergeInteropTransactions
+        ::retrieveAndMergeInteropTransactions,
+        ::render
     ).apply {
         canBeOpaque = false
     }
@@ -57,14 +57,6 @@ internal class ComposeSceneLayers: SkikoRenderDelegate {
         NSLayoutConstraint.activateConstraints(
             metalView.layoutConstraintsToMatch(view)
         )
-    }
-
-    override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-        val composeCanvas = canvas.asComposeCanvas()
-
-        layers.fastForEach {
-            it.render(composeCanvas, width, height, nanoTime)
-        }
     }
 
     /**
@@ -187,5 +179,13 @@ internal class ComposeSceneLayers: SkikoRenderDelegate {
     private fun retrieveAndMergeInteropTransactions(): UIKitInteropTransaction {
         // TODO: proper implementation
         return UIKitInteropMutableTransaction()
+    }
+
+    private fun render(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
+        val composeCanvas = canvas.asComposeCanvas()
+
+        layers.fastForEach {
+            it.render(composeCanvas, width, height, nanoTime)
+        }
     }
 }
