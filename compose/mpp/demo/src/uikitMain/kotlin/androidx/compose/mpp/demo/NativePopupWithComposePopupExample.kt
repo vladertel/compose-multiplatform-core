@@ -27,11 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import platform.UIKit.UIModalPresentationFormSheet
@@ -40,6 +42,7 @@ import platform.UIKit.UISheetPresentationControllerDetentIdentifierLarge
 import platform.UIKit.UISheetPresentationControllerDetentIdentifierMedium
 import platform.UIKit.sheetPresentationController
 
+@OptIn(ExperimentalComposeUiApi::class)
 val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compose popup") {
     val viewController = LocalUIViewController.current
 
@@ -68,10 +71,14 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
                         showComposePopup = false
                     },
                     properties = PopupProperties(
+                        usePlatformDefaultWidth = true,
                         dismissOnClickOutside = true
                     )
                 ) {
-                    Text("Compose popup", modifier = Modifier.background(Color.LightGray))
+                    Text(
+                        text ="Compose popup",
+                        modifier = Modifier.background(Color.LightGray)
+                    )
                 }
             }
 
@@ -80,8 +87,16 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
                     onDismissRequest = {
                         showComposeDialog = false
                     },
+                    properties = DialogProperties(
+                        dismissOnClickOutside = true,
+                    )
                 ) {
-                    Text("Compose dialog", modifier = Modifier.background(Color.Green))
+                    Text(
+                        text = "Compose dialog",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Green)
+                    )
                 }
             }
         }
