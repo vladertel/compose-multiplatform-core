@@ -360,9 +360,6 @@ internal abstract class ComposeSceneMediator(
     var density by scene::density
     var layoutDirection by scene::layoutDirection
 
-    fun hitTestInteractionView(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? =
-        interactionView.hitTest(point, withEvent)
-
     init {
         view.translatesAutoresizingMaskIntoConstraints = false
 
