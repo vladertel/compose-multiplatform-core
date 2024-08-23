@@ -93,10 +93,9 @@ internal class PrimaryComposeSceneMediator(
 ) {
     override val metalView: MetalView = MetalView(
         retrieveInteropTransaction = interopContainer::retrieveTransaction,
-        render = { canvas, _, _, nanoTime ->
+        render = { canvas, nanoTime ->
             scene.render(canvas.asComposeCanvas(), nanoTime)
         }
-
     )
 
     private val constraints = ExclusiveLayoutConstraints()
