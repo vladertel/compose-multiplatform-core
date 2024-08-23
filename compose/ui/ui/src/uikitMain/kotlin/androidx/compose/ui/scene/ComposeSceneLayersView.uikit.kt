@@ -30,10 +30,17 @@ internal class ComposeSceneLayersView(
     private val onLayoutSubviews: () -> Unit,
     private val onSafeAreasDidChange: () -> Unit
 ): UIView(frame = CGRectZero.readValue()) {
+    /**
+     * This view is transparent for touches, unless a child view is hit-tested.
+     */
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         val result = super.hitTest(point, withEvent)
-        println("Hit test: $result")
-        return result
+
+        return if (result == this) {
+            null
+        } else {
+            result
+        }
     }
 
     override fun layoutSubviews() {
