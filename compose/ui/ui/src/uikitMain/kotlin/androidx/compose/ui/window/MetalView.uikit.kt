@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.unit.asDpSize
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.floor
 import kotlin.math.roundToLong
@@ -24,8 +23,6 @@ import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkikoRenderDelegate
-import platform.CoreGraphics.CGFloat
 import platform.CoreGraphics.CGRectIsEmpty
 import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSizeMake
@@ -100,7 +97,7 @@ internal class MetalView(
         }
     }
 
-    fun needRedraw() = redrawer.needRedraw()
+    fun setNeedsRedraw() = redrawer.setNeedsRedraw()
 
     var isForcedToPresentWithTransactionEveryFrame by redrawer::isForcedToPresentWithTransactionEveryFrame
 

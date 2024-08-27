@@ -84,7 +84,7 @@ private class DisplayLinkConditions(
     /**
      * Mark next [FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW] frames to issue a draw dispatch and unpause displayLink if needed.
      */
-    fun needRedraw() {
+    fun setNeedsRedraw() {
         scheduledRedrawsCount = FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW
     }
 
@@ -279,7 +279,7 @@ internal class MetalRedrawer(
      * Marks current state as dirty and unpauses display link if needed and enables draw dispatch operation on
      * next vsync
      */
-    fun needRedraw() = displayLinkConditions.needRedraw()
+    fun setNeedsRedraw() = displayLinkConditions.setNeedsRedraw()
 
     /**
      * Immediately dispatch draw and block the thread until it's finished and presented on the screen.

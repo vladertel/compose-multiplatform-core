@@ -176,7 +176,7 @@ internal abstract class ComposeSceneMediator(
 
     protected val scene: ComposeScene by lazy {
         composeSceneFactory(
-            ::onComposeSceneInvalidate,
+            ::setNeedsRedraw,
             IOSPlatformContext(),
             coroutineContext,
         )
@@ -199,7 +199,7 @@ internal abstract class ComposeSceneMediator(
             // mismatch between visual state and application state. This can be fixed by forcing
             // a redraw when app returns to foreground, which will ensure that the visual state is in
             // sync with the application state even if such sequence of events took a place.
-            metalView.needRedraw()
+            metalView.setNeedsRedraw()
         }
 
     /**
@@ -221,7 +221,7 @@ internal abstract class ComposeSceneMediator(
      */
     protected val interopContainer = UIKitInteropContainer(
         root = interactionView,
-        requestRedraw = ::onComposeSceneInvalidate
+        requestRedraw = ::setNeedsRedraw
     )
 
     /**
@@ -271,7 +271,7 @@ internal abstract class ComposeSceneMediator(
     private val textInputService: UIKitTextInputService by lazy {
         UIKitTextInputService(
             updateView = {
-                metalView.setNeedsDisplay() // redraw on next frame
+                setNeedsRedraw()
                 CATransaction.flush() // clear all animations
             },
             getRootView = { view },
@@ -419,7 +419,7 @@ internal abstract class ComposeSceneMediator(
         interopContainer.dispose()
     }
 
-    private fun onComposeSceneInvalidate() = metalView.needRedraw()
+    private fun setNeedsRedraw() = metalView.setNeedsRedraw()
 
     fun viewWillLayoutSubviews() {
         val density = parentView.density

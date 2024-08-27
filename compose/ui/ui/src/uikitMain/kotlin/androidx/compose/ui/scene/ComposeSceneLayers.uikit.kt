@@ -24,7 +24,6 @@ import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
@@ -143,7 +142,7 @@ internal class ComposeSceneLayers {
             view.removeFromSuperview()
         } else {
             // Redraw content with layer removed
-            metalView.needRedraw()
+            metalView.setNeedsRedraw()
         }
     }
 
