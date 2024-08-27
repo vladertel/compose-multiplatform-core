@@ -19,9 +19,7 @@ package androidx.compose.foundation.text.input.internal
 import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSession
-import androidx.compose.ui.platform.TextFieldStateAdapter
 import androidx.compose.ui.platform.ViewConfiguration
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.ImeAction
@@ -70,7 +68,11 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
 
     startInputMethod(
         SkikoPlatformTextInputMethodRequest(
-            state = TransformedTextFieldStateAdapter(state),
+            state = TextFieldValue(
+                state.visualText.toString(),
+                state.visualText.selection,
+                state.visualText.composition,
+            ),
             imeOptions = imeOptions,
             onEditCommand = ::onEditCommand,
             onImeAction = onImeAction
@@ -78,24 +80,8 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     )
 }
 
-
-private class TransformedTextFieldStateAdapter(
-    val state: TransformedTextFieldState
-) : TextFieldStateAdapter {
-
-    override val text: CharSequence
-        get() = state.visualText
-
-    override val selection: TextRange
-        get() = state.visualText.selection
-
-    override val composition: TextRange?
-        get() = state.visualText.composition
-
-}
-
 private data class SkikoPlatformTextInputMethodRequest(
-    override val state: TextFieldStateAdapter,
+    override val state: TextFieldValue,
     override val imeOptions: ImeOptions,
     override val onEditCommand: (List<EditCommand>) -> Unit,
     override val onImeAction: ((ImeAction) -> Unit)?

@@ -22,7 +22,9 @@ import androidx.compose.ui.text.input.DeleteSurroundingTextInCodePointsCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.SetComposingTextCommand
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.substring
 import java.awt.Rectangle
 import java.awt.event.InputMethodEvent
@@ -37,9 +39,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal class DesktopTextInputService(private val component: PlatformComponent) :
-    PlatformContextTextInputService {
+    PlatformTextInputService {
     data class CurrentInput(
-        var value: TextFieldStateAdapter,
+        var value: TextFieldValue,
         val onEditCommand: ((List<EditCommand>) -> Unit),
         val onImeActionPerformed: ((ImeAction) -> Unit)?,
         val imeAction: ImeAction,
@@ -56,10 +58,10 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     var needToDeletePreviousChar: Boolean = false
 
     override fun startInput(
-        value: TextFieldStateAdapter,
+        value: TextFieldValue,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
+        onImeActionPerformed: ((ImeAction) -> Unit)
     ) {
         val input = CurrentInput(
             value = value,
@@ -83,7 +85,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     override fun hideSoftwareKeyboard() {
     }
 
-    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
         currentInput?.value = newValue
     }
 

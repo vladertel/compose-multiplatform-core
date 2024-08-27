@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.FinishComposingTextCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.SetComposingRegionCommand
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
@@ -64,7 +65,7 @@ internal class UIKitTextInputService(
      * Erasure happens due to K/N not supporting Obj-C lightweight generics.
      */
     private val onKeyboardPresses: (Set<*>) -> Unit,
-) : PlatformContextTextInputService, TextToolbar {
+) : PlatformTextInputService, TextToolbar {
 
     private val rootView get() = rootViewProvider()
     private var currentInput: CurrentInput? = null

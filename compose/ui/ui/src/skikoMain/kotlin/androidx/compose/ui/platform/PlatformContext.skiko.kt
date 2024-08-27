@@ -114,7 +114,7 @@ interface PlatformContext {
 
     val viewConfiguration: ViewConfiguration get() = EmptyViewConfiguration
     val inputModeManager: InputModeManager
-    val textInputService: PlatformContextTextInputService get() = EmptyPlatformContextTextInputService
+    val textInputService: PlatformTextInputService get() = EmptyPlatformTextInputService
 
     suspend fun textInputSession(
         session: suspend PlatformTextInputSessionScope.() -> Nothing
@@ -217,18 +217,18 @@ internal object EmptyViewConfiguration : ViewConfiguration {
     override val touchSlop: Float = 18f
 }
 
-private object EmptyPlatformContextTextInputService : PlatformContextTextInputService {
+private object EmptyPlatformTextInputService : PlatformTextInputService {
     override fun startInput(
-        value: TextFieldStateAdapter,
+        value: TextFieldValue,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
+        onImeActionPerformed: ((ImeAction) -> Unit)
     ) = Unit
 
     override fun stopInput() = Unit
     override fun showSoftwareKeyboard() = Unit
     override fun hideSoftwareKeyboard() = Unit
-    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) = Unit
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) = Unit
 }
 
 private object EmptyTextToolbar : TextToolbar {
