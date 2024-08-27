@@ -17,19 +17,24 @@
 package androidx.compose.mpp.demo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.onClick
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -56,7 +61,11 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
             var showComposePopup by remember { mutableStateOf(false) }
             var showComposeDialog by remember { mutableStateOf(false) }
 
-            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Button(onClick = {
                     showComposePopup = true
                 }) {
@@ -73,8 +82,12 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
                             )
                         ) {
                             Text(
-                                text ="Compose popup",
-                                modifier = Modifier.background(Color.LightGray)
+                                text = "Compose popup",
+                                color = Color.Black,
+                                modifier = Modifier
+                                    .padding(150.dp)
+                                    .clickable { showComposePopup = false }
+                                    .background(Color.LightGray)
                             )
                         }
                     }
