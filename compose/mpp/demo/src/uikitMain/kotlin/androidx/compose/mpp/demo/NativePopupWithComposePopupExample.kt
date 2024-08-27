@@ -22,12 +22,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.onClick
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +35,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.platform.AccessibilityDebugLogger
+import androidx.compose.ui.platform.AccessibilitySyncOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.compose.ui.window.Dialog
@@ -52,7 +52,7 @@ import platform.UIKit.addChildViewController
 import platform.UIKit.didMoveToParentViewController
 import platform.UIKit.sheetPresentationController
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalComposeApi::class)
 val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compose popup") {
     val viewController = LocalUIViewController.current
 
@@ -60,7 +60,20 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
         val presentedViewController = UIViewController(nibName = null, bundle = null)
         presentedViewController.view.backgroundColor = UIColor.yellowColor
 
-        val composeViewController = ComposeUIViewController {
+        val composeViewController = ComposeUIViewController(
+            configure = {
+                accessibilitySyncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(object:
+                    AccessibilityDebugLogger {
+                    override fun log(message: Any?) {
+                        if (message == null) {
+                            println()
+                        } else {
+                            println("[modal a11y]: $message")
+                        }
+                    }
+                })
+            }
+        ) {
             var showComposePopup by remember { mutableStateOf(false) }
             var showComposeDialog by remember { mutableStateOf(false) }
 
