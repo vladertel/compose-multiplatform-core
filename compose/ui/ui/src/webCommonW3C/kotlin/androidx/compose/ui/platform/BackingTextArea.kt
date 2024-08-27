@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.SetComposingTextCommand
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
 import org.w3c.dom.events.Event
@@ -38,7 +39,7 @@ import org.w3c.dom.events.KeyboardEventInit
 internal class BackingTextArea(
     private val imeOptions: ImeOptions,
     private val onEditCommand: (List<EditCommand>) -> Unit,
-    private val onImeActionPerformed: ((ImeAction) -> Unit)?,
+    private val onImeActionPerformed: (ImeAction) -> Unit,
     private val processKeyboardEvent: (KeyboardEvent) -> Unit
 ) {
     private val textArea: HTMLTextAreaElement = createHtmlInput()
@@ -122,7 +123,7 @@ internal class BackingTextArea(
             when (evt.inputType) {
                 "insertLineBreak" -> {
                     if (imeOptions.singleLine) {
-                        onImeActionPerformed?.invoke(imeOptions.imeAction)
+                        onImeActionPerformed(imeOptions.imeAction)
                     }
                 }
 
@@ -174,9 +175,9 @@ internal class BackingTextArea(
         focus()
     }
 
-    fun updateState(textFieldState: TextFieldStateAdapter) {
-        textArea.value = textFieldState.text.toString()
-        textArea.setSelectionRange(textFieldState.selection.start, textFieldState.selection.end)
+    fun updateState(textFieldValue: TextFieldValue) {
+        textArea.value = textFieldValue.text
+        textArea.setSelectionRange(textFieldValue.selection.start, textFieldValue.selection.end)
     }
 
     fun dispose() {

@@ -27,8 +27,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.PlatformContext
-import androidx.compose.ui.platform.PlatformContextTextInputService
-import androidx.compose.ui.platform.TextFieldStateAdapter
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
@@ -37,6 +35,8 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.PlatformTextInputService
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import kotlin.coroutines.CoroutineContext
@@ -147,7 +147,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
     private class Session(
         var imeOptions: ImeOptions,
         var onEditCommand: (List<EditCommand>) -> Unit,
-        var onImeActionPerformed: ((ImeAction) -> Unit)?,
+        var onImeActionPerformed: (ImeAction) -> Unit,
     )
 
     private val composeRootRegistry = ComposeRootRegistry()
@@ -391,19 +391,19 @@ class SkikoComposeUiTest @InternalTestApi constructor(
             get() = size
     }
 
-    private inner class TestTextInputService : PlatformContextTextInputService {
+    private inner class TestTextInputService : PlatformTextInputService {
         var session: Session? = null
 
         override fun startInput(
-            value: TextFieldStateAdapter,
+            value: TextFieldValue,
             imeOptions: ImeOptions,
             onEditCommand: (List<EditCommand>) -> Unit,
-            onImeActionPerformed: ((ImeAction) -> Unit)?
+            onImeActionPerformed: (ImeAction) -> Unit
         ) {
             session = Session(
                 imeOptions = imeOptions,
                 onEditCommand = onEditCommand,
-                onImeActionPerformed = onImeActionPerformed ?: { }
+                onImeActionPerformed = onImeActionPerformed
             )
         }
 
@@ -413,7 +413,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
 
         override fun showSoftwareKeyboard() = Unit
         override fun hideSoftwareKeyboard() = Unit
-        override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) = Unit
+        override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) = Unit
     }
 
     private inner class TestContext : PlatformContext by PlatformContext.Empty {

@@ -33,9 +33,11 @@ import androidx.compose.ui.text.input.FinishComposingTextCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.SetComposingRegionCommand
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.asCGRect
@@ -64,7 +66,7 @@ internal class UIKitTextInputService(
      * Erasure happens due to K/N not supporting Obj-C lightweight generics.
      */
     private val onKeyboardPresses: (Set<*>) -> Unit,
-) : PlatformContextTextInputService, TextToolbar {
+) : PlatformTextInputService, TextToolbar {
 
     private val rootView get() = rootViewProvider()
     private var currentInput: CurrentInput? = null
@@ -122,17 +124,17 @@ internal class UIKitTextInputService(
     private val mainScope = MainScope()
 
     override fun startInput(
-        value: TextFieldStateAdapter,
+        value: TextFieldValue,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
+        onImeActionPerformed: (ImeAction) -> Unit
     ) {
         currentInput = CurrentInput(value, onEditCommand)
         _tempCurrentInputSession = EditProcessor().apply {
-            reset(value.toTextFieldValue(), null)
+            reset(value, null)
         }
         currentImeOptions = imeOptions
-        currentImeActionHandler = onImeActionPerformed ?: { }
+        currentImeActionHandler = onImeActionPerformed
 
         attachIntermediateTextInputView()
         textUIView?.input = createSkikoInput()
@@ -165,9 +167,9 @@ internal class UIKitTextInputService(
         }
     }
 
-    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
         val internalOldValue = _tempCurrentInputSession?.toTextFieldValue()
-        val textChanged = internalOldValue == null || internalOldValue.text != newValue.text.toString()
+        val textChanged = internalOldValue == null || internalOldValue.text != newValue.text
         val selectionChanged =
             textChanged || internalOldValue == null || internalOldValue.selection != newValue.selection
         if (textChanged) {
@@ -176,7 +178,7 @@ internal class UIKitTextInputService(
         if (selectionChanged) {
             textUIView?.selectionWillChange()
         }
-        _tempCurrentInputSession?.reset(newValue.toTextFieldValue(), null)
+        _tempCurrentInputSession?.reset(newValue, null)
         currentInput?.let { input ->
             input.value = newValue
             _tempCursorPos = null
@@ -202,7 +204,7 @@ internal class UIKitTextInputService(
     }
 
     override fun updateTextLayoutResult(
-        textFieldValue: TextFieldStateAdapter,
+        textFieldValue: TextFieldValue,
         offsetMapping: OffsetMapping,
         textLayoutResult: TextLayoutResult,
         textFieldToRootTransform: (Matrix) -> Unit,
@@ -288,7 +290,7 @@ internal class UIKitTextInputService(
         return true
     }
 
-    private fun getState(): TextFieldStateAdapter? = currentInput?.value
+    private fun getState(): TextFieldValue? = currentInput?.value
 
     override fun showMenu(
         rect: Rect,
@@ -534,7 +536,7 @@ internal class UIKitTextInputService(
          * Returned value must be in range between 0 and length of text (inclusive).
          */
         override fun positionFromPosition(position: Long, offset: Long): Long {
-            val text = getState()?.text?.toString() ?: return 0
+            val text = getState()?.text ?: return 0
 
             if (position + offset >= text.lastIndex + 1) {
                 return (text.lastIndex + 1).toLong()
@@ -566,6 +568,6 @@ internal class UIKitTextInputService(
 }
 
 private data class CurrentInput(
-    var value: TextFieldStateAdapter,
+    var value: TextFieldValue,
     val onEditCommand: (List<EditCommand>) -> Unit
 )

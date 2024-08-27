@@ -19,17 +19,19 @@ package androidx.compose.ui.platform
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.PlatformTextInputService
+import androidx.compose.ui.text.input.TextFieldValue
 
-internal class WebKeyboardInputService : PlatformContextTextInputService {
+internal class WebKeyboardInputService : PlatformTextInputService {
     override fun startInput(
-        value: TextFieldStateAdapter,
+        value: TextFieldValue,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
+        onImeActionPerformed: (ImeAction) -> Unit
     ) = Unit
 
     override fun stopInput() = Unit
     override fun showSoftwareKeyboard() = Unit
     override fun hideSoftwareKeyboard() = Unit
-    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) = Unit
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) = Unit
 }

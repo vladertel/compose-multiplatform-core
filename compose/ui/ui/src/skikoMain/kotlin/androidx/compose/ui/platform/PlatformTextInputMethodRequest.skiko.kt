@@ -16,65 +16,14 @@
 
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.TextFieldValue
 
 actual interface PlatformTextInputMethodRequest {
-    val state: TextFieldStateAdapter
+    val state: TextFieldValue
     val imeOptions: ImeOptions
     val onEditCommand: (List<EditCommand>) -> Unit
     val onImeAction: ((ImeAction) -> Unit)?
-}
-
-/**
- * The purpose of this interface is to provide, in the `ui` module, an adapter for
- * `TransformedTextFieldStateAdapter`, which is in the `foundation` module.
- *
- * It exposes all the properties of `TransformedTextFieldStateAdapter` that are necessary for
- * implementing input methods.
- */
-interface TextFieldStateAdapter {
-    val text: CharSequence
-    val selection: TextRange
-    val composition: TextRange?
-}
-
-/**
- * Adapts a [TextFieldValue] to [TextFieldStateAdapter].
- */
-fun TextFieldValue.asTextFieldStateAdapter() = object: TextFieldStateAdapter {
-
-    override val text: CharSequence
-        get() = this@asTextFieldStateAdapter.annotatedString
-
-    override val selection: TextRange
-        get() = this@asTextFieldStateAdapter.selection
-
-    override val composition: TextRange?
-        get() = this@asTextFieldStateAdapter.composition
-
-}
-
-/**
- * Returns a [TextFieldValue] with the current values of a [TextFieldStateAdapter].
- */
-fun TextFieldStateAdapter.toTextFieldValue(): TextFieldValue {
-    val text = this.text
-    return if (text is AnnotatedString) {
-        TextFieldValue(
-            annotatedString = text,
-            selection = this.selection,
-            composition = this.composition
-        )
-    } else {
-        TextFieldValue(
-            text = text.toString(),
-            selection = this.selection,
-            composition = this.composition
-        )
-    }
 }

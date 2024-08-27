@@ -41,7 +41,7 @@ class DesktopInputComponentTest {
         val processor = EditProcessor()
 
         val input = DesktopTextInputService(PlatformComponent.Empty)
-        val inputService = TextInputService(input.asPlatformTextInputService())
+        val inputService = TextInputService(input)
 
         val session = inputService.startInput(
             value = TextFieldValue(),
@@ -88,7 +88,7 @@ class DesktopInputComponentTest {
             }
         }
         val input = DesktopTextInputService(component)
-        val inputService = TextInputService(input.asPlatformTextInputService())
+        val inputService = TextInputService(input)
 
         val session = inputService.startInput(
             value = TextFieldValue(),

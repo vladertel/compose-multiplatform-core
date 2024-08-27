@@ -21,6 +21,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.PlatformTextInputService
+import androidx.compose.ui.text.input.TextFieldValue
 import org.w3c.dom.events.KeyboardEvent
 
 internal interface InputAwareInputService {
@@ -29,19 +31,19 @@ internal interface InputAwareInputService {
     fun isVirtualKeyboard(): Boolean
 }
 
-internal abstract class WebTextInputService : PlatformContextTextInputService, InputAwareInputService {
+internal abstract class WebTextInputService : PlatformTextInputService, InputAwareInputService {
     private val webImeInputService = WebImeInputService(this)
     private val webKeyboardInputService = WebKeyboardInputService()
 
-    private fun delegatedService(): PlatformContextTextInputService {
+    private fun delegatedService(): PlatformTextInputService {
         return if (isVirtualKeyboard()) webImeInputService else webKeyboardInputService
     }
 
     override fun startInput(
-        value: TextFieldStateAdapter,
+        value: TextFieldValue,
         imeOptions: ImeOptions,
         onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
+        onImeActionPerformed: (ImeAction) -> Unit
     ) {
         delegatedService().startInput(value, imeOptions, onEditCommand, onImeActionPerformed)
     }
@@ -58,7 +60,7 @@ internal abstract class WebTextInputService : PlatformContextTextInputService, I
         delegatedService().hideSoftwareKeyboard()
     }
 
-    override fun updateState(oldValue: TextFieldStateAdapter?, newValue: TextFieldStateAdapter) {
+    override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
         delegatedService().updateState(oldValue, newValue)
     }
 

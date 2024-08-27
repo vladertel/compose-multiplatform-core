@@ -752,7 +752,7 @@ internal class ComposeSceneMediator(
                     value = request.state,
                     imeOptions = request.imeOptions,
                     onEditCommand = request.onEditCommand,
-                    onImeActionPerformed = request.onImeAction
+                    onImeActionPerformed = request.onImeAction ?: {}
                 )
 
                 continuation.invokeOnCancellation {
