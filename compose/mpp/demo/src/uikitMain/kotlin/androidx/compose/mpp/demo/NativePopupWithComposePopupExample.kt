@@ -36,10 +36,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIColor
 import platform.UIKit.UIModalPresentationFormSheet
 import platform.UIKit.UISheetPresentationControllerDetent
 import platform.UIKit.UISheetPresentationControllerDetentIdentifierLarge
 import platform.UIKit.UISheetPresentationControllerDetentIdentifierMedium
+import platform.UIKit.UIViewController
+import platform.UIKit.addChildViewController
+import platform.UIKit.didMoveToParentViewController
 import platform.UIKit.sheetPresentationController
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -47,7 +52,9 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
     val viewController = LocalUIViewController.current
 
     Button(onClick = {
-        val presentedViewController = ComposeUIViewController {
+        val presentedViewController = UIViewController(nibName = null, bundle = null)
+
+        val composeViewController = ComposeUIViewController {
             var showComposePopup by remember { mutableStateOf(false) }
             var showComposeDialog by remember { mutableStateOf(false) }
 
@@ -56,50 +63,65 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
                     showComposePopup = true
                 }) {
                     Text("Show Compose popup")
+
+                    if (showComposePopup) {
+                        Popup(
+                            onDismissRequest = {
+                                showComposePopup = false
+                            },
+                            properties = PopupProperties(
+                                usePlatformDefaultWidth = true,
+                                dismissOnClickOutside = true
+                            )
+                        ) {
+                            Text(
+                                text ="Compose popup",
+                                modifier = Modifier.background(Color.LightGray)
+                            )
+                        }
+                    }
                 }
 
                 Button(onClick = {
                     showComposeDialog = true
                 }) {
                     Text("Show Compose dialog")
-                }
-            }
 
-            if (showComposePopup) {
-                Popup(
-                    onDismissRequest = {
-                        showComposePopup = false
-                    },
-                    properties = PopupProperties(
-                        usePlatformDefaultWidth = true,
-                        dismissOnClickOutside = true
-                    )
-                ) {
-                    Text(
-                        text ="Compose popup",
-                        modifier = Modifier.background(Color.LightGray)
-                    )
-                }
-            }
-
-            if (showComposeDialog) {
-                Dialog(
-                    onDismissRequest = {
-                        showComposeDialog = false
-                    },
-                    properties = DialogProperties(
-                        dismissOnClickOutside = true,
-                    )
-                ) {
-                    Text(
-                        text = "Compose dialog",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Green)
-                    )
+                    if (showComposeDialog) {
+                        Dialog(
+                            onDismissRequest = {
+                                showComposeDialog = false
+                            },
+                            properties = DialogProperties(
+                                dismissOnClickOutside = true,
+                            )
+                        ) {
+                            Text(
+                                text = "Compose dialog",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Green)
+                            )
+                        }
+                    }
                 }
             }
         }
+
+        presentedViewController.addChildViewController(composeViewController)
+        presentedViewController.view.addSubview(composeViewController.view)
+        composeViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        composeViewController.view.layer.borderColor = UIColor.redColor.CGColor
+        composeViewController.view.layer.borderWidth = 2.0
+        NSLayoutConstraint.activateConstraints(
+            listOf(
+                composeViewController.view.centerXAnchor.constraintEqualToAnchor(presentedViewController.view.centerXAnchor),
+                composeViewController.view.centerYAnchor.constraintEqualToAnchor(presentedViewController.view.centerYAnchor),
+                composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.5),
+                composeViewController.view.heightAnchor.constraintEqualToAnchor(presentedViewController.view.heightAnchor, 0.5)
+            )
+        )
+        composeViewController.didMoveToParentViewController(presentedViewController)
 
         presentedViewController.modalPresentationStyle = UIModalPresentationFormSheet
         presentedViewController.sheetPresentationController?.apply {
