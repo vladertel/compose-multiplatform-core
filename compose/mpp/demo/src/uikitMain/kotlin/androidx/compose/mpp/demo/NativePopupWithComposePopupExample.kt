@@ -50,6 +50,7 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
 
     Button(onClick = {
         val presentedViewController = UIViewController(nibName = null, bundle = null)
+        presentedViewController.view.backgroundColor = UIColor.yellowColor
 
         val composeViewController = ComposeUIViewController {
             var showComposePopup by remember { mutableStateOf(false) }
@@ -114,7 +115,7 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
             listOf(
                 composeViewController.view.centerXAnchor.constraintEqualToAnchor(presentedViewController.view.centerXAnchor),
                 composeViewController.view.centerYAnchor.constraintEqualToAnchor(presentedViewController.view.centerYAnchor),
-                composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.5),
+                composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.75),
                 composeViewController.view.heightAnchor.constraintEqualToAnchor(presentedViewController.view.heightAnchor, 0.5)
             )
         )
