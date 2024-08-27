@@ -276,6 +276,13 @@ internal class MetalRedrawer(
         draw(waitUntilCompletion = true, CACurrentMediaTime())
     }
 
+    /**
+     * Encodes the frame and presents it on the screen.
+     *
+     * @param waitUntilCompletion if `true`, the method will block the thread until the frame is
+     * presented on the screen. If false, the method will just dispatch GPU workload and return.
+     * @param targetTimestamp the target timestamp for the frame to drive vsync-dependant time clock.
+     */
     @OptIn(BetaInteropApi::class)
     private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) = trace("MetalRedrawer:draw") {
         check(NSThread.isMainThread)
