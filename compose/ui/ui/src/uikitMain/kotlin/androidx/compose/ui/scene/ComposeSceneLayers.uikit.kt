@@ -118,7 +118,7 @@ internal class ComposeSceneLayers {
             // The content of previous layers drawn on the Metal view should be cleared and
             // redrawn synchronously after the new layer is attached to avoid flickering.
 
-            metalView.setNeedsSynchronousDraw()
+            metalView.setNeedsSynchronousDrawOnNextLayout()
 
             window.addSubview(view)
             NSLayoutConstraint.activateConstraints(

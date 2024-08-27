@@ -79,7 +79,7 @@ internal class MetalView(
     /**
      * Raise the flag to indicate that the view needs to be drawn synchronously with the next layout.
      */
-    fun setNeedsSynchronousDraw() {
+    fun setNeedsSynchronousDrawOnNextLayout() {
         needsSynchronousDraw = true
     }
 
