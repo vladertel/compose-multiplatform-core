@@ -19,7 +19,6 @@ package androidx.compose.mpp.demo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.Text
@@ -40,8 +39,6 @@ import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIColor
 import platform.UIKit.UIModalPresentationFormSheet
 import platform.UIKit.UISheetPresentationControllerDetent
-import platform.UIKit.UISheetPresentationControllerDetentIdentifierLarge
-import platform.UIKit.UISheetPresentationControllerDetentIdentifierMedium
 import platform.UIKit.UIViewController
 import platform.UIKit.addChildViewController
 import platform.UIKit.didMoveToParentViewController
