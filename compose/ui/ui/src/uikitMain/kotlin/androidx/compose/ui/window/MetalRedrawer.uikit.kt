@@ -104,22 +104,6 @@ private class DisplayLinkConditions(
     }
 }
 
-internal interface MetalRedrawerCallbacks {
-    /**
-     * Perform time step and encode draw operations into canvas.
-     *
-     * @param canvas Canvas to encode draw operations into.
-     * @param targetTimestamp Timestamp indicating the expected draw result presentation time. Implementation should forward its internal time clock to this targetTimestamp to achieve smooth visual change cadence.
-     */
-    fun render(canvas: Canvas, targetTimestamp: NSTimeInterval)
-
-    /**
-     * Create an interop transaction by flushing the list of all pending actions
-     * that need to be synchronized with Metal rendering using CATransaction mechanism.
-     */
-    fun retrieveInteropTransaction(): UIKitInteropTransaction
-}
-
 internal class InflightCommandBuffers(
     private val maxInflightCount: Int
 ) {
