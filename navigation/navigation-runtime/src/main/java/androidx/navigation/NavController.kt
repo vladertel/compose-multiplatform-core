@@ -1631,7 +1631,7 @@ public open class NavController(
             return null
         }
         // if not matched by routePattern, try matching with route args
-        if (_graph!!.route == route || _graph!!.matchDeepLink(route) != null) {
+        if (_graph!!.route == route || _graph!!.matchRoute(route) != null) {
             return _graph
         }
         return backQueue.getTopGraph().findNode(route)
@@ -2098,7 +2098,7 @@ public open class NavController(
             backStackMap.values.removeAll { it == backStackId }
             val backStackState = backStackStates.remove(backStackId)
 
-            val matchingDeepLink = matchingDestination.matchDeepLink(route)
+            val matchingDeepLink = matchingDestination.matchRoute(route)
             // check if the topmost NavBackStackEntryState contains the arguments in this
             // matchingDeepLink. If not, we didn't find the correct stack.
             val isCorrectStack =
