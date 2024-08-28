@@ -147,7 +147,7 @@ internal class ComposeSceneLayers {
 
     private fun onLayoutSubviews() {
         layers.fastForEach {
-            it.handleViewLayoutChange()
+            it.handleViewLayoutChange(view)
         }
     }
 

@@ -44,6 +44,7 @@ import kotlinx.cinterop.CValue
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGPoint
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIView
 
 // TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
@@ -187,7 +188,10 @@ internal class UIKitComposeSceneLayer(
         mediator.sceneWillDisappear()
     }
 
-    fun handleViewLayoutChange() {
-        mediator.handleViewLayoutChange()
+    /**
+     * Update [mediator] based on the latest layout properties of [sourceView]
+     */
+    fun handleViewLayoutChange(sourceView: UIView) {
+        mediator.handleViewLayoutChange(sourceView)
     }
 }
