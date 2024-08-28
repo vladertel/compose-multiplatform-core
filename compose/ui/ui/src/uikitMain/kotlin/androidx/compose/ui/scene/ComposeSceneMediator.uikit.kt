@@ -418,7 +418,7 @@ internal abstract class ComposeSceneMediator(
     /**
      * Updates the [ComposeScene] with the properties derived from the [layoutView].
      */
-    fun handleViewLayoutChange(layoutView: UIView) {
+    fun updateBasedOnView(layoutView: UIView) {
         val density = layoutView.density
         scene.density = density
 
@@ -435,6 +435,11 @@ internal abstract class ComposeSceneMediator(
             width = boundsInPx.width.roundToInt(),
             height = boundsInPx.height.roundToInt()
         )
+
+        println(layoutMargins)
+        println(safeArea)
+        println(layoutView)
+        println()
     }
 
     fun sceneDidAppear() {

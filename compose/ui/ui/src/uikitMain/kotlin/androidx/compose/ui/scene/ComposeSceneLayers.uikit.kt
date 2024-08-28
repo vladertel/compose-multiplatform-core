@@ -129,6 +129,8 @@ internal class ComposeSceneLayers {
         if (hasViewAppeared) {
             layer.sceneDidAppear()
         }
+
+        layer.updateBasedOnView(view)
     }
 
     fun detach(layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
@@ -147,7 +149,7 @@ internal class ComposeSceneLayers {
 
     private fun onLayoutSubviews() {
         layers.fastForEach {
-            it.handleViewLayoutChange(view)
+            it.updateBasedOnView(view)
         }
     }
 
