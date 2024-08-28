@@ -21,6 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
@@ -32,7 +33,8 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -47,7 +49,7 @@ androidXMultiplatform {
 
         commonTest {
             dependencies {
-                implementation kotlin("test-junit")
+                implementation kotlin("test")
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.kotlinReflect)
                 implementation(project(":compose:runtime:runtime-test-utils"))
@@ -78,21 +80,15 @@ androidXMultiplatform {
             }
         }
 
+        jvmTest {
+            dependsOn(commonTest)
+        }
+
         androidMain {
             dependsOn(jvmMain)
             dependencies {
                 api(libs.kotlinCoroutinesAndroid)
-                api("androidx.annotation:annotation-experimental:1.4.0")
-            }
-        }
-
-        desktopMain {
-            dependsOn(jvmMain)
-        }
-
-        jvmTest {
-            dependsOn(commonTest)
-            dependencies {
+                api("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
 
@@ -111,9 +107,22 @@ androidXMultiplatform {
             dependsOn(nonEmulatorJvmTest)
         }
 
-        desktopTest {
+        nonAndroidMain {
+            dependsOn(commonMain)
+        }
+
+        jvmStubsMain {
+            dependsOn(jvmMain)
+            dependsOn(nonAndroidMain)
+        }
+
+        jvmStubsTest {
             dependsOn(jvmTest)
             dependsOn(nonEmulatorJvmTest)
+        }
+
+        linuxx64StubsMain {
+            dependsOn(nonAndroidMain)
         }
     }
 }

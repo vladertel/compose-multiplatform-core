@@ -21,6 +21,7 @@ import androidx.compose.runtime.external.kotlinx.collections.immutable.Persisten
 import androidx.compose.runtime.external.kotlinx.collections.immutable.persistentListOf
 import androidx.compose.runtime.requirePrecondition
 import androidx.compose.runtime.synchronized
+import kotlin.jvm.JvmName
 
 /**
  * An implementation of [MutableList] that can be observed and snapshot. This is the result type

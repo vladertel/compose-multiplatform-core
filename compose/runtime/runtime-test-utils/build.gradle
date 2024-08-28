@@ -25,7 +25,8 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -34,12 +35,10 @@ androidXMultiplatform {
             dependencies {
                 implementation(libs.kotlinStdlibCommon)
                 implementation(projectOrArtifact(":compose:runtime:runtime"))
-                implementation kotlin("test-junit")
+                implementation kotlin("test")
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.kotlinReflect)
             }
-        }
-        androidMain.dependencies {
         }
 
         jvmMain {
@@ -54,10 +53,14 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
+        commonStubsMain {
+            dependsOn(commonMain)
+        }
+        jvmStubsMain {
             dependsOn(jvmMain)
-            dependencies {
-            }
+        }
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
         }
     }
 }

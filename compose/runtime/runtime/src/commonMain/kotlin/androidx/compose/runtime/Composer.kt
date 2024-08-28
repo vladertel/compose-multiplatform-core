@@ -42,6 +42,8 @@ import androidx.compose.runtime.tooling.LocalInspectionTables
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.coroutines.CoroutineContext
+import kotlin.jvm.JvmInline
+import kotlin.jvm.JvmName
 
 private class GroupInfo(
     /**
