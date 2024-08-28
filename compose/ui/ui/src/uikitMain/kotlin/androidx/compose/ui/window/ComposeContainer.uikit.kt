@@ -181,6 +181,7 @@ internal class ComposeViewController(
 
     override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
+
         systemThemeState.value = traitCollection.userInterfaceStyle.asComposeSystemTheme()
     }
 
