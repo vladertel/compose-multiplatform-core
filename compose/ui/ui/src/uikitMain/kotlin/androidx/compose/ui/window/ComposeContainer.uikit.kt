@@ -187,7 +187,7 @@ internal class ComposeViewController(
     private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
 
-        mediator?.handleViewLayoutChange()
+        mediator?.handleViewLayoutChange(view)
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {

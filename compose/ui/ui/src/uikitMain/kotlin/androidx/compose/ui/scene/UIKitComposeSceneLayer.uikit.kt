@@ -189,9 +189,9 @@ internal class UIKitComposeSceneLayer(
     }
 
     /**
-     * Update [mediator] based on the latest layout properties of [sourceView]
+     * Update [mediator] based on the latest layout properties of [layoutView]
      */
-    fun handleViewLayoutChange(sourceView: UIView) {
-        mediator.handleViewLayoutChange(sourceView)
+    fun handleViewLayoutChange(layoutView: UIView) {
+        mediator.handleViewLayoutChange(layoutView)
     }
 }
