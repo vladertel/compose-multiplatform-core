@@ -187,11 +187,7 @@ internal class UIKitComposeSceneLayer(
         mediator.sceneWillDisappear()
     }
 
-    fun viewSafeAreaInsetsDidChange() {
-        mediator.viewSafeAreaInsetsDidChange()
-    }
-
-    fun viewWillLayoutSubviews() {
-        mediator.viewWillLayoutSubviews()
+    fun handleViewLayoutChange() {
+        mediator.handleViewLayoutChange()
     }
 }

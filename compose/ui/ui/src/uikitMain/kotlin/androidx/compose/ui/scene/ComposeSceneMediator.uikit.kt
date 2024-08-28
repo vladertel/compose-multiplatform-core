@@ -20,7 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asComposeCanvas
@@ -62,6 +65,7 @@ import androidx.compose.ui.unit.asDpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.unit.toPlatformInsets
 import androidx.compose.ui.viewinterop.LocalInteropContainer
 import androidx.compose.ui.viewinterop.TrackInteropPlacementContainer
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
@@ -382,27 +386,17 @@ internal abstract class ComposeSceneMediator(
         }
     }
 
-    private val safeAreaState: MutableState<PlatformInsets> by lazy {
-        //TODO It calc 0,0,0,0 on initialization
-        mutableStateOf(calcSafeArea())
-    }
-    private val layoutMarginsState: MutableState<PlatformInsets> by lazy {
-        //TODO It calc 0,0,0,0 on initialization
-        mutableStateOf(calcLayoutMargin())
-    }
+    var safeArea by mutableStateOf(PlatformInsets.Zero)
 
-    fun viewSafeAreaInsetsDidChange() {
-        safeAreaState.value = calcSafeArea()
-        layoutMarginsState.value = calcLayoutMargin()
-    }
+    var layoutMargins by mutableStateOf(PlatformInsets.Zero)
 
     @Composable
     private fun ProvideComposeSceneMediatorCompositionLocals(content: @Composable () -> Unit) =
         CompositionLocalProvider(
             LocalInteropContainer provides interopContainer,
             LocalKeyboardOverlapHeight provides keyboardOverlapHeightState.value,
-            LocalSafeArea provides safeAreaState.value,
-            LocalLayoutMargins provides layoutMarginsState.value,
+            LocalSafeArea provides safeArea,
+            LocalLayoutMargins provides layoutMargins,
             content = content
         )
 
@@ -421,9 +415,12 @@ internal abstract class ComposeSceneMediator(
 
     private fun setNeedsRedraw() = metalView.setNeedsRedraw()
 
-    fun viewWillLayoutSubviews() {
+    fun handleViewLayoutChange() {
         val density = parentView.density
         scene.density = density
+
+        layoutMargins = parentView.layoutMargins.toPlatformInsets()
+        safeArea = parentView.safeAreaInsets.toPlatformInsets()
 
         // TODO: it should be updated on any container size change
         val boundsInPx = parentView.bounds.useContents {
@@ -436,26 +433,6 @@ internal abstract class ComposeSceneMediator(
             height = boundsInPx.height.roundToInt()
         )
     }
-
-    private fun calcSafeArea(): PlatformInsets =
-        parentView.safeAreaInsets.useContents {
-            PlatformInsets(
-                left = left.dp,
-                top = top.dp,
-                right = right.dp,
-                bottom = bottom.dp,
-            )
-        }
-
-    private fun calcLayoutMargin(): PlatformInsets =
-        parentView.directionalLayoutMargins.useContents {
-            PlatformInsets(
-                left = leading.dp, // TODO: Check RTL support
-                top = top.dp,
-                right = trailing.dp, // TODO: Check RTL support
-                bottom = bottom.dp,
-            )
-        }
 
     fun sceneDidAppear() {
         keyboardManager.start()

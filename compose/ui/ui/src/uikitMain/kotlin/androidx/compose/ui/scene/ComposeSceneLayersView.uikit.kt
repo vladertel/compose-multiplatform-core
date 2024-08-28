@@ -28,7 +28,6 @@ import platform.UIKit.UIView
  */
 internal class ComposeSceneLayersView(
     private val onLayoutSubviews: () -> Unit,
-    private val onSafeAreasDidChange: () -> Unit
 ): UIView(frame = CGRectZero.readValue()) {
     /**
      * This view is transparent for touches, unless a child view is hit-tested.
@@ -52,6 +51,6 @@ internal class ComposeSceneLayersView(
     override fun safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()
 
-        onSafeAreasDidChange()
+        setNeedsLayout()
     }
 }

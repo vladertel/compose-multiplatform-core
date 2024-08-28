@@ -36,8 +36,7 @@ internal class ComposeSceneLayers {
     private var ongoingGesturesCount = 0
 
     val view = ComposeSceneLayersView(
-        ::onLayoutSubviews,
-        ::onSafeAreasDidChange
+        ::onLayoutSubviews
     )
 
     val metalView: MetalView = MetalView(
@@ -146,17 +145,9 @@ internal class ComposeSceneLayers {
         }
     }
 
-    // TODO: investigate correctness of these implementations
-
-    private fun onSafeAreasDidChange() {
-        layers.fastForEach {
-            it.viewSafeAreaInsetsDidChange()
-        }
-    }
-
     private fun onLayoutSubviews() {
         layers.fastForEach {
-            it.viewWillLayoutSubviews()
+            it.handleViewLayoutChange()
         }
     }
 

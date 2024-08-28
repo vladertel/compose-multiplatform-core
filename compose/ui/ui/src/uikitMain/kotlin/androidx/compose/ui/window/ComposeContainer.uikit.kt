@@ -47,11 +47,9 @@ import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.uikit.utils.CMPViewController
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.roundToInt
 import kotlin.native.runtime.GC
 import kotlin.native.runtime.NativeRuntimeApi
 import kotlinx.cinterop.BetaInteropApi
@@ -80,11 +78,9 @@ import platform.UIKit.UIContentSizeCategoryExtraSmall
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryMedium
 import platform.UIKit.UIContentSizeCategorySmall
-import platform.UIKit.UIDevice
 import platform.UIKit.UIStatusBarAnimation
 import platform.UIKit.UIStatusBarStyle
 import platform.UIKit.UITraitCollection
-import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
@@ -98,7 +94,7 @@ import platform.darwin.dispatch_get_main_queue
 //  https://youtrack.jetbrains.com/issue/CMP-5950/iOS-extract-Compose-instance-management-from-ComposeContainer
 
 // TODO: Move to androidx.compose.ui.scene
-@OptIn(BetaInteropApi::class)
+@OptIn(BetaInteropApi::class, ExperimentalComposeApi::class)
 @ExportObjCClass
 internal class ComposeViewController(
     private val configuration: ComposeUIViewControllerConfiguration,
@@ -109,6 +105,11 @@ internal class ComposeViewController(
     val lifecycleOwner = ViewControllerBasedLifecycleOwner()
     val hapticFeedback = CupertinoHapticFeedback()
 
+    private val rootView = ComposeRootView(
+        onDidMoveToWindow = ::onDidMoveToWindow,
+        onLayoutSubviews = ::onLayoutSubviews,
+        useOpaqueConfiguration = configuration.opaque
+    )
     private var isInsideSwiftUI = false
     private var mediator: PrimaryComposeSceneMediator? = null
     private val layers = ComposeSceneLayers()
@@ -134,7 +135,7 @@ internal class ComposeViewController(
 
     /*
      * On iOS >= 13.0 interfaceOrientation will be deduced from [UIWindowScene] of [UIWindow]
-     * to which our [RootUIViewController] is attached.
+     * to which our [ComposeViewController] is attached.
      * It's never UIInterfaceOrientationUnknown, if accessed after owning [UIWindow] was made key and visible:
      * https://developer.apple.com/documentation/uikit/uiwindow/1621601-makekeyandvisible?language=objc
      */
@@ -163,18 +164,8 @@ internal class ComposeViewController(
         configuration.delegate.prefersStatusBarHidden
             ?: super.prefersStatusBarHidden()
 
-    override fun viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-
-        mediator?.viewSafeAreaInsetsDidChange()
-    }
-
-    @OptIn(ExperimentalComposeApi::class)
     override fun loadView() {
-        view = ComposeRootView(
-            onDidMoveToWindow = ::updateWindowContainer,
-            useOpaqueConfiguration = configuration.opaque
-        )
+        view = rootView
     }
 
     override fun viewDidLoad() {
@@ -193,25 +184,21 @@ internal class ComposeViewController(
         systemThemeState.value = traitCollection.userInterfaceStyle.asComposeSystemTheme()
     }
 
-    override fun viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
-
-        // UIKit possesses all required info for layout at this point
-        currentInterfaceOrientation?.let {
-            interfaceOrientationState.value = it
-        }
-
+    private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
 
-        mediator?.viewWillLayoutSubviews()
+        mediator?.handleViewLayoutChange()
     }
 
-    @OptIn(ExperimentalComposeApi::class)
-    private fun updateWindowContainer(window: UIWindow?) {
+    private fun onDidMoveToWindow(window: UIWindow?) {
         val windowContainer = if (configuration.platformLayers) {
             window ?: return
         } else {
             view
+        }
+
+        currentInterfaceOrientation?.let {
+            interfaceOrientationState.value = it
         }
 
         windowContext.setWindowContainer(windowContainer)
@@ -286,6 +273,7 @@ internal class ComposeViewController(
 
     override fun viewControllerDidLeaveWindowHierarchy() {
         super.viewControllerDidLeaveWindowHierarchy()
+
         dispose()
     }
 
@@ -391,6 +379,7 @@ internal class ComposeViewController(
     private fun dispose() {
         lifecycleOwner.dispose()
         mediator?.dispose()
+        rootView.dispose()
         mediator = null
 
         layers.dispose(hasViewAppeared)

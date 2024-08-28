@@ -23,7 +23,8 @@ import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
 internal class ComposeRootView(
-    val onDidMoveToWindow: (UIWindow?) -> Unit,
+    private var onDidMoveToWindow: (UIWindow?) -> Unit,
+    private var onLayoutSubviews: () -> Unit,
     useOpaqueConfiguration: Boolean
 ): UIView(frame = CGRectZero.readValue()) {
     init {
@@ -38,4 +39,20 @@ internal class ComposeRootView(
         onDidMoveToWindow(window)
     }
 
+    override fun layoutSubviews() {
+        super.layoutSubviews()
+
+        onLayoutSubviews()
+    }
+
+    override fun safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+
+        setNeedsLayout()
+    }
+
+    fun dispose() {
+        onDidMoveToWindow = {}
+        onLayoutSubviews = {}
+    }
 }
