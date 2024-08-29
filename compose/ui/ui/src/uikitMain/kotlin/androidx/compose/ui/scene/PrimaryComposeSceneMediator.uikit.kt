@@ -24,7 +24,6 @@ import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.ExclusiveLayoutConstraints
 import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
-import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
@@ -37,7 +36,6 @@ import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
 import platform.CoreGraphics.CGPoint
-import platform.CoreGraphics.CGRectContainsPoint
 import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
@@ -102,7 +100,7 @@ internal class PrimaryComposeSceneMediator(
 
     init {
         // metalView layout is set in [setLayout] by the owning implementation
-        interactionView.addSubview(metalView)
+        userInputView.addSubview(metalView)
     }
 
     /**
@@ -122,7 +120,7 @@ internal class PrimaryComposeSceneMediator(
     }
 
     /**
-     * In the primary mediator [InteractionUIView.hitTest] happens after default [UIView.pointInside]
+     * In the primary mediator [userInputView] [UIView.hitTest] happens after default [UIView.pointInside]
      * check, which is the only requirement.
      */
     override fun isPointInsideInteractionBounds(point: CValue<CGPoint>): Boolean = true
@@ -132,7 +130,7 @@ internal class PrimaryComposeSceneMediator(
             PrimaryComposeSceneMediatorLayout.Fill -> {
                 metalView.translatesAutoresizingMaskIntoConstraints = false
                 constraints.set(
-                    metalView.layoutConstraintsToMatch(interactionView)
+                    metalView.layoutConstraintsToMatch(userInputView)
                 )
             }
 

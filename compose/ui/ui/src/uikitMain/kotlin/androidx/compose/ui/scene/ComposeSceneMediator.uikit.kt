@@ -211,7 +211,7 @@ internal abstract class ComposeSceneMediator(
      */
     internal val view = ComposeSceneMediatorView()
 
-    protected val interactionView =
+    protected val userInputView =
         UserInputView(
             ::hitTestInteropView,
             ::onTouchesEvent,
@@ -224,7 +224,7 @@ internal abstract class ComposeSceneMediator(
      * Container for managing UIKitView and UIKitViewController
      */
     protected val interopContainer = UIKitInteropContainer(
-        root = interactionView,
+        root = userInputView,
         requestRedraw = ::setNeedsRedraw
     )
 
@@ -367,10 +367,10 @@ internal abstract class ComposeSceneMediator(
     init {
         view.translatesAutoresizingMaskIntoConstraints = false
 
-        interactionView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(interactionView)
+        userInputView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(userInputView)
         NSLayoutConstraint.activateConstraints(
-            interactionView.layoutConstraintsToMatch(view)
+            userInputView.layoutConstraintsToMatch(view)
         )
     }
 
@@ -405,7 +405,7 @@ internal abstract class ComposeSceneMediator(
         applicationForegroundStateListener.dispose()
         focusStack?.popUntilNext(metalView)
         keyboardManager.dispose()
-        interactionView.dispose()
+        userInputView.dispose()
 
         view.removeFromSuperview()
 

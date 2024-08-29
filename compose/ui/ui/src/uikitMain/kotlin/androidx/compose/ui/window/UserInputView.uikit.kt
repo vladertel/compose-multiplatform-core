@@ -97,21 +97,21 @@ private val UIGestureRecognizerState.isOngoing: Boolean
         }
 
 /**
- * Enum class representing the possible hit test result of [InteractionUIViewHitTestResult].
+ * Enum class representing the possible hit test result of [UserInputViewHitTestResult].
  * This enum is used solely to determine the strategy of touch event delivery and
  * doesn't require any additional information about the hit-tested view itself.
  */
-private sealed interface InteractionUIViewHitTestResult {
-    data object Self : InteractionUIViewHitTestResult
+private sealed interface UserInputViewHitTestResult {
+    data object Self : UserInputViewHitTestResult
 
-    data object NonCooperativeChildView : InteractionUIViewHitTestResult
+    data object NonCooperativeChildView : UserInputViewHitTestResult
 
     /**
      * Hit test result is Cooperative child view, that allows a delay of [delayMillis] milliseconds.
      */
     class CooperativeChildView(
         val delayMillis: Int
-    ) : InteractionUIViewHitTestResult {
+    ) : UserInputViewHitTestResult {
         val delaySeconds: Double
             get() = delayMillis.toDouble() / 1000.0
     }
@@ -134,7 +134,7 @@ private class GestureRecognizerHandlerImpl(
      * The actual view that was hit-tested by the first touch in the sequence.
      * It could be interop view, for example. If there are tracked touches, assignment is ignored.
      */
-    var hitTestResult: InteractionUIViewHitTestResult? = null
+    var hitTestResult: UserInputViewHitTestResult? = null
         set(value) {
             /**
              * Only remember the first hit-tested view in the sequence.
@@ -223,7 +223,7 @@ private class GestureRecognizerHandlerImpl(
      *
      */
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
-        if (hitTestResult == InteractionUIViewHitTestResult.NonCooperativeChildView) {
+        if (hitTestResult == UserInputViewHitTestResult.NonCooperativeChildView) {
             // If child view doesn't want delay logic applied, we should immediately fail the gesture
             // and allow touches to go through directly to that view, gesture recognizer should
             // fail immediately, no touches will be received by Compose and the gesture recognizer after
@@ -236,7 +236,7 @@ private class GestureRecognizerHandlerImpl(
 
         onTouchesEvent(trackedTouches, withEvent, TouchesEventKind.BEGAN)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, immediately start/continue the gesture recognizer if possible and pass touches.
             when (gestureRecognizerState) {
                 UIGestureRecognizerStatePossible -> {
@@ -252,7 +252,7 @@ private class GestureRecognizerHandlerImpl(
                 // We are in the scenario (2), we should schedule failure and pass touches to the
                 // interop view.
                 when (val cooperativeChildView = hitTestResult) {
-                    is InteractionUIViewHitTestResult.CooperativeChildView ->
+                    is UserInputViewHitTestResult.CooperativeChildView ->
                         gestureRecognizer?.scheduleFailure(
                             cooperativeChildView.delaySeconds
                         )
@@ -278,7 +278,7 @@ private class GestureRecognizerHandlerImpl(
     override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
         onTouchesEvent(trackedTouches, withEvent, TouchesEventKind.MOVED)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state and pass touches to
             // the Compose runtime.
 
@@ -308,7 +308,7 @@ private class GestureRecognizerHandlerImpl(
 
         stopTrackingTouches(touches)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state and pass touches to
             // the Compose runtime.
 
@@ -345,7 +345,7 @@ private class GestureRecognizerHandlerImpl(
 
         stopTrackingTouches(touches)
 
-        if (hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state.
 
             if (gestureRecognizerState.isOngoing) {
@@ -579,7 +579,7 @@ internal class UserInputView(
             null
         } else {
             if (result == this) {
-                InteractionUIViewHitTestResult.Self
+                UserInputViewHitTestResult.Self
             } else {
                 // All views beneath are considered to be interop views.
                 // If the hit-tested view is not a descendant of [InteropWrappingView], then it
@@ -589,16 +589,16 @@ internal class UserInputView(
 
                 when (interactionMode) {
                     is UIKitInteropInteractionMode.Cooperative -> {
-                        InteractionUIViewHitTestResult.CooperativeChildView(
+                        UserInputViewHitTestResult.CooperativeChildView(
                             delayMillis = interactionMode.delayMillis
                         )
                     }
 
                     is UIKitInteropInteractionMode.NonCooperative -> {
-                        InteractionUIViewHitTestResult.NonCooperativeChildView
+                        UserInputViewHitTestResult.NonCooperativeChildView
                     }
 
-                    null -> InteractionUIViewHitTestResult.Self
+                    null -> UserInputViewHitTestResult.Self
                 }
             }
         }
