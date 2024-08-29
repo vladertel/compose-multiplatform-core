@@ -435,11 +435,6 @@ internal abstract class ComposeSceneMediator(
             width = boundsInPx.width.roundToInt(),
             height = boundsInPx.height.roundToInt()
         )
-
-        println("layoutMargins = $layoutMargins")
-        println("safeArea = $safeArea")
-        println(layoutView)
-        println()
     }
 
     fun sceneDidAppear() {
