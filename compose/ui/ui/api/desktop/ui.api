@@ -134,10 +134,10 @@ public final class androidx/compose/ui/ComposableSingletons$ImageComposeScene_sk
 
 public final class androidx/compose/ui/ComposeScene {
 	public static final field $stable I
-	public fun <init> (Landroidx/compose/ui/platform/PlatformContextTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (Landroidx/compose/ui/platform/PlatformContextTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun <init> (Landroidx/compose/ui/platform/PlatformContextTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (Landroidx/compose/ui/platform/PlatformContextTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Landroidx/compose/ui/text/input/PlatformTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Landroidx/compose/ui/text/input/PlatformTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Landroidx/compose/ui/text/input/PlatformTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Landroidx/compose/ui/text/input/PlatformTextInputService;Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Lkotlin/coroutines/CoroutineContext;Landroidx/compose/ui/unit/Density;Lkotlin/jvm/functions/Function0;)V
@@ -3292,7 +3292,7 @@ public abstract interface class androidx/compose/ui/platform/PlatformContext {
 	public fun getParentFocusManager ()Landroidx/compose/ui/focus/FocusManager;
 	public fun getRootForTestListener ()Landroidx/compose/ui/platform/PlatformContext$RootForTestListener;
 	public fun getSemanticsOwnerListener ()Landroidx/compose/ui/platform/PlatformContext$SemanticsOwnerListener;
-	public fun getTextInputService ()Landroidx/compose/ui/platform/PlatformContextTextInputService;
+	public fun getTextInputService ()Landroidx/compose/ui/text/input/PlatformTextInputService;
 	public fun getTextToolbar ()Landroidx/compose/ui/platform/TextToolbar;
 	public fun getViewConfiguration ()Landroidx/compose/ui/platform/ViewConfiguration;
 	public abstract fun getWindowInfo ()Landroidx/compose/ui/platform/WindowInfo;
@@ -3317,17 +3317,6 @@ public abstract interface class androidx/compose/ui/platform/PlatformContext$Sem
 	public abstract fun onSemanticsChange (Landroidx/compose/ui/semantics/SemanticsOwner;)V
 	public abstract fun onSemanticsOwnerAppended (Landroidx/compose/ui/semantics/SemanticsOwner;)V
 	public abstract fun onSemanticsOwnerRemoved (Landroidx/compose/ui/semantics/SemanticsOwner;)V
-}
-
-public abstract interface class androidx/compose/ui/platform/PlatformContextTextInputService {
-	public abstract fun hideSoftwareKeyboard ()V
-	public fun notifyFocusedRect (Landroidx/compose/ui/geometry/Rect;)V
-	public abstract fun showSoftwareKeyboard ()V
-	public fun startInput ()V
-	public abstract fun startInput (Landroidx/compose/ui/platform/TextFieldStateAdapter;Landroidx/compose/ui/text/input/ImeOptions;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
-	public abstract fun stopInput ()V
-	public abstract fun updateState (Landroidx/compose/ui/platform/TextFieldStateAdapter;Landroidx/compose/ui/platform/TextFieldStateAdapter;)V
-	public fun updateTextLayoutResult (Landroidx/compose/ui/platform/TextFieldStateAdapter;Landroidx/compose/ui/text/input/OffsetMapping;Landroidx/compose/ui/text/TextLayoutResult;Lkotlin/jvm/functions/Function1;Landroidx/compose/ui/geometry/Rect;Landroidx/compose/ui/geometry/Rect;)V
 }
 
 public abstract interface class androidx/compose/ui/platform/PlatformDragAndDropManager {
@@ -3383,12 +3372,7 @@ public abstract interface class androidx/compose/ui/platform/PlatformTextInputMe
 	public abstract fun getImeOptions ()Landroidx/compose/ui/text/input/ImeOptions;
 	public abstract fun getOnEditCommand ()Lkotlin/jvm/functions/Function1;
 	public abstract fun getOnImeAction ()Lkotlin/jvm/functions/Function1;
-	public abstract fun getState ()Landroidx/compose/ui/platform/TextFieldStateAdapter;
-}
-
-public final class androidx/compose/ui/platform/PlatformTextInputMethodRequest_skikoKt {
-	public static final fun asTextFieldStateAdapter (Landroidx/compose/ui/text/input/TextFieldValue;)Landroidx/compose/ui/platform/TextFieldStateAdapter;
-	public static final fun toTextFieldValue (Landroidx/compose/ui/platform/TextFieldStateAdapter;)Landroidx/compose/ui/text/input/TextFieldValue;
+	public abstract fun getState ()Landroidx/compose/ui/text/input/TextFieldValue;
 }
 
 public abstract interface class androidx/compose/ui/platform/PlatformTextInputModifierNode : androidx/compose/ui/node/DelegatableNode {
@@ -3413,12 +3397,6 @@ public abstract interface class androidx/compose/ui/platform/SoftwareKeyboardCon
 
 public final class androidx/compose/ui/platform/TestTagKt {
 	public static final fun testTag (Landroidx/compose/ui/Modifier;Ljava/lang/String;)Landroidx/compose/ui/Modifier;
-}
-
-public abstract interface class androidx/compose/ui/platform/TextFieldStateAdapter {
-	public abstract fun getComposition-MzsxiRA ()Landroidx/compose/ui/text/TextRange;
-	public abstract fun getSelection-d9O1mEE ()J
-	public abstract fun getText ()Ljava/lang/CharSequence;
 }
 
 public abstract interface class androidx/compose/ui/platform/TextToolbar {
