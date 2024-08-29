@@ -141,6 +141,8 @@ internal class UIKitComposeSceneLayer(
         mediator.render(canvas, nanoTime)
     }
 
+    fun retrieveInteropTransaction() = mediator.retrieveInteropTransaction()
+
     override fun close() {
         onClosed(this)
 

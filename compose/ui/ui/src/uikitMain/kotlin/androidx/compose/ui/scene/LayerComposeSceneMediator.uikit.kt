@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toRect
+import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
@@ -86,4 +87,7 @@ internal class LayerComposeSceneMediator(
     fun render(canvas: Canvas, nanoTime: Long) {
         scene.render(canvas, nanoTime)
     }
+
+    fun retrieveInteropTransaction(): UIKitInteropTransaction =
+        interopContainer.retrieveTransaction()
 }

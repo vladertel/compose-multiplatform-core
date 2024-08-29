@@ -56,7 +56,7 @@ internal class UIKitInteropContainer(
 
     /**
      * Dispose by immediately executing all UIKit interop actions that can't be deferred to be
-     * synchronized with rendering because scene will never be rendered past that moment.
+     * synchronized with rendering because scene will never be rendered again past that moment.
      */
     fun dispose() {
         val lastTransaction = retrieveTransaction()
@@ -82,7 +82,7 @@ internal class UIKitInteropContainer(
         val interopView = checkNotNull(holder.getInteropView())
 
         if (interopViews.isEmpty()) {
-            transaction.state = UIKitInteropState.BEGAN
+            transaction.state = UIKitInteropState.Began
             snapshotObserver.start()
         }
 
@@ -107,7 +107,7 @@ internal class UIKitInteropContainer(
         interopViews.remove(interopView)
 
         if (interopViews.isEmpty()) {
-            transaction.state = UIKitInteropState.ENDED
+            transaction.state = UIKitInteropState.Ended
             snapshotObserver.stop()
         }
 

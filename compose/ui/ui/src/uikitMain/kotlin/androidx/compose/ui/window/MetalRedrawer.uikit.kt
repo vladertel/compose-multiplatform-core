@@ -357,7 +357,7 @@ internal class MetalRedrawer(
             }
 
             val interopTransaction = retrieveInteropTransaction()
-            if (interopTransaction.state == UIKitInteropState.BEGAN) {
+            if (interopTransaction.state == UIKitInteropState.Began) {
                 isInteropActive = true
             }
             val presentsWithTransaction =
@@ -406,7 +406,7 @@ internal class MetalRedrawer(
                             it.invoke()
                         }
 
-                        if (interopTransaction.state == UIKitInteropState.ENDED) {
+                        if (interopTransaction.state == UIKitInteropState.Ended) {
                             isInteropActive = false
                         }
                     }

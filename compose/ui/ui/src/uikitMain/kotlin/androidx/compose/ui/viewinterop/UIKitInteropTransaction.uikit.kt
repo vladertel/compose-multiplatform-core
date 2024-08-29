@@ -20,19 +20,28 @@ import platform.QuartzCore.CATransaction
 
 /**
  * Enum which is used to define if rendering strategy should be changed along with this transaction.
- * If [BEGAN], it will wait until a next CATransaction on every frame and make the metal layer transparent.
- * If [ENDED] it will fallback to the most efficient rendering strategy
+ * If [Began], it will wait until a next CATransaction on every frame and make the metal layer transparent.
+ * If [Ended] it will fallback to the most efficient rendering strategy
  *   (opaque layer, no transaction waiting, asynchronous encoding and GPU-driven presentation).
- * If [UNCHANGED] it will keep the current rendering strategy.
+ * If [Unchanged] it will keep the current rendering strategy.
  */
 internal enum class UIKitInteropState {
-    BEGAN, UNCHANGED, ENDED
+    Began, Unchanged, Ended
 }
 
 /**
  * Lambda containing changes to UIKit objects, which can be synchronized within [CATransaction]
  */
 internal typealias UIKitInteropAction = () -> Unit
+
+/**
+ * An aggregate type of merged state of [UIKitInteropState]s tracked within different [UIKitInteropTransaction] and
+ * a list of additional actions to be executed in the same CATransaction.
+ */
+internal class UIKitInteropMergedState(
+    val state: UIKitInteropState,
+    val additionalActions: List<UIKitInteropAction>
+)
 
 /**
  * A transaction containing changes to UIKit objects to be synchronized within [CATransaction] inside a
@@ -43,10 +52,43 @@ internal typealias UIKitInteropAction = () -> Unit
 internal interface UIKitInteropTransaction {
     val actions: List<UIKitInteropAction>
     val state: UIKitInteropState
+
+    companion object {
+        /**
+         * Merges multiple transactions into a single transaction.
+         *
+         * @param transactions a list of transactions to be merged
+         * @param mergedStateForActiveSessionsCountChange a lambda provided by an entity that
+         * manages active sessions count to calculate the merged state.
+         */
+        fun merge(
+            transactions: List<UIKitInteropTransaction>,
+            mergedStateForActiveSessionsCountChange: (delta: Int) -> UIKitInteropMergedState
+        ): UIKitInteropTransaction {
+            val transactionsActions = transactions.flatMap { it.actions }
+
+            val sessionCountDelta = transactions.fold(0) { acc, transaction ->
+                when (transaction.state) {
+                    UIKitInteropState.Began -> acc + 1
+                    UIKitInteropState.Ended -> acc - 1
+                    UIKitInteropState.Unchanged -> acc
+                }
+            }
+
+            val mergedState = mergedStateForActiveSessionsCountChange(sessionCountDelta)
+
+            val actions = transactionsActions + mergedState.additionalActions
+
+            return object : UIKitInteropTransaction {
+                override val actions = actions
+                override val state = mergedState.state
+            }
+        }
+    }
 }
 
 internal fun UIKitInteropTransaction.isEmpty() =
-    actions.isEmpty() && state == UIKitInteropState.UNCHANGED
+    actions.isEmpty() && state == UIKitInteropState.Unchanged
 
 internal fun UIKitInteropTransaction.isNotEmpty() = !isEmpty()
 
@@ -62,22 +104,22 @@ internal class UIKitInteropMutableTransaction : UIKitInteropTransaction {
     override val actions
         get() = _actions
 
-    override var state = UIKitInteropState.UNCHANGED
+    override var state = UIKitInteropState.Unchanged
         set(value) {
             field = when (value) {
-                UIKitInteropState.UNCHANGED -> error("Can't assign UNCHANGED value explicitly")
-                UIKitInteropState.BEGAN -> {
+                UIKitInteropState.Unchanged -> error("Can't assign UNCHANGED value explicitly")
+                UIKitInteropState.Began -> {
                     when (field) {
-                        UIKitInteropState.BEGAN -> error("Can't assign BEGAN twice in the same transaction")
-                        UIKitInteropState.UNCHANGED -> value
-                        UIKitInteropState.ENDED -> UIKitInteropState.UNCHANGED
+                        UIKitInteropState.Began -> error("Can't assign BEGAN twice in the same transaction")
+                        UIKitInteropState.Unchanged -> value
+                        UIKitInteropState.Ended -> UIKitInteropState.Unchanged
                     }
                 }
-                UIKitInteropState.ENDED -> {
+                UIKitInteropState.Ended -> {
                     when (field) {
-                        UIKitInteropState.BEGAN -> UIKitInteropState.UNCHANGED
-                        UIKitInteropState.UNCHANGED -> value
-                        UIKitInteropState.ENDED -> error("Can't assign ENDED twice in the same transaction")
+                        UIKitInteropState.Began -> UIKitInteropState.Unchanged
+                        UIKitInteropState.Unchanged -> value
+                        UIKitInteropState.Ended -> error("Can't assign ENDED twice in the same transaction")
                     }
                 }
             }

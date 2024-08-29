@@ -19,8 +19,11 @@ package androidx.compose.ui.scene
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.viewinterop.UIKitInteropMutableTransaction
+import androidx.compose.ui.viewinterop.UIKitInteropAction
+import androidx.compose.ui.viewinterop.UIKitInteropMergedState
+import androidx.compose.ui.viewinterop.UIKitInteropState
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
+import androidx.compose.ui.viewinterop.isEmpty
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import org.jetbrains.skia.Canvas
@@ -34,6 +37,13 @@ internal class ComposeSceneLayers {
 
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
     private var ongoingGesturesCount = 0
+
+    /**
+     * State of interop sessions managed by underlying layers.
+     * Used for tracking the state of interop sessions and merging their transactions into one, so
+     * that they can be consumed by the [MetalView].
+     */
+    private var interopState: InteropState = InteropState.Inactive(null)
 
     val view = ComposeSceneLayersView(
         ::onLayoutSubviews
@@ -137,13 +147,41 @@ internal class ComposeSceneLayers {
         if (hasViewAppeared) {
             layer.sceneWillDisappear()
         }
+
         layers.remove(layer)
+
+        // Intercept the actions UIKitInteropTransaction from the layer
+        val transaction = layer.retrieveInteropTransaction()
 
         if (layers.isEmpty()) {
             view.removeFromSuperview()
+
+            transaction.actions.fastForEach { it.invoke() }
+            interopState = InteropState.Inactive(null)
         } else {
             // Redraw content with layer removed
             metalView.setNeedsRedraw()
+
+            when (val state = interopState) {
+                is InteropState.Inactive -> {
+                    interopState = InteropState.Inactive(
+                        uncommitedActions = transaction.actions
+                    )
+                }
+                is InteropState.Active -> {
+                    if (transaction.isEmpty()) {
+                        interopState = InteropState.Active(
+                            sessionsCount = state.sessionsCount,
+                            uncommitedActions = transaction.actions
+                        )
+                    } else {
+                        interopState = InteropState.Active(
+                            sessionsCount = state.sessionsCount - 1,
+                            uncommitedActions = transaction.actions
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -165,15 +203,126 @@ internal class ComposeSceneLayers {
         }
     }
 
-    // End of suspicious code
-
     /**
      * Iterate through existing layers and merge their interop transactions to be consumed by the
      * [MetalView]
      */
-    private fun retrieveAndMergeInteropTransactions(): UIKitInteropTransaction {
-        // TODO: proper implementation
-        return UIKitInteropMutableTransaction()
+    private fun retrieveAndMergeInteropTransactions(): UIKitInteropTransaction =
+        UIKitInteropTransaction.merge(
+            transactions = layers.map { it.mediator.retrieveInteropTransaction() },
+            mergedStateForActiveSessionsCountChange = ::mergedStateForActiveSessionsCountChange
+        )
+
+    /**
+     * Update the tracker of internal state of interop sessions based on the [delta] of active
+     * sessions count. Return the merged state of all sessions to be consumed by the [metalView].
+     *
+     * @param delta the change in active sessions count.
+     */
+    private fun mergedStateForActiveSessionsCountChange(delta: Int): UIKitInteropMergedState {
+        if (delta == 0) {
+            when (val state = interopState) {
+                is InteropState.Inactive -> {
+                    if (state.uncommitedActions == null) {
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Unchanged,
+                            additionalActions = emptyList()
+                        )
+                    } else {
+                        // Interop session was ended by closing the last layer, but there are still
+                        // uncommited actions, that need to be consumed, UIKitInteropState is still
+                        // in the Began state so it needs to be Ended
+                        interopState = InteropState.Inactive(uncommitedActions = null)
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Ended,
+                            additionalActions = state.uncommitedActions
+                        )
+                    }
+                }
+                is InteropState.Active -> {
+                    if (state.uncommitedActions == null) {
+                        // Total amount of interop sessions is unchanged, no additional actions
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Unchanged,
+                            additionalActions = emptyList()
+                        )
+                    } else {
+                        // One of the layer was closed, but a new one was opened in the same frame
+                        // The state is Unchanged and there are additional actions to be consumed
+                        // and executed
+                        interopState = InteropState.Active(
+                            sessionsCount = state.sessionsCount,
+                            uncommitedActions = null
+                        )
+
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Unchanged,
+                            additionalActions = state.uncommitedActions
+                        )
+                    }
+                }
+            }
+        } else {
+            when (val state = interopState) {
+                is InteropState.Active -> {
+                    val newSessionsCount = state.sessionsCount + delta
+
+                    if (newSessionsCount == 0) {
+                        // All interop sessions ended
+                        interopState = InteropState.Inactive(
+                            uncommitedActions = null
+                        )
+
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Ended,
+                            additionalActions = state.uncommitedActions ?: emptyList()
+                        )
+                    } else if (newSessionsCount > 0) {
+                        // Some interop sessions are still active
+                        interopState = InteropState.Active(
+                            sessionsCount = newSessionsCount,
+                            uncommitedActions = null
+                        )
+
+                        return UIKitInteropMergedState(
+                            state = UIKitInteropState.Unchanged,
+                            additionalActions = state.uncommitedActions ?: emptyList()
+                        )
+                    } else {
+                        error("Invalid state: ComposeSceneLayers.InteropState.newSessionsCount is $newSessionsCount, must be non-negative")
+                    }
+                }
+
+                is InteropState.Inactive -> {
+                    if (delta > 0) {
+                        interopState = InteropState.Active(
+                            sessionsCount = delta,
+                            uncommitedActions = null
+                        )
+
+                        return if (state.uncommitedActions == null) {
+                            // New interop session started, no uncommited actions present,
+                            // UIKitInteropState will be Began
+                            UIKitInteropMergedState(
+                                state = UIKitInteropState.Began,
+                                additionalActions = emptyList()
+                            )
+                        } else {
+                            // New interop session started but there are uncommitted actions from
+                            // the last layer that was removed, UIKitInteropState is still Began
+                            // so we can just pass Unchanged state with consumed actions
+
+                            UIKitInteropMergedState(
+                                state = UIKitInteropState.Began,
+                                additionalActions = state.uncommitedActions
+                            )
+                        }
+                    } else {
+                        error("Invalid state: ComposeSceneLayers.InteropState.newSessionsCount is $delta, must be non-negative")
+                    }
+                }
+            }
+        }
     }
 
     private fun render(canvas: Canvas, nanoTime: Long) {
@@ -185,5 +334,32 @@ internal class ComposeSceneLayers {
         layersCopy.fastForEach {
             it.render(composeCanvas, nanoTime)
         }
+    }
+
+    /**
+     * Sealed class aggregating the states of interop sessions managed by underlying layers
+     */
+    private sealed interface InteropState {
+        /**
+         * State when there are no active interop sessions
+         *
+         * @param uncommitedActions uncommited actions of the last layers that were removed
+         * logically but were not yet executed. If null, current [UIKitInteropState] is
+         * [UIKitInteropState.Ended], otherwise the strategy of [UIKitInteropState.Began] is still
+         * used until all actions are executed.
+         */
+        class Inactive(
+            val uncommitedActions: List<UIKitInteropAction>?
+        ) : InteropState
+
+        /**
+         * State when there are active interop sessions.
+         *
+         * @param sessionsCount the amount of active interop sessions
+         */
+        class Active(
+            val sessionsCount: Int,
+            val uncommitedActions: List<UIKitInteropAction>?
+        ) : InteropState
     }
 }
