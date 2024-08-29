@@ -485,7 +485,7 @@ private class GestureRecognizerHandlerImpl(
  * The parameter is a [Set] of [UIPress] objects. Erasure happens due to K/N not supporting Obj-C
  * lightweight generics.
  */
-internal class InteractionUIView(
+internal class UserInputView(
     private var hitTestInteropView: (point: CValue<CGPoint>, event: UIEvent?) -> UIView?,
     onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: TouchesEventKind) -> Unit,
     onGestureEvent: (GestureEvent) -> Unit,

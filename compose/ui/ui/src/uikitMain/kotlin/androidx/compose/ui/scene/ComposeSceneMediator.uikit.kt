@@ -73,7 +73,7 @@ import androidx.compose.ui.window.ApplicationForegroundStateListener
 import androidx.compose.ui.window.ComposeSceneKeyboardOffsetManager
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
-import androidx.compose.ui.window.InteractionUIView
+import androidx.compose.ui.window.UserInputView
 import androidx.compose.ui.window.KeyboardVisibilityListener
 import androidx.compose.ui.window.MetalView
 import androidx.compose.ui.window.TouchesEventKind
@@ -212,7 +212,7 @@ internal abstract class ComposeSceneMediator(
     internal val view = ComposeSceneMediatorView()
 
     protected val interactionView =
-        InteractionUIView(
+        UserInputView(
             ::hitTestInteropView,
             ::onTouchesEvent,
             ::onGestureEvent,
