@@ -67,123 +67,125 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
         }
     })
 
-    Button(onClick = {
-        val presentedViewController = UIViewController(nibName = null, bundle = null)
-        presentedViewController.view.backgroundColor = UIColor.yellowColor
+    Column {
+        Button(onClick = {
+            val presentedViewController = UIViewController(nibName = null, bundle = null)
+            presentedViewController.view.backgroundColor = UIColor.yellowColor
 
-        val composeViewController = ComposeUIViewController(
-            configure = {
-                accessibilitySyncOptions = syncOptions
-            }
-        ) {
-            var showComposePopup by remember { mutableStateOf(false) }
-            var showComposeDialog by remember { mutableStateOf(false) }
-
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceEvenly,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Button(onClick = {
-                    showComposePopup = true
-                }) {
-                    Text("Show Compose popup")
-
-                    if (showComposePopup) {
-                        Popup(
-                            onDismissRequest = {
-                                showComposePopup = false
-                            },
-                            properties = PopupProperties(
-                                usePlatformDefaultWidth = true,
-                                dismissOnClickOutside = true
-                            )
-                        ) {
-                            Text(
-                                text = "Popup",
-                                color = Color.Black,
-                                modifier = Modifier
-                                    .size(150.dp)
-                                    .clickable { showComposePopup = false }
-                                    .background(Color.LightGray)
-                            )
-                        }
-                    }
+            val composeViewController = ComposeUIViewController(
+                configure = {
+                    accessibilitySyncOptions = syncOptions
                 }
+            ) {
+                var showComposePopup by remember { mutableStateOf(false) }
+                var showComposeDialog by remember { mutableStateOf(false) }
 
-                Button(onClick = {
-                    showComposeDialog = true
-                }) {
-                    Text("Show Compose dialog")
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceEvenly,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(onClick = {
+                        showComposePopup = true
+                    }) {
+                        Text("Show Compose popup")
 
-                    if (showComposeDialog) {
-                        Dialog(
-                            onDismissRequest = {
-                                showComposeDialog = false
-                            },
-                            properties = DialogProperties(
-                                dismissOnClickOutside = true,
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Green)
-                                    .clickable { showComposeDialog = false }
-                                ,
-                                contentAlignment = Alignment.Center
+                        if (showComposePopup) {
+                            Popup(
+                                onDismissRequest = {
+                                    showComposePopup = false
+                                },
+                                properties = PopupProperties(
+                                    usePlatformDefaultWidth = true,
+                                    dismissOnClickOutside = true
+                                )
                             ) {
                                 Text(
-                                    text = "Compose dialog",
-                                    color = Color.Black
+                                    text = "Popup",
+                                    color = Color.Black,
+                                    modifier = Modifier
+                                        .size(150.dp)
+                                        .clickable { showComposePopup = false }
+                                        .background(Color.LightGray)
                                 )
+                            }
+                        }
+                    }
+
+                    Button(onClick = {
+                        showComposeDialog = true
+                    }) {
+                        Text("Show Compose dialog")
+
+                        if (showComposeDialog) {
+                            Dialog(
+                                onDismissRequest = {
+                                    showComposeDialog = false
+                                },
+                                properties = DialogProperties(
+                                    dismissOnClickOutside = true,
+                                )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Green)
+                                        .clickable { showComposeDialog = false }
+                                    ,
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Compose dialog",
+                                        color = Color.Black
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        presentedViewController.addChildViewController(composeViewController)
-        presentedViewController.view.addSubview(composeViewController.view)
-        composeViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        composeViewController.view.layer.borderColor = UIColor.redColor.CGColor
-        composeViewController.view.layer.borderWidth = 2.0
-        NSLayoutConstraint.activateConstraints(
-            listOf(
-                composeViewController.view.centerXAnchor.constraintEqualToAnchor(presentedViewController.view.centerXAnchor),
-                composeViewController.view.centerYAnchor.constraintEqualToAnchor(presentedViewController.view.centerYAnchor),
-                composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.75),
-                composeViewController.view.heightAnchor.constraintEqualToAnchor(presentedViewController.view.heightAnchor, 0.5)
+            presentedViewController.addChildViewController(composeViewController)
+            presentedViewController.view.addSubview(composeViewController.view)
+            composeViewController.view.translatesAutoresizingMaskIntoConstraints = false
+            composeViewController.view.layer.borderColor = UIColor.redColor.CGColor
+            composeViewController.view.layer.borderWidth = 2.0
+            NSLayoutConstraint.activateConstraints(
+                listOf(
+                    composeViewController.view.centerXAnchor.constraintEqualToAnchor(presentedViewController.view.centerXAnchor),
+                    composeViewController.view.centerYAnchor.constraintEqualToAnchor(presentedViewController.view.centerYAnchor),
+                    composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.75),
+                    composeViewController.view.heightAnchor.constraintEqualToAnchor(presentedViewController.view.heightAnchor, 0.5)
+                )
             )
-        )
-        composeViewController.didMoveToParentViewController(presentedViewController)
+            composeViewController.didMoveToParentViewController(presentedViewController)
 
-        presentedViewController.modalPresentationStyle = UIModalPresentationFormSheet
-        presentedViewController.sheetPresentationController?.apply {
-            detents = listOf(
-                UISheetPresentationControllerDetent.largeDetent(),
-                UISheetPresentationControllerDetent.mediumDetent()
-            )
+            presentedViewController.modalPresentationStyle = UIModalPresentationFormSheet
+            presentedViewController.sheetPresentationController?.apply {
+                detents = listOf(
+                    UISheetPresentationControllerDetent.largeDetent(),
+                    UISheetPresentationControllerDetent.mediumDetent()
+                )
 
-            prefersGrabberVisible = true
-        }
-        viewController.presentViewController(presentedViewController, true, null)
-    }) {
-        Text("Show native popup")
-    }
-
-    Button(
-        onClick = {
-            val composeViewController = ComposeUIViewController(configure = {
-                accessibilitySyncOptions = syncOptions
-            }) {
-                IosDemo("", null)
+                prefersGrabberVisible = true
             }
-
-            viewController.presentViewController(composeViewController, true, null)
+            viewController.presentViewController(presentedViewController, true, null)
+        }) {
+            Text("Show native popup")
         }
-    ) {
-        Text("Show native modal with whole Demo app")
+
+        Button(
+            onClick = {
+                val composeViewController = ComposeUIViewController(configure = {
+                    accessibilitySyncOptions = syncOptions
+                }) {
+                    IosDemo("", null)
+                }
+
+                viewController.presentViewController(composeViewController, true, null)
+            }
+        ) {
+            Text("Show native modal with whole Demo app")
+        }
     }
 }
