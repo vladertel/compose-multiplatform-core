@@ -56,22 +56,24 @@ import platform.UIKit.sheetPresentationController
 val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compose popup") {
     val viewController = LocalUIViewController.current
 
+    val syncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(object:
+        AccessibilityDebugLogger {
+        override fun log(message: Any?) {
+            if (message == null) {
+                println()
+            } else {
+                println("[modal a11y]: $message")
+            }
+        }
+    })
+
     Button(onClick = {
         val presentedViewController = UIViewController(nibName = null, bundle = null)
         presentedViewController.view.backgroundColor = UIColor.yellowColor
 
         val composeViewController = ComposeUIViewController(
             configure = {
-                accessibilitySyncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(object:
-                    AccessibilityDebugLogger {
-                    override fun log(message: Any?) {
-                        if (message == null) {
-                            println()
-                        } else {
-                            println("[modal a11y]: $message")
-                        }
-                    }
-                })
+                accessibilitySyncOptions = syncOptions
             }
         ) {
             var showComposePopup by remember { mutableStateOf(false) }
@@ -169,5 +171,20 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
         viewController.presentViewController(presentedViewController, true, null)
     }) {
         Text("Show native popup")
+    }
+
+    Button(
+        onClick = {
+            val composeViewController = ComposeUIViewController(configure = {
+                accessibilitySyncOptions = syncOptions
+            }) {
+                val app = App()
+                app.Content()
+            }
+
+            viewController.presentViewController(composeViewController, true, null)
+        }
+    ) {
+        Text("Show native modal with whole Demo app")
     }
 }
