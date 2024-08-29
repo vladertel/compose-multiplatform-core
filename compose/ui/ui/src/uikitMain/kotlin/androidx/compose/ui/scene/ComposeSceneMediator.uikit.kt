@@ -386,9 +386,9 @@ internal abstract class ComposeSceneMediator(
         }
     }
 
-    var safeArea by mutableStateOf(PlatformInsets.Zero)
+    private var safeArea by mutableStateOf(PlatformInsets.Zero)
 
-    var layoutMargins by mutableStateOf(PlatformInsets.Zero)
+    private var layoutMargins by mutableStateOf(PlatformInsets.Zero)
 
     @Composable
     private fun ProvideComposeSceneMediatorCompositionLocals(content: @Composable () -> Unit) =
@@ -436,8 +436,8 @@ internal abstract class ComposeSceneMediator(
             height = boundsInPx.height.roundToInt()
         )
 
-        println(layoutMargins)
-        println(safeArea)
+        println("layoutMargins = $layoutMargins")
+        println("safeArea = $safeArea")
         println(layoutView)
         println()
     }
