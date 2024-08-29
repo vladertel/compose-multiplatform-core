@@ -159,9 +159,7 @@ internal class ComposeSceneLayers {
             transaction.actions.fastForEach { it.invoke() }
             interopState = InteropState.Inactive(null)
         } else {
-            // Redraw content with layer removed
-            metalView.setNeedsRedraw()
-
+            // Update interop state
             when (val state = interopState) {
                 is InteropState.Inactive -> {
                     interopState = InteropState.Inactive(
@@ -182,6 +180,10 @@ internal class ComposeSceneLayers {
                     }
                 }
             }
+
+            // Redraw content with layer removed
+            metalView.setNeedsRedraw()
+
         }
     }
 
