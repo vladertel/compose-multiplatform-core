@@ -17,6 +17,7 @@
 package androidx.compose.foundation.text.input.internal
 
 import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.ViewConfiguration
@@ -80,6 +81,7 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 private data class SkikoPlatformTextInputMethodRequest(
     override val state: TextFieldValue,
     override val imeOptions: ImeOptions,
