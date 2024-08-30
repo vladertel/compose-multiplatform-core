@@ -187,8 +187,6 @@ internal class ComposeHostingViewController(
 
     private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
-
-        mediator?.updateLayout()
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {

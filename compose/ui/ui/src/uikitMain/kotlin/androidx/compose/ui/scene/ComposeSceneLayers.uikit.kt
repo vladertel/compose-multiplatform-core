@@ -42,9 +42,7 @@ internal class ComposeSceneLayers {
      */
     private var removedLayersTransactions = mutableListOf<UIKitInteropTransaction>()
 
-    val view = ComposeSceneLayersView(
-        ::onLayoutSubviews
-    )
+    val view = ComposeSceneLayersView()
 
     val metalView: MetalView = MetalView(
         ::retrieveAndMergeInteropTransactions,
@@ -93,7 +91,6 @@ internal class ComposeSceneLayers {
     }
 
     fun dispose(hasViewAppeared: Boolean) {
-        view.dispose()
         metalView.dispose()
 
         // `dispose` is called instead of `close`, because `close` is also used imperatively
@@ -137,8 +134,6 @@ internal class ComposeSceneLayers {
         if (hasViewAppeared) {
             layer.sceneDidAppear()
         }
-
-        layer.updateLayout()
     }
 
     fun detach(layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
@@ -163,12 +158,6 @@ internal class ComposeSceneLayers {
             // Redraw content with layer removed
             metalView.setNeedsRedraw()
 
-        }
-    }
-
-    private fun onLayoutSubviews() {
-        layers.fastForEach {
-            it.updateLayout()
         }
     }
 

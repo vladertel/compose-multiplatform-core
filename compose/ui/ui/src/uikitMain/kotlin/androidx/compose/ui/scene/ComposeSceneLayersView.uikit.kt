@@ -26,9 +26,7 @@ import platform.UIKit.UIView
 /**
  * A view that hosts the [ComposeScene] layers and a metal view shared by all of them.
  */
-internal class ComposeSceneLayersView(
-    private var onLayoutSubviews: () -> Unit,
-): UIView(frame = CGRectZero.readValue()) {
+internal class ComposeSceneLayersView: UIView(frame = CGRectZero.readValue()) {
     /**
      * This view is transparent for touches, unless a child view is hit-tested.
      */
@@ -40,21 +38,5 @@ internal class ComposeSceneLayersView(
         } else {
             result
         }
-    }
-
-    override fun layoutSubviews() {
-        super.layoutSubviews()
-
-        onLayoutSubviews()
-    }
-
-    override fun safeAreaInsetsDidChange() {
-        super.safeAreaInsetsDidChange()
-
-        setNeedsLayout()
-    }
-
-    fun dispose() {
-        onLayoutSubviews = {}
     }
 }

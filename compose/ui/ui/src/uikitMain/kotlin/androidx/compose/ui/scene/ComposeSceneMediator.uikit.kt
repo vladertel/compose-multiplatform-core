@@ -210,7 +210,9 @@ internal abstract class ComposeSceneMediator(
     /**
      * View wrapping the hierarchy managed by this Mediator.
      */
-    internal val view = ComposeSceneMediatorView()
+    internal val view = ComposeSceneMediatorView(
+        onLayoutSubviews = ::updateLayout
+    )
 
     /**
      * View that handles the user input events and hosts interop views.
@@ -413,6 +415,7 @@ internal abstract class ComposeSceneMediator(
         onPreviewKeyEvent = { false }
         onKeyEvent = { false }
 
+        view.dispose()
         textInputService.stopInput()
         applicationForegroundStateListener.dispose()
         focusStack?.popUntilNext(userInputView)
@@ -431,14 +434,12 @@ internal abstract class ComposeSceneMediator(
      * Updates the [ComposeScene] with the properties derived from the [view].
      */
     fun updateLayout() {
-        // TODO: scene should be calculated based on view bounds, not window
         val density = view.density
         scene.density = density
 
         layoutMargins = view.layoutMargins.toPlatformInsets()
         safeArea = view.safeAreaInsets.toPlatformInsets()
 
-        // TODO: it should be updated on any container size change
         val boundsInPx = view.bounds.useContents {
             with(density) {
                 asDpRect().toRect()

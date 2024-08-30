@@ -24,7 +24,9 @@ import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 
-internal class ComposeSceneMediatorView : UIView(CGRectZero.readValue()) {
+internal class ComposeSceneMediatorView(
+    var onLayoutSubviews: () -> Unit
+) : UIView(CGRectZero.readValue()) {
     private var onAppeared: (() -> Unit)? = null
 
     fun runOnceOnAppeared(block: () -> Unit) {
@@ -34,6 +36,11 @@ internal class ComposeSceneMediatorView : UIView(CGRectZero.readValue()) {
         }
 
         runOnAppearedIfEligible()
+    }
+
+    fun dispose() {
+        onLayoutSubviews = {}
+        onAppeared = {}
     }
 
     private fun runOnAppearedIfEligible() {
@@ -46,12 +53,13 @@ internal class ComposeSceneMediatorView : UIView(CGRectZero.readValue()) {
         super.layoutSubviews()
 
         runOnAppearedIfEligible()
+        onLayoutSubviews()
     }
 
     override fun didMoveToWindow() {
         super.didMoveToWindow()
 
-        runOnAppearedIfEligible()
+        setNeedsLayout()
     }
 
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {

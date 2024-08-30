@@ -189,8 +189,4 @@ internal class UIKitComposeSceneLayer(
     fun sceneWillDisappear() {
         mediator.sceneWillDisappear()
     }
-
-    fun updateLayout() {
-        mediator.updateLayout()
-    }
 }
