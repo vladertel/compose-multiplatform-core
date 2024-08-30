@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,14 +50,24 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlinStdlibCommon)
-                api(project(":compose:foundation:foundation"))
-                api(project(":compose:ui:ui-geometry"))
-                api(project(":window:window-core"))
+                api(project(":compose:material3:adaptive:adaptive"))
+                api(project(":compose:animation:animation-core"))
+                api(project(":compose:ui:ui"))
+                implementation(project(":compose:animation:animation"))
+                implementation(project(":compose:foundation:foundation"))
+                implementation(project(":compose:foundation:foundation-layout"))
+                implementation(project(":compose:ui:ui-geometry"))
+                implementation(project(":compose:ui:ui-util"))
+                implementation(project(":window:window-core"))
+                implementation(project(":collection:collection"))
             }
         }
 
         commonTest {
             dependencies {
+                implementation(libs.kotlinTest)
+                api(project(":annotation:annotation"))
+                implementation(project(":kruth:kruth"))
             }
         }
 
@@ -71,10 +81,6 @@ kotlin {
         androidMain {
             dependsOn(jvmMain)
             dependencies {
-                api(project(":annotation:annotation"))
-                //dependencies are not available in JB fork
-                //api(project(":annotation:annotation-experimental"))
-                //api(project(":window:window"))
             }
         }
 
@@ -99,8 +105,7 @@ kotlin {
             dependencies {
                 implementation(project(":compose:material3:material3"))
                 implementation(project(":compose:test-utils"))
-                //dependency is not available in JB fork
-                //implementation(project(":window:window-testing"))
+//                implementation(project(":window:window-testing"))
                 implementation(libs.junit)
                 implementation(libs.testRunner)
                 implementation(libs.truth)
@@ -135,7 +140,7 @@ kotlin {
 }
 
 android {
-    namespace "androidx.compose.material3.adaptive"
+    namespace "androidx.compose.material3.adaptive.layout"
 }
 
 androidx {
@@ -144,6 +149,7 @@ androidx {
     inceptionYear = "2023"
     description = "Compose Material Design Adaptive Library"
     legacyDisableKotlinStrictApiMode = true
+//    samples(project(":compose:material3:adaptive:adaptive-samples"))
 }
 
 tasks.withType(KotlinCompile).configureEach {
@@ -154,5 +160,5 @@ tasks.withType(KotlinCompile).configureEach {
 android {
     sourceSets.androidTest.assets.srcDirs +=
             project.rootDir.absolutePath + "/../../golden/compose/material3/adaptive"
-    namespace "androidx.compose.material3.adaptive"
+    namespace "androidx.compose.material3.adaptive.layout"
 }

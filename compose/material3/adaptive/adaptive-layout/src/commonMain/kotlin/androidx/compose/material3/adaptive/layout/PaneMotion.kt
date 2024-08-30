@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEachIndexed
+import kotlin.jvm.JvmInline
 import kotlin.math.max
 import kotlin.math.min
 

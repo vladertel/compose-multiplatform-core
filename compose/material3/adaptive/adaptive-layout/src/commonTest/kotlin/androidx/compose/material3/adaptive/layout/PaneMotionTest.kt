@@ -42,14 +42,11 @@ import androidx.compose.material3.adaptive.layout.PaneAdaptedValue.Companion.Hid
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import androidx.kruth.assertThat
+import androidx.kruth.assertWithMessage
+import kotlin.test.Test
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-@RunWith(JUnit4::class)
 class PaneMotionTest {
     @Test
     fun test_allThreePaneMotions() {
