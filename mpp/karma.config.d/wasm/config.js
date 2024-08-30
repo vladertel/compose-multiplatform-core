@@ -80,3 +80,4 @@ config.customLaunchers = {
 }
 
 config.browsers = ["ChromeForComposeTests"]
+config.concurrency = 1;
