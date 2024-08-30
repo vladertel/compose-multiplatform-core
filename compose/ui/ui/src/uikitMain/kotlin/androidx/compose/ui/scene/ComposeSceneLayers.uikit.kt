@@ -27,6 +27,9 @@ import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
 
+/**
+ * A class responsible for managing and rendering [UIKitComposeSceneLayer]s.
+ */
 internal class ComposeSceneLayers {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
