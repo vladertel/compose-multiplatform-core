@@ -163,6 +163,10 @@ internal abstract class ComposeSceneMediator(
         coroutineContext: CoroutineContext
     ) -> ComposeScene
 ) {
+    private var onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
+
+    private var onKeyEvent: (KeyEvent) -> Boolean = { false }
+
     private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
 
     private val viewConfiguration: ViewConfiguration =
@@ -174,13 +178,11 @@ internal abstract class ComposeSceneMediator(
                 }
         }
 
-    protected val scene: ComposeScene by lazy {
-        composeSceneFactory(
+    protected val scene = composeSceneFactory(
             ::setNeedsRedraw,
-            IOSPlatformContext(),
-            coroutineContext,
-        )
-    }
+        IOSPlatformContext(),
+        coroutineContext,
+    )
 
     var compositionLocalContext
         get() = scene.compositionLocalContext
@@ -397,6 +399,9 @@ internal abstract class ComposeSceneMediator(
         )
 
     open fun dispose() {
+        onPreviewKeyEvent = { false }
+        onKeyEvent = { false }
+
         textInputService.stopInput()
         applicationForegroundStateListener.dispose()
         focusStack?.popUntilNext(metalView)
@@ -441,8 +446,6 @@ internal abstract class ComposeSceneMediator(
         keyboardManager.stop()
     }
 
-    private var onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
-    private var onKeyEvent: (KeyEvent) -> Boolean = { false }
     fun setKeyEventListener(
         onPreviewKeyEvent: ((KeyEvent) -> Boolean)?,
         onKeyEvent: ((KeyEvent) -> Boolean)?

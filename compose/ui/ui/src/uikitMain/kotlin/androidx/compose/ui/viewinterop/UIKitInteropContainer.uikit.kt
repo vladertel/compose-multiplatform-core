@@ -26,7 +26,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateObserver
  */
 internal class UIKitInteropContainer(
     override val root: InteropViewGroup,
-    val requestRedraw: () -> Unit
+    private var requestRedraw: () -> Unit
 ) : InteropContainer {
     override var rootModifier: TrackInteropPlacementModifierNode? = null
     private var interopViews = mutableMapOf<InteropView, InteropViewHolder>()
@@ -59,6 +59,7 @@ internal class UIKitInteropContainer(
      * synchronized with rendering because scene will never be rendered again past that moment.
      */
     fun dispose() {
+        requestRedraw = {}
         val lastTransaction = retrieveTransaction()
 
         for (action in lastTransaction.actions) {
