@@ -178,11 +178,13 @@ internal abstract class ComposeSceneMediator(
                 }
         }
 
-    protected val scene = composeSceneFactory(
+    protected val scene: ComposeScene by lazy {
+        composeSceneFactory(
             ::setNeedsRedraw,
-        IOSPlatformContext(),
-        coroutineContext,
-    )
+            IOSPlatformContext(),
+            coroutineContext,
+        )
+    }
 
     var compositionLocalContext
         get() = scene.compositionLocalContext
