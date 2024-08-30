@@ -22,12 +22,9 @@ import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.asDpOffset
 import androidx.compose.ui.unit.round
-import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
-import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
@@ -35,16 +32,7 @@ import androidx.compose.ui.window.MetalView
 import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
 import platform.CoreGraphics.CGPoint
-import platform.CoreGraphics.CGRectContainsPoint
 import platform.UIKit.UIView
-
-/**
- * Layout of sceneView on the screen
- */
-data class LayerComposeSceneMediatorLayout(
-    val renderRect: IntRect,
-    val interactionRect: IntRect
-)
 
 /**
  * A mediator for the [ComposeScene] of a layer.
