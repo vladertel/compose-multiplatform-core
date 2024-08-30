@@ -181,7 +181,7 @@ internal abstract class ComposeSceneMediator(
     protected val scene: ComposeScene by lazy {
         composeSceneFactory(
             ::setNeedsRedraw,
-            IOSPlatformContext(),
+            PlatformContextImpl(),
             coroutineContext,
         )
     }
@@ -480,7 +480,7 @@ internal abstract class ComposeSceneMediator(
         parentView
     }
 
-    private inner class IOSPlatformContext : PlatformContext by PlatformContext.Empty {
+    private inner class PlatformContextImpl : PlatformContext by PlatformContext.Empty {
         override val windowInfo: WindowInfo get() = windowContext.windowInfo
 
         override fun convertLocalToWindowPosition(localPosition: Offset): Offset =
