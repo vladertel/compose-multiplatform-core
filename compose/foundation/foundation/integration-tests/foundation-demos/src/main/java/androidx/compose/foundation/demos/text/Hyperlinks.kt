@@ -29,12 +29,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
-import androidx.compose.material.TextDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
@@ -51,6 +51,7 @@ import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
@@ -64,7 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
 
-private const val WebLink = "https://google.com"
+private const val WebLink = "https://developer.android.com"
 private const val LongWebLink =
     "https://developer.android.com/design/ui/mobile/guides/foundations/system-bars"
 private const val PhoneUri = "tel:+123456789"
@@ -80,19 +81,18 @@ fun Hyperlinks() {
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-
-        val dac = "https://developer.android.com/develop/ui/compose/"
-
         Sample("State-based styling through builder") {
-            Text(buildAnnotatedString {
+            BasicText(buildAnnotatedString {
                 append("Text and a ")
                 withLink(
                     LinkAnnotation.Url(
-                        url = "$dac/accessibility",
-                        style = SpanStyle(color = Color.Magenta),
-                        focusedStyle = SpanStyle(background = Color.Yellow.copy(alpha = 0.3f)),
-                        hoveredStyle = SpanStyle(textDecoration = TextDecoration.Underline),
-                        pressedStyle = SpanStyle(color = Color.Red)
+                        "https://developer.android.com",
+                        TextLinkStyles(
+                            style = SpanStyle(color = Color.Magenta),
+                            focusedStyle = SpanStyle(background = Color.Yellow.copy(alpha = 0.3f)),
+                            hoveredStyle = SpanStyle(textDecoration = TextDecoration.Underline),
+                            pressedStyle = SpanStyle(color = Color.Red)
+                        )
                     )
                 ) {
                     append("DEVELOPER ANDROID COM LINK")
@@ -103,16 +103,11 @@ fun Hyperlinks() {
         }
         Sample("State-based styling from Html-tagged string") {
             val htmlString = """
-                This is a <span style=\"color:red\"><a href=$dac/animation>link</a></span> 
-                here. Another <a href=$dac/semantics>link</a> follows.
+                This is a <span style="color:red"><a href="https://developer.android.com">link</a></span> here.
+                Another <a href="https://developer.android.com">link</a> follows.
             """.trimIndent()
-            val annotatedString = AnnotatedString.fromHtml(
-                htmlString,
-                linkStyle = SpanStyle(color = Color.Magenta),
-                linkFocusedStyle = SpanStyle(background = Color.Yellow.copy(alpha = 0.3f)),
-                linkHoveredStyle = SpanStyle(textDecoration = TextDecoration.Underline)
-            )
-            Text(annotatedString)
+            val annotatedString = AnnotatedString.fromHtml(htmlString)
+            BasicText(annotatedString)
         }
         Sample("Single link styling with SpanStyle") {
             val stringWithLink = buildAnnotatedString {
@@ -124,25 +119,26 @@ fun Hyperlinks() {
                 withStyle(
                     SpanStyle(
                         fontWeight = FontWeight.Bold,
-                        textDecoration = TextDecoration.None
+                        textDecoration = TextDecoration.Underline
                     )
                 ) {
                     withLink(LinkAnnotation.Url(PhoneUri)) { append("+1 (234) 567890") }
                 }
                 append(" with a custom style.")
             }
-            Text(text = stringWithLink)
+            BasicText(text = stringWithLink)
         }
         Sample("Material colors for links from builder") {
             Text(buildAnnotatedString {
                 append("Text and ")
-                withLink(TextDefaults.Url(url = WebLink)) { append("developer.android.com") }
+                withLink(LinkAnnotation.Url(WebLink)) { append("developer.android.com") }
                 append(" link.")
             })
         }
         Sample("Material colors for links from html") {
-            val htmlString = "Text and <a href=https://google.com>developer.android.com</a> link"
-            Text(TextDefaults.fromHtml(htmlString = htmlString))
+            val htmlString =
+                "Text and <a href=\"https://developer.android.com\">developer.android.com</a> link"
+            Text(AnnotatedString.fromHtml(htmlString))
         }
         Sample("Long links") {
             val text = buildAnnotatedString {
@@ -159,9 +155,7 @@ fun Hyperlinks() {
             val text = buildAnnotatedString {
                 withLink(LinkAnnotation.Url(LongWebLink)) { append("The first link") }
                 append(" immediately followed by ")
-                withLink(LinkAnnotation.Url(LongWebLink)) {
-                    append("the second quite long link")
-                }
+                withLink(LinkAnnotation.Url(LongWebLink)) { append("the second quite long link") }
                 append(" so their bounds are overlapped")
             }
             Text(text)
@@ -209,7 +203,8 @@ fun Hyperlinks() {
                         }
                     }
                     append(" is invalid and won't be opened.")
-                }
+                },
+                color = Color.Red
             )
         }
         Sample("RTL text") {
@@ -228,9 +223,7 @@ fun Hyperlinks() {
         Sample("Bidi text") {
             val text = buildAnnotatedString {
                 append(loremIpsum(Language.Arabic, 2))
-                withLink(LinkAnnotation.Url(LongWebLink)) {
-                    append(" developer.android.com ")
-                }
+                withLink(LinkAnnotation.Url(LongWebLink)) { append(" developer.android.com ") }
                 append(loremIpsum(Language.Arabic, 5))
             }
             Text(text)
@@ -243,7 +236,7 @@ fun Hyperlinks() {
         Sample("Custom Saver with link listener restoration") {
             val listener = LinkInteractionListener { /* do something */ }
             val text = buildAnnotatedString {
-                withLink(TextDefaults.Clickable("tag", linkInteractionListener = listener)) {
+                withLink(LinkAnnotation.Clickable("tag", linkInteractionListener = listener)) {
                     append("Click me")
                 }
             }
@@ -257,11 +250,11 @@ fun Hyperlinks() {
             val listener = LinkInteractionListener { localUriHandler.openUri(WebLink) }
             val text = buildAnnotatedString {
                 append("Click ")
-                withLink(TextDefaults.Clickable("tag", linkInteractionListener = listener)) {
+                withLink(LinkAnnotation.Clickable("tag", linkInteractionListener = listener)) {
                     append("the first link")
                 }
                 append(" or ")
-                withLink(TextDefaults.Url(WebLink, linkInteractionListener = listener)) {
+                withLink(LinkAnnotation.Url(WebLink, linkInteractionListener = listener)) {
                     append("the second link")
                 }
             }
@@ -304,7 +297,8 @@ private class AnnotatedStringSaver(
                    when (linkRange.item) {
                        is LinkAnnotation.Url -> {
                            // in our example we assume that we never provide listeners to the
-                           // LinkAnnotation.Url annotations. Therefore we restore them as is.
+                           // LinkAnnotation.Url annotations. Therefore we restore
+                           // LinkAnnotation.Url annotations as is.
                            builder.addLink(
                                linkRange.item as LinkAnnotation.Url,
                                linkRange.start,
@@ -314,10 +308,7 @@ private class AnnotatedStringSaver(
                        is LinkAnnotation.Clickable -> {
                            val link = LinkAnnotation.Clickable(
                                (linkRange.item as LinkAnnotation.Clickable).tag,
-                               linkRange.item.style,
-                               linkRange.item.focusedStyle,
-                               linkRange.item.hoveredStyle,
-                               linkRange.item.pressedStyle,
+                               linkRange.item.styles,
                                linkInteractionListener
                            )
                            builder.addLink(link, linkRange.start, linkRange.end)

@@ -44,7 +44,6 @@ import androidx.compose.runtime.mock.revalidate
 import androidx.compose.runtime.mock.skip
 import androidx.compose.runtime.mock.validate
 import androidx.compose.runtime.snapshots.Snapshot
-import java.lang.Integer.min
 import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.reflect.KProperty
@@ -4097,7 +4096,7 @@ class CompositionTests {
         var seen = emptyList<Any?>()
 
         fun seen(list: List<Any>) {
-            for (i in 0 until min(list.size, seen.size)) {
+            for (i in 0 until minOf(list.size, seen.size)) {
                 assertEquals(list[i], seen[i])
             }
             seen = list
@@ -4584,6 +4583,73 @@ class CompositionTests {
         advance()
     }
 
+    @Test // regression test for 339618126
+    fun removeGroupAtEndOfGroup() = compositionTest {
+        // Ensure the runtime handles aberrant code generation
+        val state = mutableStateOf(true)
+        compose {
+            InlineLinear {
+                InlineLinear {
+                    explicitStartReplaceGroup(-0x7e52e5de) {
+                        Text("Before")
+                    }
+                    explicitStartReplaceGroup(0x9222f9c, insertGroup = state.value) { }
+                    explicitStartReplaceGroup(0x22d2581c) {
+                        Text("After")
+                    }
+                }
+                InlineLinear {
+                    Text("State is ${state.value}")
+                }
+                if (state.value) {
+                    Text("State is on")
+                }
+                if (!state.value) {
+                    Text("State is off")
+                }
+            }
+        }
+
+        validate {
+            Linear {
+                Linear {
+                    Text("Before")
+                    Text("After")
+                }
+                Linear {
+                    Text("State is ${state.value}")
+                }
+                if (state.value) {
+                    Text("State is on")
+                }
+                if (!state.value) {
+                    Text("State is off")
+                }
+            }
+        }
+
+        state.value = false
+        advance()
+        revalidate()
+
+        state.value = true
+        advance()
+        revalidate()
+    }
+
+    @Test // regression test for b/362291064
+    fun avoidsThrashingTheSlotTable() = compositionTest {
+        val count = 100
+        var data by mutableIntStateOf(0)
+        compose { repeat(count) { Linear { Text("Value: $it, data: $data") } } }
+
+        validate { repeat(count) { Linear { Text("Value: $it, data: $data") } } }
+
+        data++
+        advance()
+        revalidate()
+    }
+
     private inline fun CoroutineScope.withGlobalSnapshotManager(block: CoroutineScope.() -> Unit) {
         val channel = Channel<Unit>(Channel.CONFLATED)
         val job = launch {
@@ -4917,3 +4983,16 @@ fun ListContentItem(
 data class ListViewItem(val id: Int)
 
 private fun <T> unused(@Suppress("UNUSED_PARAMETER") value: T) { }
+
+// Part of regression test for 339618126
+@Composable
+@ExplicitGroupsComposable
+inline fun explicitStartReplaceGroup(
+    key: Int,
+    insertGroup: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    if (insertGroup) currentComposer.startReplaceGroup(key)
+    content()
+    if (insertGroup) currentComposer.endReplaceGroup()
+}

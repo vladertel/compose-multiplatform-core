@@ -43,14 +43,15 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.util.fastRoundToInt
+import org.jetbrains.annotations.TestOnly
 
 @Suppress("NotCloseable")
-actual class GraphicsLayer internal constructor(
-    private val impl: GraphicsLayerImpl,
-    private val layerManager: LayerManager
+actual class GraphicsLayer
+internal constructor(
+    internal val impl: GraphicsLayerImpl,
+    private val layerManager: LayerManager?
 ) {
     private var density = DefaultDensity
     private var layoutDirection = LayoutDirection.Ltr
@@ -58,7 +59,7 @@ actual class GraphicsLayer internal constructor(
 
     private var androidOutline: AndroidOutline? = null
     private var outlineDirty = true
-    private var roundRectOutlineTopLeft: Offset = Offset.Unspecified
+    private var roundRectOutlineTopLeft: Offset = Offset.Zero
     private var roundRectOutlineSize: Size = Size.Unspecified
     private var roundRectCornerRadius: Float = 0f
 
@@ -130,10 +131,14 @@ actual class GraphicsLayer internal constructor(
      * @sample androidx.compose.ui.graphics.samples.GraphicsLayerSizeSample
      */
     actual var size: IntSize = IntSize.Zero
-        internal set(value) {
+        private set(value) {
             if (field != value) {
                 field = value
                 setPosition(topLeft, value)
+                if (roundRectOutlineSize.isUnspecified) {
+                    outlineDirty = true
+                    configureOutline()
+                }
             }
         }
 
@@ -388,8 +393,7 @@ actual class GraphicsLayer internal constructor(
      * for use cases where only the [topLeft] is desired to be changed
      */
     private fun setPosition(topLeft: IntOffset, size: IntSize) {
-        impl.setPosition(topLeft, size)
-        this.outlineDirty = true
+        impl.setPosition(topLeft.x, topLeft.y, size)
     }
 
     /**
@@ -411,17 +415,15 @@ actual class GraphicsLayer internal constructor(
         size: IntSize,
         block: DrawScope.() -> Unit
     ) {
-        if (this.size != size) {
-            setPosition(topLeft, size)
-            this.size = size
-            outlineDirty = true
-            configureOutline()
-        }
+        this.size = size
         this.density = density
         this.layoutDirection = layoutDirection
         this.drawBlock = block
         impl.isInvalidated = true
+        recordInternal()
+    }
 
+    private fun recordInternal() {
         childDependenciesTracker.withTracking(
             onDependencyRemoved = { it.onRemovedFromParentLayer() }
         ) {
@@ -472,6 +474,34 @@ actual class GraphicsLayer internal constructor(
         androidCanvas.concat(impl.calculateMatrix())
     }
 
+    internal fun drawForPersistence(canvas: Canvas) {
+        if (canvas.nativeCanvas.isHardwareAccelerated) {
+            recreateDisplayListIfNeeded()
+            impl.draw(canvas)
+        }
+    }
+
+    private fun recreateDisplayListIfNeeded() {
+        // If the displaylist has been discarded from underneath us, attempt to recreate it.
+        // This can happen if the application resumes from a background state after a trim memory
+        // callback has been invoked with a level greater than or equal to hidden. During which
+        // HWUI attempts to cull out resources that can be recreated quickly.
+        // Because recording instructions invokes the draw lambda again, there can be the potential
+        // for the objects referenced to be invalid for example in the case of a lazylist removal
+        // animation for a Composable that has been disposed, but the GraphicsLayer is drawn
+        // for a transient animation. However, when the application is backgrounded, animations are
+        // stopped anyway so attempts to recreate the displaylist from the draw lambda should
+        // be safe as the draw lambdas should still be valid. If not catch potential exceptions
+        // and continue as UI state would be recreated on resume anyway.
+        if (!impl.hasDisplayList) {
+            try {
+                recordInternal()
+            } catch (_: Throwable) {
+                // NO-OP
+            }
+        }
+    }
+
     /**
      * Draw the contents of this [GraphicsLayer] into the specified [Canvas]
      */
@@ -479,9 +509,9 @@ actual class GraphicsLayer internal constructor(
         if (isReleased) {
             return
         }
-        if (pivotOffset.isUnspecified) {
-            impl.pivotOffset = Offset(size.width / 2f, size.height / 2f)
-        }
+
+        recreateDisplayListIfNeeded()
+
         configureOutline()
         val useZ = shadowElevation > 0f
         if (useZ) {
@@ -570,22 +600,16 @@ actual class GraphicsLayer internal constructor(
     }
 
     private inline fun <T> resolveOutlinePosition(block: (Offset, Size) -> T): T {
-        val layerTopLeft = this.topLeft.toOffset()
         val layerSize = this.size.toSize()
         val rRectTopLeft = roundRectOutlineTopLeft
         val rRectSize = roundRectOutlineSize
-        val outlineTopLeft = if (rRectTopLeft.isUnspecified) {
-            layerTopLeft
-        } else {
-            rRectTopLeft
-        }
 
         val outlineSize = if (rRectSize.isUnspecified) {
             layerSize
         } else {
             rRectSize
         }
-        return block(outlineTopLeft, outlineSize)
+        return block(rRectTopLeft, outlineSize)
     }
 
     // Suppress deprecation for usage of setConvexPath in favor of setPath on API levels that
@@ -629,7 +653,11 @@ actual class GraphicsLayer internal constructor(
 
     private fun discardContentIfReleasedAndHaveNoParentLayerUsages() {
         if (isReleased && parentLayerUsages == 0) {
-            layerManager.release(this)
+            if (layerManager != null) {
+                layerManager.release(this)
+            } else {
+                discardDisplayList()
+            }
         }
     }
 
@@ -642,6 +670,16 @@ actual class GraphicsLayer internal constructor(
         childDependenciesTracker.removeDependencies {
             it.onRemovedFromParentLayer()
         }
+        impl.discardDisplayList()
+    }
+
+    /**
+     * When the system is sending trim memory request all the render nodes will discard their
+     * display list. in this case we are not being notified about that and don't update
+     * [childDependenciesTracker], as it is done when we call [discardDisplayList] manually
+     */
+    @TestOnly
+    internal fun emulateTrimMemory() {
         impl.discardDisplayList()
     }
 
@@ -689,9 +727,10 @@ actual class GraphicsLayer internal constructor(
         internalOutline = null
         outlinePath = null
         roundRectOutlineSize = Size.Unspecified
-        roundRectOutlineTopLeft = Offset.Unspecified
+        roundRectOutlineTopLeft = Offset.Zero
         roundRectCornerRadius = 0f
         outlineDirty = true
+        usePathForClip = false
     }
 
     /**
@@ -709,9 +748,11 @@ actual class GraphicsLayer internal constructor(
     }
 
     /**
-     * Specifies a round rect as the outline.
-     * By default, both [topLeft] and [size] are set to [Offset.Unspecified] and [Size.Unspecified]
-     * indicating that the outline should match the bounds of the [GraphicsLayer].
+     * Configures a rounded rect outline for this [GraphicsLayer]. By default, [topLeft] is set to
+     * [Size.Zero] and [size] is set to [Size.Unspecified] indicating that the outline
+     * should match the size of the [GraphicsLayer]. When [shadowElevation] is non-zero a shadow
+     * is produced using an [Outline] created from the round rect parameters provided. Additionally
+     * if [clip] is true, the contents of this [GraphicsLayer] will be clipped to this geometry.
      *
      * @param topLeft The top left of the rounded rect outline
      * @param size The size of the rounded rect outline
@@ -720,9 +761,11 @@ actual class GraphicsLayer internal constructor(
      * @sample androidx.compose.ui.graphics.samples.GraphicsLayerRoundRectOutline
      */
     actual fun setRoundRectOutline(topLeft: Offset, size: Size, cornerRadius: Float) {
-        if (this.roundRectOutlineTopLeft != topLeft ||
-            this.roundRectOutlineSize != size ||
-            this.roundRectCornerRadius != cornerRadius
+        if (
+            this.roundRectOutlineTopLeft != topLeft ||
+                this.roundRectOutlineSize != size ||
+                this.roundRectCornerRadius != cornerRadius ||
+                this.outlinePath != null
         ) {
             resetOutlineParams()
             this.roundRectOutlineTopLeft = topLeft
@@ -764,11 +807,11 @@ actual class GraphicsLayer internal constructor(
      * Note that this parameter is only supported on Android 9 (Pie) and above. On older versions,
      * this property always returns [Color.Black] and setting new values is ignored.
      */
-    actual var ambientShadowColor: Color = Color.Black
+    actual var ambientShadowColor: Color
+        get() = impl.ambientShadowColor
         set(value) {
-            if (field != value) {
+            if (value != impl.ambientShadowColor) {
                 impl.ambientShadowColor = value
-                field = value
             }
         }
 
@@ -785,11 +828,11 @@ actual class GraphicsLayer internal constructor(
      * Note that this parameter is only supported on Android 9 (Pie) and above. On older versions,
      * this property always returns [Color.Black] and setting new values is ignored.
      */
-    actual var spotShadowColor: Color = Color.Black
+    actual var spotShadowColor: Color
+        get() = impl.spotShadowColor
         set(value) {
-            if (field != value) {
+            if (value != impl.spotShadowColor) {
                 impl.spotShadowColor = value
-                field = value
             }
         }
 
@@ -825,8 +868,8 @@ internal interface GraphicsLayerImpl {
     val layerId: Long
 
     /**
-     * The uniqueDrawingId of the owner view of this graphics layer. This is used by
-     * tooling to match a layer to the associated owner AndroidComposeView.
+     * The uniqueDrawingId of the owner view of this graphics layer. This is used by tooling to
+     * match a layer to the associated owner AndroidComposeView.
      */
     val ownerId: Long
 
@@ -928,7 +971,7 @@ internal interface GraphicsLayerImpl {
     /**
      * @see GraphicsLayer.setPosition
      */
-    fun setPosition(topLeft: IntOffset, size: IntSize)
+    fun setPosition(x: Int, y: Int, size: IntSize)
 
     /**
      * @see GraphicsLayer.setPathOutline
@@ -950,6 +993,9 @@ internal interface GraphicsLayerImpl {
         layer: GraphicsLayer,
         block: DrawScope.() -> Unit
     )
+
+    val hasDisplayList: Boolean
+        get() = true
 
     /**
      * @see GraphicsLayer.discardDisplayList

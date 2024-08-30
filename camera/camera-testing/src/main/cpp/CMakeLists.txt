@@ -28,8 +28,3 @@ add_library(
 find_library(android-lib android)
 
 target_link_libraries(testing_surface_format_jni  ${android-lib})
-target_link_options(
-        testing_surface_format_jni
-        PRIVATE
-        "-Wl,-z,max-page-size=16384"
-)

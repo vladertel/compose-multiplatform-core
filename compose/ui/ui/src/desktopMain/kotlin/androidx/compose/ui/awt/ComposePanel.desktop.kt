@@ -42,11 +42,13 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  * @param skiaLayerAnalytics Analytics that helps to know more about SkiaLayer behaviour.
  * SkiaLayer is underlying class used internally to draw Compose content.
  * Implementation usually uses third-party solution to send info to some centralized analytics gatherer.
+ * @param renderSettings Configuration class for rendering settings.
  */
 class ComposePanel @ExperimentalComposeUiApi constructor(
     private val skiaLayerAnalytics: SkiaLayerAnalytics,
+    private val renderSettings: RenderSettings = RenderSettings.Default
 ) : JLayeredPane() {
-    constructor() : this(SkiaLayerAnalytics.Empty)
+    constructor() : this(SkiaLayerAnalytics.Empty, RenderSettings.Default)
 
     init {
         check(isEventDispatchThread()) {
@@ -80,11 +82,10 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
             override fun getDefaultComponent(aContainer: Container?) = null
         }
         isFocusCycleRoot = true
+        isFocusable = true
     }
 
     private val _focusListeners = mutableSetOf<FocusListener?>()
-    private var _isFocusable = true
-    private var _isRequestFocusEnabled = false
 
     private var _composeContainer: ComposeContainer? = null
     private var _composeContent: (@Composable () -> Unit)? = null
@@ -197,30 +198,24 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         return ComposeContainer(
             container = this,
             skiaLayerAnalytics = skiaLayerAnalytics,
-            windowContainer = windowContainer
+            windowContainer = windowContainer,
+            renderSettings = renderSettings,
         ).apply {
-            focusManager.releaseFocus()
             setBounds(0, 0, width, height)
-            contentComponent.isFocusable = _isFocusable
-            contentComponent.isRequestFocusEnabled = _isRequestFocusEnabled
+            contentComponent.isFocusable = isFocusable
+            contentComponent.isRequestFocusEnabled = isRequestFocusEnabled
             exceptionHandler = this@ComposePanel.exceptionHandler
 
             _focusListeners.forEach(contentComponent::addFocusListener)
             contentComponent.addFocusListener(object : FocusListener {
                 override fun focusGained(e: FocusEvent) {
-                    // The focus can be switched from the child component inside SwingPanel.
-                    // In that case, SwingPanel will take care of it.
-                    if (!isParentOf(e.oppositeComponent)) {
-                        focusManager.requestFocus()
+                    if (!e.isTemporary && !e.isFocusGainedHandledBySwingPanel(this@ComposePanel)) {
                         when (e.cause) {
-                            FocusEvent.Cause.TRAVERSAL_FORWARD -> {
-                                focusManager.moveFocus(FocusDirection.Next)
+                            FocusEvent.Cause.UNKNOWN, FocusEvent.Cause.ACTIVATION -> {
+                                if (!focusManager.hasFocus) {
+                                    focusManager.takeFocus(FocusDirection.Next)
+                                }
                             }
-
-                            FocusEvent.Cause.TRAVERSAL_BACKWARD -> {
-                                focusManager.moveFocus(FocusDirection.Previous)
-                            }
-
                             else -> Unit
                         }
                     }
@@ -242,13 +237,13 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     override fun setComponentOrientation(o: ComponentOrientation?) {
         super.setComponentOrientation(o)
 
-        _composeContainer?.onChangeLayoutDirection(this)
+        _composeContainer?.onLayoutDirectionChanged(this)
     }
 
     override fun setLocale(l: Locale?) {
         super.setLocale(l)
 
-        _composeContainer?.onChangeLayoutDirection(this)
+        _composeContainer?.onLayoutDirectionChanged(this)
     }
 
     override fun addFocusListener(l: FocusListener?) {
@@ -261,17 +256,13 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         _focusListeners.remove(l)
     }
 
-    override fun isFocusable() = _isFocusable
-
     override fun setFocusable(focusable: Boolean) {
-        _isFocusable = focusable
+        super.setFocusable(focusable)
         _composeContainer?.contentComponent?.isFocusable = focusable
     }
 
-    override fun isRequestFocusEnabled(): Boolean = _isRequestFocusEnabled
-
     override fun setRequestFocusEnabled(requestFocusEnabled: Boolean) {
-        _isRequestFocusEnabled = requestFocusEnabled
+        super.setRequestFocusEnabled(requestFocusEnabled)
         _composeContainer?.contentComponent?.isRequestFocusEnabled = requestFocusEnabled
     }
 

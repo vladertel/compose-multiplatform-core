@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.text.handwriting.isStylusHandwritingSupported
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
@@ -39,16 +40,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TextInputService
 import androidx.emoji2.text.EmojiCompat
 import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 private const val DEBUG_CLASS = "AndroidLegacyPlatformTextInputServiceAdapter"
@@ -60,9 +60,14 @@ private const val DEBUG_CLASS = "AndroidLegacyPlatformTextInputServiceAdapter"
 @VisibleForTesting
 internal var inputMethodManagerFactory: (View) -> InputMethodManager = ::InputMethodManagerImpl
 
+@Suppress("DEPRECATION")
 @Composable
-internal actual fun legacyPlatformTextInputServiceAdapter():
-    LegacyPlatformTextInputServiceAdapter = remember { AndroidLegacyPlatformTextInputServiceAdapter() }
+internal actual fun legacyTextInputServiceAdapterAndService():
+    Pair<LegacyPlatformTextInputServiceAdapter, TextInputService> {
+    val adapter = remember { AndroidLegacyPlatformTextInputServiceAdapter() }
+    val service = remember { TextInputService(adapter) }
+    return adapter to service
+}
 
 internal class AndroidLegacyPlatformTextInputServiceAdapter :
     LegacyPlatformTextInputServiceAdapter() {
@@ -70,7 +75,7 @@ internal class AndroidLegacyPlatformTextInputServiceAdapter :
     private var job: Job? = null
     private var currentRequest: LegacyTextInputMethodRequest? = null
     private var backingStylusHandwritingTrigger: MutableSharedFlow<Unit>? = null
-    private var stylusHandwritingTrigger: MutableSharedFlow<Unit>? = null
+    private val stylusHandwritingTrigger: MutableSharedFlow<Unit>?
         get() {
             val finalStylusHandwritingTrigger = backingStylusHandwritingTrigger
             if (finalStylusHandwritingTrigger != null) {
@@ -133,7 +138,12 @@ internal class AndroidLegacyPlatformTextInputServiceAdapter :
                 )
 
                 if (isStylusHandwritingSupported) {
-                    launch(start = CoroutineStart.UNDISPATCHED) {
+                    launch {
+                        // When the editor is just focused, we need to wait for imm.startInput
+                        // before calling startStylusHandwriting. We need to wait for one frame
+                        // because TextInputService.startInput also waits for one frame before
+                        // actually calling imm.restartInput.
+                        withFrameMillis { }
                         stylusHandwritingTrigger?.collect {
                             inputMethodManager.startStylusHandwriting()
                         }

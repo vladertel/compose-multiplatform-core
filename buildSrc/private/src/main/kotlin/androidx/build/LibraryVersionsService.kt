@@ -63,7 +63,7 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
         val versions = getTable("versions")
         val libsGroupsAndVersions = parameters.libsOverrideVersions.get()
         versions.keySet().associateWith { versionName ->
-            val tagName = libsGroupsAndVersions.keys.firstOrNull { versionName.startsWith(it) }
+            val tagName = libsGroupsAndVersions.keys.firstOrNull { versionName == it }
             val versionForTag = libsGroupsAndVersions[tagName]
             val versionValue =
                 if (versionName.startsWith("COMPOSE") &&
@@ -147,8 +147,7 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
             )
         }
         val result = mutableListOf<LibraryGroupAssociation>()
-        // the toml library returns keySet unsorted, but libraryGroupsByGroupId requires it to be sorted
-        for (name in groups.keySet().sorted()) {
+        for (name in groups.keySet()) {
             // get group name
             val groupDefinition = groups.getTable(name)!!
             val groupName = groupDefinition.getString("group")!!

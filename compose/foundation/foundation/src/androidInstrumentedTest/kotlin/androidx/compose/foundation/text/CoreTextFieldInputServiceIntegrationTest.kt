@@ -34,7 +34,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
@@ -68,7 +67,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalComposeUiApi::class)
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class CoreTextFieldInputServiceIntegrationTest {
@@ -522,20 +520,19 @@ class CoreTextFieldInputServiceIntegrationTest {
     }
 
     @Test
-    fun textField_stopAndStartInput_whenToggleWindowFocus() {
+    fun textField_onlyStartsInputConnection_whenToggleWindowFocus() {
         val value = TextFieldValue("abc")
         val focusRequester = FocusRequester()
 
         val focusWindow = mutableStateOf(true)
-        fun createWindowInfo(focused: Boolean) = object : WindowInfo {
-            override val isWindowFocused: Boolean
-                get() = focused
-        }
+        fun createWindowInfo(focused: Boolean) =
+            object : WindowInfo {
+                override val isWindowFocused: Boolean
+                    get() = focused
+            }
 
         setContent {
-            CompositionLocalProvider(
-                LocalWindowInfo provides createWindowInfo(focusWindow.value)
-            ) {
+            CompositionLocalProvider(LocalWindowInfo provides createWindowInfo(focusWindow.value)) {
                 CoreTextField(
                     value = value,
                     onValueChange = {},
@@ -544,23 +541,26 @@ class CoreTextFieldInputServiceIntegrationTest {
             }
         }
 
-        rule.runOnUiThread {
-            focusRequester.requestFocus()
-        }
+        rule.runOnUiThread { focusRequester.requestFocus() }
 
+        var firstInputConnection: InputConnection? = null
         rule.runOnIdle {
             inputMethodInterceptor.assertSessionActive()
+            inputMethodInterceptor.withInputConnection { firstInputConnection = this }
         }
 
         focusWindow.value = false
-        rule.runOnIdle {
-            inputMethodInterceptor.assertNoSessionActive()
-        }
+        rule.runOnIdle { inputMethodInterceptor.assertSessionActive() }
 
         focusWindow.value = true
+        var secondInputConnection: InputConnection? = null
         rule.runOnIdle {
             inputMethodInterceptor.assertSessionActive()
+            inputMethodInterceptor.withInputConnection { secondInputConnection = this }
         }
+
+        // check that we have not created a separate input connection
+        assertThat(firstInputConnection).isSameInstanceAs(secondInputConnection)
     }
 
     private fun setContent(

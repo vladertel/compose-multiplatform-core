@@ -15,6 +15,7 @@
  */
 
 @file:JvmName("NavGraphBuilderKt")
+@file:JvmMultifileClass
 
 package androidx.navigation
 
@@ -30,7 +31,6 @@ import kotlinx.serialization.serializer
  * @param id the destination's unique id
  * @param startDestination the starting destination for this NavGraph
  * @param builder the builder used to construct the graph
- *
  * @return the newly constructed NavGraph
  */
 @Suppress("Deprecation")
@@ -48,70 +48,11 @@ public inline fun NavigatorProvider.navigation(
 ): NavGraph = NavGraphBuilder(this, id, startDestination).apply(builder).build()
 
 /**
- * Construct a new [NavGraph]
- *
- * @param startDestination the starting destination's route for this NavGraph
- * @param route the destination's unique route
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed NavGraph
- */
-public actual inline fun NavigatorProvider.navigation(
-    startDestination: String,
-    route: String?,
-    builder: NavGraphBuilder.() -> Unit
-): NavGraph = NavGraphBuilder(this, startDestination, route).apply(builder)
-    .build()
-
-/**
- * Construct a new [NavGraph]
- *
- * @param startDestination the starting destination's route from a [KClass] for this NavGraph. The
- * respective NavDestination must be added with route from a [KClass] in order to match.
- * @param route the graph's unique route as a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
- * if [route] uses custom NavTypes.
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed NavGraph
- */
-@ExperimentalSafeArgsApi
-public inline fun NavigatorProvider.navigation(
-    startDestination: KClass<*>,
-    route: KClass<*>? = null,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-    builder: NavGraphBuilder.() -> Unit
-): NavGraph = NavGraphBuilder(this, startDestination, route, typeMap).apply(builder)
-    .build()
-
-/**
- * Construct a new [NavGraph]
- *
- * @param startDestination the starting destination's route from an Object for this NavGraph. The
- * respective NavDestination must be added with route from a [KClass] in order to match.
- * @param route the graph's unique route as a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
- * if [route] uses custom NavTypes.
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed NavGraph
- */
-@ExperimentalSafeArgsApi
-public inline fun NavigatorProvider.navigation(
-    startDestination: Any,
-    route: KClass<*>? = null,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-    builder: NavGraphBuilder.() -> Unit
-): NavGraph = NavGraphBuilder(this, startDestination, route, typeMap).apply(builder)
-    .build()
-
-/**
  * Construct a nested [NavGraph]
  *
  * @param id the destination's unique id
  * @param startDestination the starting destination for this NavGraph
  * @param builder the builder used to construct the graph
- *
  * @return the newly constructed nested NavGraph
  */
 @Suppress("Deprecation")
@@ -128,69 +69,11 @@ public inline fun NavGraphBuilder.navigation(
     builder: NavGraphBuilder.() -> Unit
 ): Unit = destination(NavGraphBuilder(provider, id, startDestination).apply(builder))
 
-/**
- * Construct a nested [NavGraph]
- *
- * @param startDestination the starting destination's route for this NavGraph
- * @param route the destination's unique route
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed nested NavGraph
- */
-public actual inline fun NavGraphBuilder.navigation(
-    startDestination: String,
-    route: String,
-    builder: NavGraphBuilder.() -> Unit
-): Unit = destination(NavGraphBuilder(provider, startDestination, route).apply(builder))
 
-/**
- * Construct a nested [NavGraph]
- *
- * @param startDestination the starting destination's route from a [KClass] for this NavGraph. The
- * respective NavDestination must be added with route from a [KClass] in order to match.
- * @param route the graph's unique route from a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
- * if [route] uses custom NavTypes.
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed nested NavGraph
- */
-@ExperimentalSafeArgsApi
-public inline fun NavGraphBuilder.navigation(
-    startDestination: KClass<*>,
-    route: KClass<*>,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-    builder: NavGraphBuilder.() -> Unit
-): Unit = destination(NavGraphBuilder(provider, startDestination, route, typeMap).apply(builder))
-
-/**
- * Construct a nested [NavGraph]
- *
- * @param startDestination the starting destination's route from an Object for this NavGraph. The
- * respective NavDestination must be added with route from a [KClass] in order to match.
- * @param route the graph's unique route from a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
- * if [route] uses custom NavTypes.
- * @param builder the builder used to construct the graph
- *
- * @return the newly constructed nested NavGraph
- */
-@ExperimentalSafeArgsApi
-public inline fun NavGraphBuilder.navigation(
-    startDestination: Any,
-    route: KClass<*>,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-    builder: NavGraphBuilder.() -> Unit
-): Unit = destination(NavGraphBuilder(provider, startDestination, route, typeMap).apply(builder))
-
-/**
- * DSL for constructing a new [NavGraph]
- */
+/** DSL for constructing a new [NavGraph] */
 @NavDestinationDsl
 public actual open class NavGraphBuilder : NavDestinationBuilder<NavGraph> {
-    /**
-     * The [NavGraphBuilder]'s [NavigatorProvider].
-     */
+    /** The [NavGraphBuilder]'s [NavigatorProvider]. */
     public actual val provider: NavigatorProvider
     @IdRes private var startDestinationId: Int = 0
     private var startDestinationRoute: String? = null
@@ -203,7 +86,6 @@ public actual open class NavGraphBuilder : NavDestinationBuilder<NavGraph> {
      * @param provider navigator used to create the destination
      * @param id the graph's unique id
      * @param startDestination the starting destination for this NavGraph
-     *
      * @return the newly created NavGraph
      */
     @Suppress("Deprecation")
@@ -229,7 +111,6 @@ public actual open class NavGraphBuilder : NavDestinationBuilder<NavGraph> {
      * @param provider navigator used to create the destination
      * @param startDestination the starting destination's route for this NavGraph
      * @param route the graph's unique route
-     *
      * @return the newly created NavGraph
      */
     public actual constructor(
@@ -246,15 +127,13 @@ public actual open class NavGraphBuilder : NavDestinationBuilder<NavGraph> {
      *
      * @param provider navigator used to create the destination
      * @param startDestination the starting destination's route as a [KClass] for this NavGraph. The
-     * respective NavDestination must be added with route from a [KClass] in order to match.
+     *   respective NavDestination must be added with route from a [KClass] in order to match.
      * @param route the graph's unique route as a [KClass]
-     * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
-     * if [route] uses custom NavTypes.
-     *
+     * @param typeMap A mapping of KType to custom NavType<*> in the [route]. May be empty if
+     *   [route] does not use custom NavTypes.
      * @return the newly created NavGraph
      */
-    @ExperimentalSafeArgsApi
-    public constructor(
+    public actual constructor(
         provider: NavigatorProvider,
         startDestination: KClass<*>,
         route: KClass<*>?,
@@ -269,66 +148,63 @@ public actual open class NavGraphBuilder : NavDestinationBuilder<NavGraph> {
      *
      * @param provider navigator used to create the destination
      * @param startDestination the starting destination's route as an Object for this NavGraph. The
-     * respective NavDestination must be added with route from a [KClass] in order to match.
+     *   respective NavDestination must be added with route from a [KClass] in order to match.
      * @param route the graph's unique route as a [KClass]
-     * @param typeMap A mapping of KType to custom NavType<*> in the [route]. Only necessary
-     * if [route] uses custom NavTypes.
-     *
+     * @param typeMap A mapping of KType to custom NavType<*> in the [route]. May be empty if
+     *   [route] does not use custom NavTypes.
      * @return the newly created NavGraph
      */
-    @ExperimentalSafeArgsApi
-    public constructor(
+    public actual constructor(
         provider: NavigatorProvider,
         startDestination: Any,
         route: KClass<*>?,
         typeMap: Map<KType, @JvmSuppressWildcards NavType<*>>
     ) : super(provider[NavGraphNavigator::class], route, typeMap) {
-            this.provider = provider
-            this.startDestinationObject = startDestination
-        }
+        this.provider = provider
+        this.startDestinationObject = startDestination
+    }
 
     private val destinations = mutableListOf<NavDestination>()
 
-    /**
-     * Build and add a new destination to the [NavGraphBuilder]
-     */
+    /** Build and add a new destination to the [NavGraphBuilder] */
     public actual fun <D : NavDestination> destination(navDestination: NavDestinationBuilder<D>) {
         destinations += navDestination.build()
     }
 
-    /**
-     * Adds this destination to the [NavGraphBuilder]
-     */
+    /** Adds this destination to the [NavGraphBuilder] */
     public actual operator fun NavDestination.unaryPlus() {
         addDestination(this)
     }
 
-    /**
-     * Add the destination to the [NavGraphBuilder]
-     */
+    /** Add the destination to the [NavGraphBuilder] */
     public actual fun addDestination(destination: NavDestination) {
         destinations += destination
     }
 
-    @OptIn(InternalSerializationApi::class, ExperimentalSafeArgsApi::class)
-    override fun build(): NavGraph = super.build().also { navGraph ->
-        navGraph.addDestinations(destinations)
-        if (startDestinationId == 0 && startDestinationRoute == null &&
-            startDestinationClass == null && startDestinationObject == null) {
-            if (route != null) {
-                throw IllegalStateException("You must set a start destination route")
+    @OptIn(InternalSerializationApi::class)
+    override fun build(): NavGraph =
+        super.build().also { navGraph ->
+            navGraph.addDestinations(destinations)
+            if (
+                startDestinationId == 0 &&
+                    startDestinationRoute == null &&
+                    startDestinationClass == null &&
+                    startDestinationObject == null
+            ) {
+                if (route != null) {
+                    throw IllegalStateException("You must set a start destination route")
+                } else {
+                    throw IllegalStateException("You must set a start destination id")
+                }
+            }
+            if (startDestinationRoute != null) {
+                navGraph.setStartDestination(startDestinationRoute!!)
+            } else if (startDestinationClass != null) {
+                navGraph.setStartDestination(startDestinationClass!!.serializer()) { it.route!! }
+            } else if (startDestinationObject != null) {
+                navGraph.setStartDestination(startDestinationObject!!)
             } else {
-                throw IllegalStateException("You must set a start destination id")
+                navGraph.setStartDestination(startDestinationId)
             }
         }
-        if (startDestinationRoute != null) {
-            navGraph.setStartDestination(startDestinationRoute!!)
-        } else if (startDestinationClass != null) {
-            navGraph.setStartDestination(startDestinationClass!!.serializer()) { it.route!! }
-        } else if (startDestinationObject != null) {
-            navGraph.setStartDestination(startDestinationObject!!)
-        } else {
-            navGraph.setStartDestination(startDestinationId)
-        }
-    }
 }

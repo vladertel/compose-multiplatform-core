@@ -356,11 +356,26 @@ class AnnotatedStringFromHtmlTest {
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    fun link_appliesColorFromHtmlTag() {
+        val stringWithColoredLink = "<span style=\"color:blue\"><a href=\"url\">link</a></span>"
+        val annotatedString = AnnotatedString.fromHtml(stringWithColoredLink)
+
+        rule.setContent {
+            BasicText(text = annotatedString)
+        }
+
+        rule.onNode(hasClickAction(), useUnmergedTree = true)
+            .captureToImage()
+            .assertContainsColor(Color.Blue)
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun link_appliesColorFromMethod() {
         val stringWithColoredLink = "<span style=\"color:blue\"><a href=\"url\">link</a></span>"
         val annotatedString = AnnotatedString.fromHtml(
             stringWithColoredLink,
-            linkStyle = SpanStyle(color = Color.Green)
+            TextLinkStyles(SpanStyle(color = Color.Green))
         )
 
         rule.setContent {
@@ -379,7 +394,7 @@ class AnnotatedStringFromHtmlTest {
         val stringWithColoredLink = "<span style=\"color:blue\"><a href=\"url\">link</a></span>"
         val annotatedString = AnnotatedString.fromHtml(
             stringWithColoredLink,
-            linkStyle = SpanStyle(background = Color.Red)
+            TextLinkStyles(SpanStyle(background = Color.Red))
         )
 
         rule.setContent {
@@ -398,19 +413,21 @@ class AnnotatedStringFromHtmlTest {
         val stringWithLink = "<a href=\"url\">link</a>"
         val annotatedString = AnnotatedString.fromHtml(
             stringWithLink,
-            linkStyle = SpanStyle(color = Color.Red),
-            linkFocusedStyle = SpanStyle(color = Color.Green),
-            linkHoveredStyle = SpanStyle(color = Color.Blue),
-            linkPressedStyle = SpanStyle(color = Color.Gray),
+            TextLinkStyles(
+                style = SpanStyle(color = Color.Red),
+                focusedStyle = SpanStyle(color = Color.Green),
+                hoveredStyle = SpanStyle(color = Color.Blue),
+                pressedStyle = SpanStyle(color = Color.Gray),
+            ),
             linkInteractionListener = {}
         )
 
         val link = annotatedString.getLinkAnnotations(0, 4).first().item as LinkAnnotation.Url
         assertThat(link.url).isEqualTo("url")
-        assertThat(link.style).isEqualTo(SpanStyle(color = Color.Red))
-        assertThat(link.focusedStyle).isEqualTo(SpanStyle(color = Color.Green))
-        assertThat(link.hoveredStyle).isEqualTo(SpanStyle(color = Color.Blue))
-        assertThat(link.pressedStyle).isEqualTo(SpanStyle(color = Color.Gray))
+        assertThat(link.styles?.style).isEqualTo(SpanStyle(color = Color.Red))
+        assertThat(link.styles?.focusedStyle).isEqualTo(SpanStyle(color = Color.Green))
+        assertThat(link.styles?.hoveredStyle).isEqualTo(SpanStyle(color = Color.Blue))
+        assertThat(link.styles?.pressedStyle).isEqualTo(SpanStyle(color = Color.Gray))
         assertThat(link.linkInteractionListener).isNotNull()
     }
 

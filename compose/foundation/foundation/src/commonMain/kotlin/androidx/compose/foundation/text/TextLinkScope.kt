@@ -67,8 +67,7 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
     var textLayoutResult: TextLayoutResult? by mutableStateOf(null)
 
     /**
-     * [initialText] with applied links styling to it (i.e. [LinkAnnotation.style],
-     * [LinkAnnotation.hoveredStyle] or [LinkAnnotation.focusedStyle])
+     * [initialText] with applied links styling to it from [LinkAnnotation.styles]
      */
     internal var text: AnnotatedString = initialText
 
@@ -174,20 +173,20 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                 isHovered,
                 isFocused,
                 isPressed,
-                range.item.style,
-                range.item.focusedStyle,
-                range.item.hoveredStyle,
-                range.item.pressedStyle
+                range.item.styles?.style,
+                range.item.styles?.focusedStyle,
+                range.item.styles?.hoveredStyle,
+                range.item.styles?.pressedStyle,
             ) {
                 // we calculate the latest style based on the link state and apply it to the
                 // initialText's style. This allows us to merge the style with the original instead
                 // of fully replacing it
-                val mergedStyle = range.item.style?.merge(
-                    if (isFocused) range.item.focusedStyle else null
-                )?.merge(
-                    if (isHovered) range.item.hoveredStyle else null
-                )?.merge(
-                    if (isPressed) range.item.pressedStyle else null
+                val mergedStyle = range.item.styles?.style.mergeOrUse(
+                    if (isFocused) range.item.styles?.focusedStyle else null
+                ).mergeOrUse(
+                    if (isHovered) range.item.styles?.hoveredStyle else null
+                ).mergeOrUse(
+                    if (isPressed) range.item.styles?.pressedStyle else null
                 )
                 mergedStyle?.let {
                     replaceStyle(it, range.start, range.end)
@@ -196,12 +195,14 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
         }
     }
 
+    private fun SpanStyle?.mergeOrUse(other: SpanStyle?) = this?.merge(other) ?: other
+
     private fun handleLink(
         link: LinkAnnotation,
         uriHandler: UriHandler
     ) {
         when (link) {
-            is LinkAnnotation.Url -> link.linkInteractionListener?.onClicked(link) ?: try {
+            is LinkAnnotation.Url -> link.linkInteractionListener?.onClick(link) ?: try {
                 uriHandler.openUri(link.url)
             } catch (_: IllegalArgumentException) {
                 // we choose to silently fail when the uri can't be opened to avoid crashes
@@ -209,7 +210,7 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                 // handlers themselves and therefore I suspect are less likely to test them
                 // manually.
             }
-            is LinkAnnotation.Clickable -> link.linkInteractionListener?.onClicked(link)
+            is LinkAnnotation.Clickable -> link.linkInteractionListener?.onClick(link)
         }
     }
 

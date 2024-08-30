@@ -305,17 +305,10 @@ public class WatchFace(
         /** Signals that the activity is going away and resources should be released. */
         public fun onDestroy()
 
-        /** Sets a callback to observe any changes to [ComplicationSlot.configExtras]. */
+        /** Sets a callback to observe an y changes to [ComplicationSlot.configExtras]. */
         public fun setComplicationSlotConfigExtrasChangeCallback(
             callback: ComplicationSlotConfigExtrasChangeCallback?
         )
-
-        /**
-         * Overrides the complications to be used until [onDestroy] is called. Note if any
-         * complications are received via the InteractiveClient while this override is in place,
-         * they should be buffered until [onDestroy] is called.
-         */
-        public fun setOverrideComplications(slotIdToComplicationData: Map<Int, ComplicationData>)
     }
 
     /** Used to inform EditorSession about changes to [ComplicationSlot.configExtras]. */
@@ -790,18 +783,14 @@ constructor(
         // To save power we request a lower hardware display frame rate when the battery is low
         // and not charging.
         if (renderer.surfaceHolder.surface.isValid) {
-            if (it) {
-                SetFrameRateHelper.setFrameRate(
-                    renderer.surfaceHolder.surface,
+            SetFrameRateHelper.setFrameRate(
+                renderer.surfaceHolder.surface,
+                if (it) {
                     1000f / MAX_LOW_POWER_INTERACTIVE_UPDATE_RATE_MS.toFloat()
-                )
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    ClearFrameRateHelperU.clearFrameRate(renderer.surfaceHolder.surface)
                 } else {
-                    ClearFrameRateHelperR.clearFrameRate(renderer.surfaceHolder.surface)
+                    SYSTEM_DECIDES_FRAME_RATE
                 }
-            }
+            )
         }
     }
 
@@ -832,9 +821,8 @@ constructor(
                     // init may not have completed.
                     if (initComplete) {
                         onDraw()
-                    } else {
-                        scheduleDraw()
                     }
+                    scheduleDraw()
                 }
             }
         }
@@ -937,21 +925,11 @@ constructor(
             complicationSlotsManager.configExtrasChangeCallback = callback
         }
 
-        override fun setOverrideComplications(
-            slotIdToComplicationData: Map<Int, ComplicationData>
-        ) {
-            InteractiveInstanceManager
-                .getCurrentInteractiveInstance()
-                ?.engine
-                ?.overrideComplications(slotIdToComplicationData)
-        }
-
         @SuppressLint("NewApi") // release
         override fun onDestroy(): Unit =
             TraceEvent("WFEditorDelegate.onDestroy").use {
                 InteractiveInstanceManager.getCurrentInteractiveInstance()?.engine?.let {
                     it.editorObscuresWatchFace = false
-                    it.removeAnyComplicationOverrides()
                 }
                 if (watchState.isHeadless) {
                     headlessWatchFaceImpl!!.release()
@@ -1407,24 +1385,12 @@ internal object CreateRemoteWatchFaceViewHelper {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.R)
-internal object SetFrameRateHelper {
-    fun setFrameRate(surface: Surface, frameRate: Float) {
-        surface.setFrameRate(frameRate, FRAME_RATE_COMPATIBILITY_DEFAULT)
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.R)
-internal object ClearFrameRateHelperR {
-    fun clearFrameRate(surface: Surface) {
-        surface.setFrameRate(SYSTEM_DECIDES_FRAME_RATE, FRAME_RATE_COMPATIBILITY_DEFAULT)
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-internal object ClearFrameRateHelperU {
-    fun clearFrameRate(surface: Surface) {
-        surface.clearFrameRate()
+internal class SetFrameRateHelper {
+    @RequiresApi(Build.VERSION_CODES.R)
+    companion object {
+        fun setFrameRate(surface: Surface, frameRate: Float) {
+            surface.setFrameRate(frameRate, FRAME_RATE_COMPATIBILITY_DEFAULT)
+        }
     }
 }
 

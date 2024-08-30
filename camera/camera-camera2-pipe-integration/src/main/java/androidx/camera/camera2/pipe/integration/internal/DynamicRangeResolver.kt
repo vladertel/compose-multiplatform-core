@@ -54,7 +54,7 @@ class DynamicRangeResolver(val cameraMetadata: CameraMetadata) {
         }
 
         // Get the supported dynamic ranges from the device
-        val supportedDynamicRanges = dynamicRangesInfo.supportedDynamicRanges
+        val supportedDynamicRanges = dynamicRangesInfo.getSupportedDynamicRanges()
 
         // Collect initial dynamic range constraints. This set will potentially shrink as we add
         // more dynamic ranges. We start with the initial set of supported dynamic ranges to

@@ -29,6 +29,7 @@ import android.view.ViewOutlineProvider
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CanvasHolder
 import androidx.compose.ui.graphics.Color
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPorterDuffMode
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toSize
@@ -186,7 +186,8 @@ internal class GraphicsViewLayer(
         viewLayer.clipBounds = null
     }
 
-    private var topLeft = IntOffset.Zero
+    private var x: Int = 0
+    private var y: Int = 0
     private var size = IntSize.Zero
     private var clipBoundsInvalidated = false
     override var isInvalidated: Boolean = true
@@ -254,11 +255,24 @@ internal class GraphicsViewLayer(
             viewLayer.setAlpha(value)
         }
 
+    private var shouldManuallySetCenterPivot = false
+
     override var pivotOffset: Offset = Offset.Zero
         set(value) {
             field = value
-            viewLayer.pivotX = value.x
-            viewLayer.pivotY = value.y
+            if (value.isUnspecified) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ViewLayerVerificationHelper28.resetPivot(viewLayer)
+                } else {
+                    shouldManuallySetCenterPivot = true
+                    viewLayer.pivotX = size.width / 2f
+                    viewLayer.pivotY = size.height / 2f
+                }
+            } else {
+                shouldManuallySetCenterPivot = false
+                viewLayer.pivotX = value.x
+                viewLayer.pivotY = value.y
+            }
         }
     override var scaleX: Float = 1f
         set(value) {
@@ -289,8 +303,8 @@ internal class GraphicsViewLayer(
         }
     override var ambientShadowColor: Color = Color.Black
         set(value) {
-            field = value
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                field = value
                 ViewLayerVerificationHelper28.setOutlineAmbientShadowColor(
                     viewLayer,
                     value.toArgb()
@@ -299,8 +313,8 @@ internal class GraphicsViewLayer(
         }
     override var spotShadowColor: Color = Color.Black
         set(value) {
-            field = value
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                field = value
                 ViewLayerVerificationHelper28.setOutlineSpotShadowColor(viewLayer, value.toArgb())
             }
         }
@@ -342,23 +356,27 @@ internal class GraphicsViewLayer(
             }
         }
 
-    override fun setPosition(topLeft: IntOffset, size: IntSize) {
-        if (this.topLeft.x != topLeft.x) {
-            viewLayer.offsetLeftAndRight(topLeft.x - this.topLeft.x)
-        }
-
-        if (this.topLeft.y != topLeft.y) {
-            viewLayer.offsetTopAndBottom(topLeft.y - this.topLeft.y)
-        }
-
+    override fun setPosition(x: Int, y: Int, size: IntSize) {
         if (this.size != size) {
             if (clip) {
                 clipBoundsInvalidated = true
             }
-            viewLayer.layout(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height)
+            viewLayer.layout(x, y, x + size.width, y + size.height)
+            this.size = size
+            if (shouldManuallySetCenterPivot) {
+                viewLayer.pivotX = size.width / 2f
+                viewLayer.pivotY = size.height / 2f
+            }
+        } else {
+            if (this.x != x) {
+                viewLayer.offsetLeftAndRight(x - this.x)
+            }
+            if (this.y != y) {
+                viewLayer.offsetTopAndBottom(y - this.y)
+            }
         }
-        this.topLeft = topLeft
-        this.size = size
+        this.x = x
+        this.y = y
     }
 
     override fun setOutline(outline: Outline?) {
@@ -388,20 +406,29 @@ internal class GraphicsViewLayer(
         layer: GraphicsLayer,
         block: DrawScope.() -> Unit
     ) {
+        if (viewLayer.parent == null) {
+            layerContainer.addView(viewLayer)
+        }
         viewLayer.setDrawParams(density, layoutDirection, layer, block)
-        recordDrawingOperations()
-        picture?.let { p ->
-            val pictureCanvas = p.beginRecording(size.width, size.height)
-            pictureCanvasHolder?.drawInto(pictureCanvas) {
-                pictureDrawScope?.draw(
-                    density,
-                    layoutDirection,
-                    this,
-                    size.toSize(),
-                    block
-                )
+        // According to View#canHaveDisplaylist, a View can only have a displaylist
+        // if it is attached and there is a valid ThreadedRenderer instance on the corresponding
+        // AttachInfo instance
+        if (viewLayer.isAttachedToWindow) {
+            // Force a call to View#cleanupDraw by toggling the visibility of the View
+            // so that requests to record the displaylist will not be skipped
+            viewLayer.visibility = View.INVISIBLE
+            viewLayer.visibility = View.VISIBLE
+            recordDrawingOperations()
+            picture?.let { p ->
+                val pictureCanvas = p.beginRecording(size.width, size.height)
+                try {
+                    pictureCanvasHolder?.drawInto(pictureCanvas) {
+                        pictureDrawScope?.draw(density, layoutDirection, this, size.toSize(), block)
+                    }
+                } finally {
+                    p.endRecording()
+                }
             }
-            p.endRecording()
         }
     }
 
@@ -486,6 +513,11 @@ private object ViewLayerVerificationHelper28 {
     @androidx.annotation.DoNotInline
     fun setOutlineSpotShadowColor(view: View, target: Int) {
         view.outlineSpotShadowColor = target
+    }
+
+    @androidx.annotation.DoNotInline
+    fun resetPivot(view: View) {
+        view.resetPivot()
     }
 }
 

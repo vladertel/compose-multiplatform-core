@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.testutils.assertPixels
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.SubcompositionReusableContentHost
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.compositeOver
@@ -48,6 +49,7 @@ import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -258,11 +260,10 @@ class DrawingPrebuiltGraphicsLayerTest {
             .assertPixels(expectedSize) { Color.Red }
     }
 
-    // TODO remove sdk suppress when we start using new layers as Modifier.graphicsLayer() on
-    //  older versions.
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
     @Test
     fun keepDrawingNestedLayers_graphicsLayerModifier() {
+        // TODO remove this after we start using new layers on P
+        Assume.assumeTrue(Build.VERSION.SDK_INT != Build.VERSION_CODES.P)
         rule.setContent {
             if (!drawPrebuiltLayer) {
                 Box(Modifier.drawIntoLayer()) {
@@ -285,6 +286,42 @@ class DrawingPrebuiltGraphicsLayerTest {
 
         rule.runOnIdle {
             drawPrebuiltLayer = true
+        }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
+    }
+
+    @Test
+    fun keepDrawingNestedLayers_deactivatedGraphicsLayerModifierScheduledForInvalidation() {
+        val counter = mutableStateOf(0)
+        // TODO remove this after we start using new layers on P
+        Assume.assumeTrue(Build.VERSION.SDK_INT != Build.VERSION_CODES.P)
+        rule.setContent {
+            SubcompositionReusableContentHost(active = !drawPrebuiltLayer) {
+                Box(
+                    Modifier
+                        .drawIntoLayer()
+                        .graphicsLayer()
+                ) {
+                    Canvas(Modifier.size(sizeDp)) {
+                        counter.value
+                        drawRect(Color.Red)
+                    }
+                }
+            }
+            if (drawPrebuiltLayer) {
+                LayerDrawingBox()
+            }
+        }
+
+        rule.runOnIdle {
+            drawPrebuiltLayer = true
+
+            // changing the counter to trigger the layer invalidation. the invalidation should
+            // be ignored in the end as we will release the layer before it will be drawn
+            counter.value++
         }
 
         rule.onNodeWithTag(LayerDrawingBoxTag)
@@ -341,6 +378,41 @@ class DrawingPrebuiltGraphicsLayerTest {
         rule.onNodeWithTag(LayerDrawingBoxTag)
             .captureToImage()
             .assertPixels(expectedSize) { Color.Red.copy(alpha = 0.5f).compositeOver(Color.White) }
+    }
+
+    @Test
+    fun invalidatingNotPlacedAnymoreChildIsNotCorruptingTheLayerContent() {
+        var shouldPlace by mutableStateOf(true)
+        var color by mutableStateOf(Color.Red)
+        rule.setContent {
+            Column {
+                val layer = obtainLayer()
+                Canvas(
+                    Modifier
+                        .layout { measurable, _ ->
+                            val placeable = measurable.measure(Constraints.fixed(size, size))
+                            layout(placeable.width, placeable.height) {
+                                if (shouldPlace) {
+                                    placeable.placeWithLayer(0, 0, layer)
+                                }
+                            }
+                        }
+                ) {
+                    drawRect(color)
+                }
+                LayerDrawingBox()
+            }
+        }
+
+        rule.runOnIdle {
+            shouldPlace = false
+            // changing the color shouldn't affect the layer as we don't place with it anymore
+            color = Color.Green
+        }
+
+        rule.onNodeWithTag(LayerDrawingBoxTag)
+            .captureToImage()
+            .assertPixels(expectedSize) { Color.Red }
     }
 
     @Composable

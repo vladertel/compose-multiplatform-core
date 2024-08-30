@@ -19,8 +19,7 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.interop.InteropWrappingView
-import androidx.compose.ui.interop.NativeViewSemanticsKey
+import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsConfiguration
@@ -29,8 +28,11 @@ import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.uikit.utils.*
+import androidx.compose.ui.uikit.utils.CMPAccessibilityContainer
+import androidx.compose.ui.uikit.utils.CMPAccessibilityElement
 import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.viewinterop.NativeAccessibilityViewSemanticsKey
+import androidx.compose.ui.viewinterop.InteropWrappingView
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.measureTime
 import kotlinx.cinterop.CValue
@@ -117,7 +119,7 @@ private object CachedAccessibilityPropertyKeys {
     val accessibilityTraits = CachedAccessibilityPropertyKey<UIAccessibilityTraits>()
     val accessibilityValue = CachedAccessibilityPropertyKey<String?>()
     val accessibilityFrame = CachedAccessibilityPropertyKey<CValue<CGRect>>()
-    val nativeView = CachedAccessibilityPropertyKey<InteropWrappingView?>()
+    val nativeAccessibilityView = CachedAccessibilityPropertyKey<InteropWrappingView?>()
 }
 
 /**
@@ -188,9 +190,19 @@ private class AccessibilityElement(
 
     private var children = mutableListOf<AccessibilityElement>()
 
-    private val nativeView: InteropWrappingView?
-        get() = getOrElse(CachedAccessibilityPropertyKeys.nativeView) {
-            cachedConfig.getOrNull(NativeViewSemanticsKey)?.also {
+    /**
+     * Cached [InteropWrappingView] for the element if it's present. AX services will be redirected
+     * to this view if it's not null, other Compose semantics data for this element will be ignored.
+     *
+     * The specific type of [InteropWrappingView] is needed to allow to change the
+     * [InteropWrappingView.actualAccessibilityContainer], which overrides defaults accessibility
+     * containers of view (its superview) to be whatever container is resolved within Compose
+     * hierarchy. This is required to allow the synthesized accessibility tree to be properly
+     * traversed by AX services.
+     */
+    private val nativeAccessibilityView: InteropWrappingView?
+        get() = getOrElse(CachedAccessibilityPropertyKeys.nativeAccessibilityView) {
+            cachedConfig.getOrNull(NativeAccessibilityViewSemanticsKey)?.also {
                 it.actualAccessibilityContainer = parent?.accessibilityContainer
             }
         }
@@ -211,7 +223,7 @@ private class AccessibilityElement(
     /**
      * Returns accessibility element communicated to iOS Accessibility services for the given [index].
      * Takes a child at [index].
-     * If the child is constructed from a [SemanticsNode] with [NativeViewSemanticsKey],
+     * If the child is constructed from a [SemanticsNode] with [NativeAccessibilityViewSemanticsKey],
      * then the element at the given index is a native view.
      * If the child has its own children, then the element at the given index is the synthesized container
      * for the child. Otherwise, the element at the given index is the child itself.
@@ -222,7 +234,7 @@ private class AccessibilityElement(
         return if (i in children.indices) {
             val child = children[i]
 
-            val nativeView = child.nativeView
+            val nativeView = child.nativeAccessibilityView
 
             if (nativeView != null) {
                 return nativeView
@@ -246,7 +258,7 @@ private class AccessibilityElement(
         for (index in 0 until children.size) {
             val child = children[index]
 
-            if (element == child.nativeView) {
+            if (element == child.nativeAccessibilityView) {
                 return index.toLong()
             } else if (child.hasChildren && element == child.accessibilityContainer) {
                 return index.toLong()
@@ -325,7 +337,13 @@ private class AccessibilityElement(
             return false
         }
 
-        val onClick = cachedConfig.getOrNull(SemanticsActions.OnClick) ?: return false
+        val config = cachedConfig
+
+        if (config.contains(SemanticsProperties.Disabled)) {
+            return false
+        }
+
+        val onClick = config.getOrNull(SemanticsActions.OnClick) ?: return false
         val action = onClick.action ?: return false
 
         return action()
@@ -531,6 +549,10 @@ private class AccessibilityElement(
             return false
         }
 
+        if (cachedConfig.contains(SemanticsProperties.Disabled)) {
+            return false
+        }
+
         val frame = semanticsNode.boundsInWindow
         val approximateScrollAnimationDuration = 350L
 
@@ -578,19 +600,26 @@ private class AccessibilityElement(
             cachedConfig.getOrNull(SemanticsActions.OnClick)?.label
         }
 
-    override fun accessibilityCustomActions(): List<UIAccessibilityCustomAction> =
-        getOrElse(CachedAccessibilityPropertyKeys.accessibilityCustomActions) {
-            cachedConfig.getOrNull(SemanticsActions.CustomActions)?.let { actions ->
+    override fun accessibilityCustomActions(): List<UIAccessibilityCustomAction> {
+        val config = cachedConfig
+
+        return getOrElse(CachedAccessibilityPropertyKeys.accessibilityCustomActions) {
+            config.getOrNull(SemanticsActions.CustomActions)?.let { actions ->
                 actions.map {
                     UIAccessibilityCustomAction(
                         name = it.label,
                         actionHandler = { _ ->
-                            it.action.invoke()
+                            if (config.contains(SemanticsProperties.Disabled)) {
+                                false
+                            } else {
+                                it.action.invoke()
+                            }
                         }
                     )
                 }
             } ?: emptyList()
         }
+    }
 
     override fun accessibilityTraits(): UIAccessibilityTraits =
         getOrElse(CachedAccessibilityPropertyKeys.accessibilityTraits) {

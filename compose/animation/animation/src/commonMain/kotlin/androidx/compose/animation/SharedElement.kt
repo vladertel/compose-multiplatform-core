@@ -24,7 +24,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -35,15 +34,13 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachReversed
 
-internal class SharedElement(val key: Any, val scope: SharedTransitionScope) {
+internal class SharedElement(val key: Any, val scope: SharedTransitionScopeImpl) {
     fun isAnimating(): Boolean = states.fastAny { it.boundsAnimation.isRunning } && foundMatch
-
-    // observation is stopped when no states are in the list, started when new state is added
-    private val observer = SnapshotStateObserver { it() }
 
     private var _targetBounds: Rect? by mutableStateOf(null)
 
@@ -55,9 +52,7 @@ internal class SharedElement(val key: Any, val scope: SharedTransitionScope) {
     val targetBounds: Rect?
         get() {
             _targetBounds = targetBoundsProvider?.run {
-                Rect(calculateLookaheadOffset(), requireNotNull(lookaheadSize) {
-                    "Error: target has not been lookahead measured."
-                })
+                Rect(calculateLookaheadOffset(), nonNullLookaheadSize)
             }
             return _targetBounds
         }
@@ -77,7 +72,7 @@ internal class SharedElement(val key: Any, val scope: SharedTransitionScope) {
             foundMatch = false
         }
         if (states.isNotEmpty()) {
-            observer.observeReads(this, updateMatch, observingVisibilityChange)
+            SharedTransitionObserver.observeReads(this, updateMatch, observingVisibilityChange)
         }
     }
 
@@ -156,21 +151,17 @@ internal class SharedElement(val key: Any, val scope: SharedTransitionScope) {
     }
 
     fun addState(sharedElementState: SharedElementInternalState) {
-        val wasEmpty = states.isEmpty()
         states.add(sharedElementState)
-        if (wasEmpty) {
-            observer.start()
-        }
-        observer.observeReads(this, updateMatch, observingVisibilityChange)
+        SharedTransitionObserver.observeReads(this, updateMatch, observingVisibilityChange)
     }
 
     fun removeState(sharedElementState: SharedElementInternalState) {
         states.remove(sharedElementState)
         if (states.isEmpty()) {
             updateMatch()
-            observer.stop()
+            SharedTransitionObserver.clear(this)
         } else {
-            observer.observeReads(this, updateMatch, observingVisibilityChange)
+            SharedTransitionObserver.observeReads(this, updateMatch, observingVisibilityChange)
         }
     }
 }
@@ -196,17 +187,15 @@ internal class SharedElementInternalState(
     var overlayClip: SharedTransitionScope.OverlayClip by mutableStateOf(overlayClip)
     var userState: SharedTransitionScope.SharedContentState by mutableStateOf(userState)
 
-    init {
-        sharedElement.scope.onStateAdded(this)
-        sharedElement.updateTargetBoundsProvider()
-    }
-
     internal var clipPathInOverlay: Path? = null
 
     override fun drawInOverlay(drawScope: DrawScope) {
         val layer = layer ?: return
         if (shouldRenderInOverlay) {
             with(drawScope) {
+                requireNotNull(sharedElement.currentBounds) {
+                    "Error: current bounds not set yet."
+                }
                 val (x, y) = sharedElement.currentBounds?.topLeft!!
                 clipPathInOverlay?.let {
                     clipPath(it) {
@@ -219,21 +208,26 @@ internal class SharedElementInternalState(
         }
     }
 
-    var lookaheadSize: Size? = null
-    var lookaheadCoords: LayoutCoordinates? = null
+    val nonNullLookaheadSize: Size
+        get() = requireNotNull(lookaheadCoords()) {
+            "Error: lookahead coordinates is null for ${sharedElement.key}."
+        }.size.toSize()
+    var lookaheadCoords: () -> LayoutCoordinates? = { null }
     override var parentState: SharedElementInternalState? = null
 
     // This can only be accessed during placement
     fun calculateLookaheadOffset(): Offset {
-        val c = requireNotNull(lookaheadCoords) {
-            "Error: target has not been placed in lookahead pass yet."
+        val c = requireNotNull(lookaheadCoords()) {
+            "Error: lookahead coordinates is null."
         }
         return sharedElement.scope.lookaheadRoot.localPositionOf(c, Offset.Zero)
     }
 
     val target: Boolean get() = boundsAnimation.target
 
-    var layer: GraphicsLayer? = null
+    // Delegate the property to a mutable state, so that when layer is updated, the rendering
+    // gets invalidated.
+    var layer: GraphicsLayer? by mutableStateOf(null)
 
     private val shouldRenderBasedOnTarget: Boolean
         get() = sharedElement.targetBoundsProvider == this || !renderOnlyWhenVisible
@@ -246,6 +240,8 @@ internal class SharedElementInternalState(
         get() = !sharedElement.foundMatch || (!shouldRenderInOverlay && shouldRenderBasedOnTarget)
 
     override fun onRemembered() {
+        sharedElement.scope.onStateAdded(this)
+        sharedElement.updateTargetBoundsProvider()
     }
 
     override fun onForgotten() {

@@ -113,8 +113,8 @@ public interface Thing {
  * )
  * class MyThing internal constructor(
  *   thing: Thing,
- *   @Document.StringProperty val foo: String,
- *   @Document.LongProperty val bars: List<Int>,
+ *   val foo: String,
+ *   val bars: List<Int>,
  * ) : AbstractThing<
  *   MyThing,
  *   MyThing.Builder
@@ -134,7 +134,6 @@ public interface Thing {
  *       .addBars(bars)
  *   }
  *
- *   @Document.BuilderProducer
  *   class Builder :
  *     AbstractThing.Builder<
  *       Builder,
@@ -150,9 +149,9 @@ public abstract class AbstractThing<
   Builder : AbstractThing.Builder<Builder, Self>
 >
 internal constructor(
-  final override val namespace: String,
-  final override val identifier: String,
-  final override val name: Name?,
+  public final override val namespace: String,
+  public final override val identifier: String,
+  public final override val name: Name?,
 ) : Thing {
   /**
    * Human readable name for the concrete [Self] class.
@@ -174,13 +173,13 @@ internal constructor(
   /** Returns a concrete [Builder] with the additional, non-[Thing] properties copied over. */
   protected abstract fun toBuilderWithAdditionalPropertiesOnly(): Builder
 
-  final override fun toBuilder(): Builder =
+  public final override fun toBuilder(): Builder =
     toBuilderWithAdditionalPropertiesOnly()
       .setNamespace(namespace)
       .setIdentifier(identifier)
       .setName(name)
 
-  final override fun equals(other: Any?): Boolean {
+  public final override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || this::class.java != other::class.java) return false
     other as Self
@@ -191,10 +190,10 @@ internal constructor(
     return true
   }
 
-  final override fun hashCode(): Int =
+  public final override fun hashCode(): Int =
     Objects.hash(namespace, identifier, name, additionalProperties)
 
-  final override fun toString(): String {
+  public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
     if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
@@ -215,13 +214,11 @@ internal constructor(
    *
    * Allows for extension like:
    * ```kt
-   * @Document(...)
    * class MyThing :
    *   : AbstractThing<
    *     MyThing,
    *     MyThing.Builder>(...) {
    *
-   *   @Document.BuilderProducer
    *   class Builder
    *   : AbstractThing.Builder<
    *       Builder,
@@ -299,25 +296,26 @@ internal constructor(
      */
     @Suppress("BuilderSetStyle") protected abstract fun buildFromThing(thing: Thing): Built
 
-    final override fun build(): Built = buildFromThing(ThingImpl(namespace, identifier, name))
+    public final override fun build(): Built =
+      buildFromThing(ThingImpl(namespace, identifier, name))
 
-    final override fun setNamespace(namespace: String): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
 
-    final override fun setIdentifier(text: String): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
 
-    final override fun setName(name: Name?): Self {
+    public final override fun setName(name: Name?): Self {
       this.name = name
       return this as Self
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun equals(other: Any?): Boolean {
+    public final override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other == null || this::class.java != other::class.java) return false
       other as Self
@@ -329,11 +327,11 @@ internal constructor(
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun hashCode(): Int =
+    public final override fun hashCode(): Int =
       Objects.hash(namespace, identifier, name, additionalProperties)
 
     @Suppress("BuilderSetStyle")
-    final override fun toString(): String {
+    public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
       if (namespace.isNotEmpty()) {
         attributes["namespace"] = namespace

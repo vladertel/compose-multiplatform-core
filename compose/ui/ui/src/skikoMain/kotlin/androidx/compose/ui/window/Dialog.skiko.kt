@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -76,11 +77,10 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
     val useSoftwareKeyboardInset: Boolean = true,
     val scrimColor: Color = DefaultScrimColor,
 ) {
-    // Constructor with all non-experimental arguments.
-    constructor(
-        dismissOnBackPress: Boolean = true,
-        dismissOnClickOutside: Boolean = true,
-        usePlatformDefaultWidth: Boolean = true,
+    actual constructor(
+        dismissOnBackPress: Boolean,
+        dismissOnClickOutside: Boolean,
+        usePlatformDefaultWidth: Boolean,
     ) : this(
         dismissOnBackPress = dismissOnBackPress,
         dismissOnClickOutside = dismissOnClickOutside,
@@ -90,7 +90,8 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
         scrimColor = DefaultScrimColor,
     )
 
-    actual constructor(
+    @Deprecated("Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    constructor(
         dismissOnBackPress: Boolean,
         dismissOnClickOutside: Boolean,
 
@@ -159,8 +160,13 @@ actual fun Dialog(
         null
     }
     val onOutsidePointerEvent = if (properties.dismissOnClickOutside) {
-        { eventType: PointerEventType ->
-            if (eventType == PointerEventType.Release) {
+        { eventType: PointerEventType, button: PointerButton? ->
+            // Clicking outside dialog is clicking on scrim.
+            // So this behavior should match regular clicks or [detectTapGestures] that accepts
+            // only primary mouse button clicks.
+            if (eventType == PointerEventType.Release &&
+                (button == null || button == PointerButton.Primary)
+            ) {
                 currentOnDismissRequest()
             }
         }
@@ -182,7 +188,7 @@ private fun DialogLayout(
     modifier: Modifier = Modifier,
     onPreviewKeyEvent: ((KeyEvent) -> Boolean)? = null,
     onKeyEvent: ((KeyEvent) -> Boolean)? = null,
-    onOutsidePointerEvent: ((eventType: PointerEventType) -> Unit)? = null,
+    onOutsidePointerEvent: ((eventType: PointerEventType, button: PointerButton?) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val currentContent by rememberUpdatedState(content)

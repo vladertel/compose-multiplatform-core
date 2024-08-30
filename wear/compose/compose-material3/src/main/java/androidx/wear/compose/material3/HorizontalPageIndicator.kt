@@ -94,8 +94,8 @@ public fun HorizontalPageIndicator(
     spacing: Dp = 4.dp
 ) {
     val isScreenRound = isRoundDevice()
-    val selectedPage: Int = pageIndicatorState.selectedPageWithOffsetFraction().toInt()
-    val offset = pageIndicatorState.selectedPageWithOffsetFraction() - selectedPage
+    val selectedPage: Int = pageIndicatorState.selectedPageWithOffset().toInt()
+    val offset = pageIndicatorState.selectedPageWithOffset() - selectedPage
 
     val pagesOnScreen = Integer.min(MaxNumberOfIndicators, pageIndicatorState.pageCount)
     val pagesState = remember(pageIndicatorState.pageCount) {
@@ -174,28 +174,24 @@ internal object PageIndicatorDefaults {
 //  once HorizontalPager is stable
 
 /**
- * Creates and remembers [PageIndicatorState] based on [pageCount] and
- * [selectedPageWithOffsetFraction] parameters.
- * @param pageCount Total number of pages.
- * @param selectedPageWithOffsetFraction The currently selected page index with offset fraction.
- * Integer part represents the selected page index and the fractional part represents
- * the offset as a fraction of the transition from the selected page
- * to the next page in the range 0f..1f
+ * Creates and remembers [PageIndicatorState] based on [maxPages] and [selectedPageWithOffset]
+ * parameters.
  */
 @ExperimentalWearMaterial3Api
 @Composable
 public fun rememberPageIndicatorState(
-    pageCount: Int,
-    selectedPageWithOffsetFraction: () -> Float
+    maxPages: Int,
+    @Suppress("PrimitiveInLambda")
+    selectedPageWithOffset: () -> Float
 ): PageIndicatorState =
-    remember(pageCount, selectedPageWithOffsetFraction) {
+    remember(maxPages, selectedPageWithOffset) {
         object : PageIndicatorState {
 
-            override fun selectedPageWithOffsetFraction(): Float =
-                selectedPageWithOffsetFraction()
+            override val selectedPageWithOffset: () -> Float
+                get() = selectedPageWithOffset
 
             override val pageCount: Int
-                get() = pageCount
+                get() = maxPages
         }
     }
 
@@ -204,17 +200,18 @@ public fun rememberPageIndicatorState(
  */
 public interface PageIndicatorState {
     /**
-     * The currently selected page index with offset fraction.
+     * The currently selected page index with offset.
      * Integer part represents the selected page index and the fractional part represents
      * the offset as a fraction of the transition from the selected page
      * to the next page in the range 0f..1f
      *
      * For example 5.5f equals to selectedPage = 5, offset 0.5f
      *
-     * It changes when a scroll (drag, swipe or fling) happens between pages in Pager.
+     * Changes when a scroll (drag, swipe or fling) between pages happens in Pager.
      */
-    @FloatRange(from = 0.0)
-    public fun selectedPageWithOffsetFraction(): Float
+    @Suppress("PrimitiveInLambda")
+    @get:FloatRange(from = 0.0)
+    public val selectedPageWithOffset: () -> Float
 
     /**
      * Total number of pages
@@ -228,6 +225,7 @@ private fun LinearPageIndicator(
     modifier: Modifier,
     visibleDotIndex: Int,
     pagesOnScreen: Int,
+    @Suppress("PrimitiveInLambda")
     indicator: @Composable (Int) -> Unit,
     selectedIndicator: @Composable () -> Unit,
     spacerLeft: @Composable () -> Unit,
@@ -346,6 +344,7 @@ private fun CurvedPageIndicator(
     modifier: Modifier,
     visibleDotIndex: Int,
     pagesOnScreen: Int,
+    @Suppress("PrimitiveInLambda")
     indicator: CurvedScope.(Int) -> Unit,
     itemsSpacer: CurvedScope.() -> Unit,
     selectedIndicator: CurvedScope.() -> Unit,

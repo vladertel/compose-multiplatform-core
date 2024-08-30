@@ -25,6 +25,7 @@ import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 
 import java.io.ByteArrayInputStream;
@@ -56,6 +57,7 @@ import java.util.concurrent.Executor;
  * </pre>
  *
  */
+@RequiresApi(19)
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class DeviceProfileWriter {
 

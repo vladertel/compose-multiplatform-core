@@ -2,14 +2,10 @@ package foo.bar;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.room.EntityDeleteOrUpdateAdapter;
 import androidx.room.EntityDeletionOrUpdateAdapter;
 import androidx.room.RoomDatabase;
-import androidx.room.util.DBUtil;
-import androidx.room.util.SQLiteConnectionUtil;
+import androidx.room.SharedSQLiteStatement;
 import androidx.room.util.StringUtil;
-import androidx.sqlite.SQLiteConnection;
-import androidx.sqlite.SQLiteStatement;
 import androidx.sqlite.db.SupportSQLiteStatement;
 import io.reactivex.Completable;
 import io.reactivex.Maybe;
@@ -26,36 +22,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import javax.annotation.processing.Generated;
-import kotlin.jvm.functions.Function1;
 
 @Generated("androidx.room.RoomProcessor")
-@SuppressWarnings({"unchecked", "deprecation", "removal"})
+@SuppressWarnings({"unchecked", "deprecation"})
 public final class DeletionDao_Impl implements DeletionDao {
     private final RoomDatabase __db;
 
-    private final EntityDeleteOrUpdateAdapter<User> __deleteAdapterOfUser;
+    private final EntityDeletionOrUpdateAdapter<User> __deletionAdapterOfUser;
 
-    private final EntityDeletionOrUpdateAdapter<User> __deleteCompatAdapterOfUser;
+    private final EntityDeletionOrUpdateAdapter<MultiPKeyEntity> __deletionAdapterOfMultiPKeyEntity;
 
-    private final EntityDeleteOrUpdateAdapter<MultiPKeyEntity> __deleteAdapterOfMultiPKeyEntity;
+    private final EntityDeletionOrUpdateAdapter<Book> __deletionAdapterOfBook;
 
-    private final EntityDeleteOrUpdateAdapter<Book> __deleteAdapterOfBook;
+    private final SharedSQLiteStatement __preparedStmtOfDeleteByUid;
+
+    private final SharedSQLiteStatement __preparedStmtOfDeleteEverything;
 
     public DeletionDao_Impl(@NonNull final RoomDatabase __db) {
         this.__db = __db;
-        this.__deleteAdapterOfUser = new EntityDeleteOrUpdateAdapter<User>() {
-            @Override
-            @NonNull
-            protected String createQuery() {
-                return "DELETE FROM `User` WHERE `uid` = ?";
-            }
-
-            @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final User entity) {
-                statement.bindLong(1, entity.uid);
-            }
-        };
-        this.__deleteCompatAdapterOfUser = new EntityDeletionOrUpdateAdapter<User>(__db) {
+        this.__deletionAdapterOfUser = new EntityDeletionOrUpdateAdapter<User>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -67,7 +52,7 @@ public final class DeletionDao_Impl implements DeletionDao {
                 statement.bindLong(1, entity.uid);
             }
         };
-        this.__deleteAdapterOfMultiPKeyEntity = new EntityDeleteOrUpdateAdapter<MultiPKeyEntity>() {
+        this.__deletionAdapterOfMultiPKeyEntity = new EntityDeletionOrUpdateAdapter<MultiPKeyEntity>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -75,20 +60,21 @@ public final class DeletionDao_Impl implements DeletionDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final MultiPKeyEntity entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement,
+                    final MultiPKeyEntity entity) {
                 if (entity.name == null) {
                     statement.bindNull(1);
                 } else {
-                    statement.bindText(1, entity.name);
+                    statement.bindString(1, entity.name);
                 }
                 if (entity.lastName == null) {
                     statement.bindNull(2);
                 } else {
-                    statement.bindText(2, entity.lastName);
+                    statement.bindString(2, entity.lastName);
                 }
             }
         };
-        this.__deleteAdapterOfBook = new EntityDeleteOrUpdateAdapter<Book>() {
+        this.__deletionAdapterOfBook = new EntityDeletionOrUpdateAdapter<Book>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -96,100 +82,120 @@ public final class DeletionDao_Impl implements DeletionDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final Book entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement, final Book entity) {
                 statement.bindLong(1, entity.bookId);
+            }
+        };
+        this.__preparedStmtOfDeleteByUid = new SharedSQLiteStatement(__db) {
+            @Override
+            @NonNull
+            public String createQuery() {
+                final String _query = "DELETE FROM user where uid = ?";
+                return _query;
+            }
+        };
+        this.__preparedStmtOfDeleteEverything = new SharedSQLiteStatement(__db) {
+            @Override
+            @NonNull
+            public String createQuery() {
+                final String _query = "DELETE FROM user";
+                return _query;
             }
         };
     }
 
     @Override
     public void deleteUser(final User user) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __deleteAdapterOfUser.handle(_connection, user);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __deletionAdapterOfUser.handle(user);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void deleteUsers(final User user1, final List<User> others) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __deleteAdapterOfUser.handle(_connection, user1);
-                __deleteAdapterOfUser.handleMultiple(_connection, others);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __deletionAdapterOfUser.handle(user1);
+            __deletionAdapterOfUser.handleMultiple(others);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void deleteArrayOfUsers(final User[] users) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __deleteAdapterOfUser.handleMultiple(_connection, users);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __deletionAdapterOfUser.handleMultiple(users);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public Integer deleteUserAndReturnCountObject(final User user) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                int _result = 0;
-                _result += __deleteAdapterOfUser.handle(_connection, user);
-                return _result;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        int _total = 0;
+        __db.beginTransaction();
+        try {
+            _total += __deletionAdapterOfUser.handle(user);
+            __db.setTransactionSuccessful();
+            return _total;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public int deleteUserAndReturnCount(final User user) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                int _result = 0;
-                _result += __deleteAdapterOfUser.handle(_connection, user);
-                return _result;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        int _total = 0;
+        __db.beginTransaction();
+        try {
+            _total += __deletionAdapterOfUser.handle(user);
+            __db.setTransactionSuccessful();
+            return _total;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public int deleteUserAndReturnCount(final User user1, final List<User> others) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                int _result = 0;
-                _result += __deleteAdapterOfUser.handle(_connection, user1);
-                _result += __deleteAdapterOfUser.handleMultiple(_connection, others);
-                return _result;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        int _total = 0;
+        __db.beginTransaction();
+        try {
+            _total += __deletionAdapterOfUser.handle(user1);
+            _total += __deletionAdapterOfUser.handleMultiple(others);
+            __db.setTransactionSuccessful();
+            return _total;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public int deleteUserAndReturnCount(final User[] users) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                int _result = 0;
-                _result += __deleteAdapterOfUser.handleMultiple(_connection, users);
-                return _result;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        int _total = 0;
+        __db.beginTransaction();
+        try {
+            _total += __deletionAdapterOfUser.handleMultiple(users);
+            __db.setTransactionSuccessful();
+            return _total;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
@@ -200,7 +206,7 @@ public final class DeletionDao_Impl implements DeletionDao {
             public Void call() throws Exception {
                 __db.beginTransaction();
                 try {
-                    __deleteCompatAdapterOfUser.handle(user);
+                    __deletionAdapterOfUser.handle(user);
                     __db.setTransactionSuccessful();
                     return null;
                 } finally {
@@ -219,7 +225,7 @@ public final class DeletionDao_Impl implements DeletionDao {
                 int _total = 0;
                 __db.beginTransaction();
                 try {
-                    _total += __deleteCompatAdapterOfUser.handle(user);
+                    _total += __deletionAdapterOfUser.handle(user);
                     __db.setTransactionSuccessful();
                     return _total;
                 } finally {
@@ -238,7 +244,7 @@ public final class DeletionDao_Impl implements DeletionDao {
                 int _total = 0;
                 __db.beginTransaction();
                 try {
-                    _total += __deleteCompatAdapterOfUser.handle(user);
+                    _total += __deletionAdapterOfUser.handle(user);
                     __db.setTransactionSuccessful();
                     return _total;
                 } finally {
@@ -250,48 +256,49 @@ public final class DeletionDao_Impl implements DeletionDao {
 
     @Override
     public int multiPKey(final MultiPKeyEntity entity) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                int _result = 0;
-                _result += __deleteAdapterOfMultiPKeyEntity.handle(_connection, entity);
-                return _result;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        int _total = 0;
+        __db.beginTransaction();
+        try {
+            _total += __deletionAdapterOfMultiPKeyEntity.handle(entity);
+            __db.setTransactionSuccessful();
+            return _total;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void deleteUserAndBook(final User user, final Book book) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __deleteAdapterOfUser.handle(_connection, user);
-                __deleteAdapterOfBook.handle(_connection, book);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __deletionAdapterOfUser.handle(user);
+            __deletionAdapterOfBook.handle(book);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public int deleteByUid(final int uid) {
-        final String _sql = "DELETE FROM user where uid = ?";
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                final SQLiteStatement _stmt = _connection.prepare(_sql);
-                try {
-                    int _argIndex = 1;
-                    _stmt.bindLong(_argIndex, uid);
-                    _stmt.step();
-                    return SQLiteConnectionUtil.getTotalChangedRows(_connection);
-                } finally {
-                    _stmt.close();
-                }
+        __db.assertNotSuspendingTransaction();
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteByUid.acquire();
+        int _argIndex = 1;
+        _stmt.bindLong(_argIndex, uid);
+        try {
+            __db.beginTransaction();
+            try {
+                final int _result = _stmt.executeUpdateDelete();
+                __db.setTransactionSuccessful();
+                return _result;
+            } finally {
+                __db.endTransaction();
             }
-        });
+        } finally {
+            __preparedStmtOfDeleteByUid.release(_stmt);
+        }
     }
 
     @Override
@@ -300,17 +307,20 @@ public final class DeletionDao_Impl implements DeletionDao {
             @Override
             @Nullable
             public Void call() throws Exception {
-                final String _sql = "DELETE FROM user where uid = ?";
-                final SupportSQLiteStatement _stmt = __db.compileStatement(_sql);
+                final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteByUid.acquire();
                 int _argIndex = 1;
                 _stmt.bindLong(_argIndex, uid);
-                __db.beginTransaction();
                 try {
-                    _stmt.executeUpdateDelete();
-                    __db.setTransactionSuccessful();
-                    return null;
+                    __db.beginTransaction();
+                    try {
+                        _stmt.executeUpdateDelete();
+                        __db.setTransactionSuccessful();
+                        return null;
+                    } finally {
+                        __db.endTransaction();
+                    }
                 } finally {
-                    __db.endTransaction();
+                    __preparedStmtOfDeleteByUid.release(_stmt);
                 }
             }
         });
@@ -322,17 +332,20 @@ public final class DeletionDao_Impl implements DeletionDao {
             @Override
             @Nullable
             public Integer call() throws Exception {
-                final String _sql = "DELETE FROM user where uid = ?";
-                final SupportSQLiteStatement _stmt = __db.compileStatement(_sql);
+                final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteByUid.acquire();
                 int _argIndex = 1;
                 _stmt.bindLong(_argIndex, uid);
-                __db.beginTransaction();
                 try {
-                    final Integer _result = _stmt.executeUpdateDelete();
-                    __db.setTransactionSuccessful();
-                    return _result;
+                    __db.beginTransaction();
+                    try {
+                        final Integer _result = _stmt.executeUpdateDelete();
+                        __db.setTransactionSuccessful();
+                        return _result;
+                    } finally {
+                        __db.endTransaction();
+                    }
                 } finally {
-                    __db.endTransaction();
+                    __preparedStmtOfDeleteByUid.release(_stmt);
                 }
             }
         });
@@ -344,49 +357,20 @@ public final class DeletionDao_Impl implements DeletionDao {
             @Override
             @Nullable
             public Integer call() throws Exception {
-                final String _sql = "DELETE FROM user where uid = ?";
-                final SupportSQLiteStatement _stmt = __db.compileStatement(_sql);
+                final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteByUid.acquire();
                 int _argIndex = 1;
                 _stmt.bindLong(_argIndex, uid);
-                __db.beginTransaction();
                 try {
-                    final Integer _result = _stmt.executeUpdateDelete();
-                    __db.setTransactionSuccessful();
-                    return _result;
-                } finally {
-                    __db.endTransaction();
-                }
-            }
-        });
-    }
-
-    @Override
-    public int deleteByUidList(final int... uid) {
-        final StringBuilder _stringBuilder = new StringBuilder();
-        _stringBuilder.append("DELETE FROM user where uid IN(");
-        final int _inputSize = uid == null ? 1 : uid.length;
-        StringUtil.appendPlaceholders(_stringBuilder, _inputSize);
-        _stringBuilder.append(")");
-        final String _sql = _stringBuilder.toString();
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                final SQLiteStatement _stmt = _connection.prepare(_sql);
-                try {
-                    int _argIndex = 1;
-                    if (uid == null) {
-                        _stmt.bindNull(_argIndex);
-                    } else {
-                        for (int _item : uid) {
-                            _stmt.bindLong(_argIndex, _item);
-                            _argIndex++;
-                        }
+                    __db.beginTransaction();
+                    try {
+                        final Integer _result = _stmt.executeUpdateDelete();
+                        __db.setTransactionSuccessful();
+                        return _result;
+                    } finally {
+                        __db.endTransaction();
                     }
-                    _stmt.step();
-                    return SQLiteConnectionUtil.getTotalChangedRows(_connection);
                 } finally {
-                    _stmt.close();
+                    __preparedStmtOfDeleteByUid.release(_stmt);
                 }
             }
         });
@@ -394,20 +378,49 @@ public final class DeletionDao_Impl implements DeletionDao {
 
     @Override
     public int deleteEverything() {
-        final String _sql = "DELETE FROM user";
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Integer>() {
-            @Override
-            @NonNull
-            public Integer invoke(@NonNull final SQLiteConnection _connection) {
-                final SQLiteStatement _stmt = _connection.prepare(_sql);
-                try {
-                    _stmt.step();
-                    return SQLiteConnectionUtil.getTotalChangedRows(_connection);
-                } finally {
-                    _stmt.close();
-                }
+        __db.assertNotSuspendingTransaction();
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteEverything.acquire();
+        try {
+            __db.beginTransaction();
+            try {
+                final int _result = _stmt.executeUpdateDelete();
+                __db.setTransactionSuccessful();
+                return _result;
+            } finally {
+                __db.endTransaction();
             }
-        });
+        } finally {
+            __preparedStmtOfDeleteEverything.release(_stmt);
+        }
+    }
+
+    @Override
+    public int deleteByUidList(final int... uid) {
+        __db.assertNotSuspendingTransaction();
+        final StringBuilder _stringBuilder = StringUtil.newStringBuilder();
+        _stringBuilder.append("DELETE FROM user where uid IN(");
+        final int _inputSize = uid == null ? 1 : uid.length;
+        StringUtil.appendPlaceholders(_stringBuilder, _inputSize);
+        _stringBuilder.append(")");
+        final String _sql = _stringBuilder.toString();
+        final SupportSQLiteStatement _stmt = __db.compileStatement(_sql);
+        int _argIndex = 1;
+        if (uid == null) {
+            _stmt.bindNull(_argIndex);
+        } else {
+            for (int _item : uid) {
+                _stmt.bindLong(_argIndex, _item);
+                _argIndex++;
+            }
+        }
+        __db.beginTransaction();
+        try {
+            final int _result = _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return _result;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @NonNull

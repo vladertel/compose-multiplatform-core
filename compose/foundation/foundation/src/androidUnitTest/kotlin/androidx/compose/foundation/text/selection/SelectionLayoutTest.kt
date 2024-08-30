@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.text.selection
 
+import androidx.collection.LongObjectMap
 import androidx.compose.foundation.text.selection.Direction.AFTER
 import androidx.compose.foundation.text.selection.Direction.BEFORE
 import androidx.compose.foundation.text.selection.Direction.ON
@@ -27,7 +28,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -37,9 +38,7 @@ import org.junit.runners.JUnit4
 class SelectionLayoutTest {
     @Test
     fun layoutBuilderSizeZero_throws() {
-        assertFailsWith(IllegalStateException::class) {
-            buildSelectionLayoutForTest { }
-        }
+        assertThat(buildSelectionLayoutForTestOrNull {}).isNull()
     }
 
     @Test
@@ -999,28 +998,30 @@ class SelectionLayoutTest {
     }
 
     @Test
-    fun createSubSelections_singleLayout_missNonCrossedSelection_throws() {
+    fun createSubSelections_singleLayout_missNonCrossedSelection_returnsCrossedSelection() {
         val layout = getSingleSelectionLayoutForTest()
         val selection = getSelection(startOffset = 1, endOffset = 0, handlesCrossed = false)
-        assertFailsWith(IllegalStateException::class) {
-            layout.createSubSelections(selection)
-        }
+        val actual = layout.createSubSelections(selection).toMap()
+        assertThat(actual).hasSize(1)
+        assertThat(actual.toList().single().second)
+            .isEqualTo(selection.copy(handlesCrossed = true))
     }
 
     @Test
-    fun createSubSelections_singleLayout_missCrossedSelection_throws() {
+    fun createSubSelections_singleLayout_missCrossedSelection_returnsUncrossedSelection() {
         val layout = getSingleSelectionLayoutForTest()
         val selection = getSelection(startOffset = 0, endOffset = 1, handlesCrossed = true)
-        assertFailsWith(IllegalStateException::class) {
-            layout.createSubSelections(selection)
-        }
+        val actual = layout.createSubSelections(selection).toMap()
+        assertThat(actual).hasSize(1)
+        assertThat(actual.toList().single().second)
+            .isEqualTo(selection.copy(handlesCrossed = false))
     }
 
     @Test
     fun createSubSelections_singleLayout_validSelection_returnsInputSelection() {
         val layout = getSingleSelectionLayoutForTest()
         val selection = getSelection()
-        val actual = layout.createSubSelections(selection)
+        val actual = layout.createSubSelections(selection).toMap()
         assertThat(actual).hasSize(1)
         // We don't care about the selectableId since it isn't used anyways
         assertThat(actual.toList().single().second).isEqualTo(selection)
@@ -1032,29 +1033,31 @@ class SelectionLayoutTest {
             appendInfoForTest(selectableId = 1L)
         }
         val selection = getSelection()
-        assertThat(layout.createSubSelections(selection)).containsExactly(1L, selection)
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(1L, selection)
     }
 
     @Test
-    fun createSubSelections_layoutBuilder_missNonCrossedSingleSelection_throws() {
+    fun createSubSelections_layoutBuilder_missNonCrossedSingleSelection_returnsCrossedSelection() {
         val layout = buildSelectionLayoutForTest {
             appendInfoForTest(selectableId = 1L)
         }
         val selection = getSelection(startOffset = 1, endOffset = 0, handlesCrossed = false)
-        assertFailsWith(IllegalStateException::class) {
-            layout.createSubSelections(selection)
-        }
+        val actual = layout.createSubSelections(selection).toMap()
+        assertThat(actual).hasSize(1)
+        assertThat(actual.toList().single().second)
+            .isEqualTo(selection.copy(handlesCrossed = true))
     }
 
     @Test
-    fun createSubSelections_layoutBuilder_missCrossedSingleSelection_throws() {
+    fun createSubSelections_layoutBuilder_missCrossedSingleSelection_returnsUncrossedSelection() {
         val layout = buildSelectionLayoutForTest {
             appendInfoForTest(selectableId = 1L)
         }
         val selection = getSelection(startOffset = 0, endOffset = 1, handlesCrossed = true)
-        assertFailsWith(IllegalStateException::class) {
-            layout.createSubSelections(selection)
-        }
+        val actual = layout.createSubSelections(selection).toMap()
+        assertThat(actual).hasSize(1)
+        assertThat(actual.toList().single().second)
+            .isEqualTo(selection.copy(handlesCrossed = false))
     }
 
     @Test
@@ -1064,7 +1067,7 @@ class SelectionLayoutTest {
             appendInfoForTest(selectableId = 2L)
         }
         val selection = getSelection(startSelectableId = 2L, endSelectableId = 2L)
-        assertThat(layout.createSubSelections(selection)).containsExactly(2L, selection)
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(2L, selection)
     }
 
     @Test
@@ -1082,7 +1085,7 @@ class SelectionLayoutTest {
             )
         }
         val selection = getSelection(startSelectableId = 1L, endSelectableId = 2L)
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L, getSelection(startSelectableId = 1L, endSelectableId = 1L),
             2L, getSelection(startSelectableId = 2L, endSelectableId = 2L),
         )
@@ -1108,7 +1111,7 @@ class SelectionLayoutTest {
             )
         }
         val selection = getSelection(startSelectableId = 1L, endSelectableId = 3L)
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L, getSelection(startSelectableId = 1L, endSelectableId = 1L),
             2L, getSelection(startSelectableId = 2L, endSelectableId = 2L),
             3L, getSelection(startSelectableId = 3L, endSelectableId = 3L),
@@ -1140,7 +1143,7 @@ class SelectionLayoutTest {
             )
         }
         val selection = getSelection(startSelectableId = 1L, endSelectableId = 4L)
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L, getSelection(startSelectableId = 1L, endSelectableId = 1L),
             2L, getSelection(startSelectableId = 2L, endSelectableId = 2L),
             3L, getSelection(startSelectableId = 3L, endSelectableId = 3L),
@@ -1166,7 +1169,7 @@ class SelectionLayoutTest {
             endOffset = 0,
             handlesCrossed = true
         )
-        assertThat(layout.createSubSelections(selection)).containsExactly(1L, selection)
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(1L, selection)
     }
 
     @Test
@@ -1194,7 +1197,7 @@ class SelectionLayoutTest {
             endOffset = 0,
             handlesCrossed = true
         )
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L,
             getSelection(
                 startSelectableId = 1L,
@@ -1246,7 +1249,7 @@ class SelectionLayoutTest {
             endOffset = 0,
             handlesCrossed = true
         )
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L,
             getSelection(
                 startSelectableId = 1L,
@@ -1313,7 +1316,7 @@ class SelectionLayoutTest {
             endOffset = 0,
             handlesCrossed = true
         )
-        assertThat(layout.createSubSelections(selection)).containsExactly(
+        assertThat(layout.createSubSelections(selection).toMap()).containsExactly(
             1L,
             getSelection(
                 startSelectableId = 1L,
@@ -1528,6 +1531,30 @@ class SelectionLayoutTest {
         block: SelectionLayoutBuilder.() -> Unit,
     ): SelectionLayout {
         contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+        return buildSelectionLayoutForTestOrNull(
+                currentPosition = currentPosition,
+                previousHandlePosition = previousHandlePosition,
+                containerCoordinates = containerCoordinates,
+                isStartHandle = isStartHandle,
+                previousSelection = previousSelection,
+                selectableIdOrderingComparator = selectableIdOrderingComparator,
+                block = block
+            )
+            .let { assertNotNull(it) }
+    }
+
+    /** Calls [getTextFieldSelectionLayout] to get a [SelectionLayout]. */
+    @OptIn(ExperimentalContracts::class)
+    private fun buildSelectionLayoutForTestOrNull(
+        currentPosition: Offset = Offset(25f, 5f),
+        previousHandlePosition: Offset = Offset.Unspecified,
+        containerCoordinates: LayoutCoordinates = MockCoordinates(),
+        isStartHandle: Boolean = false,
+        previousSelection: Selection? = null,
+        selectableIdOrderingComparator: Comparator<Long> = naturalOrder(),
+        block: SelectionLayoutBuilder.() -> Unit,
+    ): SelectionLayout? {
+        contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
         return SelectionLayoutBuilder(
             currentPosition = currentPosition,
             previousHandlePosition = previousHandlePosition,
@@ -1603,4 +1630,8 @@ class SelectionLayoutTest {
             isStartHandle = isStartHandle
         )
     }
+}
+
+private fun <T> LongObjectMap<T>.toMap(): Map<Long, T> = buildMap {
+    this@toMap.forEach { long, obj -> put(long, obj) }
 }

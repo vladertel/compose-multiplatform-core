@@ -22,15 +22,19 @@ import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.util.Rational
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.Camera2Config
+import androidx.camera.camera2.internal.compat.quirk.DeviceQuirks as Camera2DeviceQuirks
+import androidx.camera.camera2.internal.compat.quirk.ExtraCroppingQuirk as Camera2ExtraCroppingQuirk
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
-import androidx.camera.core.AspectRatio.RATIO_16_9
-import androidx.camera.core.AspectRatio.RATIO_4_3
+import androidx.camera.camera2.pipe.integration.compat.quirk.DeviceQuirks as PipeDeviceQuirks
+import androidx.camera.camera2.pipe.integration.compat.quirk.ExtraCroppingQuirk as PipeExtraCroppingQuirk
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
@@ -40,14 +44,10 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
-import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_16_9
-import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_3_4
-import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_4_3
-import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_9_16
+import androidx.camera.core.impl.utils.AspectRatioUtil
 import androidx.camera.core.impl.utils.TransformUtils.is90or270
 import androidx.camera.core.impl.utils.TransformUtils.rectToSize
 import androidx.camera.core.impl.utils.TransformUtils.rotateSize
-import androidx.camera.core.impl.utils.TransformUtils.within360
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.testing.impl.AndroidUtil.skipVideoRecordingTestIfNotSupportedByEmulator
@@ -73,6 +73,7 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Ignore
@@ -268,9 +269,9 @@ class VideoRecordingTest(
 
         // Verify.
         val metadataRotation2 = cameraInfo.getSensorRotationDegrees(targetRotation2).let {
-            if (isSurfaceProcessingEnabled(videoCapture)) {
+            if (videoCapture.node != null) {
                 // If effect is enabled, the rotation should eliminate the video content rotation.
-                within360(it - videoContentRotation)
+                it - videoContentRotation
             } else it
         }
         verifyMetadataRotation(metadataRotation2, file2)
@@ -280,49 +281,99 @@ class VideoRecordingTest(
     }
 
     @Test
-    fun getCorrectResolution_when_setAspectRatio4by3() {
-        testGetCorrectResolution_when_setAspectRatio(RATIO_4_3)
+    fun getCorrectResolution_when_setSupportedQuality() {
+        // Pre-arrange.
+        assumeExtraCroppingQuirk()
+        val qualityList = videoCapabilities.getSupportedQualities(dynamicRange)
+        assumeTrue(qualityList.isNotEmpty())
+        Log.d(TAG, "CameraSelector: ${cameraSelector.lensFacing}, QualityList: $qualityList ")
+
+        qualityList.forEach loop@{ quality ->
+            // Arrange.
+            val profile = videoCapabilities.getProfiles(quality, dynamicRange)!!.defaultVideoProfile
+            val targetResolution = Size(profile.width, profile.height)
+            val recorder = Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(quality)).build()
+
+            val videoCapture = VideoCapture.withOutput(recorder)
+
+            if (!camera.isUseCasesCombinationSupported(preview, videoCapture)) {
+                Log.e(TAG, "The UseCase combination is not supported for quality setting: $quality")
+                return@loop
+            }
+
+            instrumentation.runOnMainSync {
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    videoCapture
+                )
+            }
+
+            val file = File.createTempFile("video_$targetResolution", ".tmp")
+                .apply { deleteOnExit() }
+
+            latchForVideoSaved = CountDownLatch(1)
+            latchForVideoRecording = CountDownLatch(5)
+
+            // Act.
+            completeVideoRecording(videoCapture, file)
+
+            // Verify.
+            verifyVideoResolution(getExpectedResolution(videoCapture, targetResolution), file)
+
+            // Cleanup.
+            instrumentation.runOnMainSync {
+                cameraProvider.unbindAll()
+            }
+            file.delete()
+        }
     }
 
     @Test
-    fun getCorrectResolution_when_setAspectRatio16by9() {
-        testGetCorrectResolution_when_setAspectRatio(RATIO_16_9)
-    }
-
-    private fun testGetCorrectResolution_when_setAspectRatio(aspectRatio: Int) {
+    fun getCorrectResolution_when_setAspectRatio() {
         // Pre-arrange.
         assumeExtraCroppingQuirk()
         assumeTrue(videoCapabilities.getSupportedQualities(dynamicRange).isNotEmpty())
 
-        // Arrange.
-        val recorder = Recorder.Builder()
-            .setAspectRatio(aspectRatio)
-            .build()
-        val videoCapture = VideoCapture.withOutput(recorder)
+        for (aspectRatio in listOf(AspectRatio.RATIO_4_3, AspectRatio.RATIO_16_9)) {
+            // Arrange.
+            val recorder = Recorder.Builder()
+                .setAspectRatio(aspectRatio)
+                .build()
+            val videoCapture = VideoCapture.withOutput(recorder)
 
-        assumeTrue(camera.isUseCasesCombinationSupported(preview, videoCapture))
+            if (!camera.isUseCasesCombinationSupported(preview, videoCapture)) {
+                continue
+            }
 
-        instrumentation.runOnMainSync {
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                videoCapture
-            )
+            instrumentation.runOnMainSync {
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    videoCapture
+                )
+            }
+
+            val file = File.createTempFile("video_", ".tmp").apply { deleteOnExit() }
+
+            latchForVideoSaved = CountDownLatch(1)
+            latchForVideoRecording = CountDownLatch(5)
+
+            // Act.
+            completeVideoRecording(videoCapture, file)
+
+            // Verify.
+            verifyVideoAspectRatio(getExpectedAspectRatio(videoCapture)!!, file)
+
+            // Cleanup.
+            instrumentation.runOnMainSync {
+                cameraProvider.unbindAll()
+            }
+            file.delete()
         }
-
-        latchForVideoSaved = CountDownLatch(1)
-        latchForVideoRecording = CountDownLatch(5)
-
-        // Act.
-        val file = temporaryFolder.newFile()
-        completeVideoRecording(videoCapture, file)
-
-        // Verify.
-        verifyVideoAspectRatio(
-            getRotatedAspectRatio(aspectRatio, getRotationNeeded(videoCapture, cameraInfo)),
-            file
-        )
     }
 
     @Test
@@ -355,11 +406,6 @@ class VideoRecordingTest(
             )
         }
 
-        // TODO(b/264936115): In stream sharing (VirtualCameraAdapter), children's ViewPortCropRect
-        //  is ignored and override to the parent size, the cropRect is also rotated. Skip the test
-        //  for now.
-        assumeTrue(!isStreamSharingEnabled(videoCapture))
-
         val file = File.createTempFile("video_", ".tmp").apply { deleteOnExit() }
 
         latchForVideoSaved = CountDownLatch(1)
@@ -369,11 +415,9 @@ class VideoRecordingTest(
         completeVideoRecording(videoCapture, file)
 
         // Verify.
-        val resolution = rectToSize(videoCapture.cropRect!!)
         verifyVideoResolution(
-            context,
-            file,
-            rotateSize(resolution, getRotationNeeded(videoCapture, cameraInfo))
+            getExpectedResolution(videoCapture, rectToSize(videoCapture.cropRect!!)),
+            file
         )
 
         // Cleanup.
@@ -382,8 +426,6 @@ class VideoRecordingTest(
 
     @Test
     fun stopRecording_when_useCaseUnbind() {
-        assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
-
         // Arrange.
         val file = File.createTempFile("CameraX", ".tmp").apply { deleteOnExit() }
         latchForVideoSaved = CountDownLatch(1)
@@ -412,8 +454,6 @@ class VideoRecordingTest(
 
     @Test
     fun stopRecordingWhenLifecycleStops() {
-        assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
-
         // Arrange.
         val file = File.createTempFile("CameraX", ".tmp").apply { deleteOnExit() }
         latchForVideoSaved = CountDownLatch(1)
@@ -442,8 +482,6 @@ class VideoRecordingTest(
 
     @Test
     fun start_finalizeImmediatelyWhenSourceInactive() {
-        assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
-
         val file = File.createTempFile("CameraX", ".tmp").apply { deleteOnExit() }
 
         instrumentation.runOnMainSync {
@@ -663,12 +701,6 @@ class VideoRecordingTest(
                 )
             }
 
-        mockVideoRecordEventConsumer.verifyAcceptCall(
-            VideoRecordEvent.Finalize::class.java,
-            true,
-            GENERAL_TIMEOUT
-        )
-
         file1.delete()
         file2.delete()
     }
@@ -780,8 +812,6 @@ class VideoRecordingTest(
 
     @Test
     fun canReuseRecorder_sourceInactive() {
-        assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
-
         val recorder = Recorder.Builder().build()
         val videoCapture1 = VideoCapture.withOutput(recorder)
 
@@ -1153,27 +1183,44 @@ class VideoRecordingTest(
         videoCapture: VideoCapture<Recorder>,
         cameraInfo: CameraInfo
     ): ExpectedRotation {
-        val rotationNeeded = getRotationNeeded(videoCapture, cameraInfo)
-        return if (isSurfaceProcessingEnabled(videoCapture)) {
+        val rotationNeeded = cameraInfo.getSensorRotationDegrees(videoCapture.targetRotation)
+        return if (videoCapture.node != null) {
             ExpectedRotation(rotationNeeded, 0)
         } else {
             ExpectedRotation(0, rotationNeeded)
         }
     }
 
-    private fun getRotatedAspectRatio(aspectRatio: Int, rotation: Int): Rational {
-        val needRotate = is90or270(rotation)
-        return when (aspectRatio) {
-            RATIO_4_3 -> if (needRotate) ASPECT_RATIO_3_4 else ASPECT_RATIO_4_3
-            RATIO_16_9 -> if (needRotate) ASPECT_RATIO_9_16 else ASPECT_RATIO_16_9
-            else -> throw IllegalArgumentException("Unknown aspect ratio: $aspectRatio")
+    private fun getExpectedResolution(
+        videoCapture: VideoCapture<Recorder>,
+        resolution: Size
+    ): Size = rotateSize(resolution, getExpectedRotation(videoCapture, cameraInfo).contentRotation)
+
+    private fun getExpectedAspectRatio(videoCapture: VideoCapture<Recorder>): Rational? {
+        val needRotate by lazy {
+            is90or270(
+                getExpectedRotation(
+                    videoCapture,
+                    cameraInfo
+                ).contentRotation
+            )
+        }
+        return when (videoCapture.output.aspectRatio) {
+            AspectRatio.RATIO_4_3 ->
+                if (needRotate) AspectRatioUtil.ASPECT_RATIO_3_4
+                else AspectRatioUtil.ASPECT_RATIO_4_3
+            AspectRatio.RATIO_16_9 ->
+                if (needRotate) AspectRatioUtil.ASPECT_RATIO_9_16
+                else AspectRatioUtil.ASPECT_RATIO_16_9
+            else -> null
         }
     }
 
     private fun verifyMetadataRotation(expectedRotation: Int, file: File) {
         MediaMetadataRetriever().useAndRelease {
             it.setDataSource(context, Uri.fromFile(file))
-            val videoRotation = it.getRotation()
+            val videoRotation =
+                it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)!!.toInt()
 
             // Checks the rotation from video file's metadata is matched with the relative rotation.
             assertWithMessage(
@@ -1184,10 +1231,32 @@ class VideoRecordingTest(
         }
     }
 
+    private fun verifyVideoResolution(expectedResolution: Size, file: File) {
+        MediaMetadataRetriever().useAndRelease {
+            it.setDataSource(context, Uri.fromFile(file))
+            val height = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)!!
+                .toInt()
+            val width = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)!!
+                .toInt()
+            val resolution = Size(width, height)
+
+            // Compare with the resolution of video and the targetResolution in VideoCapabilities.
+            assertWithMessage(
+                TAG + ", verifyVideoResolution failure:" +
+                    ", videoResolution: $resolution" +
+                    ", expectedResolution: $expectedResolution"
+            ).that(resolution).isEqualTo(expectedResolution)
+        }
+    }
+
     private fun verifyVideoAspectRatio(expectedAspectRatio: Rational, file: File) {
         MediaMetadataRetriever().useAndRelease {
             it.setDataSource(context, Uri.fromFile(file))
-            val aspectRatio = it.getRotatedAspectRatio()
+            val height = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)!!
+                .toInt()
+            val width = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)!!
+                .toInt()
+            val aspectRatio = Rational(width, height)
 
             assertWithMessage(
                 TAG + ", verifyVideoAspectRatio failure:" +
@@ -1200,9 +1269,11 @@ class VideoRecordingTest(
     private fun verifyRecordingResult(file: File, hasAudio: Boolean = false) {
         MediaMetadataRetriever().useAndRelease {
             it.setDataSource(context, Uri.fromFile(file))
+            val video = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO)
+            val audio = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO)
 
-            assertThat(it.hasVideo()).isTrue()
-            assertThat(it.hasAudio()).isEqualTo(hasAudio)
+            assertThat(video).isEqualTo("yes")
+            assertThat(audio).isEqualTo(if (hasAudio) "yes" else null)
         }
     }
 
@@ -1220,6 +1291,15 @@ class VideoRecordingTest(
                     surfaceTexture.release()
                 }
             }
+        )
+    }
+
+    /** Skips tests which will enable surface processing and encounter device specific issues. */
+    private fun assumeSuccessfulSurfaceProcessing() {
+        // Skip for b/253211491
+        assumeFalse(
+            "Skip tests for Cuttlefish API 30 eglCreateWindowSurface issue",
+            Build.MODEL.contains("Cuttlefish") && Build.VERSION.SDK_INT == 30
         )
     }
 
@@ -1275,7 +1355,6 @@ class VideoRecordingTest(
         )
 }
 
-@RequiresApi(21)
 private class VideoCaptureMonitor : Consumer<VideoRecordEvent> {
     private var countDown: CountDownLatch? = null
 
@@ -1289,8 +1368,8 @@ private class VideoCaptureMonitor : Consumer<VideoRecordEvent> {
         }!!.await(timeoutMillis, TimeUnit.MILLISECONDS)).isTrue()
     }
 
-    override fun accept(value: VideoRecordEvent) {
-        when (value) {
+    override fun accept(event: VideoRecordEvent?) {
+        when (event) {
             is VideoRecordEvent.Status -> {
                 synchronized(this) {
                     countDown?.countDown()
@@ -1300,5 +1379,33 @@ private class VideoCaptureMonitor : Consumer<VideoRecordEvent> {
                 // Ignore other events.
             }
         }
+    }
+}
+
+internal fun MediaMetadataRetriever.useAndRelease(block: (MediaMetadataRetriever) -> Unit) {
+    try {
+        block(this)
+    } finally {
+        release()
+    }
+}
+
+internal fun MediaMetadataRetriever.hasAudio(): Boolean =
+    extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes"
+
+internal fun MediaMetadataRetriever.hasVideo(): Boolean =
+    extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes"
+
+internal fun MediaMetadataRetriever.getDuration(): Long? =
+    extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
+
+@RequiresApi(21)
+fun assumeExtraCroppingQuirk(implName: String) {
+    val msg =
+        "Devices in ExtraCroppingQuirk will get a fixed resolution regardless of any settings"
+    if (implName.contains(CameraPipeConfig::class.simpleName!!)) {
+        assumeTrue(msg, PipeDeviceQuirks[PipeExtraCroppingQuirk::class.java] == null)
+    } else {
+        assumeTrue(msg, Camera2DeviceQuirks.get(Camera2ExtraCroppingQuirk::class.java) == null)
     }
 }

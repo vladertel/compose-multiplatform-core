@@ -16,7 +16,6 @@
 
 package androidx.compose.material3.adaptive.layout
 
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ParentDataModifierNode
@@ -26,10 +25,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Scope for the panes of pane scaffolds.
- */
-@ExperimentalMaterial3AdaptiveApi
+/** Scope for the panes of pane scaffolds. */
 sealed interface PaneScaffoldScope {
     /**
      * This modifier specifies the preferred width for a pane, and the pane scaffold implementation
@@ -43,7 +39,6 @@ sealed interface PaneScaffoldScope {
     fun Modifier.preferredWidth(width: Dp): Modifier
 }
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 internal abstract class PaneScaffoldScopeImpl : PaneScaffoldScope {
     override fun Modifier.preferredWidth(width: Dp): Modifier {
         require(width == Dp.Unspecified || width > 0.dp) { "invalid width" }
@@ -103,8 +98,7 @@ private object AnimatedPaneElement : ModifierNodeElement<AnimatedPaneNode>() {
         return AnimatedPaneNode()
     }
 
-    override fun update(node: AnimatedPaneNode) {
-    }
+    override fun update(node: AnimatedPaneNode) {}
 
     override fun InspectorInfo.inspectableProperties() {
         inspectorInfo()

@@ -339,7 +339,7 @@ internal class LayoutNodeLayoutDelegate(
      * actual measure/layout pass.
      */
     inner class MeasurePassDelegate : Measurable, Placeable(), AlignmentLinesOwner,
-        DirectManipulationDelegate {
+        MotionReferencePlacementDelegate {
         /**
          * Is true during [replace] invocation. Helps to differentiate between the cases when our
          * parent is measuring us during the measure block, and when we are remeasured individually
@@ -498,6 +498,12 @@ internal class LayoutNodeLayoutDelegate(
         private fun markSubtreeAsNotPlaced() {
             if (isPlaced) {
                 isPlaced = false
+                layoutNode.forEachCoordinatorIncludingInner {
+                    it.onUnplaced()
+
+                    // nodes are not placed with a layer anymore, so the layers should be released
+                    it.releaseLayer()
+                }
                 forEachChildDelegate {
                     it.markSubtreeAsNotPlaced()
                 }
@@ -773,16 +779,16 @@ internal class LayoutNodeLayoutDelegate(
          * Flag to indicate when we need to propagate coordinates updates that are not related to a
          * position change.
          *
-         * @see isDirectManipulationPlacement
+         * @see isPlacedUnderMotionFrameOfReference
          */
         private var needsCoordinatesUpdate = false
 
-        override var isDirectManipulationPlacement: Boolean = false
+        override var isPlacedUnderMotionFrameOfReference: Boolean = false
             set(new) {
                 // Delegated to outerCoordinator
-                val old = outerCoordinator.isDirectManipulationPlacement
+                val old = outerCoordinator.isPlacedUnderMotionFrameOfReference
                 if (new != old) {
-                    outerCoordinator.isDirectManipulationPlacement = old
+                    outerCoordinator.isPlacedUnderMotionFrameOfReference = old
                     // Affects coordinates measurements
                     this.needsCoordinatesUpdate = true
                 }
@@ -1124,7 +1130,7 @@ internal class LayoutNodeLayoutDelegate(
      * the lookahead pass.
      */
     inner class LookaheadPassDelegate : Placeable(), Measurable, AlignmentLinesOwner,
-        DirectManipulationDelegate {
+        MotionReferencePlacementDelegate {
 
         /**
          * Is true during [replace] invocation. Helps to differentiate between the cases when our
@@ -1458,12 +1464,12 @@ internal class LayoutNodeLayoutDelegate(
             placeSelf(position, zIndex, null, layer)
         }
 
-        override var isDirectManipulationPlacement: Boolean = false
+        override var isPlacedUnderMotionFrameOfReference: Boolean = false
             set(new) {
                 // Delegated to outerCoordinator
-                val old = outerCoordinator.lookaheadDelegate?.isDirectManipulationPlacement
+                val old = outerCoordinator.lookaheadDelegate?.isPlacedUnderMotionFrameOfReference
                 if (new != old) {
-                    outerCoordinator.lookaheadDelegate?.isDirectManipulationPlacement = new
+                    outerCoordinator.lookaheadDelegate?.isPlacedUnderMotionFrameOfReference = new
                 }
                 field = new
             }
@@ -1935,19 +1941,23 @@ internal interface AlignmentLinesOwner : Measurable {
 
 /**
  * Interface for layout delegates, so that they can set the
- * [LookaheadCapablePlaceable.isDirectManipulationPlacement] to the proper placeable.
+ * [LookaheadCapablePlaceable.isPlacedUnderMotionFrameOfReference] to the proper placeable.
  */
-internal interface DirectManipulationDelegate {
+internal interface MotionReferencePlacementDelegate {
 
     /**
      * Called when a layout is about to be placed.
      *
      * The corresponding [LookaheadCapablePlaceable] should have their
-     * [LookaheadCapablePlaceable.isDirectManipulationPlacement] flag updated to the given value.
+     * [LookaheadCapablePlaceable.isPlacedUnderMotionFrameOfReference] flag updated to the given
+     * value.
      *
      * The placeable should be tagged such that its corresponding coordinates reflect the
-     * flag in [androidx.compose.ui.layout.LayoutCoordinates.isPositionedByParentWithDirectManipulation].
+     * flag in [androidx.compose.ui.layout.LayoutCoordinates.introducesMotionFrameOfReference]. Note that
+     * when it's placed on the current frame of reference, it means it doesn't introduce a new frame
+     * of reference.
+     *
      * This also means that coordinates consumers (onPlaced readers) are expected to be updated.
      */
-    var isDirectManipulationPlacement: Boolean
+    var isPlacedUnderMotionFrameOfReference: Boolean
 }

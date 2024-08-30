@@ -17,7 +17,6 @@
 package androidx.core.telecom.test
 
 import android.os.Build.VERSION_CODES
-import android.os.Bundle
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import androidx.annotation.RequiresApi
@@ -127,54 +126,6 @@ class JetpackConnectionServiceTest : BaseTelecomTest() {
     }
 
     /**
-     * ensure JetpackConnectionService#onCreateOutgoingConnection does not throw an exception if
-     * any of the arguments are null.
-     */
-    @SmallTest
-    @Test
-    fun testOnCreateOutgoingConnectionWithNullArgs() {
-        mConnectionService.onCreateOutgoingConnection(
-            null /* connectionManagerPhoneAccount */,
-            null /* request */)
-    }
-
-    /**
-     * ensure JetpackConnectionService#onCreateOutgoingConnectionFailed does not throw an exception
-     * if any of the arguments are null.
-     */
-    @SmallTest
-    @Test
-    fun testOnCreateOutgoingConnectionFailedWithNullArgs() {
-        mConnectionService.onCreateOutgoingConnectionFailed(
-            null /* connectionManagerPhoneAccount */,
-           null /* request */)
-    }
-
-    /**
-     * ensure JetpackConnectionService#onCreateIncomingConnection does not throw an exception
-     * if any of the arguments are null.
-     */
-    @SmallTest
-    @Test
-    fun testOnCreateIncomingConnectionWithNullArgs() {
-        mConnectionService.onCreateIncomingConnection(
-            null /* connectionManagerPhoneAccount */,
-            null /* request */)
-    }
-
-    /**
-     * ensure JetpackConnectionService#onCreateIncomingConnectionFailed does not throw an exception
-     * if any of the arguments are null.
-     */
-    @SmallTest
-    @Test
-    fun testOnCreateIncomingConnectionFailedWithNullArgs() {
-        mConnectionService.onCreateIncomingConnectionFailed(
-            null /* connectionManagerPhoneAccount */,
-            null /* request */)
-    }
-
-    /**
      * Ensure an outgoing Connection object has its extras set before sending it off to the
      * platform.
      */
@@ -221,13 +172,7 @@ class JetpackConnectionServiceTest : BaseTelecomTest() {
     private fun createConnectionRequest(callAttributesCompat: CallAttributesCompat):
         ConnectionRequest {
         // wrap in PendingRequest
-        val pendingRequestId = "123"
-        val pendingRequestIdBundle = Bundle()
-        pendingRequestIdBundle.putString(
-            JetpackConnectionService.REQUEST_ID_MATCHER_KEY, pendingRequestId)
-
         val pr = JetpackConnectionService.PendingConnectionRequest(
-            pendingRequestId,
             callAttributesCompat, callChannels, mWorkerContext, null,
             TestUtils.mOnAnswerLambda,
             TestUtils.mOnDisconnectLambda,
@@ -239,9 +184,6 @@ class JetpackConnectionServiceTest : BaseTelecomTest() {
         // add to the list of pendingRequests
         JetpackConnectionService.mPendingConnectionRequests.add(pr)
         // create a ConnectionRequest
-        return ConnectionRequest(
-            mPackagePhoneAccountHandle,
-            TEST_PHONE_NUMBER_9001,
-            pendingRequestIdBundle)
+        return ConnectionRequest(mPackagePhoneAccountHandle, TEST_PHONE_NUMBER_9001, null)
     }
 }

@@ -25,6 +25,7 @@ import android.view.RenderNode
 import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CanvasHolder
 import androidx.compose.ui.graphics.Color
@@ -38,7 +39,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPorterDuffMode
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toSize
@@ -173,11 +173,20 @@ internal class GraphicsLayerV23(
             renderNode.setAlpha(value)
         }
 
+    private var shouldManuallySetCenterPivot = false
+
     override var pivotOffset: Offset = Offset.Unspecified
         set(value) {
             field = value
-            renderNode.pivotX = value.x
-            renderNode.pivotY = value.y
+            if (value.isUnspecified) {
+                shouldManuallySetCenterPivot = true
+                renderNode.pivotX = size.width / 2f
+                renderNode.pivotY = size.height / 2f
+            } else {
+                shouldManuallySetCenterPivot = false
+                renderNode.pivotX = value.x
+                renderNode.pivotY = value.y
+            }
         }
 
     override var scaleX: Float = 1f
@@ -208,13 +217,17 @@ internal class GraphicsLayerV23(
         }
     override var ambientShadowColor: Color = Color.Black
         set(value) {
-            field = value
-            renderNode.setAmbientShadowColor(value.toArgb())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                field = value
+                RenderNodeVerificationHelper28.setAmbientShadowColor(renderNode, value.toArgb())
+            }
         }
     override var spotShadowColor: Color = Color.Black
         set(value) {
-            field = value
-            renderNode.setSpotShadowColor(value.toArgb())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                field = value
+                RenderNodeVerificationHelper28.setSpotShadowColor(renderNode, value.toArgb())
+            }
         }
     override var rotationX: Float = 0f
         set(value) {
@@ -246,9 +259,20 @@ internal class GraphicsLayerV23(
             applyClip()
         }
 
+    private var clipToBounds = false
+    private var clipToOutline = false
+
     private fun applyClip() {
-        renderNode.setClipToBounds(clip && !outlineIsProvided)
-        renderNode.setClipToOutline(clip && outlineIsProvided)
+        val newClipToBounds = clip && !outlineIsProvided
+        val newClipToOutline = clip && outlineIsProvided
+        if (newClipToBounds != clipToBounds) {
+            clipToBounds = newClipToBounds
+            renderNode.setClipToBounds(clipToBounds)
+        }
+        if (newClipToOutline != clipToOutline) {
+            clipToOutline = newClipToOutline
+            renderNode.setClipToOutline(newClipToOutline)
+        }
     }
 
     // API level 23 does not support RenderEffect so keep the field around for consistency
@@ -258,14 +282,15 @@ internal class GraphicsLayerV23(
     // crash the compose application
     override var renderEffect: RenderEffect? = null
 
-    override fun setPosition(topLeft: IntOffset, size: IntSize) {
-        renderNode.setLeftTopRightBottom(
-            topLeft.x,
-            topLeft.y,
-            topLeft.x + size.width,
-            topLeft.y + size.height
-        )
-        this.size = size
+    override fun setPosition(x: Int, y: Int, size: IntSize) {
+        renderNode.setLeftTopRightBottom(x, y, x + size.width, y + size.height)
+        if (this.size != size) {
+            if (shouldManuallySetCenterPivot) {
+                renderNode.pivotX = size.width / 2f
+                renderNode.pivotY = size.height / 2f
+            }
+            this.size = size
+        }
     }
 
     override fun setOutline(outline: Outline?) {
@@ -276,6 +301,9 @@ internal class GraphicsLayerV23(
 
     override var isInvalidated: Boolean = true
 
+    override val hasDisplayList: Boolean
+        get() = renderNode.isValid
+
     override fun record(
         density: Density,
         layoutDirection: LayoutDirection,
@@ -283,17 +311,13 @@ internal class GraphicsLayerV23(
         block: DrawScope.() -> Unit
     ) {
         val recordingCanvas = renderNode.start(size.width, size.height)
-        canvasHolder.drawInto(recordingCanvas) {
-            canvasDrawScope.draw(
-                density,
-                layoutDirection,
-                this,
-                size.toSize(),
-                layer,
-                block
-            )
+        try {
+            canvasHolder.drawInto(recordingCanvas) {
+                canvasDrawScope.draw(density, layoutDirection, this, size.toSize(), layer, block)
+            }
+        } finally {
+            renderNode.end(recordingCanvas)
         }
-        renderNode.end(recordingCanvas)
         isInvalidated = false
     }
 
@@ -326,7 +350,7 @@ internal class GraphicsLayerV23(
         }
     }
 
-    private fun discardDisplayListInternal() {
+    internal fun discardDisplayListInternal() {
         // See b/216660268. RenderNode#discardDisplayList was originally called
         // destroyDisplayListData on Android M and below. Make sure we gate on the corresponding
         // API level and call the original method name on these API levels, otherwise invoke

@@ -31,6 +31,7 @@ import androidx.room.solver.TypeAdapterStore
 import androidx.room.verifier.DatabaseVerifier
 import androidx.room.vo.BuiltInConverterFlags
 import androidx.room.vo.Warning
+import javax.tools.Diagnostic
 
 class Context private constructor(
     val processingEnv: XProcessingEnv,
@@ -85,16 +86,17 @@ class Context private constructor(
     }
 
     val codeLanguage: CodeLanguage by lazy {
-        if (processingEnv.backend == XProcessingEnv.Backend.KSP) {
-            if (BooleanProcessorOptions.GENERATE_KOTLIN.getValue(processingEnv)) {
+        if (BooleanProcessorOptions.GENERATE_KOTLIN.getValue(processingEnv)) {
+            if (processingEnv.backend == XProcessingEnv.Backend.KSP) {
                 CodeLanguage.KOTLIN
             } else {
+                processingEnv.messager.printMessage(
+                    Diagnostic.Kind.ERROR,
+                    "${BooleanProcessorOptions.GENERATE_KOTLIN.argName} can only be enabled in KSP."
+                )
                 CodeLanguage.JAVA
             }
         } else {
-            if (BooleanProcessorOptions.GENERATE_KOTLIN.getInputValue(processingEnv) == true) {
-                logger.e(ProcessorErrors.INVALID_KOTLIN_CODE_GEN_IN_JAVAC)
-            }
             CodeLanguage.JAVA
         }
     }
@@ -285,7 +287,7 @@ class Context private constructor(
         INCREMENTAL("room.incremental", defaultValue = true),
         EXPAND_PROJECTION("room.expandProjection", defaultValue = false),
         USE_NULL_AWARE_CONVERTER("room.useNullAwareTypeAnalysis", defaultValue = false),
-        GENERATE_KOTLIN("room.generateKotlin", defaultValue = true),
+        GENERATE_KOTLIN("room.generateKotlin", defaultValue = false),
         EXPORT_SCHEMA_RESOURCE("room.exportSchemaResource", defaultValue = false);
 
         /**
@@ -309,19 +311,5 @@ class Context private constructor(
                 it.isNotBlank()
             }?.toBoolean()
         }
-    }
-
-    /**
-     * Check if the target platform is only Android.
-     *
-     * Note that there is no 'Android' target in the `targetPlatforms` list,
-     * so instead we check for JVM and also validate that an Android only class
-     * [Context] is in the classpath.
-     */
-    fun isAndroidOnlyTarget(): Boolean {
-        val targetPlatforms = this.processingEnv.targetPlatforms
-        return targetPlatforms.size == 1 &&
-            targetPlatforms.contains(XProcessingEnv.Platform.JVM) &&
-            this.processingEnv.findType("android.content.Context") != null
     }
 }

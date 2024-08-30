@@ -29,7 +29,7 @@ import androidx.annotation.RestrictTo
 interface StreamGraph {
     val streams: List<CameraStream>
     val streamIds: Set<StreamId>
-    val inputs: List<InputStream>
+    val input: InputStream?
     val outputs: List<OutputStream>
 
     operator fun get(config: CameraStream.Config): CameraStream?

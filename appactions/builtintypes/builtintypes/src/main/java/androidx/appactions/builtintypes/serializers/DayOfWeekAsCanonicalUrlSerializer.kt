@@ -27,8 +27,8 @@ import kotlin.collections.firstOrNull
  * @see DayOfWeek.canonicalUrl
  */
 public class DayOfWeekAsCanonicalUrlSerializer : StringSerializer<DayOfWeek> {
-  override fun serialize(instance: DayOfWeek): String = instance.canonicalUrl
+  public override fun serialize(instance: DayOfWeek): String = instance.canonicalUrl
 
-  override fun deserialize(`value`: String): DayOfWeek? =
+  public override fun deserialize(`value`: String): DayOfWeek? =
     DayOfWeek.values().firstOrNull { it.canonicalUrl == value }
 }

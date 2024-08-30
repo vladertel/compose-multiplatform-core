@@ -29,7 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.handwriting.detectStylusHandwriting
+import androidx.compose.foundation.text.handwriting.StylusHandwritingNode
 import androidx.compose.foundation.text.handwriting.isStylusHandwritingSupported
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
@@ -74,10 +74,10 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.editable
 import androidx.compose.ui.semantics.editableText
 import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.insertTextAtCursor
+import androidx.compose.ui.semantics.isEditable
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onImeAction
 import androidx.compose.ui.semantics.onLongClick
@@ -89,6 +89,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -111,7 +112,6 @@ private val MediaTypesAll = setOf(MediaType.All)
  *
  * This modifier handles input events (both key and pointer), semantics, and focus.
  */
-@OptIn(ExperimentalFoundationApi::class)
 internal data class TextFieldDecoratorModifier(
     private val textFieldState: TransformedTextFieldState,
     private val textLayoutState: TextLayoutState,
@@ -222,36 +222,39 @@ internal class TextFieldDecoratorModifierNode(
                     )
                 }
                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    detectTextFieldLongPressAndAfterDrag(requestFocus)
-                }
-            }
-            // Note: when editable changes (enabled or readOnly changes), this pointerInputModifier
-            // is reset. And we don't need to worry about cancel or launch the stylus handwriting
-            // detecting job.
-            if (isStylusHandwritingSupported && editable) {
-                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    detectStylusHandwriting {
-                        if (!isFocused) {
-                            requestFocus()
-                        }
-
-                        // Send the handwriting start signal to platform.
-                        // The editor should send the signal when it is focused or is about
-                        // to gain focus, Here are more details:
-                        //   1) if the editor already has an active input session, the
-                        //   platform handwriting service should already listen to this flow
-                        //   and it'll start handwriting right away.
-                        //
-                        //   2) if the editor is not focused, but it'll be focused and
-                        //   create a new input session, one handwriting signal will be
-                        //   replayed when the platform collect this flow. And the platform
-                        //   should trigger handwriting accordingly.
-                        stylusHandwritingTrigger?.tryEmit(Unit)
-                        return@detectStylusHandwriting true
-                    }
+                    textFieldSelectionGestures(requestFocus)
                 }
             }
         }
+    })
+
+    private val stylusHandwritingNode = delegate(StylusHandwritingNode {
+        if (!isFocused) {
+            requestFocus()
+        }
+
+        // If this is a password field, we can't trigger handwriting.
+        // The expected behavior is 1) request focus 2) show software keyboard.
+        // Note: TextField will show software keyboard automatically when it
+        // gain focus. 3) show a toast message telling that handwriting is not
+        // supported for password fields. TODO(b/335294152)
+        if (keyboardOptions.keyboardType != KeyboardType.Password &&
+            keyboardOptions.keyboardType != KeyboardType.NumberPassword
+        ) {
+            // Send the handwriting start signal to platform.
+            // The editor should send the signal when it is focused or is about
+            // to gain focus, Here are more details:
+            //   1) if the editor already has an active input session, the
+            //   platform handwriting service should already listen to this flow
+            //   and it'll start handwriting right away.
+            //
+            //   2) if the editor is not focused, but it'll be focused and
+            //   create a new input session, one handwriting signal will be
+            //   replayed when the platform collect this flow. And the platform
+            //   should trigger handwriting accordingly.
+            stylusHandwritingTrigger?.tryEmit(Unit)
+        }
+        return@StylusHandwritingNode true
     })
 
     /**
@@ -354,7 +357,19 @@ internal class TextFieldDecoratorModifierNode(
      */
     private var windowInfo: WindowInfo? = null
 
-    private val isFocused: Boolean get() = isElementFocused && windowInfo?.isWindowFocused == true
+    private val isFocused: Boolean
+        get() {
+            // make sure that we read both window focus and element focus for snapshot aware
+            // callers to successfully update when either one changes
+            val isWindowFocused = windowInfo?.isWindowFocused == true
+            return isElementFocused && isWindowFocused
+        }
+
+    /**
+     * We observe text changes to show/hide text toolbar and cursor handles. This job is only run
+     * when [isFocused] is true, and cancels when focus is lost.
+     */
+    private var observeChangesJob: Job? = null
 
     /**
      * Manages key events. These events often are sourced by a hardware keyboard but it's also
@@ -415,7 +430,6 @@ internal class TextFieldDecoratorModifierNode(
         val previousTextFieldState = this.textFieldState
         val previousKeyboardOptions = this.keyboardOptions
         val previousTextFieldSelectionState = this.textFieldSelectionState
-        val previousFilter = this.filter
         val previousInteractionSource = this.interactionSource
 
         // Apply the diff.
@@ -434,8 +448,8 @@ internal class TextFieldDecoratorModifierNode(
         // Something about the session changed, restart the session.
         if (writeable != previousWriteable ||
             textFieldState != previousTextFieldState ||
-            keyboardOptions != previousKeyboardOptions ||
-            filter != previousFilter
+            // compare with the new keyboardOptions that's merged
+            this.keyboardOptions != previousKeyboardOptions
         ) {
             if (writeable && isFocused) {
                 // The old session will be implicitly disposed.
@@ -452,6 +466,7 @@ internal class TextFieldDecoratorModifierNode(
 
         if (textFieldSelectionState != previousTextFieldSelectionState) {
             pointerInputNode.resetPointerInputHandler()
+            stylusHandwritingNode.resetPointerInputHandler()
             if (isAttached) {
                 textFieldSelectionState.receiveContentConfiguration =
                     receiveContentConfigurationProvider
@@ -460,6 +475,7 @@ internal class TextFieldDecoratorModifierNode(
 
         if (interactionSource != previousInteractionSource) {
             pointerInputNode.resetPointerInputHandler()
+            stylusHandwritingNode.resetPointerInputHandler()
         }
     }
 
@@ -474,7 +490,7 @@ internal class TextFieldDecoratorModifierNode(
         textSelectionRange = selection
 
         if (!enabled) disabled()
-        if (editable) editable()
+        isEditable = this@TextFieldDecoratorModifierNode.editable
 
         getTextLayoutResult {
             textLayoutState.layoutResult?.let { result -> it.add(result) } ?: false
@@ -587,7 +603,7 @@ internal class TextFieldDecoratorModifierNode(
             return
         }
         isElementFocused = focusState.isFocused
-        textFieldSelectionState.isFocused = this.isFocused
+        onFocusChange()
 
         if (focusState.isFocused) {
             // Deselect when losing focus even if readonly.
@@ -596,7 +612,28 @@ internal class TextFieldDecoratorModifierNode(
             }
         } else {
             disposeInputSession()
+            // only clear the composing region when element loses focus. Window focus lost should
+            // not clear the composing region.
+            textFieldState.editUntransformedTextAsUser { finishComposingText() }
             textFieldState.collapseSelectionToMax()
+        }
+        stylusHandwritingNode.onFocusEvent(focusState)
+    }
+
+    /**
+     * Should be called when either [isElementFocused] or [WindowInfo.isWindowFocused] change since
+     * they are used in evaluation of [isFocused].
+     */
+    private fun onFocusChange() {
+        textFieldSelectionState.isFocused = this.isFocused
+        if (isFocused && observeChangesJob == null) {
+            // only start a new job is there's not an ongoing one.
+            observeChangesJob = coroutineScope.launch {
+                textFieldSelectionState.observeChanges()
+            }
+        } else if (!isFocused) {
+            observeChangesJob?.cancel()
+            observeChangesJob = null
         }
     }
 
@@ -619,10 +656,12 @@ internal class TextFieldDecoratorModifierNode(
         pass: PointerEventPass,
         bounds: IntSize
     ) {
+        stylusHandwritingNode.onPointerEvent(pointerEvent, pass, bounds)
         pointerInputNode.onPointerEvent(pointerEvent, pass, bounds)
     }
 
     override fun onCancelPointerInput() {
+        stylusHandwritingNode.onCancelPointerInput()
         pointerInputNode.onCancelPointerInput()
     }
 
@@ -651,8 +690,7 @@ internal class TextFieldDecoratorModifierNode(
     override fun onObservedReadsChanged() {
         observeReads {
             windowInfo = currentValueOf(LocalWindowInfo)
-            textFieldSelectionState.isFocused = this.isFocused
-            startInputSessionOnWindowFocusChange()
+            onFocusChange()
         }
     }
 
@@ -665,11 +703,6 @@ internal class TextFieldDecoratorModifierNode(
             // This will automatically cancel the previous session, if any, so we don't need to
             // cancel the inputSessionJob ourselves.
             establishTextInputSession {
-                // Re-start observing changes in case our TextFieldState instance changed.
-                launch(start = CoroutineStart.UNDISPATCHED) {
-                    textFieldSelectionState.observeChanges()
-                }
-
                 platformSpecificTextInputSession(
                     state = textFieldState,
                     layoutState = textLayoutState,
@@ -688,15 +721,6 @@ internal class TextFieldDecoratorModifierNode(
         inputSessionJob?.cancel()
         inputSessionJob = null
         stylusHandwritingTrigger?.resetReplayCache()
-    }
-
-    private fun startInputSessionOnWindowFocusChange() {
-        if (windowInfo == null) return
-        // b/326323000: We do not dispose input session on just window focus change until another
-        // item requests focus and we lose element focus status which is handled by onFocusEvent.
-        if (windowInfo?.isWindowFocused == true && isElementFocused) {
-            startInputSession(fromTap = false)
-        }
     }
 
     private fun requireKeyboardController(): SoftwareKeyboardController =

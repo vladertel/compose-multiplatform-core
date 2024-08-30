@@ -271,6 +271,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 isVertical = isVertical,
                 isLookingAhead = false,
                 hasLookaheadOccurred = false,
+                layoutMinOffset = 0,
+                layoutMaxOffset = 0,
                 coroutineScope = coroutineScope,
                 graphicsContext = graphicsContext
             )
@@ -878,6 +880,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
             laneCount = laneCount,
             isLookingAhead = false,
             hasLookaheadOccurred = false,
+            layoutMinOffset = firstItemOffsets.min(),
+            layoutMaxOffset = currentItemOffsets.max() + contentPadding,
             coroutineScope = coroutineScope,
             graphicsContext = graphicsContext
         )
@@ -957,10 +961,6 @@ private fun LazyStaggeredGridMeasureContext.calculateVisibleItems(
         val mainAxisOffset = itemScrollOffsets.maxInRange(spanRange)
         val crossAxisOffset = resolvedSlots.positions[laneIndex]
 
-        if (item.placeablesCount == 0) {
-            // nothing to place, ignore spacings
-            continue
-        }
         item.position(
             mainAxis = mainAxisOffset,
             crossAxis = crossAxisOffset,

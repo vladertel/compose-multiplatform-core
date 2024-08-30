@@ -32,7 +32,6 @@ import androidx.camera.camera2.pipe.Request.Listener
 import androidx.camera.camera2.pipe.RequestFailure
 import androidx.camera.camera2.pipe.RequestMetadata
 import androidx.camera.camera2.pipe.RequestNumber
-import androidx.camera.camera2.pipe.SensorTimestamp
 import androidx.camera.camera2.pipe.StreamId
 import androidx.camera.camera2.pipe.testing.FakeRequestMetadata
 import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
@@ -89,16 +88,6 @@ internal class Camera2CaptureSequenceTest {
     }
 
     @Test
-    fun onReadoutStartedTest() {
-        val timestamp: Long = 123456789
-        camera2CaptureSequence.onReadoutStarted(
-            captureSession, captureRequest, timestamp, frameNumber
-        )
-        assertThat(listener.lastFrameNumber?.value).isEqualTo(frameNumber)
-        assertThat(listener.lastSensorTimeStamp?.value).isEqualTo(timestamp)
-    }
-
-    @Test
     fun onCaptureCompletedTest() {
         val totalCaptureResult: TotalCaptureResult = mock()
         whenever(totalCaptureResult.frameNumber).thenReturn(frameNumber)
@@ -130,7 +119,6 @@ internal class Camera2CaptureSequenceTest {
         var lastTimeStamp: CameraTimestamp? = null
         var lastFrameInfo: FrameInfo? = null
         var lastRequestFailure: RequestFailure? = null
-        var lastSensorTimeStamp: SensorTimestamp? = null
 
         override fun onStarted(
             requestMetadata: RequestMetadata,
@@ -157,15 +145,6 @@ internal class Camera2CaptureSequenceTest {
         ) {
             lastFrameNumber = frameNumber
             lastRequestFailure = requestFailure
-        }
-
-        override fun onReadoutStarted(
-            requestMetadata: RequestMetadata,
-            frameNumber: FrameNumber,
-            timestamp: SensorTimestamp
-        ) {
-            lastFrameNumber = frameNumber
-            lastSensorTimeStamp = timestamp
         }
     }
 }

@@ -130,11 +130,6 @@ constructor(private val context: Context, private val observer: BroadcastEventOb
             // so it does not have to be exported
             Context.RECEIVER_NOT_EXPORTED
         )
-
-        // Fetch the initial battery state. NB Intent.ACTION_BATTERY_CHANGED is sticky.
-        processBatteryStatus(
-            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        )
     }
 
     /** Called to send observers initial battery state in advance of receiving any broadcasts. */

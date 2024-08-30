@@ -19,6 +19,8 @@
 package androidx.compose.animation
 
 import androidx.compose.animation.SharedTransitionScope.PlaceHolderSize.Companion.animatedSize
+import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.RemeasureToBounds
+import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.ScaleToBounds
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.Transition
@@ -29,15 +31,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -45,25 +50,39 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.testutils.assertPixels
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomCenter
+import androidx.compose.ui.Alignment.Companion.BottomEnd
+import androidx.compose.ui.Alignment.Companion.BottomStart
+import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterEnd
+import androidx.compose.ui.Alignment.Companion.CenterStart
+import androidx.compose.ui.Alignment.Companion.TopCenter
+import androidx.compose.ui.Alignment.Companion.TopEnd
+import androidx.compose.ui.Alignment.Companion.TopStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.ScaleFactor
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -79,6 +98,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.random.Random
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,7 +124,7 @@ class SharedTransitionTest {
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 SharedTransitionLayout {
-                    transitionScope = this
+                    transitionScope = this@SharedTransitionLayout as SharedTransitionScopeImpl
                     AnimatedVisibility(visible = visible) {
                         Column {
                             Box(Modifier
@@ -242,11 +262,11 @@ class SharedTransitionTest {
             Offset.Zero, Offset.Zero, Offset.Zero, Offset.Zero
         )
         val sizes = mutableListOf(IntSize(-1, -1), IntSize(-1, -1), IntSize.Zero, IntSize.Zero)
-        var transitionScope: SharedTransitionScope? = null
+        var transitionScope: SharedTransitionScopeImpl? = null
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
                 SharedTransitionLayout {
-                    transitionScope = this
+                    transitionScope = this@SharedTransitionLayout as SharedTransitionScopeImpl
                     Column {
                         Box(Modifier
                             .sharedElementWithCallerManagedVisibility(
@@ -381,6 +401,7 @@ class SharedTransitionTest {
         var visible by mutableStateOf(true)
         rule.setContent {
             SharedTransitionLayout {
+                this@SharedTransitionLayout as SharedTransitionScopeImpl
                 Column {
                     Box(
                         Modifier
@@ -1043,7 +1064,7 @@ class SharedTransitionTest {
                         .requiredSize(100.dp)
                         .background(Color.White)
                 ) {
-                    transitionScope = this
+                    transitionScope = this@SharedTransitionLayout as SharedTransitionScopeImpl
                     AnimatedVisibility(
                         visible = visible,
                         enter = EnterTransition.None,
@@ -1080,13 +1101,16 @@ class SharedTransitionTest {
                         Box(
                             Modifier
                                 .offset(20.dp)
-                                .sharedBounds(rememberSharedContentState(key = "test"),
+                                .sharedBounds(
+                                    rememberSharedContentState(key = "test"),
                                     this@AnimatedVisibility,
                                     fadeIn(),
                                     fadeOut(),
                                     boundsTransform = BoundsTransform { _, _ ->
                                         tween(100, easing = LinearEasing)
-                                    })
+                                    },
+                                    resizeMode = RemeasureToBounds
+                                )
                                 .onGloballyPositioned {
                                     parentPosition =
                                         lookaheadRoot.localPositionOf(it, Offset.Zero)
@@ -1894,8 +1918,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.Fit),
-                                        scaleOutSharedContentToBounds(ContentScale.Fit),
+                                        enter = EnterTransition.None,
+                                        exit = ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.Fit),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -1908,8 +1933,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.Fit),
-                                        scaleOutSharedContentToBounds(ContentScale.Fit),
+                                        enter = EnterTransition.None,
+                                        exit = ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.Fit),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -2005,8 +2031,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.FillHeight),
-                                        scaleOutSharedContentToBounds(ContentScale.FillHeight),
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.FillHeight),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -2019,8 +2046,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.FillWidth),
-                                        scaleOutSharedContentToBounds(ContentScale.FillWidth),
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.FillWidth),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -2127,13 +2155,10 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(
-                                            ContentScale.Fit,
-                                            Alignment.TopStart
-                                        ),
-                                        scaleOutSharedContentToBounds(
-                                            ContentScale.Fit,
-                                            Alignment.TopStart
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(
+                                            ContentScale.Fit, Alignment.TopStart
                                         ),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
@@ -2147,13 +2172,10 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(
-                                            ContentScale.Fit,
-                                            Alignment.BottomStart
-                                        ),
-                                        scaleOutSharedContentToBounds(
-                                            ContentScale.Fit,
-                                            Alignment.BottomStart
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(
+                                            ContentScale.Fit, Alignment.BottomStart
                                         ),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
@@ -2250,8 +2272,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.Crop),
-                                        scaleOutSharedContentToBounds(ContentScale.Crop),
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.Crop),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -2264,8 +2287,9 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = "test"),
                                         this,
-                                        scaleInSharedContentToBounds(ContentScale.FillWidth),
-                                        scaleOutSharedContentToBounds(ContentScale.FillWidth),
+                                        EnterTransition.None,
+                                        ExitTransition.None,
+                                        resizeMode = ScaleToBounds(ContentScale.FillWidth),
                                         boundsTransform = boundsTransform,
                                         placeHolderSize = animatedSize
                                     )
@@ -2406,7 +2430,8 @@ class SharedTransitionTest {
                                                 .sharedBounds(
                                                     rememberSharedContentState(key = id),
                                                     this@AnimatedContent,
-                                                    boundsTransform = boundsTransform
+                                                    boundsTransform = boundsTransform,
+                                                    resizeMode = ScaleToBounds(ContentScale.Fit)
                                                 )
                                                 .size(200.dp, 50.dp)
                                                 .background(
@@ -2433,7 +2458,8 @@ class SharedTransitionTest {
                                     .sharedBounds(
                                         rememberSharedContentState(key = selected),
                                         this@AnimatedContent,
-                                        boundsTransform = boundsTransform
+                                        boundsTransform = boundsTransform,
+                                        resizeMode = ScaleToBounds(ContentScale.Fit)
                                     )
                                     .size(100.dp)
                                     .onPlaced {
@@ -2469,7 +2495,6 @@ class SharedTransitionTest {
         repeat(6) {
             rule.waitForIdle()
             rule.mainClock.advanceTimeByFrame()
-            println("LTD, scaleX: ${scaleX[selected]}, detailX: $detailScaleX")
             assertEquals(scaleX[selected], scaleY[selected])
             assertEquals(detailScaleX, detailScaleY)
 
@@ -2568,6 +2593,292 @@ class SharedTransitionTest {
         }
         isSquare = !isSquare
         rule.waitForIdle()
+    }
+
+    sealed class Screen {
+        abstract val key: Int
+
+        object List : Screen() {
+            override val key = 1
+        }
+
+        data class Details(val item: Int) : Screen() {
+            override val key = 2
+        }
+    }
+
+    @SdkSuppress(minSdkVersion = 26)
+    @Test
+    fun testRandomScrollingWithInterruption() {
+        @Suppress("PrimitiveInCollection")
+        val colors = listOf(
+            Color(0xffff6f69),
+            Color(0xffffcc5c),
+            Color(0xff2a9d84),
+            Color(0xff264653)
+        )
+        var state by mutableStateOf<Screen>(Screen.List)
+        val lazyListState = LazyListState()
+        rule.setContent {
+            SharedTransitionLayout(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(800.dp)
+            ) {
+                AnimatedContent(state, label = "", contentKey = { it.key },
+                    transitionSpec = {
+                        if (initialState == Screen.List) {
+                            slideInHorizontally { -it } + fadeIn() togetherWith
+                                slideOutHorizontally { it } + fadeOut()
+                        } else {
+                            slideInHorizontally { it } + fadeIn() togetherWith
+                                slideOutHorizontally { -it } + fadeOut()
+                        }
+                    }) {
+                    when (it) {
+                        Screen.List -> {
+                            LazyColumn(state = lazyListState) {
+                                items(50) { item ->
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(100.dp)
+                                                .then(
+                                                    Modifier.sharedElement(
+                                                        rememberSharedContentState(
+                                                            key = "item-image$item"
+                                                        ),
+                                                        this@AnimatedContent,
+                                                    )
+                                                )
+                                                .background(colors[item % 4]),
+                                        )
+                                        Spacer(Modifier.size(15.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        is Screen.Details -> {
+                            val item = it.item
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Box(
+                                    modifier = Modifier
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "item-image$item"),
+                                            this@AnimatedContent,
+                                        )
+                                        .background(colors[item % 4])
+                                        .fillMaxWidth(),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        state = Screen.Details(5)
+        repeat(3) {
+            rule.waitForIdle()
+            rule.mainClock.advanceTimeByFrame()
+        }
+        state = Screen.List
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeByFrame()
+
+        repeat(3) {
+            repeat(5) {
+                rule.runOnIdle {
+                    runBlocking {
+                        lazyListState.scrollToItem(40 - it * 10)
+                    }
+                }
+            }
+            rule.mainClock.advanceTimeByFrame()
+            repeat(10) {
+                rule.runOnIdle {
+                    runBlocking {
+                        lazyListState.scrollToItem(it * 5)
+                    }
+                }
+            }
+            rule.mainClock.advanceTimeByFrame()
+            rule.runOnIdle {
+                runBlocking {
+                    lazyListState.scrollToItem(0)
+                }
+            }
+        }
+        rule.mainClock.autoAdvance = false
+    }
+
+    @Test
+    fun vigorouslyScrollingSharedElementsInLazyList() {
+        var state by mutableStateOf<Screen>(Screen.List)
+        val lazyListState = LazyListState()
+
+        @Suppress("PrimitiveInCollection")
+        val colors = listOf(
+            Color(0xffff6f69),
+            Color(0xffffcc5c),
+            Color(0xff2a9d84),
+            Color(0xff264653)
+        )
+        rule.setContent {
+            SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(state = lazyListState) {
+                    items(50) { item ->
+                        AnimatedVisibility(visible = (state as? Screen.Details)?.item != item) {
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .then(
+                                            Modifier.sharedElement(
+                                                rememberSharedContentState(
+                                                    key = "item-image$item"
+                                                ),
+                                                this@AnimatedVisibility,
+                                            )
+                                        )
+                                        .background(colors[item % 4]),
+                                )
+                                Spacer(Modifier.size(15.dp))
+                            }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = state is Screen.Details) {
+                    var item: Int? by remember { mutableStateOf(null) }
+                    if (state is Screen.Details) {
+                        item = (state as Screen.Details).item
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .sharedElement(
+                                    rememberSharedContentState(key = "item-image$item"),
+                                    this@AnimatedVisibility,
+                                )
+                                .fillMaxWidth()
+                                .background(colors[item!! % 4])
+                        )
+                    }
+                }
+            }
+        }
+
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
+        state = Screen.Details(5)
+        repeat(5) {
+            rule.waitForIdle()
+            rule.mainClock.advanceTimeByFrame()
+        }
+        state = Screen.List
+        repeat(3) {
+            rule.waitForIdle()
+            rule.mainClock.advanceTimeByFrame()
+        }
+
+        repeat(5) {
+            rule.runOnIdle {
+                runBlocking {
+                    lazyListState.scrollToItem(it + 1)
+                }
+            }
+            rule.mainClock.advanceTimeByFrame()
+        }
+        repeat(20) {
+            rule.runOnIdle {
+                val id = Random.nextInt(0, 20)
+                runBlocking {
+                    lazyListState.scrollToItem(id)
+                }
+            }
+            rule.mainClock.advanceTimeByFrame()
+        }
+    }
+
+    @Test
+    fun testUserModifierInSharedTransitionLayout() {
+        var scope: SharedTransitionScope? = null
+        rule.setContent {
+            SharedTransitionLayout(Modifier.offset { IntOffset(65, 536) }) {
+                scope = this
+                Box(Modifier.fillMaxSize())
+            }
+        }
+        rule.runOnIdle {
+            val pos = (scope as SharedTransitionScopeImpl).root.positionInWindow()
+            assertEquals(Offset(65f, 536f), pos)
+        }
+    }
+
+    @Test
+    fun testScaleToBoundsCaching() {
+        val alignments = listOf(
+            TopStart,
+            TopCenter,
+            TopEnd,
+            CenterStart,
+            Center,
+            CenterEnd,
+            BottomStart,
+            BottomCenter,
+            BottomEnd
+        )
+
+        val contentScales = listOf(
+            ContentScale.FillWidth,
+            ContentScale.FillHeight,
+            ContentScale.FillBounds,
+            ContentScale.Fit,
+            ContentScale.Crop,
+            ContentScale.None,
+            ContentScale.Inside
+        )
+        var prev: SharedTransitionScope.ResizeMode? = null
+        alignments.forEach { alignment ->
+            contentScales.forEach { contentScale ->
+                assertTrue(
+                    ScaleToBounds(contentScale, alignment) === ScaleToBounds(
+                        contentScale,
+                        alignment
+                    )
+                )
+                assertFalse(prev === ScaleToBounds(contentScale, alignment))
+                prev = ScaleToBounds(contentScale, alignment)
+            }
+        }
+
+        val customAlignment = object : Alignment {
+            override fun align(
+                size: IntSize,
+                space: IntSize,
+                layoutDirection: LayoutDirection
+            ): IntOffset {
+                return Alignment.Center.align(size, space, layoutDirection)
+            }
+        }
+
+        val customContentScale = object : ContentScale {
+            override fun computeScaleFactor(srcSize: Size, dstSize: Size): ScaleFactor {
+                return ContentScale.Crop.computeScaleFactor(srcSize, dstSize)
+            }
+        }
+
+        assertFalse(ScaleToBounds(customContentScale) === ScaleToBounds(customContentScale))
+        assertFalse(
+            ScaleToBounds(alignment = customAlignment) ===
+                ScaleToBounds(alignment = customAlignment)
+        )
     }
 }
 

@@ -29,7 +29,6 @@ import android.os.Build
 import android.view.Surface
 import androidx.annotation.GuardedBy
 import androidx.annotation.RequiresApi
-import androidx.camera.camera2.pipe.AudioRestrictionMode
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.RequestTemplate
@@ -51,7 +50,7 @@ import kotlinx.atomicfu.atomic
  * This interface has been modified to correct nullness, adjust exceptions, and to return or produce
  * wrapper interfaces instead of the native Camera2 types.
  */
-internal interface CameraDeviceWrapper : UnsafeWrapper, AudioRestrictionController.Listener {
+internal interface CameraDeviceWrapper : UnsafeWrapper {
     /** @see [CameraDevice.getId] */
     val cameraId: CameraId
 
@@ -104,14 +103,10 @@ internal interface CameraDeviceWrapper : UnsafeWrapper, AudioRestrictionControll
 
     /** @see CameraDevice.createExtensionSession */
     @RequiresApi(Build.VERSION_CODES.S)
-    fun createExtensionSession(config: ExtensionSessionConfigData): Boolean
+    fun createExtensionSession(config: SessionConfigData): Boolean
 
     /** Invoked when the [CameraDevice] has been closed */
     fun onDeviceClosed()
-
-    /** @see CameraDevice.getCameraAudioRestriction */
-    @RequiresApi(Build.VERSION_CODES.R)
-    fun getCameraAudioRestriction(): AudioRestrictionMode
 }
 
 internal fun CameraDevice?.closeWithTrace() {
@@ -173,7 +168,7 @@ internal class AndroidCameraDevice(
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    override fun createExtensionSession(config: ExtensionSessionConfigData): Boolean {
+    override fun createExtensionSession(config: SessionConfigData): Boolean {
         checkNotNull(config.extensionStateCallback) {
             "extensionStateCallback must be set to create Extension session"
         }
@@ -199,18 +194,6 @@ internal class AndroidCameraDevice(
                         config.executor
                     ),
                 )
-
-            if (config.postviewOutputConfiguration != null &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-            ) {
-                val postviewOutput = config.postviewOutputConfiguration
-                    .unwrapAs(OutputConfiguration::class)
-                checkNotNull(postviewOutput) {
-                    "Failed to unwrap Postview OutputConfiguration"
-                }
-                Api34Compat.setPostviewOutputConfiguration(sessionConfig, postviewOutput)
-            }
-
             Api31Compat.createExtensionCaptureSession(cameraDevice, sessionConfig)
         }
         if (result == null) {
@@ -455,20 +438,6 @@ internal class AndroidCameraDevice(
         Api23Compat.createReprocessCaptureRequest(cameraDevice, inputResult)
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
-    override fun getCameraAudioRestriction(): AudioRestrictionMode {
-        return AudioRestrictionMode(
-            Api30Compat.getCameraAudioRestriction(cameraDevice)
-        )
-    }
-
-    @RequiresApi(Build.VERSION_CODES.R)
-    override fun onCameraAudioRestrictionUpdated(mode: AudioRestrictionMode) {
-        catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
-            Api30Compat.setCameraAudioRestriction(cameraDevice, mode.value)
-        }
-    }
-
     override fun onDeviceClosed() {
         val lastStateCallback = _lastStateCallback.getAndSet(null)
         lastStateCallback?.onSessionFinalized()
@@ -480,8 +449,6 @@ internal class AndroidCameraDevice(
             CameraDevice::class -> cameraDevice as T
             else -> null
         }
-
-    override fun toString(): String = "AndroidCameraDevice(camera=$cameraId)"
 }
 
 /**
@@ -592,7 +559,7 @@ internal class VirtualAndroidCameraDevice(
     }
 
     @RequiresApi(31)
-    override fun createExtensionSession(config: ExtensionSessionConfigData) = synchronized(lock) {
+    override fun createExtensionSession(config: SessionConfigData) = synchronized(lock) {
         if (disconnected) {
             Log.warn { "createExtensionSession failed: Virtual device disconnected" }
             config.extensionStateCallback!!.onSessionFinalized()
@@ -640,15 +607,5 @@ internal class VirtualAndroidCameraDevice(
 
     internal fun disconnect() = synchronized(lock) {
         disconnected = true
-    }
-
-    @RequiresApi(30)
-    override fun getCameraAudioRestriction(): AudioRestrictionMode {
-        return androidCameraDevice.getCameraAudioRestriction()
-    }
-
-    @RequiresApi(30)
-    override fun onCameraAudioRestrictionUpdated(mode: AudioRestrictionMode) {
-        androidCameraDevice.onCameraAudioRestrictionUpdated(mode)
     }
 }

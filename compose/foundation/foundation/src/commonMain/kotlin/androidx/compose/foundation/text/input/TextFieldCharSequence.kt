@@ -19,6 +19,7 @@ package androidx.compose.foundation.text.input
 import androidx.compose.foundation.text.input.internal.toCharArray
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.coerceIn
+import kotlin.jvm.JvmInline
 
 /**
  * An immutable snapshot of the contents of a [TextFieldState].
@@ -39,7 +40,8 @@ import androidx.compose.ui.text.coerceIn
 internal class TextFieldCharSequence(
     text: CharSequence = "",
     selection: TextRange = TextRange.Zero,
-    composition: TextRange? = null
+    composition: TextRange? = null,
+    highlight: Pair<TextHighlightType, TextRange>? = null
 ) : CharSequence {
 
     override val length: Int
@@ -65,6 +67,13 @@ internal class TextFieldCharSequence(
      */
     val composition: TextRange? = composition?.coerceIn(0, text.length)
 
+    /**
+     * Range of text to be highlighted. This may be used to display handwriting gesture previews
+     * from the IME.
+     */
+    val highlight: Pair<TextHighlightType, TextRange>? =
+        highlight?.copy(second = highlight.second.coerceIn(0, text.length))
+
     override operator fun get(index: Int): Char = text[index]
 
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
@@ -88,6 +97,12 @@ internal class TextFieldCharSequence(
     }
 
     /**
+     * Whether to show the cursor or selection and associated handles. When there is a handwriting
+     * gesture preview highlight, the cursor or selection should be hidden.
+     */
+    fun shouldShowSelection(): Boolean = highlight == null
+
+    /**
      * Returns true if [other] is a [TextFieldCharSequence] with the same contents, text, and composition.
      * To compare just the text, call [contentEquals].
      */
@@ -100,6 +115,7 @@ internal class TextFieldCharSequence(
 
         if (selection != other.selection) return false
         if (composition != other.composition) return false
+        if (highlight != other.highlight) return false
         if (!contentEquals(other.text)) return false
 
         return true
@@ -109,7 +125,28 @@ internal class TextFieldCharSequence(
         var result = text.hashCode()
         result = 31 * result + selection.hashCode()
         result = 31 * result + (composition?.hashCode() ?: 0)
+        result = 31 * result + highlight.hashCode()
         return result
+    }
+}
+
+/**
+ * A text range highlight type. The highlight styling depends on the type.
+ */
+@JvmInline
+internal value class TextHighlightType private constructor(private val value: Int) {
+    companion object {
+        /**
+         * A highlight which previews the text range which would be selected by an ongoing stylus
+         * handwriting select gesture.
+         */
+        val HandwritingSelectPreview = TextHighlightType(0)
+
+        /**
+         * A highlight which previews the text range which would be deleted by an ongoing stylus
+         * handwriting delete gesture.
+         */
+        val HandwritingDeletePreview = TextHighlightType(1)
     }
 }
 

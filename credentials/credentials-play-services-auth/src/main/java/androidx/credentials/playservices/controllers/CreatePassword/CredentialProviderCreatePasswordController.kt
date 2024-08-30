@@ -142,8 +142,11 @@ internal class CredentialProviderCreatePasswordController(private val context: C
 
     companion object {
         private const val TAG = "CreatePassword"
+        private var controller: CredentialProviderCreatePasswordController? = null
         /**
-         * Factory method for [CredentialProviderCreatePasswordController].
+         * This finds a past version of the
+         * [CredentialProviderCreatePasswordController] if it exists, otherwise
+         * it generates a new instance.
          *
          * @param context the calling context for this controller
          * @return a credential provider controller for CreatePasswordController
@@ -151,7 +154,10 @@ internal class CredentialProviderCreatePasswordController(private val context: C
         @JvmStatic
         fun getInstance(context: Context):
             CredentialProviderCreatePasswordController {
-                return CredentialProviderCreatePasswordController(context)
+            if (controller == null) {
+                controller = CredentialProviderCreatePasswordController(context)
+            }
+            return controller!!
         }
     }
 }

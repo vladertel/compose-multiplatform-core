@@ -20,8 +20,6 @@ package androidx.camera.camera2.pipe.compat
 
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
-import android.os.Build
 import android.util.ArrayMap
 import android.view.Surface
 import androidx.annotation.GuardedBy
@@ -42,8 +40,6 @@ import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.core.Threading.runBlockingWithTimeout
 import androidx.camera.camera2.pipe.core.Threads
 import androidx.camera.camera2.pipe.graph.StreamGraphImpl
-import androidx.camera.camera2.pipe.media.AndroidImageWriter
-import androidx.camera.camera2.pipe.media.ImageWriterWrapper
 import androidx.camera.camera2.pipe.writeParameters
 import javax.inject.Inject
 import kotlin.reflect.KClass
@@ -141,7 +137,15 @@ internal class Camera2CaptureSequenceProcessor(
 
             val requestTemplate = request.template ?: template
 
-            val requestBuilder = buildCaptureRequestBuilder(request, requestTemplate) ?: return null
+            // Create the request builder. There is a risk this will throw an exception or return
+            // null
+            // if the CameraDevice has been closed or disconnected. If this fails, indicate that the
+            // request was not submitted.
+            val requestBuilder = session.device.createCaptureRequest(requestTemplate)
+            if (requestBuilder == null) {
+                Log.info { "  Failed to create a CaptureRequest.Builder from $requestTemplate!" }
+                return null
+            }
 
             // Apply the output surfaces to the requestBuilder
             var hasSurface = false
@@ -158,39 +162,22 @@ internal class Camera2CaptureSequenceProcessor(
             // surface per request.
             check(hasSurface)
 
-            if (request.inputRequest != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                checkNotNull(imageWriter) {
-                    request.inputRequest.image.close()
-                    "Failed to create ImageWriter for capture session: $session"
-                }
+            // Apply default parameters to the builder first.
+            requestBuilder.writeParameters(defaultParameters)
 
-                Log.debug {
-                    "Queuing image ${request.inputRequest.image} for reprocessing " +
-                        "to ImageWriter $imageWriter"
-                }
-                // TODO(b/321603591): Queue image closer to when capture request is submitted
-                imageWriter.queueInputImage(request.inputRequest.image)
+            // Apply request parameters to the builder.
+            requestBuilder.writeParameters(request.parameters)
 
-                // Apply request parameters to the builder.
-                requestBuilder.writeParameters(request.parameters)
-            } else {
-                // Apply default parameters to the builder first.
-                requestBuilder.writeParameters(defaultParameters)
-
-                // Apply request parameters to the builder.
-                requestBuilder.writeParameters(request.parameters)
-
-                // Finally, write required parameters to the request builder. This will override any
-                // value that has ben previously set.
-                //
-                // TODO(sushilnath@): Implement one of the two options. (1) Apply the 3A parameters
-                // from internal 3A state machine at last and provide a flag in the Request object to
-                // specify when the clients want to explicitly override some of the 3A parameters
-                // directly. Add code to handle the flag. (2) Let clients override the 3A parameters
-                // freely and when that happens intercept those parameters from the request and keep the
-                // internal 3A state machine in sync.
-                requestBuilder.writeParameters(requiredParameters)
-            }
+            // Finally, write required parameters to the request builder. This will override any
+            // value that has ben previously set.
+            //
+            // TODO(sushilnath@): Implement one of the two options. (1) Apply the 3A parameters
+            // from internal 3A state machine at last and provide a flag in the Request object to
+            // specify when the clients want to explicitly override some of the 3A parameters
+            // directly. Add code to handle the flag. (2) Let clients override the 3A parameters
+            // freely and when that happens intercept those parameters from the request and keep the
+            // internal 3A state machine in sync.
+            requestBuilder.writeParameters(requiredParameters)
 
             // The tag must be set for every request. We use it to lookup listeners for the
             // individual requests so that each request can specify individual listeners.
@@ -204,12 +191,11 @@ internal class Camera2CaptureSequenceProcessor(
             if (session is CameraConstrainedHighSpeedCaptureSessionWrapper) {
                 val highSpeedRequestList = session.createHighSpeedRequestList(captureRequest)
 
-                // Check if video stream use case or hint is present
+                // Check if video stream use case is present
                 val containsVideoStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD ||
-                                it.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
+                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
                         }
                     }
 
@@ -311,9 +297,6 @@ internal class Camera2CaptureSequenceProcessor(
     }
 
     override fun close() = synchronized(lock) {
-        if (closed) {
-            return@synchronized
-        }
         // Close should not shut down
         Debug.trace("$this#close") {
             if (shouldWaitForRepeatingRequest) {
@@ -331,38 +314,13 @@ internal class Camera2CaptureSequenceProcessor(
                     ) { it.awaitStarted() }
                 }
             }
-            imageWriter?.close()
-            session.inputSurface?.release()
             closed = true
         }
     }
 
     override fun toString(): String {
-        return "Camera2CaptureSequenceProcessor-$debugId"
+        return "Camera2RequestProcessor-$debugId"
     }
-
-    /** The [ImageWriterWrapper] is created once per capture session when the capture
-     * session is created, assuming it's a reprocessing session.
-     */
-    private val imageWriter =
-        if (streamGraph.inputs.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val inputStream = streamGraph.inputs.first()
-            val sessionInputSurface = session.inputSurface
-            checkNotNull(sessionInputSurface) {
-                "inputSurface is required to create instance of imageWriter."
-            }
-            val androidImageWriter = AndroidImageWriter.create(
-                sessionInputSurface,
-                inputStream.id,
-                inputStream.maxImages,
-                inputStream.format,
-                threads.camera2Handler
-            )
-            Log.debug { "Created ImageWriter $androidImageWriter for session $session" }
-            androidImageWriter
-        } else {
-            null
-        }
 
     private fun validateRequestList(
         requests: List<Request>,
@@ -387,21 +345,19 @@ internal class Camera2CaptureSequenceProcessor(
                 containsPreviewStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.PREVIEW ||
-                                it.streamUseHint == OutputStream.StreamUseHint.DEFAULT ||
-                                it.streamUseHint == null
+                            it.streamUseCase == OutputStream.StreamUseCase.PREVIEW
                         }
                     }
 
-                // Check if all high speed requests have preview use case or hint
+                // Check if all high speed requests have the same preview use case
                 if (prevContainsPreviewStream != null) {
                     if (prevContainsPreviewStream != containsPreviewStream) {
                         Log.error {
                             "The previous high speed request and the current high speed request " +
-                                "must both have a preview stream use case or hint. " +
-                                "Previous request contains preview stream use case or hint: " +
-                                "$prevContainsPreviewStream. Current request contains " +
-                                "preview stream use case or hint: $containsPreviewStream."
+                                "do not have the same preview stream use case. Previous request " +
+                                "contains preview stream use case: $prevContainsPreviewStream. " +
+                                "Current request contains preview stream use " +
+                                "case: $containsPreviewStream."
                         }
                     }
                 }
@@ -410,8 +366,7 @@ internal class Camera2CaptureSequenceProcessor(
                 containsVideoStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD ||
-                                it.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
+                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
                         }
                     }
 
@@ -421,22 +376,17 @@ internal class Camera2CaptureSequenceProcessor(
                         Log.error {
                             "The previous high speed request and the current high speed request " +
                                 "do not have the same video stream use case. Previous request " +
-                                "contains video stream use case: $prevContainsVideoStream. " +
+                                "contains video stream use case: $prevContainsPreviewStream. " +
                                 "Current request contains video stream use case" +
-                                ": $containsVideoStream."
+                                ": $containsPreviewStream."
                         }
                     }
                 }
 
-                // Streams must be preview and/or video for high speed sessions
-                val allStreamsValidForHighSpeedOperatingMode = this.streamGraph.outputs.all {
-                    it.isValidForHighSpeedOperatingMode()
-                }
-
-                if (!allStreamsValidForHighSpeedOperatingMode) {
+                if (!containsPreviewStream && !containsVideoStream) {
                     Log.error {
-                        "HIGH_SPEED CameraGraph must only contain Preview and/or Video " +
-                            "streams. Configured outputs are ${streamGraph.outputs}"
+                        "Preview and/or Video stream use cases must be " +
+                            "present for high speed sessions."
                     }
                     return false
                 }
@@ -466,13 +416,15 @@ internal class Camera2CaptureSequenceProcessor(
 
                 val surface = surfaceMap[stream]
                 if (surface != null) {
+                    Log.debug { "  Binding $stream to $surface" }
+
                     // TODO(codelogic) There should be a more efficient way to do these lookups than
                     // having two maps.
                     surfaceToStreamMap[surface] = stream
                     streamToSurfaceMap[stream] = surface
                     hasSurface = true
                 } else if (REQUIRE_SURFACE_FOR_ALL_STREAMS) {
-                    Log.info { "  Failed to bind surface for $stream" }
+                    Log.info { "  Failed to bind surface to $stream" }
 
                     // If requireStreams is set we are required to map every stream to a valid
                     // Surface object for this request. If this condition is violated, then we
@@ -495,49 +447,6 @@ internal class Camera2CaptureSequenceProcessor(
             check(hasSurface)
         }
         return true
-    }
-
-    /**
-     * Create a reprocessing request builder if the request is a reprocessing request.
-     * Otherwise, create a regular request builder. There is a risk this will throw an
-     * exception or return null if the CameraDevice has been closed or disconnected.
-     * If this fails, indicate that the request was not submitted.
-     */
-    private fun buildCaptureRequestBuilder(
-        request: Request,
-        requestTemplate: RequestTemplate
-    ): CaptureRequest.Builder? {
-        val requestBuilder = if (request.inputRequest != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val totalCaptureResult =
-                    request.inputRequest.frameInfo.unwrapAs(TotalCaptureResult::class)
-                checkNotNull(totalCaptureResult) {
-                    "Failed to unwrap FrameInfo ${request.inputRequest.frameInfo} as " +
-                        "TotalCaptureResult"
-                }
-                session.device.createReprocessCaptureRequest(totalCaptureResult)
-            } else {
-                null
-            }
-        } else {
-            session.device.createCaptureRequest(requestTemplate)
-        }
-
-        if (requestBuilder == null) {
-            if (request.inputRequest != null) {
-                Log.info {
-                    "Failed to create a ReprocessingCaptureRequest.Builder " +
-                        "from ${request.inputRequest.frameInfo}!"
-                }
-            } else {
-                Log.info {
-                    "Failed to create a CaptureRequest.Builder " +
-                        "from $requestTemplate!"
-                }
-            }
-            return null
-        }
-        return requestBuilder
     }
 
     companion object {

@@ -20,32 +20,41 @@ import org.jetbrains.skia.Rect as SkRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.text.platform.SkiaParagraphIntrinsics
 import androidx.compose.ui.text.platform.cursorHorizontalPosition
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.ResolvedTextDirection
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.isUnspecified
 import kotlin.math.floor
-import kotlin.math.roundToInt
 import org.jetbrains.skia.FontMetrics
 import org.jetbrains.skia.IRange
-import org.jetbrains.skia.paragraph.*
+import org.jetbrains.skia.paragraph.Direction
+import org.jetbrains.skia.paragraph.LineMetrics
+import org.jetbrains.skia.paragraph.RectHeightMode
+import org.jetbrains.skia.paragraph.RectWidthMode
+import org.jetbrains.skia.paragraph.TextBox
 
 internal class SkiaParagraph(
-    intrinsics: ParagraphIntrinsics,
+    private val paragraphIntrinsics: SkiaParagraphIntrinsics,
     val maxLines: Int,
-    val ellipsis: Boolean,
+    ellipsis: Boolean,
     val constraints: Constraints
 ) : Paragraph {
 
     private val ellipsisChar = if (ellipsis) "\u2026" else ""
-
-    private val paragraphIntrinsics = intrinsics as SkiaParagraphIntrinsics
 
     private val layouter = paragraphIntrinsics.layouter().apply {
         setParagraphStyle(
@@ -70,6 +79,12 @@ internal class SkiaParagraph(
         }
 
     init {
+        // Size is not known until layout is complete but to apply it, we need to re-create
+        // skia's paragraph :'(
+        // layouter might use cached instance if no [ShaderBrush] was applied.
+        layouter.setBrushSize(Size(width, height))
+        paragraph = layouter.layoutParagraph(width)
+
         paragraph.layout(width)
     }
 
@@ -176,14 +191,14 @@ internal class SkiaParagraph(
             floor((line.baseline + line.descent).toFloat())
         } ?: 0f
 
-    internal fun getLineAscent(lineIndex: Int): Int =
-        -(lineMetrics.getOrNull(lineIndex)?.ascent?.roundToInt() ?: 0)
+    internal fun getLineAscent(lineIndex: Int): Float =
+        -(lineMetrics.getOrNull(lineIndex)?.ascent?.toFloat() ?: 0f)
 
     override fun getLineBaseline(lineIndex: Int): Float =
         lineMetrics.getOrNull(lineIndex)?.baseline?.toFloat() ?: 0f
 
-    internal fun getLineDescent(lineIndex: Int): Int =
-        lineMetrics.getOrNull(lineIndex)?.descent?.roundToInt() ?: 0
+    internal fun getLineDescent(lineIndex: Int): Float =
+        lineMetrics.getOrNull(lineIndex)?.descent?.toFloat() ?: 0f
 
     private fun lineMetricsForOffset(offset: Int): LineMetrics? {
         checkOffsetIsValid(offset)
@@ -241,7 +256,7 @@ internal class SkiaParagraph(
         val isRtl = paragraphIntrinsics.textDirection == ResolvedTextDirection.Rtl
         val isLtr = !isRtl
         return when {
-            prevBox == null && nextBox == null -> if (isRtl) width else 0f
+            prevBox == null && nextBox == null -> getAlignedStartingPosition(isRtl)
             prevBox == null -> nextBox!!.cursorHorizontalPosition(true)
             nextBox == null -> prevBox.cursorHorizontalPosition()
             nextBox.direction == prevBox.direction -> nextBox.cursorHorizontalPosition(true)
@@ -253,6 +268,16 @@ internal class SkiaParagraph(
             else -> nextBox.cursorHorizontalPosition(true)
         }
     }
+
+    private fun getAlignedStartingPosition(isRtl: Boolean): Float =
+        when (layouter.textStyle.textAlign) {
+            TextAlign.Left -> 0f
+            TextAlign.Right -> width
+            TextAlign.Center -> width / 2
+            TextAlign.Start -> if (isRtl) width else 0f
+            TextAlign.End -> if (isRtl) 0f else width
+            else -> 0f
+        }
 
     private var _lineMetrics: Array<LineMetrics>? = null
     private val lineMetrics: Array<LineMetrics>
@@ -322,7 +347,7 @@ internal class SkiaParagraph(
                         // _________________abc   <- '\n' new line here
                         // ___________________|   <- cursor is in the end of the next line
 
-                        // if '\n' is not the last, then the box should be be aligned to the left of the following box:
+                        // if '\n' is not the last, then the box should be aligned to the left of the following box:
                         // _________________abc   <- '\n' new line here
                         // _________________|qw   <- cursor is before the box ('q') following the new line
 
@@ -391,7 +416,7 @@ internal class SkiaParagraph(
         }
 
         val rects = if (isNotEmptyLine) {
-            // expectedLine width doesn't include whitespaces. Therefore we look at the Rectangle representing the line
+            // expectedLine width doesn't include whitespaces. Therefore, we look at the Rectangle representing the line
             paragraph.getRectsForRange(
                 start = expectedLine.startIndex,
                 end = if (expectedLine.isHardBreak) expectedLine.endIndex else expectedLine.endIndex - 1,
@@ -485,8 +510,8 @@ internal class SkiaParagraph(
         textDecoration: TextDecoration?
     ) {
         paragraph = with(layouter) {
+            setColor(color)
             setTextStyle(
-                color = color,
                 shadow = shadow,
                 textDecoration = textDecoration
             )
@@ -507,8 +532,8 @@ internal class SkiaParagraph(
         blendMode: BlendMode
     ) {
         paragraph = with(layouter) {
+            setColor(color)
             setTextStyle(
-                color = color,
                 shadow = shadow,
                 textDecoration = textDecoration
             )
@@ -532,12 +557,14 @@ internal class SkiaParagraph(
         blendMode: BlendMode
     ) {
         paragraph = with(layouter) {
-            setTextStyle(
+            setBrush(
                 brush = brush,
                 brushSize = Size(width, height),
                 alpha = alpha,
+            )
+            setTextStyle(
                 shadow = shadow,
-                textDecoration = textDecoration
+                textDecoration = textDecoration,
             )
             setDrawStyle(drawStyle)
             setBlendMode(blendMode)

@@ -596,6 +596,48 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
     }
 
     @Test
+    fun moveItemToTheTop_itemWithMoreChildren_outsideBounds_shouldNotCrash() {
+        var list by mutableStateOf(listOf(0, 1, 2, 3, 4, 5))
+        val listSize = itemSize * 3
+        val listSizeDp = with(rule.density) { listSize.toDp() }
+        rule.setContent {
+            LazyList(
+                maxSize = listSizeDp,
+                startIndex = 3
+            ) {
+                items(list, key = { it }) {
+                    Item(it)
+                    if (it != list.last()) {
+                        Box(modifier = Modifier)
+                    }
+                }
+            }
+        }
+
+        assertPositions(
+            3 to 0f,
+            4 to itemSize,
+            5 to itemSize * 2
+        )
+
+        // move item 5 out of bounds
+        rule.runOnUiThread {
+            list = listOf(5, 0, 1, 2, 3, 4)
+        }
+
+        // should not crash
+        onAnimationFrame { fraction ->
+            if (fraction == 1.0f) {
+                assertPositions(
+                    2 to 0f,
+                    3 to itemSize,
+                    4 to itemSize * 2
+                )
+            }
+        }
+    }
+
+    @Test
     fun moveItemToTheBottomOutsideOfBounds_withSpacing() {
         var list by mutableStateOf(listOf(0, 1, 2, 3, 4, 5))
         val listSize = itemSize * 3 + spacing * 2
@@ -621,24 +663,26 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
             list = listOf(0, 4, 2, 3, 1, 5)
         }
 
+        val afterLastVisibleItem = itemSize * 3 + spacing * 3
+
         onAnimationFrame { fraction ->
             // item 1 moves to and item 4 moves from `listSize`, right after the end edge
             val item1Offset = if (isInLookaheadScope) {
                 itemSizePlusSpacing + 2 * itemSizePlusSpacing * fraction
             } else
-                itemSizePlusSpacing + (listSize - itemSizePlusSpacing) * fraction
+                itemSizePlusSpacing + (afterLastVisibleItem - itemSizePlusSpacing) * fraction
             val item4Offset =
-                listSize - (listSize - itemSizePlusSpacing) * fraction
-            val screenSize = itemSize * 3 + spacing * 2
+                afterLastVisibleItem - (afterLastVisibleItem - itemSizePlusSpacing) * fraction
+
             val expected = mutableListOf<Pair<Any, Float>>().apply {
                 add(0 to 0f)
-                if (item1Offset < screenSize) {
+                if (item1Offset < afterLastVisibleItem) {
                     add(1 to item1Offset)
                 } else {
                     rule.onNodeWithTag("1").assertIsNotDisplayed()
                 }
                 add(2 to itemSizePlusSpacing * 2)
-                if (item4Offset < screenSize) {
+                if (item4Offset < afterLastVisibleItem) {
                     add(4 to item4Offset)
                 } else {
                     rule.onNodeWithTag("4").assertIsNotDisplayed()
@@ -786,19 +830,21 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
         rule.runOnUiThread {
             list = listOf(0, 4, 2, 3, 1, 5)
         }
-
+        val afterLastVisibleItem = itemSize2 + itemSize3 + itemSize
         onAnimationFrame { fraction ->
-            // item 1 moves from and item 4 moves to `listSize`, right after the end edge
-            val startItem4Offset = listSize
-            val endItem1Offset = listSize
+            val startItem4Offset = afterLastVisibleItem
+            val endItem1Offset = afterLastVisibleItem
+
             val item4Size = itemSize3
-            val item1Offset =
+            val item1Offset = if (isInLookaheadScope) {
+                item0Size + (item4Size + itemSize) * fraction
+            } else {
                 item0Size + (endItem1Offset - item0Size) * fraction
-            val item4Offset =
-                startItem4Offset - (startItem4Offset - item0Size) * fraction
+            }
+            val item4Offset = startItem4Offset - (startItem4Offset - item0Size) * fraction
             val expected = mutableListOf<Pair<Any, Float>>().apply {
                 add(0 to 0f)
-                if (item1Offset < listSize) {
+                if (item1Offset < afterLastVisibleItem) {
                     add(1 to item1Offset)
                 } else {
                     rule.onNodeWithTag("1").assertIsNotDisplayed()
@@ -992,6 +1038,50 @@ class LazyListAnimateItemPlacementTest(private val config: Config) {
             assertPositions(
                 0 to startPadding,
                 1 to startPadding + itemSize + itemSize * 3 * fraction,
+                2 to startPadding + itemSize * 2 - itemSize * fraction,
+                3 to startPadding + itemSize * 3 - itemSize * fraction,
+                4 to startPadding + itemSize * 4 - itemSize * fraction,
+                fraction = fraction
+            )
+        }
+    }
+
+    @Test
+    fun removingItemsCauseOutOfBoundsItemToPopUp_withContentPadding() {
+        var list by mutableStateOf(listOf(0, 1, 2, 3, 4))
+        val rawStartPadding = 8f
+        val rawEndPadding = 12f
+        val (startPaddingDp, endPaddingDp) = with(rule.density) {
+            rawStartPadding.toDp() to rawEndPadding.toDp()
+        }
+        rule.setContent {
+            // only 4 items will be visible 0, 1, 2, 3
+            LazyList(
+                maxSize = itemSizeDp * 4,
+                startPadding = startPaddingDp,
+                endPadding = endPaddingDp
+            ) {
+                items(list, key = { it }) {
+                    Item(it)
+                }
+            }
+        }
+
+        val startPadding = if (reverseLayout) rawEndPadding else rawStartPadding
+        assertPositions(
+            0 to startPadding,
+            1 to startPadding + itemSize,
+            2 to startPadding + itemSize * 2,
+            3 to startPadding + itemSize * 3
+        )
+
+        rule.runOnUiThread {
+            list = listOf(1, 2, 3, 4)
+        }
+
+        onAnimationFrame { fraction ->
+            assertPositions(
+                1 to startPadding + itemSize - itemSize * fraction,
                 2 to startPadding + itemSize * 2 - itemSize * fraction,
                 3 to startPadding + itemSize * 3 - itemSize * fraction,
                 4 to startPadding + itemSize * 4 - itemSize * fraction,

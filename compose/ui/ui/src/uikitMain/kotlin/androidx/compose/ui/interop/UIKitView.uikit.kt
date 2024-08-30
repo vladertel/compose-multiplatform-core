@@ -17,72 +17,26 @@
 package androidx.compose.ui.interop
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateObserver
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.InteropViewCatchPointerModifier
-import androidx.compose.ui.layout.EmptyLayout
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.AccessibilityKey
-import androidx.compose.ui.semantics.SemanticsPropertyReceiver
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.uikit.toUIColor
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.asCGRect
-import androidx.compose.ui.unit.height
-import androidx.compose.ui.unit.round
-import androidx.compose.ui.unit.toDpRect
-import androidx.compose.ui.unit.toRect
-import androidx.compose.ui.unit.width
-import kotlinx.atomicfu.atomic
+import androidx.compose.ui.viewinterop.NoOp
+import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
+import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import kotlinx.cinterop.CValue
 import platform.CoreGraphics.CGRect
-import platform.CoreGraphics.CGRectMake
-import platform.Foundation.NSThread
 import platform.UIKit.UIView
 import platform.UIKit.UIViewController
-import platform.UIKit.addChildViewController
-import platform.UIKit.didMoveToParentViewController
-import platform.UIKit.removeFromParentViewController
-import platform.UIKit.willMoveToParentViewController
-import androidx.compose.ui.uikit.utils.CMPInteropWrappingView
-import kotlinx.cinterop.readValue
-import platform.CoreGraphics.CGRectZero
+import androidx.compose.ui.viewinterop.UIKitView as UIKitView2
+import androidx.compose.ui.viewinterop.UIKitViewController as UIKitViewController2
+import androidx.compose.ui.semantics.semantics
 
-private val STUB_CALLBACK_WITH_RECEIVER: Any.() -> Unit = {}
 private val DefaultViewResize: UIView.(CValue<CGRect>) -> Unit = { rect -> this.setFrame(rect) }
-private val DefaultViewControllerResize: UIViewController.(CValue<CGRect>) -> Unit = { rect -> this.view.setFrame(rect) }
-
-internal class InteropWrappingView: CMPInteropWrappingView(frame = CGRectZero.readValue()) {
-    var actualAccessibilityContainer: Any? = null
-
-    override fun accessibilityContainer(): Any? {
-        return actualAccessibilityContainer
-    }
-}
-
-internal val NativeViewSemanticsKey = AccessibilityKey<InteropWrappingView>(
-    name = "InteropView",
-    mergePolicy = { _, _ ->
-        throw IllegalStateException(
-            "Can't merge NativeView semantics property."
-        )
-    }
-)
-
-private var SemanticsPropertyReceiver.nativeView by NativeViewSemanticsKey
+private val DefaultViewControllerResize: UIViewController.(CValue<CGRect>) -> Unit =
+    { rect -> this.view.setFrame(rect) }
 
 /**
  * @param factory The block creating the [UIView] to be composed.
@@ -95,92 +49,73 @@ private var SemanticsPropertyReceiver.nativeView by NativeViewSemanticsKey
  * View should be freed at this time.
  * @param onResize May be used to custom resize logic.
  * @param interactive If true, then user touches will be passed to this UIView
+ * @param accessibilityEnabled If `true`, then the view will be visible to accessibility services.
+ *
+ * If this Composable is within a modifier chain that merges
+ * the semantics of its children (such as `Modifier.clickable`), the merged subtree data will be ignored in favor of
+ * the native UIAccessibility resolution for the view constructed by [factory]. For example, `Button` containing [UIKitView]
+ * will be invisible for accessibility services, only the [UIView] created by [factory] will be accessible.
+ * To avoid this behavior, set [accessibilityEnabled] to `false` and use custom [Modifier.semantics] for `Button` to
+ * make the information associated with this view accessible.
+ *
+ * If there are multiple [UIKitView] or [UIKitViewController] with [accessibilityEnabled] set to `true` in the merged tree, only the first one will be accessible.
+ * Consider using a single [UIKitView] or [UIKitViewController] with multiple views inside it if you need multiple accessible views.
+ *
+ * In general, [accessibilityEnabled] set to `true` is not recommended to use in such cases.
+ * Consider using [Modifier.semantics] on Composable that merges its semantics instead.
+ *
+ * @see Modifier.semantics
  */
+@Deprecated(
+    message = "This function was deprecated in favor of newer API",
+    replaceWith = ReplaceWith("UIKitView(factory = factory, modifier = modifier, update = update, onRelease = onRelease, properties = UIKitInteropProperties(isInteractive = interactive, isNativeAccessibilityEnabled = accessibilityEnabled))",
+        "androidx.compose.ui.viewinterop.UIKitView", "androidx.compose.ui.viewinterop.UIKitInteropProperties")
+)
 @Composable
 fun <T : UIView> UIKitView(
     factory: () -> T,
     modifier: Modifier,
-    update: (T) -> Unit = STUB_CALLBACK_WITH_RECEIVER,
+    update: (T) -> Unit = NoOp,
     background: Color = Color.Unspecified,
-    onRelease: (T) -> Unit = STUB_CALLBACK_WITH_RECEIVER,
+    onRelease: (T) -> Unit = NoOp,
     onResize: (view: T, rect: CValue<CGRect>) -> Unit = DefaultViewResize,
     interactive: Boolean = true,
+    accessibilityEnabled: Boolean = true
 ) {
-    // TODO: adapt UIKitView to reuse inside LazyColumn like in AndroidView:
-    //  https://developer.android.com/reference/kotlin/androidx/compose/ui/viewinterop/package-summary#AndroidView(kotlin.Function1,kotlin.Function1,androidx.compose.ui.Modifier,kotlin.Function1,kotlin.Function1)
-    val interopContainer = LocalUIKitInteropContainer.current
-    val embeddedInteropComponent = remember {
-        EmbeddedInteropView(
-            interopContainer = interopContainer,
-            onRelease
+    // Despite the name, onResize actually contains the logic for default resizing strategy.
+    // Since this strategy is already implied, changes to this argument can't be processed in a
+    // sane manner
+    if (onResize != DefaultViewResize) {
+        println("WARNING: custom `onResize` is not supported in deprecated [UIKitView], it will do nothing. If you need to perform changes based on latest calculated size - override `UIView.layoutSubviews`")
+    }
+
+    val backgroundColor by remember(background) { mutableStateOf(background.toUIColor()) }
+
+    val interactionMode =
+        if (interactive) {
+            UIKitInteropInteractionMode.Cooperative()
+        } else {
+            null
+        }
+
+    val updateWithBackground = { it: T ->
+        backgroundColor?.let { color ->
+            it.backgroundColor = color
+        }
+        update(it)
+    }
+
+    UIKitView2(
+        factory,
+        modifier,
+        update = updateWithBackground,
+        onRelease,
+        onReset = null,
+        properties = UIKitInteropProperties(
+            interactionMode = interactionMode,
+            isNativeAccessibilityEnabled = accessibilityEnabled
         )
-    }
-    val density = LocalDensity.current
-    var rectInPixels by remember { mutableStateOf(IntRect(0, 0, 0, 0)) }
-    var localToWindowOffset: IntOffset by remember { mutableStateOf(IntOffset.Zero) }
-    val interopContext = LocalUIKitInteropContext.current
-
-    EmptyLayout(
-        modifier.onGloballyPositioned { coordinates ->
-            localToWindowOffset = coordinates.positionInRoot().round()
-            val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
-            if (rectInPixels != newRectInPixels) {
-                val rect = newRectInPixels.toRect().toDpRect(density)
-
-                interopContext.deferAction {
-                    embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
-                }
-
-                if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    interopContext.deferAction {
-                        onResize(
-                            embeddedInteropComponent.component,
-                            CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
-                        )
-                    }
-                }
-                rectInPixels = newRectInPixels
-            }
-        }.drawBehind {
-            // Clear interop area to make visible the component under our canvas.
-            drawRect(Color.Transparent, blendMode = BlendMode.Clear)
-        }.trackUIKitInterop(embeddedInteropComponent.wrappingView).let {
-            if (interactive) {
-                it.then(InteropViewCatchPointerModifier())
-            } else {
-                it
-            }
-        }.semantics {
-            nativeView = embeddedInteropComponent.wrappingView
-        }
     )
-
-    DisposableEffect(Unit) {
-        embeddedInteropComponent.component = factory()
-        embeddedInteropComponent.updater = Updater(embeddedInteropComponent.component, update) {
-            interopContext.deferAction(action = it)
-        }
-
-        interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_ADDED) {
-            embeddedInteropComponent.addToHierarchy()
-        }
-
-        onDispose {
-            interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_REMOVED) {
-                embeddedInteropComponent.removeFromHierarchy()
-            }
-        }
-    }
-
-    LaunchedEffect(background) {
-        interopContext.deferAction {
-            embeddedInteropComponent.setBackgroundColor(background)
-        }
-    }
-
-    SideEffect {
-        embeddedInteropComponent.updater.update = update
-    }
 }
 
 /**
@@ -194,212 +129,73 @@ fun <T : UIView> UIKitView(
  * view controller should be freed at this time.
  * @param onResize May be used to custom resize logic.
  * @param interactive If true, then user touches will be passed to this UIViewController
+ * @param accessibilityEnabled If `true`, then the [UIViewController.view] will be visible to accessibility services.
+ *
+ * If this Composable is within a modifier chain that merges the semantics of its children (such as `Modifier.clickable`),
+ * the merged subtree data will be ignored in favor of
+ * the native UIAccessibility resolution for the [UIViewController.view] of [UIViewController] constructed by [factory].
+ * For example, `Button` containing [UIKitViewController] will be invisible for accessibility services,
+ * only the [UIViewController.view] of [UIViewController] created by [factory] will be accessible.
+ * To avoid this behavior, set [accessibilityEnabled] to `false` and use custom [Modifier.semantics] for `Button` to
+ * make the information associated with the [UIViewController] accessible.
+ *
+ * If there are multiple [UIKitView] or [UIKitViewController] with [accessibilityEnabled] set to `true` in the merged tree,
+ * only the first one will be accessible.
+ * Consider using a single [UIKitView] or [UIKitViewController] with multiple views inside it if you need multiple accessible views.
+ *
+ * In general, [accessibilityEnabled] set to `true` is not recommended to use in such cases.
+ * Consider using [Modifier.semantics] on Composable that merges its semantics instead.
+ *
+ * @see Modifier.semantics
  */
+@Deprecated(
+    message = "This function was deprecated in favor of newer API",
+    replaceWith = ReplaceWith("UIKitViewController(factory = factory, modifier = modifier, update = update, onRelease = onRelease, properties = UIKitInteropProperties(isInteractive = interactive, isNativeAccessibilityEnabled = accessibilityEnabled))",
+        "androidx.compose.ui.viewinterop.UIKitViewController", "androidx.compose.ui.viewinterop.UIKitInteropProperties")
+)
 @Composable
 fun <T : UIViewController> UIKitViewController(
     factory: () -> T,
     modifier: Modifier,
-    update: (T) -> Unit = STUB_CALLBACK_WITH_RECEIVER,
+    update: (T) -> Unit = NoOp,
     background: Color = Color.Unspecified,
-    onRelease: (T) -> Unit = STUB_CALLBACK_WITH_RECEIVER,
+    onRelease: (T) -> Unit = NoOp,
     onResize: (viewController: T, rect: CValue<CGRect>) -> Unit = DefaultViewControllerResize,
     interactive: Boolean = true,
+    accessibilityEnabled: Boolean = true
 ) {
-    // TODO: adapt UIKitViewController to reuse inside LazyColumn like in AndroidView:
-    //  https://developer.android.com/reference/kotlin/androidx/compose/ui/viewinterop/package-summary#AndroidView(kotlin.Function1,kotlin.Function1,androidx.compose.ui.Modifier,kotlin.Function1,kotlin.Function1)
-    val interopContainer = LocalUIKitInteropContainer.current
-    val rootViewController = LocalUIViewController.current
-    val embeddedInteropComponent = remember {
-        EmbeddedInteropViewController(
-            interopContainer = interopContainer,
-            rootViewController = rootViewController,
-            onRelease = onRelease
-        )
+    // Despite the name, onResize actually contains the logic for default resizing strategy.
+    // Since this strategy is already implied, changes to this argument can't be processed in a
+    // sane manner
+    if (onResize != DefaultViewControllerResize) {
+        println("WARNING: custom `onResize` is not supported in deprecated [UIKitViewController], it will do nothing. If you need to perform changes based on latest calculated size - override `UIViewController.viewDidLayoutSubviews`")
     }
 
-    val density = LocalDensity.current
-    var rectInPixels by remember { mutableStateOf(IntRect(0, 0, 0, 0)) }
-    var localToWindowOffset: IntOffset by remember { mutableStateOf(IntOffset.Zero) }
-    val interopContext = LocalUIKitInteropContext.current
+    val backgroundColor by remember(background) { mutableStateOf(background.toUIColor()) }
 
-    EmptyLayout(
-        modifier.onGloballyPositioned { coordinates ->
-            localToWindowOffset = coordinates.positionInRoot().round()
-            val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
-            if (rectInPixels != newRectInPixels) {
-                val rect = newRectInPixels.toRect().toDpRect(density)
-
-                interopContext.deferAction {
-                    embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
-                }
-
-                if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    interopContext.deferAction {
-                        onResize(
-                            embeddedInteropComponent.component,
-                            CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
-                        )
-                    }
-                }
-                rectInPixels = newRectInPixels
-            }
-        }.drawBehind {
-            // Clear interop area to make visible the component under our canvas.
-            drawRect(Color.Transparent, blendMode = BlendMode.Clear)
-        }.trackUIKitInterop(embeddedInteropComponent.wrappingView).let {
-            if (interactive) {
-                it.then(InteropViewCatchPointerModifier())
-            } else {
-                it
-            }
-        }.semantics {
-            nativeView = embeddedInteropComponent.wrappingView
-        }
-    )
-
-    DisposableEffect(Unit) {
-        embeddedInteropComponent.component = factory()
-        embeddedInteropComponent.updater = Updater(embeddedInteropComponent.component, update) {
-            interopContext.deferAction(action = it)
-        }
-
-        interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_ADDED) {
-            embeddedInteropComponent.addToHierarchy()
-        }
-
-        onDispose {
-            interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_REMOVED) {
-                embeddedInteropComponent.removeFromHierarchy()
-            }
-        }
-    }
-
-    LaunchedEffect(background) {
-        interopContext.deferAction {
-            embeddedInteropComponent.setBackgroundColor(background)
-        }
-    }
-
-    SideEffect {
-        embeddedInteropComponent.updater.update = update
-    }
-}
-
-private abstract class EmbeddedInteropComponent<T : Any>(
-    val interopContainer: UIKitInteropContainer,
-    val onRelease: (T) -> Unit
-) {
-    val wrappingView = InteropWrappingView()
-    lateinit var component: T
-    lateinit var updater: Updater<T>
-
-    fun setBackgroundColor(color: Color) {
-        if (color == Color.Unspecified) {
-            wrappingView.backgroundColor = interopContainer.containerView.backgroundColor
+    val interactionMode =
+        if (interactive) {
+            UIKitInteropInteractionMode.Cooperative()
         } else {
-            wrappingView.backgroundColor = color.toUIColor()
-        }
-    }
-
-    abstract fun addToHierarchy()
-    abstract fun removeFromHierarchy()
-
-    protected fun addViewToHierarchy(view: UIView) {
-        wrappingView.addSubview(view)
-        interopContainer.addInteropView(wrappingView)
-    }
-
-    protected fun removeViewFromHierarchy(view: UIView) {
-        view.removeFromSuperview()
-        interopContainer.removeInteropView(wrappingView)
-        updater.dispose()
-        onRelease(component)
-    }
-}
-
-private class EmbeddedInteropView<T : UIView>(
-    interopContainer: UIKitInteropContainer,
-    onRelease: (T) -> Unit
-) : EmbeddedInteropComponent<T>(interopContainer, onRelease) {
-    override fun addToHierarchy() {
-        addViewToHierarchy(component)
-    }
-
-    override fun removeFromHierarchy() {
-        removeViewFromHierarchy(component)
-    }
-}
-
-private class EmbeddedInteropViewController<T : UIViewController>(
-    interopContainer: UIKitInteropContainer,
-    private val rootViewController: UIViewController,
-    onRelease: (T) -> Unit
-) : EmbeddedInteropComponent<T>(interopContainer, onRelease) {
-    override fun addToHierarchy() {
-        rootViewController.addChildViewController(component)
-        addViewToHierarchy(component.view)
-        component.didMoveToParentViewController(rootViewController)
-    }
-
-    override fun removeFromHierarchy() {
-        component.willMoveToParentViewController(null)
-        removeViewFromHierarchy(component.view)
-        component.removeFromParentViewController()
-    }
-}
-
-private class Updater<T : Any>(
-    private val component: T,
-    update: (T) -> Unit,
-
-    /**
-     * Updater will not execute the [update] method by itself, but will pass it to this lambda
-     */
-    private val deferAction: (() -> Unit) -> Unit,
-) {
-    private var isDisposed = false
-    private val isUpdateScheduled = atomic(false)
-    private val snapshotObserver = SnapshotStateObserver { command ->
-        command()
-    }
-
-    private val scheduleUpdate = { _: T ->
-        if (!isUpdateScheduled.getAndSet(true)) {
-            deferAction {
-                check(NSThread.isMainThread)
-
-                isUpdateScheduled.value = false
-                if (!isDisposed) {
-                    performUpdate()
-                }
-            }
-        }
-    }
-
-    var update: (T) -> Unit = update
-        set(value) {
-            if (field != value) {
-                field = value
-                performUpdate()
-            }
+            null
         }
 
-    private fun performUpdate() {
-        // don't replace scheduleUpdate by lambda reference,
-        // scheduleUpdate should always be the same instance
-        snapshotObserver.observeReads(component, scheduleUpdate) {
-            update(component)
+    val updateWithBackground = { it: T ->
+        backgroundColor?.let { color ->
+            it.view.backgroundColor = color
         }
+        update(it)
     }
 
-    init {
-        snapshotObserver.start()
-        performUpdate()
-    }
-
-    fun dispose() {
-        snapshotObserver.stop()
-        snapshotObserver.clear()
-        isDisposed = true
-    }
+    UIKitViewController2(
+        factory,
+        modifier,
+        update = updateWithBackground,
+        onRelease,
+        onReset = null,
+        properties = UIKitInteropProperties(
+            interactionMode = interactionMode,
+            isNativeAccessibilityEnabled = accessibilityEnabled
+        )
+    )
 }

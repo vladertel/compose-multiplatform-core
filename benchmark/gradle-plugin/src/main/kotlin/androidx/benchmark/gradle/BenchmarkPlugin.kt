@@ -133,10 +133,10 @@ class BenchmarkPlugin : Plugin<Project> {
             )
         }
 
-        // NOTE: .configureEach here is a Gradle API, which will run the callback passed to it after
-        // the extension variants have been resolved.
+        // NOTE: .all here is a Gradle API, which will run the callback passed to it after the
+        // extension variants have been resolved.
         var applied = false
-        extensionVariants.configureEach {
+        extensionVariants.all {
             if (!applied) {
                 applied = true
 

@@ -33,7 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -88,11 +90,11 @@ fun ExposedDropdownMenuSample() {
 @Composable
 fun EditableExposedDropdownMenuSample() {
     val options = listOf("Cupcake", "Donut", "Eclair", "Froyo", "Gingerbread")
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(TextFieldValue()) }
 
     // The text that the user inputs into the text field can be used to filter the options.
     // This sample uses string subsequence matching.
-    val filteredOptions = options.filteredBy(text)
+    val filteredOptions = options.filteredBy(text.text)
 
     val (allowExpanded, setExpanded) = remember { mutableStateOf(false) }
     val expanded = allowExpanded && filteredOptions.isNotEmpty()
@@ -130,7 +132,11 @@ fun EditableExposedDropdownMenuSample() {
                 DropdownMenuItem(
                     text = { Text(option, style = MaterialTheme.typography.bodyLarge) },
                     onClick = {
-                        text = option.text
+                        text =
+                            TextFieldValue(
+                                text = option.text,
+                                selection = TextRange(option.text.length),
+                            )
                         setExpanded(false)
                     },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
@@ -141,8 +147,8 @@ fun EditableExposedDropdownMenuSample() {
 }
 
 /**
- * Returns the element of [this] list that contain [text] as a subsequence,
- * with the subsequence underlined as an [AnnotatedString].
+ * Returns the element of [this] list that contain [text] as a subsequence, with the subsequence
+ * underlined as an [AnnotatedString].
  */
 private fun List<String>.filteredBy(text: String): List<AnnotatedString> {
     fun underlineSubsequence(needle: String, haystack: String): AnnotatedString? {
@@ -151,8 +157,7 @@ private fun List<String>.filteredBy(text: String): List<AnnotatedString> {
             for (char in needle) {
                 val start = i
                 haystack.indexOf(char, startIndex = i, ignoreCase = true).let {
-                    if (it < 0) return null
-                    else i = it
+                    if (it < 0) return null else i = it
                 }
                 append(haystack.substring(start, i))
                 withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {

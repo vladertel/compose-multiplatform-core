@@ -47,7 +47,7 @@ internal constructor(
   /** Constructor for the [String] variant. */
   public constructor(text: String) : this(asText = text)
 
-  override fun toString(): String = toString(includeWrapperName = true)
+  public override fun toString(): String = toString(includeWrapperName = true)
 
   internal fun toString(includeWrapperName: Boolean): String =
     when {
@@ -60,12 +60,12 @@ internal constructor(
       else -> error("No variant present in Name")
     }
 
-  override fun equals(other: Any?): Boolean {
+  public override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other !is Name) return false
     if (asText != other.asText) return false
     return true
   }
 
-  override fun hashCode(): Int = Objects.hash(asText)
+  public override fun hashCode(): Int = Objects.hash(asText)
 }

@@ -25,7 +25,6 @@ import loadTestSource
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestName
-import writeTestSource
 
 class DatabaseKotlinCodeGenTest {
 
@@ -180,21 +179,12 @@ class DatabaseKotlinCodeGenTest {
                 it.roundEnv.isProcessingOver
             )
             it.assertCompilationResult {
-                val expectedSrc = loadTestSource(
-                    expectedFilePath,
-                    "MyDatabase_Impl"
-                )
-                // Set ROOM_TEST_WRITE_SRCS env variable to make tests write expected sources,
-                // handy for big sweeping code gen changes. ;)
-                if (System.getenv("ROOM_TEST_WRITE_SRCS") != null) {
-                    writeTestSource(
-                        checkNotNull(this.findGeneratedSource(expectedSrc.relativePath)) {
-                            "Couldn't find gen src: $expectedSrc"
-                        },
-                        expectedFilePath
+                this.generatedSource(
+                    loadTestSource(
+                        expectedFilePath,
+                        "MyDatabase_Impl"
                     )
-                }
-                this.generatedSource(expectedSrc)
+                )
                 this.hasNoWarnings()
             }
             handler.invoke(it)

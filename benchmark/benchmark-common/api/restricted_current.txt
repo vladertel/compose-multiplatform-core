@@ -37,15 +37,15 @@ package androidx.benchmark {
   }
 
   @SuppressCompatibility @androidx.benchmark.ExperimentalBenchmarkConfigApi public final class MicrobenchmarkConfig {
-    ctor public MicrobenchmarkConfig(optional java.util.List<? extends androidx.benchmark.MetricCapture> metrics, optional boolean traceAppTagEnabled, optional boolean perfettoSdkTracingEnabled, optional androidx.benchmark.ProfilerConfig? profiler);
+    ctor public MicrobenchmarkConfig(optional java.util.List<? extends androidx.benchmark.MetricCapture> metrics, optional boolean shouldEnableTraceAppTag, optional boolean shouldEnablePerfettoSdkTracing, optional androidx.benchmark.ProfilerConfig? profiler);
     method public java.util.List<androidx.benchmark.MetricCapture> getMetrics();
     method public androidx.benchmark.ProfilerConfig? getProfiler();
-    method public boolean isPerfettoSdkTracingEnabled();
-    method public boolean isTraceAppTagEnabled();
+    method public boolean shouldEnablePerfettoSdkTracing();
+    method public boolean shouldEnableTraceAppTag();
     property public final java.util.List<androidx.benchmark.MetricCapture> metrics;
-    property public final boolean perfettoSdkTracingEnabled;
     property public final androidx.benchmark.ProfilerConfig? profiler;
-    property public final boolean traceAppTagEnabled;
+    property public final boolean shouldEnablePerfettoSdkTracing;
+    property public final boolean shouldEnableTraceAppTag;
   }
 
   @SuppressCompatibility @androidx.benchmark.ExperimentalBenchmarkConfigApi public abstract sealed class ProfilerConfig {
@@ -61,7 +61,6 @@ package androidx.benchmark {
 
   @SuppressCompatibility @androidx.benchmark.ExperimentalBenchmarkConfigApi public final class TimeCapture extends androidx.benchmark.MetricCapture {
     ctor public TimeCapture();
-    ctor public TimeCapture(optional String name);
     method public void capturePaused();
     method public void captureResumed();
     method public void captureStart(long timeNs);

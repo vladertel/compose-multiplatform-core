@@ -81,12 +81,7 @@ abstract class TypeWriter(val codeLanguage: CodeLanguage) {
             javaTypeBuilder = {
                 addAnnotation(
                     com.squareup.javapoet.AnnotationSpec.builder(SuppressWarnings::class.java)
-                        .addMember(
-                            "value", "{\$S, \$S, \$S}",
-                            "unchecked",
-                            "deprecation",
-                            "removal"
-                        )
+                        .addMember("value", "{\$S, \$S}", "unchecked", "deprecation")
                         .build()
                 )
             },
@@ -94,11 +89,10 @@ abstract class TypeWriter(val codeLanguage: CodeLanguage) {
                 addAnnotation(
                     com.squareup.kotlinpoet.AnnotationSpec.builder(Suppress::class)
                         .addMember(
-                            "names = [%S, %S, %S, %S]",
+                            "names = [%S, %S, %S]",
                             "UNCHECKED_CAST",
                             "DEPRECATION",
-                            "REDUNDANT_PROJECTION",
-                            "REMOVAL"
+                            "REDUNDANT_PROJECTION"
                         )
                         .build()
                 )

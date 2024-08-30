@@ -23,7 +23,7 @@ Run tests for Web:
 
 Run tests for UIKit:
 ```bash
-./gradlew :mpp:testUIKit
+./gradlew :mpp:testUIKit -PiosSimulatorName='iPhone 15'
 ```
 
 ### API checks
@@ -64,11 +64,18 @@ Compose Multiplatform core libraries can be published to local Maven with the fo
 
 `-Pjetbrains.publication.version.CORE_BUNDLE`,
 `-Pjetbrains.publication.version.COMPOSE`,
+`-Pjetbrains.publication.version.COMPOSE_MATERIAL3_ADAPTIVE`,
 `-Pjetbrains.publication.version.LIFECYCLE`,
 `-Pjetbrains.publication.version.NAVIGATION`,
-`-Pjetbrains.publication.version.SAVEDSTATE`
+`-Pjetbrains.publication.version.SAVEDSTATE`,
+`-Pjetbrains.publication.version.WINDOW`,
 
-Default value for the version is `0.0.0-SNAPSHOT`
+The default value for the version is `0.0.0-SNAPSHOT`
+
+And library groups:
+`-Pjetbrains.publication.libraries=CORE_BUNDLE,COMPOSE,COMPOSE_MATERIAL3_ADAPTIVE,LIFECYCLE,NAVIGATION,SAVEDSTATE,WINDOW`
+
+The default value includes all libraries.
 
 2. Publish core libraries
 ```bash

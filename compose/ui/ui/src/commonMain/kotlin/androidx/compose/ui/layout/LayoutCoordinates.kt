@@ -58,17 +58,27 @@ interface LayoutCoordinates {
     val isAttached: Boolean
 
     /**
-     * Whether the coordinates were placed under direct manipulation.
+     * Indicates whether the corresponding Layout is expected to change its [Offset] in small
+     * increments (such as when its parent is a `Scroll`).
      *
-     * When true, reading [localPositionOf] coordinates with `excludeDirectManipulation = true` will
-     * exclude the offset set by its parent. This also applies when reading coordinates from a
-     * parent further up the tree, meaning, all the layouts which have this flag as `true` will not
-     * report the offset from their parent.
+     * In those situations, the corresponding placed [LayoutCoordinates] will have their
+     * [introducesMotionFrameOfReference] return `true`.
      *
-     * @see Placeable.PlacementScope.withDirectManipulationPlacement
+     * Custom Layouts that are expected to have similar behaviors should place their children using
+     * [Placeable.PlacementScope.withMotionFrameOfReferencePlacement].
+     *
+     * You may then use [localPositionOf] with `includeMotionFrameOfReference = false` to query a
+     * Layout's position such that it excludes all [Offset] introduced by those Layouts.
+     *
+     * This is typically helpful when deciding when to animate an [approachLayout] using
+     * [LookaheadScope] coordinates. As you probably don't want to trigger animations on small
+     * positional increments.
+     *
+     * @see Placeable.PlacementScope.withMotionFrameOfReferencePlacement
      * @see localPositionOf
      */
-    val isPositionedByParentWithDirectManipulation: Boolean get() = false
+    @Suppress("GetterSetterNames") // Preferred name
+    val introducesMotionFrameOfReference: Boolean get() = false
 
     /**
      * Converts [relativeToScreen] relative to the device's screen's origin into an [Offset]
@@ -103,25 +113,32 @@ interface LayoutCoordinates {
      * Converts an [relativeToSource] in [sourceCoordinates] space into local coordinates.
      * [sourceCoordinates] may be any [LayoutCoordinates] that belong to the same
      * compose layout hierarchy.
+     *
+     * By default, includes the [Offset] when [introducesMotionFrameOfReference] is `true`. But you
+     * may exclude it from the calculation by using the overload that takes
+     * `includeMotionFrameOfReference` and passing it as `false`.
      */
-    fun localPositionOf(sourceCoordinates: LayoutCoordinates, relativeToSource: Offset): Offset
+    fun localPositionOf(
+        sourceCoordinates: LayoutCoordinates,
+        relativeToSource: Offset
+    ): Offset
 
     /**
      * Converts an [relativeToSource] in [sourceCoordinates] space into local coordinates.
      * [sourceCoordinates] may be any [LayoutCoordinates] that belong to the same
      * compose layout hierarchy.
      *
-     * If [excludeDirectManipulationOffset] is true, the offset provided by layouts using
-     * [Placeable.PlacementScope.withDirectManipulationPlacement] will be ignored.
+     * Use [includeMotionFrameOfReference] to decide whether to include the [Offset] of any
+     * `LayoutCoordinate` that returns `true` in the [includeMotionFrameOfReference] flag.
      *
-     * You can query if a [LayoutCoordinates] was placed with
-     * [Placeable.PlacementScope.withDirectManipulationPlacement] through
-     * [LayoutCoordinates.isPositionedByParentWithDirectManipulation].
+     * In other words, passing [includeMotionFrameOfReference] as `false`, returns a calculation
+     * that excludes the [Offset] set from Layouts that place their children using
+     * [Placeable.PlacementScope.withMotionFrameOfReferencePlacement].
      */
     fun localPositionOf(
         sourceCoordinates: LayoutCoordinates,
-        relativeToSource: Offset,
-        excludeDirectManipulationOffset: Boolean
+        relativeToSource: Offset = Offset.Zero,
+        includeMotionFrameOfReference: Boolean = true
     ): Offset {
         throw UnsupportedOperationException(
             "localPositionOf is not implemented on this LayoutCoordinates"

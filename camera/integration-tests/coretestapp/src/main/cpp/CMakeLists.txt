@@ -32,8 +32,3 @@ find_library(egl-lib EGL)
 
 
 target_link_libraries(opengl_renderer_jni ${log-lib} ${android-lib} ${opengl-lib} ${egl-lib})
-target_link_options(
-  opengl_renderer_jni
-  PRIVATE
-  "-Wl,-z,max-page-size=16384"
-)

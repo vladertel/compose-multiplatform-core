@@ -59,12 +59,9 @@ internal class WakeLock(
     }
 
     private inner class WakeLockToken : Token {
-        private val _released = atomic(false)
-        override val released: Boolean
-            get() = _released.value
-
+        private val closed = atomic(false)
         override fun release(): Boolean {
-            if (_released.compareAndSet(expect = false, update = true)) {
+            if (closed.compareAndSet(expect = false, update = true)) {
                 releaseToken()
                 return true
             }

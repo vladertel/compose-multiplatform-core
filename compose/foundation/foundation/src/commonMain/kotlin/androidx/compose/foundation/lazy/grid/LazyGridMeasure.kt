@@ -88,6 +88,8 @@ internal fun measureLazyGrid(
             laneCount = slotsPerLine,
             isLookingAhead = false,
             hasLookaheadOccurred = false,
+            layoutMinOffset = 0,
+            layoutMaxOffset = 0,
             coroutineScope = coroutineScope,
             graphicsContext = graphicsContext
         )
@@ -326,6 +328,8 @@ internal fun measureLazyGrid(
             laneCount = slotsPerLine,
             isLookingAhead = false,
             hasLookaheadOccurred = false,
+            layoutMinOffset = currentFirstLineScrollOffset,
+            layoutMaxOffset = currentMainAxisOffset,
             coroutineScope = coroutineScope,
             graphicsContext = graphicsContext
         )

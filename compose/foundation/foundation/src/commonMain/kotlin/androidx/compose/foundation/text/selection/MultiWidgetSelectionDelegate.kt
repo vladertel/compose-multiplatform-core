@@ -137,6 +137,10 @@ internal class MultiWidgetSelectionDelegate(
         return layoutCoordinates
     }
 
+    override fun textLayoutResult(): TextLayoutResult? {
+        return layoutResultCallback()
+    }
+
     override fun getText(): AnnotatedString {
         val textLayoutResult = layoutResultCallback() ?: return AnnotatedString("")
         return textLayoutResult.layoutInput.text
@@ -330,7 +334,7 @@ private fun SelectionLayoutBuilder.getDirectionById(
 
 /**
  * Returns true if either of the directions are [Direction.ON]
- * or if the directions are on opposite sides.
+ * or if the directions are not both [Direction.BEFORE] or [Direction.AFTER].
  */
 private fun isSelected(currentDirection: Direction, otherDirection: Direction): Boolean =
     currentDirection == Direction.ON || currentDirection != otherDirection

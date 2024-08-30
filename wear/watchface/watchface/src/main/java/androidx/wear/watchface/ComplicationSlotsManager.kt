@@ -22,7 +22,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
-import android.os.Build
 import android.util.Log
 import androidx.annotation.Px
 import androidx.annotation.RestrictTo
@@ -31,7 +30,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
 import androidx.wear.watchface.complications.ComplicationDataSourceInfo
 import androidx.wear.watchface.complications.ComplicationSlotBounds
-import androidx.wear.watchface.complications.SystemDataSources
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ComplicationType
@@ -90,24 +88,7 @@ public class ComplicationSlotsManager(
     @field:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public lateinit var watchState: WatchState
 
-    private lateinit var watchFaceHostApi_: WatchFaceHostApi
-    internal var watchFaceHostApi: WatchFaceHostApi
-        set(hostApi) {
-            watchFaceHostApi_ = hostApi
-
-            for ((_, complication) in complicationSlots) {
-                require(
-                    complication.defaultDataSourcePolicy.systemDataSourceFallback !=
-                    SystemDataSources.DATA_SOURCE_HEART_RATE ||
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-                ) {
-                    "DATA_SOURCE_HEART_RATE requires Android U or above."
-                }
-            }
-        }
-
-        get() = watchFaceHostApi_
-
+    internal lateinit var watchFaceHostApi: WatchFaceHostApi
     internal lateinit var renderer: Renderer
 
     /** A map of complication IDs to complicationSlots. */
@@ -264,7 +245,7 @@ public class ComplicationSlotsManager(
     @UiThread
     internal fun onComplicationsUpdated() =
         TraceEvent("ComplicationSlotsManager.updateComplications").use {
-            if (!this::watchFaceHostApi_.isInitialized) {
+            if (!this::watchFaceHostApi.isInitialized) {
                 return
             }
             val activeKeys = mutableListOf<Int>()
@@ -335,8 +316,7 @@ public class ComplicationSlotsManager(
     internal fun onComplicationDataUpdate(
         complicationSlotId: Int,
         data: ComplicationData,
-        instant: Instant,
-        forceLoad: Boolean = false,
+        instant: Instant
     ) {
         val complication = complicationSlots[complicationSlotId]
         if (complication == null) {
@@ -348,7 +328,7 @@ public class ComplicationSlotsManager(
             return
         }
         complication.dataDirty = complication.dataDirty || (complication.renderer.getData() != data)
-        complication.setComplicationData(data, instant, forceLoad = forceLoad)
+        complication.setComplicationData(data, instant)
     }
 
     /**

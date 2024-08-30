@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.lazy.layout
 
+import androidx.collection.mutableObjectLongMapOf
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle
 import androidx.compose.runtime.Stable
@@ -53,13 +54,20 @@ class LazyLayoutPrefetchState(
     internal var prefetchHandleProvider: PrefetchHandleProvider? = null
 
     /**
+     * Schedules precomposition for the new item. If you also want to premeasure the item please
+     * use a second overload accepting a [Constraints] param.
+     *
+     * @param index item index to prefetch.
+     */
+    fun schedulePrefetch(index: Int): PrefetchHandle = schedulePrefetch(index, ZeroConstraints)
+
+    /**
      * Schedules precomposition and premeasure for the new item.
      *
      * @param index item index to prefetch.
-     * @param constraints [Constraints] to use for premeasuring. If null, the child will not
-     * be premeasured.
+     * @param constraints [Constraints] to use for premeasuring.
      */
-    fun schedulePrefetch(index: Int, constraints: Constraints? = null): PrefetchHandle {
+    fun schedulePrefetch(index: Int, constraints: Constraints): PrefetchHandle {
         return prefetchHandleProvider?.schedulePrefetch(index, constraints, prefetchMetrics)
             ?: DummyHandle
     }
@@ -79,6 +87,15 @@ class LazyLayoutPrefetchState(
          * was precomposed already it will be disposed.
          */
         fun cancel()
+
+        /**
+         * Marks this prefetch request as urgent, which is a way to communicate that the requested
+         * item is expected to be needed during the next frame.
+         *
+         * For urgent requests we can proceed with doing the prefetch even if the available time
+         * in the frame is less than we spend on similar prefetch requests on average.
+         */
+        fun markAsUrgent()
     }
 
     private inner class NestedPrefetchScopeImpl : NestedPrefetchScope {
@@ -86,8 +103,11 @@ class LazyLayoutPrefetchState(
         val requests: List<PrefetchRequest>
             get() = _requests
         private val _requests: MutableList<PrefetchRequest> = mutableListOf()
+        override fun schedulePrefetch(index: Int) {
+            schedulePrefetch(index, ZeroConstraints)
+        }
 
-        override fun schedulePrefetch(index: Int, constraints: Constraints?) {
+        override fun schedulePrefetch(index: Int, constraints: Constraints) {
             val prefetchHandleProvider = prefetchHandleProvider ?: return
             _requests.add(
                 prefetchHandleProvider.createNestedPrefetchRequest(
@@ -108,11 +128,22 @@ sealed interface NestedPrefetchScope {
 
     /**
      * Requests a child index to be prefetched as part of the prefetch of a parent LazyLayout.
+     *
+     * The prefetch will only do the precomposition for the new item. If you also want to premeasure
+     * please use a second overload accepting a [Constraints] param.
+     *
+     * @param index item index to prefetch.
+     */
+    fun schedulePrefetch(index: Int)
+
+    /**
+     * Requests a child index to be prefetched as part of the prefetch of a parent LazyLayout.
+     *
      * @param index the index of the child to prefetch.
      * @param constraints [Constraints] to use for premeasuring. If null, the child will not
      * be premeasured.
      */
-    fun schedulePrefetch(index: Int, constraints: Constraints? = null)
+    fun schedulePrefetch(index: Int, constraints: Constraints)
 }
 
 /**
@@ -122,6 +153,9 @@ sealed interface NestedPrefetchScope {
  */
 @ExperimentalFoundationApi
 internal class PrefetchMetrics {
+
+    val averageCompositionTimeNanosByContentType = mutableObjectLongMapOf<Any>()
+    val averageMeasureTimeNanosByContentType = mutableObjectLongMapOf<Any>()
 
     /**
      * The current average time composition has taken during prefetches of this LazyLayout.
@@ -139,8 +173,15 @@ internal class PrefetchMetrics {
      * Executes the [doComposition] block and updates [averageCompositionTimeNanos] with the new
      * average.
      */
-    internal inline fun recordCompositionTiming(doComposition: () -> Unit) {
+    internal inline fun recordCompositionTiming(contentType: Any?, doComposition: () -> Unit) {
         val executionTime = measureTime(doComposition)
+        contentType?.let {
+            val currentAvgCompositionTimeNanos =
+                averageCompositionTimeNanosByContentType.getOrDefault(contentType, 0L)
+            val newAvgCompositionTimeNanos =
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgCompositionTimeNanos)
+            averageCompositionTimeNanosByContentType[contentType] = newAvgCompositionTimeNanos
+        }
         averageCompositionTimeNanos =
             calculateAverageTime(executionTime.inWholeNanoseconds, averageCompositionTimeNanos)
     }
@@ -148,8 +189,15 @@ internal class PrefetchMetrics {
     /**
      * Executes the [doMeasure] block and updates [averageMeasureTimeNanos] with the new average.
      */
-    internal inline fun recordMeasureTiming(doMeasure: () -> Unit) {
+    internal inline fun recordMeasureTiming(contentType: Any?, doMeasure: () -> Unit) {
         val executionTime = measureTime(doMeasure)
+        contentType?.let {
+            val currentAvgMeasureTimeNanos =
+                averageMeasureTimeNanosByContentType.getOrDefault(contentType, 0L)
+            val newAvgMeasureTimeNanos =
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgMeasureTimeNanos)
+            averageMeasureTimeNanosByContentType[contentType] = newAvgMeasureTimeNanos
+        }
         averageMeasureTimeNanos = calculateAverageTime(executionTime.inWholeNanoseconds, averageMeasureTimeNanos)
     }
 
@@ -169,6 +217,7 @@ internal class PrefetchMetrics {
 @ExperimentalFoundationApi
 private object DummyHandle : PrefetchHandle {
     override fun cancel() {}
+    override fun markAsUrgent() {}
 }
 
 /**
@@ -185,7 +234,7 @@ internal class PrefetchHandleProvider(
 ) {
     fun schedulePrefetch(
         index: Int,
-        constraints: Constraints?,
+        constraints: Constraints,
         prefetchMetrics: PrefetchMetrics
     ): PrefetchHandle =
         HandleAndRequestImpl(index, constraints, prefetchMetrics).also {
@@ -194,7 +243,7 @@ internal class PrefetchHandleProvider(
 
     fun createNestedPrefetchRequest(
         index: Int,
-        constraints: Constraints?,
+        constraints: Constraints,
         prefetchMetrics: PrefetchMetrics,
     ): PrefetchRequest =
         HandleAndRequestImpl(index, constraints = constraints, prefetchMetrics)
@@ -202,7 +251,7 @@ internal class PrefetchHandleProvider(
     @ExperimentalFoundationApi
     private inner class HandleAndRequestImpl(
         private val index: Int,
-        private val constraints: Constraints?,
+        private val constraints: Constraints,
         private val prefetchMetrics: PrefetchMetrics,
     ) : PrefetchHandle, PrefetchRequest {
 
@@ -212,6 +261,7 @@ internal class PrefetchHandleProvider(
         private val isComposed get() = precomposeHandle != null
         private var hasResolvedNestedPrefetches = false
         private var nestedPrefetchController: NestedPrefetchController? = null
+        private var isUrgent = false
 
         private val isValid
             get() = !isCanceled &&
@@ -225,14 +275,32 @@ internal class PrefetchHandleProvider(
             }
         }
 
+        override fun markAsUrgent() {
+            isUrgent = true
+        }
+
+        private fun PrefetchRequestScope.shouldExecute(average: Long): Boolean {
+            val available = availableTimeNanos()
+            // even for urgent request we only do the work if we have time available, as otherwise
+            // it is better to just return early to allow the next frame to start and do the work.
+            return (isUrgent && available > 0) || average < available
+        }
+
         override fun PrefetchRequestScope.execute(): Boolean {
             if (!isValid) {
                 return false
             }
 
+            val contentType = itemContentFactory.itemProvider().getContentType(index)
+
             if (!isComposed) {
-                if (prefetchMetrics.averageCompositionTimeNanos < availableTimeNanos) {
-                    prefetchMetrics.recordCompositionTiming {
+                val estimatedPrecomposeTime: Long =
+                    if (contentType != null && prefetchMetrics
+                        .averageCompositionTimeNanosByContentType.contains(contentType))
+                        prefetchMetrics.averageCompositionTimeNanosByContentType[contentType]
+                    else prefetchMetrics.averageCompositionTimeNanos
+                if (shouldExecute(estimatedPrecomposeTime)) {
+                    prefetchMetrics.recordCompositionTiming(contentType) {
                         trace("compose:lazy:prefetch:compose") {
                             performComposition()
                         }
@@ -242,28 +310,41 @@ internal class PrefetchHandleProvider(
                 }
             }
 
-            // Nested prefetch logic is best-effort: if nested LazyLayout children are
-            // added/removed/updated after we've resolved nested prefetch states here or resolved
-            // nestedPrefetchRequests below, those changes won't be taken into account.
-            if (!hasResolvedNestedPrefetches) {
-                if (availableTimeNanos > 0) {
-                    trace("compose:lazy:prefetch:resolve-nested") {
-                        nestedPrefetchController = resolveNestedPrefetchStates()
-                        hasResolvedNestedPrefetches = true
+            // if the request is urgent we better proceed with the measuring straight away instead
+            // of spending time trying to split the work more via nested prefetch. nested prefetch
+            // is always an estimation and it could potentially do work we will not need in the end,
+            // but the measuring will only do exactly the needed work (including composing nested
+            // lazy layouts)
+            if (!isUrgent) {
+                // Nested prefetch logic is best-effort: if nested LazyLayout children are
+                // added/removed/updated after we've resolved nested prefetch states here or resolved
+                // nestedPrefetchRequests below, those changes won't be taken into account.
+                if (!hasResolvedNestedPrefetches) {
+                    if (availableTimeNanos() > 0) {
+                        trace("compose:lazy:prefetch:resolve-nested") {
+                            nestedPrefetchController = resolveNestedPrefetchStates()
+                            hasResolvedNestedPrefetches = true
+                        }
+                    } else {
+                        return true
                     }
-                } else {
+                }
+
+                val hasMoreWork =
+                    nestedPrefetchController?.run { executeNestedPrefetches() } ?: false
+                if (hasMoreWork) {
                     return true
                 }
             }
 
-            val hasMoreWork = nestedPrefetchController?.run { executeNestedPrefetches() } ?: false
-            if (hasMoreWork) {
-                return true
-            }
-
-            if (!isMeasured && constraints != null) {
-                if (prefetchMetrics.averageMeasureTimeNanos < availableTimeNanos) {
-                    prefetchMetrics.recordMeasureTiming {
+            if (!isMeasured && !constraints.isZero) {
+                val estimatedPremeasureTime: Long =
+                    if (contentType != null && prefetchMetrics.averageMeasureTimeNanosByContentType
+                        .contains(contentType))
+                        prefetchMetrics.averageMeasureTimeNanosByContentType[contentType]
+                    else prefetchMetrics.averageMeasureTimeNanos
+                if (shouldExecute(estimatedPremeasureTime)) {
+                    prefetchMetrics.recordMeasureTiming(contentType) {
                         trace("compose:lazy:prefetch:measure") {
                             performMeasure(constraints)
                         }
@@ -349,7 +430,7 @@ internal class PrefetchHandleProvider(
                 trace("compose:lazy:prefetch:nested") {
                     while (stateIndex < states.size) {
                         if (requestsByState[stateIndex] == null) {
-                            if (availableTimeNanos <= 0) {
+                            if (availableTimeNanos() <= 0) {
                                 // When we have time again, we'll resolve nested requests for this
                                 // state
                                 return true
@@ -419,3 +500,5 @@ private data class TraversablePrefetchStateModifierElement(
         value = prefetchState
     }
 }
+
+private val ZeroConstraints = Constraints(maxWidth = 0, maxHeight = 0)

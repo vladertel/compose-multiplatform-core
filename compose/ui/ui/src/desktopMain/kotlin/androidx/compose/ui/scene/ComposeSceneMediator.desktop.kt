@@ -23,13 +23,16 @@ import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.awt.AwtEventListener
 import androidx.compose.ui.awt.AwtEventListeners
 import androidx.compose.ui.awt.OnlyValidPrimaryMouseButtonFilter
-import androidx.compose.ui.awt.SwingInteropContainer
+import androidx.compose.ui.awt.isFocusGainedHandledBySwingPanel
 import androidx.compose.ui.awt.runOnEDTThread
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.key.internal
 import androidx.compose.ui.input.key.toComposeEvent
 import androidx.compose.ui.input.pointer.AwtCursor
@@ -39,6 +42,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.platform.AwtDragAndDropManager
 import androidx.compose.ui.platform.DelegateRootForTestListener
 import androidx.compose.ui.platform.DesktopTextInputService
 import androidx.compose.ui.platform.EmptyViewConfiguration
@@ -56,11 +60,11 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.SwingInteropContainer
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.sizeInPx
 import java.awt.Component
-import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Point
@@ -68,6 +72,9 @@ import java.awt.Toolkit
 import java.awt.event.ContainerEvent
 import java.awt.event.ContainerListener
 import java.awt.event.FocusEvent
+import java.awt.event.FocusEvent.Cause.TRAVERSAL
+import java.awt.event.FocusEvent.Cause.TRAVERSAL_BACKWARD
+import java.awt.event.FocusEvent.Cause.TRAVERSAL_FORWARD
 import java.awt.event.FocusListener
 import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent
@@ -79,6 +86,7 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
+import javax.swing.JComponent
 import javax.swing.SwingUtilities
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
@@ -100,7 +108,7 @@ import org.jetbrains.skiko.swing.SkiaSwingLayer
  * - for forcing refocus on input methods change
  */
 internal class ComposeSceneMediator(
-    private val container: Container,
+    private val container: JComponent,
     private val windowContext: PlatformWindowContext,
     private var exceptionHandler: WindowExceptionHandler?,
     eventListener: AwtEventListener? = null,
@@ -129,7 +137,7 @@ internal class ComposeSceneMediator(
     private val _platformContext = DesktopPlatformContext()
     val platformContext: PlatformContext get() = _platformContext
 
-    private val skiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
+    private val skiaLayerComponent: SkiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
     val contentComponent by skiaLayerComponent::contentComponent
     var fullscreen by skiaLayerComponent::fullscreen
     val windowHandle by skiaLayerComponent::windowHandle
@@ -155,8 +163,9 @@ internal class ComposeSceneMediator(
      * native views/components to [container].
      */
     private val interopContainer = SwingInteropContainer(
-        container = container,
-        placeInteropAbove = !useInteropBlending || metalOrderHack
+        root = container,
+        placeInteropAbove = !useInteropBlending || metalOrderHack,
+        requestRedraw = ::onComposeInvalidation
     )
 
     private val containerListener = object : ContainerListener {
@@ -215,8 +224,20 @@ internal class ComposeSceneMediator(
             // We don't reset focus for Compose when the component loses focus temporary.
             // Partially because we don't support restoring focus after clearing it.
             // Focus can be lost temporary when another window or popup takes focus.
-            if (!e.isTemporary) {
-                scene.focusManager.requestFocus()
+            if (!e.isTemporary && !e.isFocusGainedHandledBySwingPanel(container)) {
+                when (e.cause) {
+                    TRAVERSAL_BACKWARD -> {
+                        if (!focusManager.takeFocus(FocusDirection.Previous)) {
+                            platformContext.parentFocusManager.moveFocus(FocusDirection.Previous)
+                        }
+                    }
+                    TRAVERSAL, TRAVERSAL_FORWARD -> {
+                        if (!focusManager.takeFocus(FocusDirection.Next)) {
+                            platformContext.parentFocusManager.moveFocus(FocusDirection.Next)
+                        }
+                    }
+                    else -> Unit
+                }
             }
         }
 
@@ -312,6 +333,8 @@ internal class ComposeSceneMediator(
      */
     private var keyboardModifiersRequireUpdate = false
 
+    private val dragAndDropManager = AwtDragAndDropManager(container, getScene = { scene })
+
     init {
         // Transparency is used during redrawer creation that triggered by [addNotify], so
         // it must be set to correct value before adding to the hierarchy to handle cases
@@ -324,6 +347,10 @@ internal class ComposeSceneMediator(
         // Adding a listener after adding [invisibleComponent] and [contentComponent]
         // to react only on changes with [interopLayer].
         container.addContainerListener(containerListener)
+
+        // AwtDragAndDropManager support
+        container.transferHandler = dragAndDropManager.transferHandler
+        container.dropTarget = dragAndDropManager.dropTarget
 
         // It will be enabled dynamically. See DesktopPlatformComponent
         contentComponent.enableInputMethods(false)
@@ -442,9 +469,13 @@ internal class ComposeSceneMediator(
 
         unsubscribe(contentComponent)
 
+        // Since rendering will not happen after, we needs to execute all scheduled updates
+        interopContainer.dispose()
         container.removeContainerListener(containerListener)
         container.remove(contentComponent)
         container.remove(invisibleComponent)
+        container.transferHandler = null
+        container.dropTarget = null
 
         scene.close()
         skiaLayerComponent.dispose()
@@ -500,13 +531,13 @@ internal class ComposeSceneMediator(
         }
     }
 
-    fun onChangeComponentPosition() = catchExceptions {
+    fun onComponentPositionChanged() = catchExceptions {
         if (!container.isDisplayable) return
 
         offsetInWindow = windowContext.offsetInWindow(container)
     }
 
-    fun onChangeComponentSize() = catchExceptions {
+    fun onComponentSizeChanged() = catchExceptions {
         if (!container.isDisplayable) return
 
         val size = sceneBoundsInPx?.size ?: container.sizeInPx
@@ -520,21 +551,23 @@ internal class ComposeSceneMediator(
     fun onChangeDensity(density: Density = container.density) = catchExceptions {
         if (scene.density != density) {
             scene.density = density
-            onChangeComponentSize()
+            onComponentSizeChanged()
         }
     }
 
-    fun onChangeWindowTransparency(value: Boolean) {
+    fun onWindowTransparencyChanged(value: Boolean) {
         skiaLayerComponent.transparency = value || useInteropBlending
     }
 
-    fun onChangeLayoutDirection(layoutDirection: LayoutDirection) {
+    fun onLayoutDirectionChanged(layoutDirection: LayoutDirection) {
         scene.layoutDirection = layoutDirection
     }
 
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) = catchExceptions {
-        canvas.withSceneOffset {
-            scene.render(asComposeCanvas(), nanoTime)
+        interopContainer.postponingExecutingScheduledUpdates {
+            canvas.withSceneOffset {
+                scene.render(asComposeCanvas(), nanoTime)
+            }
         }
     }
 
@@ -635,11 +668,17 @@ internal class ComposeSceneMediator(
         override val windowInfo: WindowInfo get() = windowContext.windowInfo
         override val isWindowTransparent: Boolean get() = windowContext.isWindowTransparent
 
-        override fun calculatePositionInWindow(localPosition: Offset): Offset =
-            windowContext.calculatePositionInWindow(container, localPosition)
+        override fun convertLocalToWindowPosition(localPosition: Offset): Offset =
+            windowContext.convertLocalToWindowPosition(container, localPosition)
 
-        override fun calculateLocalPosition(positionInWindow: Offset): Offset =
-            windowContext.calculateLocalPosition(container, positionInWindow)
+        override fun convertWindowToLocalPosition(positionInWindow: Offset): Offset =
+            windowContext.convertWindowToLocalPosition(container, positionInWindow)
+
+        override fun convertLocalToScreenPosition(localPosition: Offset): Offset =
+            windowContext.convertLocalToScreenPosition(container, localPosition)
+
+        override fun convertScreenToLocalPosition(positionOnScreen: Offset): Offset =
+            windowContext.convertScreenToLocalPosition(container, positionOnScreen)
 
         override val measureDrawLayerBounds: Boolean = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration: ViewConfiguration = DesktopViewConfiguration()
@@ -651,8 +690,23 @@ internal class ComposeSceneMediator(
         }
         override val parentFocusManager: FocusManager = DesktopFocusManager()
         override fun requestFocus(): Boolean {
-            return contentComponent.hasFocus() || contentComponent.requestFocusInWindow()
+            // Don't check hasFocus(), and don't check the returning result
+            // Swing returns "false" if the window isn't visible or isn't active,
+            // but the component will always receive the focus after activation.
+            //
+            // if we return false - we don't allow changing the focus, and it breaks requesting
+            // focus at start and in inactive mode
+            contentComponent.requestFocusInWindow()
+            return true
         }
+
+        override fun startDrag(
+            transferData: DragAndDropTransferData,
+            decorationSize: Size,
+            drawDragDecoration: DrawScope.() -> Unit
+        ) = dragAndDropManager.startDrag(
+            transferData, decorationSize, drawDragDecoration
+        )
 
         override val rootForTestListener
             get() = this@ComposeSceneMediator.rootForTestListener
@@ -714,11 +768,11 @@ private fun ComposeScene.onMouseEvent(
         buttons = event.buttons,
         keyboardModifiers = event.keyboardModifiers,
         nativeEvent = event,
-        button = event.getPointerButton()
+        button = event.composePointerButton
     )
 }
 
-private fun MouseEvent.getPointerButton(): PointerButton? {
+internal val MouseEvent.composePointerButton: PointerButton? get() {
     if (button == MouseEvent.NOBUTTON) return null
     return when (button) {
         MouseEvent.BUTTON2 -> PointerButton.Tertiary

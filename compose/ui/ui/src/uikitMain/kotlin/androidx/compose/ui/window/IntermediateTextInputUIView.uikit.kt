@@ -21,18 +21,16 @@ import androidx.compose.ui.platform.IOSSkikoInput
 import androidx.compose.ui.platform.SkikoUITextInputTraits
 import androidx.compose.ui.platform.TextActions
 import androidx.compose.ui.platform.ViewConfiguration
-import kotlinx.cinterop.COpaquePointer
+import androidx.compose.ui.uikit.utils.CMPEditMenuView
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.DurationUnit
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
-import platform.CoreGraphics.CGRectIntersectsRect
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectNull
 import platform.CoreGraphics.CGRectZero
@@ -42,7 +40,6 @@ import platform.Foundation.NSOrderedAscending
 import platform.Foundation.NSOrderedDescending
 import platform.Foundation.NSOrderedSame
 import platform.Foundation.NSRange
-import platform.Foundation.NSSelectorFromString
 import platform.Foundation.dictionary
 import platform.UIKit.NSWritingDirection
 import platform.UIKit.NSWritingDirectionLeftToRight
@@ -50,9 +47,7 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UIKeyInputProtocol
 import platform.UIKit.UIKeyboardAppearance
 import platform.UIKit.UIKeyboardType
-import platform.UIKit.UIMenuController
 import platform.UIKit.UIPressesEvent
-import platform.UIKit.UIResponderStandardEditActionsProtocol
 import platform.UIKit.UIReturnKeyType
 import platform.UIKit.UITextAutocapitalizationType
 import platform.UIKit.UITextAutocorrectionType
@@ -71,8 +66,10 @@ import platform.UIKit.UITextRange
 import platform.UIKit.UITextSelectionRect
 import platform.UIKit.UITextStorageDirection
 import platform.UIKit.UIView
+import platform.UIKit.UIPress
 import platform.darwin.NSInteger
 
+private val NoOpOnKeyboardPresses: (Set<*>) -> Unit = {}
 /**
  * Hidden UIView to interact with iOS Keyboard and TextInput system.
  * TODO maybe need to call reloadInputViews() to update UIKit text features?
@@ -80,31 +77,47 @@ import platform.darwin.NSInteger
 @Suppress("CONFLICTING_OVERLOADS")
 internal class IntermediateTextInputUIView(
     private val viewConfiguration: ViewConfiguration
-) : UIView(frame = CGRectZero.readValue()),
+) : CMPEditMenuView(frame = CGRectZero.readValue()),
     UIKeyInputProtocol, UITextInputProtocol {
-    private var menuMonitoringJob = Job()
     private var _inputDelegate: UITextInputDelegateProtocol? = null
     var input: IOSSkikoInput? = null
         set(value) {
             field = value
             if (value == null) {
-                cancelContextMenuUpdate()
+                hideEditMenu()
             }
         }
-    var keyboardEventHandler: KeyboardEventHandler? = null
 
-    private var _currentTextMenuActions: TextActions? = null
+    /**
+     * Callback to handle keyboard presses. The parameter is a [Set] of [UIPress] objects.
+     * Erasure happens due to K/N not supporting Obj-C lightweight generics.
+     */
+    var onKeyboardPresses: (Set<*>) -> Unit = NoOpOnKeyboardPresses
+
     var inputTraits: SkikoUITextInputTraits = EmptyInputTraits
 
     override fun canBecomeFirstResponder() = true
 
+    override fun beginFloatingCursorAtPoint(point: CValue<CGPoint>) {
+        input?.beginFloatingCursor(point.useContents { DpOffset(x.dp, y.dp) })
+    }
+
+    override fun updateFloatingCursorAtPoint(point: CValue<CGPoint>) {
+        input?.updateFloatingCursor(point.useContents { DpOffset(x.dp, y.dp) })
+    }
+
+    override fun endFloatingCursor() {
+        input?.endFloatingCursor()
+    }
+
     override fun pressesBegan(presses: Set<*>, withEvent: UIPressesEvent?) {
-        keyboardEventHandler?.pressesBegan(presses, withEvent)
+        onKeyboardPresses(presses)
+
         super.pressesBegan(presses, withEvent)
     }
 
     override fun pressesEnded(presses: Set<*>, withEvent: UIPressesEvent?) {
-        keyboardEventHandler?.pressesEnded(presses, withEvent)
+        onKeyboardPresses(presses)
         super.pressesEnded(presses, withEvent)
     }
 
@@ -325,14 +338,12 @@ internal class IntermediateTextInputUIView(
     override fun positionWithinRange(
         range: UITextRange,
         atCharacterOffset: NSInteger
-    ): UITextPosition? =
-        TODO("positionWithinRange range: $range, atCharacterOffset: $atCharacterOffset")
+    ): UITextPosition? = null // TODO positionWithinRange
 
     override fun positionWithinRange(
         range: UITextRange,
         farthestInDirection: UITextLayoutDirection
-    ): UITextPosition? =
-        TODO("positionWithinRange, farthestInDirection: ${farthestInDirection.directionToStr()}")
+    ): UITextPosition? = null // TODO positionWithinRange
 
     override fun characterRangeByExtendingPosition(
         position: UITextPosition,
@@ -341,7 +352,7 @@ internal class IntermediateTextInputUIView(
         if (position !is IntermediateTextPosition) {
             error("position !is IntermediateTextPosition")
         }
-        TODO("characterRangeByExtendingPosition, inDirection: ${inDirection.directionToStr()}")
+        return null // TODO characterRangeByExtendingPosition
     }
 
     override fun baseWritingDirectionForPosition(
@@ -349,9 +360,6 @@ internal class IntermediateTextInputUIView(
         inDirection: UITextStorageDirection
     ): NSWritingDirection {
         return NSWritingDirectionLeftToRight // TODO support RTL text direction
-        if (position !is IntermediateTextPosition) {
-            error("position !is IntermediateTextPosition")
-        }
     }
 
     override fun setBaseWritingDirection(
@@ -370,9 +378,6 @@ internal class IntermediateTextInputUIView(
             Ideally, here should be correct rect for caret from Compose.
          */
         return CGRectMake(x = 1.0, y = 1.0, width = 1.0, height = 1.0)
-        if (position !is IntermediateTextPosition) {
-            error("position !is IntermediateTextPosition")
-        }
     }
 
     override fun selectionRectsForRange(range: UITextRange): List<*> = listOf<UITextSelectionRect>()
@@ -390,9 +395,6 @@ internal class IntermediateTextInputUIView(
     ): Map<Any?, *>? {
         return NSDictionary.dictionary()
         //TODO: Need to implement
-        if (position !is IntermediateTextPosition) {
-            error("position !is IntermediateTextPosition")
-        }
     }
 
     override fun characterOffsetOfPosition(
@@ -402,7 +404,7 @@ internal class IntermediateTextInputUIView(
         if (position !is IntermediateTextPosition) {
             error("position !is IntermediateTextPosition")
         }
-        TODO("characterOffsetOfPosition")
+        return 0 // TODO: characterOffsetOfPosition
     }
 
     override fun shouldChangeTextInRange(range: UITextRange, replacementText: String): Boolean {
@@ -466,35 +468,8 @@ internal class IntermediateTextInputUIView(
 
     override fun isUserInteractionEnabled(): Boolean = false // disable clicks
 
-    override fun canPerformAction(action: COpaquePointer?, withSender: Any?): Boolean {
-        return when (action) {
-            NSSelectorFromString(UIResponderStandardEditActionsProtocol::copy.name + ":") ->
-                _currentTextMenuActions?.copy != null
-
-            NSSelectorFromString(UIResponderStandardEditActionsProtocol::cut.name + ":") ->
-                _currentTextMenuActions?.cut != null
-
-            NSSelectorFromString(UIResponderStandardEditActionsProtocol::paste.name + ":") ->
-                _currentTextMenuActions?.paste != null
-
-            NSSelectorFromString(UIResponderStandardEditActionsProtocol::selectAll.name + ":") ->
-                _currentTextMenuActions?.selectAll != null
-
-            else -> false
-        }
-    }
-
-    private fun shouldReloadContextMenuItems(actions: TextActions): Boolean {
-        return (_currentTextMenuActions?.copy == null) != (actions.copy == null) ||
-            (_currentTextMenuActions?.paste == null) != (actions.paste == null) ||
-            (_currentTextMenuActions?.cut == null) != (actions.cut == null) ||
-            (_currentTextMenuActions?.selectAll == null) != (actions.selectAll == null)
-    }
-
-    private fun cancelContextMenuUpdate() {
-        menuMonitoringJob.cancel()
-        menuMonitoringJob = Job()
-    }
+    override fun editMenuDelay(): Double =
+        viewConfiguration.doubleTapTimeoutMillis.milliseconds.toDouble(DurationUnit.SECONDS)
 
     /**
      * Show copy/paste text menu
@@ -502,55 +477,25 @@ internal class IntermediateTextInputUIView(
      * @param textActions - available (not null) actions in text menu
      */
     fun showTextMenu(targetRect: CValue<CGRect>, textActions: TextActions) {
-        val isTargetVisible = CGRectIntersectsRect(bounds, targetRect)
-
-        if (isTargetVisible) {
-            // TODO: UIMenuController is deprecated since iOS 17 and not available on iOS 12
-            val menu: UIMenuController = UIMenuController.sharedMenuController()
-            if (shouldReloadContextMenuItems(textActions)) {
-                menu.hideMenu()
-            }
-            cancelContextMenuUpdate()
-            CoroutineScope(Dispatchers.Main + menuMonitoringJob).launch {
-                delay(viewConfiguration.doubleTapTimeoutMillis)
-                menu.showMenuFromView(targetView = this@IntermediateTextInputUIView, targetRect)
-            }
-            _currentTextMenuActions = textActions
-        } else {
-            hideTextMenu()
-        }
+        this.showEditMenuAtRect(
+            targetRect = targetRect,
+            copy = textActions.copy,
+            cut = textActions.cut,
+            paste = textActions.paste,
+            selectAll = textActions.selectAll
+        )
     }
 
-    fun hideTextMenu() {
-        cancelContextMenuUpdate()
+    fun hideTextMenu() = this.hideEditMenu()
 
-        _currentTextMenuActions = null
-        val menu: UIMenuController = UIMenuController.sharedMenuController()
-        menu.hideMenu()
-    }
-
-    fun isTextMenuShown(): Boolean {
-        return _currentTextMenuActions != null
-    }
-
-    override fun copy(sender: Any?) {
-        _currentTextMenuActions?.copy?.invoke()
-    }
-
-    override fun paste(sender: Any?) {
-        _currentTextMenuActions?.paste?.invoke()
-    }
-
-    override fun cut(sender: Any?) {
-        _currentTextMenuActions?.cut?.invoke()
-    }
-
-    override fun selectAll(sender: Any?) {
-        _currentTextMenuActions?.selectAll?.invoke()
-    }
+    fun isTextMenuShown() = isEditMenuShown
 
     override fun tokenizer(): UITextInputTokenizerProtocol =
         UITextInputStringTokenizer(textInput = this)
+
+    fun resetOnKeyboardPressesCallback() {
+        onKeyboardPresses = NoOpOnKeyboardPresses
+    }
 }
 
 private class IntermediateTextPosition(val position: Long = 0) : UITextPosition()

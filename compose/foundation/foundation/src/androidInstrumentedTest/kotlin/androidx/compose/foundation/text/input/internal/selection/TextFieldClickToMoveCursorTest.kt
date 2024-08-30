@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.text.input.internal.selection
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,7 +49,6 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 
-@OptIn(ExperimentalFoundationApi::class)
 @LargeTest
 class TextFieldClickToMoveCursorTest : FocusedWindowTest {
 
@@ -270,6 +268,27 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         rule.waitForIdle()
         assertThat(state.selection).isEqualTo(TextRange(5))
         assertThat(scrollState.value).isGreaterThan(0)
+    }
+
+    @Test
+    fun clickOnText_readOnly() {
+        state = TextFieldState("abc")
+        rule.setTextFieldTestContent {
+            BasicTextField(
+                state = state,
+                textStyle = defaultTextStyle,
+                readOnly = true,
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
+            )
+        }
+
+        with(rule.onNodeWithTag(TAG)) {
+            performTouchInput { click(Offset((fontSize * 2).toPx(), height / 2f)) }
+        }
+        assertThat(state.selection).isEqualTo(TextRange(2))
     }
 
     @Test

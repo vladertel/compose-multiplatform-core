@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.layout.EmptyLayout
 import androidx.compose.ui.layout.Layout
@@ -81,12 +82,11 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
     val usePlatformDefaultWidth: Boolean = false,
     val usePlatformInsets: Boolean = true,
 ) {
-    // Constructor with all non-experimental arguments.
-    constructor(
-        focusable: Boolean = false,
-        dismissOnBackPress: Boolean = true,
-        dismissOnClickOutside: Boolean = true,
-        clippingEnabled: Boolean = true,
+    actual constructor(
+        focusable: Boolean,
+        dismissOnBackPress: Boolean,
+        dismissOnClickOutside: Boolean,
+        clippingEnabled: Boolean,
     ) : this(
         focusable = focusable,
         dismissOnBackPress = dismissOnBackPress,
@@ -96,7 +96,8 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
         usePlatformInsets = true,
     )
 
-    actual constructor(
+    @Deprecated("Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    constructor(
         focusable: Boolean,
         dismissOnBackPress: Boolean,
         dismissOnClickOutside: Boolean,
@@ -410,7 +411,10 @@ fun Popup(
     }
     val onOutsidePointerEvent = if (properties.dismissOnClickOutside && onDismissRequest != null) {
         // No need to remember this lambda, as it doesn't capture any values that can change.
-        { eventType: PointerEventType ->
+        { eventType: PointerEventType, _: PointerButton? ->
+            // Popup should react on first event - [PointerEventType.Press],
+            // but at the same time trigger [onDismissRequest] only once per click.
+            // Any mouse buttons should be accepted to match regular dropdown behavior.
             if (eventType == PointerEventType.Press) {
                 currentOnDismissRequest?.invoke()
             }
@@ -436,7 +440,7 @@ private fun PopupLayout(
     modifier: Modifier,
     onPreviewKeyEvent: ((KeyEvent) -> Boolean)? = null,
     onKeyEvent: ((KeyEvent) -> Boolean)? = null,
-    onOutsidePointerEvent: ((eventType: PointerEventType) -> Unit)? = null,
+    onOutsidePointerEvent: ((eventType: PointerEventType, button: PointerButton?) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     val currentContent by rememberUpdatedState(content)
@@ -512,7 +516,10 @@ private fun rememberPopupMeasurePolicy(
                 -platformInsets.top.roundToPx()
             )
             val positionInWindow = popupPositionProvider.calculatePosition(
-                boundsWithoutInsets, sizeWithoutInsets, layoutDirection, contentSize
+                anchorBounds = boundsWithoutInsets,
+                windowSize = sizeWithoutInsets,
+                layoutDirection = layoutDirection,
+                popupContentSize = contentSize
             )
             if (properties.clippingEnabled) {
                 clipPosition(positionInWindow, contentSize, sizeWithoutInsets)

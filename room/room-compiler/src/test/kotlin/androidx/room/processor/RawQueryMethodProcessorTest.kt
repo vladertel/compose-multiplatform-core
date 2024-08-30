@@ -672,8 +672,7 @@ class RawQueryMethodProcessorTest {
             COMMON.IMAGE_FORMAT, COMMON.CONVERTER
         )
         runProcessorTest(
-            sources = commonSources + inputSource,
-            options = mapOf(Context.BooleanProcessorOptions.GENERATE_KOTLIN.argName to "false"),
+            sources = commonSources + inputSource
         ) { invocation ->
             val (owner, methods) = invocation.roundEnv
                 .getElementsAnnotatedWith(Dao::class.qualifiedName!!)

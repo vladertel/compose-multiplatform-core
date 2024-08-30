@@ -17,6 +17,7 @@
 package androidx.compose.ui
 
 import android.content.Context.ACCESSIBILITY_SERVICE
+import android.content.res.Resources
 import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
@@ -41,6 +42,7 @@ import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTE
 import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX
 import android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -61,6 +63,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -108,8 +111,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -246,6 +251,7 @@ class AndroidAccessibilityTest {
     private lateinit var container: OpenComposeView
     private lateinit var delegate: AndroidComposeViewAccessibilityDelegateCompat
     private lateinit var provider: AccessibilityNodeProviderCompat
+    private lateinit var resources: Resources
 
     private val accessibilityManager: AccessibilityManager
         get() = androidComposeView.context
@@ -258,6 +264,7 @@ class AndroidAccessibilityTest {
     fun setup() {
         // Use uiAutomation to enable accessibility manager.
         InstrumentationRegistry.getInstrumentation().uiAutomation
+        resources = InstrumentationRegistry.getInstrumentation().context.resources
 
         rule.activityRule.scenario.onActivity { activity ->
             container = spy(OpenComposeView(activity)) {
@@ -673,6 +680,110 @@ class AndroidAccessibilityTest {
                             "androidx.compose.ui.semantics.testTag"
                         )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun emptyTextField_hasStateDescription() {
+        setContent {
+            BasicTextField(
+                rememberTextFieldState(),
+                modifier = Modifier.testTag(tag)
+            )
+        }
+
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        rule.runOnIdle {
+            with(info) {
+                assertThat(stateDescription).isEqualTo(resources.getString(R.string.state_empty))
+            }
+        }
+    }
+
+    @Test
+    fun emptyTextField_noSpeakableChild_hasStateDescription() {
+        setContent {
+            BasicTextField(
+                "",
+                {},
+                modifier = Modifier.testTag(tag)
+            ) {
+                Column {
+                    it()
+                    Button(onClick = {}) {}
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { testTag = "unspeakable child" })
+                }
+            }
+        }
+
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        rule.runOnIdle {
+            with(info) {
+                assertThat(stateDescription).isEqualTo(resources.getString(R.string.state_empty))
+            }
+        }
+    }
+
+    @Test
+    fun emptyTextField_hasSpeakableChild_noStateDescription_() {
+        setContent {
+            BasicTextField(
+                rememberTextFieldState(),
+                modifier = Modifier.testTag(tag),
+                decorator = {
+                    Row {
+                        it()
+                        BasicText(text = "Label")
+                    }
+                }
+            )
+        }
+
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        rule.runOnIdle {
+            with(info) {
+                assertThat(stateDescription).isNull()
+            }
+        }
+    }
+
+    @Test
+    fun emptyTextField_hasSpeakableIndirectChild_noStateDescription_() {
+        setContent {
+            BasicTextField(
+                rememberTextFieldState(),
+                modifier = Modifier.testTag(tag),
+                decorator = {
+                    Row {
+                        it()
+                        Box(modifier = Modifier
+                            .wrapContentSize()
+                            .semantics {
+                                testTag = "box test tag"
+                            }) {
+                            BasicText(text = "Label")
+                        }
+                    }
+                }
+            )
+        }
+
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        rule.runOnIdle {
+            with(info) {
+                assertThat(stateDescription).isNull()
             }
         }
     }
@@ -2465,7 +2576,10 @@ class AndroidAccessibilityTest {
         setContent {
             Row {
                 // Initially focused item.
-                Box(Modifier.size(10.dp).focusable())
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .focusable())
                 Box(
                     Modifier
                         .testTag(tag)
@@ -2621,7 +2735,10 @@ class AndroidAccessibilityTest {
         setContent {
             Row {
                 // Initially focused item.
-                Box(Modifier.size(10.dp).focusable())
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .focusable())
                 BasicTextField(
                     modifier = Modifier.testTag(tag),
                     value = "value",
@@ -5200,6 +5317,44 @@ class AndroidAccessibilityTest {
             assertThat(columnInfo.className).isNotEqualTo("android.widget.ScrollView")
             assertThat(rowInfo.className).isNotEqualTo("android.widget.HorizontalScrollView")
         }
+    }
+
+    @Test
+    fun testAndroidViewSemanticBounds_whenAddedInRecomposition() {
+        // disable to ensure that androidViewHandler is not created by accessibility observers
+        delegate.accessibilityForceEnabledForTesting = false
+
+        var state by mutableStateOf(false)
+        val viewId = 42
+        val viewSize = 50
+        setContent {
+            Box(Modifier.size(100.dp)) {
+                if (state) {
+                    AndroidView(
+                        factory = {
+                            FrameLayout(it).apply {
+                                addView(View(it).apply {
+                                    layoutParams = FrameLayout.LayoutParams(viewSize, viewSize)
+                                    setBackgroundColor(Color.Red.toArgb())
+                                    id = viewId
+                                })
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        rule.mainClock.autoAdvance = true // ensure complete recomposition
+
+        rule.runOnIdle {
+            state = true
+        }
+
+        rule.waitForIdle()
+        val info = androidComposeView.findViewById<View>(viewId).createAccessibilityNodeInfo()
+        val bounds = Rect().apply { info.getBoundsInScreen(this) }
+        assertThat(bounds.width()).isEqualTo(viewSize)
+        assertThat(bounds.height()).isEqualTo(viewSize)
     }
 
     @Test

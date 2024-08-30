@@ -725,13 +725,13 @@ class TextToggleButtonTest {
                 if (status.enabled() || !applyAlphaForDisabled) {
                     expectedContainerColor()
                 } else {
-                    expectedContainerColor().copy(DisabledContentAlpha)
+                    expectedContainerColor().copy(ContentAlpha.disabled)
                 }.compositeOver(testBackgroundColor)
             finalExpectedContent =
                 if (status.enabled() || !applyAlphaForDisabled) {
                     expectedContentColor()
                 } else {
-                    expectedContentColor().copy(DisabledContentAlpha)
+                    expectedContentColor().copy(ContentAlpha.disabled)
                 }
             Box(
                 Modifier

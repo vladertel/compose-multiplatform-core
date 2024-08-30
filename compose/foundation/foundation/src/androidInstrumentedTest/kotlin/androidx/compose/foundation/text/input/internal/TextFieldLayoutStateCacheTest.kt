@@ -16,7 +16,7 @@
 
 package androidx.compose.foundation.text.input.internal
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.graphics.Typeface
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.getValue
@@ -30,6 +30,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.createFontFamilyResolver
+import androidx.compose.ui.text.font.toFontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -39,7 +41,12 @@ import androidx.test.filters.FlakyTest
 import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import kotlin.test.assertNotNull
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -47,7 +54,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalFoundationApi::class)
 @RunWith(AndroidJUnit4::class)
 @MediumTest
 class TextFieldLayoutStateCacheTest {
@@ -140,6 +146,31 @@ class TextFieldLayoutStateCacheTest {
         assertInvalidationsOnChange(1) {
             textStyle = TextStyle(fontSize = 23.sp)
             updateNonMeasureInputs()
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun updateNonMeasureInputs_invalidatesSnapshot_whenFontFamilyResolves() {
+        val loader = AsyncTestTypefaceLoader()
+        val asyncFauxFont = AsyncFauxFont(loader)
+        val fontFamily = asyncFauxFont.toFontFamily()
+
+        val context = InstrumentationRegistry.getInstrumentation().context
+
+        textStyle = TextStyle(fontSize = 12.sp, fontFamily = fontFamily)
+        runTest(UnconfinedTestDispatcher()) {
+            val resolverJob = Job(coroutineContext[Job])
+            val resolverContext = coroutineContext + resolverJob
+            fontFamilyResolver = createFontFamilyResolver(context, resolverContext)
+
+            assertInvalidationsOnChange(1) {
+                Snapshot.withMutableSnapshot {
+                    loader.completeOne(asyncFauxFont, Typeface.MONOSPACE)
+                }
+            }
+
+            resolverJob.cancel()
         }
     }
 
@@ -416,6 +447,47 @@ class TextFieldLayoutStateCacheTest {
     }
 
     @Test
+    fun value_returnsNewLayout_whenCompositionChanged() {
+        textFieldState.edit {
+            replace(0, length, "hello")
+            placeCursorBeforeCharAt(0)
+        }
+        assertLayoutChange(
+            change = {
+                textFieldState.editAsUser(inputTransformation = null) {
+                    setComposingRegion(2, 3)
+                }
+            },
+        ) { old, new ->
+            Truth.assertThat(
+                old.multiParagraph.intrinsics.annotatedString.spanStyles.any {
+                    it.item.textDecoration == TextDecoration.Underline
+                }
+            ).isFalse()
+            Truth.assertThat(
+                new.multiParagraph.intrinsics.annotatedString.spanStyles.any {
+                    it.item.textDecoration == TextDecoration.Underline
+                }
+            ).isTrue()
+        }
+    }
+
+    @Test
+    fun value_returnsCachedLayout_whenCompositionDoesNotChange() {
+        textFieldState.editAsUser(inputTransformation = null) {
+            replace(0, length, "hello")
+            setSelection(0, 0)
+            setComposition(0, 5)
+        }
+        updateNonMeasureInputs()
+        updateMeasureInputs()
+        val initialLayout = cache.value
+        // this shouldn't cause a recompute
+        val secondLayout = cache.value
+        assertThat(initialLayout).isSameInstanceAs(secondLayout)
+    }
+
+    @Test
     fun value_returnsCachedLayout_whenTextSelectionChanged() {
         textFieldState.edit {
             replace(0, length, "hello")
@@ -492,6 +564,7 @@ class TextFieldLayoutStateCacheTest {
         ) { old, new ->
             Truth.assertThat(old.layoutInput.style.fontSize).isEqualTo(12.sp)
             Truth.assertThat(new.layoutInput.style.fontSize).isEqualTo(23.sp)
+            Truth.assertThat(old.multiParagraph).isNotSameInstanceAs(new.multiParagraph)
         }
     }
 
@@ -518,6 +591,8 @@ class TextFieldLayoutStateCacheTest {
             }
         ) { old, new ->
             Truth.assertThat(new).isNotSameInstanceAs(old)
+            Truth.assertThat(old.layoutInput.maxLines).isEqualTo(Int.MAX_VALUE)
+            Truth.assertThat(new.layoutInput.maxLines).isEqualTo(1)
         }
     }
 
@@ -717,6 +792,40 @@ class TextFieldLayoutStateCacheTest {
         } finally {
             snapshot.dispose()
         }
+    }
+
+    @Test
+    fun textLayoutCalculatedInReadOnlySnapshot_returnedFromCacheWhenCalledFromWriteable() {
+        singleLine = true
+        updateNonMeasureInputs()
+        updateMeasureInputs()
+        val initialLayout = cache.value!!
+
+        singleLine = false
+        updateNonMeasureInputs()
+        val snapshot = Snapshot.takeSnapshot()
+
+        lateinit var layoutFromSnapshot: TextLayoutResult
+        snapshot.enter {
+            with(cache.value!!) {
+                layoutFromSnapshot = this
+                Truth.assertThat(initialLayout.layoutInput.maxLines).isEqualTo(1)
+                Truth.assertThat(layoutInput.maxLines).isEqualTo(Int.MAX_VALUE)
+            }
+        }
+
+        val finalLayout = cache.value!!
+
+        Truth.assertThat(initialLayout.multiParagraph)
+            .isNotSameInstanceAs(layoutFromSnapshot.multiParagraph)
+
+        // Even though the initial text layout calculation after TextStyle change was done in a
+        // read-only snapshot, we still expect to get the same MultiParagraph instance when called
+        // with the same measure/non-measure arguments.
+        Truth.assertThat(finalLayout.multiParagraph)
+            .isSameInstanceAs(layoutFromSnapshot.multiParagraph)
+
+        Truth.assertThat(finalLayout.layoutInput).isEqualTo(layoutFromSnapshot.layoutInput)
     }
 
     private fun assertLayoutChange(

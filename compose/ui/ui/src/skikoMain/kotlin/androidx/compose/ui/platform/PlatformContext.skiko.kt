@@ -20,10 +20,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -32,7 +35,7 @@ import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.scene.ComposeScene
-import androidx.compose.ui.scene.MultiLayerComposeScene
+import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.EditCommand
@@ -57,25 +60,41 @@ interface PlatformContext {
      * This is used when rendering the scrim of a dialog - if set to true, a special blending mode
      * will be used to take into account the existing alpha-channel values.
      *
-     * @see MultiLayerComposeScene
+     * @see CanvasLayersComposeScene
      */
     val isWindowTransparent: Boolean get() = false
 
     /**
-     * Returns the position relative to the containing window of the [localPosition],
-     * the position relative to the [ComposeScene]. If the [ComposeScene] is rotated, scaled,
-     * or otherwise transformed relative to the window, this will not be a simple translation.
+     * Converts [localPosition] relative to the [ComposeScene] into an [Offset] relative to
+     * the containing window.
+     * If the [ComposeScene] is rotated, scaled, or otherwise transformed relative to the window,
+     * this will not be a simple translation.
      */
-    fun calculatePositionInWindow(localPosition: Offset): Offset =
+    fun convertLocalToWindowPosition(localPosition: Offset): Offset =
         localPosition
 
     /**
-     * Returns the position relative to the [ComposeScene] of the [positionInWindow],
-     * the position relative to the window. If the [ComposeScene] is rotated, scaled, or
-     * otherwise transformed relative to the window, this will not be a simple translation.
+     * Converts [positionInWindow] relative to the window into an [Offset] relative to
+     * the [ComposeScene].
+     * If the [ComposeScene] is rotated, scaled, or otherwise transformed relative to the window,
+     * this will not be a simple translation.
      */
-    fun calculateLocalPosition(positionInWindow: Offset): Offset =
+    fun convertWindowToLocalPosition(positionInWindow: Offset): Offset =
         positionInWindow
+
+    /**
+     * Converts [localPosition] relative to the [ComposeScene] into an [Offset] relative to
+     * the device's screen.
+     */
+    fun convertLocalToScreenPosition(localPosition: Offset): Offset =
+        convertLocalToWindowPosition(localPosition)
+
+    /**
+     * Converts [positionOnScreen] relative to the device's screen into an [Offset] relative to
+     * the [ComposeScene].
+     */
+    fun convertScreenToLocalPosition(positionOnScreen: Offset): Offset =
+        convertWindowToLocalPosition(positionOnScreen)
 
     /**
      * Determines if [OwnedLayer] should measure bounds for all drawings.
@@ -92,7 +111,16 @@ interface PlatformContext {
     fun setPointerIcon(pointerIcon: PointerIcon) = Unit
 
     val parentFocusManager: FocusManager get() = EmptyFocusManager
-    fun requestFocus(): Boolean = false
+    fun requestFocus(): Boolean = true
+
+    /**
+     * Starts a drag-and-drop session with the Compose app as the source of the transfer.
+     */
+    fun startDrag(
+        transferData: DragAndDropTransferData,
+        decorationSize: Size,
+        drawDragDecoration: DrawScope.() -> Unit
+    ): Boolean = false
 
     /**
      * The listener to track [RootForTest]s.

@@ -57,6 +57,7 @@ internal class ComposeSceneKeyboardOffsetManager(
     private val composeSceneMediatorProvider: () -> ComposeSceneMediator?,
     private val onComposeSceneOffsetChanged: (Double) -> Unit,
 ) : KeyboardVisibilityObserver {
+    private var isDisposed: Boolean = false
 
     val view get() = viewProvider()
 
@@ -75,6 +76,12 @@ internal class ComposeSceneKeyboardOffsetManager(
         KeyboardVisibilityListener.removeObserver(this)
     }
 
+    fun dispose() {
+        check (!isDisposed) { "ComposeSceneKeyboardOffsetManager is already disposed" }
+        isDisposed = true
+        stop()
+    }
+
     /**
      * Invisible view to track system keyboard animation
      */
@@ -84,6 +91,8 @@ internal class ComposeSceneKeyboardOffsetManager(
         }
     }
     private var keyboardAnimationListener: CADisplayLink? = null
+
+    val isAnimating get() = keyboardAnimationListener != null
 
     override fun keyboardWillShow(
         targetFrame: CValue<CGRect>,
@@ -263,6 +272,11 @@ internal class ComposeSceneKeyboardOffsetManager(
     private var viewBottomOffset: Double = 0.0
         set(newValue) {
             field = newValue
-            onComposeSceneOffsetChanged(newValue)
+
+            // In certain edge cases the scene might be disposed before updateAnimationValues is called
+            // Simply don't forward the offset change in this case to avoid calling anything on closed ComposeScene.
+            if (!isDisposed) {
+                onComposeSceneOffsetChanged(newValue)
+            }
         }
 }

@@ -16,15 +16,8 @@
 
 package androidx.room.solver.shortcut.binder
 
-import androidx.room.compiler.codegen.CodeLanguage
-import androidx.room.compiler.codegen.XMemberName.Companion.packageMember
 import androidx.room.compiler.codegen.XPropertySpec
 import androidx.room.compiler.codegen.XTypeSpec
-import androidx.room.compiler.codegen.box
-import androidx.room.ext.Function1TypeSpec
-import androidx.room.ext.RoomTypeNames
-import androidx.room.ext.SQLiteDriverTypeNames
-import androidx.room.ext.isNotVoid
 import androidx.room.solver.CodeGenScope
 import androidx.room.solver.shortcut.result.DeleteOrUpdateMethodAdapter
 import androidx.room.vo.ShortcutQueryParameter
@@ -42,96 +35,14 @@ class InstantDeleteOrUpdateMethodBinder(
         dbProperty: XPropertySpec,
         scope: CodeGenScope
     ) {
-        when (scope.language) {
-            CodeLanguage.JAVA -> convertAndReturnJava(
-                parameters, adapters, dbProperty, scope
-            )
-            CodeLanguage.KOTLIN -> convertAndReturnKotlin(
-                parameters, adapters, dbProperty, scope
-            )
-        }
-    }
-
-    private fun convertAndReturnJava(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, Any>>,
-        dbProperty: XPropertySpec,
-        scope: CodeGenScope
-    ) {
-        if (adapter == null) {
-            return
-        }
-
-        val returnPrefix = if (adapter.returnType.isNotVoid()) { "return " } else { "" }
-        val connectionVar = scope.getTmpVar("_connection")
-        scope.builder.addStatement(
-            "$returnPrefix%M(%N, %L, %L, %L)",
-            RoomTypeNames.DB_UTIL.packageMember("performBlocking"),
-            dbProperty,
-            false, // isReadOnly
-            true, // inTransaction
-            Function1TypeSpec(
-                language = scope.language,
-                parameterTypeName = SQLiteDriverTypeNames.CONNECTION,
-                parameterName = connectionVar,
-                returnTypeName = adapter.returnType.asTypeName().box()
-            ) {
-                val functionScope = scope.fork()
-                val functionCode = functionScope.builder.apply {
-                    adapter.generateMethodBody(
-                        scope = functionScope,
-                        parameters = parameters,
-                        adapters = adapters,
-                        connectionVar = connectionVar
-                    )
-                }.build()
-                this.addCode(functionCode)
-            }
-        )
-    }
-
-    private fun convertAndReturnKotlin(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, Any>>,
-        dbProperty: XPropertySpec,
-        scope: CodeGenScope
-    ) {
-        if (adapter == null) {
-            return
-        }
-        val connectionVar = scope.getTmpVar("_connection")
         scope.builder.apply {
-            beginControlFlow(
-                "return %M(%N, %L, %L) { %L ->",
-                RoomTypeNames.DB_UTIL.packageMember("performBlocking"),
-                dbProperty,
-                false, // isReadOnly
-                true, // inTransaction
-                connectionVar
-            ).apply {
-                adapter.generateMethodBody(
-                    scope = scope,
-                    parameters = parameters,
-                    adapters = adapters,
-                    connectionVar = connectionVar
-                )
-            }.endControlFlow()
+            addStatement("%N.assertNotSuspendingTransaction()", dbProperty)
         }
-    }
-
-    override fun convertAndReturnCompat(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, XTypeSpec>>,
-        dbProperty: XPropertySpec,
-        scope: CodeGenScope
-    ) {
-        adapter?.generateMethodBodyCompat(
+        adapter?.createDeleteOrUpdateMethodBody(
             parameters = parameters,
             adapters = adapters,
             dbProperty = dbProperty,
             scope = scope
         )
     }
-
-    override fun isMigratedToDriver() = true
 }

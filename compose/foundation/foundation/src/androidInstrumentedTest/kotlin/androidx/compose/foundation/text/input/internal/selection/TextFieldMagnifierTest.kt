@@ -18,7 +18,6 @@ package androidx.compose.foundation.text.input.internal.selection
 
 import android.view.DragEvent
 import android.view.View
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +37,7 @@ import androidx.compose.foundation.text.selection.AbstractSelectionMagnifierTest
 import androidx.compose.foundation.text.selection.assertMagnifierExists
 import androidx.compose.foundation.text.selection.assertNoMagnifierExists
 import androidx.compose.foundation.text.selection.assertThatOffset
+import androidx.compose.foundation.text.selection.gestures.RtlChar
 import androidx.compose.foundation.text.selection.gestures.util.longPress
 import androidx.compose.foundation.text.selection.getMagnifierCenterOffset
 import androidx.compose.foundation.text.selection.isSelectionHandle
@@ -432,7 +432,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
     @Test
     fun textField_magnifier_centeredToEndOfLine_whenBidiEndOffsetInMiddleOfLine() {
         val ltrWord = "hello"
-        val rtlWord = "בבבבב"
+        val rtlWord = RtlChar.repeat(5)
 
         lateinit var textLayout: TextLayoutResult
         rule.setTextFieldTestContent {
@@ -489,7 +489,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
         assertThatOffset(actual).equalsWithTolerance(Offset(lineRightX, secondLineCenterY))
     }
 
-    @OptIn(ExperimentalTestApi::class, ExperimentalFoundationApi::class)
+    @OptIn(ExperimentalTestApi::class)
     private fun checkMagnifierStayAtEndWhenDraggedBeyondScroll(
         handle: Handle,
         layoutDirection: LayoutDirection = LayoutDirection.Ltr
@@ -566,14 +566,12 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
     ) {
         val dragDistance = Offset(10f, 0f)
         val dragDirection = if (expandForwards) 1f else -1f
+        val char = if (layoutDirection == LayoutDirection.Ltr) "a" else RtlChar
+        val word = char.repeat(4)
         rule.setTextFieldTestContent {
             Content(
-                if (layoutDirection == LayoutDirection.Ltr) {
-                    "aaaa aaaa aaaa"
-                } else {
-                    "באמת באמת באמת"
-                },
-                Modifier
+                text = "$word $word $word",
+                modifier = Modifier
                     // Center the text to give the magnifier lots of room to move.
                     .fillMaxSize()
                     .wrapContentSize()

@@ -31,6 +31,7 @@ import androidx.camera.camera2.pipe.core.Log.error
 import androidx.camera.camera2.pipe.core.Log.warn
 import androidx.camera.camera2.pipe.integration.adapter.CameraUseCaseAdapter
 import androidx.camera.camera2.pipe.integration.compat.workaround.getSupportedRepeatingSurfaceSizes
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
@@ -227,6 +228,8 @@ class MeteringRepeating(
         override fun setCaptureOptionUnpacker(optionUnpacker: CaptureConfig.OptionUnpacker) = this
 
         override fun setSurfaceOccupancyPriority(priority: Int) = this
+
+        override fun setCameraSelector(cameraSelector: CameraSelector) = this
 
         override fun setZslDisabled(disabled: Boolean) = this
 

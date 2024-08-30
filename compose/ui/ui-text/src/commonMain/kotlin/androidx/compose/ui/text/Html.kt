@@ -16,8 +16,6 @@
 
 package androidx.compose.ui.text
 
-import androidx.compose.ui.text.style.TextDecoration
-
 /**
  * Converts a string with HTML tags into [AnnotatedString].
  *
@@ -29,10 +27,8 @@ import androidx.compose.ui.text.style.TextDecoration
  * guide. Note that bullet lists are not **yet** available.
  *
  * @param htmlString HTML-tagged string to be parsed to construct AnnotatedString
- * @param linkStyle style to be applied to links present in the string
- * @param linkFocusedStyle style to be applied to links present in the string when they are focused
- * @param linkHoveredStyle style to be applied to links present in the string when they are hovered
- * @param linkPressedStyle style to be applied to links present in the string when they are pressed
+ * @param linkStyles style configuration to be applied to links present in the string in different
+ * styles
  * @param linkInteractionListener a listener that will be attached to links that are present in
  * the string and triggered when user clicks on those links. When set to null, which is a default,
  * the system will try to open the corresponding links with the
@@ -40,8 +36,8 @@ import androidx.compose.ui.text.style.TextDecoration
  *
  * Note that any link style passed directly to this method will be merged with the styles set
  * directly on a HTML-tagged string. For example, if you set a color of the link via the span
- * annotation to "red" but also pass a green color via the [linkStyle], the link will be displayed
- * as green. If, however, you pass a green background via the [linkStyle] instead, the link will
+ * annotation to "red" but also pass a green color via the [linkStyles], the link will be displayed
+ * as green. If, however, you pass a green background via the [linkStyles] instead, the link will
  * be displayed as red on a green background.
  *
  * Example of displaying styled string from resources
@@ -52,9 +48,6 @@ import androidx.compose.ui.text.style.TextDecoration
  */
 expect fun AnnotatedString.Companion.fromHtml(
     htmlString: String,
-    linkStyle: SpanStyle? = SpanStyle(textDecoration = TextDecoration.Underline),
-    linkFocusedStyle: SpanStyle? = null,
-    linkHoveredStyle: SpanStyle? = null,
-    linkPressedStyle: SpanStyle? = null,
+    linkStyles: TextLinkStyles? = null,
     linkInteractionListener: LinkInteractionListener? = null
 ): AnnotatedString

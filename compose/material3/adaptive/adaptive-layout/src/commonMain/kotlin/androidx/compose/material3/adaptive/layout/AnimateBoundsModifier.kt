@@ -20,7 +20,6 @@ import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ApproachLayoutModifierNode
@@ -44,18 +43,19 @@ internal fun Modifier.animateBounds(
     positionAnimationSpec: FiniteAnimationSpec<IntOffset>,
     lookaheadScope: LookaheadScope,
     enabled: Boolean
-) = if (enabled) {
-    this.then(
-        AnimateBoundsElement(
-            animateFraction,
-            sizeAnimationSpec,
-            positionAnimationSpec,
-            lookaheadScope
+) =
+    if (enabled) {
+        this.then(
+            AnimateBoundsElement(
+                animateFraction,
+                sizeAnimationSpec,
+                positionAnimationSpec,
+                lookaheadScope
+            )
         )
-    )
-} else {
-    this
-}
+    } else {
+        this
+    }
 
 private data class AnimateBoundsElement(
     private val animateFraction: () -> Float,
@@ -120,7 +120,6 @@ private class AnimateBoundsNode(
         lookaheadCoordinates: LayoutCoordinates
     ) = animateFraction() != 1f
 
-    @OptIn(ExperimentalComposeUiApi::class)
     override fun ApproachMeasureScope.approachMeasure(
         measurable: Measurable,
         constraints: Constraints
@@ -154,9 +153,9 @@ private class AnimateBoundsNode(
 }
 
 private class SizeTracker(var animationSpec: FiniteAnimationSpec<IntSize>) {
-    private var originalSize: IntSize = IntSize.Zero
-    private var targetSize: IntSize = IntSize.Zero
-    private var currentSize = IntSize.Zero
+    private var originalSize: IntSize = InvalidIntSize
+    private var targetSize: IntSize = InvalidIntSize
+    private var currentSize = InvalidIntSize
     private lateinit var animation: TargetBasedAnimation<IntSize, AnimationVector2D>
 
     fun updateTargetSize(newSize: IntSize) {
@@ -165,14 +164,15 @@ private class SizeTracker(var animationSpec: FiniteAnimationSpec<IntSize>) {
         }
         // TODO(conradchen): Handle the interruption better when the target size changes during
         //                   the animation
-        originalSize = currentSize
+        originalSize =
+            if (currentSize != InvalidIntSize) {
+                currentSize
+            } else {
+                newSize
+            }
         targetSize = newSize
-        animation = TargetBasedAnimation(
-            animationSpec,
-            IntSize.VectorConverter,
-            originalSize,
-            targetSize
-        )
+        animation =
+            TargetBasedAnimation(animationSpec, IntSize.VectorConverter, originalSize, targetSize)
     }
 
     fun updateAndGetCurrentSize(fraction: Float): IntSize {
@@ -193,18 +193,20 @@ private class PositionTracker(var animationSpec: FiniteAnimationSpec<IntOffset>)
         }
         // TODO(conradchen): Handle the interruption better when the target position changes during
         //                   the animation
-        originalOffset = if (currentOffset != null) {
-            currentOffset
-        } else {
-            newOffset
-        }
+        originalOffset =
+            if (currentOffset != null) {
+                currentOffset
+            } else {
+                newOffset
+            }
         targetOffset = newOffset
-        animation = TargetBasedAnimation(
-            animationSpec,
-            IntOffset.VectorConverter,
-            originalOffset!!,
-            targetOffset!!
-        )
+        animation =
+            TargetBasedAnimation(
+                animationSpec,
+                IntOffset.VectorConverter,
+                originalOffset!!,
+                targetOffset!!
+            )
     }
 
     fun updateAndGetCurrentOffset(fraction: Float): IntOffset {
@@ -214,3 +216,5 @@ private class PositionTracker(var animationSpec: FiniteAnimationSpec<IntOffset>)
 }
 
 private fun Offset.toIntOffset() = IntOffset(x.roundToInt(), y.roundToInt())
+
+private val InvalidIntSize = IntSize(-1, -1)

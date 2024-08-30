@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.text.input.internal.selection
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -49,7 +48,6 @@ import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 
-@OptIn(ExperimentalFoundationApi::class)
 @LargeTest
 class TextFieldInteractionSourcePressTest : FocusedWindowTest {
 
@@ -237,7 +235,8 @@ class TextFieldInteractionSourcePressTest : FocusedWindowTest {
             assertThat(interactions[0]).isInstanceOf(PressInteraction.Press::class.java)
             assertThat(interactions[1]).isInstanceOf(PressInteraction.Release::class.java)
             assertThat(interactions[2]).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions[3]).isInstanceOf(PressInteraction.Release::class.java)
+            // second tap is consumed to select the tapped word, so this will be cancelled.
+            assertThat(interactions[3]).isInstanceOf(PressInteraction.Cancel::class.java)
         }
     }
 }

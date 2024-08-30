@@ -361,7 +361,7 @@ class IconButtonTest {
             colors = { IconButtonDefaults.iconButtonColors() },
             expectedContainerColor = { Color.Transparent },
             expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
+                alpha = ContentAlpha.disabled
             ) }
         )
     }
@@ -387,7 +387,7 @@ class IconButtonTest {
                 alpha = DisabledContainerAlpha
             ) },
             expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
+                alpha = ContentAlpha.disabled
             ) }
         )
     }
@@ -413,7 +413,7 @@ class IconButtonTest {
                 alpha = DisabledContainerAlpha
             ) },
             expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
+                alpha = ContentAlpha.disabled
             ) }
         )
     }
@@ -437,7 +437,7 @@ class IconButtonTest {
             colors = { IconButtonDefaults.outlinedIconButtonColors() },
             expectedContainerColor = { Color.Transparent },
             expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
+                alpha = ContentAlpha.disabled
             ) }
         )
     }
@@ -538,7 +538,7 @@ private fun ComposeContentTestRule.isShape(
     setContentWithTheme {
         background = MaterialTheme.colorScheme.surface
         Box(Modifier.background(background)) {
-            buttonColor = colors().containerColor(true)
+            buttonColor = colors().containerColor(true).value
             if (buttonColor == Color.Transparent) {
                 buttonColor = background
             }

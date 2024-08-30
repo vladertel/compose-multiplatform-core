@@ -43,7 +43,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -138,7 +137,6 @@ class BasicCallControlsTest : BaseTelecomTest() {
      * [CallEndpointCompat] via [CallControlScope.requestEndpointChange].
      * The call should use the *V2 platform APIs* under the hood.
      */
-    @Ignore // b/329357697  TODO:: re-enable when cache_call_audio_callbacks is enabled in builds
     @SdkSuppress(minSdkVersion = VERSION_CODES.UPSIDE_DOWN_CAKE)
     @LargeTest
     @Test(timeout = 10000)
@@ -152,7 +150,6 @@ class BasicCallControlsTest : BaseTelecomTest() {
      * mute/unmute the call are reflected in [CallControlScope.isMuted]. The call should use the
      * *V2 platform APIs* under the hood.
      */
-    @Ignore // b/323006293  TODO:: re-enable when cache_call_audio_callbacks is enabled in builds
     @SdkSuppress(minSdkVersion = VERSION_CODES.UPSIDE_DOWN_CAKE)
     @LargeTest
     @Test(timeout = 10000)

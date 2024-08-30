@@ -16,7 +16,6 @@
 
 package androidx.test.uiautomator;
 
-import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.SuppressLint;
 import android.app.Instrumentation;
@@ -79,16 +78,12 @@ public class UiDevice implements Searchable {
 
     static final String TAG = UiDevice.class.getSimpleName();
 
-    private static final int MAX_UIAUTOMATION_RETRY = 3;
-    private static final int UIAUTOMATION_RETRY_INTERVAL = 500; // ms
-    // Workaround for stale accessibility cache issues: duration after which the a11y service flags
-    // should be reset (when fetching a UiAutomation instance) to periodically invalidate the cache.
-    private static final long SERVICE_FLAGS_TIMEOUT = 2_000; // ms
-
     // Use a short timeout after HOME or BACK key presses, as no events might be generated if
     // already on the home page or if there is nothing to go back to.
     private static final long KEY_PRESS_EVENT_TIMEOUT = 1_000; // ms
     private static final long ROTATION_TIMEOUT = 2_000; // ms
+    private static final int MAX_UIAUTOMATION_RETRY = 3;
+    private static final int UIAUTOMATION_RETRY_INTERVAL = 500;
 
     // Singleton instance.
     private static UiDevice sInstance;
@@ -101,7 +96,6 @@ public class UiDevice implements Searchable {
 
     // Track accessibility service flags to determine when the underlying connection has changed.
     private int mCachedServiceFlags = -1;
-    private long mLastServiceFlagsTime = -1;
     private boolean mCompressed = false;
 
     // Lazily created UI context per display, used to access UI components/configurations.
@@ -522,12 +516,12 @@ public class UiDevice implements Searchable {
      * Simulates a short press on the Recent Apps button.
      *
      * @return true if successful, else return false
-     * @throws RemoteException never
+     * @throws RemoteException
      */
     public boolean pressRecentApps() throws RemoteException {
         waitForIdle();
         Log.d(TAG, "Pressing recent apps button.");
-        return getUiAutomation().performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
+        return getInteractionController().toggleRecentApps();
     }
 
     /**
@@ -538,8 +532,7 @@ public class UiDevice implements Searchable {
     public boolean openNotification() {
         waitForIdle();
         Log.d(TAG, "Opening notification.");
-        return getUiAutomation().performGlobalAction(
-                AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
+        return  getInteractionController().openNotification();
     }
 
     /**
@@ -550,8 +543,7 @@ public class UiDevice implements Searchable {
     public boolean openQuickSettings() {
         waitForIdle();
         Log.d(TAG, "Opening quick settings.");
-        return getUiAutomation().performGlobalAction(
-                AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS);
+        return getInteractionController().openQuickSettings();
     }
 
     /**
@@ -1186,6 +1178,7 @@ public class UiDevice implements Searchable {
      */
     @Deprecated
     public void dumpWindowHierarchy(@NonNull String fileName) {
+
         File dumpFile = new File(fileName);
         if (!dumpFile.isAbsolute()) {
             dumpFile = mInstrumentation.getContext().getFileStreamPath(fileName);
@@ -1204,9 +1197,8 @@ public class UiDevice implements Searchable {
      * @throws IOException
      */
     public void dumpWindowHierarchy(@NonNull File dest) throws IOException {
-        Log.d(TAG, String.format("Dumping window hierarchy to %s.", dest));
         try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(dest))) {
-            AccessibilityNodeInfoDumper.dumpWindowHierarchy(this, stream);
+            dumpWindowHierarchy(stream);
         }
     }
 
@@ -1217,7 +1209,6 @@ public class UiDevice implements Searchable {
      * @throws IOException
      */
     public void dumpWindowHierarchy(@NonNull OutputStream out) throws IOException {
-        Log.d(TAG, String.format("Dumping window hierarchy to %s.", out));
         AccessibilityNodeInfoDumper.dumpWindowHierarchy(this, out);
     }
 
@@ -1476,19 +1467,13 @@ public class UiDevice implements Searchable {
         if (uiAutomation == null) {
             throw new NullPointerException("Got null UiAutomation from instrumentation.");
         }
-
         // Verify and update the accessibility service flags if necessary. These might get reset
         // if the underlying UiAutomationConnection is recreated.
         AccessibilityServiceInfo serviceInfo = uiAutomation.getServiceInfo();
         if (serviceInfo == null) {
             Log.w(TAG, "Cannot verify accessibility service flags. "
                     + "Multi-window support (searching non-active windows) may be disabled.");
-            return uiAutomation;
-        }
-
-        boolean serviceFlagsChanged = serviceInfo.flags != mCachedServiceFlags;
-        if (serviceFlagsChanged
-                || SystemClock.uptimeMillis() - mLastServiceFlagsTime > SERVICE_FLAGS_TIMEOUT) {
+        } else if (serviceInfo.flags != mCachedServiceFlags) {
             // Enable multi-window support for API 21+.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 serviceInfo.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
@@ -1499,14 +1484,10 @@ public class UiDevice implements Searchable {
             } else {
                 serviceInfo.flags |= AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
             }
-
-            if (serviceFlagsChanged) {
-                Log.d(TAG, String.format("Setting accessibility service flags: %d",
-                        serviceInfo.flags));
-            }
+            Log.d(TAG,
+                    String.format("Setting accessibility service flags: %d", serviceInfo.flags));
             uiAutomation.setServiceInfo(serviceInfo);
             mCachedServiceFlags = serviceInfo.flags;
-            mLastServiceFlagsTime = SystemClock.uptimeMillis();
         }
 
         return uiAutomation;

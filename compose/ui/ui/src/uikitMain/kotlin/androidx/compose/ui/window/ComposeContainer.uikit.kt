@@ -20,26 +20,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.hapticfeedback.CupertinoHapticFeedback
 import androidx.compose.ui.interop.LocalUIViewController
-import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
+import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
 import androidx.compose.ui.scene.ComposeSceneMediator
-import androidx.compose.ui.scene.MultiLayerComposeScene
+import androidx.compose.ui.scene.PlatformLayersComposeScene
 import androidx.compose.ui.scene.SceneLayout
-import androidx.compose.ui.scene.SingleLayerComposeScene
 import androidx.compose.ui.scene.UIViewComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
@@ -51,11 +48,15 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.viewinterop.UIKitInteropContainer
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
+import kotlin.native.runtime.GC
+import kotlin.native.runtime.NativeRuntimeApi
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
-import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,11 @@ import platform.UIKit.UIContentSizeCategoryExtraSmall
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryMedium
 import platform.UIKit.UIContentSizeCategorySmall
+import platform.UIKit.UIDevice
+import platform.UIKit.UIStatusBarAnimation
+import platform.UIKit.UIStatusBarStyle
 import platform.UIKit.UITraitCollection
+import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIView
@@ -90,14 +95,13 @@ import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
-private val coroutineDispatcher = Dispatchers.Main
-
 // TODO: Move to androidx.compose.ui.scene
-@OptIn(InternalComposeApi::class)
+@OptIn(BetaInteropApi::class)
 @ExportObjCClass
 internal class ComposeContainer(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
+    private val coroutineContext: CoroutineContext = Dispatchers.Main
 ) : CMPViewController(nibName = null, bundle = null) {
     // TODO: Rename and make private
     val lifecycleOwner = ViewControllerBasedLifecycleOwner()
@@ -108,6 +112,10 @@ internal class ComposeContainer(
     private val layers: MutableList<UIViewComposeSceneLayer> = mutableListOf()
     private val layoutDirection get() = getLayoutDirection()
     private var isViewAppeared: Boolean = false
+
+    fun hasInvalidations(): Boolean {
+        return mediator?.hasInvalidations() == true || layers.any { it.hasInvalidations() }
+    }
 
     @OptIn(ExperimentalComposeApi::class)
     private val windowContainer: UIView
@@ -147,10 +155,21 @@ internal class ComposeContainer(
             }
         }
 
-    @Suppress("unused")
-    @ObjCAction
-    fun viewSafeAreaInsetsDidChange() {
-        // super.viewSafeAreaInsetsDidChange() // TODO: call super after Kotlin 1.8.20
+    override fun preferredStatusBarStyle(): UIStatusBarStyle =
+        configuration.delegate.preferredStatusBarStyle
+            ?: super.preferredStatusBarStyle()
+
+    override fun preferredStatusBarUpdateAnimation(): UIStatusBarAnimation =
+        configuration.delegate.preferredStatysBarAnimation
+            ?: super.preferredStatusBarUpdateAnimation()
+
+    override fun prefersStatusBarHidden(): Boolean =
+        configuration.delegate.prefersStatusBarHidden
+            ?: super.prefersStatusBarHidden()
+
+    override fun viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+
         mediator?.viewSafeAreaInsetsDidChange()
         layers.fastForEach {
             it.viewSafeAreaInsetsDidChange()
@@ -168,7 +187,11 @@ internal class ComposeContainer(
 
     override fun viewDidLoad() {
         super.viewDidLoad()
-        PlistSanityCheck.performIfNeeded()
+
+        if (configuration.enforceStrictPlistSanityCheck) {
+            PlistSanityCheck.performIfNeeded()
+        }
+
         configuration.delegate.viewDidLoad()
         systemThemeState.value = traitCollection.userInterfaceStyle.asComposeSystemTheme()
     }
@@ -272,11 +295,12 @@ internal class ComposeContainer(
         configuration.delegate.viewWillDisappear(animated)
     }
 
+    @OptIn(NativeRuntimeApi::class)
     override fun viewDidDisappear(animated: Boolean) {
         super.viewDidDisappear(animated)
 
         dispatch_async(dispatch_get_main_queue()) {
-            kotlin.native.internal.GC.collect()
+            GC.collect()
         }
 
         lifecycleOwner.handleViewDidDisappear()
@@ -288,9 +312,10 @@ internal class ComposeContainer(
         dispose()
     }
 
+    @OptIn(NativeRuntimeApi::class)
     override fun didReceiveMemoryWarning() {
         println("didReceiveMemoryWarning")
-        kotlin.native.internal.GC.collect()
+        GC.collect()
         super.didReceiveMemoryWarning()
     }
 
@@ -298,8 +323,16 @@ internal class ComposeContainer(
         ComposeSceneContextImpl(platformContext)
 
     @OptIn(ExperimentalComposeApi::class)
-    private fun createSkikoUIView(interopContext: UIKitInteropContext, renderRelegate: SkikoRenderDelegate): RenderingUIView =
-        RenderingUIView(interopContext, renderRelegate).apply {
+    private fun createSkikoUIView(
+        interopContainer: UIKitInteropContainer,
+        renderRelegate: SkikoRenderDelegate
+    ): RenderingUIView =
+        RenderingUIView(
+            renderDelegate = renderRelegate,
+            retrieveInteropTransaction = {
+                interopContainer.retrieveTransaction()
+            }
+        ).apply {
             opaque = configuration.opaque
         }
 
@@ -309,7 +342,7 @@ internal class ComposeContainer(
         platformContext: PlatformContext,
         coroutineContext: CoroutineContext,
     ): ComposeScene = if (configuration.platformLayers) {
-        SingleLayerComposeScene(
+        PlatformLayersComposeScene(
             density = systemDensity,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
@@ -319,7 +352,7 @@ internal class ComposeContainer(
             invalidate = invalidate,
         )
     } else {
-        MultiLayerComposeScene(
+        CanvasLayersComposeScene(
             density = systemDensity,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
@@ -342,7 +375,7 @@ internal class ComposeContainer(
             configuration = configuration,
             focusStack = focusStack,
             windowContext = windowContext,
-            coroutineContext = coroutineDispatcher,
+            coroutineContext = coroutineContext,
             renderingUIViewFactory = ::createSkikoUIView,
             composeSceneFactory = ::createComposeScene,
         )
@@ -397,6 +430,7 @@ internal class ComposeContainer(
     }
 }
 
+@OptIn(BetaInteropApi::class)
 private fun UIViewController.checkIfInsideSwiftUI(): Boolean {
     var parent = parentViewController
 
@@ -432,7 +466,6 @@ private fun getLayoutDirection() =
         else -> LayoutDirection.Ltr
     }
 
-@OptIn(InternalComposeApi::class)
 @Composable
 internal fun ProvideContainerCompositionLocals(
     composeContainer: ComposeContainer,

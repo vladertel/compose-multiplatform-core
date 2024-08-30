@@ -92,39 +92,15 @@ class MacrobenchmarkScopeTest {
             baselineProfileMode = BaselineProfileMode.Disable,
             warmupIterations = iterations
         )
-        compilation.resetAndCompile(scope) {
+        compilation.resetAndCompile(
+            Packages.TARGET,
+            killProcessBlock = scope::killProcess
+        ) {
             executions += 1
             scope.pressHome()
             scope.startActivityAndWait()
         }
         assertEquals(iterations, executions)
-    }
-
-    @SdkSuppress(minSdkVersion = 24)
-    @Test
-    fun compile_speedProfile_withProfileFlushes() {
-        // Emulator api 30 does not have dex2oat (b/264938965)
-        assumeTrue(Build.VERSION.SDK_INT != Build.VERSION_CODES.R)
-        val scope = MacrobenchmarkScope(
-            Packages.TARGET,
-            launchWithClearTask = true
-        )
-        val warmupIterations = 2
-        var executions = 0
-        val compilation = CompilationMode.Partial(
-            baselineProfileMode = BaselineProfileMode.Disable,
-            warmupIterations = warmupIterations
-        )
-        assertFalse(scope.flushArtProfiles)
-        compilation.resetAndCompile(scope) {
-            assertTrue(scope.flushArtProfiles)
-            executions += 1
-            scope.killProcess()
-            scope.pressHome()
-            scope.startActivityAndWait()
-        }
-        assertFalse(scope.flushArtProfiles)
-        assertEquals(warmupIterations, executions)
     }
 
     @Test
@@ -138,7 +114,10 @@ class MacrobenchmarkScopeTest {
             launchWithClearTask = true
         )
         val compilation = CompilationMode.Full()
-        compilation.resetAndCompile(scope) {
+        compilation.resetAndCompile(
+            Packages.TARGET,
+            killProcessBlock = scope::killProcess
+        ) {
             fail("Should never be called for $compilation")
         }
     }
@@ -248,11 +227,11 @@ class MacrobenchmarkScopeTest {
         }.toSet()
         val testOutputs = outputs - files
         val trace = testOutputs.singleOrNull { file ->
-            file.name.endsWith(".trace") && file.name.contains("-methodTracing-")
+            file.name.endsWith(".trace") && file.name.contains("-method-")
         }
         // One method trace should have been created
         assertNotNull(trace)
-        assertTrue(trace.name.startsWith("TEST-UNIQUE-NAME-methodTracing-"))
+        assertTrue(trace.name.startsWith("TEST-UNIQUE-NAME-method-"))
     }
 
     private fun validateLaunchAndFrameStats(pressHome: Boolean) {
@@ -362,15 +341,5 @@ class MacrobenchmarkScopeTest {
             launchWithClearTask = false
         )
         scope.dropKernelPageCache() // shouldn't crash
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = 33)
-    fun cancelBackgroundDexopt() {
-        val scope = MacrobenchmarkScope(
-            Packages.TARGET,
-            launchWithClearTask = false
-        )
-        scope.cancelBackgroundDexopt() // shouldn't crash
     }
 }

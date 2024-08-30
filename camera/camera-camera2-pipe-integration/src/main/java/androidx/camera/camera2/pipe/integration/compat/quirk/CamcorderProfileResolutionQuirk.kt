@@ -24,10 +24,9 @@ import android.util.Size
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.core.Log
-import androidx.camera.camera2.pipe.integration.adapter.EncoderProfilesProviderAdapter
 import androidx.camera.camera2.pipe.integration.compat.StreamConfigurationMapCompat
 import androidx.camera.core.impl.ImageFormatConstants
-import androidx.camera.core.impl.Quirk
+import androidx.camera.core.impl.quirk.ProfileResolutionQuirk
 
 /**
  * Quirk that should validate the video resolution of [EncoderProfilesProviderAdapter] on legacy
@@ -52,7 +51,8 @@ import androidx.camera.core.impl.Quirk
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class CamcorderProfileResolutionQuirk(
     private val streamConfigurationMapCompat: StreamConfigurationMapCompat
-) : Quirk {
+) :
+    ProfileResolutionQuirk {
 
     private val supportedResolution: List<Size> by lazy {
         val sizes = streamConfigurationMapCompat
@@ -64,7 +64,7 @@ class CamcorderProfileResolutionQuirk(
     }
 
     /** Returns the supported video resolutions.  */
-    fun getSupportedResolutions(): List<Size> {
+    override fun getSupportedResolutions(): List<Size> {
         return supportedResolution.toList()
     }
 

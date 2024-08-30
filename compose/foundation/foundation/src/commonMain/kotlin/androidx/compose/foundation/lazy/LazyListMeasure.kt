@@ -88,6 +88,8 @@ internal fun measureLazyList(
             laneCount = 1,
             isLookingAhead = isLookingAhead,
             hasLookaheadOccurred = hasLookaheadPassOccurred,
+            layoutMinOffset = 0,
+            layoutMaxOffset = 0,
             coroutineScope = coroutineScope,
             graphicsContext = graphicsContext
         )
@@ -360,6 +362,8 @@ internal fun measureLazyList(
             isLookingAhead = isLookingAhead,
             hasLookaheadOccurred = hasLookaheadPassOccurred,
             coroutineScope = coroutineScope,
+            layoutMinOffset = currentFirstItemScrollOffset,
+            layoutMaxOffset = currentMainAxisOffset,
             graphicsContext = graphicsContext
         )
 

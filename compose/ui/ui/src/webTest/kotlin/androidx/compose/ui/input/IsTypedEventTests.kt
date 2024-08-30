@@ -17,6 +17,7 @@
 package androidx.compose.ui.input
 
 import androidx.compose.foundation.text.isTypedEvent
+import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.input.key.toComposeEvent
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -37,12 +38,12 @@ class IsTypedEventTests {
     @Test
     fun charsAreTyped() {
         val chars = listOf(
-            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+            "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+            "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
 
-            'a', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
-            'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц',
-            'ш', 'щ', 'ь', 'ъ', 'э', 'ю', 'я'
+            "a", "б", "в", "г", "д", "е", "ё", "ж", "з", "и", "й", "к",
+            "л", "м", "н", "о", "п", "р", "с", "т", "у", "ф", "х", "ц",
+            "ш", "щ", "ь", "ъ", "э", "ю", "я"
         )
 
         chars.forEach { char -> keyDownEvent(char).assertIsTyped() }
@@ -51,9 +52,9 @@ class IsTypedEventTests {
     @Test
     fun shortcutsAreNotTyped() {
         val keyDownEvents = listOf(
-            keyDownEvent('c', metaKey = true, ctrlKey = true),
-            keyDownEvent('p', metaKey = true, ctrlKey = true),
-            keyDownEvent('v', metaKey = true, ctrlKey = true)
+            keyDownEvent("c", metaKey = true, ctrlKey = true),
+            keyDownEvent("p", metaKey = true, ctrlKey = true),
+            keyDownEvent("v", metaKey = true, ctrlKey = true)
         )
 
         keyDownEvents.forEach { event -> event.assertIsNotTyped() }
@@ -62,9 +63,9 @@ class IsTypedEventTests {
     @Test
     fun shortcutsWithCtrlOnlyAreNotTyped() {
         val keyDownEvents = listOf(
-            keyDownEvent('c', metaKey = false, ctrlKey = true),
-            keyDownEvent('p', metaKey = false, ctrlKey = true),
-            keyDownEvent('v', metaKey = false, ctrlKey = true)
+            keyDownEvent("c", metaKey = false, ctrlKey = true),
+            keyDownEvent("p", metaKey = false, ctrlKey = true),
+            keyDownEvent("v", metaKey = false, ctrlKey = true)
         )
 
         keyDownEvents.forEach { event -> event.assertIsNotTyped() }
@@ -73,9 +74,9 @@ class IsTypedEventTests {
     @Test
     fun shortcutsWithMetaOnlyAreNotTyped() {
         val keyDownEvents = listOf(
-            keyDownEvent('c', metaKey = true, ctrlKey = false),
-            keyDownEvent('p', metaKey = true, ctrlKey = false),
-            keyDownEvent('v', metaKey = true, ctrlKey = false)
+            keyDownEvent("c", metaKey = true, ctrlKey = false),
+            keyDownEvent("p", metaKey = true, ctrlKey = false),
+            keyDownEvent("v", metaKey = true, ctrlKey = false)
         )
 
         keyDownEvents.forEach { event -> event.assertIsNotTyped() }
@@ -84,9 +85,9 @@ class IsTypedEventTests {
     @Test
     fun altProducesATypedEvent() {
         val keyDownEvents = listOf(
-            keyDownEvent('c', altKey = true),
-            keyDownEvent('p', altKey = true),
-            keyDownEvent('v', altKey = true)
+            keyDownEvent("c", altKey = true),
+            keyDownEvent("p", altKey = true),
+            keyDownEvent("v", altKey = true)
         )
 
         keyDownEvents.forEach { event -> event.assertIsTyped() }

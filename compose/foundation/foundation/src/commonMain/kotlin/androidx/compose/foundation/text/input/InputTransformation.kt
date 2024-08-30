@@ -100,10 +100,10 @@ fun InputTransformation.then(next: InputTransformation): InputTransformation =
     FilterChain(this, next)
 
 /**
- * Creates an [InputTransformation] from a function that accepts both the old and proposed
+ * Creates an [InputTransformation] from a function that accepts both the current and proposed
  * [TextFieldCharSequence] and returns the [TextFieldCharSequence] to use for the field.
  *
- * [transformation] can return either `old`, `proposed`, or a completely different value.
+ * [transformation] can return either `current`, `proposed`, or a completely different value.
  *
  * The selection or cursor will be updated automatically. For more control of selection
  * implement [InputTransformation] directly.
@@ -141,7 +141,6 @@ fun InputTransformation.maxLength(maxLength: Int): InputTransformation =
 // endregion
 // region Transformation implementations
 
-@OptIn(ExperimentalFoundationApi::class)
 private class FilterChain(
     private val first: InputTransformation,
     private val second: InputTransformation,
@@ -185,10 +184,9 @@ private class FilterChain(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 private data class InputTransformationByValue(
     val transformation: (
-        old: CharSequence,
+        current: CharSequence,
         proposed: CharSequence
     ) -> CharSequence
 ) : InputTransformation {
@@ -232,7 +230,6 @@ private data class AllCapsTransformation(private val locale: Locale) : InputTran
 }
 
 // This is a very naive implementation for now, not intended to be production-ready.
-@OptIn(ExperimentalFoundationApi::class)
 private data class MaxLengthFilter(
     private val maxLength: Int
 ) : InputTransformation {

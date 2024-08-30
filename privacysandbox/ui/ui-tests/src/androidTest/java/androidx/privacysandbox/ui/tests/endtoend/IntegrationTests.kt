@@ -35,8 +35,6 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.BackwardCompatUtil
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.filters.MediumTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -79,10 +77,8 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
     private val context = InstrumentationRegistry.getInstrumentation().context
 
     private lateinit var view: SandboxedSdkView
-    private lateinit var recyclerView: RecyclerView
     private lateinit var stateChangeListener: TestStateChangeListener
     private lateinit var errorLatch: CountDownLatch
-    private lateinit var linearLayout: LinearLayout
 
     @Before
     fun setup() {
@@ -93,11 +89,10 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
         activityScenarioRule.withActivity {
             view = SandboxedSdkView(context)
-            recyclerView = RecyclerView(context)
             errorLatch = CountDownLatch(1)
             stateChangeListener = TestStateChangeListener(errorLatch)
             view.addStateChangedListener(stateChangeListener)
-            linearLayout = LinearLayout(context)
+            val linearLayout = LinearLayout(context)
             linearLayout.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
@@ -105,8 +100,6 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
             setContentView(linearLayout)
             view.layoutParams = LinearLayout.LayoutParams(INITIAL_WIDTH, INITIAL_HEIGHT)
             linearLayout.addView(view)
-            linearLayout.addView(recyclerView)
-            recyclerView.setLayoutManager(LinearLayoutManager(context))
         }
     }
 
@@ -316,175 +309,6 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assertThat(client.hashCode()).isEqualTo(client.hashCode())
     }
 
-    @Test
-    fun testPoolingContainerListener_AllViewsRemovedFromContainer() {
-        // TODO(b/309848703): Stop skipping this for backwards compat flow
-        assumeTrue(!invokeBackwardsCompatFlow)
-
-        val adapter = createRecyclerViewTestAdapterAndWaitForChildrenToBeActive(
-            isNestedView = false)
-
-        activityScenarioRule.withActivity {
-            recyclerView.layoutManager!!.removeAllViews()
-        }
-
-        adapter.waitForViewsToBeDetached()
-        adapter.ensureChildrenDoNotBecomeIdleFromActive()
-    }
-
-    @Test
-    fun testPoolingContainerListener_ContainerRemovedFromLayout() {
-        // TODO(b/309848703): Stop skipping this for backwards compat flow
-        assumeTrue(!invokeBackwardsCompatFlow)
-
-        val adapter = createRecyclerViewTestAdapterAndWaitForChildrenToBeActive(
-            isNestedView = true)
-
-        activityScenarioRule.withActivity {
-            linearLayout.removeView(recyclerView)
-        }
-
-        adapter.ensureAllChildrenBecomeIdleFromActive()
-    }
-
-    @Test
-    fun testPoolingContainerListener_ViewWithinAnotherView_AllViewsRemovedFromContainer() {
-        // TODO(b/309848703): Stop skipping this for backwards compat flow
-        assumeTrue(!invokeBackwardsCompatFlow)
-
-        val adapter = createRecyclerViewTestAdapterAndWaitForChildrenToBeActive(
-            isNestedView = false)
-
-        activityScenarioRule.withActivity {
-            recyclerView.layoutManager!!.removeAllViews()
-        }
-
-        adapter.waitForViewsToBeDetached()
-        adapter.ensureChildrenDoNotBecomeIdleFromActive()
-    }
-
-    @Test
-    fun testPoolingContainerListener_ViewWithinAnotherView_ContainerRemovedFromLayout() {
-        // TODO(b/309848703): Stop skipping this for backwards compat flow
-        assumeTrue(!invokeBackwardsCompatFlow)
-
-        val adapter = createRecyclerViewTestAdapterAndWaitForChildrenToBeActive(
-            isNestedView = true)
-
-        activityScenarioRule.withActivity {
-            linearLayout.removeView(recyclerView)
-        }
-
-        adapter.ensureAllChildrenBecomeIdleFromActive()
-    }
-
-    fun createRecyclerViewTestAdapterAndWaitForChildrenToBeActive(isNestedView: Boolean):
-        RecyclerViewTestAdapter {
-        val adapter = RecyclerViewTestAdapter(context, isNestedView)
-        activityScenarioRule.withActivity {
-            recyclerView.setAdapter(adapter)
-        }
-
-        adapter.waitForViewsToBeAttached()
-
-        for (i in 0 until recyclerView.childCount) {
-            lateinit var childView: SandboxedSdkView
-            if (isNestedView) {
-                childView = (recyclerView.getChildAt(i) as ViewGroup)
-                    .getChildAt(0) as SandboxedSdkView
-            } else {
-                childView = recyclerView.getChildAt(i) as SandboxedSdkView
-            }
-            createAdapterAndWaitToBeActive(true, childView)
-        }
-
-        adapter.ensureAllChildrenBecomeActive()
-        return adapter
-    }
-
-    class RecyclerViewTestAdapter(
-        private val context: Context,
-        val isNestedView: Boolean = false,
-    ) :
-        RecyclerView.Adapter<RecyclerViewTestAdapter.ViewHolder>() {
-        class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
-        var numberOfSandboxedSdkViews = 0
-        val items = 5
-        private val activeLatch = CountDownLatch(items)
-        // The session will first be idle -> active -> idle in
-        // our tests, hence the count is items*2
-        private val idleLatch = CountDownLatch(items * 2)
-        private val attachedLatch = CountDownLatch(items)
-        private val detachedLatch = CountDownLatch(items)
-        val onAttachStateChangeListener = object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                attachedLatch.countDown()
-            }
-
-            override fun onViewDetachedFromWindow(v: View) {
-                if (attachedLatch.count.equals(0.toLong())) {
-                    detachedLatch.countDown()
-                }
-            }
-        }
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            if (numberOfSandboxedSdkViews >= items) {
-                // We should return without creating a SandboxedSdkView if the
-                // number of SandboxedSdkViews is already equal to items. Recycler
-                // view will create new ViewHolders once SandboxedSdkViews are
-                // removed. We do not want to count latch down at that point of time.
-                return ViewHolder(View(context))
-            }
-
-            val listener = SandboxedSdkUiSessionStateChangedListener { state ->
-                if (state is SandboxedSdkUiSessionState.Active) {
-                    activeLatch.countDown()
-                } else if (state is SandboxedSdkUiSessionState.Idle) {
-                    idleLatch.countDown()
-                }
-            }
-
-            numberOfSandboxedSdkViews++
-            var view: View = SandboxedSdkView(context)
-            (view as SandboxedSdkView).addStateChangedListener(listener)
-            if (isNestedView) {
-                val parentView = LinearLayout(context)
-                parentView.addView(view)
-                view = parentView
-            }
-            view.layoutParams =
-                RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1)
-            view.addOnAttachStateChangeListener(onAttachStateChangeListener)
-            return ViewHolder(view)
-        }
-
-        fun waitForViewsToBeAttached() {
-            assertThat(attachedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
-        }
-
-        fun waitForViewsToBeDetached() {
-            assertThat(detachedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
-        }
-
-        fun ensureAllChildrenBecomeActive() {
-            assertThat(activeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
-        }
-
-        fun ensureAllChildrenBecomeIdleFromActive() {
-            assertThat(idleLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
-        }
-
-        fun ensureChildrenDoNotBecomeIdleFromActive() {
-            assertThat(idleLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isFalse()
-            assertThat(idleLatch.count).isEqualTo(items)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        }
-
-        override fun getItemCount(): Int = items
-    }
-
     private fun getCoreLibInfoFromAdapter(sdkAdapter: SandboxedUiAdapter): Bundle {
         val bundle = sdkAdapter.toCoreLibInfo(context)
         bundle.putBoolean(TEST_ONLY_USE_REMOTE_ADAPTER, !invokeBackwardsCompatFlow)
@@ -498,10 +322,10 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
      * created adapter is set on [view] to establish session.
      */
     private fun createAdapterAndEstablishSession(
-        hasFailingTestSession: Boolean = false,
-        viewForSession: SandboxedSdkView? = view,
-        testSessionClient: TestSessionClient = TestSessionClient()
-    ): TestSandboxedUiAdapter {
+            hasFailingTestSession: Boolean = false,
+            viewForSession: SandboxedSdkView? = view,
+            testSessionClient: TestSessionClient = TestSessionClient()
+        ): TestSandboxedUiAdapter {
 
         val adapter = TestSandboxedUiAdapter(hasFailingTestSession)
         val adapterFromCoreLibInfo = SandboxedUiAdapterFactory.createFromCoreLibInfo(
@@ -530,17 +354,14 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         return adapter
     }
 
-    private fun createAdapterAndWaitToBeActive(
-        initialZOrder: Boolean = true,
-        viewForSession: SandboxedSdkView = view
-    ):
+    private fun createAdapterAndWaitToBeActive(initialZOrder: Boolean = true):
         TestSandboxedUiAdapter {
-        viewForSession.orderProviderUiAboveClientUi(initialZOrder)
+        view.orderProviderUiAboveClientUi(initialZOrder)
 
-        val adapter = createAdapterAndEstablishSession(false, viewForSession)
+        val adapter = createAdapterAndEstablishSession()
 
         val activeLatch = CountDownLatch(1)
-        viewForSession.addStateChangedListener { state ->
+        view.addStateChangedListener { state ->
             if (state is SandboxedSdkUiSessionState.Active) {
                 activeLatch.countDown()
             }

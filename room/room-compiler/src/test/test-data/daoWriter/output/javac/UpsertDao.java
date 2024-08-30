@@ -1,36 +1,31 @@
 package foo.bar;
 
 import androidx.annotation.NonNull;
-import androidx.room.EntityDeleteOrUpdateAdapter;
-import androidx.room.EntityInsertAdapter;
-import androidx.room.EntityUpsertAdapter;
+import androidx.room.EntityDeletionOrUpdateAdapter;
+import androidx.room.EntityInsertionAdapter;
+import androidx.room.EntityUpsertionAdapter;
 import androidx.room.RoomDatabase;
-import androidx.room.util.DBUtil;
-import androidx.sqlite.SQLiteConnection;
-import androidx.sqlite.SQLiteStatement;
+import androidx.sqlite.db.SupportSQLiteStatement;
 import java.lang.Class;
-import java.lang.Long;
 import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
-import java.lang.Void;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.processing.Generated;
-import kotlin.jvm.functions.Function1;
 
 @Generated("androidx.room.RoomProcessor")
-@SuppressWarnings({"unchecked", "deprecation", "removal"})
+@SuppressWarnings({"unchecked", "deprecation"})
 public final class UpsertDao_Impl implements UpsertDao {
     private final RoomDatabase __db;
 
-    private final EntityUpsertAdapter<User> __upsertAdapterOfUser;
+    private final EntityUpsertionAdapter<User> __upsertionAdapterOfUser;
 
-    private final EntityUpsertAdapter<Book> __upsertAdapterOfBook;
+    private final EntityUpsertionAdapter<Book> __upsertionAdapterOfBook;
 
     public UpsertDao_Impl(@NonNull final RoomDatabase __db) {
         this.__db = __db;
-        this.__upsertAdapterOfUser = new EntityUpsertAdapter<User>(new EntityInsertAdapter<User>() {
+        this.__upsertionAdapterOfUser = new EntityUpsertionAdapter<User>(new EntityInsertionAdapter<User>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -38,21 +33,21 @@ public final class UpsertDao_Impl implements UpsertDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final User entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement, final User entity) {
                 statement.bindLong(1, entity.uid);
                 if (entity.name == null) {
                     statement.bindNull(2);
                 } else {
-                    statement.bindText(2, entity.name);
+                    statement.bindString(2, entity.name);
                 }
                 if (entity.getLastName() == null) {
                     statement.bindNull(3);
                 } else {
-                    statement.bindText(3, entity.getLastName());
+                    statement.bindString(3, entity.getLastName());
                 }
                 statement.bindLong(4, entity.age);
             }
-        }, new EntityDeleteOrUpdateAdapter<User>() {
+        }, new EntityDeletionOrUpdateAdapter<User>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -60,23 +55,23 @@ public final class UpsertDao_Impl implements UpsertDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final User entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement, final User entity) {
                 statement.bindLong(1, entity.uid);
                 if (entity.name == null) {
                     statement.bindNull(2);
                 } else {
-                    statement.bindText(2, entity.name);
+                    statement.bindString(2, entity.name);
                 }
                 if (entity.getLastName() == null) {
                     statement.bindNull(3);
                 } else {
-                    statement.bindText(3, entity.getLastName());
+                    statement.bindString(3, entity.getLastName());
                 }
                 statement.bindLong(4, entity.age);
                 statement.bindLong(5, entity.uid);
             }
         });
-        this.__upsertAdapterOfBook = new EntityUpsertAdapter<Book>(new EntityInsertAdapter<Book>() {
+        this.__upsertionAdapterOfBook = new EntityUpsertionAdapter<Book>(new EntityInsertionAdapter<Book>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -84,11 +79,11 @@ public final class UpsertDao_Impl implements UpsertDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final Book entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement, final Book entity) {
                 statement.bindLong(1, entity.bookId);
                 statement.bindLong(2, entity.uid);
             }
-        }, new EntityDeleteOrUpdateAdapter<Book>() {
+        }, new EntityDeletionOrUpdateAdapter<Book>(__db) {
             @Override
             @NonNull
             protected String createQuery() {
@@ -96,7 +91,7 @@ public final class UpsertDao_Impl implements UpsertDao {
             }
 
             @Override
-            protected void bind(@NonNull final SQLiteStatement statement, final Book entity) {
+            protected void bind(@NonNull final SupportSQLiteStatement statement, final Book entity) {
                 statement.bindLong(1, entity.bookId);
                 statement.bindLong(2, entity.uid);
                 statement.bindLong(3, entity.bookId);
@@ -106,87 +101,91 @@ public final class UpsertDao_Impl implements UpsertDao {
 
     @Override
     public void upsertUser(final User user) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __upsertAdapterOfUser.upsert(_connection, user);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __upsertionAdapterOfUser.upsert(user);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void upsertUsers(final User user1, final List<User> others) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __upsertAdapterOfUser.upsert(_connection, user1);
-                __upsertAdapterOfUser.upsert(_connection, others);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __upsertionAdapterOfUser.upsert(user1);
+            __upsertionAdapterOfUser.upsert(others);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void upsertUsers(final User[] users) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __upsertAdapterOfUser.upsert(_connection, users);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __upsertionAdapterOfUser.upsert(users);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void upsertTwoUsers(final User userOne, final User userTwo) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __upsertAdapterOfUser.upsert(_connection, userOne);
-                __upsertAdapterOfUser.upsert(_connection, userTwo);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __upsertionAdapterOfUser.upsert(userOne);
+            __upsertionAdapterOfUser.upsert(userTwo);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public void upsertUserAndBook(final User user, final Book book) {
-        DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Void>() {
-            @Override
-            @NonNull
-            public Void invoke(@NonNull final SQLiteConnection _connection) {
-                __upsertAdapterOfUser.upsert(_connection, user);
-                __upsertAdapterOfBook.upsert(_connection, book);
-                return null;
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            __upsertionAdapterOfUser.upsert(user);
+            __upsertionAdapterOfBook.upsert(book);
+            __db.setTransactionSuccessful();
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public long upsertAndReturnId(final User user) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, Long>() {
-            @Override
-            @NonNull
-            public Long invoke(@NonNull final SQLiteConnection _connection) {
-                return __upsertAdapterOfUser.upsertAndReturnId(_connection, user);
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            final long _result = __upsertionAdapterOfUser.upsertAndReturnId(user);
+            __db.setTransactionSuccessful();
+            return _result;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @Override
     public long[] upsertAndReturnIdsArray(final User[] users) {
-        return DBUtil.performBlocking(__db, false, true, new Function1<SQLiteConnection, long[]>() {
-            @Override
-            @NonNull
-            public long[] invoke(@NonNull final SQLiteConnection _connection) {
-                return __upsertAdapterOfUser.upsertAndReturnIdsArray(_connection, users);
-            }
-        });
+        __db.assertNotSuspendingTransaction();
+        __db.beginTransaction();
+        try {
+            final long[] _result = __upsertionAdapterOfUser.upsertAndReturnIdsArray(users);
+            __db.setTransactionSuccessful();
+            return _result;
+        } finally {
+            __db.endTransaction();
+        }
     }
 
     @NonNull

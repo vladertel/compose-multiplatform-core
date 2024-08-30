@@ -34,7 +34,7 @@ internal val KOTLIN_NONE_TYPE_NAME: KClassName =
 fun <T : OriginatingElementsHolder.Builder<T>> T.addOriginatingElement(
     element: XElement
 ): T {
-    addOriginatingElement(element.originatingElementForPoet())
+    element.originatingElementForPoet()?.let(this::addOriginatingElement)
     return this
 }
 

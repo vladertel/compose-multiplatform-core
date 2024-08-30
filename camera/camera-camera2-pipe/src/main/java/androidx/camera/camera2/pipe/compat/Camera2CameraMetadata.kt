@@ -176,12 +176,12 @@ internal class Camera2CameraMetadata(
     private val _keys: Lazy<Set<CameraCharacteristics.Key<*>>> =
         lazy(LazyThreadSafetyMode.PUBLICATION) {
             try {
-                Debug.trace("$camera#keys") {
+                Debug.trace("Camera-${camera.value}#keys") {
                     characteristics.keys.orEmpty().toSet()
                 }
             } catch (e: AssertionError) {
                 Log.warn(e) {
-                    "Failed to getKeys from $camera}"
+                    "Failed to getKeys from Camera-${camera.value}"
                 }
                 emptySet()
             }
@@ -190,12 +190,12 @@ internal class Camera2CameraMetadata(
     private val _requestKeys: Lazy<Set<CaptureRequest.Key<*>>> =
         lazy(LazyThreadSafetyMode.PUBLICATION) {
             try {
-                Debug.trace("$camera#availableCaptureRequestKeys") {
+                Debug.trace("Camera-${camera.value}#availableCaptureRequestKeys") {
                     characteristics.availableCaptureRequestKeys.orEmpty().toSet()
                 }
             } catch (e: AssertionError) {
                 Log.warn(e) {
-                    "Failed to getAvailableCaptureRequestKeys from $camera"
+                    "Failed to getAvailableCaptureRequestKeys from Camera-${camera.value}"
                 }
                 emptySet()
             }
@@ -204,12 +204,12 @@ internal class Camera2CameraMetadata(
     private val _resultKeys: Lazy<Set<CaptureResult.Key<*>>> =
         lazy(LazyThreadSafetyMode.PUBLICATION) {
             try {
-                Debug.trace("$camera#availableCaptureResultKeys") {
+                Debug.trace("Camera-${camera.value}#availableCaptureResultKeys") {
                     characteristics.availableCaptureResultKeys.orEmpty().toSet()
                 }
             } catch (e: AssertionError) {
                 Log.warn(e) {
-                    "Failed to getAvailableCaptureResultKeys from $camera"
+                    "Failed to getAvailableCaptureResultKeys from Camera-${camera.value}"
                 }
                 emptySet()
             }
@@ -221,7 +221,7 @@ internal class Camera2CameraMetadata(
                 emptySet()
             } else {
                 try {
-                    Debug.trace("$camera#physicalCameraIds") {
+                    Debug.trace("Camera-${camera.value}#physicalCameraIds") {
                         val ids = Api28Compat.getPhysicalCameraIds(characteristics)
                         Log.info { "Loaded physicalCameraIds from $camera: $ids" }
 
@@ -231,10 +231,10 @@ internal class Camera2CameraMetadata(
                             .toSet()
                     }
                 } catch (e: AssertionError) {
-                    Log.warn(e) { "Failed to getPhysicalCameraIds from $camera" }
+                    Log.warn(e) { "Failed to getPhysicalCameraIds from Camera-${camera.value}" }
                     emptySet()
                 } catch (e: NullPointerException) {
-                    Log.warn(e) { "Failed to getPhysicalCameraIds from $camera" }
+                    Log.warn(e) { "Failed to getPhysicalCameraIds from Camera-${camera.value}" }
                     emptySet()
                 }
             }

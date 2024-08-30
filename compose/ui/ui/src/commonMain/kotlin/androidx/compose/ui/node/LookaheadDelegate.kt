@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.LayoutDirection
  * functionalities between the two are extracted here.
  */
 internal abstract class LookaheadCapablePlaceable : Placeable(), MeasureScopeWithLayoutNode,
-    DirectManipulationDelegate {
+    MotionReferencePlacementDelegate {
     abstract val position: IntOffset
     abstract val child: LookaheadCapablePlaceable?
     abstract val parent: LookaheadCapablePlaceable?
@@ -53,12 +53,12 @@ internal abstract class LookaheadCapablePlaceable : Placeable(), MeasureScopeWit
     private var _rulerScope: RulerScope? = null
 
     /**
-     * Indicates whether the [Placeable] was placed under direct manipulation.
+     * Indicates whether the [Placeable] was placed under a motion frame of reference.
      *
-     * This means, that its offset may be ignored with [LookaheadLayoutCoordinates.localPositionOf],
-     * using the `excludeDirectManipulationOffset` parameter.
+     * This means, that its offset may be excluded from calculation with
+     * `includeMotionFrameOfReference = false` in [LookaheadLayoutCoordinates.localPositionOf].
      */
-    override var isDirectManipulationPlacement: Boolean = false
+    override var isPlacedUnderMotionFrameOfReference: Boolean = false
 
     val rulerScope: RulerScope
         get() {
@@ -479,7 +479,8 @@ internal abstract class LookaheadDelegate(
         var aggregatedOffset = IntOffset.Zero
         var lookaheadDelegate = this
         while (lookaheadDelegate != ancestor) {
-            if (!lookaheadDelegate.isDirectManipulationPlacement || !excludingAgnosticOffset) {
+            if (!lookaheadDelegate.isPlacedUnderMotionFrameOfReference ||
+                !excludingAgnosticOffset) {
                 aggregatedOffset += lookaheadDelegate.position
             }
             lookaheadDelegate = lookaheadDelegate.coordinator.wrappedBy!!.lookaheadDelegate!!

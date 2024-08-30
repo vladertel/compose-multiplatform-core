@@ -51,7 +51,7 @@ internal constructor(
   /** Constructor for the [DayOfWeek] variant. */
   public constructor(dayOfWeek: DayOfWeek) : this(asDayOfWeek = dayOfWeek)
 
-  override fun toString(): String = toString(includeWrapperName = true)
+  public override fun toString(): String = toString(includeWrapperName = true)
 
   internal fun toString(includeWrapperName: Boolean): String =
     when {
@@ -64,12 +64,12 @@ internal constructor(
       else -> error("No variant present in ByDay")
     }
 
-  override fun equals(other: Any?): Boolean {
+  public override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other !is ByDay) return false
     if (asDayOfWeek != other.asDayOfWeek) return false
     return true
   }
 
-  override fun hashCode(): Int = Objects.hash(asDayOfWeek)
+  public override fun hashCode(): Int = Objects.hash(asDayOfWeek)
 }

@@ -34,14 +34,15 @@ import androidx.compose.foundation.lazy.layout.ObservableScopeInvalidator
 import androidx.compose.foundation.lazy.layout.animateScrollToItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Remeasurement
@@ -78,6 +79,34 @@ fun rememberLazyGridState(
 }
 
 /**
+ * Creates a [LazyGridState] that is remembered across compositions.
+ *
+ * Changes to the provided initial values will **not** result in the state being recreated or
+ * changed in any way if it has already been created.
+ *
+ * @param initialFirstVisibleItemIndex the initial value for [LazyGridState.firstVisibleItemIndex]
+ * @param initialFirstVisibleItemScrollOffset the initial value for
+ * [LazyGridState.firstVisibleItemScrollOffset]
+ * @param prefetchStrategy the [LazyGridPrefetchStrategy] to use for prefetching content in this
+ * grid
+ */
+@ExperimentalFoundationApi
+@Composable
+fun rememberLazyGridState(
+    initialFirstVisibleItemIndex: Int = 0,
+    initialFirstVisibleItemScrollOffset: Int = 0,
+    prefetchStrategy: LazyGridPrefetchStrategy = remember { LazyGridPrefetchStrategy() },
+): LazyGridState {
+    return rememberSaveable(prefetchStrategy, saver = LazyGridState.saver(prefetchStrategy)) {
+        LazyGridState(
+            initialFirstVisibleItemIndex,
+            initialFirstVisibleItemScrollOffset,
+            prefetchStrategy,
+        )
+    }
+}
+
+/**
  * A state object that can be hoisted to control and observe scrolling.
  *
  * In most cases, this will be created via [rememberLazyGridState].
@@ -85,13 +114,26 @@ fun rememberLazyGridState(
  * @param firstVisibleItemIndex the initial value for [LazyGridState.firstVisibleItemIndex]
  * @param firstVisibleItemScrollOffset the initial value for
  * [LazyGridState.firstVisibleItemScrollOffset]
+ * @param prefetchStrategy the [LazyGridPrefetchStrategy] to use for prefetching content in this
+ * grid
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Stable
-class LazyGridState constructor(
+class LazyGridState @ExperimentalFoundationApi constructor(
     firstVisibleItemIndex: Int = 0,
-    firstVisibleItemScrollOffset: Int = 0
+    firstVisibleItemScrollOffset: Int = 0,
+    private val prefetchStrategy: LazyGridPrefetchStrategy = LazyGridPrefetchStrategy(),
 ) : ScrollableState {
+
+    /**
+     * @param firstVisibleItemIndex the initial value for [LazyGridState.firstVisibleItemIndex]
+     * @param firstVisibleItemScrollOffset the initial value for
+     * [LazyGridState.firstVisibleItemScrollOffset]
+     */
+    constructor(
+        firstVisibleItemIndex: Int = 0,
+        firstVisibleItemScrollOffset: Int = 0
+    ) : this(firstVisibleItemIndex, firstVisibleItemScrollOffset, LazyGridPrefetchStrategy())
 
     /**
      * The holder class for the current scroll position.
@@ -182,23 +224,6 @@ class LazyGridState constructor(
     internal var prefetchingEnabled: Boolean = true
 
     /**
-     * The index scheduled to be prefetched (or the last prefetched index if the prefetch is done).
-     */
-    private var lineToPrefetch = -1
-
-    /**
-     * The list of handles associated with the items from the [lineToPrefetch] line.
-     */
-    private val currentLinePrefetchHandles =
-        mutableVectorOf<LazyLayoutPrefetchState.PrefetchHandle>()
-
-    /**
-     * Keeps the scrolling direction during the previous calculation in order to be able to
-     * detect the scrolling direction change.
-     */
-    private var wasScrollingForward = false
-
-    /**
      * The [Remeasurement] object associated with our layout. It allows us to remeasure
      * synchronously during scroll.
      */
@@ -223,6 +248,29 @@ class LazyGridState constructor(
     internal val itemAnimator = LazyLayoutItemAnimator<LazyGridMeasuredItem>()
 
     internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
+
+    internal val prefetchState = LazyLayoutPrefetchState(prefetchStrategy.prefetchScheduler) {
+        with(prefetchStrategy) {
+            onNestedPrefetch(Snapshot.withoutReadObservation { firstVisibleItemIndex })
+        }
+    }
+
+    private val prefetchScope: LazyGridPrefetchScope = object : LazyGridPrefetchScope {
+        override fun scheduleLinePrefetch(
+            lineIndex: Int
+        ): List<LazyLayoutPrefetchState.PrefetchHandle> {
+            // Without read observation since this can be triggered from scroll - this will then
+            // cause us to recompose when the measure result changes. We don't care since the
+            // prefetch is best effort.
+            val prefetchHandles = mutableListOf<LazyLayoutPrefetchState.PrefetchHandle>()
+            Snapshot.withoutReadObservation {
+                layoutInfoState.value.prefetchInfoRetriever(lineIndex).fastForEach {
+                    prefetchHandles.add(prefetchState.schedulePrefetch(it.first, it.second))
+                }
+            }
+            return prefetchHandles
+        }
+    }
 
     private val animateScrollScope = LazyGridAnimateScrollScope(this)
 
@@ -368,11 +416,13 @@ class LazyGridState constructor(
                 // we don't need to remeasure, so we only trigger re-placement:
                 placementScopeInvalidator.invalidateScope()
 
-                notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed, layoutInfo)
+                notifyPrefetchOnScroll(preScrollToBeConsumed - scrollToBeConsumed, layoutInfo)
             } else {
                 remeasurement?.forceRemeasure()
-
-                notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed)
+                notifyPrefetchOnScroll(
+                    preScrollToBeConsumed - scrollToBeConsumed,
+                    this.layoutInfo
+                )
             }
         }
 
@@ -390,71 +440,13 @@ class LazyGridState constructor(
         }
     }
 
-    private fun notifyPrefetch(
-        delta: Float,
-        info: LazyGridMeasureResult = layoutInfoState.value
-    ) {
-        val prefetchState = prefetchState
-        if (!prefetchingEnabled) {
-            return
-        }
-        if (info.visibleItemsInfo.isNotEmpty()) {
-            val scrollingForward = delta < 0
-            val lineToPrefetch: Int
-            val closestNextItemToPrefetch: Int
-            if (scrollingForward) {
-                lineToPrefetch = 1 + info.visibleItemsInfo.last().let {
-                    if (info.orientation == Orientation.Vertical) it.row else it.column
-                }
-                closestNextItemToPrefetch = info.visibleItemsInfo.last().index + 1
-            } else {
-                lineToPrefetch = -1 + info.visibleItemsInfo.first().let {
-                    if (info.orientation == Orientation.Vertical) it.row else it.column
-                }
-                closestNextItemToPrefetch = info.visibleItemsInfo.first().index - 1
-            }
-            if (lineToPrefetch != this.lineToPrefetch &&
-                closestNextItemToPrefetch in 0 until info.totalItemsCount
-            ) {
-                if (wasScrollingForward != scrollingForward) {
-                    // the scrolling direction has been changed which means the last prefetched
-                    // is not going to be reached anytime soon so it is safer to dispose it.
-                    // if this line is already visible it is safe to call the method anyway
-                    // as it will be no-op
-                    currentLinePrefetchHandles.forEach { it.cancel() }
-                }
-                this.wasScrollingForward = scrollingForward
-                this.lineToPrefetch = lineToPrefetch
-                currentLinePrefetchHandles.clear()
-                info.prefetchInfoRetriever(lineToPrefetch).fastForEach {
-                    currentLinePrefetchHandles.add(
-                        prefetchState.schedulePrefetch(it.first, it.second)
-                    )
-                }
-            }
+    private fun notifyPrefetchOnScroll(delta: Float, layoutInfo: LazyGridLayoutInfo) {
+        if (prefetchingEnabled) {
+           with(prefetchStrategy) {
+               prefetchScope.onScroll(delta, layoutInfo)
+           }
         }
     }
-
-    private fun cancelPrefetchIfVisibleItemsChanged(info: LazyGridLayoutInfo) {
-        if (lineToPrefetch != -1 && info.visibleItemsInfo.isNotEmpty()) {
-            val expectedLineToPrefetch = if (wasScrollingForward) {
-                info.visibleItemsInfo.last().let {
-                    if (info.orientation == Orientation.Vertical) it.row else it.column
-                } + 1
-            } else {
-                info.visibleItemsInfo.first().let {
-                    if (info.orientation == Orientation.Vertical) it.row else it.column
-                } - 1
-            }
-            if (lineToPrefetch != expectedLineToPrefetch) {
-                lineToPrefetch = -1
-                currentLinePrefetchHandles.forEach { it.cancel() }
-                currentLinePrefetchHandles.clear()
-            }
-        }
-    }
-
-    internal val prefetchState = LazyLayoutPrefetchState()
 
     private val numOfItemsToTeleport: Int get() = 100 * slotsPerLine
 
@@ -484,14 +476,19 @@ class LazyGridState constructor(
         scrollToBeConsumed -= result.consumedScroll
         layoutInfoState.value = result
 
+        canScrollBackward = result.canScrollBackward
+        canScrollForward = result.canScrollForward
+
         if (visibleItemsStayedTheSame) {
             scrollPosition.updateScrollOffset(result.firstVisibleLineScrollOffset)
         } else {
             scrollPosition.updateFromMeasureResult(result)
-            cancelPrefetchIfVisibleItemsChanged(result)
+            if (prefetchingEnabled) {
+                with(prefetchStrategy) {
+                    prefetchScope.onVisibleItemsUpdated(result)
+                }
+            }
         }
-        canScrollBackward = result.canScrollBackward
-        canScrollForward = result.canScrollForward
 
         numMeasurePasses++
     }
@@ -519,6 +516,23 @@ class LazyGridState constructor(
                 )
             }
         )
+
+        /**
+         * A [Saver] implementation for [LazyGridState] that handles setting a custom
+         * [LazyGridPrefetchStrategy].
+         */
+        @ExperimentalFoundationApi
+        internal fun saver(prefetchStrategy: LazyGridPrefetchStrategy): Saver<LazyGridState, *> =
+            listSaver(
+                save = { listOf(it.firstVisibleItemIndex, it.firstVisibleItemScrollOffset) },
+                restore = {
+                    LazyGridState(
+                        firstVisibleItemIndex = it[0],
+                        firstVisibleItemScrollOffset = it[1],
+                        prefetchStrategy
+                    )
+                }
+            )
     }
 }
 

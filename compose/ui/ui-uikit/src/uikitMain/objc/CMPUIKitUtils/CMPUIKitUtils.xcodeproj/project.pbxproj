@@ -14,11 +14,14 @@
 		997DFCF32B18DE59000B56B5 /* MockAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 997DFCF22B18DE59000B56B5 /* MockAppDelegate.swift */; };
 		997DFCF52B18E276000B56B5 /* XCTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 997DFCF42B18E276000B56B5 /* XCTestCase.swift */; };
 		997DFCFD2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 997DFCFC2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.swift */; };
+		99D97A882BF73A9B0035552B /* CMPEditMenuView.m in Sources */ = {isa = PBXBuildFile; fileRef = 99D97A872BF73A9B0035552B /* CMPEditMenuView.m */; };
 		99DCAB0E2BD00F5C002E6AC7 /* CMPTextLoupeSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 99DCAB0D2BD00F5C002E6AC7 /* CMPTextLoupeSession.m */; };
+		EA4B52962C2EDEF200FBB55C /* CMPGestureRecognizer.m in Sources */ = {isa = PBXBuildFile; fileRef = EA4B52952C2EDEF200FBB55C /* CMPGestureRecognizer.m */; };
 		EA70A7EB2B27106100300068 /* CMPAccessibilityElement.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E82B27106100300068 /* CMPAccessibilityElement.m */; };
 		EA70A7EC2B27106100300068 /* CMPAccessibilityContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E92B27106100300068 /* CMPAccessibilityContainer.m */; };
 		EA82F4F92B86144E00465418 /* CMPOSLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4F82B86144E00465418 /* CMPOSLogger.m */; };
 		EA82F4FC2B86184F00465418 /* CMPOSLoggerInterval.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4FB2B86184F00465418 /* CMPOSLoggerInterval.m */; };
+		EAB33E182C12E746002CFF44 /* CMPMetalDrawablesHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = EAB33E172C12E746002CFF44 /* CMPMetalDrawablesHandler.m */; };
 		EABD912B2BC02B5F00455279 /* CMPInteropWrappingView.m in Sources */ = {isa = PBXBuildFile; fileRef = EABD912A2BC02B5F00455279 /* CMPInteropWrappingView.m */; };
 		EAC703E32B8C826E001ECDA6 /* CMPAccessibilityElement.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E82B27106100300068 /* CMPAccessibilityElement.m */; };
 		EAC703E42B8C826E001ECDA6 /* CMPViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 997DFCDD2B18D135000B56B5 /* CMPViewController.m */; };
@@ -68,8 +71,13 @@
 		997DFCF42B18E276000B56B5 /* XCTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCTestCase.swift; sourceTree = "<group>"; };
 		997DFCFA2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CMPUIKitUtilsTestApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		997DFCFC2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CMPUIKitUtilsTestApp.swift; sourceTree = "<group>"; };
+		99BE84D22C3467B100E43826 /* CMPUIKitUtilsTestApp.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMPUIKitUtilsTestApp.xctestplan; sourceTree = "<group>"; };
+		99D97A862BF73A9B0035552B /* CMPEditMenuView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPEditMenuView.h; sourceTree = "<group>"; };
+		99D97A872BF73A9B0035552B /* CMPEditMenuView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPEditMenuView.m; sourceTree = "<group>"; };
 		99DCAB0C2BD00F5C002E6AC7 /* CMPTextLoupeSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPTextLoupeSession.h; sourceTree = "<group>"; };
 		99DCAB0D2BD00F5C002E6AC7 /* CMPTextLoupeSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPTextLoupeSession.m; sourceTree = "<group>"; };
+		EA4B52942C2EDEF200FBB55C /* CMPGestureRecognizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPGestureRecognizer.h; sourceTree = "<group>"; };
+		EA4B52952C2EDEF200FBB55C /* CMPGestureRecognizer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPGestureRecognizer.m; sourceTree = "<group>"; };
 		EA70A7E62B27106100300068 /* CMPAccessibilityElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityElement.h; sourceTree = "<group>"; };
 		EA70A7E72B27106100300068 /* CMPMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CMPMacros.h; sourceTree = "<group>"; };
 		EA70A7E82B27106100300068 /* CMPAccessibilityElement.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityElement.m; sourceTree = "<group>"; };
@@ -79,6 +87,8 @@
 		EA82F4F82B86144E00465418 /* CMPOSLogger.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPOSLogger.m; sourceTree = "<group>"; };
 		EA82F4FA2B86184F00465418 /* CMPOSLoggerInterval.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPOSLoggerInterval.h; sourceTree = "<group>"; };
 		EA82F4FB2B86184F00465418 /* CMPOSLoggerInterval.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPOSLoggerInterval.m; sourceTree = "<group>"; };
+		EAB33E162C12E746002CFF44 /* CMPMetalDrawablesHandler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPMetalDrawablesHandler.h; sourceTree = "<group>"; };
+		EAB33E172C12E746002CFF44 /* CMPMetalDrawablesHandler.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPMetalDrawablesHandler.m; sourceTree = "<group>"; };
 		EABD91292BC02B5F00455279 /* CMPInteropWrappingView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPInteropWrappingView.h; sourceTree = "<group>"; };
 		EABD912A2BC02B5F00455279 /* CMPInteropWrappingView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPInteropWrappingView.m; sourceTree = "<group>"; };
 		EAC703DF2B8C8154001ECDA6 /* CMPUIKitUtilsTestApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CMPUIKitUtilsTestApp-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -129,6 +139,12 @@
 				EABD912A2BC02B5F00455279 /* CMPInteropWrappingView.m */,
 				99DCAB0C2BD00F5C002E6AC7 /* CMPTextLoupeSession.h */,
 				99DCAB0D2BD00F5C002E6AC7 /* CMPTextLoupeSession.m */,
+				99D97A862BF73A9B0035552B /* CMPEditMenuView.h */,
+				99D97A872BF73A9B0035552B /* CMPEditMenuView.m */,
+				EAB33E162C12E746002CFF44 /* CMPMetalDrawablesHandler.h */,
+				EAB33E172C12E746002CFF44 /* CMPMetalDrawablesHandler.m */,
+				EA4B52942C2EDEF200FBB55C /* CMPGestureRecognizer.h */,
+				EA4B52952C2EDEF200FBB55C /* CMPGestureRecognizer.m */,
 			);
 			path = CMPUIKitUtils;
 			sourceTree = "<group>";
@@ -136,6 +152,7 @@
 		9975AAC02AEABB5600AF155F = {
 			isa = PBXGroup;
 			children = (
+				99BE84D22C3467B100E43826 /* CMPUIKitUtilsTestApp.xctestplan */,
 				996EFEEB2B02CE5D0000FE0F /* CMPUIKitUtils */,
 				997DFCE42B18D99E000B56B5 /* CMPUIKitUtilsTests */,
 				997DFCFB2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp */,
@@ -245,7 +262,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1520;
 				TargetAttributes = {
 					996EFEE92B02CE5D0000FE0F = {
 						CreatedOnToolsVersion = 15.0;
@@ -303,9 +320,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				997DFCDE2B18D135000B56B5 /* CMPViewController.m in Sources */,
+				EAB33E182C12E746002CFF44 /* CMPMetalDrawablesHandler.m in Sources */,
+				99D97A882BF73A9B0035552B /* CMPEditMenuView.m in Sources */,
 				EABD912B2BC02B5F00455279 /* CMPInteropWrappingView.m in Sources */,
 				EA70A7EC2B27106100300068 /* CMPAccessibilityContainer.m in Sources */,
 				EA82F4F92B86144E00465418 /* CMPOSLogger.m in Sources */,
+				EA4B52962C2EDEF200FBB55C /* CMPGestureRecognizer.m in Sources */,
 				EA70A7EB2B27106100300068 /* CMPAccessibilityElement.m in Sources */,
 				99DCAB0E2BD00F5C002E6AC7 /* CMPTextLoupeSession.m in Sources */,
 				EA82F4FC2B86184F00465418 /* CMPOSLoggerInterval.m in Sources */,
@@ -497,6 +517,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";

@@ -110,6 +110,10 @@ internal object Nodes {
         get() = NodeKind<SoftKeyboardInterceptionModifierNode>(0b1 shl 17)
     @JvmStatic
     inline val Traversable get() = NodeKind<TraversableNode>(0b1 shl 18)
+
+    @JvmStatic
+    inline val Unplaced
+        get() = NodeKind<OnUnplacedModifierNode>(0b1 shl 19)
     // ...
 }
 
@@ -216,6 +220,9 @@ internal fun calculateNodeKindSetFrom(node: Modifier.Node): Int {
         if (node is TraversableNode) {
             mask = mask or Nodes.Traversable
         }
+        if (node is OnUnplacedModifierNode) {
+            mask = mask or Nodes.Unplaced
+        }
         mask
     }
 }
@@ -271,10 +278,18 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
         }
     }
     if (Nodes.LayoutAware in selfKindSet && node is LayoutAwareModifierNode) {
-        node.requireLayoutNode().invalidateMeasurements()
+        // No need to invalidate layout when removing a LayoutAwareModifierNode, as these won't be
+        // invoked anyway
+        if (phase != Removed) {
+            node.requireLayoutNode().invalidateMeasurements()
+        }
     }
     if (Nodes.GlobalPositionAware in selfKindSet && node is GlobalPositionAwareModifierNode) {
-        node.requireLayoutNode().invalidateOnPositioned()
+        // No need to invalidate when removing a GlobalPositionAwareModifierNode, as these won't be
+        // invoked anyway
+        if (phase != Removed) {
+            node.requireLayoutNode().invalidateOnPositioned()
+        }
     }
     if (Nodes.Draw in selfKindSet && node is DrawModifierNode) {
         node.invalidateDraw()
@@ -286,11 +301,8 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
         node.invalidateParentData()
     }
     if (Nodes.FocusTarget in selfKindSet && node is FocusTargetNode) {
-        when (phase) {
-            // when we previously had focus target modifier on a node and then this modifier
-            // is removed we need to notify the focus tree about so the focus state is reset.
-            Removed -> node.onReset()
-            else -> node.requireOwner().focusOwner.scheduleInvalidation(node)
+        if (phase != Removed) {
+            node.invalidateFocusTarget()
         }
     }
     if (

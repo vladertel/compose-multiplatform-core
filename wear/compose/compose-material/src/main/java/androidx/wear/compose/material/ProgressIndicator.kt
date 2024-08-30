@@ -245,14 +245,14 @@ public object ProgressIndicatorDefaults {
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    public val IndeterminateStrokeWidth = 3.dp
+    internal val IndeterminateStrokeWidth = 3.dp
 
     /**
      * Stroke width for full screen [CircularProgressIndicator]
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    public val FullScreenStrokeWidth = 5.dp
+    internal val FullScreenStrokeWidth = 5.dp
 
     /**
      * The default [AnimationSpec] that should be used when animating between progress in a

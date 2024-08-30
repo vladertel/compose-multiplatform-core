@@ -17,7 +17,7 @@
 package androidx.privacysandbox.ads.adservices.common
 
 /**
- * Contains AdServices experimental feature opt-in annotations.
+ * Contains AdServices experimental feature opt-in anntations.
  */
 sealed interface ExperimentalFeatures {
     /**
@@ -25,10 +25,4 @@ sealed interface ExperimentalFeatures {
      */
     @RequiresOptIn("This API is experimental.", RequiresOptIn.Level.WARNING)
     annotation class RegisterSourceOptIn
-
-    @RequiresOptIn("The Ext8 API is experimental.", RequiresOptIn.Level.WARNING)
-    annotation class Ext8OptIn
-
-    @RequiresOptIn("The Ext10 API is experimental.", RequiresOptIn.Level.WARNING)
-    annotation class Ext10OptIn
 }

@@ -138,12 +138,9 @@ internal class ExternalCaptureSequenceProcessor(
         )
     }
 
-    override fun submit(captureSequence: ExternalCaptureSequence): Int? {
+    override fun submit(captureSequence: ExternalCaptureSequence): Int {
+        check(!closed.value)
         check(captureSequence.captureRequestList.isNotEmpty())
-        if (closed.value) {
-            Log.warn { "Cannot submit $captureSequence because $this is closed" }
-            return null
-        }
 
         if (captureSequence.repeating) {
             check(captureSequence.captureRequestList.size == 1)

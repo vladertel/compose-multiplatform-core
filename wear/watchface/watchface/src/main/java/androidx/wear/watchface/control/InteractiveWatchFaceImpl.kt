@@ -281,17 +281,6 @@ internal class InteractiveWatchFaceImpl(
                 ?: Long.MIN_VALUE
         }
 
-    override fun getUserStyleFlavors() =
-        aidlMethod(TAG, "getUserStyleFlavors") {
-            WatchFaceService.awaitDeferredEarlyInitDetailsThenRunOnThread(
-                engine,
-                "InteractiveWatchFaceImpl.getUserStyleFlavors",
-                WatchFaceService.Companion.ExecutionThread.CURRENT
-            ) {
-                it.userStyleFlavors.toWireFormat()
-            }
-        }
-
     fun onDestroy() {
         // Note this is almost certainly called on the ui thread, from release() above.
         runBlocking {

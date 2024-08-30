@@ -50,7 +50,7 @@ public interface ObjectCreationLimitReachedStatus : ExecutionStatus {
    * Converts this [ObjectCreationLimitReachedStatus] to its builder with all the properties copied
    * over.
    */
-  override fun toBuilder(): Builder<*>
+  public override fun toBuilder(): Builder<*>
 
   public companion object {
     /** Returns a default implementation of [Builder]. */
@@ -67,7 +67,7 @@ public interface ObjectCreationLimitReachedStatus : ExecutionStatus {
    */
   public interface Builder<Self : Builder<Self>> : ExecutionStatus.Builder<Self> {
     /** Returns a built [ObjectCreationLimitReachedStatus]. */
-    override fun build(): ObjectCreationLimitReachedStatus
+    public override fun build(): ObjectCreationLimitReachedStatus
   }
 }
 
@@ -82,8 +82,8 @@ public interface ObjectCreationLimitReachedStatus : ExecutionStatus {
  * )
  * class MyObjectCreationLimitReachedStatus internal constructor(
  *   objectCreationLimitReachedStatus: ObjectCreationLimitReachedStatus,
- *   @Document.StringProperty val foo: String,
- *   @Document.LongProperty val bars: List<Int>,
+ *   val foo: String,
+ *   val bars: List<Int>,
  * ) : AbstractObjectCreationLimitReachedStatus<
  *   MyObjectCreationLimitReachedStatus,
  *   MyObjectCreationLimitReachedStatus.Builder
@@ -103,7 +103,6 @@ public interface ObjectCreationLimitReachedStatus : ExecutionStatus {
  *       .addBars(bars)
  *   }
  *
- *   @Document.BuilderProducer
  *   class Builder :
  *     AbstractObjectCreationLimitReachedStatus.Builder<
  *       Builder,
@@ -115,13 +114,13 @@ public interface ObjectCreationLimitReachedStatus : ExecutionStatus {
  */
 @Suppress("UNCHECKED_CAST")
 public abstract class AbstractObjectCreationLimitReachedStatus<
-  Self : AbstractObjectCreationLimitReachedStatus<Self, Builder>,
-  Builder : AbstractObjectCreationLimitReachedStatus.Builder<Builder, Self>
->
+    Self : AbstractObjectCreationLimitReachedStatus<Self, Builder>,
+    Builder : AbstractObjectCreationLimitReachedStatus.Builder<Builder, Self>
+    >
 internal constructor(
-  final override val namespace: String,
-  final override val identifier: String,
-  final override val name: Name?,
+  public final override val namespace: String,
+  public final override val identifier: String,
+  public final override val name: Name?,
 ) : ObjectCreationLimitReachedStatus {
   /**
    * Human readable name for the concrete [Self] class.
@@ -155,13 +154,13 @@ internal constructor(
    */
   protected abstract fun toBuilderWithAdditionalPropertiesOnly(): Builder
 
-  final override fun toBuilder(): Builder =
+  public final override fun toBuilder(): Builder =
     toBuilderWithAdditionalPropertiesOnly()
       .setNamespace(namespace)
       .setIdentifier(identifier)
       .setName(name)
 
-  final override fun equals(other: Any?): Boolean {
+  public final override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || this::class.java != other::class.java) return false
     other as Self
@@ -172,10 +171,10 @@ internal constructor(
     return true
   }
 
-  final override fun hashCode(): Int =
+  public final override fun hashCode(): Int =
     Objects.hash(namespace, identifier, name, additionalProperties)
 
-  final override fun toString(): String {
+  public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
     if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
@@ -196,13 +195,11 @@ internal constructor(
    *
    * Allows for extension like:
    * ```kt
-   * @Document(...)
    * class MyObjectCreationLimitReachedStatus :
    *   : AbstractObjectCreationLimitReachedStatus<
    *     MyObjectCreationLimitReachedStatus,
    *     MyObjectCreationLimitReachedStatus.Builder>(...) {
    *
-   *   @Document.BuilderProducer
    *   class Builder
    *   : AbstractObjectCreationLimitReachedStatus.Builder<
    *       Builder,
@@ -249,9 +246,9 @@ internal constructor(
    */
   @Suppress("StaticFinalBuilder")
   public abstract class Builder<
-    Self : Builder<Self, Built>,
-    Built : AbstractObjectCreationLimitReachedStatus<Built, Self>
-  > : ObjectCreationLimitReachedStatus.Builder<Self> {
+      Self : Builder<Self, Built>,
+      Built : AbstractObjectCreationLimitReachedStatus<Built, Self>
+      > : ObjectCreationLimitReachedStatus.Builder<Self> {
     /**
      * Human readable name for the concrete [Self] class.
      *
@@ -286,28 +283,28 @@ internal constructor(
       objectCreationLimitReachedStatus: ObjectCreationLimitReachedStatus
     ): Built
 
-    final override fun build(): Built =
+    public final override fun build(): Built =
       buildFromObjectCreationLimitReachedStatus(
         ObjectCreationLimitReachedStatusImpl(namespace, identifier, name)
       )
 
-    final override fun setNamespace(namespace: String): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
 
-    final override fun setIdentifier(text: String): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
 
-    final override fun setName(name: Name?): Self {
+    public final override fun setName(name: Name?): Self {
       this.name = name
       return this as Self
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun equals(other: Any?): Boolean {
+    public final override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other == null || this::class.java != other::class.java) return false
       other as Self
@@ -319,11 +316,11 @@ internal constructor(
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun hashCode(): Int =
+    public final override fun hashCode(): Int =
       Objects.hash(namespace, identifier, name, additionalProperties)
 
     @Suppress("BuilderSetStyle")
-    final override fun toString(): String {
+    public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
       if (namespace.isNotEmpty()) {
         attributes["namespace"] = namespace
@@ -344,8 +341,8 @@ internal constructor(
 
 private class ObjectCreationLimitReachedStatusImpl :
   AbstractObjectCreationLimitReachedStatus<
-    ObjectCreationLimitReachedStatusImpl, ObjectCreationLimitReachedStatusImpl.Builder
-  > {
+      ObjectCreationLimitReachedStatusImpl, ObjectCreationLimitReachedStatusImpl.Builder
+      > {
   protected override val selfTypeName: String
     get() = "ObjectCreationLimitReachedStatus"
 
@@ -366,8 +363,8 @@ private class ObjectCreationLimitReachedStatusImpl :
 
   public class Builder :
     AbstractObjectCreationLimitReachedStatus.Builder<
-      Builder, ObjectCreationLimitReachedStatusImpl
-    >() {
+        Builder, ObjectCreationLimitReachedStatusImpl
+        >() {
     protected override val selfTypeName: String
       get() = "ObjectCreationLimitReachedStatus.Builder"
 

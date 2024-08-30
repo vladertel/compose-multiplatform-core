@@ -34,13 +34,13 @@ import java.util.UUID
  * [LocalSavedStateRegistryOwner] to the [content] and saves the [content]'s saveable states with
  * the given [saveableStateHolder].
  *
- * @param saveableStateHolder The [SaveableStateHolder] that holds the saved states. The same
- * holder should be used for all [NavBackStackEntry]s in the encapsulating [Composable] and the
- * holder should be hoisted.
+ * @param saveableStateHolder The [SaveableStateHolder] that holds the saved states. The same holder
+ *   should be used for all [NavBackStackEntry]s in the encapsulating [Composable] and the holder
+ *   should be hoisted.
  * @param content The content [Composable]
  */
 @Composable
-actual fun NavBackStackEntry.LocalOwnersProvider(
+public actual fun NavBackStackEntry.LocalOwnersProvider(
     saveableStateHolder: SaveableStateHolder,
     content: @Composable () -> Unit
 ) {

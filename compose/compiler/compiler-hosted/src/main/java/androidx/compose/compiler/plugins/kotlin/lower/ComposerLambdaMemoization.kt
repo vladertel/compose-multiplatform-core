@@ -18,6 +18,8 @@ package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.ComposeCallableIds
 import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
+import androidx.compose.compiler.plugins.kotlin.FeatureFlag
+import androidx.compose.compiler.plugins.kotlin.FeatureFlags
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
 import androidx.compose.compiler.plugins.kotlin.analysis.ComposeWritableSlices
 import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
@@ -199,13 +201,13 @@ private class FunctionLocalSymbol(
 private class FunctionContext(
     override val declaration: IrFunction,
     override val composable: Boolean,
-    val canRemember: Boolean
 ) : DeclarationContext() {
     override val symbol get() = declaration.symbol
     override val functionContext: FunctionContext get() = this
     val locals = mutableSetOf<IrValueDeclaration>()
     override val captures: MutableSet<IrValueDeclaration> = mutableSetOf()
     var collectors = mutableListOf<CaptureCollector>()
+    val canRemember: Boolean get() = composable
 
     init {
         declaration.valueParameters.forEach {
@@ -297,10 +299,8 @@ class ComposerLambdaMemoization(
     symbolRemapper: DeepCopySymbolRemapper,
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
-    private val strongSkippingModeEnabled: Boolean,
-    private val intrinsicRememberEnabled: Boolean,
-    private val nonSkippingGroupOptimizationEnabled: Boolean,
-) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer),
+    featureFlags: FeatureFlags,
+) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer, featureFlags),
 
     ModuleLoweringPass {
 
@@ -346,7 +346,7 @@ class ComposerLambdaMemoization(
         // Uses `rememberComposableLambda` as a indication that the runtime supports
         // generating remember after call as it was added at the same time as the slot table was
         // modified to support remember after call.
-        nonSkippingGroupOptimizationEnabled && rememberComposableLambdaFunction != null
+        FeatureFlag.OptimizeNonSkippingGroups.enabled && rememberComposableLambdaFunction != null
     }
 
     private fun getOrCreateComposableSingletonsClass(): IrClass {
@@ -456,11 +456,7 @@ class ComposerLambdaMemoization(
 
     override fun visitFunction(declaration: IrFunction): IrStatement {
         val composable = declaration.allowsComposableCalls
-        val canRemember = composable &&
-            // Don't use remember in an inline function
-            !declaration.isInline
-
-        val context = FunctionContext(declaration, composable, canRemember)
+        val context = FunctionContext(declaration, composable)
         if (declaration.isLocal) {
             declarationContextStack.recordLocalDeclaration(context)
         }
@@ -583,7 +579,7 @@ class ComposerLambdaMemoization(
                 captures.addAll(localCaptures)
             }
 
-            if (hasReceiver && (strongSkippingModeEnabled || receiverIsStable)) {
+            if (hasReceiver && (FeatureFlag.StrongSkipping.enabled || receiverIsStable)) {
                 // Save the receivers into a temporaries and memoize the function reference using
                 // the resulting temporaries
                 val builder = DeclarationIrBuilder(
@@ -971,7 +967,9 @@ class ComposerLambdaMemoization(
             functionContext.declaration.hasAnnotation(ComposeFqNames.DontMemoize) ||
             expression.hasDontMemoizeAnnotation ||
             captures.any {
-                it.isVar() || (!it.isStable() && !strongSkippingModeEnabled) || it.isInlinedLambda()
+                it.isVar() ||
+                    (!it.isStable() && !FeatureFlag.StrongSkipping.enabled) ||
+                    it.isInlinedLambda()
             }
         ) {
             metrics.recordLambda(
@@ -989,7 +987,7 @@ class ComposerLambdaMemoization(
             singleton = false
         )
 
-        return if (!intrinsicRememberEnabled) {
+        return if (!FeatureFlag.IntrinsicRemember.enabled) {
             // generate cache directly only if strong skipping is enabled without intrinsic remember
             // otherwise, generated memoization won't benefit from capturing changed values
             irCache(captureExpressions, expression)
@@ -1026,7 +1024,7 @@ class ComposerLambdaMemoization(
             calculation
         )
 
-        return if (nonSkippingGroupOptimizationEnabled) {
+        return if (useNonSkippingGroupOptimization) {
             cache
         } else {
             // If the non-skipping group optimization is disabled then we need to wrap
@@ -1120,7 +1118,7 @@ class ComposerLambdaMemoization(
         value,
         inferredStable = false,
         compareInstanceForFunctionTypes = false,
-        compareInstanceForUnstableValues = strongSkippingModeEnabled
+        compareInstanceForUnstableValues = FeatureFlag.StrongSkipping.enabled
     )
 
     private fun IrValueDeclaration.isVar(): Boolean =

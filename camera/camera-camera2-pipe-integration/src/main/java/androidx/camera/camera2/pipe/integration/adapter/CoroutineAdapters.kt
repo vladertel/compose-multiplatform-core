@@ -26,7 +26,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Convert a job into a ListenableFuture<Void>.
@@ -101,11 +100,3 @@ fun <T> Deferred<T>.propagateOnceTo(
         destination.complete(getCompleted())
     }
 }
-
-/**
- * Waits for [Deferred.await] to be completed until the given timeout.
- *
- * @return true if `Deferred.await` had completed, false otherwise.
- */
-suspend fun <T> Deferred<T>.awaitUntil(timeoutMillis: Long) =
-    withTimeoutOrNull(timeoutMillis) { this@awaitUntil.await() }?.let { true } ?: false

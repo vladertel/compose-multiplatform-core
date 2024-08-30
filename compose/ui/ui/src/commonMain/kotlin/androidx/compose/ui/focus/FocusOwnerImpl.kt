@@ -133,11 +133,9 @@ internal class FocusOwnerImpl(
      * [FocusTargetNode] was found or if the focus search was cancelled.
      */
     override fun takeFocus(focusDirection: FocusDirection, previouslyFocusedRect: Rect?): Boolean {
-        return focusTransactionManager.withExistingTransaction {
-            focusSearch(focusDirection, previouslyFocusedRect) {
-                it.requestFocus(focusDirection) ?: false
-            } ?: false
-        }
+        return focusSearch(focusDirection, previouslyFocusedRect) {
+            it.requestFocus(focusDirection) ?: false
+        } ?: false
     }
 
     /**
@@ -166,7 +164,7 @@ internal class FocusOwnerImpl(
             force,
             refreshFocusEvents = true,
             clearOwnerFocus = true,
-            focusDirection = Exit
+            focusDirection = @OptIn(ExperimentalComposeUiApi::class) Exit
         )
     }
 
@@ -192,7 +190,6 @@ internal class FocusOwnerImpl(
         if (clearedFocusSuccessfully && clearOwnerFocus) {
             onClearFocusForOwner.invoke()
         }
-
         return clearedFocusSuccessfully
     }
 
@@ -240,6 +237,7 @@ internal class FocusOwnerImpl(
         val source = rootFocusNode.findActiveFocusNode()?.also {
             // Check if a custom focus traversal order is specified.
             when (val customDest = it.customFocusSearch(focusDirection, onLayoutDirection())) {
+                @OptIn(ExperimentalComposeUiApi::class)
                 Cancel -> return null
                 Default -> { /* Do Nothing */ }
                 else -> return customDest.findFocusTargetNode(onFound)
@@ -267,8 +265,8 @@ internal class FocusOwnerImpl(
 
         val activeFocusTarget = rootFocusNode.findActiveFocusNode()
         val focusedKeyInputNode = activeFocusTarget?.lastLocalKeyInputNode()
-            ?: activeFocusTarget?.nearestAncestorIncludingSelf(Nodes.KeyInput)?.node
-            ?: rootFocusNode.nearestAncestor(Nodes.KeyInput)?.node
+                ?: activeFocusTarget?.nearestAncestorIncludingSelf(Nodes.KeyInput)?.node
+                ?: rootFocusNode.nearestAncestor(Nodes.KeyInput)?.node
 
         focusedKeyInputNode?.traverseAncestorsIncludingSelf(
             type = Nodes.KeyInput,

@@ -124,10 +124,14 @@ private class BinderAdapterDelegate(
 
         override fun onSessionOpened(session: SandboxedUiAdapter.Session) {
             val view = session.view
-            val touchTransferringView = TouchFocusTransferringView(
-                sandboxContext, surfaceControlViewHost)
-            touchTransferringView.addView(view)
-            surfaceControlViewHost.setView(touchTransferringView, initialWidth, initialHeight)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val touchTransferringView = TouchFocusTransferringView(
+                    sandboxContext, surfaceControlViewHost)
+                touchTransferringView.addView(view)
+                surfaceControlViewHost.setView(touchTransferringView, initialWidth, initialHeight)
+            } else {
+                surfaceControlViewHost.setView(view, initialWidth, initialHeight)
+            }
 
             // This var is not locked as it will be set to false by the first event that can trigger
             // sending the remote session opened callback.

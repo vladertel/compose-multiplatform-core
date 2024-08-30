@@ -53,7 +53,9 @@ class ToggleButtonScreenshotTest {
     fun toggle_button_checked_checkbox() = verifyScreenshot {
         sampleToggleButton(
             checked = true,
-            toggleControl = { Checkbox() }
+            selectionControl = {
+                Checkbox(checked = true)
+            }
         )
     }
 
@@ -61,7 +63,9 @@ class ToggleButtonScreenshotTest {
     fun toggle_button_unchecked_checkbox() = verifyScreenshot {
         sampleToggleButton(
             checked = false,
-            toggleControl = { Checkbox() },
+            selectionControl = {
+                Checkbox(checked = false)
+            }
         )
     }
 
@@ -69,7 +73,9 @@ class ToggleButtonScreenshotTest {
     fun toggle_button_checked_switch() = verifyScreenshot {
         sampleToggleButton(
             checked = true,
-            toggleControl = { Switch() }
+            selectionControl = {
+                Switch(checked = true)
+            }
         )
     }
 
@@ -77,7 +83,29 @@ class ToggleButtonScreenshotTest {
     fun toggle_button_unchecked_switch() = verifyScreenshot {
         sampleToggleButton(
             checked = false,
-            toggleControl = { Switch() }
+            selectionControl = {
+                Switch(checked = false)
+            }
+        )
+    }
+
+    @Test
+    fun toggle_button_selected_radio() = verifyScreenshot {
+        sampleToggleButton(
+            checked = true,
+            selectionControl = {
+                RadioButton(selected = true)
+            }
+        )
+    }
+
+    @Test
+    fun toggle_button_unselected_radio() = verifyScreenshot {
+        sampleToggleButton(
+            checked = false,
+            selectionControl = {
+                RadioButton(selected = false)
+            }
         )
     }
 
@@ -86,7 +114,9 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleToggleButton(
                 checked = true,
-                toggleControl = { Checkbox() }
+                selectionControl = {
+                    Checkbox(checked = true)
+                }
             )
         }
 
@@ -95,7 +125,9 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleToggleButton(
                 checked = false,
-                toggleControl = { Checkbox() }
+                selectionControl = {
+                    Checkbox(checked = false)
+                }
             )
         }
 
@@ -104,7 +136,9 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleToggleButton(
                 checked = true,
-                toggleControl = { Switch() }
+                selectionControl = {
+                    Switch(checked = true)
+                }
             )
         }
 
@@ -113,7 +147,31 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleToggleButton(
                 checked = false,
-                toggleControl = { Switch() }
+                selectionControl = {
+                    Switch(checked = false)
+                }
+            )
+        }
+
+    @Test
+    fun toggle_button_selected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleToggleButton(
+                checked = true,
+                selectionControl = {
+                    RadioButton(selected = true)
+                }
+            )
+        }
+
+    @Test
+    fun toggle_button_unselected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleToggleButton(
+                checked = false,
+                selectionControl = {
+                    RadioButton(selected = false)
+                }
             )
         }
 
@@ -122,7 +180,9 @@ class ToggleButtonScreenshotTest {
         sampleToggleButton(
             checked = true,
             enabled = false,
-            toggleControl = { Checkbox() }
+            selectionControl = {
+                Checkbox(checked = true, enabled = false)
+            }
         )
     }
 
@@ -131,7 +191,9 @@ class ToggleButtonScreenshotTest {
         sampleToggleButton(
             checked = false,
             enabled = false,
-            toggleControl = { Checkbox() }
+            selectionControl = {
+                Checkbox(checked = false, enabled = false)
+            }
         )
     }
 
@@ -140,7 +202,9 @@ class ToggleButtonScreenshotTest {
         sampleToggleButton(
             checked = true,
             enabled = false,
-            toggleControl = { Switch() }
+            selectionControl = {
+                Switch(checked = true, enabled = false)
+            }
         )
     }
 
@@ -149,7 +213,31 @@ class ToggleButtonScreenshotTest {
         sampleToggleButton(
             checked = false,
             enabled = false,
-            toggleControl = { Switch() }
+            selectionControl = {
+                Switch(checked = false, enabled = false)
+            }
+        )
+    }
+
+    @Test
+    fun disabled_toggle_button_selected_radio() = verifyScreenshot {
+        sampleToggleButton(
+            checked = true,
+            enabled = false,
+            selectionControl = {
+                RadioButton(selected = true, enabled = false)
+            }
+        )
+    }
+
+    @Test
+    fun disabled_toggle_button_unselected_radio() = verifyScreenshot {
+        sampleToggleButton(
+            checked = false,
+            enabled = false,
+            selectionControl = {
+                RadioButton(selected = false, enabled = false)
+            }
         )
     }
 
@@ -159,7 +247,9 @@ class ToggleButtonScreenshotTest {
             sampleToggleButton(
                 checked = true,
                 enabled = false,
-                toggleControl = { Checkbox() }
+                selectionControl = {
+                    Checkbox(checked = true, enabled = false)
+                }
             )
         }
 
@@ -169,7 +259,9 @@ class ToggleButtonScreenshotTest {
             sampleToggleButton(
                 checked = false,
                 enabled = false,
-                toggleControl = { Checkbox() }
+                selectionControl = {
+                    Checkbox(checked = false, enabled = false)
+                }
             )
         }
 
@@ -179,7 +271,9 @@ class ToggleButtonScreenshotTest {
             sampleToggleButton(
                 checked = true,
                 enabled = false,
-                toggleControl = { Switch() }
+                selectionControl = {
+                    Switch(checked = true, enabled = false)
+                }
             )
         }
 
@@ -189,7 +283,33 @@ class ToggleButtonScreenshotTest {
             sampleToggleButton(
                 checked = false,
                 enabled = false,
-                toggleControl = { Switch() }
+                selectionControl = {
+                    Switch(checked = false, enabled = false)
+                }
+            )
+        }
+
+    @Test
+    fun disabled_toggle_button_selected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleToggleButton(
+                checked = true,
+                enabled = false,
+                selectionControl = {
+                    RadioButton(selected = true, enabled = false)
+                }
+            )
+        }
+
+    @Test
+    fun disabled_toggle_button_unselected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleToggleButton(
+                checked = false,
+                enabled = false,
+                selectionControl = {
+                    RadioButton(selected = false, enabled = false)
+                }
             )
         }
 
@@ -197,8 +317,8 @@ class ToggleButtonScreenshotTest {
     fun split_toggle_button_checked_checkbox() = verifyScreenshot {
         sampleSplitToggleButton(
             checked = true,
-            toggleControl = {
-                Checkbox()
+            selectionControl = {
+                Checkbox(checked = true)
             }
         )
     }
@@ -207,8 +327,8 @@ class ToggleButtonScreenshotTest {
     fun split_toggle_button_unchecked_checkbox() = verifyScreenshot {
         sampleSplitToggleButton(
             checked = false,
-            toggleControl = {
-                Checkbox()
+            selectionControl = {
+                Checkbox(checked = false)
             }
         )
     }
@@ -217,8 +337,8 @@ class ToggleButtonScreenshotTest {
     fun split_toggle_button_checked_switch() = verifyScreenshot {
         sampleSplitToggleButton(
             checked = true,
-            toggleControl = {
-                Switch()
+            selectionControl = {
+                Switch(checked = true)
             }
         )
     }
@@ -227,8 +347,28 @@ class ToggleButtonScreenshotTest {
     fun split_toggle_button_unchecked_switch() = verifyScreenshot {
         sampleSplitToggleButton(
             checked = false,
-            toggleControl = {
-                Switch()
+            selectionControl = {
+                Switch(checked = false)
+            }
+        )
+    }
+
+    @Test
+    fun split_toggle_button_selected_radio() = verifyScreenshot {
+        sampleSplitToggleButton(
+            checked = true,
+            selectionControl = {
+                RadioButton(selected = true)
+            }
+        )
+    }
+
+    @Test
+    fun split_toggle_button_unselected_radio() = verifyScreenshot {
+        sampleSplitToggleButton(
+            checked = false,
+            selectionControl = {
+                RadioButton(selected = false)
             }
         )
     }
@@ -238,8 +378,8 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleSplitToggleButton(
                 checked = true,
-                toggleControl = {
-                    Checkbox()
+                selectionControl = {
+                    Checkbox(checked = true)
                 }
             )
         }
@@ -249,8 +389,8 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleSplitToggleButton(
                 checked = false,
-                toggleControl = {
-                    Checkbox()
+                selectionControl = {
+                    Checkbox(checked = false)
                 }
             )
         }
@@ -260,8 +400,8 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleSplitToggleButton(
                 checked = true,
-                toggleControl = {
-                    Switch()
+                selectionControl = {
+                    Switch(checked = true)
                 }
             )
         }
@@ -271,8 +411,30 @@ class ToggleButtonScreenshotTest {
         verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
             sampleSplitToggleButton(
                 checked = false,
-                toggleControl = {
-                    Switch()
+                selectionControl = {
+                    Switch(checked = false)
+                }
+            )
+        }
+
+    @Test
+    fun split_toggle_button_selected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleSplitToggleButton(
+                checked = true,
+                selectionControl = {
+                    RadioButton(selected = true)
+                }
+            )
+        }
+
+    @Test
+    fun split_toggle_button_unselected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleSplitToggleButton(
+                checked = false,
+                selectionControl = {
+                    RadioButton(selected = false)
                 }
             )
         }
@@ -282,8 +444,8 @@ class ToggleButtonScreenshotTest {
         sampleSplitToggleButton(
             checked = true,
             enabled = false,
-            toggleControl = {
-                Checkbox()
+            selectionControl = {
+                Checkbox(checked = true, enabled = false)
             }
         )
     }
@@ -293,8 +455,8 @@ class ToggleButtonScreenshotTest {
         sampleSplitToggleButton(
             checked = false,
             enabled = false,
-            toggleControl = {
-                Checkbox()
+            selectionControl = {
+                Checkbox(checked = false, enabled = false)
             }
         )
     }
@@ -304,8 +466,8 @@ class ToggleButtonScreenshotTest {
         sampleSplitToggleButton(
             checked = true,
             enabled = false,
-            toggleControl = {
-                Switch()
+            selectionControl = {
+                Switch(checked = true, enabled = false)
             }
         )
     }
@@ -315,8 +477,30 @@ class ToggleButtonScreenshotTest {
         sampleSplitToggleButton(
             checked = false,
             enabled = false,
-            toggleControl = {
-                Switch()
+            selectionControl = {
+                Switch(checked = false, enabled = false)
+            }
+        )
+    }
+
+    @Test
+    fun disabled_split_toggle_button_selected_radio() = verifyScreenshot {
+        sampleSplitToggleButton(
+            checked = true,
+            enabled = false,
+            selectionControl = {
+                RadioButton(selected = true, enabled = false)
+            }
+        )
+    }
+
+    @Test
+    fun disabled_split_toggle_button_unselected_radio() = verifyScreenshot {
+        sampleSplitToggleButton(
+            checked = false,
+            enabled = false,
+            selectionControl = {
+                RadioButton(selected = false, enabled = false)
             }
         )
     }
@@ -327,8 +511,8 @@ class ToggleButtonScreenshotTest {
             sampleSplitToggleButton(
                 checked = true,
                 enabled = false,
-                toggleControl = {
-                    Checkbox()
+                selectionControl = {
+                    Checkbox(checked = true, enabled = false)
                 }
             )
         }
@@ -339,8 +523,8 @@ class ToggleButtonScreenshotTest {
             sampleSplitToggleButton(
                 checked = false,
                 enabled = false,
-                toggleControl = {
-                    Checkbox()
+                selectionControl = {
+                    Checkbox(checked = false, enabled = false)
                 }
             )
         }
@@ -351,8 +535,8 @@ class ToggleButtonScreenshotTest {
             sampleSplitToggleButton(
                 checked = true,
                 enabled = false,
-                toggleControl = {
-                    Switch()
+                selectionControl = {
+                    Switch(checked = true, enabled = false)
                 }
             )
         }
@@ -363,8 +547,32 @@ class ToggleButtonScreenshotTest {
             sampleSplitToggleButton(
                 checked = false,
                 enabled = false,
-                toggleControl = {
-                    Switch()
+                selectionControl = {
+                    Switch(checked = false, enabled = false)
+                }
+            )
+        }
+
+    @Test
+    fun disabled_split_toggle_button_selected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleSplitToggleButton(
+                checked = true,
+                enabled = false,
+                selectionControl = {
+                    RadioButton(selected = true, enabled = false)
+                }
+            )
+        }
+
+    @Test
+    fun disabled_split_toggle_button_unselected_radio_rtl() =
+        verifyScreenshot(layoutDirection = LayoutDirection.Rtl) {
+            sampleSplitToggleButton(
+                checked = false,
+                enabled = false,
+                selectionControl = {
+                    RadioButton(selected = false, enabled = false)
                 }
             )
         }
@@ -373,8 +581,8 @@ class ToggleButtonScreenshotTest {
     private fun sampleToggleButton(
         enabled: Boolean = true,
         checked: Boolean = true,
-        toggleControl: @Composable ToggleControlScope.() -> Unit = {
-            Checkbox()
+        selectionControl: @Composable () -> Unit = {
+            Checkbox(checked = checked)
         },
     ) {
         ToggleButton(
@@ -387,7 +595,7 @@ class ToggleButtonScreenshotTest {
             },
             checked = checked,
             enabled = enabled,
-            toggleControl = toggleControl,
+            selectionControl = selectionControl,
             onCheckedChange = {},
             modifier = Modifier.testTag(TEST_TAG),
         )
@@ -397,7 +605,7 @@ class ToggleButtonScreenshotTest {
     private fun sampleSplitToggleButton(
         checked: Boolean = true,
         enabled: Boolean = true,
-        toggleControl: @Composable ToggleControlScope.() -> Unit = {
+        selectionControl: @Composable () -> Unit = {
         }
     ) {
         SplitToggleButton(
@@ -409,7 +617,9 @@ class ToggleButtonScreenshotTest {
             },
             checked = checked,
             enabled = enabled,
-            toggleControl = toggleControl,
+            selectionControl = {
+                selectionControl()
+            },
             onCheckedChange = {},
             onClick = {},
             modifier = Modifier.testTag(TEST_TAG),

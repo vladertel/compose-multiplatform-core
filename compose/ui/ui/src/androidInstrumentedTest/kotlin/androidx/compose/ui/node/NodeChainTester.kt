@@ -19,6 +19,7 @@
 package androidx.compose.ui.node
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.viewinterop.InteropView
 import com.google.common.base.Objects
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -477,6 +479,8 @@ private class MockOwner(
     override fun onEndApplyChanges() {}
     override fun onSemanticsChange() { semanticsChanged = true }
     override fun onLayoutChange(layoutNode: LayoutNode) { layoutChangeCount++ }
+    @InternalComposeUiApi
+    override fun onInteropViewLayoutChange(view: InteropView) {}
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         TODO("Not yet implemented")
     }
@@ -508,11 +512,7 @@ private class MockOwner(
                 drawBlock: (Canvas, GraphicsLayer?) -> Unit,
                 invalidateParentLayer: () -> Unit
             ) {}
-            override fun updateLayerProperties(
-                scope: ReusableGraphicsLayerScope,
-                layoutDirection: LayoutDirection,
-                density: Density
-            ) {
+            override fun updateLayerProperties(scope: ReusableGraphicsLayerScope) {
                 transform.reset()
                 // This is not expected to be 100% accurate
                 transform.scale(scope.scaleX, scope.scaleY)

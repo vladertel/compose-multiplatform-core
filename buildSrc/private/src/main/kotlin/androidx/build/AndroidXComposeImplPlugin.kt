@@ -56,6 +56,10 @@ const val composeReportsOption =
     "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination"
 const val enableMetricsArg = "androidx.enableComposeCompilerMetrics"
 const val enableReportsArg = "androidx.enableComposeCompilerReports"
+const val composeStrongSkippingOption =
+    "plugin:androidx.compose.compiler.plugins.kotlin:experimentalStrongSkipping"
+const val composeNonSkippingGroupOptimizationOption =
+    "plugin:androidx.compose.compiler.plugins.kotlin:nonSkippingGroupOptimization"
 
 /**
  * Plugin to apply common configuration for Compose projects.
@@ -402,6 +406,12 @@ private fun configureComposeCompilerPlugin(
             compile.onlyIf {
                 compile.kotlinOptions.freeCompilerArgs += "-Xplugin=${kotlinPlugin.first()}"
 
+                // Enable Compose strong skipping mode
+                compile.kotlinOptions.freeCompilerArgs +=
+                    listOf("-P", "$composeStrongSkippingOption=true")
+                compile.kotlinOptions.freeCompilerArgs +=
+                    listOf("-P", "$composeNonSkippingGroupOptimizationOption=true")
+
                 if (enableMetricsProvider.orNull == "true") {
                     val metricsDest = File(libraryMetricsDirectory, "compose")
                     compile.kotlinOptions.freeCompilerArgs +=
@@ -470,10 +480,6 @@ private fun Project.configureLintForMultiplatformLibrary(
         // Lint for libraries is split into two tasks - analysis, and reporting. We need to
         // add the new sources to both, so all parts of the pipeline are aware.
         project.tasks.withType<AndroidLintAnalysisTask>().configureEach {
-            it.variantInputs.addSourceSets()
-        }
-
-        project.tasks.withType<AndroidLintTask>().configureEach {
             it.variantInputs.addSourceSets()
         }
 

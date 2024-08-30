@@ -27,7 +27,6 @@ val IosBugs = Screen.Selection(
     UIKitViewMatryoshka,
     KeyboardEmptyWhiteSpace,
     KeyboardPasswordType,
-    UIKitRenderSync,
     DispatchersMainDelayCheck,
     StartRecompositionCheck,
     BackspaceIssue,
@@ -37,5 +36,8 @@ val IosBugs = Screen.Selection(
     ComposeAndNativeScroll,
     MeasureAndLayoutCrash,
     AnimationFreezeBug,
-    ModalMemoryLeak
+    ModalMemoryLeak,
+    ModalCrash,
+    PopupStretching,
+    TransformGesturesBug
 )

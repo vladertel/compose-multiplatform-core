@@ -17,10 +17,18 @@
 package androidx.compose.foundation.text.selection
 
 import androidx.annotation.VisibleForTesting
+import androidx.collection.LongObjectMap
+import androidx.collection.emptyLongObjectMap
+import androidx.collection.mutableLongIntMapOf
+import androidx.collection.mutableLongObjectMapOf
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitAllPointersUp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextDragObserver
 import androidx.compose.foundation.text.input.internal.coerceIn
+import androidx.compose.foundation.text.isPositionInsideSelection
 import androidx.compose.foundation.text.selection.Selection.AnchorInfo
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -29,7 +37,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
@@ -40,12 +47,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
-import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.changedToUp
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
@@ -138,19 +140,9 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     var focusRequester: FocusRequester = FocusRequester()
 
     /**
-     * Current focus state.
-     */
-    var focusState: FocusState? by mutableStateOf(null)
-
-    /**
      * Return true if the corresponding SelectionContainer has a child that is focused.
      */
-    val hasFocus get() = focusState?.hasFocus ?: false
-
-    /**
-     * Return true if the corresponding SelectionContainer is focused.
-     */
-    private val isContainerFocused get() = focusState?.isFocused ?: false
+    var hasFocus: Boolean by mutableStateOf(false)
 
     /**
      * Return true if dragging gesture is currently in process.
@@ -169,7 +161,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 if (!focusState.hasFocus && hasFocus) {
                     onRelease()
                 }
-                this.focusState = focusState
+                this.hasFocus = focusState.hasFocus
             }
             .focusable()
             .updateSelectionTouchMode { isInTouchMode = it }
@@ -313,7 +305,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 
         selectionRegistrar.onSelectionUpdateSelectAll =
             { isInTouchMode, selectableId ->
-                val (newSelection, newSubselection) = selectAll(
+                val (newSelection, newSubselection) = selectAllInSelectable(
                     selectableId = selectableId,
                     previousSelection = selection,
                 )
@@ -445,11 +437,11 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         return coordinates
     }
 
-    internal fun selectAll(
+    internal fun selectAllInSelectable(
         selectableId: Long,
         previousSelection: Selection?
-    ): Pair<Selection?, Map<Long, Selection>> {
-        val subselections = mutableMapOf<Long, Selection>()
+    ): Pair<Selection?, LongObjectMap<Selection>> {
+        val subselections = mutableLongObjectMapOf<Selection>()
         val newSelection = selectionRegistrar.sort(requireContainerCoordinates())
             .fastFold(null) { mergedSelection: Selection?, selectable: Selectable ->
                 val selection = if (selectable.selectableId == selectableId)
@@ -461,6 +453,70 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
             hapticFeedBack?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
         return Pair(newSelection, subselections)
+    }
+
+    /**
+     * Returns whether the selection encompasses the entire container.
+     */
+    internal fun isEntireContainerSelected(): Boolean {
+        val selectables = selectionRegistrar.sort(requireContainerCoordinates())
+
+        // If there are no selectables, then an empty selection spans the entire container.
+        if (selectables.isEmpty()) return true
+
+        // Since some text exists, we must make sure that every selectable is fully selected.
+        return selectables.fastAll {
+            val text = it.getText()
+            if (text.isEmpty()) return@fastAll true // empty text is inherently fully selected
+
+            // If a non-empty selectable isn't included in the sub-selections,
+            // then some text in the container is not selected.
+            val subSelection = selectionRegistrar.subselections[it.selectableId]
+                ?: return@fastAll false
+
+            val selectionStart = subSelection.start.offset
+            val selectionEnd = subSelection.end.offset
+
+            // The selection could be reversed,
+            // so just verify that the difference between the two offsets matches the text length
+            (selectionStart - selectionEnd).absoluteValue == text.length
+        }
+    }
+
+    /**
+     * Creates and sets a selection spanning the entire container.
+     */
+    internal fun selectAll() {
+        val selectables = selectionRegistrar.sort(requireContainerCoordinates())
+        if (selectables.isEmpty()) return
+
+        var firstSubSelection: Selection? = null
+        var lastSubSelection: Selection? = null
+        val newSubSelections = mutableLongObjectMapOf<Selection>().apply {
+            selectables.fastForEach { selectable ->
+                val subSelection = selectable.getSelectAllSelection() ?: return@fastForEach
+                if (firstSubSelection == null) firstSubSelection = subSelection
+                lastSubSelection = subSelection
+                put(selectable.selectableId, subSelection)
+            }
+        }
+
+        if (newSubSelections.isEmpty()) return
+
+        // first/last sub selections are implied to be non-null from here on out
+        val newSelection = if (firstSubSelection === lastSubSelection) {
+            firstSubSelection
+        } else {
+            Selection(
+                start = firstSubSelection!!.start,
+                end = lastSubSelection!!.end,
+                handlesCrossed = false,
+            )
+        }
+
+        selectionRegistrar.subselections = newSubSelections
+        onSelectionChange(newSelection)
+        previousSelectionLayout = null
     }
 
     /**
@@ -557,9 +613,13 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         }
 
         val textToolbar = textToolbar ?: return
-        if (showToolbar && isInTouchMode && isNonEmptySelection()) {
+        if (showToolbar && isInTouchMode) {
             val rect = getContentRect() ?: return
-            textToolbar.showMenu(rect = rect, onCopyRequested = ::toolbarCopy)
+            textToolbar.showMenu(
+                rect = rect,
+                onCopyRequested = if (isNonEmptySelection()) ::toolbarCopy else null,
+                onSelectAllRequested = if (isEntireContainerSelected()) null else ::selectAll,
+            )
         } else if (textToolbar.status == TextToolbarStatus.Shown) {
             textToolbar.hide()
         }
@@ -598,7 +658,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 
     // This is for PressGestureDetector to cancel the selection.
     fun onRelease() {
-        selectionRegistrar.subselections = emptyMap()
+        selectionRegistrar.subselections = emptyLongObjectMap()
         showToolbar = false
         if (selection != null) {
             onSelectionChange(null)
@@ -700,22 +760,22 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 
     private fun Modifier.onClearSelectionRequested(block: () -> Unit): Modifier =
         pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    awaitPointerEventWhereAllChanges(PointerEventPass.Initial) {
-                        it.changedToUpIgnoreConsumed()
-                    }?.let {
-                        if (!isContainerFocused && !isDraggingInProgress) {
-                            block()
-                        }
-                    }
-                    awaitPointerEventWhereAllChanges(PointerEventPass.Main) {
-                        it.changedToUp()
-                    }?.let {
-                        if (isContainerFocused) {
-                            block()
-                        }
-                    }
+            // Clear the selection on mouse-up that isn't a drag-end.
+            // Note that at the moment, this is only needed inside `DisableSelection` because inside
+            // regular, selectable, text, the selection is already cleared (collapsed, actually) on
+            // the first mouse-down of the selection logic.
+            // That isn't actually the correct behavior on either Windows or macOS, but that's what
+            // happens at the moment.
+            awaitEachGesture {
+                // Wait for primary pointer to be down
+                awaitFirstDown(requireUnconsumed = false)
+
+                // Wait for all pointers to be up, and if we're not dragging, clear the selection.
+                // Do it in the initial phase so that when this happens while dragging, we check
+                // isDraggingInProgress before the drag-end event clears it.
+                awaitAllPointersUp(PointerEventPass.Initial)
+                if (!isDraggingInProgress) {
+                    block()
                 }
             }
         }
@@ -811,7 +871,8 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         draggingHandle = if (isStartHandle) Handle.SelectionStart else Handle.SelectionEnd
         currentDragPosition = position
 
-        val selectionLayout = getSelectionLayout(position, previousHandlePosition, isStartHandle)
+        val selectionLayout =
+            getSelectionLayout(position, previousHandlePosition, isStartHandle) ?: return false
         if (!selectionLayout.shouldRecomputeSelection(previousSelectionLayout)) {
             return false
         }
@@ -828,11 +889,11 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         position: Offset,
         previousHandlePosition: Offset,
         isStartHandle: Boolean,
-    ): SelectionLayout {
+    ): SelectionLayout? {
         val containerCoordinates = requireContainerCoordinates()
         val sortedSelectables = selectionRegistrar.sort(containerCoordinates)
 
-        val idToIndexMap = mutableMapOf<Long, Int>()
+        val idToIndexMap = mutableLongIntMapOf()
         sortedSelectables.fastForEachIndexed { index, selectable ->
             idToIndexMap[selectable.selectableId] = index
         }
@@ -869,11 +930,31 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     internal fun shouldPerformHaptics(): Boolean =
         isInTouchMode && selectionRegistrar.selectables.fastAny { it.getText().isNotEmpty() }
 
-    fun contextMenuOpenAdjustment(position: Offset) {
-        val isEmptySelection = selection?.toTextRange()?.collapsed ?: true
-        // TODO(b/209483184) the logic should be more complex here, it should check that current
-        //  selection doesn't include click position
-        if (isEmptySelection) {
+    /**
+     * Implements the macOS select-word-on-right-click behavior.
+     *
+     * If the current selection does not already include [position], select the word at [position].
+     */
+    fun selectWordAtPositionIfNotAlreadySelected(position: Offset) {
+        val containerCoordinates = containerLayoutCoordinates ?: return
+        if (!containerCoordinates.isAttached) return
+
+        val isClickedPositionInsideSelection =
+            selectionRegistrar.selectables.fastAny { selectable ->
+                val selection =
+                    selectionRegistrar.subselections[selectable.selectableId]
+                        ?: return@fastAny false
+                val selectableLayoutCoords =
+                    selectable.getLayoutCoordinates() ?: return@fastAny false
+                val positionInSelectable =
+                    selectableLayoutCoords.localPositionOf(containerCoordinates, position)
+                val textLayoutResult = selectable.textLayoutResult() ?: return@fastAny false
+                textLayoutResult.isPositionInsideSelection(
+                    position = positionInSelectable,
+                    selectionRange = selection.toTextRange()
+                )
+            }
+        if (!isClickedPositionInsideSelection) {
             startSelection(
                 position = position,
                 isStartHandle = true,
@@ -1004,7 +1085,14 @@ private fun getMagnifierCenter(
     // Hide the magnifier when dragged too far (outside the horizontal bounds of how big the
     // magnifier actually is). See
     // https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/widget/Editor.java;l=5228-5231;drc=2fdb6bd709be078b72f011334362456bb758922c
-    if ((dragX - textConstrainedX).absoluteValue > magnifierSize.width / 2) {
+    // Also check whether magnifierSize is calculated. A platform magnifier instance is not
+    // created until it's requested for the first time. So the size will only be calculated after we
+    // return a specified offset from this function.
+    // It is very unlikely that this behavior would cause a flicker since magnifier immediately
+    // shows up where the pointer is being dragged. The pointer needs to drag further than the half
+    // of magnifier's width to hide by the following logic.
+    if (magnifierSize != IntSize.Zero &&
+        (dragX - textConstrainedX).absoluteValue > magnifierSize.width / 2) {
         return Offset.Unspecified
     }
 
@@ -1033,15 +1121,6 @@ internal fun LayoutCoordinates.visibleBounds(): Rect {
 
 internal fun Rect.containsInclusive(offset: Offset): Boolean =
     offset.x in left..right && offset.y in top..bottom
-
-/**
- * Suspend until a [PointerEvent] is reported to the specified input [pass].
- * Returns it if all changes match the given [predicate].
- */
-private suspend fun AwaitPointerEventScope.awaitPointerEventWhereAllChanges(
-    pass: PointerEventPass = PointerEventPass.Main,
-    predicate: (PointerInputChange) -> Boolean,
-) = awaitPointerEvent(pass).takeIf { it.changes.fastAll(predicate) }
 
 
 // We skip `isCopyKeyEvent(it)` on web, because should handle browser 'copy' event

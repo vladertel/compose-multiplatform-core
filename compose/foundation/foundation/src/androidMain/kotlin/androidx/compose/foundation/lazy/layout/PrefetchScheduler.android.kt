@@ -25,7 +25,6 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
-import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 @ExperimentalFoundationApi
@@ -108,6 +107,8 @@ internal class AndroidPrefetchScheduler(
     /** Is true when LazyList was composed and not yet disposed. */
     private var isActive = false
 
+    private var frameStartTimeNanos = 0L
+
     init {
         calculateFrameIntervalIfNeeded(view)
     }
@@ -124,18 +125,20 @@ internal class AndroidPrefetchScheduler(
             prefetchScheduled = false
             return
         }
-        val latestFrameVsyncNs = TimeUnit.MILLISECONDS.toNanos(view.drawingTime)
-        val nextFrameNs = latestFrameVsyncNs + frameIntervalNs
-        val oneOverTimeTaskAllowed = System.nanoTime() > nextFrameNs
-        val scope = PrefetchRequestScopeImpl(nextFrameNs, oneOverTimeTaskAllowed)
+        val nextFrameNs = frameStartTimeNanos + frameIntervalNs
+        val scope = PrefetchRequestScopeImpl(nextFrameNs)
         var scheduleForNextFrame = false
         while (prefetchRequests.isNotEmpty() && !scheduleForNextFrame) {
-            val request = prefetchRequests[0]
-            val hasMoreWorkToDo = with(request) { scope.execute() }
-            if (hasMoreWorkToDo) {
-                scheduleForNextFrame = true
+            if (scope.availableTimeNanos() > 0) {
+                val request = prefetchRequests[0]
+                val hasMoreWorkToDo = with(request) { scope.execute() }
+                if (hasMoreWorkToDo) {
+                    scheduleForNextFrame = true
+                } else {
+                    prefetchRequests.removeAt(0)
+                }
             } else {
-                prefetchRequests.removeAt(0)
+                scheduleForNextFrame = true
             }
         }
 
@@ -155,6 +158,7 @@ internal class AndroidPrefetchScheduler(
      */
     override fun doFrame(frameTimeNanos: Long) {
         if (isActive) {
+            frameStartTimeNanos = frameTimeNanos
             view.post(this)
         }
     }
@@ -182,24 +186,10 @@ internal class AndroidPrefetchScheduler(
 
     class PrefetchRequestScopeImpl(
         private val nextFrameTimeNs: Long,
-        isOneOverTimeTaskAllowed: Boolean
     ) : PrefetchRequestScope {
 
-        private var canDoOverTimeTask = isOneOverTimeTaskAllowed
-
-        override val availableTimeNanos: Long
-            get() {
-                // This logic is meant to be temporary until we replace the isOneOverTimeTaskAllowed
-                // logic with something more general. For now, we assume that a PrefetchRequest
-                // impl will check availableTimeNanos once per task and we give it a large amount
-                // of time the first time it checks if we allow an overtime task.
-                return if (canDoOverTimeTask) {
-                    canDoOverTimeTask = false
-                    Long.MAX_VALUE
-                } else {
-                    max(0, nextFrameTimeNs - System.nanoTime())
-                }
-            }
+        override fun availableTimeNanos() =
+            max(0, nextFrameTimeNs - System.nanoTime())
     }
 
     companion object {

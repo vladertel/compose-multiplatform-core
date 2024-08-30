@@ -257,7 +257,8 @@ class LazyLayoutTest {
                     .then(modifier))
         }
         var needToCompose by mutableStateOf(false)
-        val prefetchState = LazyLayoutPrefetchState()
+        val scheduler = TestPrefetchScheduler()
+        val prefetchState = LazyLayoutPrefetchState(scheduler)
         rule.setContent {
             LazyLayout(itemProvider, prefetchState = prefetchState) {
                 val item = if (needToCompose) {
@@ -273,9 +274,66 @@ class LazyLayoutTest {
             assertThat(measureCount).isEqualTo(0)
 
             prefetchState.schedulePrefetch(0, constraints)
+
+            scheduler.executeActiveRequests()
+            assertThat(measureCount).isEqualTo(1)
         }
 
-        rule.waitUntil { measureCount == 1 }
+        rule.onNodeWithTag("0").assertIsNotDisplayed()
+
+        rule.runOnIdle {
+            assertThat(measureCount).isEqualTo(1)
+            needToCompose = true
+        }
+
+        rule.onNodeWithTag("0").assertIsDisplayed()
+
+        rule.runOnIdle {
+            assertThat(measureCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun prefetchItemWithContentType() {
+        val constraints = Constraints.fixed(50, 50)
+        var measureCount = 0
+        @Suppress("NAME_SHADOWING")
+        val modifier = Modifier.layout { measurable, constraints ->
+            measureCount++
+            val placeable = measurable.measure(constraints)
+            layout(placeable.width, placeable.height) {
+                placeable.place(0, 0)
+            }
+        }
+        val itemProvider = itemProvider({ 1 }, true) { index ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .testTag("$index")
+                    .then(modifier))
+        }
+        var needToCompose by mutableStateOf(false)
+        val scheduler = TestPrefetchScheduler()
+        val prefetchState = LazyLayoutPrefetchState(scheduler)
+        rule.setContent {
+            LazyLayout(itemProvider, prefetchState = prefetchState) {
+                val item = if (needToCompose) {
+                    measure(0, constraints)[0]
+                } else null
+                layout(100, 100) {
+                    item?.place(0, 0)
+                }
+            }
+        }
+
+        rule.runOnIdle {
+            assertThat(measureCount).isEqualTo(0)
+
+            prefetchState.schedulePrefetch(0, constraints)
+
+            scheduler.executeActiveRequests()
+            assertThat(measureCount).isEqualTo(1)
+        }
 
         rule.onNodeWithTag("0").assertIsNotDisplayed()
 
@@ -303,20 +361,18 @@ class LazyLayoutTest {
                 }
             }
         }
-        val prefetchState = LazyLayoutPrefetchState()
+        val scheduler = TestPrefetchScheduler()
+        val prefetchState = LazyLayoutPrefetchState(scheduler)
         rule.setContent {
             LazyLayout(itemProvider, prefetchState = prefetchState) {
                 layout(100, 100) {}
             }
         }
 
-        val handle = rule.runOnIdle {
-            prefetchState.schedulePrefetch(0, Constraints.fixed(50, 50))
-        }
-
-        rule.waitUntil { composed }
-
         rule.runOnIdle {
+            val handle = prefetchState.schedulePrefetch(0, Constraints.fixed(50, 50))
+            scheduler.executeActiveRequests()
+            assertThat(composed).isTrue()
             handle.cancel()
         }
 
@@ -561,12 +617,18 @@ class LazyLayoutTest {
 
     private fun itemProvider(
         itemCount: () -> Int,
+        hasContentType: Boolean? = false,
         itemContent: @Composable (Int) -> Unit
     ): () -> LazyLayoutItemProvider {
         val provider = object : LazyLayoutItemProvider {
             @Composable
             override fun Item(index: Int, key: Any) {
                 itemContent(index)
+            }
+
+            override fun getContentType(index: Int): Any? {
+                hasContentType?.let { return if (hasContentType) index else null }
+                return null
             }
 
             override val itemCount: Int get() = itemCount()

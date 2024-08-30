@@ -129,9 +129,8 @@ internal class FakeGraphProcessor(
         _graphState.value = GraphStateStopping
     }
 
-    override fun onGraphStopped(requestProcessor: GraphRequestProcessor?) {
+    override fun onGraphStopped(requestProcessor: GraphRequestProcessor) {
         _graphState.value = GraphStateStopped
-        if (requestProcessor == null) return
         val old = processor
         if (requestProcessor === old) {
             processor = null

@@ -117,7 +117,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-const val Debug = false
+private const val Debug = false
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
@@ -2747,13 +2747,12 @@ class LookaheadScopeTest {
 
                                             val position = parent
                                                 .localLookaheadPositionOf(
-                                                    coordinates = coordinates!!,
-                                                    excludeDirectManipulationOffset = false
+                                                    sourceCoordinates = coordinates!!,
                                                 )
                                             val excludedPosition = parent
                                                 .localLookaheadPositionOf(
-                                                    coordinates = coordinates!!,
-                                                    excludeDirectManipulationOffset = true
+                                                    sourceCoordinates = coordinates!!,
+                                                    includeMotionFrameOfReference = false,
                                                 )
                                             positionToExcludedArray[i] =
                                                 position to excludedPosition
@@ -2826,14 +2825,13 @@ class LookaheadScopeTest {
 
                                             val position = parent
                                                 .localLookaheadPositionOf(
-                                                    coordinates = coordinates!!,
-                                                    excludeDirectManipulationOffset = false
+                                                    sourceCoordinates = coordinates!!,
                                                 )
 
                                             val excludedPosition = parent
                                                 .localLookaheadPositionOf(
-                                                    coordinates = coordinates!!,
-                                                    excludeDirectManipulationOffset = true
+                                                    sourceCoordinates = coordinates!!,
+                                                    includeMotionFrameOfReference = false,
                                                 )
                                             positionToExcludedArray[i] =
                                                 position to excludedPosition
@@ -2886,7 +2884,7 @@ class LookaheadScopeTest {
                             val placeable = measurable.measure(constraints)
                             return layout(placeable.width, placeable.height) {
                                 if (withDirectManipulation) {
-                                    withDirectManipulationPlacement {
+                                    withMotionFrameOfReferencePlacement {
                                         placeable.place(0, offset.fastRoundToInt())
                                     }
                                 } else {
@@ -2921,15 +2919,14 @@ class LookaheadScopeTest {
                                 regularPosition =
                                     parentLookaheadCoords
                                         .localLookaheadPositionOf(
-                                            coordinates = it,
-                                            excludeDirectManipulationOffset = false
+                                            sourceCoordinates = it
                                         )
 
                                 excludedManipulationPosition =
                                     parentLookaheadCoords
                                         .localLookaheadPositionOf(
-                                            coordinates = it,
-                                            excludeDirectManipulationOffset = true
+                                            sourceCoordinates = it,
+                                            includeMotionFrameOfReference = false,
                                         )
                             }
                     )
@@ -2979,7 +2976,7 @@ class LookaheadScopeTest {
                     layout(300, 300) {
                         placeableData.fastForEach { (placeable, offsetData) ->
                             if (offsetData.withDirectManipulation) {
-                                withDirectManipulationPlacement {
+                                withMotionFrameOfReferencePlacement {
                                     placeable.place(0, offsetData.offset.fastRoundToInt())
                                 }
                             } else {
@@ -3009,15 +3006,14 @@ class LookaheadScopeTest {
                                     regularPositions[0] =
                                         parentLookaheadCoords
                                             .localLookaheadPositionOf(
-                                                coordinates = it,
-                                                excludeDirectManipulationOffset = false
+                                                sourceCoordinates = it
                                             )
 
                                     excludedManipulationPositions[0] =
                                         parentLookaheadCoords
                                             .localLookaheadPositionOf(
-                                                coordinates = it,
-                                                excludeDirectManipulationOffset = true
+                                                sourceCoordinates = it,
+                                                includeMotionFrameOfReference = false,
                                             )
                                 }
                         )
@@ -3033,15 +3029,14 @@ class LookaheadScopeTest {
                                     regularPositions[1] =
                                         parentLookaheadCoords
                                             .localLookaheadPositionOf(
-                                                coordinates = it,
-                                                excludeDirectManipulationOffset = false
+                                                sourceCoordinates = it
                                             )
 
                                     excludedManipulationPositions[1] =
                                         parentLookaheadCoords
                                             .localLookaheadPositionOf(
-                                                coordinates = it,
-                                                excludeDirectManipulationOffset = true
+                                                sourceCoordinates = it,
+                                                includeMotionFrameOfReference = false,
                                             )
                                 }
                         )
@@ -3092,7 +3087,7 @@ class LookaheadScopeTest {
                                 val placeable = measurable.measure(constraints)
                                 layout(placeable.width, placeable.height) {
                                     if (placeWithDirectManipulation) {
-                                        withDirectManipulationPlacement {
+                                        withMotionFrameOfReferencePlacement {
                                             placeable.place(0, 200)
                                         }
                                     } else {
@@ -3111,13 +3106,12 @@ class LookaheadScopeTest {
 
                                         lookingAheadPosition = lookaheadScopeCoordinates
                                             .localLookaheadPositionOf(
-                                                coordinates = lookaheadCoordinates,
-                                                excludeDirectManipulationOffset = false
+                                                sourceCoordinates = lookaheadCoordinates,
                                             )
                                         lookingAheadPositionExcludingDmp = lookaheadScopeCoordinates
                                             .localLookaheadPositionOf(
-                                                coordinates = lookaheadCoordinates,
-                                                excludeDirectManipulationOffset = true
+                                                sourceCoordinates = lookaheadCoordinates,
+                                                includeMotionFrameOfReference = false,
                                             )
                                     }
                                     placeable.place(0, 0)

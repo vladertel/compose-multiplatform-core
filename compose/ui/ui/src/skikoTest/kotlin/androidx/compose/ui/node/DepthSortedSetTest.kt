@@ -17,6 +17,7 @@
 package androidx.compose.ui.node
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.draganddrop.DragAndDropManager
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.viewinterop.InteropView
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -227,9 +229,17 @@ class DepthSortedSetTest {
         override fun measureAndLayout(sendPointerUpdate: Boolean) = throw IllegalStateException()
         override fun measureAndLayout(layoutNode: LayoutNode, constraints: Constraints) = throw IllegalStateException()
         override fun forceMeasureTheSubtree(layoutNode: LayoutNode, affectsLookahead: Boolean) = throw IllegalStateException()
-        override fun createLayer(drawBlock: (Canvas) -> Unit, invalidateParentLayer: () -> Unit, explicitLayer: GraphicsLayer?): OwnedLayer = throw IllegalStateException()
+        override fun createLayer(
+            drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
+            invalidateParentLayer: () -> Unit,
+            explicitLayer: GraphicsLayer?
+        ): OwnedLayer = throw IllegalStateException()
         override fun onSemanticsChange() = throw IllegalStateException()
         override fun onLayoutChange(layoutNode: LayoutNode) = throw IllegalStateException()
+
+        @InternalComposeUiApi
+        override fun onInteropViewLayoutChange(view: InteropView) = throw IllegalStateException()
+
         override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? = throw IllegalStateException()
         override val measureIteration: Long get() = throw IllegalStateException()
         override val viewConfiguration: ViewConfiguration get() = throw IllegalStateException()

@@ -31,8 +31,6 @@ import androidx.wear.compose.foundation.samples.ExpandableTextSample
 import androidx.wear.compose.foundation.samples.ExpandableWithItemsSample
 import androidx.wear.compose.foundation.samples.HierarchicalFocusCoordinatorSample
 import androidx.wear.compose.foundation.samples.OversizeComposable
-import androidx.wear.compose.foundation.samples.RotaryScrollSample
-import androidx.wear.compose.foundation.samples.RotarySnapSample
 import androidx.wear.compose.foundation.samples.ScalingLazyColumnEdgeAnchoredAndAnimatedScrollTo
 import androidx.wear.compose.foundation.samples.SimpleCurvedWorld
 import androidx.wear.compose.foundation.samples.SimpleScalingLazyColumn
@@ -117,15 +115,7 @@ val WearFoundationDemos = DemoCategory(
         )),
         ComposableDemo("Scrollable Column") { ScrollableColumnDemo() },
         ComposableDemo("Scrollable Row") { ScrollableRowDemo() },
-        DemoCategory("Rotary Input", listOf(
-            DemoCategory("Samples", listOf(
-                ComposableDemo(".rotary with scroll") { RotaryScrollSample() },
-                ComposableDemo(".rotary with snap") { RotarySnapSample() },
-                ComposableDemo("RotaryEvent") { ScrollUsingRotatingCrownDemo() },
-                ComposableDemo("PreRotaryEvent") { InterceptScrollDemo() }
-            )),
-            DemoCategory("Demos", listOf())
-        )),
+        DemoCategory("Rotary Input", RotaryInputDemos),
         ComposableDemo("Focus Sample") { HierarchicalFocusCoordinatorSample() },
         DemoCategory("Scaling Lazy Column", listOf(
                 ComposableDemo(

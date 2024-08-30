@@ -16,36 +16,42 @@
 
 package androidx.compose.ui.platform
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.scene.getConstraintsToFillParent
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.FinishComposingTextCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.SetComposingRegionCommand
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
+import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.IntermediateTextInputUIView
-import androidx.compose.ui.window.KeyboardEventHandler
 import kotlin.math.absoluteValue
 import kotlin.math.min
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.BreakIterator
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIPress
 import platform.UIKit.UIView
 import platform.UIKit.reloadInputViews
 
@@ -55,7 +61,11 @@ internal class UIKitTextInputService(
     private val densityProvider: () -> Density,
     private val viewConfiguration: ViewConfiguration,
     private val focusStack: FocusStack<UIView>?,
-    private val keyboardEventHandler: KeyboardEventHandler,
+    /**
+     * Callback to handle keyboard presses. The parameter is a [Set] of [UIPress] objects.
+     * Erasure happens due to K/N not supporting Obj-C lightweight generics.
+     */
+    private val onKeyboardPresses: (Set<*>) -> Unit,
 ) : PlatformTextInputService, TextToolbar {
 
     private val rootView get() = rootViewProvider()
@@ -63,6 +73,7 @@ internal class UIKitTextInputService(
     private var currentImeOptions: ImeOptions? = null
     private var currentImeActionHandler: ((ImeAction) -> Unit)? = null
     private var textUIView: IntermediateTextInputUIView? = null
+    private var textLayoutResult : TextLayoutResult? = null
 
     /**
      * Workaround to prevent calling textWillChange, textDidChange, selectionWillChange, and
@@ -192,6 +203,25 @@ internal class UIKitTextInputService(
         }
     }
 
+    override fun updateTextLayoutResult(
+        textFieldValue: TextFieldValue,
+        offsetMapping: OffsetMapping,
+        textLayoutResult: TextLayoutResult,
+        textFieldToRootTransform: (Matrix) -> Unit,
+        innerTextFieldBounds: Rect,
+        decorationBoxBounds: Rect
+    ) {
+        super.updateTextLayoutResult(
+            textFieldValue,
+            offsetMapping,
+            textLayoutResult,
+            textFieldToRootTransform,
+            innerTextFieldBounds,
+            decorationBoxBounds
+        )
+        this.textLayoutResult = textLayoutResult
+    }
+
     private fun handleEnterKey(event: KeyEvent): Boolean {
         _tempImeActionIsCalledWithHardwareReturnKey = false
         return when (event.type) {
@@ -276,7 +306,6 @@ internal class UIKitTextInputService(
             // then it means that showMenu() called in SelectionContainer without any textfields,
             // and IntermediateTextInputView must be created to show an editing menu
             attachIntermediateTextInputView()
-            textUIView?.becomeFirstResponder()
             updateView()
         }
         textUIView?.showTextMenu(
@@ -312,7 +341,7 @@ internal class UIKitTextInputService(
         textUIView = IntermediateTextInputUIView(
             viewConfiguration = viewConfiguration
         ).also {
-            it.keyboardEventHandler = keyboardEventHandler
+            it.onKeyboardPresses = onKeyboardPresses
             rootView.addSubview(it)
             it.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activateConstraints(
@@ -323,7 +352,7 @@ internal class UIKitTextInputService(
 
     private fun detachIntermediateTextInputView() {
         textUIView?.let { view ->
-            view.keyboardEventHandler = null
+            view.resetOnKeyboardPressesCallback()
             mainScope.launch {
                 view.removeFromSuperview()
             }
@@ -332,6 +361,28 @@ internal class UIKitTextInputService(
     }
 
     private fun createSkikoInput(value: TextFieldValue) = object : IOSSkikoInput {
+
+        private var floatingCursorTranslation : Offset? = null
+
+        override fun beginFloatingCursor(offset: DpOffset) {
+            val cursorPos = getCursorPos() ?: getState()?.selection?.start ?: return
+            val cursorRect = textLayoutResult?.getCursorRect(cursorPos) ?: return
+            floatingCursorTranslation = cursorRect.center - offset.toOffset(densityProvider())
+        }
+
+        override fun updateFloatingCursor(offset: DpOffset) {
+            val translation = floatingCursorTranslation ?: return
+            val offsetPx = offset.toOffset(densityProvider())
+            val pos = textLayoutResult
+                ?.getOffsetForPosition(offsetPx + translation) ?: return
+
+            sendEditCommand(SetSelectionCommand(pos, pos))
+        }
+
+        override fun endFloatingCursor() {
+            floatingCursorTranslation = null
+        }
+
         /**
          * A Boolean value that indicates whether the text-entry object has any text.
          * https://developer.apple.com/documentation/uikit/uikeyinput/1614457-hastext

@@ -19,6 +19,7 @@ package androidx.compose.ui.platform
 import android.os.Build
 import androidx.compose.ui.geometry.MutableRect
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.center
 import androidx.compose.ui.geometry.isUnspecified
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.CompositingStrategy as OldCompositingStrategy
@@ -28,31 +29,26 @@ import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
-import androidx.compose.ui.graphics.drawscope.draw
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.layer.CompositingStrategy
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.layer.setOutline
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.internal.throwIllegalStateException
 import androidx.compose.ui.layout.GraphicLayerInfo
 import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.center
-import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toSize
 
 internal class GraphicsLayerOwnerLayer(
-    private val graphicsLayer: GraphicsLayer,
+    private var graphicsLayer: GraphicsLayer,
     // when we have a context it means the object is created by us and we need to release it
     private val context: GraphicsContext?,
     private val ownerView: AndroidComposeView,
@@ -80,7 +76,7 @@ internal class GraphicsLayerOwnerLayer(
     private val scope = CanvasDrawScope()
     private var mutatedFields: Int = 0
     private var transformOrigin: TransformOrigin = TransformOrigin.Center
-    private var shape: Shape = RectangleShape
+    private var outline: Outline? = null
     private var tmpPath: Path? = null
     /**
      * Optional paint used when the RenderNode is rendered on a software backed
@@ -88,17 +84,10 @@ internal class GraphicsLayerOwnerLayer(
      */
     private var softwareLayerPaint: Paint? = null
 
-    override fun updateLayerProperties(
-        scope: ReusableGraphicsLayerScope,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ) {
-        var maybeChangedFields = scope.mutatedFields or mutatedFields
-        if (this.layoutDirection != layoutDirection || this.density != density) {
-            this.layoutDirection = layoutDirection
-            this.density = density
-            maybeChangedFields = maybeChangedFields or Fields.Shape
-        }
+    override fun updateLayerProperties(scope: ReusableGraphicsLayerScope) {
+        val maybeChangedFields = scope.mutatedFields or mutatedFields
+        this.layoutDirection = scope.layoutDirection
+        this.density = scope.graphicsDensity
         if (maybeChangedFields and Fields.TransformOrigin != 0) {
             this.transformOrigin = scope.transformOrigin
         }
@@ -147,14 +136,14 @@ internal class GraphicsLayerOwnerLayer(
             graphicsLayer.cameraDistance = scope.cameraDistance
         }
         if (maybeChangedFields and Fields.TransformOrigin != 0) {
-            graphicsLayer.pivotOffset = Offset(
-                transformOrigin.pivotFractionX * size.width,
-                transformOrigin.pivotFractionY * size.height
-            )
-        }
-        if (maybeChangedFields and Fields.Shape != 0) {
-            this.shape = scope.shape
-            updateOutline()
+            if (transformOrigin == TransformOrigin.Center) {
+                graphicsLayer.pivotOffset = Offset.Unspecified
+            } else {
+                graphicsLayer.pivotOffset = Offset(
+                    transformOrigin.pivotFractionX * size.width,
+                    transformOrigin.pivotFractionY * size.height
+                )
+            }
         }
         if (maybeChangedFields and Fields.Clip != 0) {
             graphicsLayer.clip = scope.clip
@@ -171,8 +160,16 @@ internal class GraphicsLayerOwnerLayer(
             }
         }
 
+        var outlineChanged = false
+
+        if (outline != scope.outline) {
+            outlineChanged = true
+            outline = scope.outline
+            updateOutline()
+        }
+
         mutatedFields = scope.mutatedFields
-        if (maybeChangedFields != 0) {
+        if (maybeChangedFields != 0 || outlineChanged) {
             triggerRepaint()
         }
     }
@@ -189,7 +186,7 @@ internal class GraphicsLayerOwnerLayer(
     }
 
     private fun updateOutline() {
-        val outline = shape.createOutline(size.toSize(), layoutDirection, density)
+        val outline = outline ?: return
         graphicsLayer.setOutline(outline)
         if (outline is Outline.Generic && Build.VERSION.SDK_INT < 33) {
             // before 33 many of the paths are not clipping by rendernode. instead we have to
@@ -214,6 +211,7 @@ internal class GraphicsLayerOwnerLayer(
 
     override fun move(position: IntOffset) {
         graphicsLayer.topLeft = position
+        triggerRepaint()
     }
 
     override fun resize(size: IntSize) {
@@ -230,9 +228,11 @@ internal class GraphicsLayerOwnerLayer(
         if (androidCanvas.isHardwareAccelerated) {
             updateDisplayList()
             drawnWithEnabledZ = graphicsLayer.shadowElevation > 0
-            scope.draw(density, layoutDirection, canvas, size.toSize(), parentLayer) {
-                drawLayer(graphicsLayer)
+            scope.drawContext.also {
+                it.canvas = canvas
+                it.graphicsLayer = parentLayer
             }
+            scope.drawLayer(graphicsLayer)
         } else {
             // TODO ideally there should be some solution for drawing a layer on a software
             //  accelerated canvas built in right into GraphicsLayer, as this workaround is not
@@ -253,15 +253,11 @@ internal class GraphicsLayerOwnerLayer(
             // If there is alpha applied, we must render into an offscreen buffer to
             // properly blend the contents of this layer against the background content
             if (graphicsLayer.alpha < 1.0f) {
-                val paint = (softwareLayerPaint ?: Paint().also { softwareLayerPaint = it })
-                    .apply { alpha = graphicsLayer.alpha }
-                androidCanvas.saveLayer(
-                    left,
-                    top,
-                    right,
-                    bottom,
-                    paint.asFrameworkPaint()
-                )
+                val paint =
+                    (softwareLayerPaint ?: Paint().also { softwareLayerPaint = it }).apply {
+                        alpha = graphicsLayer.alpha
+                    }
+                androidCanvas.saveLayer(left, top, right, bottom, paint.asFrameworkPaint())
             } else {
                 canvas.save()
             }
@@ -279,19 +275,20 @@ internal class GraphicsLayerOwnerLayer(
 
     override fun updateDisplayList() {
         if (isDirty) {
-            if (graphicsLayer.size != size) {
+            if (transformOrigin != TransformOrigin.Center && graphicsLayer.size != size) {
                 graphicsLayer.pivotOffset = Offset(
                     transformOrigin.pivotFractionX * size.width,
                     transformOrigin.pivotFractionY * size.height
                 )
-                updateOutline()
             }
-            graphicsLayer.record(density, layoutDirection, size) {
-                drawIntoCanvas { canvas ->
-                    drawBlock?.let { it(canvas, drawContext.graphicsLayer) }
-                }
-            }
+            graphicsLayer.record(density, layoutDirection, size, recordLambda)
             isDirty = false
+        }
+    }
+
+    private val recordLambda: DrawScope.() -> Unit = {
+        drawIntoCanvas { canvas ->
+            this@GraphicsLayerOwnerLayer.drawBlock?.let { it(canvas, drawContext.graphicsLayer) }
         }
     }
 
@@ -307,7 +304,10 @@ internal class GraphicsLayerOwnerLayer(
         invalidateParentLayer = null
         isDestroyed = true
         isDirty = false
-        context?.releaseGraphicsLayer(graphicsLayer)
+        if (context != null) {
+            context.releaseGraphicsLayer(graphicsLayer)
+            ownerView.recycle(this)
+        }
     }
 
     override fun mapOffset(point: Offset, inverse: Boolean): Offset {
@@ -335,7 +335,25 @@ internal class GraphicsLayerOwnerLayer(
         drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
         invalidateParentLayer: () -> Unit
     ) {
-        throwIllegalStateException("reuseLayer is not supported yet")
+        val context = requireNotNull(context) {
+            "currently reuse is only supported when we manage the layer lifecycle"
+        }
+        require(graphicsLayer.isReleased) { "layer should have been released before reuse" }
+
+        // recreate a layer
+        graphicsLayer = context.createGraphicsLayer()
+        isDestroyed = false
+
+        // apply new params
+        this.drawBlock = drawBlock
+        this.invalidateParentLayer = invalidateParentLayer
+
+        // reset mutable variables to their initial values
+        transformOrigin = TransformOrigin.Center
+        drawnWithEnabledZ = false
+        size = IntSize(Int.MAX_VALUE, Int.MAX_VALUE)
+        outline = null
+        mutatedFields = 0
     }
 
     override fun transform(matrix: Matrix) {
@@ -371,7 +389,11 @@ internal class GraphicsLayerOwnerLayer(
     }
 
     private fun updateMatrix() = with(graphicsLayer) {
-        val pivot = if (pivotOffset.isUnspecified) size.center.toOffset() else pivotOffset
+        val pivot = if (pivotOffset.isUnspecified) {
+            this@GraphicsLayerOwnerLayer.size.toSize().center
+        } else {
+            pivotOffset
+        }
 
         matrixCache.reset()
         matrixCache *= Matrix().apply {
@@ -390,8 +412,8 @@ internal class GraphicsLayerOwnerLayer(
     }
 
     /**
-     * Manually clips the content of the RenderNodeLayer in the provided canvas.
-     * This is used only in software rendered use cases
+     * Manually clips the content of the RenderNodeLayer in the provided canvas. This is used only
+     * in software rendered use cases
      */
     private fun clipManually(canvas: Canvas) {
         if (graphicsLayer.clip) {
