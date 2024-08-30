@@ -68,7 +68,7 @@ internal class UIKitComposeSceneLayer(
         isInterceptingOutsideEvents = { focusable }
     )
 
-    val mediator =
+    private val mediator =
         LayerComposeSceneMediator(
             view,
             configuration,
