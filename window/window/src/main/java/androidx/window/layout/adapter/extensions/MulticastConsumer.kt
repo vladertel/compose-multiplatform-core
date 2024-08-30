@@ -19,16 +19,22 @@ package androidx.window.layout.adapter.extensions
 import android.content.Context
 import androidx.annotation.GuardedBy
 import androidx.core.util.Consumer
+import androidx.window.extensions.core.util.function.Consumer as OEMConsumer
 import androidx.window.extensions.layout.WindowLayoutInfo as OEMWindowLayoutInfo
 import androidx.window.layout.WindowLayoutInfo
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-/** A [Consumer] that handles multicasting to multiple [Consumer]s downstream. */
-internal class MulticastConsumer(private val context: Context) : Consumer<OEMWindowLayoutInfo> {
+/**
+ * A [Consumer] that handles multicasting to multiple [Consumer]s downstream.
+ */
+internal class MulticastConsumer(
+    private val context: Context
+) : Consumer<OEMWindowLayoutInfo>, OEMConsumer<OEMWindowLayoutInfo> {
     private val globalLock = ReentrantLock()
 
-    @GuardedBy("globalLock") private var lastKnownValue: WindowLayoutInfo? = null
+    @GuardedBy("globalLock")
+    private var lastKnownValue: WindowLayoutInfo? = null
     @GuardedBy("globalLock")
     private val registeredListeners = mutableSetOf<Consumer<WindowLayoutInfo>>()
 
@@ -48,7 +54,9 @@ internal class MulticastConsumer(private val context: Context) : Consumer<OEMWin
     }
 
     fun removeListener(listener: Consumer<WindowLayoutInfo>) {
-        globalLock.withLock { registeredListeners.remove(listener) }
+        globalLock.withLock {
+            registeredListeners.remove(listener)
+        }
     }
 
     fun isEmpty(): Boolean {

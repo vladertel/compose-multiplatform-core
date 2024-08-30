@@ -46,11 +46,10 @@ import java.util.WeakHashMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-/** Extension interface compatibility wrapper for v0.1 sidecar. */
-internal class SidecarCompat
-@VisibleForTesting
-constructor(
-    @get:VisibleForTesting val sidecar: SidecarInterface?,
+/** Extension interface compatibility wrapper for v0.1 sidecar.  */
+internal class SidecarCompat @VisibleForTesting constructor(
+    @get:VisibleForTesting
+    val sidecar: SidecarInterface?,
     private val sidecarAdapter: SidecarAdapter
 ) : ExtensionInterfaceCompat {
     // Map of active listeners registered with #onWindowLayoutChangeListenerAdded() and not yet
@@ -61,12 +60,18 @@ constructor(
     private val componentCallbackMap = mutableMapOf<Activity, Consumer<Configuration>>()
     private var extensionCallback: DistinctElementCallback? = null
 
-    constructor(context: Context) : this(getSidecarCompat(context), SidecarAdapter())
+    constructor(context: Context) : this(
+        getSidecarCompat(context),
+        SidecarAdapter()
+    )
 
     override fun setExtensionCallback(extensionCallback: ExtensionCallbackInterface) {
         this.extensionCallback = DistinctElementCallback(extensionCallback)
         sidecar?.setSidecarCallback(
-            DistinctElementSidecarCallback(sidecarAdapter, TranslatingCallback())
+            DistinctElementSidecarCallback(
+                sidecarAdapter,
+                TranslatingCallback()
+            )
         )
     }
 
@@ -91,9 +96,8 @@ constructor(
     }
 
     /**
-     * Register an [IBinder] token and an [Activity] so that the given [Activity] will receive
-     * updates when there is a new [WindowLayoutInfo].
-     *
+     * Register an [IBinder] token and an [Activity] so that the given
+     * [Activity] will receive updates when there is a new [WindowLayoutInfo].
      * @param windowToken for the given [Activity].
      * @param activity that is listening for changes of [WindowLayoutInfo]
      */
@@ -115,13 +119,12 @@ constructor(
         if (componentCallbackMap[activity] == null && activity is OnConfigurationChangedProvider) {
             // Create a configuration change observer to send updated WindowLayoutInfo
             // when the configuration of the app changes: b/186647126
-            val configChangeObserver =
-                Consumer<Configuration> {
-                    extensionCallback?.onWindowLayoutChanged(
-                        activity,
-                        getWindowLayoutInfo(activity)
-                    )
-                }
+            val configChangeObserver = Consumer<Configuration> {
+                extensionCallback?.onWindowLayoutChanged(
+                    activity,
+                    getWindowLayoutInfo(activity)
+                )
+            }
             componentCallbackMap[activity] = configChangeObserver
             activity.addOnConfigurationChangedListener(configChangeObserver)
         }
@@ -151,8 +154,10 @@ constructor(
     override fun validateExtensionInterface(): Boolean {
         return try {
             // sidecar.setSidecarCallback(SidecarInterface.SidecarCallback);
-            val methodSetSidecarCallback =
-                sidecar?.javaClass?.getMethod("setSidecarCallback", SidecarCallback::class.java)
+            val methodSetSidecarCallback = sidecar?.javaClass?.getMethod(
+                "setSidecarCallback",
+                SidecarCallback::class.java
+            )
             val rSetSidecarCallback = methodSetSidecarCallback?.returnType
             if (rSetSidecarCallback != Void.TYPE) {
                 throw NoSuchMethodException(
@@ -169,8 +174,8 @@ constructor(
             sidecar?.onDeviceStateListenersChanged(true /* isEmpty */)
 
             // sidecar.getWindowLayoutInfo(IBinder)
-            val methodGetWindowLayoutInfo =
-                sidecar?.javaClass?.getMethod("getWindowLayoutInfo", IBinder::class.java)
+            val methodGetWindowLayoutInfo = sidecar?.javaClass
+                ?.getMethod("getWindowLayoutInfo", IBinder::class.java)
             val rtGetWindowLayoutInfo = methodGetWindowLayoutInfo?.returnType
             if (rtGetWindowLayoutInfo != SidecarWindowLayoutInfo::class.java) {
                 throw NoSuchMethodException(
@@ -179,10 +184,8 @@ constructor(
             }
 
             // sidecar.onWindowLayoutChangeListenerAdded(IBinder);
-            val methodRegisterWindowLayoutChangeListener =
-                sidecar
-                    ?.javaClass
-                    ?.getMethod("onWindowLayoutChangeListenerAdded", IBinder::class.java)
+            val methodRegisterWindowLayoutChangeListener = sidecar?.javaClass
+                ?.getMethod("onWindowLayoutChangeListenerAdded", IBinder::class.java)
             val rtRegisterWindowLayoutChangeListener =
                 methodRegisterWindowLayoutChangeListener?.returnType
             if (rtRegisterWindowLayoutChangeListener != Void.TYPE) {
@@ -193,10 +196,8 @@ constructor(
             }
 
             // sidecar.onWindowLayoutChangeListenerRemoved(IBinder);
-            val methodUnregisterWindowLayoutChangeListener =
-                sidecar
-                    ?.javaClass
-                    ?.getMethod("onWindowLayoutChangeListenerRemoved", IBinder::class.java)
+            val methodUnregisterWindowLayoutChangeListener = sidecar?.javaClass
+                ?.getMethod("onWindowLayoutChangeListenerRemoved", IBinder::class.java)
             val rtUnregisterWindowLayoutChangeListener =
                 methodUnregisterWindowLayoutChangeListener?.returnType
             if (rtUnregisterWindowLayoutChangeListener != Void.TYPE) {
@@ -222,10 +223,10 @@ constructor(
                             "error: $error"
                     )
                 }
-                val methodSetPosture =
-                    SidecarDeviceState::class
-                        .java
-                        .getMethod("setPosture", Int::class.javaPrimitiveType)
+                val methodSetPosture = SidecarDeviceState::class.java.getMethod(
+                    "setPosture",
+                    Int::class.javaPrimitiveType
+                )
                 methodSetPosture.invoke(tmpDeviceState, SidecarDeviceState.POSTURE_OPENED)
                 val methodGetPosture = SidecarDeviceState::class.java.getMethod("getPosture")
                 val posture = methodGetPosture.invoke(tmpDeviceState) as Int
@@ -242,7 +243,8 @@ constructor(
             displayFeature.rect = tmpRect
 
             // displayFeature.getType()/setType()
-            @Suppress("UNUSED_VARIABLE") val tmpType = displayFeature.type
+            @Suppress("UNUSED_VARIABLE")
+            val tmpType = displayFeature.type
             displayFeature.type = SidecarDisplayFeature.TYPE_FOLD
 
             // SidecarWindowLayoutInfo constructor
@@ -264,13 +266,13 @@ constructor(
                 }
                 val featureList: MutableList<SidecarDisplayFeature> = ArrayList()
                 featureList.add(displayFeature)
-                val methodSetFeatures =
-                    SidecarWindowLayoutInfo::class
-                        .java
-                        .getMethod("setDisplayFeatures", MutableList::class.java)
+                val methodSetFeatures = SidecarWindowLayoutInfo::class.java.getMethod(
+                    "setDisplayFeatures", MutableList::class.java
+                )
                 methodSetFeatures.invoke(windowLayoutInfo, featureList)
-                val methodGetFeatures =
-                    SidecarWindowLayoutInfo::class.java.getMethod("getDisplayFeatures")
+                val methodGetFeatures = SidecarWindowLayoutInfo::class.java.getMethod(
+                    "getDisplayFeatures"
+                )
                 @Suppress("UNCHECKED_CAST")
                 val resultDisplayFeatures =
                     methodGetFeatures.invoke(windowLayoutInfo) as List<SidecarDisplayFeature>
@@ -295,10 +297,11 @@ constructor(
      * An adapter that will run a callback when a window is attached and then be removed from the
      * listener set.
      */
-    private class FirstAttachAdapter(private val sidecarCompat: SidecarCompat, activity: Activity) :
-        View.OnAttachStateChangeListener {
+    private class FirstAttachAdapter(
+        private val sidecarCompat: SidecarCompat,
+        activity: Activity
+    ) : View.OnAttachStateChangeListener {
         private val activityWeakReference = WeakReference(activity)
-
         override fun onViewAttachedToWindow(view: View) {
             view.removeOnAttachStateChangeListener(this)
             val activity = activityWeakReference.get()
@@ -329,10 +332,8 @@ constructor(
     internal inner class TranslatingCallback : SidecarCallback {
         override fun onDeviceStateChanged(newDeviceState: SidecarDeviceState) {
             windowListenerRegisteredContexts.values.forEach { activity ->
-                val layoutInfo =
-                    getActivityWindowToken(activity)?.let { windowToken ->
-                        sidecar?.getWindowLayoutInfo(windowToken)
-                    }
+                val layoutInfo = getActivityWindowToken(activity)
+                    ?.let { windowToken -> sidecar?.getWindowLayoutInfo(windowToken) }
                 extensionCallback?.onWindowLayoutChanged(
                     activity,
                     sidecarAdapter.translate(layoutInfo, newDeviceState)
@@ -353,16 +354,19 @@ constructor(
                 )
                 return
             }
-            val layoutInfo =
-                sidecarAdapter.translate(newLayout, sidecar?.deviceState ?: SidecarDeviceState())
+            val layoutInfo = sidecarAdapter.translate(
+                newLayout,
+                sidecar?.deviceState ?: SidecarDeviceState()
+            )
             extensionCallback?.onWindowLayoutChanged(activity, layoutInfo)
         }
     }
 
     /**
      * A class to record the last calculated values from [SidecarInterface] and filter out
-     * duplicates. This class uses [WindowLayoutInfo] as opposed to [SidecarDisplayFeature] since
-     * the methods [Object.equals] and [Object.hashCode] may not have been overridden.
+     * duplicates. This class uses [WindowLayoutInfo] as opposed to
+     * [SidecarDisplayFeature] since the methods [Object.equals] and
+     * [Object.hashCode] may not have been overridden.
      */
     private class DistinctElementCallback(
         private val callbackInterface: ExtensionCallbackInterface
@@ -370,13 +374,15 @@ constructor(
         private val globalLock = ReentrantLock()
 
         /**
-         * A map from [Activity] to the last computed [WindowLayoutInfo] for the given activity. A
-         * [WeakHashMap] is used to avoid retaining the [Activity].
+         * A map from [Activity] to the last computed [WindowLayoutInfo] for the
+         * given activity. A [WeakHashMap] is used to avoid retaining the [Activity].
          */
         @GuardedBy("globalLock")
         private val activityWindowLayoutInfo = WeakHashMap<Activity, WindowLayoutInfo>()
-
-        override fun onWindowLayoutChanged(activity: Activity, newLayout: WindowLayoutInfo) {
+        override fun onWindowLayoutChanged(
+            activity: Activity,
+            newLayout: WindowLayoutInfo
+        ) {
             globalLock.withLock {
                 val lastInfo = activityWindowLayoutInfo[activity]
                 if (newLayout == lastInfo) {
@@ -388,28 +394,29 @@ constructor(
         }
 
         fun clearWindowLayoutInfo(activity: Activity) {
-            globalLock.withLock { activityWindowLayoutInfo[activity] = null }
+            globalLock.withLock {
+                activityWindowLayoutInfo[activity] = null
+            }
         }
     }
 
     companion object {
         private const val TAG = "SidecarCompat"
         val sidecarVersion: Version?
-            get() =
-                try {
-                    val vendorVersion = SidecarProvider.getApiVersion()
-                    if (!TextUtils.isEmpty(vendorVersion)) parse(vendorVersion) else null
-                } catch (e: NoClassDefFoundError) {
-                    if (DEBUG) {
-                        Log.d(TAG, "Sidecar version not found")
-                    }
-                    null
-                } catch (e: UnsupportedOperationException) {
-                    if (DEBUG) {
-                        Log.d(TAG, "Stub Sidecar")
-                    }
-                    null
+            get() = try {
+                val vendorVersion = SidecarProvider.getApiVersion()
+                if (!TextUtils.isEmpty(vendorVersion)) parse(vendorVersion) else null
+            } catch (e: NoClassDefFoundError) {
+                if (DEBUG) {
+                    Log.d(TAG, "Sidecar version not found")
                 }
+                null
+            } catch (e: UnsupportedOperationException) {
+                if (DEBUG) {
+                    Log.d(TAG, "Stub Sidecar")
+                }
+                null
+            }
 
         internal fun getSidecarCompat(context: Context): SidecarInterface? {
             return SidecarProvider.getSidecarImpl(context.applicationContext)

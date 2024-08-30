@@ -26,8 +26,6 @@ import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
-import androidx.compose.ui.autofill.SemanticAutofill
-import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.focus.FocusOwnerImpl
@@ -66,10 +64,10 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.RenderNodeLayer
-import androidx.compose.ui.platform.asDragAndDropManager
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
+import androidx.compose.ui.scene.OwnerDragAndDropManager
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
@@ -85,8 +83,9 @@ import androidx.compose.ui.unit.toIntRect
 import androidx.compose.ui.unit.toRect
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.trace
+import androidx.compose.ui.viewinterop.InteropPointerInputModifier
 import androidx.compose.ui.viewinterop.InteropView
-import androidx.compose.ui.viewinterop.InteropViewAnchorModifierNode
+import androidx.compose.ui.viewinterop.pointerInteropFilter
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlin.math.min
@@ -123,8 +122,9 @@ internal class RootNodeOwner(
             platformContext.parentFocusManager.clearFocus(true)
         },
     )
-    private val dragAndDropManager: DragAndDropManager =
-        platformContext.createDragAndDropManager().asDragAndDropManager()
+
+    val dragAndDropManager = OwnerDragAndDropManager(platformContext)
+
     private val rootSemanticsNode = EmptySemanticsModifier()
 
     private val rootModifier = EmptySemanticsElement(rootSemanticsNode)
@@ -269,15 +269,16 @@ internal class RootNodeOwner(
 
     /**
      * Perform hit test and return the [InteropView] associated with the resulting
-     * [PointerInputModifierNode] node in case it is a [InteropViewAnchorModifierNode], otherwise null.
+     * [PointerInputModifierNode] node in case it is a [Modifier.pointerInteropFilter],
+     * otherwise null.
      */
     fun hitTestInteropView(position: Offset): InteropView? {
         val result = HitTestResult()
         owner.root.hitTest(position, result, true)
 
-        val node = result.lastOrNull() as? InteropViewAnchorModifierNode ?: return null
-
-        return node.interopView
+        val last = result.lastOrNull() as? BackwardsCompatNode
+        val node = last?.element as? InteropPointerInputModifier
+        return node?.interopView
     }
 
     private fun isInBounds(localPosition: Offset): Boolean =
@@ -318,8 +319,6 @@ internal class RootNodeOwner(
         override val textToolbar get() = platformContext.textToolbar
         override val autofillTree = AutofillTree()
         override val autofill: Autofill?  get() = null
-        // TODO https://youtrack.jetbrains.com/issue/CMP-1572/Support-SemanticAutofill
-        override val semanticAutofill: SemanticAutofill? get() = null
         override val density get() = this@RootNodeOwner.density
         override val textInputService = TextInputService(platformContext.textInputService)
         override val softwareKeyboardController =
@@ -331,7 +330,7 @@ internal class RootNodeOwner(
         ): Nothing {
             awaitCancellation()
         }
-        override val dragAndDropManager: DragAndDropManager = this@RootNodeOwner.dragAndDropManager
+        override val dragAndDropManager = this@RootNodeOwner.dragAndDropManager
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
@@ -462,7 +461,9 @@ internal class RootNodeOwner(
         }
 
         @InternalComposeUiApi
-        override fun onInteropViewLayoutChange(view: InteropView) {}
+        override fun onInteropViewLayoutChange(view: InteropView) {
+            // TODO dispatch platform re-layout
+        }
 
         override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
             return when (keyEvent.key) {
