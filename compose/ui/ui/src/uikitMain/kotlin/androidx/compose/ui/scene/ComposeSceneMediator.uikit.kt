@@ -419,17 +419,18 @@ internal abstract class ComposeSceneMediator(
     private fun setNeedsRedraw() = metalView.setNeedsRedraw()
 
     /**
-     * Updates the [ComposeScene] with the properties derived from the [layoutView].
+     * Updates the [ComposeScene] with the properties derived from the [view].
      */
-    fun updateBasedOnView(layoutView: UIView) {
-        val density = layoutView.density
+    fun updateLayout() {
+        // TODO: scene should be calculated based on view bounds, not window
+        val density = view.density
         scene.density = density
 
-        layoutMargins = layoutView.layoutMargins.toPlatformInsets()
-        safeArea = layoutView.safeAreaInsets.toPlatformInsets()
+        layoutMargins = view.layoutMargins.toPlatformInsets()
+        safeArea = view.safeAreaInsets.toPlatformInsets()
 
         // TODO: it should be updated on any container size change
-        val boundsInPx = layoutView.bounds.useContents {
+        val boundsInPx = view.bounds.useContents {
             with(density) {
                 asDpRect().toRect()
             }

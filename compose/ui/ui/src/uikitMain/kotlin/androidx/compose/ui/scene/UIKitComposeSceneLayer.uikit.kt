@@ -190,10 +190,7 @@ internal class UIKitComposeSceneLayer(
         mediator.sceneWillDisappear()
     }
 
-    /**
-     * Update [mediator] based on the latest layout properties of [layoutView]
-     */
-    fun updateBasedOnView(layoutView: UIView) {
-        mediator.updateBasedOnView(layoutView)
+    fun updateLayout() {
+        mediator.updateLayout()
     }
 }

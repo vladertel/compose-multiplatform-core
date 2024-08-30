@@ -188,10 +188,7 @@ internal class ComposeHostingViewController(
     private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
 
-        /**
-         * If platform layers are enabled, we need to update the mediator based on the window properties.
-         */
-        mediator?.updateBasedOnView(view)
+        mediator?.updateLayout()
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {
