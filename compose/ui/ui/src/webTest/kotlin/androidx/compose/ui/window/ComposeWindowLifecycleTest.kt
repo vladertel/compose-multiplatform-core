@@ -32,39 +32,39 @@ import kotlinx.coroutines.test.runTest
 
 
 class ComposeWindowLifecycleTest : OnCanvasTests {
-    @Test
-    @Ignore // ignored while investigating CI issues: this test opens a new browser window which can be the cause
-    fun allEvents() = runTest {
-        val canvas = getCanvas()
-        canvas.focus()
-
-        val lifecycleOwner = ComposeWindow(
-            canvas = canvas,
-            content = {},
-            state = DefaultWindowState(document.documentElement!!)
-        )
-
-        val eventsChannel = Channel<Lifecycle.Event>(10)
-
-        lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
-            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                eventsChannel.sendFromScope(event)
-            }
-        })
-
-        assertEquals(Lifecycle.State.CREATED, eventsChannel.receive().targetState)
-        assertEquals(Lifecycle.State.STARTED, eventsChannel.receive().targetState)
-        assertEquals(Lifecycle.State.RESUMED, eventsChannel.receive().targetState)
-
-        // Browsers don't allow to blur the window from code:
-        // https://developer.mozilla.org/en-US/docs/Web/API/Window/blur
-        // So we simulate a new tab being open:
-        val anotherWindow = window.open("about:config")
-        assertTrue(anotherWindow != null)
-        assertEquals(Lifecycle.State.STARTED, eventsChannel.receive().targetState)
-
-        // Now go back to the original window
-        anotherWindow.close()
-        assertEquals(Lifecycle.State.RESUMED, eventsChannel.receive().targetState)
-    }
+//    @Test
+//    @Ignore // ignored while investigating CI issues: this test opens a new browser window which can be the cause
+//    fun allEvents() = runTest {
+//        val canvas = getCanvas()
+//        canvas.focus()
+//
+//        val lifecycleOwner = ComposeWindow(
+//            canvas = canvas,
+//            content = {},
+//            state = DefaultWindowState(document.documentElement!!)
+//        )
+//
+//        val eventsChannel = Channel<Lifecycle.Event>(10)
+//
+//        lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+//            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+//                eventsChannel.sendFromScope(event)
+//            }
+//        })
+//
+//        assertEquals(Lifecycle.State.CREATED, eventsChannel.receive().targetState)
+//        assertEquals(Lifecycle.State.STARTED, eventsChannel.receive().targetState)
+//        assertEquals(Lifecycle.State.RESUMED, eventsChannel.receive().targetState)
+//
+//        // Browsers don't allow to blur the window from code:
+//        // https://developer.mozilla.org/en-US/docs/Web/API/Window/blur
+//        // So we simulate a new tab being open:
+//        val anotherWindow = window.open("about:config")
+//        assertTrue(anotherWindow != null)
+//        assertEquals(Lifecycle.State.STARTED, eventsChannel.receive().targetState)
+//
+//        // Now go back to the original window
+//        anotherWindow.close()
+//        assertEquals(Lifecycle.State.RESUMED, eventsChannel.receive().targetState)
+//    }
 }
