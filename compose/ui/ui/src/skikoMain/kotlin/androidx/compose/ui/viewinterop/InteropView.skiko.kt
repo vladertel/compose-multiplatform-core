@@ -16,49 +16,182 @@
 
 package androidx.compose.ui.viewinterop
 
-import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ComposeNode
+import androidx.compose.runtime.CompositionLocalMap
+import androidx.compose.runtime.ReusableComposeNode
+import androidx.compose.runtime.Updater
+import androidx.compose.runtime.currentComposer
+import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.PointerInputModifierNode
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.UiComposable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.materialize
+import androidx.compose.ui.node.ComposeUiNode.Companion.SetCompositeKeyHash
+import androidx.compose.ui.node.ComposeUiNode.Companion.SetResolvedCompositionLocals
+import androidx.compose.ui.node.LayoutNode
+import androidx.compose.ui.platform.DefaultUiApplier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+
+internal val NoOp: Any.() -> Unit = {}
 
 /**
- * [Modifier.Node] to associate an [InteropView] with the modified element to allow hit testing it and
- * perform custom pointer input handling if needed.
+ * Base class for any concrete implementation of [InteropViewHolder] that holds a specific type
+ * of InteropView to be implemented by the platform-specific [TypedInteropViewHolder] subclass
  */
-@InternalComposeUiApi
-open class InteropViewAnchorModifierNode(
-    var interopView: InteropView
-) : Modifier.Node(), PointerInputModifierNode {
-    override fun onPointerEvent(
-        pointerEvent: PointerEvent,
-        pass: PointerEventPass,
-        bounds: IntSize
-    ) {}
+internal abstract class TypedInteropViewHolder<T : InteropView>(
+    factory: () -> T,
+    interopContainer: InteropContainer,
+    group: InteropViewGroup,
+    compositeKeyHash: Int,
+    measurePolicy: MeasurePolicy
+) : InteropViewHolder(
+    interopContainer,
+    group,
+    compositeKeyHash,
+    measurePolicy
+) {
+    val typedInteropView = factory()
 
-    override fun onCancelPointerInput() {}
+    override fun getInteropView(): InteropView? {
+        return typedInteropView
+    }
+
+    /**
+     * A block containing the update logic for [T], to be forwarded to user.
+     * Setting it will schedule an update immediately.
+     * See [InteropViewHolder.update]
+     */
+    var updateBlock: (T) -> Unit = NoOp
+        set(value) {
+            field = value
+            update = { typedInteropView.apply(updateBlock) }
+        }
+
+    /**
+     * A block containing the reset logic for [T], to be forwarded to user.
+     * It will be called if [LayoutNode] associated with this [InteropViewHolder] is reused to
+     * avoid interop view reallocation.
+     */
+    var resetBlock: (T) -> Unit = NoOp
+        set(value) {
+            field = value
+            reset = { typedInteropView.apply(resetBlock) }
+        }
+
+    /**
+     * A block containing the release logic for [T], to be forwarded to user.
+     * It will be called if [LayoutNode] associated with this [InteropViewHolder] is released.
+     */
+    var releaseBlock: (T) -> Unit = NoOp
+        set(value) {
+            field = value
+            release = {
+                typedInteropView.apply(releaseBlock)
+            }
+        }
 }
 
 /**
- * Element for [InteropViewAnchorModifierNode]. A custom implementation of [ModifierNodeElement] is needed
- * for possible [InteropViewAnchorModifierNode] subclasses.
+ * Create a [LayoutNode] factory that can be constructed from [TypedInteropViewHolder] built with
+ * the [currentCompositeKeyHash]
+ *
+ * @see [AndroidView.android.kt:createAndroidViewNodeFactory]
  */
-internal data class InteropViewAnchorModifierNodeElement(
-    val interopView: InteropView
-) : ModifierNodeElement<InteropViewAnchorModifierNode>() {
-    override fun create(): InteropViewAnchorModifierNode =
-        InteropViewAnchorModifierNode(interopView)
+@Composable
+private fun <T : InteropView> createInteropViewLayoutNodeFactory(
+    factory: (compositeKeyHash: Int) -> TypedInteropViewHolder<T>
+): () -> LayoutNode {
+    val compositeKeyHash = currentCompositeKeyHash
 
-    override fun update(node: InteropViewAnchorModifierNode) {
-        node.interopView = interopView
+    return {
+        factory(compositeKeyHash).layoutNode
     }
 }
 
 /**
- * Add an association with [InteropView] to the modified element.
- * Allows hit testing and custom pointer input handling for the [InteropView].
+ * Entry point for creating a composable that wraps a platform specific interop view.
+ * Platform implementations should call it and provide the appropriate factory, returning
+ * a subclass of [TypedInteropViewHolder].
+ *
+ * @see [AndroidView.android.kt:AndroidView]
  */
-internal fun Modifier.interopViewAnchor(view: InteropView): Modifier =
-    this then InteropViewAnchorModifierNodeElement(view)
+@Composable
+@UiComposable
+internal fun <T : InteropView> InteropView(
+    factory: (compositeKeyHash: Int) -> TypedInteropViewHolder<T>,
+    modifier: Modifier,
+    onReset: ((T) -> Unit)? = null,
+    onRelease: (T) -> Unit = NoOp,
+    update: (T) -> Unit = NoOp,
+) {
+    val compositeKeyHash = currentCompositeKeyHash
+    val materializedModifier = currentComposer.materialize(modifier)
+    val density = LocalDensity.current
+    val compositionLocalMap = currentComposer.currentCompositionLocalMap
+
+    // TODO: there are other parameters on Android that we don't yet use:
+    //  lifecycleOwner, savedStateRegistryOwner, layoutDirection
+    if (onReset == null) {
+        ComposeNode<LayoutNode, DefaultUiApplier>(
+            factory = createInteropViewLayoutNodeFactory(factory),
+            update = {
+                updateParameters<T>(
+                    compositionLocalMap,
+                    materializedModifier,
+                    density,
+                    compositeKeyHash
+                )
+
+                set(update) { requireViewFactoryHolder<T>().updateBlock = it }
+                set(onRelease) { requireViewFactoryHolder<T>().releaseBlock = it }
+            }
+        )
+    } else {
+        ReusableComposeNode<LayoutNode, DefaultUiApplier>(
+            factory = createInteropViewLayoutNodeFactory(factory),
+            update = {
+                updateParameters<T>(
+                    compositionLocalMap,
+                    materializedModifier,
+                    density,
+                    compositeKeyHash
+                )
+
+                set(onReset) { requireViewFactoryHolder<T>().resetBlock = it }
+                set(update) { requireViewFactoryHolder<T>().updateBlock = it }
+                set(onRelease) { requireViewFactoryHolder<T>().releaseBlock = it }
+            }
+        )
+    }
+}
+
+/**
+ * Updates the parameters of the [LayoutNode] in the current [Updater] with the given values.
+ * @see [AndroidView.android.kt:updateViewHolderParams]
+ */
+private fun <T : InteropView> Updater<LayoutNode>.updateParameters(
+    compositionLocalMap: CompositionLocalMap,
+    modifier: Modifier,
+    density: Density,
+    compositeKeyHash: Int
+) {
+    set(compositionLocalMap, SetResolvedCompositionLocals)
+    set(modifier) { requireViewFactoryHolder<T>().modifier = it }
+    set(density) { requireViewFactoryHolder<T>().density = it }
+    set(compositeKeyHash, SetCompositeKeyHash)
+}
+
+/**
+ * Returns the [TypedInteropViewHolder] associated with the current [LayoutNode].
+ * Since the [TypedInteropViewHolder] is responsible for constructing the [LayoutNode], it
+ * associates itself with the [LayoutNode] by setting the [LayoutNode.interopViewFactoryHolder]
+ * property and it's safe to cast from [InteropViewHolder]
+ */
+@Suppress("UNCHECKED_CAST")
+private fun <T : InteropView> LayoutNode.requireViewFactoryHolder(): TypedInteropViewHolder<T> {
+    // This LayoutNode is created and managed internally here, so it's safe to cast
+    return checkNotNull(interopViewFactoryHolder) as TypedInteropViewHolder<T>
+}
+

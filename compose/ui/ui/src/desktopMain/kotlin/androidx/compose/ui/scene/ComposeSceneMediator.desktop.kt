@@ -25,14 +25,16 @@ import androidx.compose.ui.SessionMutex
 import androidx.compose.ui.awt.AwtEventListener
 import androidx.compose.ui.awt.AwtEventListeners
 import androidx.compose.ui.awt.OnlyValidPrimaryMouseButtonFilter
-import androidx.compose.ui.awt.SwingInteropContainer
 import androidx.compose.ui.awt.isFocusGainedHandledBySwingPanel
 import androidx.compose.ui.awt.runOnEDTThread
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.key.internal
 import androidx.compose.ui.input.key.toComposeEvent
 import androidx.compose.ui.input.pointer.AwtCursor
@@ -61,6 +63,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.SwingInteropContainer
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.sizeInPx
@@ -139,7 +142,7 @@ internal class ComposeSceneMediator(
     private val _platformContext = DesktopPlatformContext()
     val platformContext: PlatformContext get() = _platformContext
 
-    private val skiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
+    private val skiaLayerComponent: SkiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
     val contentComponent by skiaLayerComponent::contentComponent
     var fullscreen by skiaLayerComponent::fullscreen
     val windowHandle by skiaLayerComponent::windowHandle
@@ -165,8 +168,9 @@ internal class ComposeSceneMediator(
      * native views/components to [container].
      */
     private val interopContainer = SwingInteropContainer(
-        container = container,
-        placeInteropAbove = !useInteropBlending || metalOrderHack
+        root = container,
+        placeInteropAbove = !useInteropBlending || metalOrderHack,
+        requestRedraw = ::onComposeInvalidation
     )
 
     private val containerListener = object : ContainerListener {
@@ -334,6 +338,8 @@ internal class ComposeSceneMediator(
      */
     private var keyboardModifiersRequireUpdate = false
 
+    private val dragAndDropManager = AwtDragAndDropManager(container, getScene = { scene })
+
     init {
         // Transparency is used during redrawer creation that triggered by [addNotify], so
         // it must be set to correct value before adding to the hierarchy to handle cases
@@ -346,6 +352,10 @@ internal class ComposeSceneMediator(
         // Adding a listener after adding [invisibleComponent] and [contentComponent]
         // to react only on changes with [interopLayer].
         container.addContainerListener(containerListener)
+
+        // AwtDragAndDropManager support
+        container.transferHandler = dragAndDropManager.transferHandler
+        container.dropTarget = dragAndDropManager.dropTarget
 
         // It will be enabled dynamically. See DesktopPlatformComponent
         contentComponent.enableInputMethods(false)
@@ -464,9 +474,13 @@ internal class ComposeSceneMediator(
 
         unsubscribe(contentComponent)
 
+        // Since rendering will not happen after, we needs to execute all scheduled updates
+        interopContainer.dispose()
         container.removeContainerListener(containerListener)
         container.remove(contentComponent)
         container.remove(invisibleComponent)
+        container.transferHandler = null
+        container.dropTarget = null
 
         scene.close()
         skiaLayerComponent.dispose()
@@ -555,8 +569,10 @@ internal class ComposeSceneMediator(
     }
 
     override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) = catchExceptions {
-        canvas.withSceneOffset {
-            scene.render(asComposeCanvas(), nanoTime)
+        interopContainer.postponingExecutingScheduledUpdates {
+            canvas.withSceneOffset {
+                scene.render(asComposeCanvas(), nanoTime)
+            }
         }
     }
 
@@ -700,12 +716,18 @@ internal class ComposeSceneMediator(
             return true
         }
 
+        override fun startDrag(
+            transferData: DragAndDropTransferData,
+            decorationSize: Size,
+            drawDragDecoration: DrawScope.() -> Unit
+        ) = dragAndDropManager.startDrag(
+            transferData, decorationSize, drawDragDecoration
+        )
+
         override val rootForTestListener
             get() = this@ComposeSceneMediator.rootForTestListener
         override val semanticsOwnerListener
             get() = this@ComposeSceneMediator.semanticsOwnerListener
-
-        override fun createDragAndDropManager() = AwtDragAndDropManager(container)
     }
 
     private inner class DesktopPlatformComponent : PlatformComponent {

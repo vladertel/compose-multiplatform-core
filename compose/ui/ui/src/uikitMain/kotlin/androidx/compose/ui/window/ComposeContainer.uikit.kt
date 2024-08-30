@@ -26,7 +26,6 @@ import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.hapticfeedback.CupertinoHapticFeedback
 import androidx.compose.ui.interop.LocalUIViewController
-import androidx.compose.ui.interop.UIKitInteropContainer
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
@@ -49,6 +48,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.viewinterop.UIKitInteropContainer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
@@ -82,9 +82,11 @@ import platform.UIKit.UIContentSizeCategoryExtraSmall
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryMedium
 import platform.UIKit.UIContentSizeCategorySmall
+import platform.UIKit.UIDevice
 import platform.UIKit.UIStatusBarAnimation
 import platform.UIKit.UIStatusBarStyle
 import platform.UIKit.UITraitCollection
+import platform.UIKit.UIUserInterfaceIdiomPhone
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIView
@@ -185,7 +187,11 @@ internal class ComposeContainer(
 
     override fun viewDidLoad() {
         super.viewDidLoad()
-        PlistSanityCheck.performIfNeeded()
+
+        if (configuration.enforceStrictPlistSanityCheck) {
+            PlistSanityCheck.performIfNeeded()
+        }
+
         configuration.delegate.viewDidLoad()
         systemThemeState.value = traitCollection.userInterfaceStyle.asComposeSystemTheme()
     }
