@@ -16,9 +16,9 @@
 
 package androidx.compose.animation.core
 
+import androidx.annotation.RestrictTo
 import androidx.compose.animation.core.internal.JvmDefaultWithCompatibility
 import kotlin.math.roundToLong
-import androidx.annotation.RestrictTo
 
 /**
  * This interface provides a convenient way to query from an [VectorizedAnimationSpec] or

@@ -536,18 +536,6 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
             }
         }
 
-        val reportLibraryMetrics = project.configureReportLibraryMetricsTask()
-        project.addToBuildOnServer(reportLibraryMetrics)
-        libraryExtension.defaultPublishVariant { libraryVariant ->
-            reportLibraryMetrics.configure {
-                it.jarFiles.from(
-                    libraryVariant.packageLibraryProvider.map { zip ->
-                        zip.inputs.files
-                    }
-                )
-            }
-        }
-
         project.addToProjectMap(androidXExtension)
     }
 

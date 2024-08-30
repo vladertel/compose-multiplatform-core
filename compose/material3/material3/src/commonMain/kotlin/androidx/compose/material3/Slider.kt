@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.progressSemantics
+import androidx.compose.material3.internal.IncreaseHorizontalSemanticsBounds
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.awaitHorizontalPointerSlopOrCancellation
 import androidx.compose.material3.internal.getString
@@ -738,9 +739,6 @@ private fun RangeSliderImpl(
             enabled
         )
 
-    val startThumbSemantics = Modifier.rangeSliderStartThumbSemantics(state, enabled)
-    val endThumbSemantics = Modifier.rangeSliderEndThumbSemantics(state, enabled)
-
     val startContentDescription = getString(Strings.SliderRangeStart)
     val endContentDescription = getString(Strings.SliderRangeEnd)
 
@@ -751,11 +749,11 @@ private fun RangeSliderImpl(
                     Modifier.layoutId(RangeSliderComponents.STARTTHUMB)
                         .wrapContentWidth()
                         .onSizeChanged { state.startThumbWidth = it.width.toFloat() }
+                        .rangeSliderStartThumbSemantics(state, enabled)
                         .semantics(mergeDescendants = true) {
                             contentDescription = startContentDescription
                         }
                         .focusable(enabled, startInteractionSource)
-                        .then(startThumbSemantics)
             ) {
                 startThumb(state)
             }
@@ -764,11 +762,11 @@ private fun RangeSliderImpl(
                     Modifier.layoutId(RangeSliderComponents.ENDTHUMB)
                         .wrapContentWidth()
                         .onSizeChanged { state.endThumbWidth = it.width.toFloat() }
+                        .rangeSliderEndThumbSemantics(state, enabled)
                         .semantics(mergeDescendants = true) {
                             contentDescription = endContentDescription
                         }
                         .focusable(enabled, endInteractionSource)
-                        .then(endThumbSemantics)
             ) {
                 endThumb(state)
             }
@@ -1487,6 +1485,7 @@ private fun Modifier.sliderSemantics(state: SliderState, enabled: Boolean): Modi
                 }
             )
         }
+        .then(IncreaseHorizontalSemanticsBounds)
         .progressSemantics(
             state.value,
             state.valueRange.start..state.valueRange.endInclusive,
@@ -1548,6 +1547,7 @@ private fun Modifier.rangeSliderStartThumbSemantics(
                 }
             )
         }
+        .then(IncreaseHorizontalSemanticsBounds)
         .progressSemantics(state.activeRangeStart, valueRange, state.startSteps)
 }
 
@@ -1606,6 +1606,7 @@ private fun Modifier.rangeSliderEndThumbSemantics(
                 }
             )
         }
+        .then(IncreaseHorizontalSemanticsBounds)
         .progressSemantics(state.activeRangeEnd, valueRange, state.endSteps)
 }
 

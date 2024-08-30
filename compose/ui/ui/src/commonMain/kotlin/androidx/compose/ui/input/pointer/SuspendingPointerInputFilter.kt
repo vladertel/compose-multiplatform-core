@@ -27,8 +27,8 @@ import androidx.compose.ui.node.requireLayoutNode
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewConfiguration
-import androidx.compose.ui.createSynchronizedObject
-import androidx.compose.ui.synchronized
+import androidx.compose.ui.platform.createSynchronizedObject
+import androidx.compose.ui.platform.synchronized
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastAll
@@ -895,6 +895,12 @@ internal class SuspendingPointerInputModifierNodeImpl(
         }
     }
 }
+
+/**
+ * An exception thrown from [AwaitPointerEventScope.withTimeout] when the execution time of the
+ * coroutine is too long.
+ */
+expect class PointerEventTimeoutCancellationException(time: Long) : CancellationException
 
 /**
  * Used in place of the standard Job cancellation pathway to avoid reflective javaClass.simpleName

@@ -65,8 +65,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import kotlin.jvm.JvmName
 import androidx.compose.ui.util.fastCoerceIn
+import kotlin.jvm.JvmName
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min

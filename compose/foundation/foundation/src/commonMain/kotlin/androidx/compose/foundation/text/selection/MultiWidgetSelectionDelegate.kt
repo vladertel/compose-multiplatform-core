@@ -23,14 +23,16 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
-import kotlin.jvm.Synchronized
 import kotlin.math.max
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 internal class MultiWidgetSelectionDelegate(
     override val selectableId: Long,
     private val coordinatesCallback: () -> LayoutCoordinates?,
     private val layoutResultCallback: () -> TextLayoutResult?
 ) : Selectable {
+    private val lock = SynchronizedObject()
 
     private var _previousTextLayoutResult: TextLayoutResult? = null
 
@@ -45,8 +47,7 @@ internal class MultiWidgetSelectionDelegate(
      * instance check is enough to accomplish whether a text layout has changed in a meaningful way.
      */
     private val TextLayoutResult.lastVisibleOffset: Int
-        @Synchronized
-        get() {
+        get() = synchronized(lock) {
             if (_previousTextLayoutResult !== this) {
                 val lastVisibleLine =
                     when {
@@ -68,7 +69,7 @@ internal class MultiWidgetSelectionDelegate(
                 _previousLastVisibleOffset = getLineEnd(lastVisibleLine, true)
                 _previousTextLayoutResult = this
             }
-            return _previousLastVisibleOffset
+            _previousLastVisibleOffset
         }
 
     override fun appendSelectableInfoToBuilder(builder: SelectionLayoutBuilder) {

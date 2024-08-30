@@ -23,7 +23,6 @@ import android.hardware.camera2.params.OutputConfiguration
 import android.os.Build
 import android.os.Handler
 import android.view.Surface
-import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.UnsafeWrapper
 import androidx.camera.camera2.pipe.core.Debug
@@ -140,8 +139,7 @@ internal interface CameraConstrainedHighSpeedCaptureSessionWrapper : CameraCaptu
      * @param request A capture list.
      * @return A list of high speed requests.
      */
-    @Throws(ObjectUnavailableException::class)
-    fun createHighSpeedRequestList(request: CaptureRequest): List<CaptureRequest>
+    fun createHighSpeedRequestList(request: CaptureRequest): List<CaptureRequest>?
 }
 
 internal class AndroidCaptureSessionStateCallback(
@@ -245,7 +243,6 @@ internal class AndroidCaptureSessionStateCallback(
 
     @RequiresApi(Build.VERSION_CODES.O)
     private object Api26CompatImpl {
-        @DoNotInline
         @JvmStatic
         fun onCaptureQueueEmpty(
             session: CameraCaptureSession,
@@ -370,8 +367,7 @@ internal constructor(
 ) :
     AndroidCameraCaptureSession(device, session, cameraErrorListener, callbackHandler),
     CameraConstrainedHighSpeedCaptureSessionWrapper {
-    @Throws(ObjectUnavailableException::class)
-    override fun createHighSpeedRequestList(request: CaptureRequest): List<CaptureRequest> =
+    override fun createHighSpeedRequestList(request: CaptureRequest): List<CaptureRequest>? =
         try {
             // This converts a single CaptureRequest into a list of CaptureRequest(s) that must be
             // submitted together during high speed recording.
@@ -385,7 +381,7 @@ internal constructor(
             // happen during normal operation of the camera, log and rethrow the error as a standard
             // exception that can be ignored.
             Log.warn { "Failed to createHighSpeedRequestList. $device may be closed." }
-            throw ObjectUnavailableException(e)
+            null
         } catch (e: IllegalArgumentException) {
 
             // b/111749845: If the surface (such as the viewfinder) is destroyed before calling
@@ -396,7 +392,7 @@ internal constructor(
                 "Failed to createHighSpeedRequestList from $device because the output surface" +
                     " was destroyed before calling createHighSpeedRequestList."
             }
-            throw ObjectUnavailableException(e)
+            null
         }
 
     @Suppress("UNCHECKED_CAST")

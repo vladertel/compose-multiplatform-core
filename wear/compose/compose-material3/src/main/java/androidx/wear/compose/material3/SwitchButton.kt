@@ -23,24 +23,35 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -50,9 +61,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.wear.compose.material3.tokens.MotionTokens
+import androidx.wear.compose.material3.tokens.ShapeTokens
 import androidx.wear.compose.material3.tokens.SplitSwitchButtonTokens
 import androidx.wear.compose.material3.tokens.SwitchButtonTokens
 import androidx.wear.compose.materialcore.SelectionStage
@@ -68,7 +83,7 @@ import androidx.wear.compose.materialcore.isLayoutDirectionRtl
  * The [SwitchButton] is Stadium shaped. The label should take no more than 3 lines of text. The
  * secondary label should take no more than 2 lines of text. With localisation and/or large font
  * sizes, the [SwitchButton] height adjusts to accommodate the contents. The label and secondary
- * label should be start aligned.
+ * label are start aligned by default.
  *
  * Example of a SwitchButton:
  *
@@ -122,6 +137,9 @@ fun SwitchButton(
             provideScopeContent(
                 contentColor = colors.contentColor(enabled = enabled, checked),
                 textStyle = SwitchButtonTokens.LabelFont.value,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 3,
+                textAlign = TextAlign.Start,
                 content = label
             ),
         toggleControl = {
@@ -153,6 +171,9 @@ fun SwitchButton(
             provideNullableScopeContent(
                 contentColor = colors.secondaryContentColor(enabled = enabled, checked),
                 textStyle = SwitchButtonTokens.SecondaryLabelFont.value,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+                textAlign = TextAlign.Start,
                 content = secondaryLabel
             ),
         background = { isEnabled, isChecked ->
@@ -181,7 +202,7 @@ fun SwitchButton(
  * The [SplitSwitchButton] is Stadium shaped. The label should take no more than 3 lines of text.
  * The secondary label should take no more than 2 lines of text. With localisation and/or large font
  * sizes, the [SplitSwitchButton] height adjusts to accommodate the contents. The label and
- * secondary label should be start aligned.
+ * secondary label are start aligned by default.
  *
  * A [SplitSwitchButton] has two tappable areas, one tap area for the labels and another for the
  * switch. The [onContainerClick] listener will be associated with the main body of the
@@ -245,18 +266,85 @@ fun SplitSwitchButton(
     contentPadding: PaddingValues = SwitchButtonDefaults.ContentPadding,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
-) =
-    androidx.wear.compose.materialcore.SplitToggleButton(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        label =
-            provideScopeContent(
-                contentColor = colors.contentColor(enabled = enabled, checked = checked),
-                textStyle = SplitSwitchButtonTokens.LabelFont.value,
-                content = label
-            ),
-        onClick = onContainerClick,
-        toggleControl = {
+) {
+    val containerColor = colors.containerColor(enabled, checked).value
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            modifier
+                .defaultMinSize(minHeight = MIN_HEIGHT)
+                .height(IntrinsicSize.Min)
+                .width(IntrinsicSize.Max)
+                .clip(shape = shape)
+    ) {
+        Row(
+            modifier =
+                Modifier.clickable(
+                        enabled = enabled,
+                        onClick = onContainerClick,
+                        indication = ripple(),
+                        interactionSource = containerInteractionSource,
+                        onClickLabel = containerClickLabel,
+                    )
+                    .semantics { role = Role.Button }
+                    .fillMaxHeight()
+                    .clip(SPLIT_SECTIONS_SHAPE)
+                    .background(containerColor)
+                    .padding(contentPadding)
+                    .weight(1.0f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Labels(
+                label =
+                    provideScopeContent(
+                        contentColor = colors.contentColor(enabled = enabled, checked = checked),
+                        textStyle = SplitSwitchButtonTokens.LabelFont.value,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 3,
+                        textAlign = TextAlign.Start,
+                        content = label
+                    ),
+                secondaryLabel =
+                    provideNullableScopeContent(
+                        contentColor =
+                            colors.secondaryContentColor(enabled = enabled, checked = checked),
+                        textStyle = SplitSwitchButtonTokens.SecondaryLabelFont.value,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        textAlign = TextAlign.Start,
+                        content = secondaryLabel
+                    ),
+                spacerSize = SwitchButtonDefaults.LabelSpacerSize
+            )
+        }
+
+        Spacer(modifier = Modifier.size(2.dp))
+
+        val splitBackground = colors.splitContainerColor(enabled, checked).value
+        Box(
+            modifier =
+                Modifier.toggleable(
+                        enabled = enabled,
+                        value = checked,
+                        onValueChange = onCheckedChange,
+                        indication = ripple(),
+                        interactionSource = toggleInteractionSource
+                    )
+                    .fillMaxHeight()
+                    .clip(SPLIT_SECTIONS_SHAPE)
+                    .background(containerColor)
+                    .drawWithCache {
+                        onDrawWithContent {
+                            drawRect(color = splitBackground)
+                            drawContent()
+                        }
+                    }
+                    .align(Alignment.CenterVertically)
+                    .width(SPLIT_WIDTH)
+                    .wrapContentHeight(align = Alignment.CenterVertically)
+                    .padding(contentPadding)
+        ) {
             Switch(
                 checked = checked,
                 enabled = enabled,
@@ -279,30 +367,9 @@ fun SplitSwitchButton(
                     colors.trackBorderColor(enabled = enabled, checked = checked)
                 }
             )
-        },
-        selectionControl = null,
-        modifier = modifier.defaultMinSize(minHeight = MIN_HEIGHT).height(IntrinsicSize.Min),
-        secondaryLabel =
-            provideNullableScopeContent(
-                contentColor = colors.secondaryContentColor(enabled = enabled, checked = checked),
-                textStyle = SplitSwitchButtonTokens.SecondaryLabelFont.value,
-                content = secondaryLabel
-            ),
-        backgroundColor = { isEnabled, isChecked ->
-            colors.containerColor(enabled = isEnabled, checked = isChecked)
-        },
-        splitBackgroundColor = { isEnabled, isChecked ->
-            colors.splitContainerColor(enabled = isEnabled, checked = isChecked)
-        },
-        enabled = enabled,
-        checkedInteractionSource = toggleInteractionSource,
-        clickInteractionSource = containerInteractionSource,
-        onClickLabel = containerClickLabel,
-        contentPadding = contentPadding,
-        shape = shape,
-        labelSpacerSize = SwitchButtonDefaults.LabelSpacerSize,
-        ripple = ripple()
-    )
+        }
+    }
+}
 
 /** Contains the default values used by [SwitchButton]s and [SplitSwitchButton]s */
 object SwitchButtonDefaults {
@@ -1730,6 +1797,21 @@ private fun DrawScope.drawThumbAndTick(
     )
 }
 
+@Composable
+private fun RowScope.Labels(
+    label: @Composable RowScope.() -> Unit,
+    secondaryLabel: @Composable (RowScope.() -> Unit)?,
+    spacerSize: Dp
+) {
+    Column(modifier = Modifier.weight(1.0f)) {
+        Row(content = label)
+        if (secondaryLabel != null) {
+            Spacer(modifier = Modifier.size(spacerSize))
+            Row(content = secondaryLabel)
+        }
+    }
+}
+
 private val SWITCH_WIDTH = 32.dp
 private val SWITCH_OUTER_HEIGHT = 24.dp
 private val SWITCH_INNER_HEIGHT = 22.dp
@@ -1739,6 +1821,9 @@ private val THUMB_RADIUS_CHECKED = 9.dp
 private val TOGGLE_CONTROL_SPACING = 6.dp
 private val ICON_SPACING = 6.dp
 private val MIN_HEIGHT = 52.dp
+
+private val SPLIT_WIDTH = 60.dp
+private val SPLIT_SECTIONS_SHAPE = ShapeTokens.CornerExtraSmall
 
 private val COLOR_ANIMATION_SPEC: AnimationSpec<Color> =
     tween(MotionTokens.DurationMedium1, 0, MotionTokens.EasingStandardDecelerate)

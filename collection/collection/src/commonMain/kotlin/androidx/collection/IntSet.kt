@@ -26,6 +26,8 @@
 
 package androidx.collection
 
+import androidx.annotation.IntRange
+import androidx.collection.internal.requirePrecondition
 import kotlin.contracts.contract
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -126,7 +128,7 @@ public sealed class IntSet {
      * Returns the number of elements that can be stored in this set without requiring internal
      * storage reallocation.
      */
-    @get:androidx.annotation.IntRange(from = 0)
+    @get:IntRange(from = 0)
     public val capacity: Int
         get() = _capacity
 
@@ -135,7 +137,7 @@ public sealed class IntSet {
     @JvmField internal var _size: Int = 0
 
     /** Returns the number of elements in this set. */
-    @get:androidx.annotation.IntRange(from = 0)
+    @get:IntRange(from = 0)
     public val size: Int
         get() = _size
 
@@ -246,7 +248,7 @@ public sealed class IntSet {
     }
 
     /** Returns the number of elements in this set. */
-    @androidx.annotation.IntRange(from = 0) public fun count(): Int = _size
+    @IntRange(from = 0) public fun count(): Int = _size
 
     /**
      * Returns the number of elements matching the given [predicate].
@@ -254,7 +256,7 @@ public sealed class IntSet {
      * @param predicate Called for all elements in the set to count the number for which it returns
      *   `true`.
      */
-    @androidx.annotation.IntRange(from = 0)
+    @IntRange(from = 0)
     public inline fun count(predicate: (element: Int) -> Boolean): Int {
         contract { callsInPlace(predicate) }
         var count = 0
@@ -437,7 +439,7 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
     private var growthLimit = 0
 
     init {
-        require(initialCapacity >= 0) { "Capacity must be a positive value." }
+        requirePrecondition(initialCapacity >= 0) { "Capacity must be a positive value." }
         initializeStorage(unloadedCapacity(initialCapacity))
     }
 
@@ -615,7 +617,7 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
 
         // TODO: We could just mark the element as empty if there's a group
         //       window around this element that was already empty
-        writeMetadata(index, Deleted)
+        writeMetadata(metadata, _capacity, index, Deleted)
     }
 
     /** Removes all elements from this set. */
@@ -670,7 +672,7 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
 
         _size += 1
         growthLimit -= if (isEmpty(metadata, index)) 1 else 0
-        writeMetadata(index, hash2.toLong())
+        writeMetadata(metadata, _capacity, index, hash2.toLong())
 
         return index
     }
@@ -701,7 +703,7 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
      * Returns the number of empty elements removed from this set's storage. Returns 0 if no
      * trimming is necessary or possible.
      */
-    @androidx.annotation.IntRange(from = 0)
+    @IntRange(from = 0)
     public fun trim(): Int {
         val previousCapacity = _capacity
         val newCapacity = normalizeCapacity(unloadedCapacity(_size))
@@ -720,10 +722,100 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
      */
     private fun adjustStorage() {
         if (_capacity > GroupWidth && _size.toULong() * 32UL <= _capacity.toULong() * 25UL) {
-            removeDeletedMarkers()
+            dropDeletes()
         } else {
             resizeStorage(nextCapacity(_capacity))
         }
+    }
+
+    private fun dropDeletes() {
+        val metadata = metadata
+        val capacity = _capacity
+        val elements = elements
+
+        // Converts Sentinel and Deleted to Empty, and Full to Deleted
+        convertMetadataForCleanup(metadata, capacity)
+
+        var swapIndex = -1
+        var index = 0
+
+        // Drop deleted items and re-hashes surviving entries
+        while (index != capacity) {
+            var m = readRawMetadata(metadata, index)
+            // Formerly Deleted entry, we can use it as a swap spot
+            if (m == Empty) {
+                swapIndex = index
+                index++
+                continue
+            }
+
+            // Formerly Full entries are now marked Deleted. If we see an
+            // entry that's not marked Deleted, we can ignore it completely
+            if (m != Deleted) {
+                index++
+                continue
+            }
+
+            val hash = hash(elements[index])
+            val hash1 = h1(hash)
+            val targetIndex = findFirstAvailableSlot(hash1)
+
+            // Test if the current index (i) and the new index (targetIndex) fall
+            // within the same group based on the hash. If the group doesn't change,
+            // we don't move the entry
+            val probeOffset = hash1 and capacity
+            val newProbeIndex = ((targetIndex - probeOffset) and capacity) / GroupWidth
+            val oldProbeIndex = ((index - probeOffset) and capacity) / GroupWidth
+
+            if (newProbeIndex == oldProbeIndex) {
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, index, hash2.toLong())
+
+                // Copies the metadata into the clone area
+                metadata[metadata.lastIndex] =
+                    (Empty shl 56) or (metadata[0] and 0x00ffffff_ffffffffL)
+
+                index++
+                continue
+            }
+
+            m = readRawMetadata(metadata, targetIndex)
+            if (m == Empty) {
+                // The target is empty so we can transfer directly
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, targetIndex, hash2.toLong())
+                writeRawMetadata(metadata, index, Empty)
+
+                elements[targetIndex] = elements[index]
+                elements[index] = 0
+
+                swapIndex = index
+            } else /* m == Deleted */ {
+                // The target isn't empty so we use an empty slot denoted by
+                // swapIndex to perform the swap
+                val hash2 = h2(hash)
+                writeRawMetadata(metadata, targetIndex, hash2.toLong())
+
+                if (swapIndex == -1) {
+                    swapIndex = findEmptySlot(metadata, index + 1, capacity)
+                }
+
+                elements[swapIndex] = elements[targetIndex]
+                elements[targetIndex] = elements[index]
+                elements[index] = elements[swapIndex]
+
+                // Since we exchanged two slots we must repeat the process with
+                // element we just moved in the current location
+                index--
+            }
+
+            // Copies the metadata into the clone area
+            metadata[metadata.lastIndex] = (Empty shl 56) or (metadata[0] and 0x00ffffff_ffffffffL)
+
+            index++
+        }
+
+        initializeGrowth()
     }
 
     private fun resizeStorage(newCapacity: Int) {
@@ -733,7 +825,9 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
 
         initializeStorage(newCapacity)
 
+        val newMetadata = metadata
         val newElements = elements
+        val capacity = _capacity
 
         for (i in 0 until previousCapacity) {
             if (isFull(previousMetadata, i)) {
@@ -741,42 +835,10 @@ public class MutableIntSet(initialCapacity: Int = DefaultScatterCapacity) : IntS
                 val hash = hash(previousElement)
                 val index = findFirstAvailableSlot(h1(hash))
 
-                writeMetadata(index, h2(hash).toLong())
+                writeMetadata(newMetadata, capacity, index, h2(hash).toLong())
                 newElements[index] = previousElement
             }
         }
-    }
-
-    private fun removeDeletedMarkers() {
-        val m = metadata
-        val capacity = _capacity
-        var removedDeletes = 0
-
-        // TODO: this can be done in a more efficient way
-        for (i in 0 until capacity) {
-            val slot = readRawMetadata(m, i)
-            if (slot == Deleted) {
-                writeMetadata(i, Empty)
-                removedDeletes++
-            }
-        }
-
-        growthLimit += removedDeletes
-    }
-
-    /**
-     * Writes the "H2" part of an entry into the metadata array at the specified [index]. The index
-     * must be a valid index. This function ensures the metadata is also written in the clone area
-     * at the end.
-     */
-    private inline fun writeMetadata(index: Int, value: Long) {
-        val m = metadata
-        writeRawMetadata(m, index, value)
-
-        // Mirroring
-        val c = _capacity
-        val cloneIndex = ((index - ClonedMetadataCount) and c) + (ClonedMetadataCount and c)
-        writeRawMetadata(m, cloneIndex, value)
     }
 }
 

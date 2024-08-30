@@ -26,6 +26,13 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.OutputTransformation
+import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.foundation.text.input.TextFieldDecorator
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine
+import androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.internal.CommonDecorationBox
@@ -40,12 +47,14 @@ import androidx.compose.material3.tokens.OutlinedTextFieldTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.debugInspectorInfo
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -77,6 +86,133 @@ object TextFieldDefaults {
 
     /** The default thickness of the indicator line in [TextField] in focused state. */
     val FocusedIndicatorThickness = 2.dp
+
+    /**
+     * A decorator used to create custom text fields based on <a
+     * href="https://m3.material.io/components/text-fields/overview" class="external"
+     * target="_blank">Material Design filled text field</a>.
+     *
+     * If your text field requires customising elements that aren't exposed by [TextField], such as
+     * the indicator line thickness, consider using this decorator to achieve the desired design.
+     *
+     * For example, if you wish to customise the bottom indicator line, you can pass a custom
+     * [Container] to this decorator's [container].
+     *
+     * This decorator is meant to be used in conjunction with the overload of [BasicTextField] that
+     * accepts a [TextFieldDecorator] parameter. For other overloads of [BasicTextField] that use a
+     * `decorationBox`, see [DecorationBox].
+     *
+     * An example of building a custom text field using [decorator]:
+     *
+     * @sample androidx.compose.material3.samples.CustomTextFieldUsingDecorator
+     * @param state [TextFieldState] object that holds the internal editing state of the text field.
+     * @param enabled the enabled state of the text field. When `false`, this decorator will appear
+     *   visually disabled. This must be the same value that is passed to [BasicTextField].
+     * @param lineLimits whether the text field is [SingleLine] or [MultiLine]. This must be the
+     *   same value that is passed to [BasicTextField].
+     * @param outputTransformation [OutputTransformation] that transforms how the contents of the
+     *   text field are presented. This must be the same value that is passed to [BasicTextField].
+     * @param interactionSource the read-only [InteractionSource] representing the stream of
+     *   [Interaction]s for this text field. You must first create and pass in your own `remember`ed
+     *   [MutableInteractionSource] instance to the [BasicTextField] for it to dispatch events. And
+     *   then pass the same instance to this decorator to observe [Interaction]s and customize the
+     *   appearance/behavior of the text field in different states.
+     * @param alwaysMinimizeLabel whether to always minimize the label of this text field. Defaults
+     *   to `false`, so the label will expand to occupy the input area when the text field is
+     *   unfocused and empty. When `true`, this allows displaying the [placeholder], [prefix], and
+     *   [suffix] alongside the [label] when the text field is unfocused and empty.
+     * @param label the optional label to be displayed with this text field. The default text style
+     *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
+     * @param placeholder the optional placeholder to be displayed when the input text is empty. The
+     *   default text style uses [Typography.bodyLarge].
+     * @param leadingIcon the optional leading icon to be displayed at the beginning of the text
+     *   field container.
+     * @param trailingIcon the optional trailing icon to be displayed at the end of the text field
+     *   container.
+     * @param prefix the optional prefix to be displayed before the input text in the text field.
+     * @param suffix the optional suffix to be displayed after the input text in the text field.
+     * @param supportingText the optional supporting text to be displayed below the text field.
+     * @param isError indicates if the text field's current value is in an error state. When `true`,
+     *   this decorator will display its contents in an error color.
+     * @param colors [TextFieldColors] that will be used to resolve the colors used for this text
+     *   field decorator in different states. See [TextFieldDefaults.colors].
+     * @param contentPadding the padding between the input field and the surrounding elements of the
+     *   decorator. Note that the padding values may not be respected if they are incompatible with
+     *   the text field's size constraints or layout. See
+     *   [TextFieldDefaults.contentPaddingWithLabel] and
+     *   [TextFieldDefaults.contentPaddingWithoutLabel].
+     * @param container the container to be drawn behind the text field. By default, this uses
+     *   [Container]. Default colors for the container come from the [colors].
+     */
+    @Composable
+    @ExperimentalMaterial3Api
+    fun decorator(
+        state: TextFieldState,
+        enabled: Boolean,
+        lineLimits: TextFieldLineLimits,
+        outputTransformation: OutputTransformation?,
+        interactionSource: InteractionSource,
+        alwaysMinimizeLabel: Boolean = false,
+        label: @Composable (() -> Unit)? = null,
+        placeholder: @Composable (() -> Unit)? = null,
+        leadingIcon: @Composable (() -> Unit)? = null,
+        trailingIcon: @Composable (() -> Unit)? = null,
+        prefix: @Composable (() -> Unit)? = null,
+        suffix: @Composable (() -> Unit)? = null,
+        supportingText: @Composable (() -> Unit)? = null,
+        isError: Boolean = false,
+        colors: TextFieldColors = colors(),
+        contentPadding: PaddingValues =
+            if (label == null) {
+                contentPaddingWithoutLabel()
+            } else {
+                contentPaddingWithLabel()
+            },
+        container: @Composable () -> Unit = {
+            Container(
+                enabled = enabled,
+                isError = isError,
+                interactionSource = interactionSource,
+                colors = colors,
+                shape = shape,
+                focusedIndicatorLineThickness = FocusedIndicatorThickness,
+                unfocusedIndicatorLineThickness = UnfocusedIndicatorThickness,
+            )
+        }
+    ): TextFieldDecorator = TextFieldDecorator { innerTextField ->
+        val visualText =
+            if (outputTransformation == null) state.text
+            else {
+                // TODO: use constructor to create TextFieldBuffer from TextFieldState when
+                // available
+                lateinit var buffer: TextFieldBuffer
+                state.edit { buffer = this }
+                // after edit completes, mutations on buffer are ineffective
+                with(outputTransformation) { buffer.transformOutput() }
+                buffer.asCharSequence()
+            }
+
+        CommonDecorationBox(
+            type = TextFieldType.Filled,
+            visualText = visualText,
+            innerTextField = innerTextField,
+            placeholder = placeholder,
+            alwaysMinimizeLabel = alwaysMinimizeLabel,
+            label = label,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            prefix = prefix,
+            suffix = suffix,
+            supportingText = supportingText,
+            singleLine = lineLimits == SingleLine,
+            enabled = enabled,
+            isError = isError,
+            interactionSource = interactionSource,
+            colors = colors,
+            contentPadding = contentPadding,
+            container = container
+        )
+    }
 
     /**
      * Composable that draws a default container for a [TextField] with an indicator line at the
@@ -191,6 +327,10 @@ object TextFieldDefaults {
      * For example, if you wish to customise the bottom indicator line, you can pass a custom
      * [Container] to this decoration box's [container].
      *
+     * This decoration box is meant to be used in conjunction with overloads of [BasicTextField]
+     * that accept a `decorationBox` parameter. For other overloads of [BasicTextField] that use a
+     * [TextFieldDecorator], see [decorator].
+     *
      * An example of building a custom text field using [DecorationBox]:
      *
      * @sample androidx.compose.material3.samples.CustomTextFieldBasedOnDecorationBox
@@ -211,9 +351,8 @@ object TextFieldDefaults {
      *   the appearance / behavior of this text field in different states.
      * @param isError indicates if the text field's current value is in an error state. When `true`,
      *   this decoration box will display its contents in an error color.
-     * @param label the optional label to be displayed inside the text field container. The default
-     *   text style for internal [Text] is [Typography.bodySmall] when the text field is in focus
-     *   and [Typography.bodyLarge] when the text field is not in focus.
+     * @param label the optional label to be displayed with this text field. The default text style
+     *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
      * @param placeholder the optional placeholder to be displayed when the text field is in focus
      *   and the input text is empty. The default text style for internal [Text] is
      *   [Typography.bodyLarge].
@@ -273,12 +412,19 @@ object TextFieldDefaults {
             )
         }
     ) {
+        val visualText =
+            remember(value, visualTransformation) {
+                    visualTransformation.filter(AnnotatedString(value))
+                }
+                .text
+                .text
+
         CommonDecorationBox(
             type = TextFieldType.Filled,
-            value = value,
+            visualText = visualText,
             innerTextField = innerTextField,
-            visualTransformation = visualTransformation,
             placeholder = placeholder,
+            alwaysMinimizeLabel = false,
             label = label,
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
@@ -753,6 +899,129 @@ object OutlinedTextFieldDefaults {
     val FocusedBorderThickness = 2.dp
 
     /**
+     * A decorator used to create custom text fields based on <a
+     * href="https://m3.material.io/components/text-fields/overview" class="external"
+     * target="_blank">Material Design outlined text field</a>.
+     *
+     * If your text field requires customising elements that aren't exposed by [OutlinedTextField],
+     * such as the border thickness, consider using this decorator to achieve the desired design.
+     *
+     * For example, if you wish to customize the thickness of the border, you can pass a custom
+     * [Container] to this decoration box's [container].
+     *
+     * This decorator is meant to be used in conjunction with the overload of [BasicTextField] that
+     * accepts a [TextFieldDecorator] parameter. For other overloads of [BasicTextField] that use a
+     * `decorationBox`, see [DecorationBox].
+     *
+     * An example of building a custom text field using [decorator]:
+     *
+     * @sample androidx.compose.material3.samples.CustomOutlinedTextFieldUsingDecorator
+     * @param state [TextFieldState] object that holds the internal editing state of the text field.
+     * @param enabled the enabled state of the text field. When `false`, this decorator will appear
+     *   visually disabled. This must be the same value that is passed to [BasicTextField].
+     * @param lineLimits whether the text field is [SingleLine] or [MultiLine]. This must be the
+     *   same value that is passed to [BasicTextField].
+     * @param outputTransformation [OutputTransformation] that transforms how the contents of the
+     *   text field are presented. This must be the same value that is passed to [BasicTextField].
+     * @param interactionSource the read-only [InteractionSource] representing the stream of
+     *   [Interaction]s for this text field. You must first create and pass in your own `remember`ed
+     *   [MutableInteractionSource] instance to the [BasicTextField] for it to dispatch events. And
+     *   then pass the same instance to this decorator to observe [Interaction]s and customize the
+     *   appearance/behavior of the text field in different states.
+     * @param alwaysMinimizeLabel whether to always minimize the label of this text field. Defaults
+     *   to `false`, so the label will expand to occupy the input area when the text field is
+     *   unfocused and empty. When `true`, this allows displaying the [placeholder], [prefix], and
+     *   [suffix] alongside the [label] when the text field is unfocused and empty.
+     * @param label the optional label to be displayed with this text field. The default text style
+     *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
+     * @param placeholder the optional placeholder to be displayed when the input text is empty. The
+     *   default text style uses [Typography.bodyLarge].
+     * @param leadingIcon the optional leading icon to be displayed at the beginning of the text
+     *   field container.
+     * @param trailingIcon the optional trailing icon to be displayed at the end of the text field
+     *   container.
+     * @param prefix the optional prefix to be displayed before the input text in the text field.
+     * @param suffix the optional suffix to be displayed after the input text in the text field.
+     * @param supportingText the optional supporting text to be displayed below the text field.
+     * @param isError indicates if the text field's current value is in an error state. When `true`,
+     *   this decorator will display its contents in an error color.
+     * @param colors [TextFieldColors] that will be used to resolve the colors used for this text
+     *   field decorator in different states. See [OutlinedTextFieldDefaults.colors].
+     * @param contentPadding the padding between the input field and the surrounding elements of the
+     *   decorator. Note that the padding values may not be respected if they are incompatible with
+     *   the text field's size constraints or layout. See
+     *   [OutlinedTextFieldDefaults.contentPadding].
+     * @param container the container to be drawn behind the text field. By default, this is
+     *   transparent and only includes a border. The cutout in the border to fit the [label] will be
+     *   automatically added by the framework. Default colors for the container come from the
+     *   [colors].
+     */
+    @Composable
+    @ExperimentalMaterial3Api
+    fun decorator(
+        state: TextFieldState,
+        enabled: Boolean,
+        lineLimits: TextFieldLineLimits,
+        outputTransformation: OutputTransformation?,
+        interactionSource: InteractionSource,
+        alwaysMinimizeLabel: Boolean = false,
+        label: @Composable (() -> Unit)? = null,
+        placeholder: @Composable (() -> Unit)? = null,
+        leadingIcon: @Composable (() -> Unit)? = null,
+        trailingIcon: @Composable (() -> Unit)? = null,
+        prefix: @Composable (() -> Unit)? = null,
+        suffix: @Composable (() -> Unit)? = null,
+        supportingText: @Composable (() -> Unit)? = null,
+        isError: Boolean = false,
+        colors: TextFieldColors = colors(),
+        contentPadding: PaddingValues = contentPadding(),
+        container: @Composable () -> Unit = {
+            Container(
+                enabled = enabled,
+                isError = isError,
+                interactionSource = interactionSource,
+                colors = colors,
+                shape = shape,
+                focusedBorderThickness = FocusedBorderThickness,
+                unfocusedBorderThickness = UnfocusedBorderThickness,
+            )
+        }
+    ): TextFieldDecorator = TextFieldDecorator { innerTextField ->
+        val visualText =
+            if (outputTransformation == null) state.text
+            else {
+                // TODO: use constructor to create TextFieldBuffer from TextFieldState when
+                // available
+                lateinit var buffer: TextFieldBuffer
+                state.edit { buffer = this }
+                // after edit completes, mutations on buffer are ineffective
+                with(outputTransformation) { buffer.transformOutput() }
+                buffer.asCharSequence()
+            }
+
+        CommonDecorationBox(
+            type = TextFieldType.Outlined,
+            visualText = visualText,
+            innerTextField = innerTextField,
+            placeholder = placeholder,
+            alwaysMinimizeLabel = alwaysMinimizeLabel,
+            label = label,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            prefix = prefix,
+            suffix = suffix,
+            supportingText = supportingText,
+            singleLine = lineLimits == SingleLine,
+            enabled = enabled,
+            isError = isError,
+            interactionSource = interactionSource,
+            colors = colors,
+            contentPadding = contentPadding,
+            container = container
+        )
+    }
+
+    /**
      * Composable that draws a default container for an [OutlinedTextField] with a border stroke.
      * You can apply it to a [BasicTextField] using [DecorationBox] to create a custom text field
      * based on the styling of a Material outlined text field. The [OutlinedTextField] component
@@ -813,6 +1082,10 @@ object OutlinedTextFieldDefaults {
      * For example, if you wish to customize the thickness of the border, you can pass a custom
      * [Container] to this decoration box's [container].
      *
+     * This decoration box is meant to be used in conjunction with overloads of [BasicTextField]
+     * that accept a `decorationBox` parameter. For other overloads of [BasicTextField] that use a
+     * [TextFieldDecorator], see [decorator].
+     *
      * An example of building a custom text field using [DecorationBox]:
      *
      * @sample androidx.compose.material3.samples.CustomOutlinedTextFieldBasedOnDecorationBox
@@ -833,9 +1106,8 @@ object OutlinedTextFieldDefaults {
      *   the appearance / behavior of this text field in different states.
      * @param isError indicates if the text field's current value is in an error state. When `true`,
      *   this decoration box will display its contents in an error color.
-     * @param label the optional label to be displayed inside the text field container. The default
-     *   text style for internal [Text] is [Typography.bodySmall] when the text field is in focus
-     *   and [Typography.bodyLarge] when the text field is not in focus.
+     * @param label the optional label to be displayed with this text field. The default text style
+     *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
      * @param placeholder the optional placeholder to be displayed when the text field is in focus
      *   and the input text is empty. The default text style for internal [Text] is
      *   [Typography.bodyLarge].
@@ -889,12 +1161,19 @@ object OutlinedTextFieldDefaults {
             )
         }
     ) {
+        val visualText =
+            remember(value, visualTransformation) {
+                    visualTransformation.filter(AnnotatedString(value))
+                }
+                .text
+                .text
+
         CommonDecorationBox(
             type = TextFieldType.Outlined,
-            value = value,
-            visualTransformation = visualTransformation,
+            visualText = visualText,
             innerTextField = innerTextField,
             placeholder = placeholder,
+            alwaysMinimizeLabel = false,
             label = label,
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,

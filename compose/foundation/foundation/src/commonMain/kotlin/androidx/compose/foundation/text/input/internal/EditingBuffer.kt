@@ -16,9 +16,13 @@
 
 package androidx.compose.foundation.text.input.internal
 
+import androidx.compose.foundation.text.input.PlacedAnnotation
 import androidx.compose.foundation.text.input.TextHighlightType
+import androidx.compose.runtime.collection.MutableVector
+import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.util.fastForEach
 
 /**
  * The editing buffer
@@ -27,7 +31,7 @@ import androidx.compose.ui.text.TextRange
  */
 internal class EditingBuffer(
     /** The initial text of this editing buffer */
-    text: AnnotatedString,
+    text: String,
     /**
      * The initial selection range of this buffer. If you provide collapsed selection, it is treated
      * as the cursor position. The cursor and selection cannot exists at the same time. The
@@ -40,7 +44,10 @@ internal class EditingBuffer(
         const val NOWHERE = -1
     }
 
-    private val gapBuffer = PartialGapBuffer(text.text)
+    var composingAnnotations: MutableVector<AnnotatedString.Range<AnnotatedString.Annotation>>? =
+        null
+
+    private val gapBuffer = PartialGapBuffer(text)
 
     val changeTracker = ChangeTracker()
 
@@ -120,8 +127,6 @@ internal class EditingBuffer(
     val length: Int
         get() = gapBuffer.length
 
-    constructor(text: String, selection: TextRange) : this(AnnotatedString(text), selection)
-
     init {
         checkRange(selection.start, selection.end)
     }
@@ -142,6 +147,16 @@ internal class EditingBuffer(
         // composition based typing when each keystroke may trigger a replace function that looks
         // like "abcd" => "abcde".
 
+        // b(351165334)
+        // Since we are starting from the left hand side to compare the strings, when "abc" is
+        // replaced with "aabc", it will be reported as an `a` is inserted at `TextRange(1)` instead
+        // of the more logical possibility; `TextRange(0)`. This replace call cannot differentiate
+        // between the two possible cases because we have no way of really knowing what was the
+        // intention of the user beyond this replace call. We prefer to choose the more logical
+        // explanation for right hand side since it's the more common direction of typing. This is
+        // guaranteed by the fact that we start our coercion from left hand side, and finally apply
+        // the right hand side.
+
         // coerce min
         var i = 0
         var cMin = min
@@ -152,7 +167,7 @@ internal class EditingBuffer(
         // coerce max
         var j = text.length
         var cMax = max
-        while (cMax > min && j > i && text[j - 1] == gapBuffer[cMax - 1]) {
+        while (cMax > cMin && j > i && text[j - 1] == gapBuffer[cMax - 1]) {
             j--
             cMax--
         }
@@ -174,6 +189,8 @@ internal class EditingBuffer(
         // to set composition range after replace function.
         compositionStart = NOWHERE
         compositionEnd = NOWHERE
+        // Do not deallocate an existing list. We will probably use it again.
+        composingAnnotations?.clear()
 
         highlight = null
     }
@@ -261,11 +278,15 @@ internal class EditingBuffer(
      *
      * @param start the inclusive start offset of the composition
      * @param end the exclusive end offset of the composition
-     * @throws IndexOutOfBoundsException if start or end offset is ouside of current buffer
+     * @param annotations Annotations that are attached to the composing region of text. This
+     *   function does not check whether the given annotations are inside the composing region. It
+     *   simply adds them to the current buffer while adjusting their range according to where the
+     *   new composition region is set.
+     * @throws IndexOutOfBoundsException if start or end offset is outside of current buffer
      * @throws IllegalArgumentException if start is larger than or equal to end. (reversed or
      *   collapsed range)
      */
-    fun setComposition(start: Int, end: Int) {
+    fun setComposition(start: Int, end: Int, annotations: List<PlacedAnnotation>? = null) {
         if (start < 0 || start > gapBuffer.length) {
             throw IndexOutOfBoundsException(
                 "start ($start) offset is outside of text region ${gapBuffer.length}"
@@ -282,17 +303,29 @@ internal class EditingBuffer(
 
         compositionStart = start
         compositionEnd = end
+
+        this.composingAnnotations?.clear()
+        if (!annotations.isNullOrEmpty()) {
+            if (this.composingAnnotations == null) {
+                this.composingAnnotations = mutableVectorOf()
+            }
+            annotations.fastForEach {
+                // place the annotations at the correct indices in the buffer.
+                this.composingAnnotations?.add(
+                    it.copy(start = it.start + start, end = it.end + start)
+                )
+            }
+        }
     }
 
     /** Commits the ongoing composition text and reset the composition range. */
     fun commitComposition() {
         compositionStart = NOWHERE
         compositionEnd = NOWHERE
+        composingAnnotations?.clear()
     }
 
     override fun toString(): String = gapBuffer.toString()
-
-    fun toAnnotatedString(): AnnotatedString = AnnotatedString(toString())
 
     private fun checkRange(start: Int, end: Int) {
         if (start < 0 || start > gapBuffer.length) {

@@ -490,12 +490,13 @@ internal class RootNodeOwner(
         override fun localToScreen(localPosition: Offset): Offset =
             platformContext.convertLocalToScreenPosition(localPosition)
 
-        override fun localToScreen(localTransform: Matrix) {
-            throw UnsupportedOperationException(
-                "Construction of local-to-screen matrix is not supported, " +
-                    "use direct conversion instead"
-            )
-        }
+        // TODO: reverted in https://r.android.com/3208275
+//        override fun localToScreen(localTransform: Matrix) {
+//            throw UnsupportedOperationException(
+//                "Construction of local-to-screen matrix is not supported, " +
+//                    "use direct conversion instead"
+//            )
+//        }
 
         private val endApplyChangesListeners = mutableVectorOf<(() -> Unit)?>()
 
@@ -674,5 +675,4 @@ private fun IntSize.toConstraints() = Constraints(maxWidth = width, maxHeight = 
 private object IdentityPositionCalculator: PositionCalculator {
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
     override fun localToScreen(localPosition: Offset): Offset = localPosition
-    override fun localToScreen(localTransform: Matrix) = Unit
 }

@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
@@ -43,7 +45,7 @@ import androidx.wear.compose.material3.IconButton
 import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ProgressIndicatorDefaults
-import androidx.wear.compose.material3.ProgressIndicatorDefaults.FullScreenPadding
+import androidx.wear.compose.material3.SegmentedCircularProgressIndicator
 
 @Sampled
 @Composable
@@ -51,7 +53,7 @@ fun FullScreenProgressIndicatorSample() {
     Box(
         modifier =
             Modifier.background(MaterialTheme.colorScheme.background)
-                .padding(FullScreenPadding)
+                .padding(ProgressIndicatorDefaults.FullScreenPadding)
                 .fillMaxSize()
     ) {
         CircularProgressIndicator(
@@ -72,6 +74,7 @@ fun FullScreenProgressIndicatorSample() {
 fun MediaButtonProgressIndicatorSample() {
     var isPlaying by remember { mutableStateOf(false) }
     val progressPadding = 4.dp
+    val progress = 0.75f
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Box(
@@ -79,10 +82,18 @@ fun MediaButtonProgressIndicatorSample() {
                 Modifier.align(Alignment.Center)
                     .size(IconButtonDefaults.DefaultButtonSize + progressPadding)
         ) {
-            CircularProgressIndicator(progress = { 0.75f }, strokeWidth = progressPadding)
+            CircularProgressIndicator(progress = { progress }, strokeWidth = progressPadding)
             IconButton(
                 modifier =
                     Modifier.align(Alignment.Center)
+                        .semantics {
+                            // Set custom progress semantics for accessibility.
+                            contentDescription =
+                                String.format(
+                                    "Play/pause button, track progress: %.0f%%",
+                                    progress * 100
+                                )
+                        }
                         .padding(progressPadding)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerLow),
@@ -90,7 +101,7 @@ fun MediaButtonProgressIndicatorSample() {
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Close else Icons.Filled.PlayArrow,
-                    contentDescription = "Play/pause button icon"
+                    contentDescription = null,
                 )
             }
         }
@@ -103,7 +114,7 @@ fun OverflowProgressIndicatorSample() {
     Box(
         modifier =
             Modifier.background(MaterialTheme.colorScheme.background)
-                .padding(FullScreenPadding)
+                .padding(ProgressIndicatorDefaults.FullScreenPadding)
                 .fillMaxSize()
     ) {
         CircularProgressIndicator(
@@ -121,6 +132,68 @@ fun OverflowProgressIndicatorSample() {
                                 MaterialTheme.colorScheme.surfaceContainer
                             )
                         )
+                )
+        )
+    }
+}
+
+@Sampled
+@Composable
+fun SmallValuesProgressIndicatorSample() {
+    Box {
+        CircularProgressIndicator(
+            // Small progress values like 2% will be rounded up to at least the stroke width.
+            progress = { 0.02f },
+            modifier = Modifier.fillMaxSize().padding(ProgressIndicatorDefaults.FullScreenPadding),
+            startAngle = 120f,
+            endAngle = 60f,
+            strokeWidth = 10.dp,
+            colors =
+                ProgressIndicatorDefaults.colors(
+                    indicatorColor = Color.Green,
+                    trackColor = Color.White
+                ),
+        )
+    }
+}
+
+@Sampled
+@Composable
+fun SegmentedProgressIndicatorSample() {
+    Box(
+        modifier =
+            Modifier.background(MaterialTheme.colorScheme.background)
+                .padding(ProgressIndicatorDefaults.FullScreenPadding)
+                .fillMaxSize()
+    ) {
+        SegmentedCircularProgressIndicator(
+            segmentCount = 5,
+            progress = { 0.5f },
+            colors =
+                ProgressIndicatorDefaults.colors(
+                    indicatorColor = Color.Green,
+                    trackColor = Color.Green.copy(alpha = 0.5f)
+                )
+        )
+    }
+}
+
+@Sampled
+@Composable
+fun SegmentedProgressIndicatorOnOffSample() {
+    Box(
+        modifier =
+            Modifier.background(MaterialTheme.colorScheme.background)
+                .padding(ProgressIndicatorDefaults.FullScreenPadding)
+                .fillMaxSize()
+    ) {
+        SegmentedCircularProgressIndicator(
+            segmentCount = 5,
+            completed = { it % 2 != 0 },
+            colors =
+                ProgressIndicatorDefaults.colors(
+                    indicatorColor = Color.Green,
+                    trackColor = Color.Green.copy(alpha = 0.5f)
                 )
         )
     }

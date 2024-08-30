@@ -16,9 +16,9 @@
 
 package androidx.compose.ui.autofill
 
-import androidx.compose.ui.createSynchronizedObject
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.synchronized
+import androidx.compose.ui.platform.createSynchronizedObject
+import androidx.compose.ui.platform.synchronized
 
 /**
  * Autofill API.

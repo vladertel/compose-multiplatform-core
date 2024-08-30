@@ -40,12 +40,15 @@ import androidx.compose.ui.node.NodeKind
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.ancestors
 import androidx.compose.ui.node.dispatchForKind
+import androidx.compose.ui.node.nearestAncestor
 import androidx.compose.ui.node.visitAncestors
 import androidx.compose.ui.node.visitLocalDescendants
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachReversed
+
+private const val Warning = "FocusRelatedWarning"
 
 /**
  * The focus manager is used by different [Owner][androidx.compose.ui.node.Owner] implementations to
@@ -257,16 +260,18 @@ internal class FocusOwnerImpl(
 
     /** Dispatches a key event through the compose hierarchy. */
     override fun dispatchKeyEvent(keyEvent: KeyEvent, onFocusedItem: () -> Boolean): Boolean {
-        check(!focusInvalidationManager.hasPendingInvalidation()) {
-            "Dispatching key event while focus system is invalidated."
+        if (focusInvalidationManager.hasPendingInvalidation()) {
+            // Ignoring this to unblock b/346370327.
+            println("$Warning: Dispatching key event while focus system is invalidated.")
+            return false
         }
-
         if (!validateKeyEvent(keyEvent)) return false
 
         val activeFocusTarget = rootFocusNode.findActiveFocusNode()
         val focusedKeyInputNode =
             activeFocusTarget?.lastLocalKeyInputNode()
                 ?: activeFocusTarget?.nearestAncestorIncludingSelf(Nodes.KeyInput)?.node
+                ?: rootFocusNode.nearestAncestor(Nodes.KeyInput)?.node
 
         focusedKeyInputNode?.traverseAncestorsIncludingSelf(
             type = Nodes.KeyInput,
@@ -278,8 +283,13 @@ internal class FocusOwnerImpl(
     }
 
     override fun dispatchInterceptedSoftKeyboardEvent(keyEvent: KeyEvent): Boolean {
-        check(!focusInvalidationManager.hasPendingInvalidation()) {
-            "Dispatching intercepted soft keyboard event while focus system is invalidated."
+        if (focusInvalidationManager.hasPendingInvalidation()) {
+            // Ignoring this to unblock b/346370327.
+            println(
+                "$Warning: Dispatching intercepted soft keyboard event while the focus system" +
+                    " is invalidated."
+            )
+            return false
         }
 
         val focusedSoftKeyboardInterceptionNode =

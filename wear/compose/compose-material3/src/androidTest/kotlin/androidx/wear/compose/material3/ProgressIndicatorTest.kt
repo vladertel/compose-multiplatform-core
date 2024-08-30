@@ -134,8 +134,8 @@ class CircularProgressIndicatorTest {
             )
         }
         rule.waitForIdle()
-        // Color should take approximately a quarter of what it normally takes
-        // (a little bit less), eg 25% / 4 ≈ 6%.
+        // Color should take approximately a quarter of the full screen color percentages,
+        // eg 25% / 4 ≈ 6%.
         rule
             .onNodeWithTag(TEST_TAG)
             .captureToImage()
@@ -152,7 +152,7 @@ class CircularProgressIndicatorTest {
         setContentWithTheme {
             CircularProgressIndicator(
                 modifier = Modifier.testTag(TEST_TAG),
-                progress = { 0.05f },
+                progress = { 0.02f },
                 colors =
                     ProgressIndicatorDefaults.colors(
                         indicatorColor = Color.Yellow,
@@ -161,6 +161,7 @@ class CircularProgressIndicatorTest {
             )
         }
         rule.waitForIdle()
+        // Small progress values like 2% should be rounded up to at least the stroke width.
         rule
             .onNodeWithTag(TEST_TAG)
             .captureToImage()

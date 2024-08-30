@@ -33,7 +33,6 @@ import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestFailure
 import androidx.camera.camera2.pipe.StreamId
 import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.withTimeout
@@ -70,7 +69,6 @@ private constructor(
          * test completes and allows the test to provide more fine grained control over the
          * interactions.
          */
-        @OptIn(ExperimentalCoroutinesApi::class)
         fun create(
             scope: TestScope,
             context: Context,
@@ -150,6 +148,10 @@ private constructor(
         cameraController.simulateCameraError(graphStateError)
     }
 
+    /**
+     * Configure all streams in the CameraGraph with fake surfaces that match the size of the first
+     * output stream.
+     */
     fun simulateFakeSurfaceConfiguration() {
         check(!closed.value) {
             "Cannot call simulateFakeSurfaceConfiguration on $this after close."

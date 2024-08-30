@@ -18,63 +18,71 @@ package androidx.compose.foundation.lazy.staggeredgrid
 
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.lazy.grid.LazyLayoutAnimateScrollScope
 import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateScrollScope
+import androidx.compose.foundation.pager.LazyLayoutAnimateScrollScope
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastSumBy
 
-internal class LazyStaggeredGridAnimateScrollScope(private val state: LazyStaggeredGridState) :
-    LazyLayoutAnimateScrollScope {
+/**
+ * An implementation of [LazyLayoutAnimateScrollScope] that can be used with LazyStaggeredGrids.
+ *
+ * @param state The [LazyStaggeredGridState] associated with the layout where this animated scroll
+ *   should be performed.
+ * @return An implementation of [LazyLayoutAnimateScrollScope] that works with
+ *   [LazyHorizontalStaggeredGrid] and [LazyVerticalStaggeredGrid].
+ * @sample androidx.compose.foundation.samples.CustomLazyStaggeredGridAnimateToItemScrollSample
+ */
+fun LazyLayoutAnimateScrollScope(state: LazyStaggeredGridState): LazyLayoutAnimateScrollScope {
 
-    override val firstVisibleItemIndex: Int
-        get() = state.firstVisibleItemIndex
+    return object : LazyLayoutAnimateScrollScope {
+        override val firstVisibleItemIndex: Int
+            get() = state.firstVisibleItemIndex
 
-    override val firstVisibleItemScrollOffset: Int
-        get() = state.firstVisibleItemScrollOffset
+        override val firstVisibleItemScrollOffset: Int
+            get() = state.firstVisibleItemScrollOffset
 
-    override val lastVisibleItemIndex: Int
-        get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        override val lastVisibleItemIndex: Int
+            get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-    override val itemCount: Int
-        get() = state.layoutInfo.totalItemsCount
+        override val itemCount: Int
+            get() = state.layoutInfo.totalItemsCount
 
-    override fun ScrollScope.snapToItem(index: Int, scrollOffset: Int) {
-        with(state) { snapToItemInternal(index, scrollOffset, forceRemeasure = true) }
-    }
+        override fun ScrollScope.snapToItem(index: Int, offset: Int) {
+            with(state) { snapToItemInternal(index, offset, forceRemeasure = true) }
+        }
 
-    override fun calculateDistanceTo(targetIndex: Int): Float {
-        val layoutInfo = state.layoutInfo
-        if (layoutInfo.visibleItemsInfo.isEmpty()) return 0f
-        val visibleItem = layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == targetIndex }
-        return if (visibleItem == null) {
-            val averageMainAxisItemSize = calculateVisibleItemsAverageSize(layoutInfo)
+        override fun calculateDistanceTo(targetIndex: Int, targetOffset: Int): Int {
+            val layoutInfo = state.layoutInfo
+            if (layoutInfo.visibleItemsInfo.isEmpty()) return 0
+            val visibleItem =
+                layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == targetIndex }
+            return if (visibleItem == null) {
+                val averageMainAxisItemSize = calculateVisibleItemsAverageSize(layoutInfo)
 
-            val laneCount = state.laneCount
-            val lineDiff = targetIndex / laneCount - firstVisibleItemIndex / laneCount
-            averageMainAxisItemSize * lineDiff.toFloat() - firstVisibleItemScrollOffset
-        } else {
-            if (layoutInfo.orientation == Orientation.Vertical) {
+                val laneCount = state.laneCount
+                val lineDiff = targetIndex / laneCount - firstVisibleItemIndex / laneCount
+                averageMainAxisItemSize * lineDiff - firstVisibleItemScrollOffset
+            } else {
+                if (layoutInfo.orientation == Orientation.Vertical) {
                     visibleItem.offset.y
                 } else {
                     visibleItem.offset.x
                 }
-                .toFloat()
+            } + targetOffset
         }
-    }
 
-    override suspend fun scroll(block: suspend ScrollScope.() -> Unit) {
-        state.scroll(block = block)
-    }
-
-    private fun calculateVisibleItemsAverageSize(layoutInfo: LazyStaggeredGridLayoutInfo): Int {
-        val visibleItems = layoutInfo.visibleItemsInfo
-        val itemSizeSum =
-            visibleItems.fastSumBy {
-                if (layoutInfo.orientation == Orientation.Vertical) {
-                    it.size.height
-                } else {
-                    it.size.width
+        private fun calculateVisibleItemsAverageSize(layoutInfo: LazyStaggeredGridLayoutInfo): Int {
+            val visibleItems = layoutInfo.visibleItemsInfo
+            val itemSizeSum =
+                visibleItems.fastSumBy {
+                    if (layoutInfo.orientation == Orientation.Vertical) {
+                        it.size.height
+                    } else {
+                        it.size.width
+                    }
                 }
-            }
-        return itemSizeSum / visibleItems.size + layoutInfo.mainAxisItemSpacing
+            return itemSizeSum / visibleItems.size + layoutInfo.mainAxisItemSpacing
+        }
     }
 }

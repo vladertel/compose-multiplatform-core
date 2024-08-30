@@ -31,9 +31,9 @@ import androidx.core.telecom.internal.CapabilityExchangeRemote
 import androidx.core.telecom.internal.ParticipantStateListenerRemote
 import androidx.core.telecom.util.ExperimentalAppActions
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.onCompletion
@@ -115,6 +115,7 @@ internal data class CallEvent(val event: ExtensionEvent, val extras: Bundle)
  *   implementation of [ExtensionInitializationScope.onCall] will be called.
  * @see CallsManager.addCall
  */
+// TODO: Refactor to Public API
 @RequiresApi(Build.VERSION_CODES.O)
 @ExperimentalAppActions
 @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY)
@@ -125,12 +126,15 @@ suspend fun CallsManager.addCallWithExtensions(
     onSetActive: suspend () -> Unit,
     onSetInactive: suspend () -> Unit,
     init: suspend ExtensionInitializationScope.() -> Unit
-) {
+) = coroutineScope {
     Log.v(CallsManagerExtensions.LOG_TAG, "addCall: begin")
     val eventFlow = MutableSharedFlow<CallEvent>()
     val scope = ExtensionInitializationScope()
-    var extensionJob: Job? = null
     scope.init()
+    val extensionJob = launch {
+        Log.d(CallsManagerExtensions.LOG_TAG, "addCall: connecting extensions")
+        scope.collectEvents(this, eventFlow)
+    }
     Log.v(CallsManagerExtensions.LOG_TAG, "addCall: init complete")
     addCall(
         callAttributes,
@@ -150,16 +154,12 @@ suspend fun CallsManager.addCallWithExtensions(
             foundEvent?.let { eventFlow.emit(CallEvent(it, extras)) }
         }
     ) {
-        extensionJob = launch {
-            Log.d(CallsManagerExtensions.LOG_TAG, "addCall: connecting extensions")
-            scope.collectEvents(this, eventFlow)
-        }
         Log.i(CallsManagerExtensions.LOG_TAG, "addCall: invoking delegates")
         scope.invokeDelegate(this)
     }
     // Ensure that when the call ends, we also cancel any ongoing coroutines/flows as part of
     // extension work
-    extensionJob?.cancelAndJoin()
+    extensionJob.cancelAndJoin()
 }
 
 /**
@@ -170,6 +170,7 @@ suspend fun CallsManager.addCallWithExtensions(
  * implementation of [onCall] will be run, which should manage the call and extension states during
  * the lifetime of when the call is active.
  */
+// TODO: Refactor to Public API
 @RequiresApi(Build.VERSION_CODES.O)
 @ExperimentalAppActions
 @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY)

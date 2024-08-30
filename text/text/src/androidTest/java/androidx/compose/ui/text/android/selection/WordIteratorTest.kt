@@ -16,17 +16,41 @@
 
 package androidx.compose.ui.text.android.selection
 
+import androidx.emoji2.bundled.BundledEmojiCompatConfig
+import androidx.emoji2.text.EmojiCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.filters.SmallTest
+import androidx.test.filters.LargeTest
+import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import java.text.BreakIterator
 import java.util.Locale
+import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@SmallTest
+@LargeTest
 @RunWith(AndroidJUnit4::class)
 class WordIteratorTest {
+    companion object {
+        private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+        @BeforeClass
+        @JvmStatic
+        fun setup() {
+            EmojiCompat.reset(null)
+            // we want a temporary thread, we don't need to control the font loading thread
+            // for this test, hence the deprecation suppression
+            @Suppress("DEPRECATION") EmojiCompat.init(BundledEmojiCompatConfig(context))
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun clean() {
+            EmojiCompat.reset(null)
+        }
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun testConstructor_IndexOutOfBounds_too_big() {
         WordIterator("text", 100, 100, Locale.ENGLISH)
@@ -139,6 +163,17 @@ class WordIteratorTest {
         assertThat(currentOffset).isEqualTo(BreakIterator.DONE)
     }
 
+    @Test(timeout = 5000)
+    fun testNextBoundary_emoji() {
+        assertThat(EmojiCompat.isConfigured()).isTrue()
+        // Wait for EmojiCompat to fully load (this is necessary due to inclusion of emojis)
+        while (EmojiCompat.get().loadState != EmojiCompat.LOAD_STATE_SUCCEEDED) {}
+
+        val text = "ab, c\uD83D\uDC4D\uD83C\uDFFEd!" // ab, c👍🏾d!
+        val wordIterator = WordIterator(text, 0, text.length, Locale.ENGLISH)
+        assertThat(wordIterator.nextBoundary(4)).isEqualTo(10)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun testPrevBoundary_out_of_boundary_too_small() {
         val text = "abc def-ghi. jkl"
@@ -223,6 +258,17 @@ class WordIteratorTest {
         assertThat(currentOffset).isEqualTo(BreakIterator.DONE)
     }
 
+    @Test(timeout = 5000)
+    fun testPrevBoundary_emoji() {
+        assertThat(EmojiCompat.isConfigured()).isTrue()
+        // Wait for EmojiCompat to fully load (this is necessary due to inclusion of emojis)
+        while (EmojiCompat.get().loadState != EmojiCompat.LOAD_STATE_SUCCEEDED) {}
+
+        val text = "ab, c\uD83D\uDC4D\uD83C\uDFFE!" // ab, c👍🏾!
+        val wordIterator = WordIterator(text, 0, text.length, Locale.ENGLISH)
+        assertThat(wordIterator.prevBoundary(9)).isEqualTo(4)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun testGetPrevWordBeginningOnTwoWordsBoundary_out_of_boundary_too_small() {
         val text = "abc def-ghi. jkl"
@@ -299,6 +345,19 @@ class WordIteratorTest {
             .isEqualTo(text.indexOf('h'))
     }
 
+    @Test(timeout = 5000)
+    fun testGetPrevWordBeginningOnTwoWordsBoundary_emoji() {
+        assertThat(EmojiCompat.isConfigured()).isTrue()
+        // Wait for EmojiCompat to fully load (this is necessary due to inclusion of emojis)
+        while (EmojiCompat.get().loadState != EmojiCompat.LOAD_STATE_SUCCEEDED) {}
+
+        val text = "a b\uD83E\uDDD1\uD83C\uDFFF\u200D\uD83E\uDDB0c\uD83D\uDC4D\uD83C\uDFFE d"
+        // a b🧑🏿‍🦰c👍🏾 d
+        val wordIterator = WordIterator(text, 0, text.length, Locale.ENGLISH)
+        assertThat(wordIterator.getPrevWordBeginningOnTwoWordsBoundary(text.indexOf('d') - 2))
+            .isEqualTo(text.indexOf('b'))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun testGetNextWordEndOnTwoWordBoundary_out_of_boundary_too_small() {
         val text = "abc def-ghi. jkl"
@@ -366,6 +425,18 @@ class WordIteratorTest {
             .isEqualTo(text.indexOf('t') + 1)
         assertThat(wordIterator.getNextWordEndOnTwoWordBoundary(text.indexOf('h')))
             .isEqualTo(text.indexOf('e') + 1)
+    }
+
+    @Test(timeout = 5000)
+    fun testGetNextWordEndOnTwoWordBoundary_emoji() {
+        assertThat(EmojiCompat.isConfigured()).isTrue()
+        // Wait for EmojiCompat to fully load (this is necessary due to inclusion of emojis)
+        while (EmojiCompat.get().loadState != EmojiCompat.LOAD_STATE_SUCCEEDED) {}
+
+        val text = "a b\uD83E\uDDD1\uD83C\uDFFF\u200D\uD83E\uDDB0c\uD83D\uDC4D\uD83C\uDFFE d"
+        // a b🧑🏿‍🦰c👍🏾 d
+        val wordIterator = WordIterator(text, 0, text.length, Locale.ENGLISH)
+        assertThat(wordIterator.getNextWordEndOnTwoWordBoundary(2)).isEqualTo(text.indexOf('d') - 1)
     }
 
     @Test(expected = IllegalArgumentException::class)

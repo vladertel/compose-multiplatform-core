@@ -54,6 +54,7 @@ internal suspend fun BringIntoViewParent.scrollIntoView(
     layoutCoordinates: LayoutCoordinates,
     rect: Rect? = null
 ) {
+    if (!layoutCoordinates.isAttached) return
     bringChildIntoView(layoutCoordinates) {
         // If the rect is not specified, use a rectangle representing the entire composable.
         // If the coordinates are detached when this call is made, we don't bother even
