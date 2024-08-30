@@ -191,13 +191,12 @@ internal class MetalRedrawer(
     private var isInteropActive = false
         set(value) {
             if (field != value) {
+                field = value
                 // If active, make metalLayer transparent, opaque otherwise.
                 // Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
                 updateLayerOpacity()
                 metalLayer.drawsAsynchronously = !value
             }
-
-            field = value
         }
 
     private fun updateLayerOpacity() {
@@ -369,13 +368,15 @@ internal class MetalRedrawer(
 
             val interopTransaction = retrieveInteropTransaction()
 
+            val presentsWithTransaction =
+                isForcedToPresentWithTransactionEveryFrame
+                    || interopTransaction.actions.isNotEmpty()
+                    || isInteropActive != interopTransaction.isInteropActive
+            metalLayer.presentsWithTransaction = presentsWithTransaction
+
             if (interopTransaction.isInteropActive) {
                 isInteropActive = true
             }
-
-            val presentsWithTransaction =
-                isForcedToPresentWithTransactionEveryFrame || interopTransaction.actions.isNotEmpty()
-            metalLayer.presentsWithTransaction = presentsWithTransaction
 
             // TODO: encoding on separate thread requires investigation for reported crashes
             //  https://github.com/JetBrains/compose-multiplatform/issues/3862

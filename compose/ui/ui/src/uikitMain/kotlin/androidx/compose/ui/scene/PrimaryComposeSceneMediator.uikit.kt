@@ -95,11 +95,14 @@ internal class PrimaryComposeSceneMediator(
         }
     )
 
-    private val constraints = ExclusiveLayoutConstraints()
-
     init {
         // metalView layout is set in [setLayout] by the owner of this mediator
+        metalView.translatesAutoresizingMaskIntoConstraints = false
         userInputView.addSubview(metalView)
+
+        NSLayoutConstraint.activateConstraints(
+            metalView.layoutConstraintsToMatch(userInputView)
+        )
     }
 
     /**
@@ -127,16 +130,14 @@ internal class PrimaryComposeSceneMediator(
     fun setLayout(value: PrimaryComposeSceneMediatorLayout) {
         when (value) {
             PrimaryComposeSceneMediatorLayout.Fill -> {
-                metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints.set(
-                    metalView.layoutConstraintsToMatch(userInputView)
+                userInputViewConstraints.set(
+                    userInputView.layoutConstraintsToMatch(view)
                 )
             }
 
             is PrimaryComposeSceneMediatorLayout.Center -> {
-                metalView.translatesAutoresizingMaskIntoConstraints = false
-                constraints.set(
-                    metalView.layoutConstraintsToCenterInParent(parentView, value.size)
+                userInputViewConstraints.set(
+                    userInputView.layoutConstraintsToCenterInParent(view, value.size)
                 )
             }
         }
@@ -163,13 +164,13 @@ internal class PrimaryComposeSceneMediator(
         metalView.isForcedToPresentWithTransactionEveryFrame = true
 
         setLayout(PrimaryComposeSceneMediatorLayout.Center(targetSize))
-        metalView.transform = coordinator.targetTransform
+        userInputView.transform = coordinator.targetTransform
 
         coordinator.animateAlongsideTransition(
             animation = {
                 startSnapshotView.alpha = 0.0
                 startSnapshotView.transform = CGAffineTransformInvert(coordinator.targetTransform)
-                metalView.transform = CGAffineTransformIdentity.readValue()
+                userInputView.transform = CGAffineTransformIdentity.readValue()
             },
             completion = {
                 startSnapshotView.removeFromSuperview()
@@ -178,6 +179,7 @@ internal class PrimaryComposeSceneMediator(
             }
         )
 
+        userInputView.setNeedsLayout()
         view.layoutIfNeeded()
     }
 }

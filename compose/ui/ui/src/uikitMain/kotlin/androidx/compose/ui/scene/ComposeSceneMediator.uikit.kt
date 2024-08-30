@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
+import androidx.compose.ui.uikit.ExclusiveLayoutConstraints
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
@@ -211,6 +212,9 @@ internal abstract class ComposeSceneMediator(
      */
     internal val view = ComposeSceneMediatorView()
 
+    /**
+     * View that handles the user input events and hosts interop views.
+     */
     protected val userInputView =
         UserInputView(
             ::hitTestInteropView,
@@ -364,12 +368,15 @@ internal abstract class ComposeSceneMediator(
     var density by scene::density
     var layoutDirection by scene::layoutDirection
 
+    protected val userInputViewConstraints = ExclusiveLayoutConstraints()
+
     init {
         view.translatesAutoresizingMaskIntoConstraints = false
 
         userInputView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(userInputView)
-        NSLayoutConstraint.activateConstraints(
+
+        userInputViewConstraints.set(
             userInputView.layoutConstraintsToMatch(view)
         )
     }
