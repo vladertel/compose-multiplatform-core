@@ -43,6 +43,8 @@ internal class ComposeSceneLayers {
      */
     private var removedLayersTransactions = mutableListOf<UIKitInteropTransaction>()
 
+    private var layersCache = mutableListOf<UIKitComposeSceneLayer>()
+
     val view = ComposeSceneLayersView()
 
     val metalView: MetalView = MetalView(
@@ -193,10 +195,11 @@ internal class ComposeSceneLayers {
         val composeCanvas = canvas.asComposeCanvas()
 
         // Some layers may be removed during rendering, because recomposition will happen in the
-        // process, so we need to make a copy of the list
-        val layersCopy = layers.map { it }
-        layersCopy.fastForEach {
+        // process, so we need to make a temporary copy of the list
+        layersCache.addAll(layers)
+        layersCache.fastForEach {
             it.render(composeCanvas, nanoTime)
         }
+        layersCache.clear()
     }
 }
