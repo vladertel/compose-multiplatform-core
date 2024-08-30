@@ -66,10 +66,10 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.RenderNodeLayer
-import androidx.compose.ui.platform.asDragAndDropManager
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
+import androidx.compose.ui.scene.OwnerDragAndDropManager
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
@@ -124,8 +124,9 @@ internal class RootNodeOwner(
             platformContext.parentFocusManager.clearFocus(true)
         },
     )
-    private val dragAndDropManager: DragAndDropManager =
-        platformContext.createDragAndDropManager().asDragAndDropManager()
+
+    val dragAndDropManager = OwnerDragAndDropManager(platformContext)
+
     private val rootSemanticsNode = EmptySemanticsModifier()
 
     private val rootModifier = EmptySemanticsElement(rootSemanticsNode)
@@ -333,7 +334,7 @@ internal class RootNodeOwner(
         ): Nothing {
             awaitCancellation()
         }
-        override val dragAndDropManager: DragAndDropManager = this@RootNodeOwner.dragAndDropManager
+        override val dragAndDropManager = this@RootNodeOwner.dragAndDropManager
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
