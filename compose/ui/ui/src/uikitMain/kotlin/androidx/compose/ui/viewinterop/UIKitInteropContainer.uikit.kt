@@ -30,7 +30,7 @@ internal class UIKitInteropContainer(
 ) : InteropContainer {
     override var rootModifier: TrackInteropPlacementModifierNode? = null
     private var interopViews = mutableMapOf<InteropView, InteropViewHolder>()
-    private var transaction = UIKitInteropMutableTransaction()
+    private var transaction = UIKitInteropMutableTransaction(isInteropActive = false)
 
     // TODO: Android reuses `owner.snapshotObserver`. We should probably do the same with RootNodeOwner.
     /**
@@ -74,7 +74,9 @@ internal class UIKitInteropContainer(
      */
     fun retrieveTransaction(): UIKitInteropTransaction {
         val result = transaction
-        transaction = UIKitInteropMutableTransaction()
+        transaction = UIKitInteropMutableTransaction(
+            isInteropActive = interopViews.isNotEmpty()
+        )
         return result
     }
 
@@ -82,7 +84,7 @@ internal class UIKitInteropContainer(
         val interopView = checkNotNull(holder.getInteropView())
 
         if (interopViews.isEmpty()) {
-            transaction.state = UIKitInteropState.Began
+            transaction.isInteropActive = true
             snapshotObserver.start()
         }
 
@@ -107,7 +109,7 @@ internal class UIKitInteropContainer(
         interopViews.remove(interopView)
 
         if (interopViews.isEmpty()) {
-            transaction.state = UIKitInteropState.Ended
+            transaction.isInteropActive = false
             snapshotObserver.stop()
         }
 

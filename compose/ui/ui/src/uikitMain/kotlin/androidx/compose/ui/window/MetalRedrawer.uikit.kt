@@ -19,9 +19,7 @@ package androidx.compose.ui.window
 import androidx.compose.ui.uikit.utils.CMPMetalDrawablesHandler
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.trace
-import androidx.compose.ui.viewinterop.UIKitInteropState
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
-import androidx.compose.ui.viewinterop.isNotEmpty
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
@@ -191,12 +189,14 @@ internal class MetalRedrawer(
      */
     private var isInteropActive = false
         set(value) {
-            field = value
+            if (field != value) {
+                // If active, make metalLayer transparent, opaque otherwise.
+                // Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
+                updateLayerOpacity()
+                metalLayer.drawsAsynchronously = !value
+            }
 
-            // If active, make metalLayer transparent, opaque otherwise.
-            // Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
-            updateLayerOpacity()
-            metalLayer.drawsAsynchronously = !value
+            field = value
         }
 
     private fun updateLayerOpacity() {
@@ -357,11 +357,13 @@ internal class MetalRedrawer(
             }
 
             val interopTransaction = retrieveInteropTransaction()
-            if (interopTransaction.state == UIKitInteropState.Began) {
+
+            if (interopTransaction.isInteropActive) {
                 isInteropActive = true
             }
+
             val presentsWithTransaction =
-                isForcedToPresentWithTransactionEveryFrame || interopTransaction.isNotEmpty()
+                isForcedToPresentWithTransactionEveryFrame || interopTransaction.actions.isNotEmpty()
             metalLayer.presentsWithTransaction = presentsWithTransaction
 
             // TODO: encoding on separate thread requires investigation for reported crashes
@@ -406,7 +408,7 @@ internal class MetalRedrawer(
                             it.invoke()
                         }
 
-                        if (interopTransaction.state == UIKitInteropState.Ended) {
+                        if (interopTransaction.isInteropActive.not()) {
                             isInteropActive = false
                         }
                     }
