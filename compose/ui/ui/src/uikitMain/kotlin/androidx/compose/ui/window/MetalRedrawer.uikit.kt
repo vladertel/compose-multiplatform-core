@@ -19,6 +19,7 @@ package androidx.compose.ui.window
 import androidx.compose.ui.uikit.utils.CMPMetalDrawablesHandler
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.trace
+import androidx.compose.ui.viewinterop.UIKitInteropAction
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
@@ -125,8 +126,8 @@ internal class InflightCommandBuffers(
 
 internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,
-    private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
-    private val render: (Canvas, targetTimestamp: NSTimeInterval) -> Unit
+    private var retrieveInteropTransaction: () -> UIKitInteropTransaction,
+    private var render: (Canvas, targetTimestamp: NSTimeInterval) -> Unit
 ) {
     /**
      * A wrapper around CAMetalLayer that allows to perform operations on its drawables without
@@ -204,6 +205,7 @@ internal class MetalRedrawer(
     }
 
     /**
+     * Display link for driving the rendering loop.
      * null after [dispose] call
      */
     private var caDisplayLink: CADisplayLink? = CADisplayLink.displayLinkWithTarget(
@@ -247,6 +249,15 @@ internal class MetalRedrawer(
 
     fun dispose() {
         check(caDisplayLink != null) { "MetalRedrawer.dispose() was called more than once" }
+
+        retrieveInteropTransaction = {
+            object : UIKitInteropTransaction {
+                override val isInteropActive: Boolean = false
+                override val actions = emptyList<UIKitInteropAction>()
+            }
+        }
+
+        render = { _, _ -> }
 
         releaseCachedCommandQueue(queue)
 

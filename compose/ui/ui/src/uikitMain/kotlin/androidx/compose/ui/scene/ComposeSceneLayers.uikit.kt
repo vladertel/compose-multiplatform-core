@@ -93,6 +93,7 @@ internal class ComposeSceneLayers {
     }
 
     fun dispose(hasViewAppeared: Boolean) {
+        view.dispose()
         metalView.dispose()
 
         // `dispose` is called instead of `close`, because `close` is also used imperatively
