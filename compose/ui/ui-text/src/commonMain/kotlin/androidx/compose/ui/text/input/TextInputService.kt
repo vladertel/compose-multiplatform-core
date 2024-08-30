@@ -34,7 +34,6 @@ import androidx.compose.ui.text.TextLayoutResult
  * it with [stopInput].
  */
 // Open for testing purposes.
-@Deprecated("Use PlatformTextInputModifierNode instead.")
 open class TextInputService(private val platformTextInputService: PlatformTextInputService) {
     private val _currentInputSession: AtomicReference<TextInputSession?> = AtomicReference(null)
 
@@ -284,7 +283,6 @@ class TextInputSession(
 }
 
 /** Platform specific text input service. */
-@Deprecated("Use PlatformTextInputModifierNode instead.")
 interface PlatformTextInputService {
     /**
      * Start text input session for given client.

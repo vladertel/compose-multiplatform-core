@@ -91,7 +91,6 @@ import androidx.compose.ui.viewinterop.pointerInteropFilter
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.awaitCancellation
 
 /**
  * Owner of root [LayoutNode].
@@ -324,16 +323,15 @@ internal class RootNodeOwner(
         // TODO https://youtrack.jetbrains.com/issue/CMP-1572/Support-SemanticAutofill
         override val semanticAutofill: SemanticAutofill? get() = null
         override val density get() = this@RootNodeOwner.density
-        override val textInputService = TextInputService(platformContext.textInputService)
+        override val textInputService =
+            TextInputService(platformContext.textInputService)
         override val softwareKeyboardController =
             DelegatingSoftwareKeyboardController(textInputService)
 
-        // TODO https://youtrack.jetbrains.com/issue/COMPOSE-733/Merge-1.6.-Apply-changes-for-the-new-text-input
         override suspend fun textInputSession(
             session: suspend PlatformTextInputSessionScope.() -> Nothing
-        ): Nothing {
-            awaitCancellation()
-        }
+        ) = platformContext.textInputSession(session)
+
         override val dragAndDropManager = this@RootNodeOwner.dragAndDropManager
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
@@ -534,6 +532,7 @@ internal class RootNodeOwner(
 
     private inner class PlatformRootForTestImpl : PlatformRootForTest {
         override val density get() = this@RootNodeOwner.density
+        @Suppress("OVERRIDE_DEPRECATION")
         override val textInputService get() = owner.textInputService
         override val semanticsOwner get() = this@RootNodeOwner.semanticsOwner
         override val visibleBounds: Rect
