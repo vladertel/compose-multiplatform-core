@@ -27,6 +27,7 @@ import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
 
+// TODO: add cross-fade orientation transition like in `ComposeHostingViewController`
 /**
  * A class responsible for managing and rendering [UIKitComposeSceneLayer]s.
  */
