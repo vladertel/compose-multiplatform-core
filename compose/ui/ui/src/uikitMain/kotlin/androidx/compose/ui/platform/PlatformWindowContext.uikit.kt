@@ -45,9 +45,7 @@ internal class PlatformWindowContext {
      */
     private var windowContainer: UIView? = null
 
-    fun setWindowFocused(focused: Boolean) {
-        windowInfo.isWindowFocused = focused
-    }
+    var isWindowFocused by windowInfo::isWindowFocused
 
     fun setWindowContainer(windowContainer: UIView) {
         this.windowContainer = windowContainer

@@ -130,7 +130,7 @@ internal class ComposeHostingViewController(
     val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
     private val focusStack = FocusStack()
     private val windowContext = PlatformWindowContext().apply {
-        setWindowFocused(true)
+        isWindowFocused = true
     }
 
     /*
