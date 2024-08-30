@@ -143,41 +143,6 @@ internal class UIKitTextInputService(
         showSoftwareKeyboard()
     }
 
-    fun startInput(
-        value: TextFieldStateAdapter,
-        imeOptions: ImeOptions,
-        onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: ((ImeAction) -> Unit)?
-    ) {
-        startInputImpl(value, imeOptions, onEditCommand, onImeActionPerformed ?: {})
-    }
-
-    private fun startInputImpl(
-        value: TextFieldStateAdapter,
-        imeOptions: ImeOptions,
-        onEditCommand: (List<EditCommand>) -> Unit,
-        onImeActionPerformed: (ImeAction) -> Unit
-    ) {
-//        fun valueFromTextFieldStateAdapter(state: TextFieldStateAdapter) =
-//        TextFieldValue(text = state.text.toString(), selection = state.selection, composition = state.composition)
-
-        currentInput = CurrentInput(valueFromTextFieldStateAdapter(value), onEditCommand)
-//         Done before
-        _tempCurrentInputSession = EditProcessor().apply {
-            reset(valueFromTextFieldStateAdapter(value), null)
-        }
-        currentImeOptions = imeOptions
-        currentImeActionHandler = onImeActionPerformed
-
-        attachIntermediateTextInputView()
-        textUIView?.input = createSkikoInput(valueFromTextFieldStateAdapter(value))
-        textUIView?.inputTraits = getUITextInputTraits(imeOptions)
-
-        showSoftwareKeyboard()
-    }
-
-
-
     override fun stopInput() {
         currentInput = null
         _tempCurrentInputSession = null
@@ -284,9 +249,6 @@ internal class UIKitTextInputService(
         val commandList = commands.toList()
         _tempCurrentInputSession?.apply(commandList)
         currentInput?.onEditCommand?.invoke(commandList)
-        currentInput?.let { input ->
-            input.onEditCommand(commandList)
-        }
         val newValue = _tempCurrentInputSession?.toTextFieldValue() ?: return
         updateState(currentInput?.value, newValue)
     }
@@ -510,13 +472,6 @@ internal class UIKitTextInputService(
          */
         override fun textInRange(range: IntRange): String {
             val text = getState()?.text ?: ""
-            println("LET'S DEBUG")
-            println("range = $range")
-            println("text = ${text}")
-            println("min(range.last + 1, text.length) => min(${range.last + 1}, ${text.length}) = ${min(range.last + 1, text.length)}")
-            println("(range.first, min(range.last + 1, text.length) = (${range.first}, ${min(range.last + 1, text.length)})")
-            println("text.substring(range.first, min(range.last + 1, text.length)) = ${text.substring(range.first, min(range.last + 1, text.length))}")
-
             return text.substring(range.first, min(range.last + 1, text.length))
         }
 
@@ -617,18 +572,3 @@ private data class CurrentInput(
     var value: TextFieldValue,
     val onEditCommand: (List<EditCommand>) -> Unit
 )
-
-//private class TextFieldValueStateAdapter(
-//    val value: TextFieldValue
-//): TextFieldStateAdapter {
-//
-//    override val text: CharSequence
-//        get() = value.text
-//
-//    override val selection: TextRange
-//        get() = value.selection
-//
-//    override val composition: TextRange?
-//        get() = value.composition
-//
-//}

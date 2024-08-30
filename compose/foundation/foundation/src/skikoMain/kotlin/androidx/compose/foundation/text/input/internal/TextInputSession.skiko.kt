@@ -39,7 +39,6 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
 ): Nothing {
     val editProcessor = EditProcessor()
     fun onEditCommand(commands: List<EditCommand>) {
-        println("== onEditCommand")
         editProcessor.reset(
             value = with(state.visualText) {
                 TextFieldValue(
@@ -54,8 +53,6 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
         val newValue = editProcessor.apply(commands)
 
         state.replaceAll(newValue.text)
-        println("== replacedVisualText = ${state.visualText}")
-
         state.editUntransformedTextAsUser {
             val untransformedSelection = state.mapFromTransformed(newValue.selection)
             setSelection(untransformedSelection.start, untransformedSelection.end)
