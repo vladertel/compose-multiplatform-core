@@ -36,6 +36,7 @@ class PreventDefaultTest : OnCanvasTests {
     fun testPreventDefault() {
         val fr = FocusRequester()
         var changedValue = ""
+
         composableContent {
             TextField(
                 value = "",
@@ -47,25 +48,27 @@ class PreventDefaultTest : OnCanvasTests {
             }
         }
 
-        var stack = mutableListOf<Boolean>()
+        val stack = mutableListOf<Boolean>()
+
+        val canvas = getCanvas()
 
         getCanvas().addEventListener("keydown", { event ->
             stack.add(event.defaultPrevented)
         })
 
         // dispatchEvent synchronously invokes all the listeners
-        dispatchEvents(keyDownEvent("c"))
+        canvas.dispatchEvent(keyDownEvent("c"))
         assertEquals(1, stack.size)
         assertTrue(stack.last())
 
-        dispatchEvents(keyDownEventUnprevented())
+        canvas.dispatchEvent(keyDownEventUnprevented())
         assertEquals(2, stack.size)
         assertFalse(stack.last())
 
         assertEquals(changedValue, "c")
 
-        // copy shortcut should not be prevented (we let browser create a corresponding event)
-        dispatchEvents(keyDownEvent("c", metaKey = true, ctrlKey = true))
+        // copy shortcut should not be prevented (we let the browser create a corresponding event)
+        canvas.dispatchEvent(keyDownEvent("c", metaKey = true, ctrlKey = true))
         assertEquals(3, stack.size)
         assertFalse(stack.last())
 

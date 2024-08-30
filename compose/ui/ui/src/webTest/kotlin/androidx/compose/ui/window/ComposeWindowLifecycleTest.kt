@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.OnCanvasTests
 import androidx.compose.ui.sendFromScope
 import androidx.lifecycle.Lifecycle
@@ -26,7 +25,6 @@ import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runTest
@@ -34,16 +32,10 @@ import kotlinx.coroutines.test.runTest
 
 class ComposeWindowLifecycleTest : OnCanvasTests {
 
-    private lateinit var lifecycleOwner: LifecycleOwner
-
-    override fun createComposeViewport(content: @Composable () -> Unit) {
-        lifecycleOwner = ComposeWindow(canvas = getCanvas(), content = content, state = DefaultWindowState(document.documentElement!!))
-    }
-
     @Test
     @Ignore // ignored while investigating CI issues: this test opens a new browser window which can be the cause
     fun allEvents() = runTest {
-        composableContent {  }
+        val lifecycleOwner = composableContent {  }
 
         getCanvas().focus()
 

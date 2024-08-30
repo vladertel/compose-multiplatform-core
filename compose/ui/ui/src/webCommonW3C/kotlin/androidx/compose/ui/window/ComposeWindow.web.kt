@@ -256,7 +256,7 @@ internal class ComposeWindow(
         canvasEvents.addDisposableEvent(type) { event -> handler(event as T) }
     }
 
-    private fun processKeyboardEvent(keyboardEvent: KeyboardEvent) {
+    internal fun processKeyboardEvent(keyboardEvent: KeyboardEvent) {
         val processed = scene.sendKeyEvent(keyboardEvent.toComposeEvent())
         if (processed) keyboardEvent.preventDefault()
     }
@@ -399,7 +399,7 @@ internal class ComposeWindow(
         isDisposed = true
     }
 
-    private fun onTouchEvent(
+    internal fun onTouchEvent(
         event: TouchEvent,
         offset: Offset,
     ) {
@@ -443,7 +443,7 @@ internal class ComposeWindow(
 
     }
 
-    private fun onMouseEvent(
+    internal fun onMouseEvent(
         event: MouseEvent,
     ) {
         keyboardModeState = KeyboardModeState.Hardware

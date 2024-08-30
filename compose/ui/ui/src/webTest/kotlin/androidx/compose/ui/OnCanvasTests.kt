@@ -70,23 +70,16 @@ internal interface OnCanvasTests {
         document.body!!.appendChild(canvas)
     }
 
-    fun composableContent(content: @Composable () -> Unit) {
+    fun composableContent(content: @Composable () -> Unit): ComposeWindow {
         // We should use this method whenever we are relying on the fact that document coordinates start exactly at (0, 0)
         // TODO: strictly speaking, this way one test suit affects the other in that sense that styles can be injected by different tests suite
         injectDefaultStyles()
         resetCanvas()
-        createComposeViewport(content)
+        return createComposeViewport(content)
     }
 
-    fun createComposeViewport(content: @Composable () -> Unit) {
-        ComposeWindow(canvas = getCanvas(), content = content, state = DefaultWindowState(document.documentElement!!))
-    }
-
-    fun dispatchEvents(vararg events: Any) {
-        val canvas = getCanvas()
-        for (event in events) {
-            canvas.dispatchEvent(event as Event)
-        }
+    fun createComposeViewport(content: @Composable () -> Unit): ComposeWindow {
+        return ComposeWindow(canvas = getCanvas(), content = content, state = DefaultWindowState(document.documentElement!!))
     }
 }
 

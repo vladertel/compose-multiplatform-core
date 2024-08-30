@@ -27,6 +27,7 @@ import androidx.compose.ui.events.createTouchEvent
 import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.sendFromScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,6 +37,7 @@ import kotlinx.browser.document
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runTest
+import org.w3c.dom.TouchEvent
 
 class TextInputTests : OnCanvasTests  {
 
@@ -48,7 +50,7 @@ class TextInputTests : OnCanvasTests  {
 
         val (firstFocusRequester, secondFocusRequester) = FocusRequester.createRefs()
 
-        composableContent {
+        val composeWindow = composableContent {
             TextField(
                 value = "",
                 onValueChange = { value ->
@@ -73,43 +75,37 @@ class TextInputTests : OnCanvasTests  {
 
         assertNull(document.querySelector("textarea"))
 
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("1")
-        )
+        composeWindow.processKeyboardEvent(keyDownEvent("s"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("e"))
+        composeWindow.processKeyboardEvent(keyDownEvent("p"))
+        composeWindow.processKeyboardEvent(keyDownEvent("1"))
 
 
         assertEquals("step1", textInputChannel.receive())
         assertNull(document.querySelector("textarea"))
 
         // trigger virtual keyboard
-        dispatchEvents(createTouchEvent("touchstart"))
+        composeWindow.onTouchEvent(createTouchEvent("touchstart") as TouchEvent, Offset.Zero)
         secondFocusRequester.requestFocus()
 
         assertNotNull(document.querySelector("textarea"))
 
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("2")
-        )
+        composeWindow.processKeyboardEvent(keyDownEvent("s"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("e"))
+        composeWindow.processKeyboardEvent(keyDownEvent("p"))
+        composeWindow.processKeyboardEvent(keyDownEvent("2"))
 
         assertEquals("step2", textInputChannel.receive())
 
         val backingField = document.querySelector("textarea")!!
 
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("3")
-        )
+        composeWindow.processKeyboardEvent(keyDownEvent("s"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("e"))
+        composeWindow.processKeyboardEvent(keyDownEvent("p"))
+        composeWindow.processKeyboardEvent(keyDownEvent("3"))
 
         assertEquals("step2step3", textInputChannel.receive())
 
@@ -122,16 +118,14 @@ class TextInputTests : OnCanvasTests  {
         assertEquals("step2step3step4", textInputChannel.receive())
 
         // trigger hardware keyboard
-        dispatchEvents(createMouseEvent("mousedown"))
+        composeWindow.onMouseEvent(createMouseEvent("mousedown"))
         firstFocusRequester.requestFocus()
 
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("5")
-        )
+        composeWindow.processKeyboardEvent(keyDownEvent("s"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("e"))
+        composeWindow.processKeyboardEvent(keyDownEvent("p"))
+        composeWindow.processKeyboardEvent(keyDownEvent("5"))
 
         assertEquals("step1step5", textInputChannel.receive())
     }

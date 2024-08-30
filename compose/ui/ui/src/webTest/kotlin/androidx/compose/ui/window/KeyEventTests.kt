@@ -47,7 +47,8 @@ class KeyEventTests : OnCanvasTests {
         val fr = FocusRequester()
         var mapping = ""
         var k: Key? = null
-        composableContent {
+
+        val composeWindow = composableContent {
             Box(
                 Modifier.size(1000.dp).background(Color.Red).focusRequester(fr).focusTarget()
                     .onKeyEvent {
@@ -71,7 +72,7 @@ class KeyEventTests : OnCanvasTests {
 
 
         ('a'..'z').forEachIndexed { index, c ->
-            dispatchEvents(keyDownEvent(c.toString()))
+            composeWindow.processKeyboardEvent(keyDownEvent(c.toString()))
             assertEquals(listOfKeys[index], k)
         }
 
@@ -82,7 +83,7 @@ class KeyEventTests : OnCanvasTests {
 
         ('0'..'9').forEachIndexed { index, c ->
             val id = c.toString()
-            dispatchEvents(keyDownEvent(id, code = "Digit${id}"))
+            composeWindow.processKeyboardEvent(keyDownEvent(id, code = "Digit${id}"))
             assertEquals(listOfNumbers[index], k)
         }
     }
@@ -96,7 +97,7 @@ class KeyEventTests : OnCanvasTests {
         var lastKeyEvent: KeyEvent? = null
         var stopPropagation = true
 
-        composableContent {
+        val composeWindow = composableContent {
             TextField(
                 value = textValue.value,
                 onValueChange = { textValue.value = it },
@@ -110,18 +111,18 @@ class KeyEventTests : OnCanvasTests {
             }
         }
 
-        dispatchEvents(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
         assertEquals(Key.T, lastKeyEvent!!.key)
         assertEquals("", textValue.value)
 
         stopPropagation = false
-        dispatchEvents(
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("x")
-        )
+
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("e"))
+        composeWindow.processKeyboardEvent(keyDownEvent("s"))
+        composeWindow.processKeyboardEvent(keyDownEvent("t"))
+        composeWindow.processKeyboardEvent(keyDownEvent("x"))
+
         assertEquals(Key.X, lastKeyEvent!!.key)
         assertEquals("testx", textValue.value)
     }

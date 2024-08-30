@@ -27,7 +27,6 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.NonCancellable.isActive
@@ -41,7 +40,7 @@ class MouseEventsTest : OnCanvasTests {
     fun testPointerEvents() = runTest {
         val pointerEvents = mutableListOf<PointerEvent>()
 
-        composableContent {
+        val composeWindow = composableContent {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -55,11 +54,9 @@ class MouseEventsTest : OnCanvasTests {
             ) {}
         }
 
-        dispatchEvents(
-            MouseEvent("mouseenter", MouseEventInit(100, 100)),
-            MouseEvent("mousedown", MouseEventInit(100, 100, button = 0, buttons = 1)),
-            MouseEvent("mouseup", MouseEventInit(100, 100, button = 0, buttons = 0))
-        )
+        composeWindow.onMouseEvent(MouseEvent("mouseenter", MouseEventInit(100, 100)))
+        composeWindow.onMouseEvent(MouseEvent("mousedown", MouseEventInit(100, 100, button = 0, buttons = 1)))
+        composeWindow.onMouseEvent(MouseEvent("mouseup", MouseEventInit(100, 100, button = 0, buttons = 0)))
 
         assertEquals(3, pointerEvents.size)
         assertEquals(PointerEventType.Enter, pointerEvents[0].type)
@@ -70,10 +67,8 @@ class MouseEventsTest : OnCanvasTests {
         assertEquals(PointerEventType.Release, pointerEvents[2].type)
         assertEquals(PointerButton.Primary, pointerEvents[2].button)
 
-        dispatchEvents(
-            MouseEvent("mousedown", MouseEventInit(100, 100, button = 2, buttons = 2)),
-            MouseEvent("mouseup", MouseEventInit(100, 100, button = 2, buttons = 0))
-        )
+        composeWindow.onMouseEvent(MouseEvent("mousedown", MouseEventInit(100, 100, button = 2, buttons = 2)))
+        composeWindow.onMouseEvent(MouseEvent("mouseup", MouseEventInit(100, 100, button = 2, buttons = 0)))
 
         assertEquals(5, pointerEvents.size)
 
@@ -90,7 +85,7 @@ class MouseEventsTest : OnCanvasTests {
         var primaryClickedCounter = 0
         var secondaryClickedCounter = 0
 
-        composableContent {
+        val composeWindow = composableContent {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -99,19 +94,16 @@ class MouseEventsTest : OnCanvasTests {
             ) {}
         }
 
-        dispatchEvents(
-            MouseEvent("mouseenter", MouseEventInit(100, 100)),
-            MouseEvent("mousedown", MouseEventInit(100, 100, button = 0, buttons = 1)),
-            MouseEvent("mouseup", MouseEventInit(100, 100, button = 0, buttons = 0))
-        )
+
+        composeWindow.onMouseEvent(MouseEvent("mouseenter", MouseEventInit(100, 100)))
+        composeWindow.onMouseEvent(MouseEvent("mousedown", MouseEventInit(100, 100, button = 0, buttons = 1)))
+        composeWindow.onMouseEvent(MouseEvent("mouseup", MouseEventInit(100, 100, button = 0, buttons = 0)))
 
         assertEquals(1, primaryClickedCounter)
         assertEquals(0, secondaryClickedCounter)
 
-        dispatchEvents(
-            MouseEvent("mousedown", MouseEventInit(100, 100, button = 2, buttons = 2)),
-            MouseEvent("mouseup", MouseEventInit(100, 100, button = 2, buttons = 0))
-        )
+        composeWindow.onMouseEvent(MouseEvent("mousedown", MouseEventInit(100, 100, button = 2, buttons = 2)))
+        composeWindow.onMouseEvent(MouseEvent("mouseup", MouseEventInit(100, 100, button = 2, buttons = 0)))
 
         assertEquals(1, primaryClickedCounter)
         assertEquals(1, secondaryClickedCounter)
@@ -121,7 +113,7 @@ class MouseEventsTest : OnCanvasTests {
     fun testPointerButtonIsNullForNoClickEvents() = runTest {
         var event: PointerEvent? = null
 
-        composableContent {
+        val composeWindow = composableContent {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -137,15 +129,15 @@ class MouseEventsTest : OnCanvasTests {
 
         assertEquals(null, event)
 
-        dispatchEvents(MouseEvent("mouseenter", MouseEventInit(100, 100)))
+        composeWindow.onMouseEvent(MouseEvent("mouseenter", MouseEventInit(100, 100)))
         assertEquals(PointerEventType.Enter, event!!.type)
         assertEquals(null, event!!.button)
 
-        dispatchEvents(MouseEvent("mousemove", MouseEventInit(101, 101, clientX = 101, clientY = 101)))
+        composeWindow.onMouseEvent(MouseEvent("mousemove", MouseEventInit(101, 101, clientX = 101, clientY = 101)))
         assertEquals(PointerEventType.Move, event!!.type)
         assertEquals(null, event!!.button)
 
-        dispatchEvents(MouseEvent("mouseleave", MouseEventInit(0, 0, clientX = 0, clientY = 0)))
+        composeWindow.onMouseEvent(MouseEvent("mouseleave", MouseEventInit(0, 0, clientX = 0, clientY = 0)))
         assertEquals(PointerEventType.Exit, event!!.type)
         assertEquals(null, event!!.button)
     }
