@@ -22,7 +22,7 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
-internal class ComposeRootView(
+internal class ComposeView(
     private var onDidMoveToWindow: (UIWindow?) -> Unit,
     private var onLayoutSubviews: () -> Unit,
     useOpaqueConfiguration: Boolean
@@ -37,6 +37,11 @@ internal class ComposeRootView(
         super.didMoveToWindow()
 
         onDidMoveToWindow(window)
+
+        // To avoid a situation where a user decided to call [layoutIfNeeded] on the detached view
+        // using a certain frame and it will be attached to the window later, so there is a chance
+        // that [onLayoutSubviews] will not be called when a [window] is set.
+        setNeedsLayout()
     }
 
     override fun layoutSubviews() {

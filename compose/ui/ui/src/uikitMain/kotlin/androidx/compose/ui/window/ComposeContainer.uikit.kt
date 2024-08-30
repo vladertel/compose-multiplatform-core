@@ -96,7 +96,7 @@ import platform.darwin.dispatch_get_main_queue
 // TODO: Move to androidx.compose.ui.scene
 @OptIn(BetaInteropApi::class, ExperimentalComposeApi::class)
 @ExportObjCClass
-internal class ComposeViewController(
+internal class ComposeHostingViewController(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
     private val coroutineContext: CoroutineContext = Dispatchers.Main
@@ -105,7 +105,7 @@ internal class ComposeViewController(
     val lifecycleOwner = ViewControllerBasedLifecycleOwner()
     val hapticFeedback = CupertinoHapticFeedback()
 
-    private val rootView = ComposeRootView(
+    private val rootView = ComposeView(
         onDidMoveToWindow = ::onDidMoveToWindow,
         onLayoutSubviews = ::onLayoutSubviews,
         useOpaqueConfiguration = configuration.opaque
@@ -188,6 +188,9 @@ internal class ComposeViewController(
     private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
 
+        /**
+         * If platform layers are enabled, we need to update the mediator based on the window properties.
+         */
         mediator?.updateBasedOnView(view)
     }
 
@@ -301,7 +304,7 @@ internal class ComposeViewController(
                     },
                     createComposeSceneContext = ::createComposeSceneContext,
                     providingCompositionLocals = {
-                        ProvideContainerCompositionLocals(this@ComposeViewController, it)
+                        ProvideContainerCompositionLocals(this@ComposeHostingViewController, it)
                     },
                     metalView = layers.metalView,
                     onGestureEvent = layers::onGestureEvent,
@@ -437,9 +440,9 @@ private fun getLayoutDirection() =
 
 @Composable
 internal fun ProvideContainerCompositionLocals(
-    composeViewController: ComposeViewController,
+    composeHostingViewController: ComposeHostingViewController,
     content: @Composable () -> Unit,
-) = with(composeViewController) {
+) = with(composeHostingViewController) {
     CompositionLocalProvider(
         LocalHapticFeedback provides hapticFeedback,
         LocalUIViewController provides this,
