@@ -376,6 +376,8 @@ internal abstract class ComposeSceneMediator(
 
     fun setContent(content: @Composable () -> Unit) {
         view.runOnceOnAppeared {
+            focusStack?.pushAndFocus(userInputView)
+
             scene.setContent {
                 ProvideComposeSceneMediatorCompositionLocals {
                     interopContainer.TrackInteropPlacementContainer(
@@ -406,7 +408,7 @@ internal abstract class ComposeSceneMediator(
 
         textInputService.stopInput()
         applicationForegroundStateListener.dispose()
-        focusStack?.popUntilNext(metalView)
+        focusStack?.popUntilNext(userInputView)
         keyboardManager.dispose()
         userInputView.dispose()
 
