@@ -157,7 +157,12 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             nativeMain.dependsOn(nonAndroidMain)
             nativeMain.dependsOn(nonJvmMain)
             jsMain.dependsOn(webMain)
-            wasmJsMain.dependsOn(webMain)
+            wasmJsMain {
+                dependsOn(webMain)
+                dependencies {
+                    implementation(libs.kotlinXw3c)
+                }
+            }
 
             nonJvmMain {
                 dependencies {
