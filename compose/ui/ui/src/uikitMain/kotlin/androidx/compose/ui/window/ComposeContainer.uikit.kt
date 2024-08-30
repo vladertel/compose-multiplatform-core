@@ -89,7 +89,7 @@ import platform.UIKit.UIWindow
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
-// TODO: ComposeContainer is not the same thing as ComposeViewController, extract the actual
+// TODO: ComposeContainer is not the same thing as ComposeHostingViewController, extract the actual
 //  part responsible for Compose instance management to a separate class.
 //  https://youtrack.jetbrains.com/issue/CMP-5950/iOS-extract-Compose-instance-management-from-ComposeContainer
 
