@@ -30,12 +30,7 @@ import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.unit.toRect
 import kotlin.math.roundToInt
 import kotlinx.cinterop.useContents
-import platform.Foundation.NSKeyValueObservingOptionNew
-import platform.Foundation.addObserver
-import platform.Foundation.observeValueForKeyPath
-import platform.Foundation.removeObserver
 import platform.UIKit.UIView
-import platform.darwin.NSObject
 
 private const val LayerFrameKeyPath = "layer.frame"
 
