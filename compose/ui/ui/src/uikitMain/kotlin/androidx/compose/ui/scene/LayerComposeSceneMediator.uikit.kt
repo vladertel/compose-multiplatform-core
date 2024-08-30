@@ -68,7 +68,6 @@ internal class LayerComposeSceneMediator(
     configuration,
     focusStack,
     windowContext,
-    measureDrawLayerBounds = true,
     coroutineContext,
     composeSceneFactory
 ) {

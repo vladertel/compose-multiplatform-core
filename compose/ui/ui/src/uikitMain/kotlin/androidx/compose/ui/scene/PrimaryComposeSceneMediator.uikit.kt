@@ -85,7 +85,6 @@ internal class PrimaryComposeSceneMediator(
     configuration,
     focusStack,
     windowContext,
-    measureDrawLayerBounds = false,
     coroutineContext,
     composeSceneFactory
 ) {
@@ -99,7 +98,7 @@ internal class PrimaryComposeSceneMediator(
     private val constraints = ExclusiveLayoutConstraints()
 
     init {
-        // metalView layout is set in [setLayout] by the owning implementation
+        // metalView layout is set in [setLayout] by the owner of this mediator
         userInputView.addSubview(metalView)
     }
 

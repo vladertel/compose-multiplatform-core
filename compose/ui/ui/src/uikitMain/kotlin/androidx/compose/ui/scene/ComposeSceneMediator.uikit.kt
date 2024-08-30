@@ -156,10 +156,6 @@ internal abstract class ComposeSceneMediator(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val focusStack: FocusStack?,
     private val windowContext: PlatformWindowContext,
-    /**
-     * @see PlatformContext.measureDrawLayerBounds
-     */
-    private val measureDrawLayerBounds: Boolean,
     private val coroutineContext: CoroutineContext,
     composeSceneFactory: (
         invalidate: () -> Unit,
