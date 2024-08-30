@@ -16,9 +16,4 @@
 
 package androidx.compose.runtime
 
-import kotlin.DeprecationLevel.*
-
-@PublishedApi
-@JvmName("synchronized")
-@Deprecated(level = HIDDEN, message = "Use SynchronizedObjectKt.synchronized() instead")
-internal fun <R> oldSynchronized(lock: SynchronizedObject, block: () -> R): R = synchronized(lock, block)
+internal actual val PTHREAD_MUTEX_ERRORCHECK: Int = platform.posix.PTHREAD_MUTEX_ERRORCHECK

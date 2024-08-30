@@ -16,9 +16,8 @@
 
 package androidx.compose.runtime
 
-import kotlin.DeprecationLevel.*
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias SynchronizedObject = Any
 
 @PublishedApi
-@JvmName("synchronized")
-@Deprecated(level = HIDDEN, message = "Use SynchronizedObjectKt.synchronized() instead")
-internal fun <R> oldSynchronized(lock: SynchronizedObject, block: () -> R): R = synchronized(lock, block)
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()
