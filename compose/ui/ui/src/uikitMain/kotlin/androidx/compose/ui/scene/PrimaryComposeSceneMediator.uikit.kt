@@ -16,12 +16,10 @@
 
 package androidx.compose.ui.scene
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
-import androidx.compose.ui.uikit.ExclusiveLayoutConstraints
 import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.window.FocusStack
@@ -31,8 +29,6 @@ import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
 import platform.CoreGraphics.CGPoint
@@ -41,25 +37,6 @@ import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
-
-private class MetalViewRenderer(
-    private val scene: ComposeScene,
-    private val sceneOffset: () -> Offset,
-) : SkikoRenderDelegate {
-    override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-        canvas.withSceneOffset {
-            scene.render(asComposeCanvas(), nanoTime)
-        }
-    }
-
-    private inline fun Canvas.withSceneOffset(block: Canvas.() -> Unit) {
-        val sceneOffset = sceneOffset()
-        save()
-        translate(sceneOffset.x, sceneOffset.y)
-        block()
-        restore()
-    }
-}
 
 internal sealed interface PrimaryComposeSceneMediatorLayout {
     data object Fill : PrimaryComposeSceneMediatorLayout
