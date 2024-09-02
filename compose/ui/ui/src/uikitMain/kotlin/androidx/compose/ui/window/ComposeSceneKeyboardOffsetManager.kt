@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
@@ -45,7 +44,6 @@ import platform.darwin.sel_registerName
 
 internal class ComposeSceneKeyboardOffsetManager(
     private val view: UIView,
-    private val density: Density,
     private val keyboardOverlapHeightChanged: (Dp) -> Unit
 ) : KeyboardVisibilityObserver {
     private var isDisposed: Boolean = false
@@ -152,6 +150,26 @@ internal class ComposeSceneKeyboardOffsetManager(
                 it.removeFromSuperview()
             }
         }
+        keyboardAnimationListener?.invalidate()
+
+        var previousAnimationProgress = 0.0
+        fun updateAnimationValues(progress: Double) {
+            // Adjust [progress] one frame ahead to partially compensate for the delay between the
+            // current keyboard position and the position of the compose scene elements.
+            val adjustedProgress = max(
+                0.0, min(1.0, progress + (progress - previousAnimationProgress))
+            )
+            previousAnimationProgress = progress
+
+            val currentHeight = previousKeyboardHeight +
+                (keyboardHeight - previousKeyboardHeight) * adjustedProgress
+            keyboardOverlapHeightChanged(max(0.0, currentHeight - viewBottomIndent).dp)
+        }
+
+        if (previousKeyboardHeight == keyboardHeight) {
+            updateAnimationValues(1.0)
+            return
+        }
 
         val animationView = UIView()
         view.addSubview(animationView)
@@ -166,27 +184,6 @@ internal class ComposeSceneKeyboardOffsetManager(
             val layer = animationView.layer.presentationLayer() ?: return 0.0
             return layer.frame.useContents { size.height / animationTargetSize }
         }
-
-        var previousAnimationProgress = 0.0
-        fun updateAnimationValues(progress: Double) {
-            // Adjust [progress] one frame ahead to partially compensate for the delay between the
-            // current keyboard position and the position of the compose scene elements.
-            val adjustedProgress = max(
-                0.0, min(1.0, progress + (progress - previousAnimationProgress))
-            )
-            previousAnimationProgress = progress
-
-//            // Perform already scheduled in Run Loop actions.
-//            // This call helps to synchronize keyboard and scene updates,
-//            // as well as smoothing the animation of ime insets and scene offset.
-//            NSRunLoop.currentRunLoop().runUntilDate(NSDate())
-
-            val currentHeight = previousKeyboardHeight +
-                (keyboardHeight - previousKeyboardHeight) * adjustedProgress
-            keyboardOverlapHeightChanged(max(0.0, currentHeight - viewBottomIndent).dp)
-        }
-
-        keyboardAnimationListener?.invalidate()
 
         //animation listener
         val keyboardDisplayLink = CADisplayLink.displayLinkWithTarget(

@@ -328,7 +328,6 @@ internal class ComposeSceneMediator(
     private val keyboardManager by lazy {
         ComposeSceneKeyboardOffsetManager(
             view = rootView,
-            density = density,
             keyboardOverlapHeightChanged = { height ->
                 keyboardOverlapHeightState.value = height
                 if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
