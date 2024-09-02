@@ -129,6 +129,7 @@ internal class RootNodeOwner(
         onLayoutDirection = { _layoutDirection },
         onClearFocusForOwner = {
             platformContext.parentFocusManager.clearFocus(true)
+            animateRootNodeOffsetChanges = true
         },
     )
 
