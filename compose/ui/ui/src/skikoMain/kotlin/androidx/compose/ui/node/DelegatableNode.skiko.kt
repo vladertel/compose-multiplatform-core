@@ -16,9 +16,11 @@
 
 package androidx.compose.ui.node
 
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.internal.checkPrecondition
 
+@InternalComposeUiApi
 fun DelegatableNode.bringFocusIntoViewParent(rect: Rect?) {
     checkPrecondition(node.isAttached) {
         "Cannot get View because the Modifier node is not currently attached."
