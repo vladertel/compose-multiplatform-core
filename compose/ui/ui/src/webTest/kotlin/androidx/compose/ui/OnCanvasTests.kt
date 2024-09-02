@@ -18,6 +18,7 @@ package androidx.compose.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.CanvasBasedWindow
+import kotlin.test.BeforeTest
 import kotlinx.browser.document
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,11 @@ private const val canvasId: String = "canvasApp"
 internal interface OnCanvasTests {
     fun getCanvas() = document.getElementById(canvasId) as HTMLCanvasElement
 
+    @BeforeTest
+    fun init() {
+        resetCanvas()
+    }
+
     private fun resetCanvas() {
         /** TODO: [kotlin.test.AfterTest] is fixed only in kotlin 2.0
         see https://youtrack.jetbrains.com/issue/KT-61888
@@ -50,7 +56,6 @@ internal interface OnCanvasTests {
     }
 
     fun createComposeWindow(content: @Composable () -> Unit) {
-        resetCanvas()
         CanvasBasedWindow(canvasElementId = canvasId, content = content)
     }
 
