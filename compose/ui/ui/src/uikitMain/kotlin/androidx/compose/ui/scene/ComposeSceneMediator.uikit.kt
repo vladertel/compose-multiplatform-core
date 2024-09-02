@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.uikit.systemDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -68,8 +69,8 @@ import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.viewinterop.LocalInteropContainer
 import androidx.compose.ui.viewinterop.TrackInteropPlacementContainer
 import androidx.compose.ui.viewinterop.UIKitInteropContainer
-import androidx.compose.ui.window.ComposeSceneKeyboardOffsetManager
 import androidx.compose.ui.window.ApplicationForegroundStateListener
+import androidx.compose.ui.window.ComposeSceneKeyboardOffsetManager
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.InteractionUIView
@@ -85,7 +86,6 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
-import platform.CoreGraphics.CGAffineTransformMakeTranslation
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
@@ -106,8 +106,8 @@ import platform.UIKit.UIWindow
  * Layout of sceneView on the screen
  */
 internal sealed interface SceneLayout {
-    object Undefined : SceneLayout
-    object UseConstraintsToFillContainer : SceneLayout
+    data object Undefined : SceneLayout
+    data object UseConstraintsToFillContainer : SceneLayout
     class UseConstraintsToCenter(val size: CValue<CGSize>) : SceneLayout
     class Bounds(val renderBounds: IntRect, val interactionBounds: IntRect) : SceneLayout
 }
@@ -256,14 +256,12 @@ internal class ComposeSceneMediator(
             scene.compositionLocalContext = value
         }
 
-    val focusManager get() = scene.focusManager
-
     private val renderingView: RenderingUIView by lazy {
         renderingUIViewFactory(interopContainer, renderDelegate)
     }
 
     private val applicationForegroundStateListener =
-        ApplicationForegroundStateListener { isForeground ->
+        ApplicationForegroundStateListener { _ ->
             // Sometimes the application can trigger animation and go background before the animation is
             // finished. The scheduled GPU work is performed, but no presentation can be done, causing
             // mismatch between visual state and application state. This can be fixed by forcing
@@ -329,15 +327,13 @@ internal class ComposeSceneMediator(
 
     private val keyboardManager by lazy {
         ComposeSceneKeyboardOffsetManager(
-            configuration = configuration,
-            keyboardOverlapHeightState = keyboardOverlapHeightState,
-            viewProvider = { viewForKeyboardOffsetTransform },
-            composeSceneMediatorProvider = { this },
-            onComposeSceneOffsetChanged = { offset ->
-                viewForKeyboardOffsetTransform.layer.setAffineTransform(
-                    CGAffineTransformMakeTranslation(0.0, -offset)
-                )
-                scene.invalidatePositionInWindow()
+            view = rootView,
+            density = density,
+            keyboardOverlapHeightChanged = { height ->
+                keyboardOverlapHeightState.value = height
+                if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
+                    scene.adjustedFocusAreaInsets = PlatformInsets(bottom = height)
+                }
             }
         )
     }
@@ -379,7 +375,7 @@ internal class ComposeSceneMediator(
             val position = asDpOffset().toOffset(density)
             val interopView = scene.hitTestInteropView(position)
 
-            // Find a group of a holder assocaited with a given interop view or view controller
+            // Find a group of a holder associated with a given interop view or view controller
             interopView?.let {
                 interopContainer.groupForInteropView(it)
             }
@@ -674,10 +670,6 @@ internal class ComposeSceneMediator(
         keyboardManager.stop()
     }
 
-    fun getViewHeight(): Double = renderingView.frame.useContents {
-        size.height
-    }
-
     private var _onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
     private var _onKeyEvent: (KeyEvent) -> Boolean = { false }
     fun setKeyEventListener(
@@ -705,37 +697,30 @@ internal class ComposeSceneMediator(
             || scene.sendKeyEvent(keyEvent)
             || _onKeyEvent(keyEvent)
 
-    @OptIn(ExperimentalComposeApi::class)
-    private var viewForKeyboardOffsetTransform = if (configuration.platformLayers) {
-        rootView
-    } else {
-        container
-    }
-
     private inner class IOSPlatformContext : PlatformContext by PlatformContext.Empty {
         override val windowInfo: WindowInfo get() = windowContext.windowInfo
 
         override fun convertLocalToWindowPosition(localPosition: Offset): Offset =
             windowContext.convertLocalToWindowPosition(
-                viewForKeyboardOffsetTransform,
+                rootView,
                 localPosition
             )
 
         override fun convertWindowToLocalPosition(positionInWindow: Offset): Offset =
             windowContext.convertWindowToLocalPosition(
-                viewForKeyboardOffsetTransform,
+                rootView,
                 positionInWindow
             )
 
         override fun convertLocalToScreenPosition(localPosition: Offset): Offset =
             windowContext.convertLocalToScreenPosition(
-                viewForKeyboardOffsetTransform,
+                rootView,
                 localPosition
             )
 
         override fun convertScreenToLocalPosition(positionOnScreen: Offset): Offset =
             windowContext.convertScreenToLocalPosition(
-                viewForKeyboardOffsetTransform,
+                rootView,
                 positionOnScreen
             )
 

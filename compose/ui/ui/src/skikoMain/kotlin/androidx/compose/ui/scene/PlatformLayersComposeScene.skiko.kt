@@ -28,6 +28,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.RootNodeOwner
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -124,6 +125,12 @@ private class PlatformLayersComposeSceneImpl(
             }
             field = value
             mainOwner.size = value
+        }
+
+    override var adjustedFocusAreaInsets: PlatformInsets
+        get() = mainOwner.adjustedFocusAreaInsets
+        set(value) {
+            mainOwner.adjustedFocusAreaInsets = value
         }
 
     override val focusManager: ComposeSceneFocusManager = ComposeSceneFocusManager(

@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -95,6 +96,12 @@ interface ComposeScene {
      * restrictions and the window size will be utilized to bounds verification.
      */
     var size: IntSize?
+
+    /**
+     * These insets indicate areas that have been obscured by system UI elements
+     * (like status bar, navigation bar, keyboard) and therefore might not be completely visible.
+     */
+    var adjustedFocusAreaInsets: PlatformInsets
 
     /**
      * Top-level composition locals, which will be provided for the Composable content,

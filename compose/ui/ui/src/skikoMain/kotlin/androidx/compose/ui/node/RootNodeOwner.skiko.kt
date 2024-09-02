@@ -16,14 +16,18 @@
 
 package androidx.compose.ui.node
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.animation.withAnimationProgress
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.focus.FocusDirection
@@ -54,6 +58,7 @@ import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.PositionCalculator
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.platform.DefaultAccessibilityManager
@@ -61,6 +66,7 @@ import androidx.compose.ui.platform.DefaultHapticFeedback
 import androidx.compose.ui.platform.DelegatingSoftwareKeyboardController
 import androidx.compose.ui.platform.PlatformClipboardManager
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.RenderNodeLayer
@@ -77,6 +83,7 @@ import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toIntRect
@@ -89,6 +96,8 @@ import androidx.compose.ui.viewinterop.pointerInteropFilter
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.awaitCancellation
 
 /**
@@ -101,7 +110,7 @@ internal class RootNodeOwner(
     density: Density,
     layoutDirection: LayoutDirection,
     size: IntSize?,
-    coroutineContext: CoroutineContext,
+    private val coroutineContext: CoroutineContext,
     val platformContext: PlatformContext,
     private val snapshotInvalidationTracker: SnapshotInvalidationTracker,
     private val inputHandler: ComposeSceneInputHandler,
@@ -190,6 +199,77 @@ internal class RootNodeOwner(
             snapshotObserver.clearInvalidObservations()
             needClearObservations = false
         }
+    }
+
+    private var _adjustedFocusAreaInsets by mutableStateOf(PlatformInsets())
+    var adjustedFocusAreaInsets: PlatformInsets
+        get() = _adjustedFocusAreaInsets
+        set(value) {
+            if (_adjustedFocusAreaInsets != value) {
+                animateRootNodeOffsetChanges = false
+            }
+            _adjustedFocusAreaInsets = value
+        }
+
+    private var lastFocusRect: Rect? = null
+    private fun rootNodeToFocusedRectOffset(currentOffset: IntOffset): IntOffset {
+        if (adjustedFocusAreaInsets == PlatformInsets.Zero) {
+            return IntOffset.Zero
+        }
+
+        lastFocusRect = focusOwner.getFocusRect() ?: lastFocusRect
+        return density.adjustedFocusOffset(
+            focusedRect = lastFocusRect,
+            size = size,
+            currentOffset = currentOffset,
+            insets = adjustedFocusAreaInsets
+        )
+    }
+
+    private var animateRootNodeOffsetChanges by mutableStateOf(false)
+
+    @Composable
+    internal fun RootNodeOwner.OffsetToFocusedRect(content: @Composable () -> Unit) {
+        var currentOffset by remember { mutableStateOf(IntOffset.Zero) }
+        var startOffset by remember { mutableStateOf(IntOffset.Zero) }
+        var offsetProgress by remember { mutableStateOf(1f) }
+        LaunchedEffect(_adjustedFocusAreaInsets, animateRootNodeOffsetChanges) {
+            startOffset = currentOffset
+            if (animateRootNodeOffsetChanges) {
+                if (startOffset == rootNodeToFocusedRectOffset(currentOffset)) {
+                    offsetProgress = 1f
+                } else {
+                    withAnimationProgress(FOCUS_CHANGE_ANIMATION_DURATION) {
+                        offsetProgress = it
+                    }
+                }
+                animateRootNodeOffsetChanges = false
+            } else {
+                offsetProgress = 1f
+            }
+        }
+
+        Layout(
+            content = content,
+            measurePolicy = { measurables, constraints ->
+                val endOffset = rootNodeToFocusedRectOffset(currentOffset)
+
+                // Intentionally update state within composition to trigger second measure and
+                // layout because focus rect may be miscalculated due to simultaneous offset and
+                // window insets changes.
+                currentOffset = startOffset + (endOffset - startOffset) * offsetProgress
+
+                val placeables = measurables.map { it.measure(constraints) }
+                layout(
+                    placeables.maxOfOrNull { it.width } ?: constraints.minWidth,
+                    placeables.maxOfOrNull { it.height } ?: constraints.minHeight
+                ) {
+                    placeables.forEach {
+                        it.place(currentOffset)
+                    }
+                }
+            }
+        )
     }
 
     /**
@@ -301,7 +381,7 @@ internal class RootNodeOwner(
     private inner class OwnerImpl(
         layoutDirection: LayoutDirection,
         override val coroutineContext: CoroutineContext,
-    ) : Owner {
+    ) : Owner, FocusChangeNotifier {
 
         override val root = LayoutNode().also {
             it.layoutDirection = layoutDirection
@@ -318,7 +398,7 @@ internal class RootNodeOwner(
         override val graphicsContext: GraphicsContext = GraphicsContext()
         override val textToolbar get() = platformContext.textToolbar
         override val autofillTree = AutofillTree()
-        override val autofill: Autofill?  get() = null
+        override val autofill: Autofill? get() = null
         override val density get() = this@RootNodeOwner.density
         override val textInputService = TextInputService(platformContext.textInputService)
         override val softwareKeyboardController =
@@ -330,6 +410,7 @@ internal class RootNodeOwner(
         ): Nothing {
             awaitCancellation()
         }
+
         override val dragAndDropManager = this@RootNodeOwner.dragAndDropManager
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
@@ -523,6 +604,60 @@ internal class RootNodeOwner(
         override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
             measureAndLayoutDelegate.registerOnLayoutCompletedListener(listener)
             snapshotInvalidationTracker.requestMeasureAndLayout()
+        }
+
+        override fun onFocusRectChanged(rect: Rect?) {
+            animateRootNodeOffsetChanges = true
+        }
+    }
+
+    companion object {
+        private val FOCUS_CHANGE_ANIMATION_DURATION = 0.15.seconds
+
+        fun Density.adjustedFocusOffset(
+            focusedRect: Rect?,
+            size: IntSize?,
+            currentOffset: IntOffset,
+            insets: PlatformInsets
+        ): IntOffset {
+            focusedRect ?: return IntOffset.Zero
+            size ?: return IntOffset.Zero
+            
+            return IntOffset(
+                x = directionalFocusOffset(
+                    contentSize = size.width.toFloat(),
+                    contentInsetStart = insets.left.toPx(),
+                    contentInsetEnd = insets.right.toPx(),
+                    focusStart = focusedRect.left - currentOffset.x,
+                    focusEnd = focusedRect.right - currentOffset.x
+                ),
+                y = directionalFocusOffset(
+                    contentSize = size.height.toFloat(),
+                    contentInsetStart = insets.top.toPx(),
+                    contentInsetEnd = insets.bottom.toPx(),
+                    focusStart = focusedRect.top - currentOffset.y,
+                    focusEnd = focusedRect.bottom - currentOffset.y
+                )
+            )
+        }
+
+        private fun directionalFocusOffset(
+            contentSize: Float,
+            contentInsetStart: Float,
+            contentInsetEnd: Float,
+            focusStart: Float,
+            focusEnd: Float
+        ): Int {
+            val hiddenFromPart = contentInsetStart - max(focusStart, 0f)
+            val hiddenToPart = contentInsetEnd - contentSize + min(focusEnd, contentSize)
+
+            return if (hiddenFromPart >= 0 && hiddenToPart >= 0) {
+                0
+            } else if (hiddenToPart < 0) {
+                max(0f, min(hiddenFromPart, -hiddenToPart)).roundToInt()
+            } else {
+                min(0f, max(hiddenFromPart, -hiddenToPart)).roundToInt()
+            }
         }
     }
 

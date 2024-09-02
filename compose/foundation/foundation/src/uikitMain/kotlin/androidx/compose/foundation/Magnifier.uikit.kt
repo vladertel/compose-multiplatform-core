@@ -304,12 +304,7 @@ internal class MagnifierNode(
                 ),
                 fromCoordinateSpace = window.coordinateSpace()
             ).useContents {
-                // HACK: Applying additional offset to adjust magnifier location
-                // when platform layers are disabled.
-                val additionalViewOffsetInWindow = view!!.layer.affineTransform().useContents {
-                    Offset(tx.toFloat(), ty.toFloat()) * density.density
-                }
-                Offset(x.toFloat(), y.toFloat()) * density.density + additionalViewOffsetInWindow
+                Offset(x.toFloat(), y.toFloat()) * density.density
             }
         }
 

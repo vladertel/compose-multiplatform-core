@@ -40,6 +40,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.RootNodeOwner
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -144,6 +145,13 @@ private class CanvasLayersComposeSceneImpl(
             field = value
             mainOwner.size = value
             forEachLayer { it.owner.size = value }
+        }
+
+    override var adjustedFocusAreaInsets: PlatformInsets
+        get() = mainOwner.adjustedFocusAreaInsets
+        set(value) {
+            mainOwner.adjustedFocusAreaInsets = value
+            forEachLayer { it.owner.adjustedFocusAreaInsets = value }
         }
 
     override val focusManager: ComposeSceneFocusManager = ComposeSceneFocusManager(

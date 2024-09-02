@@ -16,14 +16,16 @@
 
 package androidx.compose.foundation.relocation
 
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.bringFocusIntoViewParent
 
 /**
  * Platform specific internal API to bring a rectangle into view.
  */
-internal actual fun DelegatableNode.defaultBringIntoViewParent():
-    BringIntoViewParent =
-     BringIntoViewParent { _, _ ->
-        // TODO(b/203204124): Implement this if desktop has a
-        //  concept similar to Android's View.requestRectangleOnScreen.
+internal actual fun DelegatableNode.defaultBringIntoViewParent(): BringIntoViewParent =
+    BringIntoViewParent { childCoordinates, boundsProvider ->
+        val childOffset = childCoordinates.positionInRoot()
+        val rootRect = boundsProvider()?.translate(childOffset)
+        bringFocusIntoViewParent(rootRect)
     }
