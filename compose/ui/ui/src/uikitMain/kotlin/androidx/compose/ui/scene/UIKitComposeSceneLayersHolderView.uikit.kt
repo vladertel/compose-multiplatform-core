@@ -26,7 +26,7 @@ import platform.UIKit.UIView
 /**
  * A view that hosts the [ComposeScene] layers and a metal view shared by all of them.
  */
-internal class ComposeSceneLayersView: UIView(frame = CGRectZero.readValue()) {
+internal class UIKitComposeSceneLayersHolderView: UIView(frame = CGRectZero.readValue()) {
     /**
      * This view is transparent for touches, unless a child view is hit-tested.
      */

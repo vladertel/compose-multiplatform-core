@@ -44,7 +44,6 @@ import kotlinx.cinterop.CValue
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGPoint
 import platform.UIKit.NSLayoutConstraint
-import platform.UIKit.UIView
 
 // TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
@@ -63,7 +62,7 @@ internal class UIKitComposeSceneLayer(
 
     override var focusable: Boolean = focusStack != null
 
-    val view = ComposeSceneLayerView(
+    val view = UIKitComposeSceneLayerView(
         ::isInsideInteractionBounds,
         isInterceptingOutsideEvents = { focusable }
     )

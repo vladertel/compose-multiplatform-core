@@ -31,7 +31,7 @@ import platform.UIKit.UIWindow
 /**
  * A class responsible for managing and rendering [UIKitComposeSceneLayer]s.
  */
-internal class ComposeSceneLayers {
+internal class UIKitComposeSceneLayersHolder {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
 
@@ -45,7 +45,7 @@ internal class ComposeSceneLayers {
 
     private var layersCache = mutableListOf<UIKitComposeSceneLayer>()
 
-    val view = ComposeSceneLayersView()
+    val view = UIKitComposeSceneLayersHolderView()
 
     val metalView: MetalView = MetalView(
         ::retrieveAndMergeInteropTransactions,

@@ -35,7 +35,7 @@ import platform.UIKit.UIView
  * @param isInterceptingOutsideEvents a function that returns true if the layer should intercept
  * events that start outside the bounds of the layer content or should let them pass through.
  */
-internal class ComposeSceneLayerView(
+internal class UIKitComposeSceneLayerView(
     val isInsideInteractionBounds: (point: CValue<CGPoint>) -> Boolean,
     val isInterceptingOutsideEvents: () -> Boolean
 ): UIView(frame = CGRectZero.readValue()) {

@@ -31,7 +31,7 @@ import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.CanvasLayersComposeScene
-import androidx.compose.ui.scene.ComposeSceneLayers
+import androidx.compose.ui.scene.UIKitComposeSceneLayersHolder
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.ComposeSceneLayer
@@ -112,7 +112,7 @@ internal class ComposeHostingViewController(
     )
     private var isInsideSwiftUI = false
     private var mediator: PrimaryComposeSceneMediator? = null
-    private val layers = ComposeSceneLayers()
+    private val layers = UIKitComposeSceneLayersHolder()
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
 
