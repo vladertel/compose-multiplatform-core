@@ -87,7 +87,6 @@ import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
 import platform.QuartzCore.CACurrentMediaTime
 import platform.QuartzCore.CATransaction
-import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIPress
 import platform.UIKit.UITouch
