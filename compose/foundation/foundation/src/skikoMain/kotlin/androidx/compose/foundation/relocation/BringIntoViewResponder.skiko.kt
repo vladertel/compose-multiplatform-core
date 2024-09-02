@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.relocation
 
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.bringFocusIntoViewParent
@@ -23,6 +24,7 @@ import androidx.compose.ui.node.bringFocusIntoViewParent
 /**
  * Platform specific internal API to bring a rectangle into view.
  */
+@OptIn(InternalComposeUiApi::class)
 internal actual fun DelegatableNode.defaultBringIntoViewParent(): BringIntoViewParent =
     BringIntoViewParent { childCoordinates, boundsProvider ->
         val childOffset = childCoordinates.positionInRoot()
