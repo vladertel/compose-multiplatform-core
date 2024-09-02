@@ -21,12 +21,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asComposeCanvas
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -722,14 +719,6 @@ internal class ComposeSceneMediator(
                 rootView,
                 positionOnScreen
             )
-
-        override fun startDrag(
-            transferData: DragAndDropTransferData,
-            decorationSize: Size,
-            drawDragDecoration: DrawScope.() -> Unit
-        ): Boolean {
-            TODO("Drag&drop isn't implemented")
-        }
 
         override val measureDrawLayerBounds get() = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration get() = this@ComposeSceneMediator.viewConfiguration
