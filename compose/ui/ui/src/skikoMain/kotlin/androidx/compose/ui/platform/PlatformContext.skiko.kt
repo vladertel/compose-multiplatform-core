@@ -127,6 +127,11 @@ interface PlatformContext {
     val textToolbar: TextToolbar get() = EmptyTextToolbar
     fun setPointerIcon(pointerIcon: PointerIcon) = Unit
 
+    /**
+     * These insets indicate areas that have been obscured by system UI elements
+     * (like status bar, navigation bar, keyboard) and therefore might not be completely visible.
+     */
+    val adjustedFocusAreaInsets: PlatformInsets get() = PlatformInsets.Zero
     val parentFocusManager: FocusManager get() = EmptyFocusManager
     fun requestFocus(): Boolean = true
 

@@ -98,12 +98,6 @@ interface ComposeScene {
     var size: IntSize?
 
     /**
-     * These insets indicate areas that have been obscured by system UI elements
-     * (like status bar, navigation bar, keyboard) and therefore might not be completely visible.
-     */
-    var adjustedFocusAreaInsets: PlatformInsets
-
-    /**
      * Top-level composition locals, which will be provided for the Composable content,
      * which is set by [setContent].
      *

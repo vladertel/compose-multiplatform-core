@@ -37,6 +37,7 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.node.KeepRectVisible
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.RootNodeOwner
 import androidx.compose.ui.platform.PlatformContext
@@ -147,13 +148,6 @@ private class CanvasLayersComposeSceneImpl(
             forEachLayer { it.owner.size = value }
         }
 
-    override var adjustedFocusAreaInsets: PlatformInsets
-        get() = mainOwner.adjustedFocusAreaInsets
-        set(value) {
-            mainOwner.adjustedFocusAreaInsets = value
-            forEachLayer { it.owner.adjustedFocusAreaInsets = value }
-        }
-
     override val focusManager = ComposeSceneFocusManager { focusedOwner.focusOwner }
 
     override val dragAndDropTarget = ComposeSceneDragAndDropTarget { focusedOwner.dragAndDropOwner }
@@ -215,9 +209,14 @@ private class CanvasLayersComposeSceneImpl(
     override fun createComposition(content: @Composable () -> Unit): Composition {
         return mainOwner.setContent(
             compositionContext,
-            { compositionLocalContext },
-            content = content
-        )
+            { compositionLocalContext }) {
+            KeepRectVisible(
+                trackingRect = mainOwner.focusRect,
+                size = size,
+                insets = platformContext.adjustedFocusAreaInsets,
+                content = content,
+            )
+        }
     }
 
     override fun hitTestInteropView(position: Offset): InteropView? {
@@ -579,7 +578,12 @@ private class CanvasLayersComposeSceneImpl(
                 }
             ) {
                 owner.setRootModifier(background)
-                content()
+                KeepRectVisible(
+                    trackingRect = owner.focusRect,
+                    size = size,
+                    insets = platformContext.adjustedFocusAreaInsets,
+                    content = content,
+                )
             }
         }
 

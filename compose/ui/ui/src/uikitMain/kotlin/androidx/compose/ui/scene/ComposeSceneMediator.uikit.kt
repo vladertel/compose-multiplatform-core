@@ -327,9 +327,6 @@ internal class ComposeSceneMediator(
             view = rootView,
             keyboardOverlapHeightChanged = { height ->
                 keyboardOverlapHeightState.value = height
-                if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
-                    scene.adjustedFocusAreaInsets = PlatformInsets(bottom = height)
-                }
             }
         )
     }
@@ -719,6 +716,13 @@ internal class ComposeSceneMediator(
                 rootView,
                 positionOnScreen
             )
+
+        override val adjustedFocusAreaInsets: PlatformInsets
+            get() = if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
+                    PlatformInsets(bottom = keyboardOverlapHeightState.value)
+                } else {
+                    PlatformInsets.Zero
+                }
 
         override val measureDrawLayerBounds get() = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration get() = this@ComposeSceneMediator.viewConfiguration

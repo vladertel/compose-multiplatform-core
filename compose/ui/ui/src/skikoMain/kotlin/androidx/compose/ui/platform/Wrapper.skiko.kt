@@ -48,9 +48,9 @@ internal fun RootNodeOwner.setContent(
                 owner = owner,
                 uriHandler = remember { PlatformUriHandler() },
             ) {
-                ProvidePlatformCompositionLocals {
-                    OffsetToFocusedRect(content)
-                }
+                ProvidePlatformCompositionLocals(
+                    content = content
+                )
             }
         }
     }

@@ -35,11 +35,6 @@ class ComposeSceneFocusManager internal constructor(
     val hasFocus: Boolean get() = focusOwner().rootState.hasFocus
 
     /**
-     * Searches for the currently focused item, and returns its coordinates as a rect.
-     */
-    fun getFocusRect(): Rect? = focusOwner().getFocusRect()
-
-    /**
      * Take focus to ComposeScene in specified [focusDirection].
      *
      * Returns false if there are no focusable elements in this direction:
