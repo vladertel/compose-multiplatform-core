@@ -22,6 +22,14 @@ import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIView
 
+internal fun UIView.embedSubview(subview: UIView): List<NSLayoutConstraint> {
+    addSubview(subview)
+    subview.translatesAutoresizingMaskIntoConstraints = false
+    return subview.layoutConstraintsToMatch(this).also {
+        NSLayoutConstraint.activateConstraints(it)
+    }
+}
+
 internal fun UIView.layoutConstraintsToMatch(other: UIView) =
     listOf(
         leftAnchor.constraintEqualToAnchor(other.leftAnchor),

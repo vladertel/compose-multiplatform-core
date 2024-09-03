@@ -24,7 +24,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.text.input.EditCommand
@@ -39,6 +38,7 @@ import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.uikit.density
+import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
@@ -50,14 +50,13 @@ import kotlin.math.min
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.BreakIterator
-import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIPress
 import platform.UIKit.UIView
 import platform.UIKit.reloadInputViews
 
 internal class UIKitTextInputService(
     private val updateView: () -> Unit,
-    private val getRootView: () -> UIView,
+    private val rootView: UIView,
     private val viewConfiguration: ViewConfiguration,
     private val focusStack: FocusStack?,
     /**
@@ -67,7 +66,6 @@ internal class UIKitTextInputService(
     private val onKeyboardPresses: (Set<*>) -> Unit,
 ) : PlatformTextInputService, TextToolbar {
 
-    private val rootView get() = getRootView()
     private var currentInput: CurrentInput? = null
     private var currentImeOptions: ImeOptions? = null
     private var currentImeActionHandler: ((ImeAction) -> Unit)? = null
@@ -339,11 +337,7 @@ internal class UIKitTextInputService(
             viewConfiguration = viewConfiguration
         ).also {
             it.onKeyboardPresses = onKeyboardPresses
-            rootView.addSubview(it)
-            it.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activateConstraints(
-                it.layoutConstraintsToMatch(rootView)
-            )
+            rootView.embedSubview(it)
         }
     }
 

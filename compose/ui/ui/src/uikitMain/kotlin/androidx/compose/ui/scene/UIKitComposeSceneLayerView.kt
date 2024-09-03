@@ -47,7 +47,6 @@ internal class UIKitComposeSceneLayerView(
     ) -> Unit)? = null
 
     init {
-        translatesAutoresizingMaskIntoConstraints = false
         setMultipleTouchEnabled(true)
     }
 

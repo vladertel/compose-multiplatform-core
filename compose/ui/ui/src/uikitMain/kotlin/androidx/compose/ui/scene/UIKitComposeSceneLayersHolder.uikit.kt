@@ -17,13 +17,12 @@
 package androidx.compose.ui.scene
 
 import androidx.compose.ui.graphics.asComposeCanvas
-import androidx.compose.ui.uikit.layoutConstraintsToMatch
+import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import org.jetbrains.skia.Canvas
-import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
 
@@ -36,6 +35,9 @@ internal class UIKitComposeSceneLayersHolder {
         get() = layers.any { it.hasInvalidations }
 
     private val layers = mutableListOf<UIKitComposeSceneLayer>()
+    private val layersCache = CopiedList {
+        it.addAll(layers)
+    }
     private var ongoingGesturesCount = 0
 
     /**
@@ -43,9 +45,7 @@ internal class UIKitComposeSceneLayersHolder {
      */
     private var removedLayersTransactions = mutableListOf<UIKitInteropTransaction>()
 
-    private var layersCache = mutableListOf<UIKitComposeSceneLayer>()
-
-    val view = UIKitComposeSceneLayersHolderView()
+    private val view = UIKitComposeSceneLayersHolderView()
 
     val metalView: MetalView = MetalView(
         ::retrieveAndMergeInteropTransactions,
@@ -55,14 +55,7 @@ internal class UIKitComposeSceneLayersHolder {
     }
 
     init {
-        view.translatesAutoresizingMaskIntoConstraints = false
-
-        metalView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(metalView)
-
-        NSLayoutConstraint.activateConstraints(
-            metalView.layoutConstraintsToMatch(view)
-        )
+        view.embedSubview(metalView)
     }
 
     /**
@@ -116,10 +109,8 @@ internal class UIKitComposeSceneLayersHolder {
 
         layers.add(layer)
 
-        view.insertSubview(layer.view, belowSubview = metalView)
-        NSLayoutConstraint.activateConstraints(
-            layer.view.layoutConstraintsToMatch(view)
-        )
+        view.embedSubview(layer.view)
+        view.bringSubviewToFront(metalView)
 
         if (isFirstLayer) {
             // The content of previous layers drawn on the Metal view should be cleared and
@@ -127,10 +118,7 @@ internal class UIKitComposeSceneLayersHolder {
 
             metalView.setNeedsSynchronousDrawOnNextLayout()
 
-            window.addSubview(view)
-            NSLayoutConstraint.activateConstraints(
-                view.layoutConstraintsToMatch(window)
-            )
+            window.embedSubview(view)
             window.layoutIfNeeded()
         }
 
@@ -159,7 +147,7 @@ internal class UIKitComposeSceneLayersHolder {
             removedLayersTransactions.add(transaction)
 
             // Redraw content with layer removed
-            metalView.setNeedsRedraw()
+            metalView.redrawer.setNeedsRedraw()
 
         }
     }
@@ -196,10 +184,10 @@ internal class UIKitComposeSceneLayersHolder {
 
         // Some layers may be removed during rendering, because recomposition will happen in the
         // process, so we need to make a temporary copy of the list
-        layersCache.addAll(layers)
-        layersCache.fastForEach {
-            it.render(composeCanvas, nanoTime)
+        layersCache.withCopy {
+            it.fastForEach {
+                it.render(composeCanvas, nanoTime)
+            }
         }
-        layersCache.clear()
     }
 }

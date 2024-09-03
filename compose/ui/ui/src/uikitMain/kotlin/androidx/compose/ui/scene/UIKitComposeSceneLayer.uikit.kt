@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.density
-import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -43,9 +42,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGPoint
-import platform.UIKit.NSLayoutConstraint
 
-// TODO: perhaps make LayerComposeSceneMediator a ComposeSceneLayer?
 internal class UIKitComposeSceneLayer(
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
@@ -67,24 +64,16 @@ internal class UIKitComposeSceneLayer(
         isInterceptingOutsideEvents = { focusable }
     )
 
-    private val mediator =
-        LayerComposeSceneMediator(
-            view,
-            configuration,
-            focusStack,
-            windowContext,
-            coroutineContext = compositionContext.effectCoroutineContext,
-            metalView,
-            onGestureEvent = onGestureEvent,
-            composeSceneFactory = ::createComposeScene
-        )
-
-    init {
-        view.addSubview(mediator.view)
-        NSLayoutConstraint.activateConstraints(
-            mediator.view.layoutConstraintsToMatch(view)
-        )
-    }
+    private val mediator = ComposeSceneMediator(
+        view,
+        configuration,
+        focusStack,
+        windowContext,
+        coroutineContext = compositionContext.effectCoroutineContext,
+        metalView.redrawer,
+        onGestureEvent = onGestureEvent,
+        composeSceneFactory = ::createComposeScene
+    )
 
     private fun isInsideInteractionBounds(point: CValue<CGPoint>): Boolean =
         boundsInWindow.contains(point.asDpOffset().toOffset(view.density).round())
@@ -108,7 +97,7 @@ internal class UIKitComposeSceneLayer(
 
     override var layoutDirection by mediator::layoutDirection
 
-    override var boundsInWindow by mediator::boundsInWindow
+    override var boundsInWindow by mediator::interactionBounds
 
     override var compositionLocalContext by mediator::compositionLocalContext
 

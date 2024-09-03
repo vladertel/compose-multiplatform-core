@@ -39,7 +39,7 @@ internal class RecordDrawRectRenderDecorator(
             }
         }
 
-    // TODO: nobody calls it
+    // TODO(@MatkovIvan): nobody calls it
     fun close() {
         pictureRecorder.close()
         bbhFactory.close()

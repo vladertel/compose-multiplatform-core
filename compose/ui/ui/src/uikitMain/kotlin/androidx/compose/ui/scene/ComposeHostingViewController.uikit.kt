@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.window
+package androidx.compose.ui.scene
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
@@ -24,30 +24,31 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
+import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.hapticfeedback.CupertinoHapticFeedback
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
-import androidx.compose.ui.scene.CanvasLayersComposeScene
-import androidx.compose.ui.scene.UIKitComposeSceneLayersHolder
-import androidx.compose.ui.scene.ComposeScene
-import androidx.compose.ui.scene.ComposeSceneContext
-import androidx.compose.ui.scene.ComposeSceneLayer
-import androidx.compose.ui.scene.PlatformLayersComposeScene
-import androidx.compose.ui.scene.PrimaryComposeSceneMediator
-import androidx.compose.ui.scene.PrimaryComposeSceneMediatorLayout
-import androidx.compose.ui.scene.UIKitComposeSceneLayer
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
 import androidx.compose.ui.uikit.PlistSanityCheck
 import androidx.compose.ui.uikit.density
-import androidx.compose.ui.uikit.layoutConstraintsToMatch
+import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.uikit.utils.CMPViewController
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.asDpRect
+import androidx.compose.ui.unit.roundToIntRect
+import androidx.compose.ui.viewinterop.UIKitInteropAction
+import androidx.compose.ui.viewinterop.UIKitInteropTransaction
+import androidx.compose.ui.window.ComposeView
+import androidx.compose.ui.window.FocusStack
+import androidx.compose.ui.window.GestureEvent
+import androidx.compose.ui.window.MetalView
+import androidx.compose.ui.window.ViewControllerBasedLifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.coroutines.CoroutineContext
 import kotlin.native.runtime.GC
@@ -64,20 +65,8 @@ import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeEqualToSize
 import platform.Foundation.NSStringFromClass
-import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIApplication
-import platform.UIKit.UIContentSizeCategoryAccessibilityExtraExtraExtraLarge
-import platform.UIKit.UIContentSizeCategoryAccessibilityExtraExtraLarge
-import platform.UIKit.UIContentSizeCategoryAccessibilityExtraLarge
-import platform.UIKit.UIContentSizeCategoryAccessibilityLarge
-import platform.UIKit.UIContentSizeCategoryAccessibilityMedium
-import platform.UIKit.UIContentSizeCategoryExtraExtraExtraLarge
-import platform.UIKit.UIContentSizeCategoryExtraExtraLarge
-import platform.UIKit.UIContentSizeCategoryExtraLarge
-import platform.UIKit.UIContentSizeCategoryExtraSmall
-import platform.UIKit.UIContentSizeCategoryLarge
-import platform.UIKit.UIContentSizeCategoryMedium
-import platform.UIKit.UIContentSizeCategorySmall
+import platform.UIKit.UIEvent
 import platform.UIKit.UIStatusBarAnimation
 import platform.UIKit.UIStatusBarStyle
 import platform.UIKit.UITraitCollection
@@ -89,11 +78,6 @@ import platform.UIKit.UIWindow
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
-// TODO: ComposeContainer is not the same thing as ComposeHostingViewController, extract the actual
-//  part responsible for Compose instance management to a separate class.
-//  https://youtrack.jetbrains.com/issue/CMP-5950/iOS-extract-Compose-instance-management-from-ComposeContainer
-
-// TODO: Move to androidx.compose.ui.scene
 @OptIn(BetaInteropApi::class, ExperimentalComposeApi::class)
 @ExportObjCClass
 internal class ComposeHostingViewController(
@@ -101,9 +85,8 @@ internal class ComposeHostingViewController(
     private val content: @Composable () -> Unit,
     private val coroutineContext: CoroutineContext = Dispatchers.Main
 ) : CMPViewController(nibName = null, bundle = null) {
-    // TODO: Rename and make private
-    val lifecycleOwner = ViewControllerBasedLifecycleOwner()
-    val hapticFeedback = CupertinoHapticFeedback()
+    private val lifecycleOwner = ViewControllerBasedLifecycleOwner()
+    private val hapticFeedback = CupertinoHapticFeedback()
 
     private val rootView = ComposeView(
         onDidMoveToWindow = ::onDidMoveToWindow,
@@ -111,7 +94,7 @@ internal class ComposeHostingViewController(
         useOpaqueConfiguration = configuration.opaque
     )
     private var isInsideSwiftUI = false
-    private var mediator: PrimaryComposeSceneMediator? = null
+    private var mediator: ComposeSceneMediator? = null
     private val layers = UIKitComposeSceneLayersHolder()
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
@@ -124,10 +107,10 @@ internal class ComposeHostingViewController(
      * Initial value is arbitrarily chosen to avoid propagating invalid value logic
      * It's never the case in real usage scenario to reflect that in type system
      */
-    val interfaceOrientationState: MutableState<InterfaceOrientation> = mutableStateOf(
+    private val interfaceOrientationState: MutableState<InterfaceOrientation> = mutableStateOf(
         InterfaceOrientation.Portrait
     )
-    val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
+    private val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
     private val focusStack = FocusStack()
     private val windowContext = PlatformWindowContext().apply {
         isWindowFocused = true
@@ -171,6 +154,8 @@ internal class ComposeHostingViewController(
     override fun viewDidLoad() {
         super.viewDidLoad()
 
+        view.embedSubview(metalView)
+
         if (configuration.enforceStrictPlistSanityCheck) {
             PlistSanityCheck.performIfNeeded()
         }
@@ -187,6 +172,8 @@ internal class ComposeHostingViewController(
 
     private fun onLayoutSubviews() {
         windowContext.updateWindowContainerSize()
+
+        mediator?.updateInteractionRect()
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {
@@ -283,7 +270,7 @@ internal class ComposeHostingViewController(
         super.didReceiveMemoryWarning()
     }
 
-    fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext {
+    private fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext {
         return object : ComposeSceneContext {
             override val platformContext: PlatformContext = platformContext
 
@@ -294,13 +281,9 @@ internal class ComposeHostingViewController(
                 compositionContext: CompositionContext
             ): ComposeSceneLayer {
                 val layer = UIKitComposeSceneLayer(
-                    onClosed = {
-                        detachLayer(it)
-                    },
+                    onClosed = ::detachLayer,
                     createComposeSceneContext = ::createComposeSceneContext,
-                    providingCompositionLocals = {
-                        ProvideContainerCompositionLocals(this@ComposeHostingViewController, it)
-                    },
+                    providingCompositionLocals = { ProvideContainerCompositionLocals(it) },
                     metalView = layers.metalView,
                     onGestureEvent = layers::onGestureEvent,
                     initDensity = density,
@@ -351,28 +334,50 @@ internal class ComposeHostingViewController(
         }
     }
 
-    private fun createMediator(): PrimaryComposeSceneMediator {
-        val mediator = PrimaryComposeSceneMediator(
-            parentView = view,
-            configuration = configuration,
-            focusStack = focusStack,
-            windowContext = windowContext,
-            coroutineContext = coroutineContext,
-            composeSceneFactory = ::createComposeScene,
-        ).also {
-            it.setContent {
-                ProvideContainerCompositionLocals(this, content)
-            }
-
-            it.setLayout(PrimaryComposeSceneMediatorLayout.Fill)
-
-            view.addSubview(it.view)
-            NSLayoutConstraint.activateConstraints(
-                it.view.layoutConstraintsToMatch(view)
-            )
+    private fun createMediator() = ComposeSceneMediator(
+        parentView = view,
+        configuration = configuration,
+        focusStack = focusStack,
+        windowContext = windowContext,
+        coroutineContext = coroutineContext,
+        redrawer = metalView.redrawer,
+        onGestureEvent = ::onGestureEvent,
+        composeSceneFactory = ::createComposeScene,
+    ).also { mediator ->
+        mediator.updateInteractionRect()
+        mediator.setContent {
+            ProvideContainerCompositionLocals(content)
         }
 
-        return mediator
+        view.bringSubviewToFront(metalView)
+    }
+
+    private val metalView by lazy {
+        MetalView(
+            retrieveInteropTransaction = {
+                mediator?.retrieveInteropTransaction() ?: object : UIKitInteropTransaction {
+                    override val actions = emptyList<UIKitInteropAction>()
+                    override val isInteropActive = false
+                }
+            },
+            render = { canvas, nanoTime ->
+                mediator?.render(canvas.asComposeCanvas(), nanoTime)
+            }
+        )
+    }
+
+    /**
+     * When there is an ongoing gesture, we need notify redrawer about it. It should unconditionally
+     * unpause CADisplayLink which affects frequency of polling UITouch events on high frequency
+     * display and force it to match display refresh rate.
+     *
+     * Otherwise [UIEvent]s will be dispatched with the 60hz frequency.
+     */
+    private fun onGestureEvent(gestureEvent: GestureEvent) {
+        metalView.needsProactiveDisplayLink = when (gestureEvent) {
+            GestureEvent.BEGAN -> true
+            GestureEvent.ENDED -> false
+        }
     }
 
     private fun dispose() {
@@ -384,7 +389,7 @@ internal class ComposeHostingViewController(
         layers.dispose(hasViewAppeared)
     }
 
-    fun attachLayer(layer: UIKitComposeSceneLayer) {
+    private fun attachLayer(layer: UIKitComposeSceneLayer) {
         val window = checkNotNull(view.window) {
             "Cannot attach layer if the view is not in the window hierarchy"
         }
@@ -392,8 +397,26 @@ internal class ComposeHostingViewController(
         layers.attach(window, layer, hasViewAppeared)
     }
 
-    fun detachLayer(layer: UIKitComposeSceneLayer) {
+    private fun detachLayer(layer: UIKitComposeSceneLayer) {
         layers.detach(layer, hasViewAppeared)
+    }
+
+    @Composable
+    private fun ProvideContainerCompositionLocals(content: @Composable () -> Unit) =
+        CompositionLocalProvider(
+            LocalHapticFeedback provides hapticFeedback,
+            LocalUIViewController provides this,
+            LocalInterfaceOrientation provides interfaceOrientationState.value,
+            LocalSystemTheme provides systemThemeState.value,
+            LocalLifecycleOwner provides lifecycleOwner,
+            LocalInternalViewModelStoreOwner provides lifecycleOwner,
+            content = content
+        )
+
+    private fun ComposeSceneMediator.updateInteractionRect() {
+        interactionBounds = with(density) {
+            view.bounds.useContents { asDpRect() }.toRect().roundToIntRect()
+        }
     }
 }
 
@@ -432,40 +455,3 @@ private fun getLayoutDirection() =
         UIUserInterfaceLayoutDirection.UIUserInterfaceLayoutDirectionRightToLeft -> LayoutDirection.Rtl
         else -> LayoutDirection.Ltr
     }
-
-@Composable
-internal fun ProvideContainerCompositionLocals(
-    composeHostingViewController: ComposeHostingViewController,
-    content: @Composable () -> Unit,
-) = with(composeHostingViewController) {
-    CompositionLocalProvider(
-        LocalHapticFeedback provides hapticFeedback,
-        LocalUIViewController provides this,
-        LocalInterfaceOrientation provides interfaceOrientationState.value,
-        LocalSystemTheme provides systemThemeState.value,
-        LocalLifecycleOwner provides lifecycleOwner,
-        LocalInternalViewModelStoreOwner provides lifecycleOwner,
-        content = content
-    )
-}
-
-internal val uiContentSizeCategoryToFontScaleMap = mapOf(
-    UIContentSizeCategoryExtraSmall to 0.8f,
-    UIContentSizeCategorySmall to 0.85f,
-    UIContentSizeCategoryMedium to 0.9f,
-    UIContentSizeCategoryLarge to 1f, // default preference
-    UIContentSizeCategoryExtraLarge to 1.1f,
-    UIContentSizeCategoryExtraExtraLarge to 1.2f,
-    UIContentSizeCategoryExtraExtraExtraLarge to 1.3f,
-
-    // These values don't work well if they match scale shown by
-    // Text Size control hint, because iOS uses non-linear scaling
-    // calculated by UIFontMetrics, while Compose uses linear.
-    UIContentSizeCategoryAccessibilityMedium to 1.4f, // 160% native
-    UIContentSizeCategoryAccessibilityLarge to 1.5f, // 190% native
-    UIContentSizeCategoryAccessibilityExtraLarge to 1.6f, // 235% native
-    UIContentSizeCategoryAccessibilityExtraExtraLarge to 1.7f, // 275% native
-    UIContentSizeCategoryAccessibilityExtraExtraExtraLarge to 1.8f, // 310% native
-
-    // UIContentSizeCategoryUnspecified
-)

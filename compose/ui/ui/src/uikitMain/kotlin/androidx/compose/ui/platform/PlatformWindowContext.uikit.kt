@@ -38,14 +38,16 @@ private const val LayerFrameKeyPath = "layer.frame"
  * Tracking a state of window.
  */
 internal class PlatformWindowContext {
-    val windowInfo = WindowInfoImpl()
+    private val _windowInfo = WindowInfoImpl()
+
+    val windowInfo: WindowInfo get() = _windowInfo
 
     /**
      * A container used for additional layers and as reference for window coordinate space.
      */
     private var windowContainer: UIView? = null
 
-    var isWindowFocused by windowInfo::isWindowFocused
+    var isWindowFocused by _windowInfo::isWindowFocused
 
     fun setWindowContainer(windowContainer: UIView) {
         this.windowContainer = windowContainer
@@ -64,7 +66,7 @@ internal class PlatformWindowContext {
             )
         }
 
-        windowInfo.containerSize = size
+        _windowInfo.containerSize = size
     }
 
     fun convertLocalToWindowPosition(container: UIView, localPosition: Offset): Offset {

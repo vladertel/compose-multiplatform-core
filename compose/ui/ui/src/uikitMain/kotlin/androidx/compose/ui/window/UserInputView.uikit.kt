@@ -253,9 +253,7 @@ private class GestureRecognizerHandlerImpl(
                 // interop view.
                 when (val cooperativeChildView = hitTestResult) {
                     is UserInputViewHitTestResult.CooperativeChildView ->
-                        gestureRecognizer?.scheduleFailure(
-                            cooperativeChildView.delaySeconds
-                        )
+                        gestureRecognizer?.scheduleFailure(cooperativeChildView.delaySeconds)
                     else -> {}
                 }
             } else {
@@ -499,7 +497,6 @@ internal class UserInputView(
     )
 
     private val gestureRecognizer = CMPGestureRecognizer()
-
 
     init {
         multipleTouchEnabled = true

@@ -50,14 +50,11 @@ internal class MetalView(
 
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
 
-    private val redrawer = MetalRedrawer(
+    val redrawer = MetalRedrawer(
         metalLayer,
         retrieveInteropTransaction,
     ) { canvas, targetTimestamp ->
-        render(
-            canvas,
-            /*nanoTime = */targetTimestamp.toNanoSeconds()
-        )
+        render(canvas, targetTimestamp.toNanoSeconds())
     }
 
     /**
@@ -96,10 +93,6 @@ internal class MetalView(
             it.framebufferOnly = false
         }
     }
-
-    fun setNeedsRedraw() = redrawer.setNeedsRedraw()
-
-    var isForcedToPresentWithTransactionEveryFrame by redrawer::isForcedToPresentWithTransactionEveryFrame
 
     fun dispose() {
         redrawer.dispose()
