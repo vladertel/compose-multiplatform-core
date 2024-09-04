@@ -594,7 +594,7 @@ private val PointerInputEvent.isGestureInProgress get() = pointers.fastAny { it.
 private fun PointerInputEvent.isMouseOrSingleTouch() =
     button != null || pointers.size == 1
 
-private class CopiedList<T>(
+internal class CopiedList<T>(
     private val populate: (MutableList<T>) -> Unit
 ) : MutableList<T> by mutableListOf() {
     inline fun withCopy(

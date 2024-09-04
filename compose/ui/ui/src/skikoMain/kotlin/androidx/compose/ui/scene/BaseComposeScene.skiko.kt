@@ -150,7 +150,13 @@ internal abstract class BaseComposeScene(
         recomposer.performScheduledRecomposerTasks()
     }
 
-    override fun render(canvas: Canvas, nanoTime: Long) =
+    override fun render(canvas: Canvas, nanoTime: Long) {
+        // This is a no-op if the scene is closed, this situation can happen if the scene is
+        // in the list for rendering, but recomposition in another scene from the same list
+        // processed earlier has closed it.
+
+        if (isClosed) return
+
         postponeInvalidation("BaseComposeScene:render") {
             // We try to run the phases here in the same order Android does.
 
@@ -183,6 +189,7 @@ internal abstract class BaseComposeScene(
             snapshotInvalidationTracker.onDraw()
             draw(canvas)
         }
+    }
 
     override fun sendPointerEvent(
         eventType: PointerEventType,

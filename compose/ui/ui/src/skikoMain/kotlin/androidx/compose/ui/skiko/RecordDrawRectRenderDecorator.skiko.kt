@@ -39,6 +39,7 @@ internal class RecordDrawRectRenderDecorator(
             }
         }
 
+    // TODO(@MatkovIvan): nobody calls it
     fun close() {
         pictureRecorder.close()
         bbhFactory.close()
@@ -53,17 +54,17 @@ internal class RecordDrawRectRenderDecorator(
     private inline fun Canvas.recordCullRect(
         block: (Canvas) -> Unit
     ): SkRect? {
-        val pictureCanvas = pictureRecorder.beginRecording(PICTURE_BOUNDS, bbhFactory)
-        pictureCanvas.translate(MEASURE_OFFSET, MEASURE_OFFSET)
+        val pictureCanvas = pictureRecorder.beginRecording(SkRect.Unconstrained, bbhFactory)
+        pictureCanvas.translate(MeasureOffset, MeasureOffset)
         block(pictureCanvas)
         val picture = pictureRecorder.finishRecordingAsPicture()
         try {
             save()
-            translate(-MEASURE_OFFSET, -MEASURE_OFFSET)
+            translate(-MeasureOffset, -MeasureOffset)
             drawPicture(picture, null, null)
             restore()
             return if (!picture.cullRect.isEmpty) {
-                picture.cullRect.offset(-MEASURE_OFFSET, -MEASURE_OFFSET)
+                picture.cullRect.offset(-MeasureOffset, -MeasureOffset)
             } else {
                 // It means that there ware no drawings.
                 // Applying our offset is incorrect in this case.
@@ -79,11 +80,12 @@ internal class RecordDrawRectRenderDecorator(
  * Skia cannot return negative values in [Picture.cullRect],
  * so temporary applying some offset is required to get right measurement in negative area.
  */
-private const val MEASURE_OFFSET = (1 shl 14).toFloat()
+private const val MeasureOffset = (1 shl 14).toFloat()
 
-private val PICTURE_BOUNDS = SkRect.makeLTRB(
-    l = Float.MIN_VALUE,
-    t = Float.MIN_VALUE,
-    r = Float.MAX_VALUE,
-    b = Float.MAX_VALUE
-)
+private val SkRect.Companion.Unconstrained: SkRect
+    get() = makeLTRB(
+        l = Float.MIN_VALUE,
+        t = Float.MIN_VALUE,
+        r = Float.MAX_VALUE,
+        b = Float.MAX_VALUE
+    )
