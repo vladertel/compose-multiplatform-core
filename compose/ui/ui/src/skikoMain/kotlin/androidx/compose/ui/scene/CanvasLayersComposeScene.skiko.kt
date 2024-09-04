@@ -208,7 +208,7 @@ private class CanvasLayersComposeSceneImpl(
         return mainOwner.setContent(
             compositionContext,
             { compositionLocalContext },
-            content = content
+            content = composeSceneContext.providePlatformEnvironment(content)
         )
     }
 
@@ -571,7 +571,7 @@ private class CanvasLayersComposeSceneImpl(
                 }
             ) {
                 owner.setRootModifier(background)
-                content()
+                composeSceneContext.providePlatformEnvironment(content)()
             }
         }
 

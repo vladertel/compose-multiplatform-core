@@ -283,7 +283,6 @@ internal class ComposeHostingViewController(
                 val layer = UIKitComposeSceneLayer(
                     onClosed = ::detachLayer,
                     createComposeSceneContext = ::createComposeSceneContext,
-                    providingCompositionLocals = { ProvideContainerCompositionLocals(it) },
                     metalView = layers.metalView,
                     onGestureEvent = layers::onGestureEvent,
                     initDensity = density,
@@ -298,6 +297,11 @@ internal class ComposeHostingViewController(
 
                 return layer
             }
+
+            override fun providePlatformEnvironment(content: () -> Unit): () -> Unit =
+                @Composable {
+                    ProvideContainerCompositionLocals(content)
+                }
         }
     }
 

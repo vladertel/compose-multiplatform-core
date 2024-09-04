@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.platform.PlatformContext
@@ -50,6 +51,8 @@ interface ComposeSceneContext {
     ) : ComposeSceneLayer {
         throw IllegalStateException()
     }
+
+    fun providePlatformEnvironment(content: @Composable () -> Unit): @Composable () -> Unit = content
 
     companion object {
         /**

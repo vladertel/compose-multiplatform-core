@@ -46,7 +46,7 @@ import platform.CoreGraphics.CGPoint
 internal class UIKitComposeSceneLayer(
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
-    private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
+    // private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
     metalView: MetalView,
     onGestureEvent: (GestureEvent) -> Unit,
     private val initDensity: Density,
@@ -143,11 +143,7 @@ internal class UIKitComposeSceneLayer(
     }
 
     override fun setContent(content: @Composable () -> Unit) {
-        mediator.setContent {
-            providingCompositionLocals {
-                content()
-            }
-        }
+        mediator.setContent(content)
     }
 
     override fun setKeyEventListener(

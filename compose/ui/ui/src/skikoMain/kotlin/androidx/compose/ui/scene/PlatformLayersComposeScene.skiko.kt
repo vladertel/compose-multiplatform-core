@@ -155,7 +155,7 @@ private class PlatformLayersComposeSceneImpl(
         return mainOwner.setContent(
             compositionContext,
             { compositionLocalContext },
-            content = content
+            content = composeSceneContext.providePlatformEnvironment(content)
         )
     }
 

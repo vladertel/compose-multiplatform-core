@@ -29,8 +29,10 @@ import androidx.compose.ui.awt.AwtEventListeners
 import androidx.compose.ui.awt.RenderSettings
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
+import androidx.compose.ui.platform.LocalLocalization
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
+import androidx.compose.ui.platform.defaultPlatformLocalization
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.scene.skia.SwingSkiaLayerComponent
 import androidx.compose.ui.scene.skia.WindowSkiaLayerComponent
@@ -482,6 +484,15 @@ internal class ComposeContainer(
             focusable = focusable,
             compositionContext = compositionContext
         )
+
+        override fun providePlatformEnvironment(content: @Composable () -> Unit): () -> Unit =
+            @Composable {
+                CompositionLocalProvider(
+                    // See https://issuetracker.google.com/issues/330036209 for why `arrayOf` is used.
+                    values = arrayOf(LocalLocalization providesDefault defaultPlatformLocalization()),
+                    content = content
+                )
+            }
     }
 
     private inner class DesktopCoroutineExceptionHandler :
