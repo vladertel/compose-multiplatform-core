@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.UIKitTextInputService
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
 import androidx.compose.ui.uikit.systemDensity
@@ -783,6 +784,7 @@ internal class ComposeSceneMediator(
                     uiKitTextInputService.startInput(
                         value = request.state,
                         imeOptions = request.imeOptions,
+                        editProcessor = request.editProcessor,
                         onEditCommand = request.onEditCommand,
                         onImeActionPerformed = request.onImeAction ?: {}
                     )
@@ -792,6 +794,10 @@ internal class ComposeSceneMediator(
                     }
                 }
             }
+
+        override fun updateSelectionState(newState: TextFieldValue) {
+            uiKitTextInputService.updateState(oldValue = null, newValue = newState)
+        }
     }
 }
 
