@@ -67,7 +67,6 @@ import androidx.compose.ui.platform.RenderNodeLayer
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
-import androidx.compose.ui.scene.OwnerDragAndDropManager
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
@@ -89,7 +88,6 @@ import androidx.compose.ui.viewinterop.pointerInteropFilter
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.awaitCancellation
 
 /**
  * Owner of root [LayoutNode].
@@ -122,8 +120,7 @@ internal class RootNodeOwner(
             platformContext.parentFocusManager.clearFocus(true)
         },
     )
-
-    val dragAndDropManager = OwnerDragAndDropManager(platformContext)
+    val dragAndDropOwner = DragAndDropOwner(platformContext.dragAndDropManager)
 
     private val rootSemanticsNode = EmptySemanticsModifier()
 
@@ -140,7 +137,7 @@ internal class RootNodeOwner(
             }
         }
         .then(focusOwner.modifier)
-        .then(dragAndDropManager.modifier)
+        .then(dragAndDropOwner.modifier)
         .semantics {
             // This makes the reported role of the root node "PANEL", which is ignored by VoiceOver
             // (which is what we want).
@@ -320,17 +317,16 @@ internal class RootNodeOwner(
         override val autofillTree = AutofillTree()
         override val autofill: Autofill?  get() = null
         override val density get() = this@RootNodeOwner.density
-        override val textInputService = TextInputService(platformContext.textInputService)
+        override val textInputService =
+            TextInputService(platformContext.textInputService)
         override val softwareKeyboardController =
             DelegatingSoftwareKeyboardController(textInputService)
 
-        // TODO https://youtrack.jetbrains.com/issue/COMPOSE-733/Merge-1.6.-Apply-changes-for-the-new-text-input
         override suspend fun textInputSession(
             session: suspend PlatformTextInputSessionScope.() -> Nothing
-        ): Nothing {
-            awaitCancellation()
-        }
-        override val dragAndDropManager = this@RootNodeOwner.dragAndDropManager
+        ) = platformContext.textInputSession(session)
+
+        override val dragAndDropManager = this@RootNodeOwner.dragAndDropOwner
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
@@ -528,6 +524,7 @@ internal class RootNodeOwner(
 
     private inner class PlatformRootForTestImpl : PlatformRootForTest {
         override val density get() = this@RootNodeOwner.density
+        @Suppress("OVERRIDE_DEPRECATION")
         override val textInputService get() = owner.textInputService
         override val semanticsOwner get() = this@RootNodeOwner.semanticsOwner
         override val visibleBounds: Rect

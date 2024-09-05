@@ -40,8 +40,8 @@ import androidx.compose.ui.node.SnapshotInvalidationTracker
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.util.trace
-import kotlin.coroutines.CoroutineContext
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.CoroutineContext
 
 /**
  * BaseComposeScene is an internal abstract class that implements the ComposeScene interface.
@@ -89,6 +89,7 @@ internal abstract class BaseComposeScene(
             snapshotInvalidationTracker.sendAndPerformSnapshotChanges()
             snapshotInvalidationTracker.performSnapshotChangesSynchronously(block)
         } finally {
+            snapshotInvalidationTracker.sendAndPerformSnapshotChanges()
             isInvalidationDisabled = false
         }.also {
             updateInvalidations()
@@ -149,7 +150,13 @@ internal abstract class BaseComposeScene(
         recomposer.performScheduledRecomposerTasks()
     }
 
-    override fun render(canvas: Canvas, nanoTime: Long) =
+    override fun render(canvas: Canvas, nanoTime: Long) {
+        // This is a no-op if the scene is closed, this situation can happen if the scene is
+        // in the list for rendering, but recomposition in another scene from the same list
+        // processed earlier has closed it.
+
+        if (isClosed) return
+
         postponeInvalidation("BaseComposeScene:render") {
             // We try to run the phases here in the same order Android does.
 
@@ -182,6 +189,7 @@ internal abstract class BaseComposeScene(
             snapshotInvalidationTracker.onDraw()
             draw(canvas)
         }
+    }
 
     override fun sendPointerEvent(
         eventType: PointerEventType,
@@ -205,6 +213,7 @@ internal abstract class BaseComposeScene(
             nativeEvent = nativeEvent,
             button = button
         )
+        recomposer.performScheduledEffects()
     }
 
     // TODO(demin): return Boolean (when it is consumed)
@@ -229,10 +238,13 @@ internal abstract class BaseComposeScene(
             nativeEvent = nativeEvent,
             button = button
         )
+        recomposer.performScheduledEffects()
     }
 
     override fun sendKeyEvent(keyEvent: KeyEvent): Boolean = postponeInvalidation("BaseComposeScene:sendKeyEvent") {
-        inputHandler.onKeyEvent(keyEvent)
+        inputHandler.onKeyEvent(keyEvent).also {
+            recomposer.performScheduledEffects()
+        }
     }
 
     private fun doMeasureAndLayout() {
