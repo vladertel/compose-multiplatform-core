@@ -213,11 +213,11 @@ internal class MagnifierNode(
     private var previousSize: IntSize? = null
 
     fun update(
-        sourceCenter: Density.() -> Offset,
-        magnifierCenter: (Density.() -> Offset)?,
-        onSizeChanged: ((DpSize) -> Unit)?,
-        color: Color,
-        platformMagnifierFactory: PlatformMagnifierFactory
+        sourceCenter: Density.() -> Offset = this.sourceCenter,
+        magnifierCenter: (Density.() -> Offset)? = this.magnifierCenter,
+        onSizeChanged: ((DpSize) -> Unit)? = this.onSizeChanged,
+        color: Color = this.color,
+        platformMagnifierFactory: PlatformMagnifierFactory = this.platformMagnifierFactory
     ) {
         val previousPlatformMagnifierFactory = this.platformMagnifierFactory
         val previousColor = this.color

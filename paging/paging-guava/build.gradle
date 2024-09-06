@@ -30,7 +30,7 @@ dependencies {
     implementation(libs.kotlinCoroutinesGuava)
 
     testImplementation(project(":internal-testutils-common"))
-    testImplementation(project(":internal-testutils-paging"))
+//    testImplementation(project(":internal-testutils-paging"))
     testImplementation(libs.junit)
     testImplementation(libs.kotlinTest)
     testImplementation(libs.kotlinCoroutinesTest)

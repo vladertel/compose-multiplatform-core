@@ -189,7 +189,7 @@ private fun getLongPressHandlerModifier(
                 var dragBeginOffset = Offset.Zero
 
                 override fun onStart(startPoint: Offset) {
-                    currentManager.draggingHandle = Handle.SelectionEnd
+                    currentManager.draggingHandle = Handle.Cursor
                     currentManager.currentDragPosition = startPoint
 
                     currentState.layoutResult?.let { layoutResult ->

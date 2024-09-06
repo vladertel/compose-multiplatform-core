@@ -31,7 +31,7 @@ dependencies {
     implementation(libs.kotlinCoroutinesRx2)
 
     testImplementation(project(":internal-testutils-common"))
-    testImplementation(project(":internal-testutils-paging"))
+//    testImplementation(project(":internal-testutils-paging"))
     testImplementation(project(":internal-testutils-ktx"))
     testImplementation(libs.junit)
     testImplementation(libs.kotlinTest)

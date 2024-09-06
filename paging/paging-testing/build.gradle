@@ -62,7 +62,7 @@ androidXMultiplatform {
             dependencies {
                 implementation(libs.kotlinTest)
                 implementation(libs.kotlinCoroutinesTest)
-                implementation(project(":internal-testutils-paging"))
+//                implementation(project(":internal-testutils-paging"))
                 implementation(project(":kruth:kruth"))
             }
         }
