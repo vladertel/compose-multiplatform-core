@@ -161,7 +161,6 @@ internal fun Modifier.drawSelectionHandle(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun HandlePopup(
     positionProvider: OffsetProvider,
@@ -173,7 +172,7 @@ internal fun HandlePopup(
     }
     Popup(
         popupPositionProvider = popupPositionProvider,
-        properties = PopupProperties(clippingEnabled = false, usePlatformInsets = false),
+        properties = PopupProperties(clippingEnabled = false),
         content = content,
     )
 }
