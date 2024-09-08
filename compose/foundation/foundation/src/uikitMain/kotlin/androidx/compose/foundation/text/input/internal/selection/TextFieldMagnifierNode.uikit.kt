@@ -21,6 +21,7 @@ import androidx.compose.foundation.isPlatformMagnifierSupported
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.input.internal.TextLayoutState
 import androidx.compose.foundation.text.input.internal.TransformedTextFieldState
+import androidx.compose.foundation.text.input.internal.coerceIn
 import androidx.compose.foundation.text.input.internal.fromTextLayoutToCore
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.MagnifierPostTravelDp
@@ -190,8 +191,8 @@ private fun calculateSelectionMagnifierCenterIOS(
     density: Float
 ): Offset {
 
-    val dragPosition = selectionState.handleDragPosition.takeIf { it.isSpecified } ?:
-    return Offset.Unspecified
+    val dragPosition =
+        selectionState.handleDragPosition.takeIf { it.isSpecified } ?: return Offset.Unspecified
 
     val selection = textFieldState.visualText.selection
 
@@ -199,6 +200,7 @@ private fun calculateSelectionMagnifierCenterIOS(
         null -> return Offset.Unspecified
         Handle.Cursor,
         Handle.SelectionStart -> selection.start
+
         Handle.SelectionEnd -> selection.end
     }
 
@@ -209,7 +211,7 @@ private fun calculateSelectionMagnifierCenterIOS(
         return Offset.Unspecified
     }
 
-    val innerFieldBounds = textLayoutState.coreNodeCoordinates
+    val coreNodeBounds = textLayoutState.coreNodeCoordinates
         ?.takeIf { it.isAttached }?.visibleBounds()
         ?: return Offset.Unspecified
 
@@ -218,18 +220,21 @@ private fun calculateSelectionMagnifierCenterIOS(
         val line = layoutResult.getLineForOffset(textOffset)
         val top = layoutResult.getLineTop(line)
         val bottom = layoutResult.getLineBottom(line)
-        ((bottom - top) / 2) + top
+        (((bottom - top) / 2) + top)
     } else {
-        // can't get line bounds for empty field
-        // better alternatives?
-        innerFieldBounds.center.y
+        coreNodeBounds.center.y
     }
 
-    // native magnifier goes a little bit farther than text field bounds
-    val centerX = dragPosition.x.coerceIn(
-        -magnifierSize.width / 4f,
-        innerFieldBounds.right + magnifierSize.width / 4
-    )
+    val offset = textLayoutState.fromTextLayoutToCore(Offset(dragPosition.x, centerY))
 
-    return textLayoutState.fromTextLayoutToCore(Offset(centerX, centerY))
+    return offset.copy(
+        x = offset.x.coerceIn(
+            -magnifierSize.width / 4f,
+            coreNodeBounds.right + magnifierSize.width / 4
+        ),
+        y = offset.y.coerceIn(
+            coreNodeBounds.top,
+            coreNodeBounds.bottom
+        )
+    )
 }
