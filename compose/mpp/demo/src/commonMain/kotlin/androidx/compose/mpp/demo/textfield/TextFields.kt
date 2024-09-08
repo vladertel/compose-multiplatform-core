@@ -16,39 +16,25 @@
 
 package androidx.compose.mpp.demo.textfield
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.mpp.demo.Screen
-import androidx.compose.mpp.demo.textfield.android.loremIpsum
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 val TextFields = Screen.Selection(
     "TextFields",
@@ -94,7 +80,17 @@ val TextFields = Screen.Selection(
     },
 
     Screen.Example("BasicTextField2") {
-        BasicTextField2()
+        var textFieldState by remember { mutableStateOf("I am TextField") }
+        val textFieldState2 = remember { TextFieldState("I am TextField 2") }
+        Column(Modifier.fillMaxWidth()) {
+            BasicTextField(
+                textFieldState,
+                onValueChange = { textFieldState = it },
+                Modifier.padding(16.dp).fillMaxWidth()
+            )
+            Box(Modifier.height(16.dp))
+            BasicTextField(textFieldState2, Modifier.padding(16.dp).fillMaxWidth())
+        }
     },
 
     Screen.Example("RTL and BiDi") {
@@ -117,75 +113,4 @@ private fun AlmostFullscreen() {
         textState.value, { textState.value = it },
         Modifier.fillMaxSize().padding(vertical = 40.dp)
     )
-}
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-private fun BasicTextField2(modifier: Modifier = Modifier) {
-
-    val style = TextStyle(fontSize = 22.sp)
-    var textFieldState by remember { mutableStateOf("I am TextField") }
-    val textFieldState2 = remember { TextFieldState("I am TextField 2") }
-    Column(Modifier.fillMaxWidth()) {
-        BasicTextField(
-            textFieldState,
-            onValueChange = { textFieldState = it },
-            Modifier.padding(16.dp).fillMaxWidth(),
-            textStyle = style
-        )
-        Box(Modifier.height(16.dp))
-        BasicTextField(
-            textFieldState2, Modifier.padding(16.dp).fillMaxWidth(), textStyle = style
-        )
-
-        val s3 = remember { TextFieldState(loremIpsum(wordCount = 10)) }
-        BasicTextField(
-            state = s3,
-            textStyle = style,
-            modifier = Modifier
-                .padding(16.dp)
-                .padding(start = 100.dp)
-                .width(200.dp)
-                .border(1.dp, Color.Black)
-        )
-
-        val s4 = remember { TextFieldState("Multiline 6\n" + loremIpsum(wordCount = 50)) }
-        BasicTextField(
-            state = s4,
-            textStyle = style,
-            modifier = Modifier.padding(16.dp).padding(start = 100.dp).width(200.dp)
-                .border(1.dp, Color.Black),
-            lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 6)
-        )
-
-        val s5 = remember { TextFieldState(loremIpsum(wordCount = 30)) }
-
-        BasicTextField(
-            state = s5,
-            textStyle = style,
-            modifier = Modifier.padding(50.dp).fillMaxWidth(),
-            decorator = {
-                TextFieldDefaults.TextFieldDecorationBox(
-                    innerTextField = it,
-                    enabled = true,
-                    interactionSource = remember { MutableInteractionSource() },
-                    singleLine = false,
-                    value = s5.text.toString(),
-                    visualTransformation = VisualTransformation.None,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null
-                        )
-                    },
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null
-                        )
-                    }
-                )
-            }
-        )
-    }
 }

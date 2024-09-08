@@ -31,9 +31,9 @@ dependencies {
     // by gradle when leanback runs. But leanback uses paging-runtime:3.0.0. The version discrepancy
     // between paging-common and paging-runtime will cause errors. `Exclude` prevents pulling in
     // paging-common from internal-testutils-paging and uses the 3.0.0 version provided by leanback.
-//    androidTestImplementation(project(":internal-testutils-paging")){
-//        exclude group: "androidx.paging"
-//    }
+    androidTestImplementation(project(":internal-testutils-paging")){
+        exclude group: "androidx.paging"
+    }
     androidTestImplementation(libs.kotlinTest)
     androidTestImplementation(libs.kotlinCoroutinesTest)
     androidTestImplementation("androidx.arch.core:core-testing:2.2.0")

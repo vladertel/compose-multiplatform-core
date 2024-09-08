@@ -48,7 +48,7 @@ androidXMultiplatform {
             dependencies {
                 implementation projectOrArtifact(":compose:ui:ui-tooling")
                 implementation(project(":compose:test-utils"))
-//                implementation(projectOrArtifact(":internal-testutils-paging"))
+                implementation(projectOrArtifact(":internal-testutils-paging"))
             }
         }
 
