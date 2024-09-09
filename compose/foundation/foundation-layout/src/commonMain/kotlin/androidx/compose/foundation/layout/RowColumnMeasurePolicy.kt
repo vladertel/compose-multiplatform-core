@@ -167,25 +167,40 @@ internal fun RowColumnMeasurePolicy.measure(
             try {
                 remainder -= weightedSize.fastRoundToInt()
             } catch (e: IllegalArgumentException) {
-                throw IllegalArgumentException(
-                    "This log indicates a hard-to-reproduce Compose issue, " +
-                        "modified with additional debugging details. " +
-                        "Please help us by adding your experiences to the bug link provided. " +
-                        "Thank you for helping us improve Compose. " +
-                        "https://issuetracker.google.com/issues/297974033 " +
-                        "mainAxisMax " + mainAxisMax +
-                        "mainAxisMin " + mainAxisMin +
-                        "targetSpace " + targetSpace +
-                        "arrangementSpacingPx " + arrangementSpacingPx +
-                        "weightChildrenCount " + weightChildrenCount +
-                        "fixedSpace " + fixedSpace +
-                        "arrangementSpacingTotal " + arrangementSpacingTotal +
-                        "remainingToTarget " + remainingToTarget +
-                        "totalWeight " + totalWeight +
-                        "weightUnitSpace " + weightUnitSpace +
-                        "itemWeight " + itemWeight +
-                        "weightedSize " + weightedSize
-                ).initCause(e)
+                throw initCause(
+                    IllegalArgumentException(
+                        "This log indicates a hard-to-reproduce Compose issue, " +
+                            "modified with additional debugging details. " +
+                            "Please help us by adding your experiences to the bug link " +
+                            "provided. Thank you for helping us improve Compose. " +
+                            "https://issuetracker.google.com/issues/297974033 " +
+                            "mainAxisMax " +
+                            mainAxisMax +
+                            "mainAxisMin " +
+                            mainAxisMin +
+                            "targetSpace " +
+                            targetSpace +
+                            "arrangementSpacingPx " +
+                            arrangementSpacingPx +
+                            "weightChildrenCount " +
+                            weightChildrenCount +
+                            "fixedSpace " +
+                            fixedSpace +
+                            "arrangementSpacingTotal " +
+                            arrangementSpacingTotal +
+                            "remainingToTarget " +
+                            remainingToTarget +
+                            "totalWeight " +
+                            totalWeight +
+                            "weightUnitSpace " +
+                            weightUnitSpace +
+                            "itemWeight " +
+                            itemWeight +
+                            "weightedSize " +
+                            weightedSize
+                    ),
+                    e
+                )
             }
         }
 
@@ -226,28 +241,46 @@ internal fun RowColumnMeasurePolicy.measure(
                         isPrioritizing = true
                     )
                 } catch (e: IllegalArgumentException) {
-                    throw IllegalArgumentException(
-                        "This log indicates a hard-to-reproduce Compose issue, " +
-                            "modified with additional debugging details. " +
-                            "Please help us by adding your experiences to the bug link provided. " +
-                            "Thank you for helping us improve Compose. " +
-                            "https://issuetracker.google.com/issues/300280216 " +
-                            "mainAxisMax " + mainAxisMax +
-                            "mainAxisMin " + mainAxisMin +
-                            "targetSpace " + targetSpace +
-                            "arrangementSpacingPx " + arrangementSpacingPx +
-                            "weightChildrenCount " + weightChildrenCount +
-                            "fixedSpace " + fixedSpace +
-                            "arrangementSpacingTotal " + arrangementSpacingTotal +
-                            "remainingToTarget " + remainingToTarget +
-                            "totalWeight " + totalWeight +
-                            "weightUnitSpace " + weightUnitSpace +
-                            "weight " + weight +
-                            "weightedSize " + weightedSize +
-                            "crossAxisDesiredSize " + crossAxisDesiredSize +
-                            "remainderUnit " + remainderUnit +
-                            "childMainAxisSize " + childMainAxisSize
-                    ).initCause(e)
+                    throw initCause(
+                        IllegalArgumentException(
+                            "This log indicates a hard-to-reproduce Compose issue, " +
+                                "modified with additional debugging details. " +
+                                "Please help us by adding your experiences to the bug link " +
+                                "provided. Thank you for helping us improve Compose. " +
+                                "https://issuetracker.google.com/issues/300280216 " +
+                                "mainAxisMax " +
+                                mainAxisMax +
+                                "mainAxisMin " +
+                                mainAxisMin +
+                                "targetSpace " +
+                                targetSpace +
+                                "arrangementSpacingPx " +
+                                arrangementSpacingPx +
+                                "weightChildrenCount " +
+                                weightChildrenCount +
+                                "fixedSpace " +
+                                fixedSpace +
+                                "arrangementSpacingTotal " +
+                                arrangementSpacingTotal +
+                                "remainingToTarget " +
+                                remainingToTarget +
+                                "totalWeight " +
+                                totalWeight +
+                                "weightUnitSpace " +
+                                weightUnitSpace +
+                                "weight " +
+                                weight +
+                                "weightedSize " +
+                                weightedSize +
+                                "crossAxisDesiredSize " +
+                                crossAxisDesiredSize +
+                                "remainderUnit " +
+                                remainderUnit +
+                                "childMainAxisSize " +
+                                childMainAxisSize
+                        ),
+                        e
+                    )
                 }
                 val placeable = child.measure(childConstraints)
                 val placeableMainAxisSize = placeable.mainAxisSize()
@@ -318,3 +351,8 @@ internal fun RowColumnMeasurePolicy.measure(
         endIndex
     )
 }
+
+internal expect inline fun initCause(
+    exception: IllegalArgumentException,
+    cause: Exception
+): Throwable
