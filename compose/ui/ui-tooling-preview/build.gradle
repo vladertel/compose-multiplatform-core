@@ -32,7 +32,7 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -55,12 +55,6 @@ androidXMultiplatform {
             }
         }
 
-        skikoMain {
-            dependsOn(commonMain)
-            dependencies {
-            }
-        }
-
         androidMain {
             dependsOn(jvmMain)
             dependencies {
@@ -68,36 +62,22 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(skikoMain)
+        jvmStubsMain {
             dependsOn(jvmMain)
             dependencies {
             }
         }
 
-        jvmTest {
+        androidInstrumentedTest {
             dependsOn(commonTest)
             dependencies {
             }
         }
 
-        androidInstrumentedTest {
-            dependsOn(jvmTest)
-            dependencies {
-            }
-        }
-
         androidUnitTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.junit)
-            }
-        }
-
-        desktopTest {
-            dependsOn(jvmTest)
-            dependencies {
-
             }
         }
     }

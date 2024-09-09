@@ -33,7 +33,8 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -41,12 +42,12 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 implementation(project(":compose:runtime:runtime"))
-                implementation("androidx.compose.ui:ui:1.6.0")
-                implementation("androidx.compose.ui:ui-unit:1.6.0")
+                implementation(project(":compose:ui:ui"))
+                implementation(project(":compose:ui:ui-unit"))
                 implementation(project(":compose:ui:ui-graphics"))
                 implementation(project(":compose:ui:ui-util"))
                 implementation("androidx.collection:collection:1.4.0")
-                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
             }
         }
@@ -73,19 +74,20 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(jvmMain)
-            dependencies {
-            }
+        commonStubsMain {
+            dependsOn(commonMain)
         }
 
-        jvmTest {
-            dependencies {
-            }
+        jvmStubsMain {
+            dependsOn(commonStubsMain)
+        }
+
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
         }
 
         androidInstrumentedTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
@@ -101,7 +103,7 @@ androidXMultiplatform {
         }
 
         androidUnitTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
@@ -109,10 +111,6 @@ androidXMultiplatform {
                 implementation(libs.truth)
                 implementation(libs.kotlinCoroutinesCore)
             }
-        }
-
-        desktopTest {
-            dependsOn(jvmTest)
         }
     }
 }

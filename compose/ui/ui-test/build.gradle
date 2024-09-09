@@ -32,7 +32,8 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -44,8 +45,10 @@ androidXMultiplatform {
                 api(project(":compose:ui:ui-unit"))
                 api(project(":compose:runtime:runtime"))
                 api(libs.kotlinStdlib)
-
+                api(libs.kotlinCoroutinesCore)
+                api(libs.kotlinCoroutinesTest)
                 implementation(project(":compose:ui:ui-util"))
+                implementation("androidx.collection:collection:1.4.0")
             }
         }
 
@@ -57,9 +60,6 @@ androidXMultiplatform {
         jvmMain {
             dependsOn(commonMain)
             dependencies {
-                api(libs.kotlinCoroutinesCore)
-                api(libs.kotlinCoroutinesTest)
-                api(libs.kotlinStdlibCommon)
             }
         }
 
@@ -76,18 +76,16 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(jvmMain)
-            dependencies {
-                implementation(libs.junit)
-                implementation(libs.truth)
-                implementation(libs.skiko)
-            }
+        commonStubsMain {
+            dependsOn(commonMain)
         }
 
-        jvmTest {
-            dependencies {
-            }
+        jvmStubsMain {
+            dependsOn(commonStubsMain)
+        }
+
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
         }
 
         androidCommonTest {
@@ -99,7 +97,7 @@ androidXMultiplatform {
         }
 
         androidInstrumentedTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependsOn(androidCommonTest)
             dependencies {
                 implementation(project(":compose:material:material"))
@@ -120,7 +118,7 @@ androidXMultiplatform {
         }
 
         androidUnitTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependsOn(androidCommonTest)
             dependencies {
                 implementation(libs.truth)
@@ -132,18 +130,6 @@ androidXMultiplatform {
                 implementation(project(":compose:animation:animation-core"))
                 implementation(project(":compose:material:material"))
                 implementation(project(":compose:test-utils"))
-            }
-        }
-
-        desktopTest {
-            dependsOn(jvmTest)
-            dependencies {
-                implementation(libs.truth)
-                implementation(libs.junit)
-                implementation(libs.kotlinTest)
-                implementation(libs.skikoCurrentOs)
-                implementation(project(":compose:foundation:foundation"))
-                implementation(project(":compose:ui:ui-test"))
             }
         }
     }
