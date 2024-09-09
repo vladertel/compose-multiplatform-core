@@ -129,7 +129,7 @@ private val FocusableInNonTouchModeElement =
 
         override fun update(node: FocusableInNonTouchMode) {}
 
-        override fun hashCode(): Int = System.identityHashCode(this)
+        override fun hashCode(): Int = identityHashCode(this)
 
         override fun equals(other: Any?): Boolean = this === other
 
@@ -137,6 +137,8 @@ private val FocusableInNonTouchModeElement =
             name = "focusableInNonTouchMode"
         }
     }
+
+internal expect fun identityHashCode(instance: Any?): Int
 
 internal class FocusableInNonTouchMode : Modifier.Node(), CompositionLocalConsumerModifierNode,
     FocusPropertiesModifierNode {

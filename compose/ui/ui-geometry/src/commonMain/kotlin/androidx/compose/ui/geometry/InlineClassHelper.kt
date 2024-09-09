@@ -46,6 +46,7 @@ internal fun throwIllegalStateException(message: String) {
     throw IllegalStateException(message)
 }
 
+@Suppress("BanInlineOptIn")
 // Like Kotlin's require() but without the .toString() call
 @OptIn(ExperimentalContracts::class)
 internal inline fun checkPrecondition(value: Boolean, lazyMessage: () -> String) {

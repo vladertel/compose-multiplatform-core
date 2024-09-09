@@ -34,14 +34,15 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.kotlinStdlibCommon)
+                implementation(libs.kotlinStdlib)
                 api(libs.androidx.annotation)
 
                 api(project(":compose:ui:ui-unit"))
@@ -57,21 +58,8 @@ androidXMultiplatform {
             }
         }
 
-        skikoMain {
-            dependsOn(commonMain)
-            dependencies {
-                api(libs.skikoCommon)
-            }
-        }
-
-        jvmMain {
-            dependsOn(commonMain)
-            dependencies {
-            }
-        }
-
         androidMain {
-            dependsOn(jvmMain)
+            dependsOn(commonMain)
             dependencies {
                 // This has stub APIs for access to legacy Android APIs, so we don't want
                 // any dependency on this module.
@@ -82,22 +70,17 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(jvmMain)
-            dependsOn(skikoMain)
-            dependencies {
-                implementation(libs.kotlinStdlib)
-                implementation(libs.kotlinStdlibJdk8)
-            }
+        commonStubsMain {
+            dependsOn(commonMain)
         }
-
-        jvmTest {
-            dependencies {
-            }
+        jvmStubsMain {
+            dependsOn(commonStubsMain)
+        }
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
         }
 
         androidInstrumentedTest {
-            dependsOn(jvmTest)
             dependencies {
                 implementation(project(":compose:ui:ui-graphics:ui-graphics-samples"))
                 implementation(project(":compose:ui:ui-test-junit4"))
@@ -111,23 +94,13 @@ androidXMultiplatform {
         }
 
         androidUnitTest {
-            dependsOn(jvmTest)
             dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
                 implementation(libs.junit)
                 implementation(libs.truth)
-            }
-        }
-
-        desktopTest {
-            resources.srcDirs += "src/desktopTest/res"
-            dependsOn(jvmTest)
-            dependencies {
-                implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(libs.junit)
-                implementation(libs.truth)
-                implementation(libs.skikoCurrentOs)
+                implementation(libs.robolectric)
+                implementation(project(":compose:test-utils"))
             }
         }
     }
@@ -152,12 +125,4 @@ androidxCompose {
 
 android {
     namespace "androidx.compose.ui.graphics"
-}
-
-if (KmpPlatformsKt.enableDesktop(project)) {
-    tasks.withType(Test).configureEach {
-        if (name.equals("desktopTest")) {
-            systemProperties["GOLDEN_PATH"] = project.rootDir.absolutePath + "/../../golden"
-        }
-    }
 }
