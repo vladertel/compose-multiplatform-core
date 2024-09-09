@@ -32,15 +32,16 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
+    linuxX64Stubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.kotlinStdlibCommon)
-                api("androidx.annotation:annotation:1.1.0")
+                implementation(libs.kotlinStdlib)
+                api("androidx.annotation:annotation:1.8.0")
                 api(project(":compose:ui:ui-geometry"))
                 implementation("androidx.collection:collection:1.4.0")
                 implementation(project(":compose:runtime:runtime"))
@@ -57,10 +58,8 @@ androidXMultiplatform {
         jvmMain {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.kotlinStdlib)
             }
         }
-
 
         androidMain {
             dependsOn(jvmMain)
@@ -71,19 +70,20 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(jvmMain)
-            dependencies {
-            }
+        commonStubsMain {
+            dependsOn(commonMain)
         }
 
-        jvmTest {
-            dependencies {
-            }
+        jvmStubsMain {
+            dependsOn(commonStubsMain)
+        }
+
+        linuxx64StubsMain {
+            dependsOn(commonStubsMain)
         }
 
         androidInstrumentedTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.testRules)
                 implementation(libs.testRunner)
@@ -95,15 +95,11 @@ androidXMultiplatform {
         }
 
         androidUnitTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.truth)
                 implementation('androidx.collection:collection-ktx:1.2.0')
             }
-        }
-
-        desktopTest {
-            dependsOn(jvmTest)
         }
     }
 }

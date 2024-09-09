@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.text.selection
 
+import androidx.compose.foundation.internal.JvmSynchronized
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isUnspecified
@@ -45,7 +46,7 @@ internal class MultiWidgetSelectionDelegate(
      * way.
      */
     private val TextLayoutResult.lastVisibleOffset: Int
-        @Synchronized get() {
+        @JvmSynchronized get() {
             if (_previousTextLayoutResult !== this) {
                 val lastVisibleLine = when {
                     !didOverflowHeight || multiParagraph.didExceedMaxLines -> lineCount - 1
