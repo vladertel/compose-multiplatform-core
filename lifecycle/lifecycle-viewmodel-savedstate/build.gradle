@@ -64,11 +64,11 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":annotation:annotation"))
-                api(project(":core:core-bundle"))
+                api "org.jetbrains.compose.annotation-internal:annotation:1.6.11"
+                api "org.jetbrains.androidx.core:core-bundle:1.0.0"
                 api(project(":lifecycle:lifecycle-common"))
                 api(project(":lifecycle:lifecycle-viewmodel"))
-                api(project(":savedstate:savedstate"))
+                api "org.jetbrains.androidx.savedstate:savedstate:1.2.0"
                 api(libs.kotlinStdlib)
             }
         }
