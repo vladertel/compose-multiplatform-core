@@ -31,6 +31,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
+import android.os.Build;
 
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.SmallTest;
@@ -39,11 +40,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 
 import java.io.File;
 
 @SmallTest
 @RunWith(RobolectricTestRunner.class)
+//TODO: Remove minsdk check after sdk extension 13 release
+@Config(minSdk = Build.VERSION_CODES.VANILLA_ICE_CREAM)
 public class AnnotationUtilsTest {
     @Test
     public void getAnnotationIntent_nonNullUri_returnsAnnotateActionIntent() {
@@ -66,7 +70,7 @@ public class AnnotationUtilsTest {
     }
 
     @Test
-    public void launchAnnotationIntent_nonNullUri_returnsTrue() {
+    public void resolveAnnotationIntent_nonNullUri_returnsTrue() {
         String fileName = "file:://dummyfile.pdf";
         Uri uri = Uri.fromFile(new File(fileName));
 
@@ -85,23 +89,23 @@ public class AnnotationUtilsTest {
                 mockResolveInfo);
         when(mockContext.getPackageManager()).thenReturn(mockPackageManager);
 
-        boolean result = AnnotationUtils.launchAnnotationIntent(mockContext, uri);
+        boolean result = AnnotationUtils.resolveAnnotationIntent(mockContext, uri);
         assertTrue(result);
     }
 
     @Test
-    public void launchAnnotationIntent_nullContext_returnsNullPointerException() {
+    public void resolveAnnotationIntent_nullContext_returnsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> AnnotationUtils.launchAnnotationIntent(
+                () -> AnnotationUtils.resolveAnnotationIntent(
                         ApplicationProvider.getApplicationContext(), null));
     }
 
     @Test
-    public void launchAnnotationIntent_nullUri_returnsNullPointerException() {
+    public void resolveAnnotationIntent_nullUri_returnsNullPointerException() {
         String fileName = "file:://dummyfile.pdf";
         Uri uri = Uri.fromFile(new File(fileName));
         assertThrows(NullPointerException.class,
-                () -> AnnotationUtils.launchAnnotationIntent(
+                () -> AnnotationUtils.resolveAnnotationIntent(
                         null, uri));
     }
 }

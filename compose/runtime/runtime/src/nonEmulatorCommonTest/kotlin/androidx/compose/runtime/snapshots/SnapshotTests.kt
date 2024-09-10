@@ -16,7 +16,6 @@
 
 package androidx.compose.runtime.snapshots
 
-import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -962,7 +961,6 @@ class SnapshotTests {
         mutable1.dispose()
     }
 
-    @OptIn(ExperimentalComposeApi::class)
     @Test
     fun testUnsafeSnapshotEnterAndLeave() {
         val snapshot = takeSnapshot()
@@ -979,7 +977,6 @@ class SnapshotTests {
         }
     }
 
-    @OptIn(ExperimentalComposeApi::class)
     @Test
     fun testUnsafeSnapshotLeaveThrowsIfNotCurrent() {
         val snapshot = takeSnapshot()
@@ -1340,6 +1337,56 @@ class SnapshotTests {
         }
 
         assertEquals(listOf(3, 2, 1), result)
+    }
+
+    @Test
+    fun earlyReturnWithMutableSnapshot() {
+        val state = mutableStateOf(0)
+        fun test() {
+            Snapshot.withMutableSnapshot {
+                state.value = 1
+                return
+            }
+        }
+
+        test()
+
+        assertEquals(state.value, 1)
+    }
+
+    @Test
+    fun earlyReturnGlobal() {
+        val state = mutableStateOf(0)
+        fun test() {
+            Snapshot.global {
+                state.value = 1
+                return
+            }
+        }
+
+        val snapshot = takeMutableSnapshot()
+        try {
+            snapshot.enter {
+                test()
+                assertEquals(snapshot, Snapshot.current)
+            }
+        } finally {
+            snapshot.dispose()
+        }
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun throwInWithMutableSnapshot() {
+        Snapshot.withMutableSnapshot { error("Test error") }
+    }
+
+    @Test(expected = SnapshotApplyConflictException::class)
+    fun throwInApplyWithMutableSnapshot() {
+        val state = mutableStateOf(0)
+        Snapshot.withMutableSnapshot {
+            Snapshot.global { state.value = 1 }
+            state.value = 2
+        }
     }
 
     private fun usedRecords(state: StateObject): Int {

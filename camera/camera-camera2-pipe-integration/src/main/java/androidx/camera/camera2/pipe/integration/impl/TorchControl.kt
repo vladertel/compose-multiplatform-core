@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 
 /** Implementation of Torch control exposed by [CameraControlInternal]. */
 @CameraScope
-class TorchControl
+public class TorchControl
 @Inject
 constructor(
     cameraProperties: CameraProperties,
@@ -44,11 +44,11 @@ constructor(
     private val threads: UseCaseThreads,
 ) : UseCaseCameraControl {
 
-    private var _useCaseCamera: UseCaseCamera? = null
-    override var useCaseCamera: UseCaseCamera?
-        get() = _useCaseCamera
+    private var _requestControl: UseCaseCameraRequestControl? = null
+    override var requestControl: UseCaseCameraRequestControl?
+        get() = _requestControl
         set(value) {
-            _useCaseCamera = value
+            _requestControl = value
             setTorchAsync(
                 torch =
                     when (torchStateLiveData.value) {
@@ -68,7 +68,7 @@ constructor(
     private val hasFlashUnit: Boolean = cameraProperties.isFlashAvailable()
 
     private val _torchState = MutableLiveData(TorchState.OFF)
-    val torchStateLiveData: LiveData<Int>
+    public val torchStateLiveData: LiveData<Int>
         get() = _torchState
 
     private var _updateSignal: CompletableDeferred<Unit>? = null
@@ -81,7 +81,7 @@ constructor(
      * @param ignoreFlashUnitAvailability Whether to ignore the flash unit availability. When true,
      *   torch mode setting will be attempted even if a physical flash unit is not available.
      */
-    fun setTorchAsync(
+    public fun setTorchAsync(
         torch: Boolean,
         cancelPreviousTask: Boolean = true,
         ignoreFlashUnitAvailability: Boolean = false
@@ -92,7 +92,7 @@ constructor(
             return signal.createFailureResult(IllegalStateException("No flash unit"))
         }
 
-        useCaseCamera?.let { useCaseCamera ->
+        requestControl?.let { requestControl ->
             _torchState.setLiveDataValue(torch)
 
             threads.sequentialScope.launch {
@@ -108,7 +108,7 @@ constructor(
                 _updateSignal = signal
 
                 // TODO(b/209757083), handle the failed result of the setTorchAsync().
-                useCaseCamera.requestControl.setTorchAsync(torch).join()
+                requestControl.setTorchAsync(torch).join()
 
                 // Hold the internal AE mode to ON while the torch is turned ON.
                 state3AControl.preferredAeMode =
@@ -152,9 +152,9 @@ constructor(
         }
 
     @Module
-    abstract class Bindings {
+    public abstract class Bindings {
         @Binds
         @IntoSet
-        abstract fun provideControls(torchControl: TorchControl): UseCaseCameraControl
+        public abstract fun provideControls(torchControl: TorchControl): UseCaseCameraControl
     }
 }

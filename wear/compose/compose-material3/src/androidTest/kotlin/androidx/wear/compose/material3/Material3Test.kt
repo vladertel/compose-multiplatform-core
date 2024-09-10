@@ -69,10 +69,31 @@ import androidx.compose.ui.unit.toSize
 import androidx.test.screenshot.AndroidXScreenshotTestRule
 import kotlin.math.abs
 import org.junit.Assert
+import org.junit.rules.TestName
 
 /** Constant to emulate very big but finite constraints */
 val BigTestMaxWidth = 5000.dp
 val BigTestMaxHeight = 5000.dp
+
+/** Screen size constants for screenshot tests */
+val SCREEN_SIZE_SMALL = 192
+val SCREEN_SIZE_LARGE = 228
+
+enum class ScreenSize(val size: Int) {
+    SMALL(SCREEN_SIZE_SMALL),
+    LARGE(SCREEN_SIZE_LARGE)
+}
+
+enum class ScreenShape(val isRound: Boolean) {
+    ROUND_DEVICE(true),
+    SQUARE_DEVICE(false)
+}
+
+/**
+ * Valid characters for golden identifiers are [A-Za-z0-9_-] TestParameterInjector adds '[' +
+ * parameter_values + ']' to the test name.
+ */
+fun TestName.goldenIdentifier(): String = methodName.replace("[", "_").replace("]", "")
 
 internal const val TEST_TAG = "test-item"
 

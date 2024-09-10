@@ -26,6 +26,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 internal class ScatterMapTest {
     @Test
@@ -52,7 +53,7 @@ internal class ScatterMapTest {
     }
 
     @Test
-    fun zeroCapacityHashMap() {
+    fun zeroCapacityMap() {
         val map = MutableScatterMap<String, String>(0)
         assertEquals(0, map.capacity)
         assertEquals(0, map.size)
@@ -627,6 +628,8 @@ internal class ScatterMapTest {
 
         assertEquals(0, map.size)
         assertEquals(capacity, map.capacity)
+
+        map.forEach { _, _ -> fail() }
     }
 
     @Test

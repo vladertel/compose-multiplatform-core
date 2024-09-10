@@ -380,22 +380,6 @@ class ProcessCameraProviderTest {
     }
 
     @Test
-    fun exception_withDestroyedLifecycle() {
-        ProcessCameraProvider.configureInstance(FakeAppConfig.create())
-
-        runBlocking(MainScope().coroutineContext) {
-            provider = ProcessCameraProvider.getInstance(context).await()
-
-            lifecycleOwner0.destroy()
-
-            assertThrows<IllegalArgumentException> {
-                provider.bindToLifecycle(lifecycleOwner0, CameraSelector.DEFAULT_BACK_CAMERA)
-            }
-            assertThat(provider.isConcurrentCameraModeOn).isFalse()
-        }
-    }
-
-    @Test
     fun bind_returnTheSameCameraForSameSelectorAndLifecycleOwner() {
         ProcessCameraProvider.configureInstance(FakeAppConfig.create())
 
@@ -581,6 +565,23 @@ class ProcessCameraProviderTest {
     }
 
     @Test
+    fun lifecycleCameraIsNotActive_bindAfterLifecycleDestroyed() {
+        ProcessCameraProvider.configureInstance(FakeAppConfig.create())
+        runBlocking(MainScope().coroutineContext) {
+            provider = ProcessCameraProvider.getInstance(context).await()
+            val useCase = Preview.Builder().setSessionOptionUnpacker { _, _, _ -> }.build()
+            lifecycleOwner0.destroy()
+            val camera: LifecycleCamera =
+                provider.bindToLifecycle(
+                    lifecycleOwner0,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    useCase
+                ) as LifecycleCamera
+            assertThat(camera.isActive).isFalse()
+        }
+    }
+
+    @Test
     fun lifecycleCameraIsNotActive_unbindUseCase() {
         ProcessCameraProvider.configureInstance(FakeAppConfig.create())
         runBlocking(MainScope().coroutineContext) {
@@ -730,14 +731,6 @@ class ProcessCameraProviderTest {
             assertThat(provider.availableConcurrentCameraInfos.size).isEqualTo(2)
             assertThat(provider.availableConcurrentCameraInfos[0].size).isEqualTo(2)
             assertThat(provider.availableConcurrentCameraInfos[1].size).isEqualTo(2)
-        }
-    }
-
-    @Test
-    fun cannotConfigureTwice() {
-        ProcessCameraProvider.configureInstance(FakeAppConfig.create())
-        assertThrows<IllegalStateException> {
-            ProcessCameraProvider.configureInstance(FakeAppConfig.create())
         }
     }
 

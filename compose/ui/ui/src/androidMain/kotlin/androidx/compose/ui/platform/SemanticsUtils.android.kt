@@ -20,9 +20,9 @@ import android.annotation.SuppressLint
 import android.graphics.Region
 import android.view.View
 import androidx.collection.IntObjectMap
+import androidx.collection.MutableIntObjectMap
 import androidx.collection.MutableIntSet
-import androidx.collection.mutableIntObjectMapOf
-import androidx.collection.mutableIntSetOf
+import androidx.collection.emptyIntObjectMap
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.node.OwnerScope
@@ -48,7 +48,9 @@ internal class SemanticsNodeCopy(
     currentSemanticsNodes: IntObjectMap<SemanticsNodeWithAdjustedBounds>
 ) {
     val unmergedConfig = semanticsNode.unmergedConfig
-    val children: MutableIntSet = mutableIntSetOf()
+    // Root node must always be considered visible and sent to listening services
+    val isTransparent = if (semanticsNode.isRoot) false else semanticsNode.isTransparent
+    val children: MutableIntSet = MutableIntSet(semanticsNode.replacedChildren.size)
 
     init {
         semanticsNode.replacedChildren.fastForEach { child ->
@@ -144,18 +146,9 @@ internal class SemanticsNodeWithAdjustedBounds(
 )
 
 /** This function retrieves the View corresponding to a semanticsId, if it exists. */
-internal fun AndroidViewsHandler.semanticsIdToView(id: Int): View? {
-    layoutNodeToHolder.forEach { key, value ->
-        if (key.semanticsId == id) {
-            return value
-        }
-    }
-    return null
-}
+internal fun AndroidViewsHandler.semanticsIdToView(id: Int): View? =
+    layoutNodeToHolder.entries.firstOrNull { it.key.semanticsId == id }?.value
 
-// TODO(mnuzen): refactor `currentSemanticsNodes` in the AccessibilityDelegate file to also use
-// IntObjectMap's. Then ACVADC can also call `getAllUncoveredSemanticsNodesToIntObjectMap` instead
-// of `getAllUncoveredSemanticsNodesToMap` as it does now.
 /**
  * Finds pruned [SemanticsNode]s in the tree owned by this [SemanticsOwner]. A semantics node
  * completely covered by siblings drawn on top of it will be pruned. Return the results in a map.
@@ -163,10 +156,12 @@ internal fun AndroidViewsHandler.semanticsIdToView(id: Int): View? {
 internal fun SemanticsOwner.getAllUncoveredSemanticsNodesToIntObjectMap():
     IntObjectMap<SemanticsNodeWithAdjustedBounds> {
     val root = unmergedRootSemanticsNode
-    val nodes = mutableIntObjectMapOf<SemanticsNodeWithAdjustedBounds>()
     if (!root.layoutNode.isPlaced || !root.layoutNode.isAttached) {
-        return nodes
+        return emptyIntObjectMap()
     }
+
+    // Default capacity chosen to accommodate common scenarios
+    val nodes = MutableIntObjectMap<SemanticsNodeWithAdjustedBounds>(48)
 
     val unaccountedSpace =
         with(root.boundsInRoot) {
@@ -209,6 +204,12 @@ internal fun SemanticsOwner.getAllUncoveredSemanticsNodesToIntObjectMap():
             // if block.
             val children = currentNode.replacedChildren
             for (i in children.size - 1 downTo 0) {
+                // Links in text nodes are semantics children. But for Android accessibility support
+                // we don't publish them to the accessibility services because they are exposed
+                // as UrlSpan/ClickableSpan spans instead
+                if (children[i].config.contains(SemanticsProperties.LinkTestMarker)) {
+                    continue
+                }
                 findAllSemanticNodesRecursive(children[i], region)
             }
             if (currentNode.isImportantForAccessibility()) {

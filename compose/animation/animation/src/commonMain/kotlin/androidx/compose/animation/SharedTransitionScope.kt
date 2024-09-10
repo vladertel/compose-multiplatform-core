@@ -106,7 +106,7 @@ import kotlinx.coroutines.launch
  */
 @ExperimentalSharedTransitionApi
 @Composable
-fun SharedTransitionLayout(
+public fun SharedTransitionLayout(
     modifier: Modifier = Modifier,
     content: @Composable SharedTransitionScope.() -> Unit
 ) {
@@ -132,7 +132,7 @@ fun SharedTransitionLayout(
  */
 @ExperimentalSharedTransitionApi
 @Composable
-fun SharedTransitionScope(content: @Composable SharedTransitionScope.(Modifier) -> Unit) {
+public fun SharedTransitionScope(content: @Composable SharedTransitionScope.(Modifier) -> Unit) {
     LookaheadScope {
         val coroutineScope = rememberCoroutineScope()
         val sharedScope = remember { SharedTransitionScopeImpl(this, coroutineScope) }
@@ -165,12 +165,12 @@ fun SharedTransitionScope(content: @Composable SharedTransitionScope.(Modifier) 
  * bounds.
  */
 @ExperimentalSharedTransitionApi
-fun interface BoundsTransform {
+public fun interface BoundsTransform {
     /**
      * Returns a [FiniteAnimationSpec] for animating the bounds from [initialBounds] to
      * [targetBounds].
      */
-    fun transform(initialBounds: Rect, targetBounds: Rect): FiniteAnimationSpec<Rect>
+    public fun transform(initialBounds: Rect, targetBounds: Rect): FiniteAnimationSpec<Rect>
 }
 
 /**
@@ -194,14 +194,14 @@ fun interface BoundsTransform {
  */
 @Stable
 @ExperimentalSharedTransitionApi
-interface SharedTransitionScope : LookaheadScope {
+public interface SharedTransitionScope : LookaheadScope {
 
     /**
      * PlaceHolderSize defines the size of the space that was or will be occupied by the exiting or
      * entering [sharedElement]/[sharedBounds].
      */
-    fun interface PlaceHolderSize {
-        companion object {
+    public fun interface PlaceHolderSize {
+        public companion object {
             /**
              * [animatedSize] is a pre-defined [SharedTransitionScope.PlaceHolderSize] that lets the
              * parent layout of shared elements or shared bounds observe the animated size during an
@@ -211,7 +211,9 @@ interface SharedTransitionScope : LookaheadScope {
              * @see [contentSize]
              * @see [SharedTransitionScope.PlaceHolderSize]
              */
-            val animatedSize = PlaceHolderSize { _, animatedSize -> animatedSize }
+            public val animatedSize: PlaceHolderSize = PlaceHolderSize { _, animatedSize ->
+                animatedSize
+            }
 
             /**
              * [contentSize] is a pre-defined [SharedTransitionScope.PlaceHolderSize] that allows
@@ -228,7 +230,9 @@ interface SharedTransitionScope : LookaheadScope {
              * @see [contentSize]
              * @see [SharedTransitionScope.PlaceHolderSize]
              */
-            val contentSize = PlaceHolderSize { contentSize, _ -> contentSize }
+            public val contentSize: PlaceHolderSize = PlaceHolderSize { contentSize, _ ->
+                contentSize
+            }
         }
 
         /**
@@ -237,7 +241,7 @@ interface SharedTransitionScope : LookaheadScope {
          * content, [contentSize] is the lookahead size of the content (i.e. target size of the
          * shared transition).
          */
-        fun calculateSize(contentSize: IntSize, animatedSize: IntSize): IntSize
+        public fun calculateSize(contentSize: IntSize, animatedSize: IntSize): IntSize
     }
 
     /**
@@ -258,8 +262,8 @@ interface SharedTransitionScope : LookaheadScope {
      * aspect ratios, and other layouts that adjust themselves visually nicely and efficiently to
      * size changes.
      */
-    sealed interface ResizeMode {
-        companion object {
+    public sealed interface ResizeMode {
+        public companion object {
             /**
              * In contrast to [ScaleToBounds], [RemeasureToBounds] is a [ResizeMode] that remeasures
              * and relayouts its child whenever bounds change during the bounds transform. More
@@ -274,7 +278,7 @@ interface SharedTransitionScope : LookaheadScope {
              * result in overlapping children when constrained to too small of a size. In these
              * cases, it's recommended to use [ScaleToBounds] instead.
              */
-            val RemeasureToBounds: ResizeMode = RemeasureImpl
+            public val RemeasureToBounds: ResizeMode = RemeasureImpl
 
             /**
              * [ScaleToBounds] as a type of [ResizeMode] will measure the child layout with
@@ -292,7 +296,7 @@ interface SharedTransitionScope : LookaheadScope {
              * used to calculate the placement of the scaled content. It is [Alignment.Center] by
              * default.
              */
-            fun ScaleToBounds(
+            public fun ScaleToBounds(
                 contentScale: ContentScale = ContentScale.FillWidth,
                 alignment: Alignment = Alignment.Center
             ): ResizeMode = ScaleToBoundsCached(contentScale, alignment)
@@ -303,13 +307,13 @@ interface SharedTransitionScope : LookaheadScope {
      * Indicates whether there is any ongoing transition between matched [sharedElement] or
      * [sharedBounds].
      */
-    val isTransitionActive: Boolean
+    public val isTransitionActive: Boolean
 
     @Deprecated(
         "This EnterTransition has been deprecated. Please replace the usage with " +
             "resizeMode = ScaleToBounds(...) in sharedBounds to achieve the scale-to-bounds effect."
     )
-    fun scaleInSharedContentToBounds(
+    public fun scaleInSharedContentToBounds(
         contentScale: ContentScale = ContentScale.Fit,
         alignment: Alignment = Alignment.Center
     ): EnterTransition =
@@ -319,7 +323,7 @@ interface SharedTransitionScope : LookaheadScope {
         "This ExitTransition has been deprecated.  Please replace the usage with " +
             "resizeMode = ScaleToBounds(...) in sharedBounds to achieve the scale-to-bounds effect."
     )
-    fun scaleOutSharedContentToBounds(
+    public fun scaleOutSharedContentToBounds(
         contentScale: ContentScale = ContentScale.Fit,
         alignment: Alignment = Alignment.Center
     ): ExitTransition =
@@ -336,7 +340,7 @@ interface SharedTransitionScope : LookaheadScope {
      *
      * @sample androidx.compose.animation.samples.NestedSharedBoundsSample
      */
-    fun Modifier.skipToLookaheadSize(): Modifier
+    public fun Modifier.skipToLookaheadSize(): Modifier
 
     /**
      * Renders the content in the [SharedTransitionScope]'s overlay, where shared content (i.e.
@@ -362,7 +366,7 @@ interface SharedTransitionScope : LookaheadScope {
      *
      * @sample androidx.compose.animation.samples.SharedElementWithFABInOverlaySample
      */
-    fun Modifier.renderInSharedTransitionScopeOverlay(
+    public fun Modifier.renderInSharedTransitionScopeOverlay(
         renderInOverlay: () -> Boolean = { isTransitionActive },
         zIndexInOverlay: Float = 0f,
         clipInOverlayDuringTransition: (LayoutDirection, Density) -> Path? =
@@ -373,7 +377,7 @@ interface SharedTransitionScope : LookaheadScope {
      * [OverlayClip] defines a specific clipping that should be applied to a [sharedBounds] or
      * [sharedElement] in the overlay.
      */
-    interface OverlayClip {
+    public interface OverlayClip {
         /**
          * Creates a clip path based using current animated [bounds] of the [sharedBounds] or
          * [sharedElement], their [state] (to query parent state's bounds if needed), and
@@ -387,7 +391,7 @@ interface SharedTransitionScope : LookaheadScope {
          * It is recommended to modify the same [Path] object and return it here, instead of
          * creating new [Path]s.
          */
-        fun getClipPath(
+        public fun getClipPath(
             state: SharedContentState,
             bounds: Rect,
             layoutDirection: LayoutDirection,
@@ -453,7 +457,7 @@ interface SharedTransitionScope : LookaheadScope {
      * @see [sharedBounds]
      */
     @OptIn(ExperimentalAnimationApi::class)
-    fun Modifier.sharedElement(
+    public fun Modifier.sharedElement(
         state: SharedContentState,
         animatedVisibilityScope: AnimatedVisibilityScope,
         boundsTransform: BoundsTransform = DefaultBoundsTransform,
@@ -533,7 +537,7 @@ interface SharedTransitionScope : LookaheadScope {
      * @see [sharedBounds]
      */
     @OptIn(ExperimentalAnimationApi::class)
-    fun Modifier.sharedBounds(
+    public fun Modifier.sharedBounds(
         sharedContentState: SharedContentState,
         animatedVisibilityScope: AnimatedVisibilityScope,
         enter: EnterTransition = fadeIn(),
@@ -610,7 +614,7 @@ interface SharedTransitionScope : LookaheadScope {
      *
      * @sample androidx.compose.animation.samples.SharedElementWithMovableContentSample
      */
-    fun Modifier.sharedElementWithCallerManagedVisibility(
+    public fun Modifier.sharedElementWithCallerManagedVisibility(
         sharedContentState: SharedContentState,
         visible: Boolean,
         boundsTransform: BoundsTransform = DefaultBoundsTransform,
@@ -621,10 +625,10 @@ interface SharedTransitionScope : LookaheadScope {
     ): Modifier
 
     /** Creates an [OverlayClip] based on a specific [clipShape]. */
-    fun OverlayClip(clipShape: Shape): OverlayClip
+    public fun OverlayClip(clipShape: Shape): OverlayClip
 
     /** Creates and remembers a [SharedContentState] with a given [key]. */
-    @Composable fun rememberSharedContentState(key: Any): SharedContentState
+    @Composable public fun rememberSharedContentState(key: Any): SharedContentState
 
     /**
      * [SharedContentState] is designed to allow access of the properties of
@@ -632,7 +636,7 @@ interface SharedTransitionScope : LookaheadScope {
      * the [SharedTransitionScope], its [clipPathInOverlay] and [parentSharedContentState] if there
      * is a parent [sharedBounds] in the layout tree.
      */
-    class SharedContentState internal constructor(val key: Any) {
+    public class SharedContentState internal constructor(public val key: Any) {
         /**
          * Indicates whether a match of the same [key] has been found. [sharedElement] or
          * [sharedBounds] will not have any animation unless a match has been found.
@@ -642,7 +646,7 @@ interface SharedTransitionScope : LookaheadScope {
          * declared in subcomposition (e.g. a LazyList) where the composition happens as a part of
          * the measure/layout pass, that's when [isMatchFound] will become true.
          */
-        val isMatchFound: Boolean
+        public val isMatchFound: Boolean
             get() = internalState?.sharedElement?.foundMatch ?: false
 
         /**
@@ -651,11 +655,11 @@ interface SharedTransitionScope : LookaheadScope {
          * means it is safe to query [parentSharedContentState]'s [clipPathInOverlay] when the
          * shared content is drawn.
          */
-        val clipPathInOverlay: Path?
+        public val clipPathInOverlay: Path?
             get() = nonNullInternalState.clipPathInOverlay
 
         /** Returns the [SharedContentState] of a parent [sharedBounds], if any. */
-        val parentSharedContentState: SharedContentState?
+        public val parentSharedContentState: SharedContentState?
             get() = nonNullInternalState.parentState?.userState
 
         internal var internalState: SharedElementInternalState? by mutableStateOf(null)

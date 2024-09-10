@@ -17,12 +17,15 @@
 package androidx.compose.runtime
 
 import androidx.collection.MutableScatterSet
+import androidx.collection.ScatterSet
+import androidx.collection.emptyScatterSet
 import androidx.collection.mutableScatterSetOf
 import androidx.compose.runtime.collection.fastForEach
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.collection.wrapIntoSet
 import androidx.compose.runtime.external.kotlinx.collections.immutable.persistentSetOf
 import androidx.compose.runtime.internal.AtomicReference
+import androidx.compose.runtime.internal.SnapshotThreadLocal
 import androidx.compose.runtime.internal.logError
 import androidx.compose.runtime.internal.trace
 import androidx.compose.runtime.snapshots.MutableSnapshot
@@ -38,6 +41,8 @@ import androidx.compose.runtime.snapshots.fastGroupBy
 import androidx.compose.runtime.snapshots.fastMap
 import androidx.compose.runtime.snapshots.fastMapNotNull
 import androidx.compose.runtime.tooling.CompositionData
+import kotlin.collections.removeFirst as removeFirstKt
+import kotlin.collections.removeLast as removeLastKt
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -230,6 +235,7 @@ class Recomposer(effectCoroutineContext: CoroutineContext) : CompositionContext(
     // End properties guarded by stateLock
 
     private val _state = MutableStateFlow(State.Inactive)
+    private val pausedScopes = SnapshotThreadLocal<MutableScatterSet<RecomposeScopeImpl>?>()
 
     /**
      * A [Job] used as a parent of any effects created by this [Recomposer]'s compositions. Its
@@ -795,7 +801,7 @@ class Recomposer(effectCoroutineContext: CoroutineContext) : CompositionContext(
                 ?: return
         try {
             while (compositionsToRetry.isNotEmpty()) {
-                val composition = compositionsToRetry.removeLast()
+                val composition = compositionsToRetry.removeLastKt()
                 if (composition !is CompositionImpl) continue
 
                 composition.invalidateAll()
@@ -1112,6 +1118,54 @@ class Recomposer(effectCoroutineContext: CoroutineContext) : CompositionContext(
             // if modified after this call.
             Snapshot.notifyObjectsInitialized()
         }
+    }
+
+    internal override fun composeInitialPaused(
+        composition: ControlledComposition,
+        shouldPause: () -> Boolean,
+        content: @Composable () -> Unit
+    ): ScatterSet<RecomposeScopeImpl> {
+        return try {
+            composition.pausable(shouldPause) {
+                composeInitial(composition, content)
+                pausedScopes.get() ?: emptyScatterSet()
+            }
+        } finally {
+            pausedScopes.set(null)
+        }
+    }
+
+    internal override fun recomposePaused(
+        composition: ControlledComposition,
+        shouldPause: () -> Boolean,
+        invalidScopes: ScatterSet<RecomposeScopeImpl>
+    ): ScatterSet<RecomposeScopeImpl> {
+        return try {
+            recordComposerModifications()
+            composition.recordModificationsOf(invalidScopes.wrapIntoSet())
+            composition.pausable(shouldPause) {
+                val needsApply = performRecompose(composition, null)
+                if (needsApply != null) {
+                    performInitialMovableContentInserts(composition)
+                    needsApply.applyChanges()
+                    needsApply.applyLateChanges()
+                }
+                pausedScopes.get() ?: emptyScatterSet()
+            }
+        } finally {
+            pausedScopes.set(null)
+        }
+    }
+
+    override fun reportPausedScope(scope: RecomposeScopeImpl) {
+        val scopes =
+            pausedScopes.get()
+                ?: run {
+                    val newScopes = mutableScatterSetOf<RecomposeScopeImpl>()
+                    pausedScopes.set(newScopes)
+                    newScopes
+                }
+        scopes.add(scope)
     }
 
     private fun performInitialMovableContentInserts(composition: ControlledComposition) {
@@ -1588,4 +1642,4 @@ internal fun <K, V> MutableMap<K, MutableList<V>>.addMultiValue(key: K, value: V
     getOrPut(key) { mutableListOf() }.add(value)
 
 internal fun <K, V> MutableMap<K, MutableList<V>>.removeLastMultiValue(key: K): V? =
-    get(key)?.let { list -> list.removeFirst().also { if (list.isEmpty()) remove(key) } }
+    get(key)?.let { list -> list.removeFirstKt().also { if (list.isEmpty()) remove(key) } }

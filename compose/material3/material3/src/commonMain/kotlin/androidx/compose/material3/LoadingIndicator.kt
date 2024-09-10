@@ -36,6 +36,7 @@ import androidx.compose.material3.tokens.LoadingIndicatorTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,6 +71,9 @@ import kotlinx.coroutines.launch
  *
  * This version of the loading indicator morphs between its [polygons] shapes by the value of its
  * [progress].
+ *
+ * ![Loading indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material3/loading-indicator.png)
  *
  * It can be created like this:
  *
@@ -109,6 +113,9 @@ fun LoadingIndicator(
  * This version of the loading indicator animates and morphs between various shapes as long as the
  * loading indicator is visible.
  *
+ * ![Loading indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material3/loading-indicator.png)
+ *
  * It can be created like this:
  *
  * @sample androidx.compose.material3.samples.LoadingIndicatorSample
@@ -139,6 +146,9 @@ fun LoadingIndicator(
  *
  * This version of the loading indicator morphs between its [polygons] shapes by the value of its
  * [progress]. The shapes in this variation are contained within a colored [containerShape].
+ *
+ * ![Contained loading indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material3/contained-loading-indicator.png)
  *
  * It can be created like this:
  *
@@ -186,6 +196,9 @@ fun ContainedLoadingIndicator(
  * This version of the loading indicator animates and morphs between various shapes as long as the
  * loading indicator is visible. The shapes in this variation are contained within a colored
  * [containerShape].
+ *
+ * ![Contained loading indicator
+ * image](https://developer.android.com/images/reference/androidx/compose/material3/contained-loading-indicator.png)
  *
  * It can be created like this:
  *
@@ -360,10 +373,10 @@ private fun LoadingIndicatorImpl(
             calculateScaleFactor(indicatorPolygons) * LoadingIndicatorDefaults.ActiveIndicatorScale
         }
     val morphProgress = remember { Animatable(0f) }
-    var morphRotationTargetAngle = remember { QuarterRotation }
+    var morphRotationTargetAngle by remember { mutableFloatStateOf(QuarterRotation) }
     val globalRotation = remember { Animatable(0f) }
-    var currentMorphIndex by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
+    var currentMorphIndex by remember(indicatorPolygons) { mutableIntStateOf(0) }
+    LaunchedEffect(indicatorPolygons) {
         launch {
             // Note that we up the visibilityThreshold here to 0.1, which is x10 than the default
             // threshold, and ends the low-damping spring in a shorter time.

@@ -18,6 +18,7 @@ package androidx.camera.camera2.pipe.integration.adapter
 
 import android.hardware.camera2.CameraDevice
 import android.media.MediaCodec
+import android.util.Range
 import androidx.annotation.VisibleForTesting
 import androidx.camera.camera2.pipe.OutputStream
 import androidx.camera.camera2.pipe.core.Log
@@ -32,6 +33,7 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.SessionConfig
+import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.UseCaseConfig
 import androidx.camera.core.streamsharing.StreamSharing
 import kotlinx.coroutines.CoroutineScope
@@ -42,13 +44,13 @@ import kotlinx.coroutines.launch
  * Aggregate the SessionConfig from a List of [UseCase]s, and provide a validated SessionConfig for
  * operation.
  */
-class SessionConfigAdapter(
+public class SessionConfigAdapter(
     private val useCases: Collection<UseCase>,
     private val sessionProcessorConfig: SessionConfig? = null,
     private val isPrimary: Boolean = true,
 ) {
-    val isSessionProcessorEnabled = sessionProcessorConfig != null
-    val surfaceToStreamUseCaseMap: Map<DeferrableSurface, Long> by lazy {
+    public val isSessionProcessorEnabled: Boolean = sessionProcessorConfig != null
+    public val surfaceToStreamUseCaseMap: Map<DeferrableSurface, Long> by lazy {
         val sessionConfigs = mutableListOf<SessionConfig>()
         val useCaseConfigs = mutableListOf<UseCaseConfig<*>>()
         for (useCase in useCases) {
@@ -57,7 +59,7 @@ class SessionConfigAdapter(
         }
         getSurfaceToStreamUseCaseMapping(sessionConfigs, useCaseConfigs)
     }
-    val surfaceToStreamUseHintMap: Map<DeferrableSurface, Long> by lazy {
+    public val surfaceToStreamUseHintMap: Map<DeferrableSurface, Long> by lazy {
         val sessionConfigs = useCases.map { it.getSessionConfig(isPrimary) }
         getSurfaceToStreamUseHintMapping(sessionConfigs)
     }
@@ -82,21 +84,21 @@ class SessionConfigAdapter(
         validatingBuilder.build()
     }
 
-    val deferrableSurfaces: List<DeferrableSurface> by lazy {
+    public val deferrableSurfaces: List<DeferrableSurface> by lazy {
         check(validatingBuilder.isValid)
 
         sessionConfig.surfaces
     }
 
-    fun getValidSessionConfigOrNull(): SessionConfig? {
+    public fun getValidSessionConfigOrNull(): SessionConfig? {
         return if (isSessionConfigValid()) sessionConfig else null
     }
 
-    fun isSessionConfigValid(): Boolean {
+    public fun isSessionConfigValid(): Boolean {
         return validatingBuilder.isValid
     }
 
-    fun reportSurfaceInvalid(deferrableSurface: DeferrableSurface) {
+    public fun reportSurfaceInvalid(deferrableSurface: DeferrableSurface) {
         debug { "Unavailable $deferrableSurface, notify SessionConfig invalid" }
 
         // Only report error to one SessionConfig, CameraInternal#onUseCaseReset()
@@ -118,6 +120,15 @@ class SessionConfigAdapter(
         }
     }
 
+    public fun getExpectedFrameRateRange(): Range<Int>? {
+        return if (
+            isSessionConfigValid() &&
+                sessionConfig.expectedFrameRateRange != StreamSpec.FRAME_RATE_RANGE_UNSPECIFIED
+        )
+            sessionConfig.expectedFrameRateRange
+        else null
+    }
+
     /**
      * Populates the mapping between surfaces of a capture session and the Stream Use Case of their
      * associated stream.
@@ -126,7 +137,7 @@ class SessionConfigAdapter(
      * @return the mapping between surfaces and Stream Use Case flag
      */
     @VisibleForTesting
-    fun getSurfaceToStreamUseCaseMapping(
+    public fun getSurfaceToStreamUseCaseMapping(
         sessionConfigs: Collection<SessionConfig>,
         useCaseConfigs: Collection<UseCaseConfig<*>>,
     ): Map<DeferrableSurface, Long> {
@@ -154,7 +165,7 @@ class SessionConfigAdapter(
      * @return the mapping between surfaces and Stream Use Hint flag
      */
     @VisibleForTesting
-    fun getSurfaceToStreamUseHintMapping(
+    public fun getSurfaceToStreamUseHintMapping(
         sessionConfigs: Collection<SessionConfig>
     ): Map<DeferrableSurface, Long> {
         val mapping = mutableMapOf<DeferrableSurface, Long>()
@@ -194,12 +205,12 @@ class SessionConfigAdapter(
         }
     }
 
-    companion object {
-        fun SessionConfig.toCamera2ImplConfig(): Camera2ImplConfig {
+    public companion object {
+        public fun SessionConfig.toCamera2ImplConfig(): Camera2ImplConfig {
             return Camera2ImplConfig(implementationOptions)
         }
 
-        fun UseCase.getSessionConfig(isPrimary: Boolean): SessionConfig {
+        public fun UseCase.getSessionConfig(isPrimary: Boolean): SessionConfig {
             return if (isPrimary) sessionConfig else secondarySessionConfig
         }
     }

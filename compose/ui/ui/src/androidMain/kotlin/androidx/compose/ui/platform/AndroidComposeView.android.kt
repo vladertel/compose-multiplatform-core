@@ -189,6 +189,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastIsFinite
 import androidx.compose.ui.util.fastLastOrNull
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.trace
@@ -1230,10 +1231,9 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
     fun removeAndroidView(view: AndroidViewHolder) {
         registerOnEndApplyChangesListener {
             androidViewsHandler.removeViewInLayout(view)
-            val layoutNode = androidViewsHandler.holderToLayoutNode.remove(view)
-            if (layoutNode != null) {
-                androidViewsHandler.layoutNodeToHolder.remove(layoutNode)
-            }
+            androidViewsHandler.layoutNodeToHolder.remove(
+                androidViewsHandler.holderToLayoutNode.remove(view)
+            )
             view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO)
         }
     }
@@ -1297,7 +1297,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
                     requestLayout()
                 }
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
-                _androidViewsHandler?.layoutChildViewsIfNeeded()
                 dispatchPendingInteropLayoutCallbacks()
             }
         }
@@ -1311,7 +1310,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
             // it allows us to not traverse the hierarchy twice.
             if (!measureAndLayoutDelegate.hasPendingMeasureOrLayout) {
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
-                _androidViewsHandler?.layoutChildViewsIfNeeded()
                 dispatchPendingInteropLayoutCallbacks()
             }
         }
@@ -1437,7 +1435,6 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         // View is not yet laid out.
         updatePositionCacheAndDispatch()
         if (_androidViewsHandler != null) {
-            androidViewsHandler.layoutChildViewsIfNeeded()
             // Even if we laid out during onMeasure, we want to set the bounds of the
             // AndroidViewsHandler for accessibility and for Views making assumptions based on
             // the size of their ancestors. Usually the Views in the hierarchy will not
@@ -1601,7 +1598,7 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
             invalidateLayers(root)
         }
         measureAndLayout()
-        Snapshot.sendApplyNotifications()
+        Snapshot.notifyObjectsInitialized()
 
         isDrawingContent = true
         // we don't have to observe here because the root has a layer modifier
@@ -2324,17 +2321,17 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
 
     private fun isBadMotionEvent(event: MotionEvent): Boolean {
         var eventInvalid =
-            !event.x.isFinite() ||
-                !event.y.isFinite() ||
-                !event.rawX.isFinite() ||
-                !event.rawY.isFinite()
+            !event.x.fastIsFinite() ||
+                !event.y.fastIsFinite() ||
+                !event.rawX.fastIsFinite() ||
+                !event.rawY.fastIsFinite()
 
         if (!eventInvalid) {
             // First event x,y is checked above if block, so we can skip index 0.
             for (index in 1 until event.pointerCount) {
                 eventInvalid =
-                    !event.getX(index).isFinite() ||
-                        !event.getY(index).isFinite() ||
+                    !event.getX(index).fastIsFinite() ||
+                        !event.getY(index).fastIsFinite() ||
                         (SDK_INT >= Q && !isValidMotionEvent(event, index))
 
                 if (eventInvalid) break
@@ -2437,6 +2434,27 @@ internal class AndroidComposeView(context: Context, coroutineContext: CoroutineC
         get() = viewTreeOwners?.lifecycleOwner?.lifecycle?.currentState == Lifecycle.State.RESUMED
 
     override fun shouldDelayChildPressedState(): Boolean = false
+
+    // Track sensitive composable visible in this view
+    private var sensitiveComponentCount = 0
+
+    override fun incrementSensitiveComponentCount() {
+        if (SDK_INT >= 35) {
+            if (sensitiveComponentCount == 0) {
+                AndroidComposeViewSensitiveContent35.setContentSensitivity(view, true)
+            }
+            sensitiveComponentCount += 1
+        }
+    }
+
+    override fun decrementSensitiveComponentCount() {
+        if (SDK_INT >= 35) {
+            if (sensitiveComponentCount == 1) {
+                AndroidComposeViewSensitiveContent35.setContentSensitivity(view, false)
+            }
+            sensitiveComponentCount -= 1
+        }
+    }
 
     companion object {
         private var systemPropertiesClass: Class<*>? = null
@@ -2621,6 +2639,19 @@ private interface CalculateMatrixToWindow {
     fun calculateMatrixToWindow(view: View, matrix: Matrix)
 }
 
+@RequiresApi(35)
+private object AndroidComposeViewSensitiveContent35 {
+    @DoNotInline
+    @RequiresApi(35)
+    fun setContentSensitivity(view: View, isSensitiveContent: Boolean) {
+        if (isSensitiveContent) {
+            view.setContentSensitivity(View.CONTENT_SENSITIVITY_SENSITIVE)
+        } else {
+            view.setContentSensitivity(View.CONTENT_SENSITIVITY_AUTO)
+        }
+    }
+}
+
 @RequiresApi(Q)
 private class CalculateMatrixToWindowApi29 : CalculateMatrixToWindow {
     private val tmpMatrix = android.graphics.Matrix()
@@ -2692,7 +2723,7 @@ private class CalculateMatrixToWindowApi21(private val tmpMatrix: Matrix) :
 private object MotionEventVerifierApi29 {
     @DoNotInline
     fun isValidMotionEvent(event: MotionEvent, index: Int): Boolean {
-        return event.getRawX(index).isFinite() && event.getRawY(index).isFinite()
+        return event.getRawX(index).fastIsFinite() && event.getRawY(index).fastIsFinite()
     }
 }
 

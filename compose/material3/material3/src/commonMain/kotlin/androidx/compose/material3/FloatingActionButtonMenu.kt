@@ -16,33 +16,37 @@
 
 package androidx.compose.material3
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.tokens.FabBaselineTokens
+import androidx.compose.material3.tokens.FabLargeTokens
+import androidx.compose.material3.tokens.FabMediumTokens
+import androidx.compose.material3.tokens.FabMenuBaselineTokens
+import androidx.compose.material3.tokens.FabPrimaryContainerTokens
+import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -55,25 +59,36 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.HorizontalRuler
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.util.fastForEachIndexed
+import androidx.compose.ui.util.fastMap
+import androidx.compose.ui.util.fastMaxBy
+import androidx.compose.ui.util.fastSumBy
 import kotlin.math.hypot
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 // TODO: link to spec and image
 /**
- * FAB Menus should be used in conjunction with a [ToggleableFloatingActionButton] to provide
- * additional choices to the user after clicking a FAB.
+ * FAB Menus should be used in conjunction with a [ToggleFloatingActionButton] to provide additional
+ * choices to the user after clicking a FAB.
  *
  * @sample androidx.compose.material3.samples.FloatingActionButtonMenuSample
  * @param expanded whether the FAB Menu is expanded, which will trigger a staggered animation of the
  *   FAB Menu Items
- * @param itemsCount the total number of FAB Menu Items in this FAB Menu
+ * @param button a composable which triggers the showing and hiding of the FAB Menu Items via the
+ *   [expanded] state, typically a [ToggleFloatingActionButton]
  * @param modifier the [Modifier] to be applied to this FAB Menu
  * @param horizontalAlignment the horizontal alignment of the FAB Menu Items
  * @param content the content of this FAB Menu, typically a list of [FloatingActionButtonMenuItem]s
@@ -82,55 +97,159 @@ import kotlin.math.hypot
 @Composable
 fun FloatingActionButtonMenu(
     expanded: Boolean,
-    itemsCount: Int,
+    button: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     horizontalAlignment: Alignment.Horizontal = Alignment.End,
     content: @Composable FloatingActionButtonMenuScope.() -> Unit
-) =
-    Column(
-        modifier =
-            modifier
-                .verticalScroll(state = rememberScrollState(), reverseScrolling = true)
-                .padding(bottom = FabMenuPaddingBottom),
-        horizontalAlignment = horizontalAlignment,
-        verticalArrangement = Arrangement.spacedBy(FabMenuItemSpacingVertical)
-    ) {
-        val staggerDelayMillis = if (expanded) StaggerEnterDelayMillis else StaggerExitDelayMillis
-        val staggerProgress =
-            animateFloatAsState(
-                targetValue = if (expanded) 1f else 0f,
-                animationSpec =
-                    tween(durationMillis = itemsCount * staggerDelayMillis, easing = LinearEasing)
+) {
+    var buttonHeight by remember { mutableIntStateOf(0) }
+
+    Layout(
+        modifier = modifier.padding(horizontal = FabMenuPaddingHorizontal),
+        content = {
+            FloatingActionButtonMenuItemColumn(
+                expanded,
+                horizontalAlignment,
+                { buttonHeight },
+                content
             )
-        val scope =
-            remember(horizontalAlignment) {
-                object : FloatingActionButtonMenuScopeWrapper(this) {
-                    override val itemsCount: Int
-                        get() = itemsCount
 
-                    override val staggerProgress: Float
-                        get() = staggerProgress.value
+            button()
+        },
+    ) { measureables, constraints ->
+        val menuItemsPlaceable = measureables[0].measure(constraints)
 
-                    override val horizontalAlignment: Alignment.Horizontal
-                        get() = horizontalAlignment
-                }
+        val buttonPaddingBottom = FabMenuButtonPaddingBottom.roundToPx()
+        var buttonPlaceable: Placeable? = null
+        val suggestedWidth: Int
+        val suggestedHeight: Int
+        if (measureables.size > 1) {
+            buttonPlaceable = measureables[1].measure(constraints)
+            buttonHeight = buttonPlaceable.height
+
+            suggestedWidth = maxOf(buttonPlaceable.width, menuItemsPlaceable.width)
+            suggestedHeight =
+                maxOf(buttonPlaceable.height + buttonPaddingBottom, menuItemsPlaceable.height)
+        } else {
+            suggestedWidth = menuItemsPlaceable.width
+            suggestedHeight = menuItemsPlaceable.height
+        }
+
+        val width = minOf(suggestedWidth, constraints.maxWidth)
+        val height = minOf(suggestedHeight, constraints.maxHeight)
+
+        layout(width, height) {
+            val menuItemsX =
+                horizontalAlignment.align(menuItemsPlaceable.width, width, layoutDirection)
+            menuItemsPlaceable.place(menuItemsX, 0)
+
+            if (buttonPlaceable != null) {
+                val buttonX =
+                    horizontalAlignment.align(buttonPlaceable.width, width, layoutDirection)
+                val buttonY = height - buttonPlaceable.height - buttonPaddingBottom
+                buttonPlaceable.place(buttonX, buttonY)
             }
-        content(scope)
+        }
     }
-
-/** Scope for the children of [FloatingActionButtonMenu] */
-@ExperimentalMaterial3ExpressiveApi
-interface FloatingActionButtonMenuScope : ColumnScope {
-    val itemsCount: Int
-
-    val staggerProgress: Float
-
-    val horizontalAlignment: Alignment.Horizontal
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-private abstract class FloatingActionButtonMenuScopeWrapper(scope: ColumnScope) :
-    FloatingActionButtonMenuScope, ColumnScope by scope
+@Composable
+private fun FloatingActionButtonMenuItemColumn(
+    expanded: Boolean,
+    horizontalAlignment: Alignment.Horizontal,
+    buttonHeight: () -> Int,
+    content: @Composable FloatingActionButtonMenuScope.() -> Unit
+) {
+    var itemCount by remember { mutableIntStateOf(0) }
+    var staggerAnim by remember { mutableStateOf<Animatable<Int, AnimationVector1D>?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    Layout(
+        modifier =
+            Modifier.semantics {
+                    isTraversalGroup = true
+                    traversalIndex = -0.9f
+                }
+                .verticalScroll(state = rememberScrollState()),
+        content = {
+            val scope =
+                remember(horizontalAlignment) {
+                    object : FloatingActionButtonMenuScope {
+                        override val horizontalAlignment: Alignment.Horizontal
+                            get() = horizontalAlignment
+                    }
+                }
+            content(scope)
+        }
+    ) { measurables, constraints ->
+        itemCount = measurables.size
+
+        val targetItemCount = if (expanded) itemCount else 0
+        staggerAnim =
+            staggerAnim?.also {
+                if (it.targetValue != targetItemCount) {
+                    coroutineScope.launch {
+                        it.animateTo(
+                            targetItemCount,
+                            tween(
+                                (if (expanded) (StaggerEnterDelayMillis)
+                                else StaggerExitDelayMillis) * itemCount,
+                                easing = LinearEasing
+                            )
+                        )
+                    }
+                }
+            } ?: Animatable(targetItemCount, Int.VectorConverter)
+
+        val placeables = measurables.fastMap { measurable -> measurable.measure(constraints) }
+        val width = placeables.fastMaxBy { it.width }?.width ?: 0
+
+        val verticalSpacing = FabMenuItemSpacingVertical.roundToPx()
+        val verticalSpacingHeight =
+            if (placeables.isNotEmpty()) {
+                verticalSpacing * (placeables.size - 1)
+            } else {
+                0
+            }
+        val currentButtonHeight = buttonHeight()
+        val bottomPadding =
+            if (currentButtonHeight > 0)
+                currentButtonHeight +
+                    FabMenuButtonPaddingBottom.roundToPx() +
+                    FabMenuPaddingBottom.roundToPx()
+            else 0
+        val height = placeables.fastSumBy { it.height } + verticalSpacingHeight + bottomPadding
+        var visibleHeight = bottomPadding.toFloat()
+        placeables.fastForEachIndexed { index, placeable ->
+            val itemVisible = index >= itemCount - (staggerAnim?.value ?: 0)
+            if (itemVisible) {
+                visibleHeight += placeable.height
+                if (index < placeables.size - 1) {
+                    visibleHeight += verticalSpacing
+                }
+            }
+        }
+        layout(width, height, rulers = { MenuItemRuler provides height - visibleHeight }) {
+            var y = 0
+            placeables.fastForEachIndexed { index, placeable ->
+                val x = horizontalAlignment.align(placeable.width, width, layoutDirection)
+                placeable.place(x, y)
+
+                y += placeable.height
+                if (index < placeables.size - 1) {
+                    y += verticalSpacing
+                }
+            }
+        }
+    }
+}
+
+/** Scope for the children of [FloatingActionButtonMenu] */
+@ExperimentalMaterial3ExpressiveApi
+interface FloatingActionButtonMenuScope {
+    val horizontalAlignment: Alignment.Horizontal
+}
 
 // TODO: link to spec and image
 /**
@@ -141,7 +260,6 @@ private abstract class FloatingActionButtonMenuScopeWrapper(scope: ColumnScope) 
  * @param onClick called when this FAB Menu Item is clicked
  * @param text label displayed inside this FAB Menu Item
  * @param icon optional icon for this FAB Menu Item, typically an [Icon]
- * @param itemIndex the index of this FAB Menu Item within the list of all items
  * @param modifier the [Modifier] to be applied to this FAB Menu Item
  * @param containerColor the color used for the background of this FAB Menu Item
  * @param contentColor the preferred color for content inside this FAB Menu Item. Defaults to either
@@ -154,73 +272,86 @@ fun FloatingActionButtonMenuScope.FloatingActionButtonMenuItem(
     onClick: () -> Unit,
     text: @Composable () -> Unit,
     icon: @Composable () -> Unit,
-    itemIndex: Int,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     contentColor: Color = contentColorFor(containerColor)
 ) {
-    val stagger = 1f / itemsCount
-    val visible by remember {
-        derivedStateOf { (itemsCount - 1 - itemIndex) * stagger < staggerProgress }
-    }
-    AnimatedVisibility(
-        modifier = modifier,
-        visible = visible,
-        enter = fadeIn(animationSpec = springFastFlat()),
-        exit = fadeOut(animationSpec = springFastFlat())
-    ) {
-        // Disable min interactive component size because it interferes with the item expand
-        // animation and we know we are meeting the size requirements below.
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-            Surface(
-                shape = CircleShape,
-                color = containerColor,
-                contentColor = contentColor,
-                onClick = onClick
+    var widthAnim by remember { mutableStateOf<Animatable<Float, AnimationVector1D>?>(null) }
+    var alphaAnim by remember { mutableStateOf<Animatable<Float, AnimationVector1D>?>(null) }
+    // TODO Load the motionScheme tokens from the component tokens file
+    val widthSpring: FiniteAnimationSpec<Float> = MotionSchemeKeyTokens.FastSpatial.value()
+    val alphaSpring: FiniteAnimationSpec<Float> = MotionSchemeKeyTokens.FastEffects.value()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Disable min interactive component size because it interferes with the item expand
+    // animation and we know we are meeting the size requirements below.
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Surface(
+            modifier =
+                modifier.layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+
+                    layout(placeable.width, placeable.height) {
+                        val target =
+                            if (MenuItemRuler.current(Float.POSITIVE_INFINITY) <= 0) 1f else 0f
+
+                        widthAnim =
+                            widthAnim?.also {
+                                if (it.targetValue != target) {
+                                    coroutineScope.launch { it.animateTo(target, widthSpring) }
+                                }
+                            } ?: Animatable(target, Float.VectorConverter)
+
+                        val tempAlphaAnim =
+                            alphaAnim?.also {
+                                if (it.targetValue != target) {
+                                    coroutineScope.launch { it.animateTo(target, alphaSpring) }
+                                }
+                            } ?: Animatable(target, Float.VectorConverter)
+                        alphaAnim = tempAlphaAnim
+
+                        placeable.placeWithLayer(0, 0) { alpha = tempAlphaAnim.value }
+                    }
+                },
+            shape = FabMenuBaselineTokens.ListItemContainerShape.value,
+            color = containerColor,
+            contentColor = contentColor,
+            onClick = onClick
+        ) {
+            Row(
+                Modifier.layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val width =
+                            (placeable.width * maxOf((widthAnim?.value ?: 0f), 0f)).roundToInt()
+                        layout(width, placeable.height) {
+                            val x =
+                                horizontalAlignment.align(placeable.width, width, layoutDirection)
+                            placeable.placeWithLayer(x, 0)
+                        }
+                    }
+                    .sizeIn(minWidth = FabMenuItemMinWidth, minHeight = FabMenuItemHeight)
+                    .padding(
+                        start = FabMenuItemContentPaddingStart,
+                        end = FabMenuItemContentPaddingEnd
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        FabMenuItemContentSpacingHorizontal,
+                        Alignment.CenterHorizontally
+                    )
             ) {
-                Row(
-                    Modifier.animateEnterExit(
-                            enter =
-                                expandHorizontally(
-                                    expandFrom = getItemAnimationAlignment(horizontalAlignment),
-                                    animationSpec = springFastBouncy(),
-                                    clip = false
-                                ),
-                            exit =
-                                shrinkHorizontally(
-                                    shrinkTowards = getItemAnimationAlignment(horizontalAlignment),
-                                    animationSpec = springFastBouncy(),
-                                    clip = false
-                                )
-                        )
-                        .sizeIn(minWidth = FabMenuItemMinWidth, minHeight = FabMenuItemHeight)
-                        .padding(horizontal = FabMenuItemContentPaddingHorizontal),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement =
-                        Arrangement.spacedBy(
-                            FabMenuItemContentSpacingHorizontal,
-                            Alignment.CenterHorizontally
-                        )
-                ) {
-                    icon()
-                    text()
-                }
+                icon()
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.titleMedium,
+                    content = text
+                )
             }
         }
     }
 }
 
-/* Workaround for issue where the content itself (icon/text) slides in RTL. */
-@Composable
-private fun getItemAnimationAlignment(
-    horizontalAlignment: Alignment.Horizontal
-): Alignment.Horizontal {
-    if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
-        if (horizontalAlignment == Alignment.End) return Alignment.Start
-        if (horizontalAlignment == Alignment.Start) return Alignment.End
-    }
-    return horizontalAlignment
-}
+private val MenuItemRuler = HorizontalRuler()
 
 // TODO: link to spec and image
 /**
@@ -228,8 +359,8 @@ private fun getItemAnimationAlignment(
  * toggled, and should be used in conjunction with a [FloatingActionButtonMenu] to provide
  * additional choices to the user after clicking the FAB.
  *
- * Use [ToggleableFloatingActionButtonDefaults.animateIcon] to animate the color and size of the
- * icon while the [ToggleableFloatingActionButton] is being toggled.
+ * Use [ToggleFloatingActionButtonDefaults.animateIcon] to animate the color and size of the icon
+ * while the [ToggleFloatingActionButton] is being toggled.
  *
  * @sample androidx.compose.material3.samples.FloatingActionButtonMenuSample
  * @param checked whether this Toggleable FAB is checked
@@ -248,23 +379,24 @@ private fun getItemAnimationAlignment(
  */
 @ExperimentalMaterial3ExpressiveApi
 @Composable
-fun ToggleableFloatingActionButton(
+fun ToggleFloatingActionButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    containerColor: (Float) -> Color = ToggleableFloatingActionButtonDefaults.containerColor(),
+    containerColor: (Float) -> Color = ToggleFloatingActionButtonDefaults.containerColor(),
     contentAlignment: Alignment = Alignment.TopEnd,
-    containerSize: (Float) -> Dp = ToggleableFloatingActionButtonDefaults.containerSize(),
+    containerSize: (Float) -> Dp = ToggleFloatingActionButtonDefaults.containerSize(),
     containerCornerRadius: (Float) -> Dp =
-        ToggleableFloatingActionButtonDefaults.containerCornerRadius(),
-    content: @Composable ToggleableFloatingActionButtonScope.(() -> Float) -> Unit,
+        ToggleFloatingActionButtonDefaults.containerCornerRadius(),
+    content: @Composable ToggleFloatingActionButtonScope.() -> Unit,
 ) {
     val checkedProgress =
         animateFloatAsState(
             targetValue = if (checked) 1f else 0f,
-            animationSpec = springFastBouncy()
+            // TODO Load the motionScheme tokens from the component tokens file
+            animationSpec = MotionSchemeKeyTokens.FastSpatial.value()
         )
-    ToggleableFloatingActionButton(
+    ToggleFloatingActionButton(
         checked,
         onCheckedChange,
         { checkedProgress.value },
@@ -283,8 +415,8 @@ fun ToggleableFloatingActionButton(
  * toggled, and should be used in conjunction with a [FloatingActionButtonMenu] to provide
  * additional choices to the user after clicking the FAB.
  *
- * Use [ToggleableFloatingActionButtonDefaults.animateIcon] to animate the color and size of the
- * icon while the [ToggleableFloatingActionButton] is being toggled.
+ * Use [ToggleFloatingActionButtonDefaults.animateIcon] to animate the color and size of the icon
+ * while the [ToggleFloatingActionButton] is being toggled.
  *
  * This overload of Toggleable FAB also supports a [checkedProgress] param which is used to drive
  * the toggle animation.
@@ -308,17 +440,17 @@ fun ToggleableFloatingActionButton(
  */
 @ExperimentalMaterial3ExpressiveApi
 @Composable
-private fun ToggleableFloatingActionButton(
+private fun ToggleFloatingActionButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     checkedProgress: () -> Float,
     modifier: Modifier = Modifier,
-    containerColor: (Float) -> Color = ToggleableFloatingActionButtonDefaults.containerColor(),
+    containerColor: (Float) -> Color = ToggleFloatingActionButtonDefaults.containerColor(),
     contentAlignment: Alignment = Alignment.TopEnd,
-    containerSize: (Float) -> Dp = ToggleableFloatingActionButtonDefaults.containerSize(),
+    containerSize: (Float) -> Dp = ToggleFloatingActionButtonDefaults.containerSize(),
     containerCornerRadius: (Float) -> Dp =
-        ToggleableFloatingActionButtonDefaults.containerCornerRadius(),
-    content: @Composable ToggleableFloatingActionButtonScope.(() -> Float) -> Unit,
+        ToggleFloatingActionButtonDefaults.containerCornerRadius(),
+    content: @Composable ToggleFloatingActionButtonScope.() -> Unit,
 ) {
     val initialSize = remember(containerSize) { containerSize(0f) }
     Box(Modifier.size(initialSize), contentAlignment = contentAlignment) {
@@ -370,19 +502,19 @@ private fun ToggleableFloatingActionButton(
         ) {
             val scope =
                 remember(checkedProgress) {
-                    object : ToggleableFloatingActionButtonScope {
+                    object : ToggleFloatingActionButtonScope {
                         override val checkedProgress: Float
                             get() = checkedProgress()
                     }
                 }
-            scope.content(checkedProgress)
+            content(scope)
         }
     }
 }
 
-/** Contains the default values used by [ToggleableFloatingActionButton] */
+/** Contains the default values used by [ToggleFloatingActionButton] */
 @ExperimentalMaterial3ExpressiveApi
-object ToggleableFloatingActionButtonDefaults {
+object ToggleFloatingActionButtonDefaults {
 
     @Composable
     fun containerColor(
@@ -428,7 +560,7 @@ object ToggleableFloatingActionButtonDefaults {
     fun iconSizeLarge() = iconSize(FabLargeInitialIconSize)
 
     /**
-     * Modifier for animating the color and size of an icon within [ToggleableFloatingActionButton]
+     * Modifier for animating the color and size of an icon within [ToggleFloatingActionButton]
      * based on a progress value.
      *
      * @param checkedProgress callback that provides the progress value for the icon animation
@@ -457,35 +589,34 @@ object ToggleableFloatingActionButtonDefaults {
             }
 }
 
-/** Scope for the children of [ToggleableFloatingActionButton] */
+/** Scope for the children of [ToggleFloatingActionButton] */
 @ExperimentalMaterial3ExpressiveApi
-interface ToggleableFloatingActionButtonScope {
+interface ToggleFloatingActionButtonScope {
 
     val checkedProgress: Float
 }
 
-private val FabInitialSize = 56.dp
+private val FabInitialSize = FabBaselineTokens.ContainerHeight
 private val FabInitialCornerRadius = 16.dp
-private val FabInitialIconSize = 24.dp
-private val FabMediumInitialSize = 80.dp
-private val FabMediumInitialCornerRadius = 24.dp
-private val FabMediumInitialIconSize = 28.dp
-private val FabLargeInitialSize = 96.dp
+private val FabInitialIconSize = FabBaselineTokens.IconSize
+private val FabMediumInitialSize = FabMediumTokens.ContainerHeight
+private val FabMediumInitialCornerRadius = 20.dp
+private val FabMediumInitialIconSize = FabMediumTokens.IconSize
+private val FabLargeInitialSize = FabLargeTokens.ContainerHeight
 private val FabLargeInitialCornerRadius = 28.dp
-private val FabLargeInitialIconSize = 36.dp
-private val FabFinalSize = 56.dp
+private val FabLargeInitialIconSize = 36.dp // TODO: FabLargeTokens.IconSize is incorrect
+private val FabFinalSize = FabMenuBaselineTokens.CloseButtonContainerHeight
 private val FabFinalCornerRadius = FabFinalSize.div(2)
-private val FabFinalIconSize = 20.dp
-private val FabShadowElevation = 6.dp
-private val FabMenuPaddingBottom = 8.dp
-private val FabMenuItemMinWidth = 56.dp
-private val FabMenuItemHeight = 56.dp
-private val FabMenuItemSpacingVertical = 4.dp
-private val FabMenuItemContentPaddingHorizontal = 16.dp
-private val FabMenuItemContentSpacingHorizontal = 8.dp
+private val FabFinalIconSize = FabMenuBaselineTokens.CloseButtonIconSize
+private val FabShadowElevation = FabPrimaryContainerTokens.ContainerElevation
+private val FabMenuPaddingHorizontal = 16.dp
+private val FabMenuPaddingBottom = FabMenuBaselineTokens.CloseButtonBetweenSpace
+private val FabMenuButtonPaddingBottom = 16.dp
+private val FabMenuItemMinWidth = FabMenuBaselineTokens.ListItemContainerHeight
+private val FabMenuItemHeight = FabMenuBaselineTokens.ListItemContainerHeight
+private val FabMenuItemSpacingVertical = FabMenuBaselineTokens.ListItemBetweenSpace
+private val FabMenuItemContentPaddingStart = FabMenuBaselineTokens.ListItemLeadingSpace
+private val FabMenuItemContentPaddingEnd = FabMenuBaselineTokens.ListItemTrailingSpace
+private val FabMenuItemContentSpacingHorizontal = FabMenuBaselineTokens.ListItemIconLabelSpace
 private const val StaggerEnterDelayMillis = 35
 private const val StaggerExitDelayMillis = 25
-
-private fun <T> springFastBouncy() = spring<T>(0.6f, 800f)
-
-private fun <T> springFastFlat() = spring<T>(1f, 3800f)

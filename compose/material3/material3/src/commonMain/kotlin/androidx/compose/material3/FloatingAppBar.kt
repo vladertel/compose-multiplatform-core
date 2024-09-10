@@ -20,10 +20,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDecay
 import androidx.compose.animation.core.animateTo
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -52,6 +50,7 @@ import androidx.compose.material3.FloatingAppBarPosition.Companion.Start
 import androidx.compose.material3.FloatingAppBarPosition.Companion.Top
 import androidx.compose.material3.tokens.ColorSchemeKeyTokens
 import androidx.compose.material3.tokens.ElevationTokens
+import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.material3.tokens.ShapeKeyTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -79,18 +78,19 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * @sample androidx.compose.material3.samples.HorizontalFloatingAppBar
- * @param expanded whether the FloatingAppBar is in expanded mode, i.e. showing [trailingContent]
- *   and [leadingContent].
+ * @sample androidx.compose.material3.samples.ExpandableHorizontalFloatingAppBar
+ * @sample androidx.compose.material3.samples.ScrollableHorizontalFloatingAppBar
+ * @param expanded whether the FloatingAppBar is in expanded mode, i.e. showing [leadingContent] and
+ *   [trailingContent].
  * @param modifier the [Modifier] to be applied to this FloatingAppBar.
  * @param containerColor the color used for the background of this FloatingAppBar. Use
  *   [Color.Transparent] to have no color.
  * @param contentPadding the padding applied to the content of this FloatingAppBar.
  * @param scrollBehavior a [FloatingAppBarScrollBehavior].
  * @param shape the shape used for this FloatingAppBar.
- * @param trailingContent the trailing content of this FloatingAppBar. The default layout here is a
- *   [Row], so content inside will be placed horizontally. Only showing if [expanded] is true.
  * @param leadingContent the leading content of this FloatingAppBar. The default layout here is a
+ *   [Row], so content inside will be placed horizontally. Only showing if [expanded] is true.
+ * @param trailingContent the trailing content of this FloatingAppBar. The default layout here is a
  *   [Row], so content inside will be placed horizontally. Only showing if [expanded] is true.
  * @param content the main content of this FloatingAppBar. The default layout here is a [Row], so
  *   content inside will be placed horizontally.
@@ -104,8 +104,8 @@ fun HorizontalFloatingAppBar(
     contentPadding: PaddingValues = FloatingAppBarDefaults.ContentPadding,
     scrollBehavior: FloatingAppBarScrollBehavior? = null,
     shape: Shape = FloatingAppBarDefaults.ContainerShape,
-    trailingContent: @Composable (RowScope.() -> Unit)? = null,
     leadingContent: @Composable (RowScope.() -> Unit)? = null,
+    trailingContent: @Composable (RowScope.() -> Unit)? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -122,7 +122,7 @@ fun HorizontalFloatingAppBar(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        trailingContent?.let {
+        leadingContent?.let {
             val alignment = if (isRtl) Alignment.Start else Alignment.End
             AnimatedVisibility(
                 visible = expanded,
@@ -133,7 +133,7 @@ fun HorizontalFloatingAppBar(
             }
         }
         content()
-        leadingContent?.let {
+        trailingContent?.let {
             val alignment = if (isRtl) Alignment.End else Alignment.Start
             AnimatedVisibility(
                 visible = expanded,
@@ -147,18 +147,19 @@ fun HorizontalFloatingAppBar(
 }
 
 /**
- * @sample androidx.compose.material3.samples.VerticalFloatingAppBar
- * @param expanded whether the FloatingAppBar is in expanded mode, i.e. showing [trailingContent]
- *   and [leadingContent].
+ * @sample androidx.compose.material3.samples.ExpandableVerticalFloatingAppBar
+ * @sample androidx.compose.material3.samples.ScrollableVerticalFloatingAppBar
+ * @param expanded whether the FloatingAppBar is in expanded mode, i.e. showing [leadingContent] and
+ *   [trailingContent].
  * @param modifier the [Modifier] to be applied to this FloatingAppBar.
  * @param containerColor the color used for the background of this FloatingAppBar. Use
  *   Color.Transparent] to have no color.
  * @param contentPadding the padding applied to the content of this FloatingAppBar.
  * @param scrollBehavior a [FloatingAppBarScrollBehavior].
  * @param shape the shape used for this FloatingAppBar.
- * @param trailingContent the trailing content of this FloatingAppBar. The default layout here is a
- *   [Column], so content inside will be placed vertically. Only showing if [expanded] is true.
  * @param leadingContent the leading content of this FloatingAppBar. The default layout here is a
+ *   [Column], so content inside will be placed vertically. Only showing if [expanded] is true.
+ * @param trailingContent the trailing content of this FloatingAppBar. The default layout here is a
  *   [Column], so content inside will be placed vertically. Only showing if [expanded] is true.
  * @param content the main content of this FloatingAppBar. The default layout here is a [Column], so
  *   content inside will be placed vertically.
@@ -172,8 +173,8 @@ fun VerticalFloatingAppBar(
     contentPadding: PaddingValues = FloatingAppBarDefaults.ContentPadding,
     scrollBehavior: FloatingAppBarScrollBehavior? = null,
     shape: Shape = FloatingAppBarDefaults.ContainerShape,
-    trailingContent: @Composable (ColumnScope.() -> Unit)? = null,
     leadingContent: @Composable (ColumnScope.() -> Unit)? = null,
+    trailingContent: @Composable (ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -189,7 +190,7 @@ fun VerticalFloatingAppBar(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        trailingContent?.let {
+        leadingContent?.let {
             AnimatedVisibility(
                 visible = expanded,
                 enter = verticalEnterTransition(expandFrom = Alignment.Bottom),
@@ -199,7 +200,7 @@ fun VerticalFloatingAppBar(
             }
         }
         content()
-        leadingContent?.let {
+        trailingContent?.let {
             AnimatedVisibility(
                 visible = expanded,
                 enter = verticalEnterTransition(expandFrom = Alignment.Top),
@@ -380,6 +381,9 @@ object FloatingAppBarDefaults {
      */
     val ScreenOffset = 16.dp
 
+    // TODO: note that this scroll behavior may impact assistive technologies making the component
+    //  inaccessible. See @sample androidx.compose.material3.samples.HorizontalFloatingAppBar on how
+    //  to disable scrolling when touch exploration is enabled.
     /**
      * Returns a [FloatingAppBarScrollBehavior]. A floating app bar that is set up with this
      * [FloatingAppBarScrollBehavior] will immediately collapse when the content is pulled up, and
@@ -396,13 +400,14 @@ object FloatingAppBarDefaults {
      * @param flingAnimationSpec an [DecayAnimationSpec] that defines how to fling the floating app
      *   bar when the user flings the app bar itself, or the content below it
      */
+    // TODO Load the motionScheme tokens from the component tokens file
     @ExperimentalMaterial3ExpressiveApi
     @Composable
     fun exitAlwaysScrollBehavior(
         position: FloatingAppBarPosition,
         screenOffset: Dp = ScreenOffset,
         state: FloatingAppBarState = rememberFloatingAppBarState(),
-        snapAnimationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow),
+        snapAnimationSpec: AnimationSpec<Float> = MotionSchemeKeyTokens.DefaultEffects.value(),
         flingAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay()
     ): FloatingAppBarScrollBehavior =
         remember(position, screenOffset, state, snapAnimationSpec, flingAnimationSpec) {
@@ -416,46 +421,34 @@ object FloatingAppBarDefaults {
         }
 
     /** Default enter transition used for [HorizontalFloatingAppBar] when expanding */
+    @Composable
     fun horizontalEnterTransition(expandFrom: Alignment.Horizontal) =
         expandHorizontally(
-            animationSpec =
-                spring(
-                    dampingRatio = .8f,
-                    stiffness = 380f,
-                ),
+            animationSpec = MotionSchemeKeyTokens.FastSpatial.value(),
             expandFrom = expandFrom,
         )
 
     /** Default enter transition used for [VerticalFloatingAppBar] when expanding */
+    @Composable
     fun verticalEnterTransition(expandFrom: Alignment.Vertical) =
         expandVertically(
-            animationSpec =
-                spring(
-                    dampingRatio = .8f,
-                    stiffness = 380f,
-                ),
+            animationSpec = MotionSchemeKeyTokens.FastSpatial.value(),
             expandFrom = expandFrom,
         )
 
     /** Default exit transition used for [HorizontalFloatingAppBar] when shrinking */
+    @Composable
     fun horizontalExitTransition(shrinkTowards: Alignment.Horizontal) =
         shrinkHorizontally(
-            animationSpec =
-                spring(
-                    dampingRatio = .8f,
-                    stiffness = 380f,
-                ),
+            animationSpec = MotionSchemeKeyTokens.FastSpatial.value(),
             shrinkTowards = shrinkTowards,
         )
 
     /** Default exit transition used for [VerticalFloatingAppBar] when shrinking */
+    @Composable
     fun verticalExitTransition(shrinkTowards: Alignment.Vertical) =
         shrinkVertically(
-            animationSpec =
-                spring(
-                    dampingRatio = .8f,
-                    stiffness = 380f,
-                ),
+            animationSpec = MotionSchemeKeyTokens.FastSpatial.value(),
             shrinkTowards = shrinkTowards,
         )
 }

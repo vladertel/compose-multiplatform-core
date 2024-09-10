@@ -211,6 +211,7 @@ tasks.register("updateTranslations", UpdateTranslationsTask.class) {
             "dropdown_menu": "ExposedDropdownMenu",
             "range_start": "SliderRangeStart",
             "range_end": "SliderRangeEnd",
+            "snackbar_pane_title": "SnackbarPaneTitle",
     ]
     // This is all the locales translated by Compose on Android in the ui module:
     // https://github.com/androidx/androidx/tree/androidx-main/compose/ui/ui/src/androidMain/res

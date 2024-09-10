@@ -19,6 +19,9 @@
 package androidx.collection
 
 import androidx.annotation.IntRange
+import androidx.collection.internal.throwIllegalArgumentException
+import androidx.collection.internal.throwIndexOutOfBoundsException
+import androidx.collection.internal.throwNoSuchElementException
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.jvm.JvmField
@@ -57,7 +60,7 @@ public sealed class FloatList(initialCapacity: Int) {
 
     /** The number of elements in the [FloatList]. */
     @get:IntRange(from = 0)
-    public val size: Int
+    public inline val size: Int
         get() = _size
 
     /** Returns the last valid index in the [FloatList]. This can be `-1` when the list is empty. */
@@ -70,12 +73,12 @@ public sealed class FloatList(initialCapacity: Int) {
         get() = 0 until _size
 
     /** Returns `true` if the collection has no elements in it. */
-    public fun none(): Boolean {
+    public inline fun none(): Boolean {
         return isEmpty()
     }
 
     /** Returns `true` if there's at least one element in the collection. */
-    public fun any(): Boolean {
+    public inline fun any(): Boolean {
         return isNotEmpty()
     }
 
@@ -126,7 +129,7 @@ public sealed class FloatList(initialCapacity: Int) {
     }
 
     /** Returns the number of elements in this list. */
-    public fun count(): Int = _size
+    public inline fun count(): Int = _size
 
     /**
      * Counts the number of elements matching [predicate].
@@ -146,7 +149,7 @@ public sealed class FloatList(initialCapacity: Int) {
      */
     public fun first(): Float {
         if (isEmpty()) {
-            throw NoSuchElementException("FloatList is empty.")
+            throwNoSuchElementException("FloatList is empty.")
         }
         return content[0]
     }
@@ -285,7 +288,7 @@ public sealed class FloatList(initialCapacity: Int) {
      */
     public operator fun get(@IntRange(from = 0) index: Int): Float {
         if (index !in 0 until _size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         return content[index]
     }
@@ -296,7 +299,7 @@ public sealed class FloatList(initialCapacity: Int) {
      */
     public fun elementAt(@IntRange(from = 0) index: Int): Float {
         if (index !in 0 until _size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         return content[index]
     }
@@ -358,10 +361,10 @@ public sealed class FloatList(initialCapacity: Int) {
     }
 
     /** Returns `true` if the [FloatList] has no elements in it or `false` otherwise. */
-    public fun isEmpty(): Boolean = _size == 0
+    public inline fun isEmpty(): Boolean = _size == 0
 
     /** Returns `true` if there are elements in the [FloatList] or `false` if it is empty. */
-    public fun isNotEmpty(): Boolean = _size != 0
+    public inline fun isNotEmpty(): Boolean = _size != 0
 
     /**
      * Returns the last element in the [FloatList] or throws a [NoSuchElementException] if it
@@ -369,7 +372,7 @@ public sealed class FloatList(initialCapacity: Int) {
      */
     public fun last(): Float {
         if (isEmpty()) {
-            throw NoSuchElementException("FloatList is empty.")
+            throwNoSuchElementException("FloatList is empty.")
         }
         return content[lastIndex]
     }
@@ -401,6 +404,43 @@ public sealed class FloatList(initialCapacity: Int) {
             }
         }
         return -1
+    }
+
+    /**
+     * Searches this list the specified element in the range defined by [fromIndex] and [toIndex].
+     * The list is expected to be sorted into ascending order according to the natural ordering of
+     * its elements, otherwise the result is undefined.
+     *
+     * [fromIndex] must be >= 0 and < [toIndex], and [toIndex] must be <= [size], otherwise an an
+     * [IndexOutOfBoundsException] will be thrown.
+     *
+     * @return the index of the element if it is contained in the list within the specified range.
+     *   otherwise, the inverted insertion point `(-insertionPoint - 1)`. The insertion point is
+     *   defined as the index at which the element should be inserted, so that the list remains
+     *   sorted.
+     */
+    @JvmOverloads
+    public fun binarySearch(element: Int, fromIndex: Int = 0, toIndex: Int = size): Int {
+        if (fromIndex < 0 || fromIndex >= toIndex || toIndex > _size) {
+            throwIndexOutOfBoundsException("")
+        }
+
+        var low = fromIndex
+        var high = toIndex - 1
+
+        while (low <= high) {
+            val mid = low + high ushr 1
+            val midVal = content[mid]
+            if (midVal < element) {
+                low = mid + 1
+            } else if (midVal > element) {
+                high = mid - 1
+            } else {
+                return mid // key found
+            }
+        }
+
+        return -(low + 1) // key not found.
     }
 
     /**
@@ -533,7 +573,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public fun add(@IntRange(from = 0) index: Int, element: Float) {
         if (index !in 0.._size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         ensureCapacity(_size + 1)
         val content = content
@@ -558,7 +598,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public fun addAll(@IntRange(from = 0) index: Int, elements: FloatArray): Boolean {
         if (index !in 0.._size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+            throwIndexOutOfBoundsException("")
         }
         if (elements.isEmpty()) return false
         ensureCapacity(_size + elements.size)
@@ -585,7 +625,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public fun addAll(@IntRange(from = 0) index: Int, elements: FloatList): Boolean {
         if (index !in 0.._size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+            throwIndexOutOfBoundsException("")
         }
         if (elements.isEmpty()) return false
         ensureCapacity(_size + elements._size)
@@ -612,7 +652,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
      * [MutableFloatList] was changed or `false` if [elements] was empty.
      */
-    public fun addAll(elements: FloatList): Boolean {
+    public inline fun addAll(elements: FloatList): Boolean {
         return addAll(_size, elements)
     }
 
@@ -620,17 +660,17 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
      * [MutableFloatList] was changed or `false` if [elements] was empty.
      */
-    public fun addAll(elements: FloatArray): Boolean {
+    public inline fun addAll(elements: FloatArray): Boolean {
         return addAll(_size, elements)
     }
 
     /** Adds all [elements] to the end of the [MutableFloatList]. */
-    public operator fun plusAssign(elements: FloatList) {
+    public inline operator fun plusAssign(elements: FloatList) {
         addAll(_size, elements)
     }
 
     /** Adds all [elements] to the end of the [MutableFloatList]. */
-    public operator fun plusAssign(elements: FloatArray) {
+    public inline operator fun plusAssign(elements: FloatArray) {
         addAll(_size, elements)
     }
 
@@ -734,7 +774,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public fun removeAt(@IntRange(from = 0) index: Int): Float {
         if (index !in 0 until _size) {
-            throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         val content = content
         val item = content[index]
@@ -758,10 +798,10 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public fun removeRange(@IntRange(from = 0) start: Int, @IntRange(from = 0) end: Int) {
         if (start !in 0.._size || end !in 0.._size) {
-            throw IndexOutOfBoundsException("Start ($start) and end ($end) must be in 0..$_size")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         if (end < start) {
-            throw IllegalArgumentException("Start ($start) is more than end ($end)")
+            throwIllegalArgumentException("The end index must be < start index")
         }
         if (end != start) {
             if (end < _size) {
@@ -818,7 +858,7 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
      */
     public operator fun set(@IntRange(from = 0) index: Int, element: Float): Float {
         if (index !in 0 until _size) {
-            throw IndexOutOfBoundsException("set index $index must be between 0 .. $lastIndex")
+            throwIndexOutOfBoundsException("Index must be between 0 and size")
         }
         val content = content
         val old = content[index]
@@ -828,13 +868,15 @@ public class MutableFloatList(initialCapacity: Int = 16) : FloatList(initialCapa
 
     /** Sorts the [MutableFloatList] elements in ascending order. */
     public fun sort() {
-        if (_size == 0) return // TODO: remove after fix https://youtrack.jetbrains.com/issue/KT-70005
+        // TODO: remove a return after https://youtrack.jetbrains.com/issue/KT-70005 is fixed
+        if (_size == 0) return
         content.sort(fromIndex = 0, toIndex = _size)
     }
 
     /** Sorts the [MutableFloatList] elements in descending order. */
     public fun sortDescending() {
-        if (_size == 0) return // TODO: remove after fix https://youtrack.jetbrains.com/issue/KT-70005
+        // TODO: remove a return after https://youtrack.jetbrains.com/issue/KT-70005 is fixed
+        if (_size == 0) return
         content.sortDescending(fromIndex = 0, toIndex = _size)
     }
 }

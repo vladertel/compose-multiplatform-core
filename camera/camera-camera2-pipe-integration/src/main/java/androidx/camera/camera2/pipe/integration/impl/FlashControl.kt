@@ -44,7 +44,7 @@ internal const val DEFAULT_FLASH_MODE = ImageCapture.FLASH_MODE_OFF
 
 /** Implementation of Flash control exposed by [CameraControlInternal]. */
 @CameraScope
-class FlashControl
+public class FlashControl
 @Inject
 constructor(
     private val cameraProperties: CameraProperties,
@@ -53,11 +53,11 @@ constructor(
     private val torchControl: TorchControl,
     private val useFlashModeTorchFor3aUpdate: UseFlashModeTorchFor3aUpdate,
 ) : UseCaseCameraControl {
-    private var _useCaseCamera: UseCaseCamera? = null
-    override var useCaseCamera: UseCaseCamera?
-        get() = _useCaseCamera
+    private var _requestControl: UseCaseCameraRequestControl? = null
+    override var requestControl: UseCaseCameraRequestControl?
+        get() = _requestControl
         set(value) {
-            _useCaseCamera = value
+            _requestControl = value
             setFlashAsync(_flashMode, false)
         }
 
@@ -71,19 +71,19 @@ constructor(
     @Volatile @ImageCapture.FlashMode private var _flashMode: Int = DEFAULT_FLASH_MODE
 
     @ImageCapture.FlashMode
-    var flashMode: Int = _flashMode
+    public var flashMode: Int = _flashMode
         get() = _flashMode
         private set
 
     @Volatile private var _screenFlash: ScreenFlash? = null
 
-    var screenFlash: ScreenFlash? = _screenFlash
+    public var screenFlash: ScreenFlash? = _screenFlash
         get() = _screenFlash
         private set
 
     private var _updateSignal: CompletableDeferred<Unit>? = null
 
-    var updateSignal: Deferred<Unit> = CompletableDeferred(Unit)
+    public var updateSignal: Deferred<Unit> = CompletableDeferred(Unit)
         get() =
             if (_updateSignal != null) {
                 _updateSignal!!
@@ -92,13 +92,13 @@ constructor(
             }
         private set
 
-    fun setFlashAsync(
+    public fun setFlashAsync(
         @ImageCapture.FlashMode flashMode: Int,
         cancelPreviousTask: Boolean = true
     ): Deferred<Unit> {
         val signal = CompletableDeferred<Unit>()
 
-        useCaseCamera?.let {
+        requestControl?.let {
 
             // Update _flashMode immediately so that CameraControlInternal#getFlashMode()
             // returns correct value.
@@ -139,11 +139,11 @@ constructor(
         _updateSignal = null
     }
 
-    fun setScreenFlash(screenFlash: ScreenFlash?) {
+    public fun setScreenFlash(screenFlash: ScreenFlash?) {
         _screenFlash = screenFlash
     }
 
-    suspend fun startScreenFlashCaptureTasks() {
+    public suspend fun startScreenFlashCaptureTasks() {
         val pendingTasks = mutableListOf<Deferred<Unit>>()
 
         // Invoke ScreenFlash#apply and wait later for its listener to be completed
@@ -245,7 +245,7 @@ constructor(
         }
     }
 
-    suspend fun stopScreenFlashCaptureTasks() {
+    public suspend fun stopScreenFlashCaptureTasks() {
         withContext(Dispatchers.Main) {
             screenFlash?.clear()
             debug { "screenFlashPostCapture: ScreenFlash.clear() invoked" }
@@ -262,9 +262,9 @@ constructor(
     }
 
     @Module
-    abstract class Bindings {
+    public abstract class Bindings {
         @Binds
         @IntoSet
-        abstract fun provideControls(flashControl: FlashControl): UseCaseCameraControl
+        public abstract fun provideControls(flashControl: FlashControl): UseCaseCameraControl
     }
 }

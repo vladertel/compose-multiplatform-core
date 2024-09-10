@@ -16,6 +16,8 @@
 
 package androidx.compose.foundation.lazy.layout
 
+import androidx.collection.mutableScatterSetOf
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -61,7 +63,7 @@ private class LazySaveableStateHolder(private val wrappedRegistry: SaveableState
 
     var wrappedHolder by mutableStateOf<SaveableStateHolder?>(null)
 
-    private val previouslyComposedKeys = mutableSetOf<Any>()
+    private val previouslyComposedKeys = mutableScatterSetOf<Any>()
 
     override fun performSave(): Map<String, List<Any?>> {
         val holder = wrappedHolder
@@ -73,7 +75,8 @@ private class LazySaveableStateHolder(private val wrappedRegistry: SaveableState
 
     @Composable
     override fun SaveableStateProvider(key: Any, content: @Composable () -> Unit) {
-        requireNotNull(wrappedHolder) { "null wrappedHolder" }.SaveableStateProvider(key, content)
+        requirePreconditionNotNull(wrappedHolder) { "null wrappedHolder" }
+            .SaveableStateProvider(key, content)
         DisposableEffect(key) {
             previouslyComposedKeys -= key
             onDispose { previouslyComposedKeys += key }
@@ -81,7 +84,7 @@ private class LazySaveableStateHolder(private val wrappedRegistry: SaveableState
     }
 
     override fun removeState(key: Any) {
-        requireNotNull(wrappedHolder) { "null wrappedHolder" }.removeState(key)
+        requirePreconditionNotNull(wrappedHolder) { "null wrappedHolder" }.removeState(key)
     }
 
     companion object {

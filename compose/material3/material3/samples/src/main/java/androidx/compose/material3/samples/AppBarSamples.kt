@@ -16,6 +16,8 @@
 
 package androidx.compose.material3.samples
 
+import android.content.Context
+import android.view.accessibility.AccessibilityManager
 import androidx.annotation.Sampled
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,8 +54,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarTitleAlignment
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -120,7 +124,9 @@ fun SimpleTopAppBar() {
 @Sampled
 @Composable
 fun SimpleTopAppBarWithSubtitle() {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -142,7 +148,8 @@ fun SimpleTopAppBarWithSubtitle() {
                             contentDescription = "Localized description"
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         },
         content = { innerPadding ->
@@ -225,7 +232,9 @@ fun SimpleCenterAlignedTopAppBar() {
 @Sampled
 @Composable
 fun SimpleCenterAlignedTopAppBarWithSubtitle() {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -248,7 +257,8 @@ fun SimpleCenterAlignedTopAppBarWithSubtitle() {
                             contentDescription = "Localized description"
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         },
         content = { innerPadding ->
@@ -649,6 +659,11 @@ fun BottomAppBarWithFAB() {
 @Sampled
 @Composable
 fun ExitAlwaysBottomAppBar() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -662,7 +677,7 @@ fun ExitAlwaysBottomAppBar() {
                         Icon(Icons.Filled.Edit, contentDescription = "Localized description")
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
             )
         },
         floatingActionButton = {
@@ -703,6 +718,11 @@ fun ExitAlwaysBottomAppBar() {
 @Sampled
 @Composable
 fun ExitAlwaysBottomAppBarSpacedAround() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -710,7 +730,7 @@ fun ExitAlwaysBottomAppBarSpacedAround() {
             BottomAppBar(
                 horizontalArrangement = Arrangement.SpaceAround,
                 contentPadding = PaddingValues(horizontal = 0.dp),
-                scrollBehavior = scrollBehavior,
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
                 content = {
                     IconButton(onClick = { /* doSomething() */ }) {
                         Icon(
@@ -766,13 +786,18 @@ fun ExitAlwaysBottomAppBarSpacedAround() {
 @Sampled
 @Composable
 fun ExitAlwaysBottomAppBarSpacedBetween() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         bottomBar = {
             BottomAppBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
-                scrollBehavior = scrollBehavior,
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
                 content = {
                     IconButton(onClick = { /* doSomething() */ }) {
                         Icon(
@@ -828,6 +853,11 @@ fun ExitAlwaysBottomAppBarSpacedBetween() {
 @Sampled
 @Composable
 fun ExitAlwaysBottomAppBarSpacedEvenly() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -835,7 +865,7 @@ fun ExitAlwaysBottomAppBarSpacedEvenly() {
             BottomAppBar(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 contentPadding = PaddingValues(horizontal = 0.dp),
-                scrollBehavior = scrollBehavior,
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
                 content = {
                     IconButton(onClick = { /* doSomething() */ }) {
                         Icon(
@@ -891,13 +921,87 @@ fun ExitAlwaysBottomAppBarSpacedEvenly() {
 @Sampled
 @Composable
 fun ExitAlwaysBottomAppBarFixed() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
     val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         bottomBar = {
             BottomAppBar(
                 horizontalArrangement = BottomAppBarDefaults.HorizontalArrangement,
-                scrollBehavior = scrollBehavior,
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
+                content = {
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Localized description"
+                        )
+                    }
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Localized description"
+                        )
+                    }
+                    FilledIconButton(
+                        modifier = Modifier.width(56.dp),
+                        onClick = { /* doSomething() */ }
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Localized description")
+                    }
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(Icons.Filled.Check, contentDescription = "Localized description")
+                    }
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Localized description")
+                    }
+                }
+            )
+        },
+        content = { innerPadding ->
+            LazyColumn(
+                contentPadding = innerPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val list = (0..75).map { it.toString() }
+                items(count = list.size) {
+                    Text(
+                        text = list[it],
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * A sample for a vibrant [BottomAppBar] that collapses when the content is scrolled up, and appears
+ * when the content scrolled down. The content arrangement is fixed.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Preview
+@Sampled
+@Composable
+fun ExitAlwaysBottomAppBarFixedVibrant() {
+    val context = LocalContext.current
+    val isTouchExplorationEnabled = remember {
+        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        am.isEnabled && am.isTouchExplorationEnabled
+    }
+    val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        bottomBar = {
+            BottomAppBar(
+                horizontalArrangement = BottomAppBarDefaults.HorizontalArrangement,
+                scrollBehavior = if (!isTouchExplorationEnabled) scrollBehavior else null,
+                containerColor =
+                    MaterialTheme.colorScheme.primaryContainer, // TODO(b/356885344): tokens
                 content = {
                     IconButton(onClick = { /* doSomething() */ }) {
                         Icon(

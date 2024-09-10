@@ -33,6 +33,7 @@ import androidx.camera.testing.impl.AndroidUtil.isEmulator
 import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CoreAppTestUtil
+import androidx.camera.testing.impl.InternalTestConvenience.useInCameraTest
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.Lifecycle.State
 import androidx.test.core.app.ActivityScenario
@@ -120,15 +121,16 @@ class ViewPager2ActivityTest(
             )
         )
 
-    private val mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private lateinit var device: UiDevice
 
     @Before
     fun setUp() {
         Assume.assumeTrue(CameraUtil.hasCameraWithLensFacing(lensFacing))
 
+        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         // Ensure it's in a natural orientation. This change could delay around 1 sec, please
         // call this earlier before launching the test activity.
-        mDevice.setOrientationNatural()
+        device.setOrientationNatural()
 
         // Clear the device UI and check if there is no dialog or lock screen on the top of the
         // window.
@@ -140,13 +142,15 @@ class ViewPager2ActivityTest(
         val context = ApplicationProvider.getApplicationContext<Context>()
         val cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
         cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
-        mDevice.unfreezeRotation()
+        if (::device.isInitialized) {
+            device.unfreezeRotation()
+        }
     }
 
     // The test makes sure the camera PreviewView is in the streaming state.
     @Test
     fun testPreviewViewUpdateAfterStopResume() {
-        launchActivity(lensFacing, cameraXConfig).use { scenario ->
+        launchActivity(lensFacing, cameraXConfig).useInCameraTest { scenario ->
             // At first, check Preview in stream state
             assertStreamState(scenario, PreviewView.StreamState.STREAMING)
 
@@ -165,7 +169,7 @@ class ViewPager2ActivityTest(
     fun testPreviewViewUpdateAfterSwitch() {
         assumeFalse(shouldSkipTest()) // b/331933633
 
-        launchActivity(lensFacing, cameraXConfig).use { scenario ->
+        launchActivity(lensFacing, cameraXConfig).useInCameraTest { scenario ->
             // At first, check Preview in stream state
             assertStreamState(scenario, PreviewView.StreamState.STREAMING)
 
@@ -195,7 +199,7 @@ class ViewPager2ActivityTest(
 
     @Test
     fun testPreviewViewUpdateAfterSwitchAndStop_ResumeAndSwitchBack() {
-        launchActivity(lensFacing, cameraXConfig).use { scenario ->
+        launchActivity(lensFacing, cameraXConfig).useInCameraTest { scenario ->
             // At first, check Preview in stream state
             assertStreamState(scenario, PreviewView.StreamState.STREAMING)
 

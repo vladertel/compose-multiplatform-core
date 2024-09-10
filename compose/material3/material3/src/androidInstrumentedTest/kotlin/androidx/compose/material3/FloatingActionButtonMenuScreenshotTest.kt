@@ -19,7 +19,6 @@ package androidx.compose.material3
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
@@ -28,7 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
-import androidx.compose.material3.ToggleableFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -42,17 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
@@ -95,7 +88,7 @@ class FloatingActionButtonMenuScreenshotTest {
     fun fabMenu_expanded_lightTheme() {
         rule.setMaterialContent(lightColorScheme()) { testContent() }
 
-        rule.onNodeWithTag(ToggleableFabTestTag).performClick()
+        rule.onNodeWithTag(ToggleFabTestTag).performClick()
 
         rule
             .onNodeWithTag(FabMenuTestTag)
@@ -107,7 +100,7 @@ class FloatingActionButtonMenuScreenshotTest {
     fun fabMenu_expanded_darkTheme() {
         rule.setMaterialContent(darkColorScheme()) { testContent() }
 
-        rule.onNodeWithTag(ToggleableFabTestTag).performClick()
+        rule.onNodeWithTag(ToggleFabTestTag).performClick()
 
         rule
             .onNodeWithTag(FabMenuTestTag)
@@ -120,19 +113,19 @@ class FloatingActionButtonMenuScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             testContent(
                 containerColor =
-                    ToggleableFloatingActionButtonDefaults.containerColor(
+                    ToggleFloatingActionButtonDefaults.containerColor(
                         MaterialTheme.colorScheme.secondaryContainer,
                         MaterialTheme.colorScheme.secondary
                     ),
-                containerSize = ToggleableFloatingActionButtonDefaults.containerSizeMedium(),
+                containerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium(),
                 containerCornerRadius =
-                    ToggleableFloatingActionButtonDefaults.containerCornerRadiusMedium(),
+                    ToggleFloatingActionButtonDefaults.containerCornerRadiusMedium(),
                 iconColor =
-                    ToggleableFloatingActionButtonDefaults.iconColor(
+                    ToggleFloatingActionButtonDefaults.iconColor(
                         MaterialTheme.colorScheme.onSecondaryContainer,
                         MaterialTheme.colorScheme.onSecondary
                     ),
-                iconSize = ToggleableFloatingActionButtonDefaults.iconSizeMedium(),
+                iconSize = ToggleFloatingActionButtonDefaults.iconSizeMedium(),
                 itemContainerColor = MaterialTheme.colorScheme.secondaryContainer
             )
         }
@@ -151,24 +144,24 @@ class FloatingActionButtonMenuScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             testContent(
                 containerColor =
-                    ToggleableFloatingActionButtonDefaults.containerColor(
+                    ToggleFloatingActionButtonDefaults.containerColor(
                         MaterialTheme.colorScheme.secondaryContainer,
                         MaterialTheme.colorScheme.secondary
                     ),
-                containerSize = ToggleableFloatingActionButtonDefaults.containerSizeMedium(),
+                containerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium(),
                 containerCornerRadius =
-                    ToggleableFloatingActionButtonDefaults.containerCornerRadiusMedium(),
+                    ToggleFloatingActionButtonDefaults.containerCornerRadiusMedium(),
                 iconColor =
-                    ToggleableFloatingActionButtonDefaults.iconColor(
+                    ToggleFloatingActionButtonDefaults.iconColor(
                         MaterialTheme.colorScheme.onSecondaryContainer,
                         MaterialTheme.colorScheme.onSecondary
                     ),
-                iconSize = ToggleableFloatingActionButtonDefaults.iconSizeMedium(),
+                iconSize = ToggleFloatingActionButtonDefaults.iconSizeMedium(),
                 itemContainerColor = MaterialTheme.colorScheme.secondaryContainer
             )
         }
 
-        rule.onNodeWithTag(ToggleableFabTestTag).performClick()
+        rule.onNodeWithTag(ToggleFabTestTag).performClick()
 
         rule
             .onNodeWithTag(FabMenuTestTag)
@@ -184,19 +177,19 @@ class FloatingActionButtonMenuScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             testContent(
                 containerColor =
-                    ToggleableFloatingActionButtonDefaults.containerColor(
+                    ToggleFloatingActionButtonDefaults.containerColor(
                         MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.tertiary
                     ),
-                containerSize = ToggleableFloatingActionButtonDefaults.containerSizeLarge(),
+                containerSize = ToggleFloatingActionButtonDefaults.containerSizeLarge(),
                 containerCornerRadius =
-                    ToggleableFloatingActionButtonDefaults.containerCornerRadiusLarge(),
+                    ToggleFloatingActionButtonDefaults.containerCornerRadiusLarge(),
                 iconColor =
-                    ToggleableFloatingActionButtonDefaults.iconColor(
+                    ToggleFloatingActionButtonDefaults.iconColor(
                         MaterialTheme.colorScheme.onTertiary,
                         MaterialTheme.colorScheme.onTertiary
                     ),
-                iconSize = ToggleableFloatingActionButtonDefaults.iconSizeLarge(),
+                iconSize = ToggleFloatingActionButtonDefaults.iconSizeLarge(),
                 itemContainerColor = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
@@ -212,24 +205,24 @@ class FloatingActionButtonMenuScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             testContent(
                 containerColor =
-                    ToggleableFloatingActionButtonDefaults.containerColor(
+                    ToggleFloatingActionButtonDefaults.containerColor(
                         MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.tertiary
                     ),
-                containerSize = ToggleableFloatingActionButtonDefaults.containerSizeLarge(),
+                containerSize = ToggleFloatingActionButtonDefaults.containerSizeLarge(),
                 containerCornerRadius =
-                    ToggleableFloatingActionButtonDefaults.containerCornerRadiusLarge(),
+                    ToggleFloatingActionButtonDefaults.containerCornerRadiusLarge(),
                 iconColor =
-                    ToggleableFloatingActionButtonDefaults.iconColor(
+                    ToggleFloatingActionButtonDefaults.iconColor(
                         MaterialTheme.colorScheme.onTertiary,
                         MaterialTheme.colorScheme.onTertiary
                     ),
-                iconSize = ToggleableFloatingActionButtonDefaults.iconSizeLarge(),
+                iconSize = ToggleFloatingActionButtonDefaults.iconSizeLarge(),
                 itemContainerColor = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
 
-        rule.onNodeWithTag(ToggleableFabTestTag).performClick()
+        rule.onNodeWithTag(ToggleFabTestTag).performClick()
 
         rule
             .onNodeWithTag(FabMenuTestTag)
@@ -240,16 +233,12 @@ class FloatingActionButtonMenuScreenshotTest {
     @Test
     fun fabMenuItem_iconOnly_lightTheme() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButtonMenu(
-                expanded = true,
-                itemsCount = 1,
-            ) {
+            FloatingActionButtonMenu(expanded = true, button = {}) {
                 FloatingActionButtonMenuItem(
                     modifier = Modifier.testTag(FabMenuItemTestTag),
                     onClick = {},
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = {},
-                    itemIndex = 0,
                 )
             }
         }
@@ -263,16 +252,12 @@ class FloatingActionButtonMenuScreenshotTest {
     @Test
     fun fabMenuItem_textOnly_lightTheme() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButtonMenu(
-                expanded = true,
-                itemsCount = 1,
-            ) {
+            FloatingActionButtonMenu(expanded = true, button = {}) {
                 FloatingActionButtonMenuItem(
                     modifier = Modifier.testTag(FabMenuItemTestTag),
                     onClick = {},
                     icon = {},
                     text = { Text(text = "Text") },
-                    itemIndex = 0,
                 )
             }
         }
@@ -286,16 +271,12 @@ class FloatingActionButtonMenuScreenshotTest {
     @Test
     fun fabMenuItem_minimumTextOnly_lightTheme() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButtonMenu(
-                expanded = true,
-                itemsCount = 1,
-            ) {
+            FloatingActionButtonMenu(expanded = true, button = {}) {
                 FloatingActionButtonMenuItem(
                     modifier = Modifier.testTag(FabMenuItemTestTag),
                     onClick = {},
                     icon = {},
                     text = { Text(text = ".") },
-                    itemIndex = 0,
                 )
             }
         }
@@ -308,16 +289,16 @@ class FloatingActionButtonMenuScreenshotTest {
 
     private val FabMenuTestTag = "fabMenu"
     private val FabMenuItemTestTag = "fabMenuItem"
-    private val ToggleableFabTestTag = "toggleableFab"
+    private val ToggleFabTestTag = "toggleableFab"
 
     @Composable
     private fun testContent(
-        containerColor: (Float) -> Color = ToggleableFloatingActionButtonDefaults.containerColor(),
-        containerSize: (Float) -> Dp = ToggleableFloatingActionButtonDefaults.containerSize(),
+        containerColor: (Float) -> Color = ToggleFloatingActionButtonDefaults.containerColor(),
+        containerSize: (Float) -> Dp = ToggleFloatingActionButtonDefaults.containerSize(),
         containerCornerRadius: (Float) -> Dp =
-            ToggleableFloatingActionButtonDefaults.containerCornerRadius(),
-        iconColor: (Float) -> Color = ToggleableFloatingActionButtonDefaults.iconColor(),
-        iconSize: (Float) -> Dp = ToggleableFloatingActionButtonDefaults.iconSize(),
+            ToggleFloatingActionButtonDefaults.containerCornerRadius(),
+        iconColor: (Float) -> Color = ToggleFloatingActionButtonDefaults.iconColor(),
+        iconSize: (Float) -> Dp = ToggleFloatingActionButtonDefaults.iconSize(),
         itemContainerColor: Color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Box {
@@ -334,61 +315,44 @@ class FloatingActionButtonMenuScreenshotTest {
             var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
 
             Column(
-                modifier =
-                    Modifier.testTag(FabMenuTestTag)
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 16.dp, end = 16.dp)
-                        .semantics {
-                            isTraversalGroup = true
-                            traversalIndex = -1f
-                        },
+                modifier = Modifier.testTag(FabMenuTestTag).align(Alignment.BottomEnd),
                 horizontalAlignment = Alignment.End
             ) {
                 FloatingActionButtonMenu(
                     modifier = Modifier.weight(weight = 1f, fill = false),
                     expanded = fabMenuExpanded,
-                    itemsCount = items.size,
+                    button = {
+                        ToggleFloatingActionButton(
+                            modifier = Modifier.testTag(ToggleFabTestTag),
+                            checked = fabMenuExpanded,
+                            onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                            containerColor = containerColor,
+                            containerSize = containerSize,
+                            containerCornerRadius = containerCornerRadius,
+                        ) {
+                            val imageVector by remember {
+                                derivedStateOf {
+                                    if (checkedProgress > 0.5f) Icons.Filled.Close
+                                    else Icons.Filled.Add
+                                }
+                            }
+                            Icon(
+                                painter = rememberVectorPainter(imageVector),
+                                contentDescription = null,
+                                modifier =
+                                    Modifier.animateIcon({ checkedProgress }, iconColor, iconSize)
+                            )
+                        }
+                    }
                 ) {
-                    items.forEachIndexed { i, item ->
+                    items.forEach { item ->
                         FloatingActionButtonMenuItem(
-                            modifier =
-                                Modifier.semantics {
-                                    isTraversalGroup = true
-                                    traversalIndex = -1f + (items.size - i) * 0.01f
-                                },
                             onClick = { fabMenuExpanded = !fabMenuExpanded },
                             icon = { Icon(item.first, contentDescription = null) },
                             text = { Text(text = item.second) },
-                            itemIndex = i,
                             containerColor = itemContainerColor
                         )
                     }
-                }
-
-                ToggleableFloatingActionButton(
-                    modifier =
-                        Modifier.testTag(ToggleableFabTestTag).semantics {
-                            isTraversalGroup = true
-                            traversalIndex = -1f
-                            stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
-                            contentDescription = "Toggle menu"
-                        },
-                    checked = fabMenuExpanded,
-                    onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                    containerColor = containerColor,
-                    containerSize = containerSize,
-                    containerCornerRadius = containerCornerRadius,
-                ) {
-                    val imageVector by remember {
-                        derivedStateOf {
-                            if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
-                        }
-                    }
-                    Icon(
-                        painter = rememberVectorPainter(imageVector),
-                        contentDescription = null,
-                        modifier = Modifier.animateIcon({ checkedProgress }, iconColor, iconSize)
-                    )
                 }
             }
         }

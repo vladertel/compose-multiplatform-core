@@ -216,6 +216,7 @@ import androidx.test.espresso.Espresso
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.FlakyTest
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
@@ -2903,6 +2904,7 @@ class AndroidAccessibilityTest {
         }
     }
 
+    @FlakyTest(bugId = 354750986)
     @Test
     fun sendTextEvents_whenSetText() {
         // Arrange.
@@ -2926,7 +2928,7 @@ class AndroidAccessibilityTest {
             .assert(expectValue(EditableText, AnnotatedString("H")))
 
         // TODO(b/272068594): Extra TYPE_WINDOW_CONTENT_CHANGED sent 100ms after setup.
-        rule.mainClock.advanceTimeBy(100L)
+        rule.mainClock.advanceTimeBy(accessibilityEventLoopIntervalMs)
         rule.runOnIdle { clearInvocations(container) }
 
         // Act.
@@ -3088,6 +3090,7 @@ class AndroidAccessibilityTest {
         }
     }
 
+    @FlakyTest(bugId = 356384247)
     @Test
     fun selectionEventBeforeTraverseEvent_whenTraverseText() {
         // Arrange.
@@ -3353,6 +3356,7 @@ class AndroidAccessibilityTest {
         assertThat(vitrualViewId).isEqualTo(hitTestedId)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     fun testSemanticsHitTest_invisibleToUserSemantics() {
         // Arrange.
@@ -4635,8 +4639,8 @@ class AndroidAccessibilityTest {
 
         // Assert.
         rule.runOnIdle {
-            assertThat(parent.unmergedChildren(true).size).isEqualTo(1)
-            assertThat(child.unmergedChildren(true).size).isEqualTo(0)
+            assertThat(parent.unmergedChildren(includeFakeNodes = true).size).isEqualTo(1)
+            assertThat(child.unmergedChildren(includeFakeNodes = true).size).isEqualTo(0)
         }
     }
 
@@ -4666,7 +4670,9 @@ class AndroidAccessibilityTest {
         }
 
         // Assert.
-        rule.runOnIdle { assertThat(parent.unmergedChildren(true).size).isEqualTo(2) }
+        rule.runOnIdle {
+            assertThat(parent.unmergedChildren(includeFakeNodes = true).size).isEqualTo(2)
+        }
     }
 
     @Test

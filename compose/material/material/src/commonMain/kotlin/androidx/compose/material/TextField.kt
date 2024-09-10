@@ -34,11 +34,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.OutputTransformation
-import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine
 import androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.toTextFieldBuffer
 import androidx.compose.material.TextFieldDefaults.indicatorLine
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -77,7 +77,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * <a href="https://material.io/components/text-fields#filled-text-field" class="external"
+ * <a href="https://m2.material.io/components/text-fields#filled-text-field" class="external"
  * target="_blank">Material Design filled text field</a>.
  *
  * Filled text fields have more visual emphasis than outlined text fields, making them stand out
@@ -226,13 +226,10 @@ fun TextField(
                 if (outputTransformation == null) {
                     state.text.toString()
                 } else {
-                    // TODO: use constructor to create TextFieldBuffer from TextFieldState when
-                    // available
-                    lateinit var buffer: TextFieldBuffer
-                    state.edit { buffer = this }
+                    val buffer = state.toTextFieldBuffer()
                     // after edit completes, mutations on buffer are ineffective
                     with(outputTransformation) { buffer.transformOutput() }
-                    buffer.asCharSequence().toString()
+                    buffer.toString()
                 }
 
             TextFieldDefaults.TextFieldDecorationBox(
@@ -255,7 +252,7 @@ fun TextField(
 }
 
 /**
- * <a href="https://material.io/components/text-fields#filled-text-field" class="external"
+ * <a href="https://m2.material.io/components/text-fields#filled-text-field" class="external"
  * target="_blank">Material Design filled text field</a>.
  *
  * Filled text fields have more visual emphasis than outlined text fields, making them stand out
@@ -444,7 +441,7 @@ fun TextField(
 }
 
 /**
- * <a href="https://material.io/components/text-fields#filled-text-field" class="external"
+ * <a href="https://m2.material.io/components/text-fields#filled-text-field" class="external"
  * target="_blank">Material Design filled text field</a>.
  *
  * Filled text fields have more visual emphasis than outlined text fields, making them stand out
@@ -453,7 +450,8 @@ fun TextField(
  * ![Filled text field
  * image](https://developer.android.com/images/reference/androidx/compose/material/filled-text-field.png)
  *
- * If you are looking for an outlined version, see [OutlinedTextField].
+ * If you are looking for an outlined version, see [OutlinedTextField]. For a text field
+ * specifically designed for passwords or other secure content, see [SecureTextField].
  *
  * This overload provides access to the input text, cursor position, selection range and IME
  * composition. If you only want to observe an input text change, use the TextField overload with
@@ -658,7 +656,7 @@ internal fun TextFieldLayout(
         content = {
             if (leading != null) {
                 Box(
-                    modifier = Modifier.layoutId(LeadingId).then(IconDefaultSizeModifier),
+                    modifier = Modifier.layoutId(LeadingId).minimumInteractiveComponentSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     leading()
@@ -666,7 +664,7 @@ internal fun TextFieldLayout(
             }
             if (trailing != null) {
                 Box(
-                    modifier = Modifier.layoutId(TrailingId).then(IconDefaultSizeModifier),
+                    modifier = Modifier.layoutId(TrailingId).minimumInteractiveComponentSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     trailing()

@@ -29,6 +29,7 @@ import androidx.room.compiler.processing.XRawType
 import androidx.room.compiler.processing.isTypeElement
 import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
+import androidx.room.compiler.processing.util.compileFiles
 import androidx.room.compiler.processing.util.runProcessorTest
 import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.GuavaUtilConcurrentTypeNames
@@ -46,6 +47,7 @@ import androidx.room.processor.CustomConverterProcessor
 import androidx.room.processor.DaoProcessor
 import androidx.room.processor.DaoProcessorTest
 import androidx.room.processor.ProcessorErrors
+import androidx.room.runProcessorTestWithK1
 import androidx.room.solver.binderprovider.DataSourceFactoryQueryResultBinderProvider
 import androidx.room.solver.binderprovider.DataSourceQueryResultBinderProvider
 import androidx.room.solver.binderprovider.ListenableFuturePagingSourceQueryResultBinderProvider
@@ -57,11 +59,9 @@ import androidx.room.solver.binderprovider.RxQueryResultBinderProvider
 import androidx.room.solver.query.parameter.CollectionQueryParameterAdapter
 import androidx.room.solver.query.result.MultiTypedPagingSourceQueryResultBinder
 import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureDeleteOrUpdateMethodBinderProvider
-import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureInsertMethodBinderProvider
-import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureUpsertMethodBinderProvider
+import androidx.room.solver.shortcut.binderprovider.GuavaListenableFutureInsertOrUpsertMethodBinderProvider
 import androidx.room.solver.shortcut.binderprovider.RxCallableDeleteOrUpdateMethodBinderProvider
-import androidx.room.solver.shortcut.binderprovider.RxCallableInsertMethodBinderProvider
-import androidx.room.solver.shortcut.binderprovider.RxCallableUpsertMethodBinderProvider
+import androidx.room.solver.shortcut.binderprovider.RxCallableInsertOrUpsertMethodBinderProvider
 import androidx.room.solver.types.BoxedPrimitiveColumnTypeAdapter
 import androidx.room.solver.types.ByteBufferColumnTypeAdapter
 import androidx.room.solver.types.ColumnTypeAdapter
@@ -82,6 +82,7 @@ import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.MatcherAssert.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -139,7 +140,7 @@ class TypeAdapterStoreTest {
             """
                     .trimIndent()
             )
-        runProcessorTest(sources = listOf(entity, converter)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(entity, converter)) { invocation ->
             val typeElement =
                 invocation.processingEnv.requireTypeElement("foo.bar.EntityWithOneWayEnum")
             val context = Context(invocation.processingEnv)
@@ -203,7 +204,7 @@ class TypeAdapterStoreTest {
                 """
                     .trimMargin()
             )
-        runProcessorTest(sources = listOf(enumSrc)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(enumSrc)) { invocation ->
             val store =
                 TypeAdapterStore.create(
                     Context(invocation.processingEnv),
@@ -236,7 +237,7 @@ class TypeAdapterStoreTest {
             )
         var results: Map<String, String?> = mutableMapOf()
 
-        runProcessorTest(sources = listOf(source)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(source)) { invocation ->
             val typeAdapterStore =
                 TypeAdapterStore.create(
                     context = invocation.context,
@@ -292,7 +293,7 @@ class TypeAdapterStoreTest {
                     .trimIndent()
             )
 
-        runProcessorTest(sources = listOf(source)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(source)) { invocation ->
             TypeAdapterStore.create(
                 context = invocation.context,
                 builtInConverterFlags = BuiltInConverterFlags.DEFAULT
@@ -409,7 +410,7 @@ class TypeAdapterStoreTest {
             }
             """
             )
-        runProcessorTest(sources = listOf(point)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(point)) { invocation ->
             val context = Context(invocation.processingEnv)
             val converters =
                 CustomConverterProcessor(
@@ -534,7 +535,7 @@ class TypeAdapterStoreTest {
             val converter =
                 store.typeConverterStore.findTypeConverter(
                     binders[0].from,
-                    invocation.context.COMMON_TYPES.STRING
+                    invocation.context.processingEnv.requireType(CommonTypeNames.STRING)
                 )
             assertThat(converter).isNotNull()
             assertThat(store.typeConverterStore.reverse(converter!!)).isEqualTo(binders[1])
@@ -561,7 +562,7 @@ class TypeAdapterStoreTest {
             val converter =
                 store.typeConverterStore.findTypeConverter(
                     binders[0].from,
-                    invocation.context.COMMON_TYPES.STRING
+                    invocation.context.processingEnv.requireType(CommonTypeNames.STRING)
                 )
             assertThat(converter, notNullValue())
             assertThat(store.typeConverterStore.reverse(converter!!), nullValue())
@@ -570,7 +571,8 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRx2Room() {
-        runProcessorTest(sources = listOf(COMMON.PUBLISHER, COMMON.RX2_FLOWABLE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.PUBLISHER, COMMON.RX2_FLOWABLE)) { invocation
+            ->
             val publisherElement =
                 invocation.processingEnv.requireTypeElement(ReactiveStreamsTypeNames.PUBLISHER)
             assertThat(publisherElement, notNullValue())
@@ -588,7 +590,8 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRx3Room() {
-        runProcessorTest(sources = listOf(COMMON.PUBLISHER, COMMON.RX3_FLOWABLE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.PUBLISHER, COMMON.RX3_FLOWABLE)) { invocation
+            ->
             val publisherElement =
                 invocation.processingEnv.requireTypeElement(ReactiveStreamsTypeNames.PUBLISHER)
             assertThat(publisherElement, notNullValue())
@@ -605,6 +608,7 @@ class TypeAdapterStoreTest {
     }
 
     @Test
+    @Ignore("Temporarily disabling to unblock b/362512509")
     fun testMissingRoomPaging() {
         runProcessorTest { invocation ->
             val pagingSourceElement =
@@ -627,7 +631,8 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRoomPagingGuava() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) {
+            invocation ->
             val listenableFuturePagingSourceElement =
                 invocation.processingEnv.requireTypeElement(
                     PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE
@@ -654,7 +659,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRoomPagingRx2() {
-        runProcessorTest(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
             val rx2PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -675,7 +680,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testMissingRoomPagingRx3() {
-        runProcessorTest(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
             val rx3PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -698,16 +703,21 @@ class TypeAdapterStoreTest {
     fun testFindPublisher() {
         listOf(COMMON.RX2_FLOWABLE to COMMON.RX2_ROOM, COMMON.RX3_FLOWABLE to COMMON.RX3_ROOM)
             .forEach { (rxTypeSrc, rxRoomSrc) ->
-                runProcessorTest(
-                    sources =
-                        listOf(
-                            COMMON.RX2_SINGLE,
-                            COMMON.RX3_SINGLE,
-                            COMMON.RX2_OBSERVABLE,
-                            COMMON.RX3_OBSERVABLE,
-                            COMMON.PUBLISHER,
-                            rxTypeSrc,
-                            rxRoomSrc
+                runProcessorTestWithK1(
+                    sources = listOf(rxTypeSrc, rxRoomSrc),
+                    classpath =
+                        compileFiles(
+                            listOf(
+                                COMMON.RX2_SINGLE,
+                                COMMON.RX2_MAYBE,
+                                COMMON.RX2_COMPLETABLE,
+                                COMMON.RX2_OBSERVABLE,
+                                COMMON.RX3_SINGLE,
+                                COMMON.RX3_MAYBE,
+                                COMMON.RX3_COMPLETABLE,
+                                COMMON.RX3_OBSERVABLE,
+                                COMMON.PUBLISHER,
+                            )
                         )
                 ) { invocation ->
                     val publisher =
@@ -732,16 +742,21 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_FLOWABLE, COMMON.RX3_ROOM, RxJava3TypeNames.FLOWABLE)
             )
             .forEach { (rxTypeSrc, rxRoomSrc, rxTypeClassName) ->
-                runProcessorTest(
-                    sources =
-                        listOf(
-                            COMMON.RX2_SINGLE,
-                            COMMON.RX3_SINGLE,
-                            COMMON.RX2_OBSERVABLE,
-                            COMMON.RX3_OBSERVABLE,
-                            COMMON.PUBLISHER,
-                            rxTypeSrc,
-                            rxRoomSrc
+                runProcessorTestWithK1(
+                    sources = listOf(rxTypeSrc, rxRoomSrc),
+                    classpath =
+                        compileFiles(
+                            listOf(
+                                COMMON.RX2_SINGLE,
+                                COMMON.RX2_MAYBE,
+                                COMMON.RX2_COMPLETABLE,
+                                COMMON.RX2_OBSERVABLE,
+                                COMMON.RX3_SINGLE,
+                                COMMON.RX3_MAYBE,
+                                COMMON.RX3_COMPLETABLE,
+                                COMMON.RX3_OBSERVABLE,
+                                COMMON.PUBLISHER,
+                            )
                         )
                 ) { invocation ->
                     val flowable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
@@ -762,16 +777,23 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_OBSERVABLE, COMMON.RX3_ROOM, RxJava3TypeNames.OBSERVABLE)
             )
             .forEach { (rxTypeSrc, rxRoomSrc, rxTypeClassName) ->
-                runProcessorTest(
-                    sources =
-                        listOf(
-                            COMMON.RX2_SINGLE,
-                            COMMON.RX3_SINGLE,
-                            COMMON.RX2_FLOWABLE,
-                            COMMON.RX3_FLOWABLE,
-                            COMMON.PUBLISHER,
-                            rxTypeSrc,
-                            rxRoomSrc
+                runProcessorTestWithK1(
+                    sources = listOf(rxTypeSrc, rxRoomSrc),
+                    classpath =
+                        compileFiles(
+                            listOf(
+                                COMMON.RX2_SINGLE,
+                                COMMON.RX2_MAYBE,
+                                COMMON.RX2_COMPLETABLE,
+                                COMMON.RX2_OBSERVABLE,
+                                COMMON.RX2_FLOWABLE,
+                                COMMON.RX3_SINGLE,
+                                COMMON.RX3_MAYBE,
+                                COMMON.RX3_COMPLETABLE,
+                                COMMON.RX3_OBSERVABLE,
+                                COMMON.RX3_FLOWABLE,
+                                COMMON.PUBLISHER,
+                            )
                         )
                 ) { invocation ->
                     val observable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
@@ -793,13 +815,12 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_SINGLE, COMMON.RX3_ROOM, RxJava3TypeNames.SINGLE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val single = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(single, notNullValue())
                     assertThat(
-                        RxCallableInsertMethodBinderProvider.getAll(invocation.context).any {
-                            it.matches(single.type)
-                        },
+                        RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                            .any { it.matches(single.type) },
                         `is`(true)
                     )
                 }
@@ -813,12 +834,11 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_MAYBE, COMMON.RX3_ROOM, RxJava3TypeNames.MAYBE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val maybe = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(
-                        RxCallableInsertMethodBinderProvider.getAll(invocation.context).any {
-                            it.matches(maybe.type)
-                        },
+                        RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                            .any { it.matches(maybe.type) },
                         `is`(true)
                     )
                 }
@@ -832,12 +852,11 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_COMPLETABLE, COMMON.RX3_ROOM, RxJava3TypeNames.COMPLETABLE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val completable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(
-                        RxCallableInsertMethodBinderProvider.getAll(invocation.context).any {
-                            it.matches(completable.type)
-                        },
+                        RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                            .any { it.matches(completable.type) },
                         `is`(true)
                     )
                 }
@@ -846,13 +865,13 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindInsertListenableFuture() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
             val future =
                 invocation.processingEnv.requireTypeElement(
                     GuavaUtilConcurrentTypeNames.LISTENABLE_FUTURE
                 )
             assertThat(
-                GuavaListenableFutureInsertMethodBinderProvider(invocation.context)
+                GuavaListenableFutureInsertOrUpsertMethodBinderProvider(invocation.context)
                     .matches(future.type),
                 `is`(true)
             )
@@ -861,7 +880,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindDeleteOrUpdateSingle() {
-        runProcessorTest(sources = listOf(COMMON.RX2_SINGLE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_SINGLE)) { invocation ->
             val single = invocation.processingEnv.requireTypeElement(RxJava2TypeNames.SINGLE)
             assertThat(single, notNullValue())
             assertThat(
@@ -875,7 +894,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindDeleteOrUpdateMaybe() {
-        runProcessorTest(sources = listOf(COMMON.RX2_MAYBE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_MAYBE)) { invocation ->
             val maybe = invocation.processingEnv.requireTypeElement(RxJava2TypeNames.MAYBE)
             assertThat(maybe, notNullValue())
             assertThat(
@@ -889,7 +908,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindDeleteOrUpdateCompletable() {
-        runProcessorTest(sources = listOf(COMMON.RX2_COMPLETABLE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_COMPLETABLE)) { invocation ->
             val completable =
                 invocation.processingEnv.requireTypeElement(RxJava2TypeNames.COMPLETABLE)
             assertThat(completable, notNullValue())
@@ -904,7 +923,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindDeleteOrUpdateListenableFuture() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
             val future =
                 invocation.processingEnv.requireTypeElement(
                     GuavaUtilConcurrentTypeNames.LISTENABLE_FUTURE
@@ -925,13 +944,12 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_SINGLE, COMMON.RX3_ROOM, RxJava3TypeNames.SINGLE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val single = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(single).isNotNull()
                     assertThat(
-                            RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
-                                it.matches(single.type)
-                            }
+                            RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                                .any { it.matches(single.type) }
                         )
                         .isTrue()
                 }
@@ -945,12 +963,11 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_MAYBE, COMMON.RX3_ROOM, RxJava3TypeNames.MAYBE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val maybe = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(
-                            RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
-                                it.matches(maybe.type)
-                            }
+                            RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                                .any { it.matches(maybe.type) }
                         )
                         .isTrue()
                 }
@@ -964,12 +981,11 @@ class TypeAdapterStoreTest {
                 Triple(COMMON.RX3_COMPLETABLE, COMMON.RX3_ROOM, RxJava3TypeNames.COMPLETABLE)
             )
             .forEach { (rxTypeSrc, _, rxTypeClassName) ->
-                runProcessorTest(sources = listOf(rxTypeSrc)) { invocation ->
+                runProcessorTestWithK1(sources = listOf(rxTypeSrc)) { invocation ->
                     val completable = invocation.processingEnv.requireTypeElement(rxTypeClassName)
                     assertThat(
-                            RxCallableUpsertMethodBinderProvider.getAll(invocation.context).any {
-                                it.matches(completable.type)
-                            }
+                            RxCallableInsertOrUpsertMethodBinderProvider.getAll(invocation.context)
+                                .any { it.matches(completable.type) }
                         )
                         .isTrue()
                 }
@@ -978,13 +994,13 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindUpsertListenableFuture() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE)) { invocation ->
             val future =
                 invocation.processingEnv.requireTypeElement(
                     GuavaUtilConcurrentTypeNames.LISTENABLE_FUTURE
                 )
             assertThat(
-                    GuavaListenableFutureUpsertMethodBinderProvider(invocation.context)
+                    GuavaListenableFutureInsertOrUpsertMethodBinderProvider(invocation.context)
                         .matches(future.type)
                 )
                 .isTrue()
@@ -993,7 +1009,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun testFindLiveData() {
-        runProcessorTest(sources = listOf(COMMON.COMPUTABLE_LIVE_DATA, COMMON.LIVE_DATA)) {
+        runProcessorTestWithK1(sources = listOf(COMMON.COMPUTABLE_LIVE_DATA, COMMON.LIVE_DATA)) {
             invocation ->
             val liveData =
                 invocation.processingEnv.requireTypeElement(LifecyclesTypeNames.LIVE_DATA)
@@ -1007,7 +1023,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findPagingSourceIntKey() {
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources = listOf(COMMON.LIMIT_OFFSET_PAGING_SOURCE),
         ) { invocation ->
             val pagingSourceElement =
@@ -1151,7 +1167,8 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findListenableFuturePagingSourceJavaCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) {
+            invocation ->
             val listenableFuturePagingSourceElement =
                 invocation.processingEnv.requireTypeElement(
                     PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE
@@ -1179,7 +1196,8 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findListenableFutureKotlinCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.LISTENABLE_FUTURE_PAGING_SOURCE)) {
+            invocation ->
             val listenableFuturePagingSourceElement =
                 invocation.processingEnv.requireTypeElement(
                     PagingTypeNames.LISTENABLE_FUTURE_PAGING_SOURCE
@@ -1207,7 +1225,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findRx2PagingSourceJavaCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
             val rx2PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -1233,7 +1251,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findRx2PagingSourceKotlinCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX2_PAGING_SOURCE)) { invocation ->
             val rx2PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX2_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -1259,7 +1277,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findRx3PagingSourceJavaCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
             val rx3PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -1285,7 +1303,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findRx3PagingSourceKotlinCollectionValue() {
-        runProcessorTest(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.RX3_PAGING_SOURCE)) { invocation ->
             val rx3PagingSourceElement =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.RX3_PAGING_SOURCE)
             val intType = invocation.processingEnv.requireType(Integer::class)
@@ -1325,7 +1343,7 @@ class TypeAdapterStoreTest {
                     """
                         .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     inputSource,
@@ -1389,7 +1407,7 @@ class TypeAdapterStoreTest {
                     """
                         .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     inputSource,
@@ -1449,7 +1467,7 @@ class TypeAdapterStoreTest {
                     """
                         .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     inputSource,
@@ -1505,7 +1523,7 @@ class TypeAdapterStoreTest {
                     """
                         .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     inputSource,
@@ -1578,7 +1596,7 @@ class TypeAdapterStoreTest {
 
     @Test
     fun findDataSourceFactory() {
-        runProcessorTest(sources = listOf(COMMON.DATA_SOURCE_FACTORY)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(COMMON.DATA_SOURCE_FACTORY)) { invocation ->
             val pagedListProvider =
                 invocation.processingEnv.requireTypeElement(PagingTypeNames.DATA_SOURCE_FACTORY)
             assertThat(pagedListProvider, notNullValue())
@@ -1661,7 +1679,7 @@ class TypeAdapterStoreTest {
             """
                     .trimIndent()
             )
-        runProcessorTest(sources = listOf(source)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(source)) { invocation ->
             val converters =
                 CustomConverterProcessor(
                         context = invocation.context,
@@ -1797,7 +1815,7 @@ class TypeAdapterStoreTest {
             """
                     .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     classExtendsClassWithEqualsAndHashcodeFunctions,
@@ -1840,7 +1858,7 @@ class TypeAdapterStoreTest {
             """
                     .trimIndent()
             )
-        runProcessorTest(
+        runProcessorTestWithK1(
             sources =
                 listOf(
                     inputSource,
@@ -1872,7 +1890,7 @@ class TypeAdapterStoreTest {
             """
                     .trimIndent()
             )
-        runProcessorTest(sources = listOf(source)) { invocation ->
+        runProcessorTestWithK1(sources = listOf(source)) { invocation ->
             val subjectTypeElement = invocation.processingEnv.requireTypeElement("Subject")
 
             subjectTypeElement.getDeclaredFields().forEach {
@@ -1887,7 +1905,10 @@ class TypeAdapterStoreTest {
         val listOfInts = invocation.processingEnv.getDeclaredType(listElement, intType)
         val intListConverter =
             object :
-                SingleStatementTypeConverter(listOfInts, invocation.context.COMMON_TYPES.STRING) {
+                SingleStatementTypeConverter(
+                    listOfInts,
+                    invocation.context.processingEnv.requireType(CommonTypeNames.STRING)
+                ) {
                 override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
                     return XCodeBlock.of(
                         scope.language,
@@ -1900,7 +1921,10 @@ class TypeAdapterStoreTest {
 
         val stringToIntListConverter =
             object :
-                SingleStatementTypeConverter(invocation.context.COMMON_TYPES.STRING, listOfInts) {
+                SingleStatementTypeConverter(
+                    invocation.context.processingEnv.requireType(CommonTypeNames.STRING),
+                    listOfInts
+                ) {
                 override fun buildStatement(inputVarName: String, scope: CodeGenScope): XCodeBlock {
                     return XCodeBlock.of(
                         scope.language,

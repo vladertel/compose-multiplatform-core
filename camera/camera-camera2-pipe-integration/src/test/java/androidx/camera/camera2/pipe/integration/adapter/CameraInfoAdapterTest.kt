@@ -21,13 +21,14 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_OFF
 import android.hardware.camera2.CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON
 import android.hardware.camera2.CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
-import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.util.Range
 import android.util.Size
 import android.util.SizeF
 import androidx.camera.camera2.pipe.CameraBackendId
 import androidx.camera.camera2.pipe.CameraId
+import androidx.camera.camera2.pipe.CameraMetadata
+import androidx.camera.camera2.pipe.integration.adapter.CameraInfoAdapter.Companion.unwrapAs
 import androidx.camera.camera2.pipe.integration.impl.ZoomControl
 import androidx.camera.camera2.pipe.integration.internal.DOLBY_VISION_10B_UNCONSTRAINED
 import androidx.camera.camera2.pipe.integration.internal.HLG10_UNCONSTRAINED
@@ -36,7 +37,7 @@ import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Inter
 import androidx.camera.camera2.pipe.integration.testing.FakeCameraInfoAdapterCreator.createCameraInfoAdapter
 import androidx.camera.camera2.pipe.integration.testing.FakeCameraInfoAdapterCreator.useCaseThreads
 import androidx.camera.camera2.pipe.integration.testing.FakeCameraProperties
-import androidx.camera.camera2.pipe.integration.testing.FakeUseCaseCamera
+import androidx.camera.camera2.pipe.integration.testing.FakeUseCaseCameraRequestControl
 import androidx.camera.camera2.pipe.integration.testing.FakeZoomCompat
 import androidx.camera.camera2.pipe.testing.FakeCameraDevices
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
@@ -52,6 +53,8 @@ import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.ZoomState
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.ImageFormatConstants
+import androidx.camera.core.impl.RestrictedCameraInfo
+import androidx.camera.testing.impl.fakes.FakeCameraConfig
 import androidx.testutils.MainDispatcherRule
 import androidx.testutils.assertThrows
 import com.google.common.truth.Truth.assertThat
@@ -79,7 +82,7 @@ class CameraInfoAdapterTest {
     private val defaultCameraId = "0"
     private val defaultCameraCharacteristics =
         mapOf(
-            CameraCharacteristics.LENS_FACING to CameraMetadata.LENS_FACING_BACK,
+            CameraCharacteristics.LENS_FACING to CameraCharacteristics.LENS_FACING_BACK,
             CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS to floatArrayOf(1.0f),
             CameraCharacteristics.SENSOR_ORIENTATION to 0,
             CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE to Size(10, 10),
@@ -164,7 +167,7 @@ class CameraInfoAdapterTest {
         cameraInfoAdapter.zoomState.observeForever { currentZoomState = it }
 
         // if useCaseCamera is null, zoom setting operation will be cancelled
-        zoomControl.useCaseCamera = FakeUseCaseCamera()
+        zoomControl.requestControl = FakeUseCaseCameraRequestControl()
 
         val expectedZoomState = ZoomValue(3.0f, 1.0f, 10.0f)
         zoomControl.applyZoomState(expectedZoomState)[3, TimeUnit.SECONDS]
@@ -180,7 +183,7 @@ class CameraInfoAdapterTest {
         cameraInfoAdapter.zoomState.observeForever { currentZoomState = it }
 
         // if useCaseCamera is null, zoom setting operation will be cancelled
-        zoomControl.useCaseCamera = FakeUseCaseCamera()
+        zoomControl.requestControl = FakeUseCaseCameraRequestControl()
 
         zoomControl.reset()
 
@@ -712,5 +715,14 @@ class CameraInfoAdapterTest {
             )
 
         assertThat(cameraInfo.intrinsicZoomRatio).isEqualTo(CameraInfo.INTRINSIC_ZOOM_RATIO_UNKNOWN)
+    }
+
+    @Test
+    fun canUnwrapRestrictedCameraInfoAsCameraMetadata() {
+        val fakeCameraConfig = FakeCameraConfig()
+        val restrictedCameraInfo = RestrictedCameraInfo(cameraInfoAdapter, fakeCameraConfig)
+
+        val cameraMetadata = restrictedCameraInfo.unwrapAs(CameraMetadata::class)
+        assertThat(cameraMetadata).isNotNull()
     }
 }

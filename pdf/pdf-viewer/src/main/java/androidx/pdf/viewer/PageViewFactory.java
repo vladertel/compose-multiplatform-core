@@ -24,12 +24,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
+import androidx.pdf.find.FindInFileView;
 import androidx.pdf.models.Dimensions;
 import androidx.pdf.models.GotoLink;
 import androidx.pdf.models.LinkRects;
 import androidx.pdf.util.Accessibility;
 import androidx.pdf.util.GestureTracker;
-import androidx.pdf.util.ObservableValue;
 import androidx.pdf.util.TileBoard;
 import androidx.pdf.viewer.loader.PdfLoader;
 import androidx.pdf.widget.MosaicView;
@@ -53,16 +53,22 @@ public class PageViewFactory {
     private final Context mContext;
     private final PdfLoader mPdfLoader;
     private final PaginatedView mPaginatedView;
-    private final ObservableValue<ZoomView.ZoomScroll> mZoomScroll;
+    private final ZoomView mZoomView;
+    private final SingleTapHandler mSingleTapHandler;
+    private final FindInFileView mFindInFileView;
 
     public PageViewFactory(@NonNull Context context,
             @NonNull PdfLoader pdfLoader,
             @NonNull PaginatedView paginatedView,
-            @NonNull ZoomView zoomView) {
+            @NonNull ZoomView zoomView,
+            @NonNull SingleTapHandler singleTapHandler,
+            @NonNull FindInFileView findInFileView) {
         this.mContext = context;
         this.mPdfLoader = pdfLoader;
         this.mPaginatedView = paginatedView;
-        this.mZoomScroll = zoomView.zoomScroll();
+        this.mZoomView = zoomView;
+        this.mSingleTapHandler = singleTapHandler;
+        this.mFindInFileView = findInFileView;
     }
 
     /**
@@ -98,20 +104,21 @@ public class PageViewFactory {
         void clearAll();
     }
 
-    /** Returns an instance of {@link PageView}. If the view is already created and added to the
-     *  {@link PaginatedView} then it will be returned from that list else a new instance will be
-     *  created. */
+    /**
+     * Returns an instance of {@link PageView}. If the view is already created and added to the
+     * {@link PaginatedView} then it will be returned from that list else a new instance will be
+     * created.
+     */
     @NonNull
-    public PageView getOrCreatePageView(int pageNum,
+    public PageMosaicView getOrCreatePageView(int pageNum,
             int pageElevationInPixels,
-            @NonNull Dimensions pageDimensions,
-            @NonNull PdfViewer.PageTouchHandler handler) {
+            @NonNull Dimensions pageDimensions) {
         PageView pageView = mPaginatedView.getViewAt(pageNum);
-        if (pageView != null) {
-            return pageView;
+        if (pageView == null) {
+            pageView = createAndSetupPageView(pageNum, pageElevationInPixels, pageDimensions);
         }
 
-        return createAndSetupPageView(pageNum, pageElevationInPixels, pageDimensions, handler);
+        return pageView.getPageView();
     }
 
     /**
@@ -126,9 +133,10 @@ public class PageViewFactory {
         final MosaicView.BitmapSource bitmapSource = createBitmapSource(pageNum);
         final PageMosaicView pageMosaicView =
                 new PageMosaicView(mContext, pageNum, pageSize, bitmapSource,
-                        TileBoard.DEFAULT_RECYCLER);
+                        TileBoard.DEFAULT_RECYCLER, mPdfLoader, mPaginatedView.getSelectionModel(),
+                        mPaginatedView.getSearchModel(), mPaginatedView.getSelectionHandles());
         if (isTouchExplorationEnabled(mContext)) {
-            final PageLinksView pageLinksView = new PageLinksView(mContext, mZoomScroll);
+            final PageLinksView pageLinksView = new PageLinksView(mContext, mZoomView.zoomScroll());
 
             return new AccessibilityPageWrapper(
                     mContext, pageNum, pageMosaicView, pageLinksView);
@@ -168,8 +176,7 @@ public class PageViewFactory {
     @NonNull
     protected PageView createAndSetupPageView(int pageNum,
             int pageElevationInPixels,
-            @NonNull Dimensions pageDimensions,
-            @NonNull PdfViewer.PageTouchHandler handler) {
+            @NonNull Dimensions pageDimensions) {
         PageView pageView =
                 createPageView(
                         pageNum,
@@ -178,8 +185,9 @@ public class PageViewFactory {
         mPaginatedView.addView(pageView);
 
         GestureTracker gestureTracker = new GestureTracker(mContext);
+        gestureTracker.setDelegateHandler(new PageTouchListener(pageView, mPdfLoader,
+                mSingleTapHandler, mFindInFileView));
         pageView.asView().setOnTouchListener(gestureTracker);
-        gestureTracker.setDelegateHandler(new PageTouchListener(pageView, mPdfLoader, handler));
 
         PageMosaicView pageMosaicView = pageView.getPageView();
         // Setting Elevation only works if there is a background color.

@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.handwriting.stylusHandwriting
-import androidx.compose.foundation.text.input.internal.legacyTextInputServiceAdapterAndService
 import androidx.compose.foundation.text.input.internal.legacyTextInputAdapter
+import androidx.compose.foundation.text.input.internal.legacyTextInputServiceAdapterAndService
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.OffsetProvider
 import androidx.compose.foundation.text.selection.SelectionHandleAnchor
@@ -38,9 +38,7 @@ import androidx.compose.foundation.text.selection.SimpleLayout
 import androidx.compose.foundation.text.selection.TextFieldSelectionHandle
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.foundation.text.selection.isSelectionHandleInVisibleBound
-import androidx.compose.foundation.text.selection.selectionGestureInput
 import androidx.compose.foundation.text.selection.textFieldMagnifier
-import androidx.compose.foundation.text.selection.updateSelectionTouchMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.DontMemoize
@@ -68,7 +66,6 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.IntrinsicMeasurable

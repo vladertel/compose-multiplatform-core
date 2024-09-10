@@ -38,22 +38,26 @@ import androidx.compose.foundation.text.input.delete
 import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.internal.HorizontalIconPadding
+import androidx.compose.material3.internal.AboveLabelBottomPadding
+import androidx.compose.material3.internal.AboveLabelHorizontalPadding
 import androidx.compose.material3.internal.MinFocusedLabelLineHeight
 import androidx.compose.material3.internal.MinSupportingTextLineHeight
 import androidx.compose.material3.internal.MinTextLineHeight
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.SupportingTopPadding
-import androidx.compose.material3.internal.TextFieldAnimationDuration
 import androidx.compose.material3.internal.TextFieldPadding
 import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertPixels
 import androidx.compose.testutils.assertShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -62,6 +66,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.Ref
@@ -76,6 +81,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertWidthIsEqualTo
@@ -112,8 +118,9 @@ import org.junit.runner.RunWith
 class OutlinedTextFieldTest {
     private val ExpectedMinimumTextFieldHeight = OutlinedTextFieldDefaults.MinHeight
     private val ExpectedDefaultTextFieldWidth = OutlinedTextFieldDefaults.MinWidth
+    private val OutlinedTextFieldTopPadding = 8.sp
     private val ExpectedPadding = TextFieldPadding
-    private val IconPadding = HorizontalIconPadding
+    private val IconPadding = 12.dp
     private val TextFieldTag = "textField"
 
     @get:Rule val rule = createComposeRule()
@@ -400,6 +407,75 @@ class OutlinedTextFieldTest {
     }
 
     @Test
+    fun testOutlinedTextField_labelPosition_whenPositionedAbove() {
+        val labelPosition = Ref<Offset>()
+        rule
+            .setMaterialContentForSizeAssertions {
+                OutlinedTextField(
+                    state = rememberTextFieldState(),
+                    label = {
+                        Box(
+                            Modifier.size(MinFocusedLabelLineHeight).onGloballyPositioned {
+                                labelPosition.value = it.positionInRoot()
+                            }
+                        )
+                    },
+                    labelPosition = TextFieldLabelPosition.Above(),
+                )
+            }
+            .assertHeightIsEqualTo(
+                MinFocusedLabelLineHeight + AboveLabelBottomPadding + ExpectedMinimumTextFieldHeight
+            )
+
+        rule.runOnIdleWithDensity {
+            // x position is padding
+            assertThat(labelPosition.value?.x).isWithin(1f).of(AboveLabelHorizontalPadding.toPx())
+            // y position is 0
+            assertThat(labelPosition.value?.y).isEqualTo(0f)
+        }
+    }
+
+    @Test
+    fun testOutlinedTextField_labelPosition_customAlignment() {
+        val labelPosition = Ref<Offset>()
+        val labelSize = MinFocusedLabelLineHeight
+        rule.setMaterialContentForSizeAssertions {
+            OutlinedTextField(
+                state = rememberTextFieldState(),
+                modifier = Modifier.testTag(TextFieldTag),
+                label = {
+                    Box(
+                        Modifier.size(labelSize).onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
+                    )
+                },
+                labelPosition =
+                    TextFieldLabelPosition.Default(
+                        minimizedAlignment = Alignment.End,
+                        expandedAlignment = Alignment.CenterHorizontally
+                    ),
+            )
+        }
+
+        rule.runOnIdleWithDensity {
+            // centered horizontally
+            assertThat(labelPosition.value?.x)
+                .isWithin(1f)
+                .of(((ExpectedDefaultTextFieldWidth - labelSize) / 2).toPx())
+        }
+
+        rule.onNodeWithTag(TextFieldTag).performClick()
+
+        rule.runOnIdleWithDensity {
+            // end
+            assertThat(labelPosition.value?.x)
+                .isWithin(1f)
+                .of((ExpectedDefaultTextFieldWidth - TextFieldPadding - labelSize).toPx())
+        }
+    }
+
+    @Test
     fun testOutlinedTextField_labelHeight_contributesToTextFieldMeasurements_whenUnfocused() {
         val tfSize = Ref<IntSize>()
         val labelHeight = 200.dp
@@ -488,6 +564,34 @@ class OutlinedTextFieldTest {
                 .isWithin(1f)
                 .of(getLabelPosition(labelSize.roundToPx()).toFloat())
         }
+    }
+
+    @Test
+    fun testOutlinedTextField_labelScope_progressAndRecomposition() {
+        val progressValue = Ref<Float>()
+        var compositionCount = 0
+        rule.setMaterialContent(lightColorScheme()) {
+            OutlinedTextField(
+                state = rememberTextFieldState(),
+                modifier = Modifier.testTag(TextFieldTag),
+                label = {
+                    SideEffect { compositionCount++ }
+
+                    // lambda reads `progress` in the draw phase
+                    Box(Modifier.graphicsLayer { progressValue.value = progress })
+                }
+            )
+        }
+
+        assertThat(progressValue.value).isEqualTo(0f)
+        assertThat(compositionCount).isEqualTo(1)
+
+        // click to focus
+        rule.onNodeWithTag(TextFieldTag).performClick()
+        rule.waitForIdle()
+
+        assertThat(progressValue.value).isEqualTo(1f)
+        assertThat(compositionCount).isEqualTo(1)
     }
 
     @Test
@@ -910,7 +1014,7 @@ class OutlinedTextFieldTest {
                 prefix = { Text(prefixText) },
                 suffix = { Text(suffixText) },
                 placeholder = { Text(placeholderText) },
-                alwaysMinimizeLabel = false,
+                labelPosition = TextFieldLabelPosition.Default(alwaysMinimize = false),
             )
         }
 
@@ -934,7 +1038,30 @@ class OutlinedTextFieldTest {
                 prefix = { Text(prefixText) },
                 suffix = { Text(suffixText) },
                 placeholder = { Text(placeholderText) },
-                alwaysMinimizeLabel = true,
+                labelPosition = TextFieldLabelPosition.Default(alwaysMinimize = true),
+            )
+        }
+
+        rule.onNodeWithText(labelText).assertIsDisplayed()
+        rule.onNodeWithText(prefixText).assertIsDisplayed()
+        rule.onNodeWithText(suffixText).assertIsDisplayed()
+        rule.onNodeWithText(placeholderText).assertIsDisplayed()
+    }
+
+    @Test
+    fun testOutlinedTextField_prefixAndSuffixAndPlaceholder_areDisplayed_withLabel_ifLabelIsAbove() {
+        val labelText = "Label"
+        val prefixText = "Prefix"
+        val suffixText = "Suffix"
+        val placeholderText = "Placeholder"
+        rule.setMaterialContent(lightColorScheme()) {
+            OutlinedTextField(
+                state = rememberTextFieldState(),
+                label = { Text(labelText) },
+                prefix = { Text(prefixText) },
+                suffix = { Text(suffixText) },
+                placeholder = { Text(placeholderText) },
+                labelPosition = TextFieldLabelPosition.Above(),
             )
         }
 
@@ -1608,7 +1735,7 @@ class OutlinedTextFieldTest {
         rule.runOnUiThread { focusRequester.requestFocus() }
 
         // advance to middle of animation
-        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration.toLong() / 2)
+        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration)
 
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(expectedLabelColor)
@@ -1659,6 +1786,65 @@ class OutlinedTextFieldTest {
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(bodySmallColor)
             assertThat(contentColor).isEqualTo(focusedLabelColor)
+        }
+    }
+
+    @Test
+    fun testOutlinedTextField_selectionColors_areCustomizable() {
+        rule.setMaterialContent(lightColorScheme()) {
+            Column {
+                // default colors
+                OutlinedTextField(
+                    state = rememberTextFieldState(),
+                    label = {
+                        val textSelectionColors = LocalTextSelectionColors.current
+                        assertThat(textSelectionColors.handleColor)
+                            .isEqualTo(MaterialTheme.colorScheme.primary)
+                        assertThat(textSelectionColors.backgroundColor)
+                            .isEqualTo(
+                                MaterialTheme.colorScheme.primary.copy(
+                                    alpha = TextSelectionBackgroundOpacity
+                                )
+                            )
+                    }
+                )
+
+                // set via `colors()`
+                OutlinedTextField(
+                    state = rememberTextFieldState(),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            selectionColors =
+                                TextSelectionColors(
+                                    handleColor = Color.Red,
+                                    backgroundColor = Color.Green
+                                )
+                        ),
+                    label = {
+                        val textSelectionColors = LocalTextSelectionColors.current
+                        assertThat(textSelectionColors.handleColor).isEqualTo(Color.Red)
+                        assertThat(textSelectionColors.backgroundColor).isEqualTo(Color.Green)
+                    }
+                )
+
+                // set via `CompositionLocal`
+                CompositionLocalProvider(
+                    LocalTextSelectionColors provides
+                        TextSelectionColors(
+                            handleColor = Color.Magenta,
+                            backgroundColor = Color.Yellow
+                        )
+                ) {
+                    OutlinedTextField(
+                        state = rememberTextFieldState(),
+                        label = {
+                            val textSelectionColors = LocalTextSelectionColors.current
+                            assertThat(textSelectionColors.handleColor).isEqualTo(Color.Magenta)
+                            assertThat(textSelectionColors.backgroundColor).isEqualTo(Color.Yellow)
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -1805,3 +1991,6 @@ class OutlinedTextFieldTest {
         return (paddingTop - labelHalfHeight).roundToInt()
     }
 }
+
+// We use springs to animate, so picking an arbitrary duration that work.
+private const val TextFieldAnimationDuration = 75L

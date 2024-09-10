@@ -34,6 +34,7 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
 import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.TransformResult
 import androidx.graphics.shapes.circle
@@ -46,11 +47,23 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Returns a normalized [Path] that is remembered across compositions for this [RoundedPolygon].
+ * Returns a [Path] for this [Morph].
+ *
+ * @param progress the [Morph]'s progress
+ * @param path a [Path] to rewind and set with the new path data. In case provided, this Path would
+ *   be the returned one.
+ * @param startAngle an angle to rotate the [Path] to start drawing from
+ */
+@ExperimentalMaterial3ExpressiveApi
+fun Morph.toPath(progress: Float, path: Path = Path(), startAngle: Int = 0): Path {
+    return this.toPath(path = path, progress = progress, startAngle = startAngle)
+}
+
+/**
+ * Returns a [Path] that is remembered across compositions for this [RoundedPolygon].
  *
  * @param startAngle an angle to rotate the Material shape's path to start drawing from. The
  *   rotation pivot is set to be the shape's centerX and centerY coordinates.
- * @see RoundedPolygon.normalized
  */
 @ExperimentalMaterial3ExpressiveApi
 @Composable
@@ -72,19 +85,25 @@ fun RoundedPolygon.toPath(startAngle: Int = 0): Path {
 fun RoundedPolygon.toShape(startAngle: Int = 0): Shape {
     return remember(this, startAngle) {
         object : Shape {
-            private val path: Path = toPath(startAngle = startAngle)
+            // Store the Path we convert from the RoundedPolygon here. The path we will be
+            // manipulating and using on the createOutline would be a copy of this to ensure we
+            // don't mutate the original.
+            private val shapePath: Path = toPath(startAngle = startAngle)
+            private val workPath: Path = Path()
 
             override fun createOutline(
                 size: Size,
                 layoutDirection: LayoutDirection,
                 density: Density
             ): Outline {
+                workPath.rewind()
+                workPath.addPath(shapePath)
                 val scaleMatrix = Matrix().apply { scale(x = size.width, y = size.height) }
                 // Scale and translate the path to align its center with the available size
                 // center.
-                path.transform(scaleMatrix)
-                path.translate(size.center - path.getBounds().center)
-                return Outline.Generic(path)
+                workPath.transform(scaleMatrix)
+                workPath.translate(size.center - workPath.getBounds().center)
+                return Outline.Generic(workPath)
             }
         }
     }

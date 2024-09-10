@@ -30,8 +30,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.TextFieldDefaults.OutlinedTextFieldDecorationBox
-import androidx.compose.material.internal.JvmDefaultWithCompatibility
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color

@@ -151,7 +151,6 @@ internal abstract class InputDispatcher(
         }
     }
 
-    @OptIn(InternalTestApi::class)
     private val TestContext.currentTime
         get() = testOwner.mainClock.currentTime
 

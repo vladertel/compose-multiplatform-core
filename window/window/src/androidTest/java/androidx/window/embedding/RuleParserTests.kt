@@ -19,6 +19,7 @@ package androidx.window.embedding
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Rect
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -79,6 +80,7 @@ class RuleParserTests {
             SplitAttributes.Builder()
                 .setSplitType(SplitAttributes.SplitType.ratio(0.5f))
                 .setLayoutDirection(LOCALE)
+                .setAnimationBackground(EmbeddingAnimationBackground.DEFAULT)
                 .build()
         assertNull(rule.tag)
         assertEquals(SPLIT_MIN_DIMENSION_DP_DEFAULT, rule.minWidthDp)
@@ -136,6 +138,9 @@ class RuleParserTests {
             SplitAttributes.Builder()
                 .setSplitType(SplitAttributes.SplitType.ratio(0.3f))
                 .setLayoutDirection(TOP_TO_BOTTOM)
+                .setAnimationBackground(
+                    EmbeddingAnimationBackground.createColorBackground(Color.BLUE)
+                )
                 .build()
         assertEquals(TEST_TAG, rule.tag)
         assertEquals(NEVER, rule.finishPrimaryWithSecondary)
@@ -163,6 +168,7 @@ class RuleParserTests {
             SplitAttributes.Builder()
                 .setSplitType(SplitAttributes.SplitType.ratio(0.5f))
                 .setLayoutDirection(LOCALE)
+                .setAnimationBackground(EmbeddingAnimationBackground.DEFAULT)
                 .build()
         assertNull(rule.tag)
         assertEquals(SPLIT_MIN_DIMENSION_DP_DEFAULT, rule.minWidthDp)
@@ -226,6 +232,11 @@ class RuleParserTests {
             SplitAttributes.Builder()
                 .setSplitType(SplitAttributes.SplitType.ratio(0.3f))
                 .setLayoutDirection(BOTTOM_TO_TOP)
+                .setAnimationBackground(
+                    EmbeddingAnimationBackground.createColorBackground(
+                        application.resources.getColor(R.color.testColor, null)
+                    )
+                )
                 .build()
         assertEquals(TEST_TAG, rule.tag)
         assertEquals(ALWAYS, rule.finishPrimaryWithPlaceholder)

@@ -17,7 +17,6 @@
 package androidx.compose.foundation
 
 import androidx.collection.mutableLongObjectMapOf
-import androidx.collection.mutableLongSetOf
 import androidx.compose.foundation.gestures.PressGestureScope
 import androidx.compose.foundation.gestures.ScrollableContainerNode
 import androidx.compose.foundation.gestures.detectTapAndPress
@@ -30,7 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.Focusability
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyInputModifierNode
 import androidx.compose.ui.input.key.key
@@ -50,6 +50,7 @@ import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.node.invalidateSemantics
 import androidx.compose.ui.node.traverseAncestors
 import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
@@ -227,8 +228,59 @@ fun Modifier.clickable(
  * @param onLongClickLabel semantic / accessibility label for the [onLongClick] action
  * @param onLongClick will be called when user long presses on the element
  * @param onDoubleClick will be called when user double clicks on the element
+ * @param hapticFeedbackEnabled whether to use the default [HapticFeedback] behavior
  * @param onClick will be called when user clicks on the element
  */
+fun Modifier.combinedClickable(
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
+    role: Role? = null,
+    onLongClickLabel: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onDoubleClick: (() -> Unit)? = null,
+    hapticFeedbackEnabled: Boolean = true,
+    onClick: () -> Unit
+) =
+    composed(
+        inspectorInfo =
+            debugInspectorInfo {
+                name = "combinedClickable"
+                properties["enabled"] = enabled
+                properties["onClickLabel"] = onClickLabel
+                properties["role"] = role
+                properties["onClick"] = onClick
+                properties["onDoubleClick"] = onDoubleClick
+                properties["onLongClick"] = onLongClick
+                properties["onLongClickLabel"] = onLongClickLabel
+                properties["hapticFeedbackEnabled"] = hapticFeedbackEnabled
+            }
+    ) {
+        val localIndication = LocalIndication.current
+        val interactionSource =
+            if (localIndication is IndicationNodeFactory) {
+                // We can fast path here as it will be created inside clickable lazily
+                null
+            } else {
+                // We need an interaction source to pass between the indication modifier and
+                // clickable, so
+                // by creating here we avoid another composed down the line
+                remember { MutableInteractionSource() }
+            }
+        Modifier.combinedClickable(
+            enabled = enabled,
+            onClickLabel = onClickLabel,
+            onLongClickLabel = onLongClickLabel,
+            onLongClick = onLongClick,
+            onDoubleClick = onDoubleClick,
+            onClick = onClick,
+            role = role,
+            indication = localIndication,
+            interactionSource = interactionSource,
+            hapticFeedbackEnabled = hapticFeedbackEnabled
+        )
+    }
+
+@Deprecated(message = "Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
 fun Modifier.combinedClickable(
     enabled: Boolean = true,
     onClickLabel: String? = null,
@@ -271,7 +323,8 @@ fun Modifier.combinedClickable(
             onClick = onClick,
             role = role,
             indication = localIndication,
-            interactionSource = interactionSource
+            interactionSource = interactionSource,
+            hapticFeedbackEnabled = true
         )
     }
 
@@ -321,8 +374,40 @@ fun Modifier.combinedClickable(
  * @param onLongClickLabel semantic / accessibility label for the [onLongClick] action
  * @param onLongClick will be called when user long presses on the element
  * @param onDoubleClick will be called when user double clicks on the element
+ * @param hapticFeedbackEnabled whether to use the default [HapticFeedback] behavior
  * @param onClick will be called when user clicks on the element
  */
+fun Modifier.combinedClickable(
+    interactionSource: MutableInteractionSource?,
+    indication: Indication?,
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
+    role: Role? = null,
+    onLongClickLabel: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onDoubleClick: (() -> Unit)? = null,
+    hapticFeedbackEnabled: Boolean = true,
+    onClick: () -> Unit
+) =
+    clickableWithIndicationIfNeeded(
+        interactionSource = interactionSource,
+        indication = indication
+    ) { intSource, indicationNodeFactory ->
+        CombinedClickableElement(
+            interactionSource = intSource,
+            indicationNodeFactory = indicationNodeFactory,
+            enabled = enabled,
+            onClickLabel = onClickLabel,
+            role = role,
+            onClick = onClick,
+            onLongClickLabel = onLongClickLabel,
+            onLongClick = onLongClick,
+            onDoubleClick = onDoubleClick,
+            hapticFeedbackEnabled = hapticFeedbackEnabled
+        )
+    }
+
+@Deprecated(message = "Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
 fun Modifier.combinedClickable(
     interactionSource: MutableInteractionSource?,
     indication: Indication?,
@@ -347,7 +432,8 @@ fun Modifier.combinedClickable(
             onClick = onClick,
             onLongClickLabel = onLongClickLabel,
             onLongClick = onLongClick,
-            onDoubleClick = onDoubleClick
+            onDoubleClick = onDoubleClick,
+            hapticFeedbackEnabled = true
         )
     }
 
@@ -483,7 +569,8 @@ private class CombinedClickableElement(
     private val onClick: () -> Unit,
     private val onLongClickLabel: String?,
     private val onLongClick: (() -> Unit)?,
-    private val onDoubleClick: (() -> Unit)?
+    private val onDoubleClick: (() -> Unit)?,
+    private val hapticFeedbackEnabled: Boolean,
 ) : ModifierNodeElement<CombinedClickableNodeImpl>() {
     override fun create() =
         CombinedClickableNodeImpl(
@@ -491,6 +578,7 @@ private class CombinedClickableElement(
             onLongClickLabel,
             onLongClick,
             onDoubleClick,
+            hapticFeedbackEnabled,
             interactionSource,
             indicationNodeFactory,
             enabled,
@@ -499,6 +587,7 @@ private class CombinedClickableElement(
         )
 
     override fun update(node: CombinedClickableNodeImpl) {
+        node.hapticFeedbackEnabled = hapticFeedbackEnabled
         node.update(
             onClick,
             onLongClickLabel,
@@ -523,6 +612,7 @@ private class CombinedClickableElement(
         properties["onDoubleClick"] = onDoubleClick
         properties["onLongClick"] = onLongClick
         properties["onLongClickLabel"] = onLongClickLabel
+        properties["hapticFeedbackEnabled"] = hapticFeedbackEnabled
     }
 
     override fun equals(other: Any?): Boolean {
@@ -541,6 +631,7 @@ private class CombinedClickableElement(
         if (onLongClickLabel != other.onLongClickLabel) return false
         if (onLongClick !== other.onLongClick) return false
         if (onDoubleClick !== other.onDoubleClick) return false
+        if (hapticFeedbackEnabled != other.hapticFeedbackEnabled) return false
 
         return true
     }
@@ -555,6 +646,7 @@ private class CombinedClickableElement(
         result = 31 * result + (onLongClickLabel?.hashCode() ?: 0)
         result = 31 * result + (onLongClick?.hashCode() ?: 0)
         result = 31 * result + (onDoubleClick?.hashCode() ?: 0)
+        result = 31 * result + hapticFeedbackEnabled.hashCode()
         return result
     }
 }
@@ -648,6 +740,7 @@ fun CombinedClickableNode(
         onLongClickLabel,
         onLongClick,
         onDoubleClick,
+        hapticFeedbackEnabled = true,
         interactionSource,
         indicationNodeFactory,
         enabled,
@@ -699,6 +792,7 @@ private class CombinedClickableNodeImpl(
     private var onLongClickLabel: String?,
     private var onLongClick: (() -> Unit)?,
     private var onDoubleClick: (() -> Unit)?,
+    var hapticFeedbackEnabled: Boolean,
     interactionSource: MutableInteractionSource?,
     indicationNodeFactory: IndicationNodeFactory?,
     enabled: Boolean,
@@ -715,18 +809,32 @@ private class CombinedClickableNodeImpl(
         role,
         onClick
     ) {
-    private val pressedDownKeys = mutableLongSetOf()
+    class DoubleKeyClickState(val job: Job) {
+        var doubleTapMinTimeMillisElapsed: Boolean = false
+    }
+
     private val longKeyPressJobs = mutableLongObjectMapOf<Job>()
+    private val doubleKeyClickStates = mutableLongObjectMapOf<DoubleKeyClickState>()
 
     override suspend fun PointerInputScope.clickPointerInput() {
         detectTapGestures(
             onDoubleTap =
                 if (enabled && onDoubleClick != null) {
-                    { focusableNode.requestFocusWhenInMouseInputMode(); onDoubleClick?.invoke() }
+                    {
+                        focusableNode.requestFocusWhenInMouseInputMode()
+                        onDoubleClick?.invoke()
+                    }
                 } else null,
             onLongPress =
                 if (enabled && onLongClick != null) {
-                    { focusableNode.requestFocusWhenInMouseInputMode(); onLongClick?.invoke() }
+                    {
+                        focusableNode.requestFocusWhenInMouseInputMode()
+                        onLongClick?.invoke()
+                        if (hapticFeedbackEnabled) {
+                            currentValueOf(LocalHapticFeedback)
+                                .performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    }
                 } else null,
             onPress = { offset ->
                 if (enabled) {
@@ -808,7 +916,7 @@ private class CombinedClickableNodeImpl(
 
     override fun onClickKeyDownEvent(event: KeyEvent): Boolean {
         val keyCode = event.key.keyCode
-        pressedDownKeys.add(keyCode)
+        var handledByLongClick = false
         if (onLongClick != null) {
             if (longKeyPressJobs[keyCode] == null) {
                 longKeyPressJobs[keyCode] =
@@ -816,41 +924,106 @@ private class CombinedClickableNodeImpl(
                         delay(currentValueOf(LocalViewConfiguration).longPressTimeoutMillis)
                         onLongClick?.invoke()
                     }
-                return true
+                handledByLongClick = true
             }
         }
-        return false
+        val doubleClickState = doubleKeyClickStates[keyCode]
+        // This is the second down event, so it might be a double click
+        if (doubleClickState != null) {
+            // Within the allowed timeout, so check if this is above the minimum time needed for
+            // a double click
+            if (doubleClickState.job.isActive) {
+                doubleClickState.job.cancel()
+                // If the second down was before the minimum double tap time, don't track this as
+                // a double click. Instead, we need to invoke onClick for the previous click, since
+                // that is now counted as a standalone click instead of the first of a double click.
+                if (!doubleClickState.doubleTapMinTimeMillisElapsed) {
+                    onClick()
+                    doubleKeyClickStates.remove(keyCode)
+                }
+            } else {
+                // We already invoked onClick because we passed the timeout, so stop tracking this
+                // as a double click
+                doubleKeyClickStates.remove(keyCode)
+            }
+        }
+        return handledByLongClick
     }
 
     override fun onClickKeyUpEvent(event: KeyEvent): Boolean {
         val keyCode = event.key.keyCode
-        if (!pressedDownKeys.contains(keyCode)) {
-            // If the node is reused while a key is pressed down (which resets the set of pressed
-            // down keys), we shouldn't interpret the key up event as a click.
-            return false
-        }
-        pressedDownKeys.remove(keyCode)
+        var longClickInvoked = false
         if (longKeyPressJobs[keyCode] != null) {
             longKeyPressJobs[keyCode]?.let {
                 if (it.isActive) {
                     it.cancel()
-                    onClick()
+                } else {
+                    // If we already passed the timeout, we invoked long click already, and so
+                    // we shouldn't invoke onClick in this case
+                    longClickInvoked = true
                 }
             }
             longKeyPressJobs.remove(keyCode)
+        }
+        if (onDoubleClick != null) {
+            when {
+                // First click
+                doubleKeyClickStates[keyCode] == null -> {
+                    // We only track the second click if the first click was not a long click
+                    if (!longClickInvoked) {
+                        doubleKeyClickStates[keyCode] =
+                            DoubleKeyClickState(
+                                coroutineScope.launch {
+                                    val configuration = currentValueOf(LocalViewConfiguration)
+                                    val minTime = configuration.doubleTapMinTimeMillis
+                                    val timeout = configuration.doubleTapTimeoutMillis
+                                    delay(minTime)
+                                    doubleKeyClickStates[keyCode]?.doubleTapMinTimeMillisElapsed =
+                                        true
+                                    // Delay the remainder until we are at timeout
+                                    delay(timeout - minTime)
+                                    // If there was no second key press after the timeout, invoke
+                                    // onClick as normal
+                                    onClick()
+                                }
+                            )
+                    }
+                }
+                // Second click
+                else -> {
+                    // Invoke onDoubleClick if the second click was not a long click
+                    if (!longClickInvoked) {
+                        onDoubleClick?.invoke()
+                    }
+                    doubleKeyClickStates.remove(keyCode)
+                }
+            }
         } else {
-            onClick()
+            if (!longClickInvoked) {
+                onClick()
+            }
         }
         return true
     }
 
+    override fun onCancelKeyInput() {
+        resetKeyPressState()
+    }
+
     override fun onReset() {
         super.onReset()
+        resetKeyPressState()
+    }
+
+    private fun resetKeyPressState() {
         longKeyPressJobs.apply {
             forEachValue { it.cancel() }
             clear()
         }
-        pressedDownKeys.clear()
+        doubleKeyClickStates.apply {
+            forEachValue { it.job.cancel() }
+            clear()
+        }
     }
 }
 
@@ -879,7 +1052,7 @@ internal abstract class AbstractClickableNode(
         FocusableNode(
             interactionSource,
             focusability = Focusability.SystemDefined,
-            onFocus = ::initializeIndicationAndInteractionSourceIfNeeded
+            onFocusChange = ::onFocusChange
         )
 
 
@@ -888,7 +1061,7 @@ internal abstract class AbstractClickableNode(
 
     private var pressInteraction: PressInteraction.Press? = null
     private var hoverInteraction: HoverInteraction.Enter? = null
-    private val currentKeyPressInteractions = mutableMapOf<Key, PressInteraction.Press>()
+    private val currentKeyPressInteractions = mutableLongObjectMapOf<PressInteraction.Press>()
     private var centerOffset: Offset = Offset.Zero
 
     // Track separately from interactionSource, as we will create our own internal
@@ -999,13 +1172,29 @@ internal abstract class AbstractClickableNode(
                 val interaction = HoverInteraction.Exit(oldValue)
                 interactionSource.tryEmit(interaction)
             }
-            currentKeyPressInteractions.values.forEach {
+            currentKeyPressInteractions.forEachValue {
                 interactionSource.tryEmit(PressInteraction.Cancel(it))
             }
         }
         pressInteraction = null
         hoverInteraction = null
         currentKeyPressInteractions.clear()
+    }
+
+    private fun onFocusChange(isFocused: Boolean) {
+        if (isFocused) {
+            initializeIndicationAndInteractionSourceIfNeeded()
+        } else {
+            // If we are no longer focused while we are tracking existing key presses, we need to
+            // clear them and cancel the presses.
+            if (interactionSource != null) {
+                currentKeyPressInteractions.forEachValue {
+                    coroutineScope.launch { interactionSource?.emit(PressInteraction.Cancel(it)) }
+                }
+            }
+            currentKeyPressInteractions.clear()
+            onCancelKeyInput()
+        }
     }
 
     private fun initializeIndicationAndInteractionSourceIfNeeded() {
@@ -1060,14 +1249,15 @@ internal abstract class AbstractClickableNode(
         // the event can bubble up without this clickable ever being focused, and hence without
         // this being initialized through the focus path
         initializeIndicationAndInteractionSourceIfNeeded()
+        val keyCode = event.key.keyCode
         return when {
             enabled && event.isPress -> {
                 // If the key already exists in the map, keyEvent is a repeat event.
                 // We ignore it as we only want to emit an interaction for the initial key press.
                 var wasInteractionHandled = false
-                if (!currentKeyPressInteractions.containsKey(event.key)) {
+                if (!currentKeyPressInteractions.containsKey(keyCode)) {
                     val press = PressInteraction.Press(centerOffset)
-                    currentKeyPressInteractions[event.key] = press
+                    currentKeyPressInteractions[keyCode] = press
                     // Even if the interactionSource is null, we still want to intercept the presses
                     // so we always track them above, and return true
                     if (interactionSource != null) {
@@ -1078,15 +1268,19 @@ internal abstract class AbstractClickableNode(
                 onClickKeyDownEvent(event) || wasInteractionHandled
             }
             enabled && event.isClick -> {
-                currentKeyPressInteractions.remove(event.key)?.let {
+                val press = currentKeyPressInteractions.remove(keyCode)
+                if (press != null) {
                     if (interactionSource != null) {
                         coroutineScope.launch {
-                            interactionSource?.emit(PressInteraction.Release(it))
+                            interactionSource?.emit(PressInteraction.Release(press))
                         }
                     }
+                    // Don't invoke onClick if we were not pressed - this could happen if we became
+                    // focused after the down event, or if the node was reused after the down event.
+                    onClickKeyUpEvent(event)
                 }
-                onClickKeyUpEvent(event)
-                true
+                // Only consume if we were previously pressed for this key event
+                press != null
             }
             else -> false
         }
@@ -1095,6 +1289,12 @@ internal abstract class AbstractClickableNode(
     protected abstract fun onClickKeyDownEvent(event: KeyEvent): Boolean
 
     protected abstract fun onClickKeyUpEvent(event: KeyEvent): Boolean
+
+    /**
+     * Called when focus is lost, to allow cleaning up and resetting the state for ongoing key
+     * presses
+     */
+    protected open fun onCancelKeyInput() {}
 
     final override fun onPreKeyEvent(event: KeyEvent) = false
 

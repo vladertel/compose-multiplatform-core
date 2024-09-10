@@ -27,8 +27,8 @@ import androidx.test.filters.MediumTest
 import androidx.testutils.assertThrows
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -43,7 +43,7 @@ class AutoCloserTest {
         private const val TIMEOUT_AMOUNT = 1L
     }
 
-    private val testDispatcher = TestCoroutineScheduler()
+    private val testCoroutineScope = TestScope()
 
     private lateinit var autoCloser: AutoCloser
     private lateinit var testWatch: AutoCloserTestWatch
@@ -63,7 +63,7 @@ class AutoCloserTest {
 
     @Before
     fun setUp() {
-        testWatch = AutoCloserTestWatch(TIMEOUT_AMOUNT, testDispatcher)
+        testWatch = AutoCloserTestWatch(TIMEOUT_AMOUNT, testCoroutineScope.testScheduler)
         callback = Callback()
 
         val delegateOpenHelper =
@@ -80,20 +80,19 @@ class AutoCloserTest {
         autoCloser =
             AutoCloser(TIMEOUT_AMOUNT, TimeUnit.MILLISECONDS, testWatch).apply {
                 initOpenHelper(delegateOpenHelper)
-                initCoroutineScope(TestScope(testDispatcher))
+                initCoroutineScope(testCoroutineScope)
                 setAutoCloseCallback {}
             }
     }
 
     @After
     fun cleanUp() {
-        testWatch.step()
         // At the end of all tests we always expect to auto-close the database
         assertWithMessage("Database was not closed").that(autoCloser.delegateDatabase).isNull()
     }
 
     @Test
-    fun refCountsCounted() {
+    fun refCountsCounted() = runTest {
         autoCloser.incrementCountAndEnsureDbIsOpen()
         assertThat(autoCloser.refCountForTest).isEqualTo(1)
 
@@ -113,14 +112,14 @@ class AutoCloserTest {
     }
 
     @Test
-    fun executeRefCountingFunctionPropagatesFailure() {
+    fun executeRefCountingFunctionPropagatesFailure() = runTest {
         assertThrows<IOException> { autoCloser.executeRefCountingFunction { throw IOException() } }
 
         assertThat(autoCloser.refCountForTest).isEqualTo(0)
     }
 
     @Test
-    fun dbNotClosedWithRefCountIncremented() {
+    fun dbNotClosedWithRefCountIncremented() = runTest {
         autoCloser.incrementCountAndEnsureDbIsOpen()
 
         testWatch.step()
@@ -131,7 +130,7 @@ class AutoCloserTest {
     }
 
     @Test
-    fun getDelegatedDatabaseReturnsUnwrappedDatabase() {
+    fun getDelegatedDatabaseReturnsUnwrappedDatabase() = runTest {
         assertThat(autoCloser.delegateDatabase).isNull()
 
         val db = autoCloser.incrementCountAndEnsureDbIsOpen()
@@ -151,7 +150,7 @@ class AutoCloserTest {
     }
 
     @Test
-    fun refCountStaysIncrementedWhenErrorIsEncountered() {
+    fun refCountStaysIncrementedWhenErrorIsEncountered() = runTest {
         callback.throwOnOpen = true
         assertThrows<IOException> { autoCloser.incrementCountAndEnsureDbIsOpen() }
 
@@ -162,7 +161,7 @@ class AutoCloserTest {
     }
 
     @Test
-    fun testDbCanBeManuallyClosed() {
+    fun testDbCanBeManuallyClosed() = runTest {
         val db = autoCloser.incrementCountAndEnsureDbIsOpen()
 
         assertThat(db.isOpen).isTrue()
@@ -179,4 +178,10 @@ class AutoCloserTest {
 
         assertThrows<IllegalStateException> { autoCloser.incrementCountAndEnsureDbIsOpen() }
     }
+
+    private fun runTest(testBody: suspend TestScope.() -> Unit) =
+        testCoroutineScope.runTest {
+            testBody.invoke(this)
+            testWatch.step()
+        }
 }

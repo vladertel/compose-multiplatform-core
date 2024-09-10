@@ -14,18 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.tv.material3.samples
+package androidx.compose.material3.adaptive
 
-import androidx.annotation.Sampled
 import androidx.compose.runtime.Composable
-<<<<<<<< HEAD:tv/tv-material/samples/src/main/java/androidx/tv/material3/samples/SwitchSamples.kt
-import androidx.tv.material3.Switch
-
-@Sampled
-@Composable
-fun SwitchSample() {
-    Switch(checked = true, onCheckedChange = {})
-========
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -42,5 +33,4 @@ actual fun currentWindowAdaptiveInfo(): WindowAdaptiveInfo {
         WindowSizeClass.compute(size.width.value, size.height.value),
         Posture() //postures and hinges are relevant to android devices only
     )
->>>>>>>> 16b3858d2015621b889483c361d1c3926947b81f:compose/material3/adaptive/adaptive/src/skikoMain/kotlin/androidx/compose/material3/adaptive/WindowAdaptiveInfo.skiko.kt
 }

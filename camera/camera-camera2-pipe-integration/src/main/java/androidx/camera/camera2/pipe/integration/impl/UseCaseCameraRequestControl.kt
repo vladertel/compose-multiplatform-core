@@ -50,67 +50,66 @@ import kotlinx.coroutines.Deferred
 internal const val DEFAULT_REQUEST_TEMPLATE = CameraDevice.TEMPLATE_PREVIEW
 
 /**
- * The RequestControl provides a couple of APIs to update the config of the camera, it also stores
- * the (repeating) request parameters of the configured [UseCaseCamera]. Once the parameters are
- * updated, it will trigger the update to the [UseCaseCameraState].
+ * Provides methods to update the configuration and parameters of the camera. It also stores the
+ * repeating request parameters associated with the configured [UseCaseCamera]. When parameters are
+ * updated, it triggers changes in the [UseCaseCameraState].
  *
- * The parameters can be stored for the different types of config respectively. Each type of the
- * config can be removed or overridden respectively without interfering with the other types.
+ * Parameters can be stored and managed according to different configuration types. Each type can be
+ * modified or overridden independently without affecting other types.
  */
-interface UseCaseCameraRequestControl {
-    /** The declaration order is the ordering to merge. */
-    enum class Type {
+@JvmDefaultWithCompatibility
+public interface UseCaseCameraRequestControl {
+    /** Defines the types or categories of configuration parameters. */
+    public enum class Type {
+        /** Parameters related to the overall session configuration. */
         SESSION_CONFIG,
+        /** General, default parameters. */
         DEFAULT,
-        CAMERA2_CAMERA_CONTROL,
+        /** Parameters specifically for interoperability with Camera2. */
+        CAMERA2_CAMERA_CONTROL
     }
 
-    // Repeating parameters
+    // Repeating Request Parameters
     /**
-     * Append a new option to update the repeating request.
+     * Asynchronously sets or updates parameters for the repeating capture request.
      *
-     * This method will: (1) Stores [values], [tags] and [listeners] by [type] respectively. The new
-     * inputs above will append to the values that store as the same [type], the existing values
-     * that don't conflict with the new inputs will not be cleared. If the [type] isn't set, it will
-     * treat the new inputs as the [Type.DEFAULT] (2) Update the repeating request by merging all
-     * the [values], [tags] and [listeners] from all the defined types.
+     * New values will overwrite any existing parameters with the same key for the given [type]. If
+     * no [type] is specified, it defaults to [Type.DEFAULT].
      *
-     * @param type the type of the input parameter, the possible value could be one of the [Type]
-     * @param values the new [CaptureRequest.Key] and value will be append to the repeating request
-     * @param optionPriority is the priority option that would be used to determine whether the new
-     *   value can override the existing value or not. This is default to
-     *   [Config.OptionPriority.OPTIONAL]
-     * @param tags the option tag that could be appended to the repeating request, its effect is
-     *   similar to the [CaptureRequest.Builder.setTag].
-     * @param listeners to receive the capture results.
+     * @param type The category of parameters being set (default: [Type.DEFAULT]).
+     * @param values A map of [CaptureRequest.Key] to their new values.
+     * @param optionPriority The priority for resolving conflicts if the same parameter is set
+     *   multiple times.
+     * @return A [Deferred] object representing the asynchronous operation.
      */
-    fun addParametersAsync(
+    public fun setParametersAsync(
         type: Type = Type.DEFAULT,
         values: Map<CaptureRequest.Key<*>, Any> = emptyMap(),
         optionPriority: Config.OptionPriority = defaultOptionPriority,
-        tags: Map<String, Any> = emptyMap(),
-        listeners: Set<Request.Listener> = emptySet()
     ): Deferred<Unit>
 
     /**
-     * Use a new [config] to update the repeating request.
+     * Asynchronously updates the repeating request with a new configuration.
      *
-     * This method will: (1) Stores [config], [tags] and [listeners] by [type] respectively. The new
-     * inputs above will take place of the existing value of the [type]. (2) Update the repeating
-     * request by merging all the [config], [tags] and [listeners] from all the defined types.
+     * This method replaces any existing configuration, tags, and listeners associated with the
+     * specified [type]. The repeating request is then rebuilt by merging all configurations, tags,
+     * and listeners from all defined types.
      *
-     * @param type the type of the input [config]
-     * @param config the new config values will be used to update the repeating request.
-     * @param tags the option tag that could be appended to the repeating request, its effect is
-     *   similar to the [CaptureRequest.Builder.setTag].
-     * @param streams Specify a list of streams that would be updated. Leave the value in empty will
-     *   use the [streams] that is previously specified. The update can only be processed after
-     *   specifying 1 or more valid streams.
-     * @param template The [RequestTemplate] will be used for the requests. Leave the value in empty
-     *   will use the [RequestTemplate] that is previously specified.
-     * @param listeners to receive the capture results.
+     * @param type The category of the configuration being updated (e.g., SESSION_CONFIG, DEFAULT).
+     * @param config The new configuration values to apply. If null, the existing configuration for
+     *   this type is cleared.
+     * @param tags Optional tags to append to the repeating request, similar to
+     *   [CaptureRequest.Builder.setTag].
+     * @param streams The specific streams to update. If empty, all previously specified streams are
+     *   updated. The update only proceeds if at least one valid stream is specified.
+     * @param template The [RequestTemplate] to use for the requests. If null, the previously
+     *   specified template is used.
+     * @param listeners Listeners to receive capture results.
+     * @param sessionConfig Optional [SessionConfig] to update if applicable to the configuration
+     *   type.
+     * @return A [Deferred] representing the asynchronous update operation.
      */
-    fun setConfigAsync(
+    public fun setConfigAsync(
         type: Type,
         config: Config? = null,
         tags: Map<String, Any> = emptyMap(),
@@ -121,9 +120,30 @@ interface UseCaseCameraRequestControl {
     ): Deferred<Unit>
 
     // 3A
-    suspend fun setTorchAsync(enabled: Boolean): Deferred<Result3A>
+    /**
+     * Asynchronously sets the torch (flashlight) state.
+     *
+     * @param enabled True to enable the torch, false to disable it.
+     * @return A [Deferred] representing the asynchronous operation and its result ([Result3A]).
+     */
+    public suspend fun setTorchAsync(enabled: Boolean): Deferred<Result3A>
 
-    suspend fun startFocusAndMeteringAsync(
+    /**
+     * Asynchronously starts a 3A (Auto Exposure, Auto Focus, Auto White Balance) operation with the
+     * specified regions and locking behaviors.
+     *
+     * @param aeRegions The auto-exposure regions.
+     * @param afRegions The auto-focus regions.
+     * @param awbRegions The auto-white balance regions.
+     * @param aeLockBehavior The behavior for locking auto-exposure.
+     * @param afLockBehavior The behavior for locking auto-focus.
+     * @param awbLockBehavior The behavior for locking auto-white balance.
+     * @param afTriggerStartAeMode The AE mode to use when triggering AF.
+     * @param timeLimitNs The time limit for the 3A operation in nanoseconds. Defaults to
+     *   [CameraGraph.Constants3A.DEFAULT_TIME_LIMIT_NS].
+     * @return A [Deferred] representing the asynchronous operation and its result ([Result3A]).
+     */
+    public suspend fun startFocusAndMeteringAsync(
         aeRegions: List<MeteringRectangle>? = null,
         afRegions: List<MeteringRectangle>? = null,
         awbRegions: List<MeteringRectangle>? = null,
@@ -134,10 +154,24 @@ interface UseCaseCameraRequestControl {
         timeLimitNs: Long = CameraGraph.Constants3A.DEFAULT_TIME_LIMIT_NS,
     ): Deferred<Result3A>
 
-    suspend fun cancelFocusAndMeteringAsync(): Deferred<Result3A>
+    /**
+     * Asynchronously cancels any ongoing focus and metering operations.
+     *
+     * @return A [Deferred] representing the asynchronous operation and its result ([Result3A]).
+     */
+    public suspend fun cancelFocusAndMeteringAsync(): Deferred<Result3A>
 
     // Capture
-    suspend fun issueSingleCaptureAsync(
+    /**
+     * Asynchronously issues a single capture request.
+     *
+     * @param captureSequence A list of [CaptureConfig] objects defining the capture settings.
+     * @param captureMode The capture mode (from [ImageCapture.CaptureMode]).
+     * @param flashType The flash type (from [ImageCapture.FlashType]).
+     * @param flashMode The flash mode (from [ImageCapture.FlashMode]).
+     * @return A list of [Deferred] objects, one for each capture in the sequence.
+     */
+    public suspend fun issueSingleCaptureAsync(
         captureSequence: List<CaptureConfig>,
         @ImageCapture.CaptureMode captureMode: Int,
         @ImageCapture.FlashType flashType: Int,
@@ -152,17 +186,17 @@ interface UseCaseCameraRequestControl {
      *
      * @see [CameraGraph.Session.update3A]
      */
-    suspend fun update3aRegions(
+    public suspend fun update3aRegions(
         aeRegions: List<MeteringRectangle>? = null,
         afRegions: List<MeteringRectangle>? = null,
         awbRegions: List<MeteringRectangle>? = null,
     ): Deferred<Result3A>
 
-    fun close()
+    public fun close()
 }
 
 @UseCaseCameraScope
-class UseCaseCameraRequestControlImpl
+public class UseCaseCameraRequestControlImpl
 @Inject
 constructor(
     private val capturePipeline: CapturePipeline,
@@ -184,26 +218,18 @@ constructor(
     private val infoBundleMap = mutableMapOf<UseCaseCameraRequestControl.Type, InfoBundle>()
     private val lock = Any()
 
-    override fun addParametersAsync(
+    override fun setParametersAsync(
         type: UseCaseCameraRequestControl.Type,
         values: Map<CaptureRequest.Key<*>, Any>,
         optionPriority: Config.OptionPriority,
-        tags: Map<String, Any>,
-        listeners: Set<Request.Listener>
     ): Deferred<Unit> =
         runIfNotClosed {
             synchronized(lock) {
                     debug { "[$type] Add request option: $values" }
                     infoBundleMap
                         .getOrPut(type) { InfoBundle() }
-                        .let {
-                            it.options.addAllCaptureRequestOptionsWithPriority(
-                                values,
-                                optionPriority
-                            )
-                            it.tags.putAll(tags)
-                            it.listeners.addAll(listeners)
-                        }
+                        .options
+                        .addAllCaptureRequestOptionsWithPriority(values, optionPriority)
                     infoBundleMap.merge()
                 }
                 .updateCameraStateAsync()
@@ -270,12 +296,13 @@ constructor(
                     afLockBehavior = afLockBehavior,
                     awbLockBehavior = awbLockBehavior,
                     afTriggerStartAeMode = afTriggerStartAeMode,
-                    timeLimitNs = timeLimitNs,
+                    convergedTimeLimitNs = timeLimitNs,
+                    lockedTimeLimitNs = timeLimitNs
                 )
             }
         } ?: submitFailedResult
 
-    override suspend fun cancelFocusAndMeteringAsync() =
+    override suspend fun cancelFocusAndMeteringAsync(): Deferred<Result3A> =
         runIfNotClosed {
             useGraphSessionOrFailed { it.unlock3A(ae = true, af = true, awb = true) }.await()
 
@@ -293,7 +320,7 @@ constructor(
         @ImageCapture.CaptureMode captureMode: Int,
         @ImageCapture.FlashType flashType: Int,
         @ImageCapture.FlashMode flashMode: Int,
-    ) =
+    ): List<Deferred<Void?>> =
         runIfNotClosed {
             if (captureSequence.hasInvalidSurface()) {
                 failedResults(captureSequence.size, "Capture request failed due to invalid surface")
@@ -323,13 +350,13 @@ constructor(
         aeRegions: List<MeteringRectangle>?,
         afRegions: List<MeteringRectangle>?,
         awbRegions: List<MeteringRectangle>?
-    ) =
+    ): Deferred<Result3A> =
         runIfNotClosed {
             useGraphSessionOrFailed {
                 it.update3A(
-                    aeRegions = METERING_REGIONS_DEFAULT.asList(),
-                    afRegions = METERING_REGIONS_DEFAULT.asList(),
-                    awbRegions = METERING_REGIONS_DEFAULT.asList()
+                    aeRegions = aeRegions ?: METERING_REGIONS_DEFAULT.asList(),
+                    afRegions = afRegions ?: METERING_REGIONS_DEFAULT.asList(),
+                    awbRegions = awbRegions ?: METERING_REGIONS_DEFAULT.asList()
                 )
             }
         } ?: submitFailedResult
@@ -427,22 +454,22 @@ constructor(
         }
 
     @Module
-    abstract class Bindings {
+    public abstract class Bindings {
         @UseCaseCameraScope
         @Binds
-        abstract fun provideRequestControls(
+        public abstract fun provideRequestControls(
             requestControl: UseCaseCameraRequestControlImpl
         ): UseCaseCameraRequestControl
     }
 
-    companion object {
+    public companion object {
         private val submitFailedResult =
             CompletableDeferred(Result3A(Result3A.Status.SUBMIT_FAILED))
         private val canceledResult = CompletableDeferred<Unit>().apply { cancel() }
     }
 }
 
-fun TagBundle.toMap(): Map<String, Any> =
+public fun TagBundle.toMap(): Map<String, Any> =
     mutableMapOf<String, Any>().also {
         listKeys().forEach { tagKey -> it[tagKey] = getTag(tagKey) as Any }
     }

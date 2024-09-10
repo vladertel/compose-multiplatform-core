@@ -243,13 +243,11 @@ actual abstract class RoomDatabase {
             transactionContext =
                 if (inCompatibilityMode()) {
                     // To prevent starvation due to primary connection blocking in
-                    // SupportSQLiteDatabase
-                    // a limited dispatcher is used for transactions.
+                    // SupportSQLiteDatabase a limited dispatcher is used for transactions.
                     coroutineScope.coroutineContext + dispatcher.limitedParallelism(1)
                 } else {
                     // When a SQLiteDriver is provided a suspending connection pool is used and
-                    // there
-                    // is no reason to limit parallelism.
+                    // there is no reason to limit parallelism.
                     coroutineScope.coroutineContext
                 }
         } else {
@@ -266,23 +264,16 @@ actual abstract class RoomDatabase {
 
         allowMainThreadQueries = configuration.allowMainThreadQueries
 
-        // Configure SQLiteCopyOpenHelper if it is available
-        unwrapOpenHelper(
-                clazz = PrePackagedCopyOpenHelper::class.java,
-                openHelper = connectionManager.supportOpenHelper
-            )
+        // Configure PrePackagedCopyOpenHelper if it is available
+        unwrapOpenHelper<PrePackagedCopyOpenHelper>(connectionManager.supportOpenHelper)
             ?.setDatabaseConfiguration(configuration)
 
         // Configure AutoClosingRoomOpenHelper if it is available
-        unwrapOpenHelper(
-                clazz = AutoClosingRoomOpenHelper::class.java,
-                openHelper = connectionManager.supportOpenHelper
-            )
-            ?.let {
-                autoCloser = it.autoCloser
-                it.autoCloser.initCoroutineScope(coroutineScope)
-                invalidationTracker.setAutoCloser(it.autoCloser)
-            }
+        unwrapOpenHelper<AutoClosingRoomOpenHelper>(connectionManager.supportOpenHelper)?.let {
+            autoCloser = it.autoCloser
+            it.autoCloser.initCoroutineScope(coroutineScope)
+            invalidationTracker.setAutoCloser(it.autoCloser)
+        }
 
         // Configure multi-instance invalidation, if enabled
         if (configuration.multiInstanceInvalidationServiceIntent != null) {
@@ -351,21 +342,30 @@ actual abstract class RoomDatabase {
     }
 
     /**
-     * Unwraps (delegating) open helpers until it finds clazz, otherwise returns null.
+     * Unwraps (delegating) open helpers until it finds [T], otherwise returns null.
      *
-     * @param clazz the open helper type to search for
      * @param openHelper the open helper to search through
-     * @param T the type of clazz
-     * @return the instance of clazz, otherwise null
+     * @param T the type of open helper type to search for
+     * @return the instance of [T], otherwise null
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> unwrapOpenHelper(clazz: Class<T>, openHelper: SupportSQLiteOpenHelper?): T? {
-        if (clazz.isInstance(openHelper)) {
-            return openHelper as T
+    private inline fun <reified T : SupportSQLiteOpenHelper> unwrapOpenHelper(
+        openHelper: SupportSQLiteOpenHelper?
+    ): T? {
+        if (openHelper == null) {
+            return null
         }
-        return if (openHelper is DelegatingOpenHelper) {
-            unwrapOpenHelper(clazz = clazz, openHelper = openHelper.delegate)
-        } else null
+        var current: SupportSQLiteOpenHelper = openHelper
+        while (true) {
+            if (current is T) {
+                return current
+            }
+            if (current is DelegatingOpenHelper) {
+                current = current.delegate
+            } else {
+                break
+            }
+        }
+        return null
     }
 
     /**
@@ -404,7 +404,8 @@ actual abstract class RoomDatabase {
      */
     protected actual abstract fun createInvalidationTracker(): InvalidationTracker
 
-    internal actual fun getCoroutineScope(): CoroutineScope {
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    actual fun getCoroutineScope(): CoroutineScope {
         return coroutineScope
     }
 
@@ -548,9 +549,6 @@ actual abstract class RoomDatabase {
      * Once a [RoomDatabase] is closed it should no longer be used.
      */
     actual open fun close() {
-        if (inCompatibilityMode() && !isOpen) {
-            return
-        }
         closeBarrier.close()
     }
 
@@ -663,10 +661,7 @@ actual abstract class RoomDatabase {
         if (autoCloser == null) {
             internalBeginTransaction()
         } else {
-            autoCloser.executeRefCountingFunction<Any?> {
-                internalBeginTransaction()
-                null
-            }
+            autoCloser.executeRefCountingFunction { internalBeginTransaction() }
         }
     }
 
@@ -690,10 +685,7 @@ actual abstract class RoomDatabase {
         if (autoCloser == null) {
             internalEndTransaction()
         } else {
-            autoCloser.executeRefCountingFunction<Any?> {
-                internalEndTransaction()
-                null
-            }
+            autoCloser.executeRefCountingFunction { internalEndTransaction() }
         }
     }
 
@@ -874,6 +866,7 @@ actual abstract class RoomDatabase {
         private var prepackagedDatabaseCallback: PrepackagedDatabaseCallback? = null
         private var queryCallback: QueryCallback? = null
         private var queryCallbackExecutor: Executor? = null
+        private var queryCallbackCoroutineContext: CoroutineContext? = null
         private val typeConverters: MutableList<Any> = mutableListOf()
         private var queryExecutor: Executor? = null
         private var transactionExecutor: Executor? = null
@@ -1449,6 +1442,9 @@ actual abstract class RoomDatabase {
          * A use case for providing a callback is to allow logging executed queries. When the
          * callback implementation logs then it is recommended to use an immediate executor.
          *
+         * If a previous callback was set with [setQueryCallback] then this call will override it,
+         * including removing the Coroutine context previously set, if any.
+         *
          * @param queryCallback The query callback.
          * @param executor The executor on which the query callback will be invoked.
          * @return This builder instance.
@@ -1457,6 +1453,31 @@ actual abstract class RoomDatabase {
         open fun setQueryCallback(queryCallback: QueryCallback, executor: Executor) = apply {
             this.queryCallback = queryCallback
             this.queryCallbackExecutor = executor
+            this.queryCallbackCoroutineContext = null
+        }
+
+        /**
+         * Sets a [QueryCallback] to be invoked when queries are executed.
+         *
+         * The callback is invoked whenever a query is executed, note that adding this callback has
+         * a small cost and should be avoided in production builds unless needed.
+         *
+         * A use case for providing a callback is to allow logging executed queries. When the
+         * callback implementation simply logs then it is recommended to use
+         * [kotlinx.coroutines.Dispatchers.Unconfined].
+         *
+         * If a previous callback was set with [setQueryCallback] then this call will override it,
+         * including removing the executor previously set, if any.
+         *
+         * @param context The coroutine context on which the query callback will be invoked.
+         * @param queryCallback The query callback.
+         * @return This builder instance.
+         */
+        @Suppress("MissingGetterMatchingBuilder")
+        fun setQueryCallback(context: CoroutineContext, queryCallback: QueryCallback) = apply {
+            this.queryCallback = queryCallback
+            this.queryCallbackExecutor = null
+            this.queryCallbackCoroutineContext = context
         }
 
         /**
@@ -1598,8 +1619,11 @@ actual abstract class RoomDatabase {
                                 "Cannot create auto-closing database for an in-memory database."
                             }
                             val autoCloser =
-                                AutoCloser(autoCloseTimeout, requireNotNull(autoCloseTimeUnit))
-                            AutoClosingRoomOpenHelperFactory(it, autoCloser)
+                                AutoCloser(
+                                    timeoutAmount = autoCloseTimeout,
+                                    timeUnit = requireNotNull(autoCloseTimeUnit)
+                                )
+                            AutoClosingRoomOpenHelperFactory(delegate = it, autoCloser = autoCloser)
                         } else {
                             it
                         }
@@ -1630,10 +1654,10 @@ actual abstract class RoomDatabase {
                                     "three configurations."
                             }
                             PrePackagedCopyOpenHelperFactory(
-                                copyFromAssetPath,
-                                copyFromFile,
-                                copyFromInputStream,
-                                it
+                                copyFromAssetPath = copyFromAssetPath,
+                                copyFromFile = copyFromFile,
+                                copyFromInputStream = copyFromInputStream,
+                                delegate = it
                             )
                         } else {
                             it
@@ -1641,10 +1665,13 @@ actual abstract class RoomDatabase {
                     }
                     ?.let {
                         if (queryCallback != null) {
+                            val queryCallbackContext =
+                                queryCallbackExecutor?.asCoroutineDispatcher()
+                                    ?: requireNotNull(queryCallbackCoroutineContext)
                             QueryInterceptorOpenHelperFactory(
-                                it,
-                                requireNotNull(queryCallbackExecutor),
-                                requireNotNull(queryCallback)
+                                delegate = it,
+                                queryCallbackScope = CoroutineScope(queryCallbackContext),
+                                queryCallback = requireNotNull(queryCallback)
                             )
                         } else {
                             it

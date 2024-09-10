@@ -86,7 +86,7 @@ credentials with the AOSP Gerrit code review system by signing in to
 least once using the account you will use to submit patches.
 
 Next, you will need to
-[set up authentication](https://android-review.googlesource.com/new-password).
+[set up authentication](https://android.googlesource.com/new-password).
 This will give you a shell command to update your local Git cookies, which will
 allow you to upload changes.
 
@@ -573,6 +573,14 @@ version -- we record three different types of API surfaces.
     [Experimental APIs](/docs/api_guidelines/index.md#experimental-api))
     and API review
 
+NOTE: Experimental API tracking for KLib is enabled by default for KMP projects
+via parallel `updateAbi` and `checkAbi` tasks. If you have a problem with these
+tools,
+[please file an issue](https://issuetracker.google.com/issues/new?component=1102332&template=1780493).
+As a workaround, you may opt-out by setting
+`enableBinaryCompatibilityValidator = false` under
+`AndroidxMultiplatformExtension` in your library's `build.gradle` file.
+
 ### Release notes & the `Relnote:` tag {#relnote}
 
 Prior to releasing, release notes are pre-populated using a script and placed
@@ -963,7 +971,7 @@ First, use the `createArchive` Gradle task to generate the local Maven
 repository artifact:
 
 ```shell
-# Creates <path-to-checkout>/out/androidx/build/support_repo/
+# Creates <path-to-checkout>/out/repository/
 ./gradlew createArchive
 ```
 
@@ -980,7 +988,7 @@ dependencyResolutionManagement {
         mavenCentral()
         // Add this
         maven {
-            setUrl("<path-to-sdk>/out/androidx/build/support_repo/")
+            setUrl("<path-to-sdk>/out/repository/")
         }
     }
 }
@@ -1010,8 +1018,8 @@ module. We recommend only replacing the module you are modifying instead of the
 full m2repository to avoid version issues of other modules. You can either take
 the unzipped directory from
 `<path-to-checkout>/out/dist/top-of-tree-m2repository-##.zip`, or from
-`<path-to-checkout>/out/androidx/build/support_repo/` after building `androidx`.
-Here is an example of replacing the RecyclerView module:
+`<path-to-checkout>/out/repository/` after building `androidx`. Here is an
+example of replacing the RecyclerView module:
 
 ```shell
 $TARGET=YOUR_ANDROID_PATH/prebuilts/sdk/current/androidx/m2repository/androidx/recyclerview/recyclerview/1.1.0-alpha07;

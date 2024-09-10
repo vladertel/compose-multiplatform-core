@@ -27,6 +27,7 @@ import kotlin.test.Test
 class NavigationSuiteScaffoldTest {
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_compactWidth_compactHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(400f, 400f))
@@ -36,6 +37,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_compactWidth_mediumHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(400f, 800f))
@@ -45,6 +47,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_compactWidth_expandedHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(400f, 1000f))
@@ -54,6 +57,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_mediumWidth_compactHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(800f, 400f))
@@ -63,6 +67,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_mediumWidth_mediumHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(800f, 800f))
@@ -72,6 +77,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_mediumWidth_expandedHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(800f, 1000f))
@@ -81,6 +87,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_expandedWidth_compactHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(1000f, 400f))
@@ -90,6 +97,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_expandedWidth_mediumHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(1000f, 800f))
@@ -99,6 +107,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_expandedWidth_expandedHeight() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(windowSizeClass = WindowSizeClass.compute(1000f, 1000f))
@@ -108,6 +117,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_tableTop() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(
@@ -120,6 +130,7 @@ class NavigationSuiteScaffoldTest {
     }
 
     @Test
+    @Suppress("DEPRECATION") // WindowSizeClass#compute is deprecated
     fun navigationLayoutTypeTest_tableTop_expandedWidth() {
         val mockAdaptiveInfo =
             createMockAdaptiveInfo(

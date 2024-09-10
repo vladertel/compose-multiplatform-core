@@ -57,8 +57,7 @@ class ViewModelScenarioTest {
 
     @Test
     fun viewModel_whenNotCleared_usesCustomCreationExtras() {
-        val expectedExtras = MutableCreationExtras()
-        expectedExtras[CREATION_EXTRAS_KEY] = "one-two-three"
+        val expectedExtras = MutableCreationExtras().apply { this[CREATION_EXTRAS_KEY] = "value" }
         val scenario = viewModelScenario(expectedExtras) { TestViewModel(creationExtras = this) }
 
         val actualExtras = scenario.viewModel.creationExtras
@@ -68,8 +67,7 @@ class ViewModelScenarioTest {
 
     @Test
     fun viewModel_whenCleared_reusesCustomCreationExtras() {
-        val expectedExtras = MutableCreationExtras()
-        expectedExtras[CREATION_EXTRAS_KEY] = "one-two-three"
+        val expectedExtras = MutableCreationExtras().apply { this[CREATION_EXTRAS_KEY] = "value" }
         val scenario = viewModelScenario(expectedExtras) { TestViewModel(creationExtras = this) }
 
         val actualExtras1 = scenario.viewModel.creationExtras
@@ -92,7 +90,7 @@ class ViewModelScenarioTest {
     }
 }
 
-private val CREATION_EXTRAS_KEY = object : CreationExtras.Key<String> {}
+private val CREATION_EXTRAS_KEY = CreationExtras.Key<String>()
 
 private class TestViewModel(
     val creationExtras: CreationExtras = CreationExtras.Empty,

@@ -17,9 +17,15 @@
 package androidx.compose.foundation.lazy.grid
 
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.internal.checkPrecondition
+import androidx.compose.foundation.internal.requirePrecondition
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
 import androidx.compose.foundation.lazy.layout.ObservableScopeInvalidator
+import androidx.compose.foundation.lazy.layout.StickyItemsPlacement
+import androidx.compose.foundation.lazy.layout.applyStickyItems
+import androidx.compose.foundation.lazy.layout.updatedVisibleItems
 import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Placeable
@@ -29,7 +35,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
-import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.util.fastRoundToInt
@@ -67,10 +72,11 @@ internal fun measureLazyGrid(
     placementScopeInvalidator: ObservableScopeInvalidator,
     graphicsContext: GraphicsContext,
     prefetchInfoRetriever: (line: Int) -> List<Pair<Int, Constraints>>,
+    stickyItemsScrollBehavior: StickyItemsPlacement?,
     layout: (Int, Int, Placeable.PlacementScope.() -> Unit) -> MeasureResult
 ): LazyGridMeasureResult {
-    require(beforeContentPadding >= 0) { "negative beforeContentPadding" }
-    require(afterContentPadding >= 0) { "negative afterContentPadding" }
+    requirePrecondition(beforeContentPadding >= 0) { "negative beforeContentPadding" }
+    requirePrecondition(afterContentPadding >= 0) { "negative afterContentPadding" }
     if (itemsCount <= 0) {
         // empty data set. reset the current scroll and report zero size
         var layoutWidth = constraints.minWidth
@@ -257,7 +263,7 @@ internal fun measureLazyGrid(
             }
 
         // the initial offset for lines from visibleLines list
-        require(currentFirstLineScrollOffset >= 0) { "negative initial offset" }
+        requirePrecondition(currentFirstLineScrollOffset >= 0) { "negative initial offset" }
         val visibleLinesScrollOffset = -currentFirstLineScrollOffset
         var firstLine = visibleLines.first()
 
@@ -357,6 +363,26 @@ internal fun measureLazyGrid(
             }
         }
 
+        // apply sticky items logic.
+        val stickingItems =
+            stickyItemsScrollBehavior.applyStickyItems(
+                positionedItems,
+                measuredItemProvider.headerIndices,
+                beforeContentPadding,
+                afterContentPadding,
+                layoutWidth,
+                layoutHeight
+            ) {
+                val span = measuredLineProvider.spanOf(it)
+                val childConstraints = measuredLineProvider.childConstraints(0, span)
+                measuredItemProvider.getAndMeasure(
+                    index = it,
+                    constraints = childConstraints,
+                    lane = 0,
+                    span = span
+                )
+            }
+
         return LazyGridMeasureResult(
             firstVisibleLine = firstLine,
             firstVisibleLineScrollOffset = currentFirstLineScrollOffset,
@@ -365,17 +391,14 @@ internal fun measureLazyGrid(
             measureResult =
                 layout(layoutWidth, layoutHeight) {
                     positionedItems.fastForEach { it.place(this) }
+                    stickingItems.fastForEach { it.place(this) }
                     // we attach it during the placement so LazyGridState can trigger re-placement
                     placementScopeInvalidator.attachToScope()
                 },
             viewportStartOffset = -beforeContentPadding,
             viewportEndOffset = mainAxisAvailableSize + afterContentPadding,
             visibleItemsInfo =
-                if (extraItemsBefore.isEmpty() && extraItemsAfter.isEmpty()) {
-                    positionedItems
-                } else {
-                    positionedItems.fastFilter { it.index in firstItemIndex..lastItemIndex }
-                },
+                updatedVisibleItems(firstItemIndex, lastItemIndex, positionedItems, stickingItems),
             totalItemsCount = itemsCount,
             reverseLayout = reverseLayout,
             orientation = if (isVertical) Orientation.Vertical else Orientation.Horizontal,
@@ -438,24 +461,26 @@ private fun calculateItemsOffsets(
     val mainAxisLayoutSize = if (isVertical) layoutHeight else layoutWidth
     val hasSpareSpace = finalMainAxisOffset < min(mainAxisLayoutSize, maxOffset)
     if (hasSpareSpace) {
-        check(firstLineScrollOffset == 0) { "non-zero firstLineScrollOffset" }
+        checkPrecondition(firstLineScrollOffset == 0) { "non-zero firstLineScrollOffset" }
     }
 
     val positionedItems = ArrayList<LazyGridMeasuredItem>(lines.fastSumBy { it.items.size })
 
     if (hasSpareSpace) {
-        require(itemsBefore.isEmpty() && itemsAfter.isEmpty()) { "no items" }
+        requirePrecondition(itemsBefore.isEmpty() && itemsAfter.isEmpty()) { "no items" }
         val linesCount = lines.size
         fun Int.reverseAware() = if (!reverseLayout) this else linesCount - this - 1
 
         val sizes = IntArray(linesCount) { index -> lines[index.reverseAware()].mainAxisSize }
         val offsets = IntArray(linesCount) { 0 }
         if (isVertical) {
-            with(requireNotNull(verticalArrangement) { "null verticalArrangement" }) {
+            with(requirePreconditionNotNull(verticalArrangement) { "null verticalArrangement" }) {
                 density.arrange(mainAxisLayoutSize, sizes, offsets)
             }
         } else {
-            with(requireNotNull(horizontalArrangement) { "null horizontalArrangement" }) {
+            with(
+                requirePreconditionNotNull(horizontalArrangement) { "null horizontalArrangement" }
+            ) {
                 // Enforces Ltr layout direction as it is mirrored with placeRelative later.
                 density.arrange(mainAxisLayoutSize, sizes, LayoutDirection.Ltr, offsets)
             }

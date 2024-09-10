@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.privacysandbox.sdkruntime.integration.testaidl;
+package androidx.compose.material3.adaptive.layout
 
-interface ISdkApi {
-    boolean invert(boolean value);
-}
+import androidx.compose.ui.Modifier
+
+internal actual fun Modifier.systemGestureExclusion(): Modifier = this

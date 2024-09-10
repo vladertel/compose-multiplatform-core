@@ -18,6 +18,7 @@ package androidx.privacysandbox.ui.client.test
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Rect
@@ -31,6 +32,7 @@ import android.view.ViewGroup.LayoutParams
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.lifecycle.Lifecycle
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
@@ -77,6 +79,7 @@ class SandboxedSdkViewTest {
         const val SHORTEST_TIME_BETWEEN_SIGNALS_MS = 200
     }
 
+    private lateinit var uiDevice: UiDevice
     private lateinit var context: Context
     private lateinit var view: SandboxedSdkView
     private lateinit var layoutParams: LayoutParams
@@ -146,6 +149,10 @@ class SandboxedSdkViewTest {
             assertThat(openSessionLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
         }
 
+        internal fun assertSessionNotOpened() {
+            assertThat(openSessionLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isFalse()
+        }
+
         internal fun wasNotifyResizedCalled(): Boolean {
             return resizeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)
         }
@@ -174,7 +181,7 @@ class SandboxedSdkViewTest {
                 view.layoutParams = LinearLayout.LayoutParams(initialWidth, initialHeight)
             }
 
-            fun requestSizeChange(width: Int, height: Int) {
+            fun requestResize(width: Int, height: Int) {
                 internalClient?.onResizeRequested(width, height)
             }
 
@@ -252,6 +259,7 @@ class SandboxedSdkViewTest {
             testSandboxedUiAdapter = TestSandboxedUiAdapter()
             view.setAdapter(testSandboxedUiAdapter)
         }
+        uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     }
 
     @Test
@@ -293,6 +301,17 @@ class SandboxedSdkViewTest {
         view.stateListenerManager.currentUiSessionState = SandboxedSdkUiSessionState.Loading
         assertThat(latch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(currentState).isEqualTo(SandboxedSdkUiSessionState.Active)
+    }
+
+    @Test
+    fun sessionNotOpenedWhenWindowIsNotVisible() {
+        // the window is not visible when the activity is in the CREATED state.
+        activityScenarioRule.scenario.moveToState(Lifecycle.State.CREATED)
+        addViewToLayout()
+        testSandboxedUiAdapter.assertSessionNotOpened()
+        // the window becomes visible when the activity is in the STARTED state.
+        activityScenarioRule.scenario.moveToState(Lifecycle.State.STARTED)
+        testSandboxedUiAdapter.assertSessionOpened()
     }
 
     @Test
@@ -389,18 +408,17 @@ class SandboxedSdkViewTest {
     @Test
     fun onConfigurationChangedTest() {
         addViewToLayout()
-        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         testSandboxedUiAdapter.assertSessionOpened()
         // newWindow() will be triggered by a window state change, even if the activity handles
         // orientation changes without recreating the activity.
-        device.performActionAndWait(
-            { device.setOrientationLeft() },
+        uiDevice.performActionAndWait(
+            { uiDevice.setOrientationLeft() },
             Until.newWindow(),
             UI_INTENSIVE_TIMEOUT
         )
         testSandboxedUiAdapter.assertSessionOpened()
-        device.performActionAndWait(
-            { device.setOrientationNatural() },
+        uiDevice.performActionAndWait(
+            { uiDevice.setOrientationNatural() },
             Until.newWindow(),
             UI_INTENSIVE_TIMEOUT
         )
@@ -463,7 +481,7 @@ class SandboxedSdkViewTest {
             layout.addView(view)
         }
         testSandboxedUiAdapter.assertSessionOpened()
-        testSandboxedUiAdapter.testSession?.requestSizeChange(layout.width, layout.height)
+        testSandboxedUiAdapter.testSession?.requestResize(layout.width, layout.height)
         val observer = view.viewTreeObserver
         observer.addOnGlobalLayoutListener(
             object : ViewTreeObserver.OnGlobalLayoutListener {
@@ -518,6 +536,7 @@ class SandboxedSdkViewTest {
         surfaceView.addOnAttachStateChangeListener(
             object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(p0: View) {
+                    @Suppress("DEPRECATION")
                     token = surfaceView.hostToken
                     surfaceViewLatch.countDown()
                 }
@@ -598,10 +617,10 @@ class SandboxedSdkViewTest {
 
     @Ignore("b/307829956")
     @Test
-    fun requestSizeWithMeasureSpecAtMost_withinParentBounds() {
+    fun requestResizeWithMeasureSpecAtMost_withinParentBounds() {
         view.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         addViewToLayoutAndWaitToBeActive()
-        requestSizeAndVerifyLayout(
+        requestResizeAndVerifyLayout(
             /* requestedWidth=*/ mainLayoutWidth - 100,
             /* requestedHeight=*/ mainLayoutHeight - 100,
             /* expectedWidth=*/ mainLayoutWidth - 100,
@@ -610,11 +629,11 @@ class SandboxedSdkViewTest {
     }
 
     @Test
-    fun requestSizeWithMeasureSpecAtMost_exceedsParentBounds() {
+    fun requestResizeWithMeasureSpecAtMost_exceedsParentBounds() {
         view.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         addViewToLayoutAndWaitToBeActive()
         // the resize is constrained by the parent's size
-        requestSizeAndVerifyLayout(
+        requestResizeAndVerifyLayout(
             /* requestedWidth=*/ mainLayoutWidth + 100,
             /* requestedHeight=*/ mainLayoutHeight + 100,
             /* expectedWidth=*/ mainLayoutWidth,
@@ -623,13 +642,13 @@ class SandboxedSdkViewTest {
     }
 
     @Test
-    fun requestSizeWithMeasureSpecExactly() {
+    fun requestResizeWithMeasureSpecExactly() {
         view.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         addViewToLayoutAndWaitToBeActive()
         val currentWidth = view.width
         val currentHeight = view.height
         // the request is a no-op when the MeasureSpec is EXACTLY
-        requestSizeAndVerifyLayout(
+        requestResizeAndVerifyLayout(
             /* requestedWidth=*/ currentWidth - 100,
             /* requestedHeight=*/ currentHeight - 100,
             /* expectedWidth=*/ currentWidth,
@@ -637,6 +656,7 @@ class SandboxedSdkViewTest {
         )
     }
 
+    @Ignore // b/356742276
     @Test
     fun signalsOnlyCollectedWhenSignalOptionsNonEmpty() {
         addViewToLayoutAndWaitToBeActive()
@@ -781,6 +801,25 @@ class SandboxedSdkViewTest {
             .isAtLeast(SHORTEST_TIME_BETWEEN_SIGNALS_MS)
     }
 
+    @Test
+    fun signalsSentWhenHostActivityStateChanges() {
+        addViewToLayoutAndWaitToBeActive()
+        val session = testSandboxedUiAdapter.testSession!!
+        session.runAndRetrieveNextUiChange {}
+        // Replace the first activity with a new activity. The onScreenGeometry should now be empty.
+        var sandboxedSdkViewUiInfo =
+            session.runAndRetrieveNextUiChange {
+                activityScenarioRule.scenario.onActivity {
+                    val intent = Intent(it, SecondActivity::class.java)
+                    it.startActivity(intent)
+                }
+            }
+        assertThat(sandboxedSdkViewUiInfo.onScreenGeometry.isEmpty).isTrue()
+        // Return to the first activity. The onScreenGeometry should now be non-empty.
+        sandboxedSdkViewUiInfo = session.runAndRetrieveNextUiChange { uiDevice.pressBack() }
+        assertThat(sandboxedSdkViewUiInfo.onScreenGeometry.isEmpty).isFalse()
+    }
+
     private fun addViewToLayout(waitToBeActive: Boolean = false, viewToAdd: View = view) {
         activityScenarioRule.withActivity {
             val mainLayout: LinearLayout = findViewById(R.id.mainlayout)
@@ -803,7 +842,7 @@ class SandboxedSdkViewTest {
         addViewToLayout(true, viewToAdd)
     }
 
-    private fun requestSizeAndVerifyLayout(
+    private fun requestResizeAndVerifyLayout(
         requestedWidth: Int,
         requestedHeight: Int,
         expectedWidth: Int,
@@ -817,7 +856,7 @@ class SandboxedSdkViewTest {
             height = bottom - top
             layoutLatch.countDown()
         }
-        activityScenarioRule.withActivity { view.requestSize(requestedWidth, requestedHeight) }
+        activityScenarioRule.withActivity { view.requestResize(requestedWidth, requestedHeight) }
         assertThat(layoutLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(width).isEqualTo(expectedWidth)
         assertThat(height).isEqualTo(expectedHeight)

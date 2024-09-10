@@ -47,9 +47,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleableFloatingActionButton
-import androidx.compose.material3.ToggleableFloatingActionButtonDefaults
-import androidx.compose.material3.ToggleableFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,8 +61,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -131,26 +133,24 @@ fun FloatingActionButtonMenuDemo() {
             listOf(
                 SizeOption(
                     label = "Default",
-                    initialContainerSize = ToggleableFloatingActionButtonDefaults.containerSize(),
+                    initialContainerSize = ToggleFloatingActionButtonDefaults.containerSize(),
                     initialContainerCornerRadius =
-                        ToggleableFloatingActionButtonDefaults.containerCornerRadius(),
-                    initialIconSize = ToggleableFloatingActionButtonDefaults.iconSize(),
+                        ToggleFloatingActionButtonDefaults.containerCornerRadius(),
+                    initialIconSize = ToggleFloatingActionButtonDefaults.iconSize(),
                 ),
                 SizeOption(
                     label = "Medium",
-                    initialContainerSize =
-                        ToggleableFloatingActionButtonDefaults.containerSizeMedium(),
+                    initialContainerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium(),
                     initialContainerCornerRadius =
-                        ToggleableFloatingActionButtonDefaults.containerCornerRadiusMedium(),
-                    initialIconSize = ToggleableFloatingActionButtonDefaults.iconSizeMedium(),
+                        ToggleFloatingActionButtonDefaults.containerCornerRadiusMedium(),
+                    initialIconSize = ToggleFloatingActionButtonDefaults.iconSizeMedium(),
                 ),
                 SizeOption(
                     label = "Large",
-                    initialContainerSize =
-                        ToggleableFloatingActionButtonDefaults.containerSizeLarge(),
+                    initialContainerSize = ToggleFloatingActionButtonDefaults.containerSizeLarge(),
                     initialContainerCornerRadius =
-                        ToggleableFloatingActionButtonDefaults.containerCornerRadiusLarge(),
-                    initialIconSize = ToggleableFloatingActionButtonDefaults.iconSizeLarge(),
+                        ToggleFloatingActionButtonDefaults.containerCornerRadiusLarge(),
+                    initialIconSize = ToggleFloatingActionButtonDefaults.iconSizeLarge(),
                 ),
             )
         val (selectedSize, onSizeSelected) = remember { mutableStateOf(sizeOptions[0]) }
@@ -307,75 +307,76 @@ fun FloatingActionButtonMenuDemo() {
 
         BackHandler(fabMenuExpanded) { fabMenuExpanded = false }
 
-        Column(
-            modifier =
-                Modifier.align(selectedAlignment.alignment)
-                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
-                    .semantics {
-                        isTraversalGroup = true
-                        traversalIndex = -1f
-                    },
-            horizontalAlignment = selectedAlignment.menuAlignment
-        ) {
-            FloatingActionButtonMenu(
-                modifier = Modifier.weight(weight = 1f, fill = false),
-                expanded = fabMenuExpanded,
-                itemsCount = items.size,
-                horizontalAlignment = selectedAlignment.menuAlignment,
-            ) {
-                items.forEachIndexed { i, item ->
-                    FloatingActionButtonMenuItem(
+        FloatingActionButtonMenu(
+            modifier = Modifier.align(selectedAlignment.alignment),
+            expanded = fabMenuExpanded,
+            horizontalAlignment = selectedAlignment.menuAlignment,
+            button = {
+                ToggleFloatingActionButton(
+                    modifier =
+                        Modifier.semantics {
+                            traversalIndex = -1f
+                            stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
+                            contentDescription = "Toggle menu"
+                        },
+                    checked = fabMenuExpanded,
+                    onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                    contentAlignment = selectedAlignment.fabCheckedAlignment,
+                    containerColor =
+                        ToggleFloatingActionButtonDefaults.containerColor(
+                            selectedColor.initialContainerColor,
+                            selectedColor.finalContainerColor
+                        ),
+                    containerSize = selectedSize.initialContainerSize,
+                    containerCornerRadius = selectedSize.initialContainerCornerRadius,
+                ) {
+                    val imageVector by remember {
+                        derivedStateOf {
+                            if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
+                        }
+                    }
+                    Icon(
+                        painter = rememberVectorPainter(imageVector),
+                        contentDescription = null,
                         modifier =
-                            Modifier.semantics {
-                                isTraversalGroup = true
-                                traversalIndex = -1f + (items.size - i) * 0.01f
-                            },
-                        onClick = { fabMenuExpanded = false },
-                        icon = { Icon(item.first, contentDescription = null) },
-                        text = { Text(text = item.second) },
-                        itemIndex = i,
-                        containerColor = selectedColor.itemContainerColor,
+                            Modifier.animateIcon(
+                                checkedProgress = { checkedProgress },
+                                color =
+                                    ToggleFloatingActionButtonDefaults.iconColor(
+                                        selectedColor.initialIconColor,
+                                        selectedColor.finalIconColor
+                                    ),
+                                size = selectedSize.initialIconSize
+                            )
                     )
                 }
             }
-
-            ToggleableFloatingActionButton(
-                modifier =
-                    Modifier.semantics {
-                        isTraversalGroup = true
-                        traversalIndex = -1f
-                        stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
-                        contentDescription = "Toggle menu"
-                    },
-                checked = fabMenuExpanded,
-                onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                contentAlignment = selectedAlignment.fabCheckedAlignment,
-                containerColor =
-                    ToggleableFloatingActionButtonDefaults.containerColor(
-                        selectedColor.initialContainerColor,
-                        selectedColor.finalContainerColor
-                    ),
-                containerSize = selectedSize.initialContainerSize,
-                containerCornerRadius = selectedSize.initialContainerCornerRadius,
-            ) {
-                val imageVector by remember {
-                    derivedStateOf {
-                        if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
-                    }
-                }
-                Icon(
-                    painter = rememberVectorPainter(imageVector),
-                    contentDescription = null,
+        ) {
+            items.forEachIndexed { i, item ->
+                FloatingActionButtonMenuItem(
                     modifier =
-                        Modifier.animateIcon(
-                            checkedProgress = { checkedProgress },
-                            color =
-                                ToggleableFloatingActionButtonDefaults.iconColor(
-                                    selectedColor.initialIconColor,
-                                    selectedColor.finalIconColor
-                                ),
-                            size = selectedSize.initialIconSize
-                        )
+                        Modifier.semantics {
+                            isTraversalGroup = true
+                            // Add a custom a11y action to allow closing the menu when focusing
+                            // the last menu item, since the close button comes before the first
+                            // menu item in the traversal order.
+                            if (i == items.size - 1) {
+                                customActions =
+                                    listOf(
+                                        CustomAccessibilityAction(
+                                            label = "Close menu",
+                                            action = {
+                                                fabMenuExpanded = false
+                                                true
+                                            }
+                                        )
+                                    )
+                            }
+                        },
+                    onClick = { fabMenuExpanded = false },
+                    icon = { Icon(item.first, contentDescription = null) },
+                    text = { Text(text = item.second) },
+                    containerColor = selectedColor.itemContainerColor,
                 )
             }
         }

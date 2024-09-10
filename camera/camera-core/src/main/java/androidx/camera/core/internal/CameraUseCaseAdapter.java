@@ -55,9 +55,9 @@ import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.CompositionSettings;
 import androidx.camera.core.DynamicRange;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.LayoutSettings;
 import androidx.camera.core.Logger;
 import androidx.camera.core.Preview;
 import androidx.camera.core.UseCase;
@@ -86,6 +86,7 @@ import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.core.impl.UseCaseConfigFactory.CaptureType;
 import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
+import androidx.camera.core.internal.compat.workaround.StreamSharingForceEnabler;
 import androidx.camera.core.streamsharing.StreamSharing;
 import androidx.core.util.Preconditions;
 
@@ -173,9 +174,11 @@ public final class CameraUseCaseAdapter implements Camera {
     private final RestrictedCameraInfo mAdapterSecondaryCameraInfo;
 
     @NonNull
-    private final LayoutSettings mLayoutSettings;
+    private final CompositionSettings mCompositionSettings;
     @NonNull
-    private final LayoutSettings mSecondaryLayoutSettings;
+    private final CompositionSettings mSecondaryCompositionSettings;
+    private final StreamSharingForceEnabler mStreamSharingForceEnabler =
+            new StreamSharingForceEnabler();
 
     /**
      * Create a new {@link CameraUseCaseAdapter} instance.
@@ -196,8 +199,8 @@ public final class CameraUseCaseAdapter implements Camera {
                 new RestrictedCameraInfo(camera.getCameraInfoInternal(),
                         CameraConfigs.defaultConfig()),
                 null,
-                LayoutSettings.DEFAULT,
-                LayoutSettings.DEFAULT,
+                CompositionSettings.DEFAULT,
+                CompositionSettings.DEFAULT,
                 cameraCoordinator,
                 cameraDeviceSurfaceManager,
                 useCaseConfigFactory);
@@ -212,10 +215,10 @@ public final class CameraUseCaseAdapter implements Camera {
      *                                   information to configure the {@link CameraInternal} when
      *                                   attaching the uses cases of this adapter to the camera.
      * @param secondaryRestrictedCameraInfo The {@link RestrictedCameraInfo} of secondary camera.
-     * @param layoutSettings             The layout settings that will be used to configure the
+     * @param compositionSettings        The composition settings that will be used to configure the
      *                                   camera.
-     * @param secondaryLayoutSettings    The layout settings that will be used to configure the
-     *                                   secondary camera.
+     * @param secondaryCompositionSettings  The composition settings that will be used to configure
+     *                                      the secondary camera.
      * @param cameraCoordinator          Camera coordinator that exposes concurrent camera mode.
      * @param cameraDeviceSurfaceManager A class that checks for whether a specific camera
      *                                   can support the set of Surface with set resolutions.
@@ -227,15 +230,15 @@ public final class CameraUseCaseAdapter implements Camera {
             @Nullable CameraInternal secondaryCamera,
             @NonNull RestrictedCameraInfo restrictedCameraInfo,
             @Nullable RestrictedCameraInfo secondaryRestrictedCameraInfo,
-            @NonNull LayoutSettings layoutSettings,
-            @NonNull LayoutSettings secondaryLayoutSettings,
+            @NonNull CompositionSettings compositionSettings,
+            @NonNull CompositionSettings secondaryCompositionSettings,
             @NonNull CameraCoordinator cameraCoordinator,
             @NonNull CameraDeviceSurfaceManager cameraDeviceSurfaceManager,
             @NonNull UseCaseConfigFactory useCaseConfigFactory) {
         mCameraInternal = camera;
         mSecondaryCameraInternal = secondaryCamera;
-        mLayoutSettings = layoutSettings;
-        mSecondaryLayoutSettings = secondaryLayoutSettings;
+        mCompositionSettings = compositionSettings;
+        mSecondaryCompositionSettings = secondaryCompositionSettings;
         mCameraCoordinator = cameraCoordinator;
         mCameraDeviceSurfaceManager = cameraDeviceSurfaceManager;
         mUseCaseConfigFactory = useCaseConfigFactory;
@@ -359,7 +362,7 @@ public final class CameraUseCaseAdapter implements Camera {
             // Force enable StreamSharing for Extensions to support VideoCapture. This means that
             // applyStreamSharing is set to true when the use case combination contains
             // VideoCapture and Extensions is enabled.
-            if (!applyStreamSharing && hasExtension() && hasVideoCapture(appUseCases)) {
+            if (!applyStreamSharing && shouldForceEnableStreamSharing(appUseCases)) {
                 updateUseCases(appUseCases, /*applyStreamSharing*/true, isDualCamera);
                 return;
             }
@@ -508,6 +511,15 @@ public final class CameraUseCaseAdapter implements Camera {
         }
     }
 
+    private boolean shouldForceEnableStreamSharing(@NonNull Collection<UseCase> appUseCases) {
+        if (hasExtension() && hasVideoCapture(appUseCases)) {
+            return true;
+        }
+
+        return mStreamSharingForceEnabler.shouldForceEnableStreamSharing(
+                mCameraInternal.getCameraInfoInternal().getCameraId(), appUseCases);
+    }
+
     /**
      * Return true if the given StreamSpec has any option with a different value than that
      * of the given sessionConfig.
@@ -622,8 +634,8 @@ public final class CameraUseCaseAdapter implements Camera {
 
             return new StreamSharing(mCameraInternal,
                     mSecondaryCameraInternal,
-                    mLayoutSettings,
-                    mSecondaryLayoutSettings,
+                    mCompositionSettings,
+                    mSecondaryCompositionSettings,
                     newChildren,
                     mUseCaseConfigFactory);
         }
@@ -1019,9 +1031,16 @@ public final class CameraUseCaseAdapter implements Camera {
         // TODO(b/309900490): since there are other places (e.g. SupportedSurfaceCombination in
         //  camera2) that feature combination constraints are enforced, it would be nice if they
         //  followed a similar pattern for checking constraints.
-        if (hasExtension() && hasNonSdrConfig(useCases)) {
-            throw new IllegalArgumentException("Extensions are only supported for use with "
-                    + "standard dynamic range.");
+        if (hasExtension()) {
+            if (hasNonSdrConfig(useCases)) {
+                throw new IllegalArgumentException("Extensions are only supported for use with "
+                        + "standard dynamic range.");
+            }
+
+            if (hasUltraHdrImageCapture(useCases)) {
+                throw new IllegalArgumentException("Extensions are not supported for use with "
+                        + "Ultra HDR image capture.");
+            }
         }
 
         // TODO(b/322311893): throw exception to block feature combination of effect with Ultra

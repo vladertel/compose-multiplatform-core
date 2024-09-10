@@ -19,12 +19,10 @@ package androidx.compose.foundation.text
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +40,8 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ParentDataModifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.semantics.SemanticsProperties.LinkTestMarker
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -179,6 +179,10 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
 
             Box(
                 clipModifier
+                    .semantics {
+                        // adding this to identify links in tests, see performFirstLinkClick
+                        this[LinkTestMarker] = Unit
+                    }
                     .textRange(range.start, range.end)
                     .hoverable(interactionSource)
                     .pointerHoverIcon(PointerIcon.Hand)
@@ -190,14 +194,18 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
             )
 
             if (!range.item.styles.isNullOrEmpty()) {
-                val isHovered by interactionSource.collectIsHoveredAsState()
-                val isFocused by interactionSource.collectIsFocusedAsState()
-                val isPressed by interactionSource.collectIsPressedAsState()
+                // the interaction source is not hoisted, we create and remember it in the
+                // code above. Therefore there's no need to pass it as a key to the remember and a
+                // launch effect.
+                val linkStateObserver = remember {
+                    LinkStateInteractionSourceObserver(interactionSource)
+                }
+                LaunchedEffect(Unit) { linkStateObserver.collectInteractionsForLinks() }
 
                 StyleAnnotation(
-                    isHovered,
-                    isFocused,
-                    isPressed,
+                    linkStateObserver.isHovered,
+                    linkStateObserver.isFocused,
+                    linkStateObserver.isPressed,
                     range.item.styles?.style,
                     range.item.styles?.focusedStyle,
                     range.item.styles?.hoveredStyle,
@@ -209,9 +217,18 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                     val mergedStyle =
                         range.item.styles
                             ?.style
-                            .mergeOrUse(if (isFocused) range.item.styles?.focusedStyle else null)
-                            .mergeOrUse(if (isHovered) range.item.styles?.hoveredStyle else null)
-                            .mergeOrUse(if (isPressed) range.item.styles?.pressedStyle else null)
+                            .mergeOrUse(
+                                if (linkStateObserver.isFocused) range.item.styles?.focusedStyle
+                                else null
+                            )
+                            .mergeOrUse(
+                                if (linkStateObserver.isHovered) range.item.styles?.hoveredStyle
+                                else null
+                            )
+                            .mergeOrUse(
+                                if (linkStateObserver.isPressed) range.item.styles?.pressedStyle
+                                else null
+                            )
                     replaceStyle(range, mergedStyle)
                 }
             }

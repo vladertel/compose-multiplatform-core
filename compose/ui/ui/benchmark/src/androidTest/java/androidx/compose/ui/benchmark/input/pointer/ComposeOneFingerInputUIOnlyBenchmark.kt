@@ -174,11 +174,12 @@ class ComposeOneFingerInputUIOnlyBenchmark {
 
             val ups =
                 createUps(
-                    initialX = upEventX,
                     initialTime = upEventTime,
-                    y = y,
-                    rootView = rootView,
-                    numberOfEvents = 1,
+                    initialPointers =
+                        arrayOf(
+                            BenchmarkSimplifiedPointerInputPointer(id = 0, x = upEventX, y = y)
+                        ),
+                    rootView = rootView
                 )
 
             assertThat(ups.size).isEqualTo(1)

@@ -722,7 +722,7 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
      * place" occurs when the current size is <= 25/32 of the set capacity. The choice of 25/32 is
      * detailed in the implementation of abseil's `raw_hash_map`.
      */
-    private fun adjustStorage() {
+    internal fun adjustStorage() { // Internal to prevent inlining
         if (_capacity > GroupWidth && _size.toULong() * 32UL <= _capacity.toULong() * 25UL) {
             dropDeletes()
         } else {
@@ -730,7 +730,8 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
         }
     }
 
-    private fun dropDeletes() {
+    // Internal to prevent inlining
+    internal fun dropDeletes() {
         val metadata = metadata
         val capacity = _capacity
         val elements = elements
@@ -738,7 +739,6 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
         // Converts Sentinel and Deleted to Empty, and Full to Deleted
         convertMetadataForCleanup(metadata, capacity)
 
-        var swapIndex = -1
         var index = 0
 
         // Drop deleted items and re-hashes surviving entries
@@ -746,7 +746,6 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
             var m = readRawMetadata(metadata, index)
             // Formerly Deleted entry, we can use it as a swap spot
             if (m == Empty) {
-                swapIndex = index
                 index++
                 continue
             }
@@ -790,21 +789,15 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
 
                 elements[targetIndex] = elements[index]
                 elements[index] = 0f
-
-                swapIndex = index
             } else /* m == Deleted */ {
                 // The target isn't empty so we use an empty slot denoted by
                 // swapIndex to perform the swap
                 val hash2 = h2(hash)
                 writeRawMetadata(metadata, targetIndex, hash2.toLong())
 
-                if (swapIndex == -1) {
-                    swapIndex = findEmptySlot(metadata, index + 1, capacity)
-                }
-
-                elements[swapIndex] = elements[targetIndex]
+                val oldElement = elements[targetIndex]
                 elements[targetIndex] = elements[index]
-                elements[index] = elements[swapIndex]
+                elements[index] = oldElement
 
                 // Since we exchanged two slots we must repeat the process with
                 // element we just moved in the current location
@@ -820,7 +813,8 @@ public class MutableFloatSet(initialCapacity: Int = DefaultScatterCapacity) : Fl
         initializeGrowth()
     }
 
-    private fun resizeStorage(newCapacity: Int) {
+    // Internal to prevent inlining
+    internal fun resizeStorage(newCapacity: Int) {
         val previousMetadata = metadata
         val previousElements = elements
         val previousCapacity = _capacity

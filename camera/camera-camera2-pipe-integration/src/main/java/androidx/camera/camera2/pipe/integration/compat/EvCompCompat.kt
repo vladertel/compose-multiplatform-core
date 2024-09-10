@@ -30,7 +30,7 @@ import androidx.camera.camera2.pipe.integration.adapter.propagateTo
 import androidx.camera.camera2.pipe.integration.config.CameraScope
 import androidx.camera.camera2.pipe.integration.impl.CameraProperties
 import androidx.camera.camera2.pipe.integration.impl.ComboRequestListener
-import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
+import androidx.camera.camera2.pipe.integration.impl.UseCaseCameraRequestControl
 import androidx.camera.camera2.pipe.integration.impl.UseCaseThreads
 import androidx.camera.core.CameraControl
 import dagger.Binds
@@ -40,22 +40,22 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 
-interface EvCompCompat {
-    val supported: Boolean
-    val range: Range<Int>
-    val step: Rational
+public interface EvCompCompat {
+    public val supported: Boolean
+    public val range: Range<Int>
+    public val step: Rational
 
-    fun stopRunningTask(throwable: Throwable)
+    public fun stopRunningTask(throwable: Throwable)
 
-    fun applyAsync(
+    public fun applyAsync(
         evCompIndex: Int,
-        camera: UseCaseCamera,
+        requestControl: UseCaseCameraRequestControl,
         cancelPreviousTask: Boolean,
     ): Deferred<Int>
 
     @Module
-    abstract class Bindings {
-        @Binds abstract fun bindEvCompImpl(impl: EvCompImpl): EvCompCompat
+    public abstract class Bindings {
+        @Binds public abstract fun bindEvCompImpl(impl: EvCompImpl): EvCompCompat
     }
 }
 
@@ -67,7 +67,7 @@ internal val EMPTY_RANGE: Range<Int> = Range(0, 0)
  * the [FrameInfo] via the [ComboRequestListener] to monitor the capture result.
  */
 @CameraScope
-class EvCompImpl
+public class EvCompImpl
 @Inject
 constructor(
     private val cameraProperties: CameraProperties,
@@ -97,7 +97,7 @@ constructor(
 
     override fun applyAsync(
         evCompIndex: Int,
-        camera: UseCaseCamera,
+        requestControl: UseCaseCameraRequestControl,
         cancelPreviousTask: Boolean,
     ): Deferred<Int> {
         val signal = CompletableDeferred<Int>()
@@ -122,7 +122,9 @@ constructor(
                 updateListener = null
             }
 
-            camera.setParameterAsync(CONTROL_AE_EXPOSURE_COMPENSATION, evCompIndex)
+            requestControl.setParametersAsync(
+                values = mapOf(CONTROL_AE_EXPOSURE_COMPENSATION to evCompIndex)
+            )
 
             // Prepare the listener to wait for the exposure value to reach the target.
             updateListener =

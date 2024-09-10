@@ -17,7 +17,8 @@
 package androidx.credentials
 
 import android.os.Bundle
-import androidx.annotation.RestrictTo
+import androidx.annotation.Discouraged
+import androidx.annotation.RequiresApi
 import androidx.credentials.internal.FrameworkClassParsingException
 
 /**
@@ -29,14 +30,25 @@ import androidx.credentials.internal.FrameworkClassParsingException
  *   [PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL] for `PublicKeyCredential`)
  * @property data the credential data in the [Bundle] format
  */
+@OptIn(ExperimentalDigitalCredentialApi::class)
 abstract class Credential
 internal constructor(
     val type: String,
     val data: Bundle,
 ) {
-    internal companion object {
+    companion object {
+        /**
+         * Parses the raw data into an instance of [Credential].
+         *
+         * @param type matches [Credential.type], the credential type
+         * @param data matches [Credential.data], the credential data in the [Bundle] format; this
+         *   should be constructed and retrieved from the a given [Credential] itself and never be
+         *   created from scratch
+         */
         @JvmStatic
-        @RestrictTo(RestrictTo.Scope.LIBRARY) // used from java tests
+        @Discouraged(
+            "It is recommended to construct a Credential by directly instantiating a Credential subclass"
+        )
         fun createFrom(type: String, data: Bundle): Credential {
             return try {
                 when (type) {
@@ -44,6 +56,8 @@ internal constructor(
                         PasswordCredential.createFrom(data)
                     PublicKeyCredential.TYPE_PUBLIC_KEY_CREDENTIAL ->
                         PublicKeyCredential.createFrom(data)
+                    RestoreCredential.TYPE_RESTORE_CREDENTIAL -> RestoreCredential.createFrom(data)
+                    DigitalCredential.TYPE_DIGITAL_CREDENTIAL -> DigitalCredential.createFrom(data)
                     else -> throw FrameworkClassParsingException()
                 }
             } catch (e: FrameworkClassParsingException) {
@@ -51,6 +65,20 @@ internal constructor(
                 // with the raw framework values.
                 CustomCredential(type, data)
             }
+        }
+
+        /**
+         * Parses the [credential] into an instance of [Credential].
+         *
+         * @param credential the framework Credential object
+         */
+        @JvmStatic
+        @RequiresApi(34)
+        @Discouraged(
+            "It is recommended to construct a Credential by directly instantiating a Credential subclass"
+        )
+        fun createFrom(credential: android.credentials.Credential): Credential {
+            return createFrom(credential.type, credential.data)
         }
     }
 }

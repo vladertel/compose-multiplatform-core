@@ -16,10 +16,10 @@
 
 package androidx.camera.camera2.pipe.integration.adapter
 
-import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CaptureRequest
 import androidx.annotation.OptIn
+import androidx.camera.camera2.pipe.CameraMetadata.Companion.isHardwareLevelLegacy
 import androidx.camera.camera2.pipe.FrameInfo
 import androidx.camera.camera2.pipe.InputRequest
 import androidx.camera.camera2.pipe.Request
@@ -45,7 +45,7 @@ import javax.inject.Inject
  * CameraPipe can submit to the camera.
  */
 @UseCaseCameraScope
-class CaptureConfigAdapter
+public class CaptureConfigAdapter
 @Inject
 constructor(
     cameraProperties: CameraProperties,
@@ -54,9 +54,7 @@ constructor(
     private val threads: UseCaseThreads,
     private val templateParamsOverride: TemplateParamsOverride,
 ) {
-    private val isLegacyDevice =
-        cameraProperties.metadata[CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL] ==
-            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
+    private val isLegacyDevice = cameraProperties.metadata.isHardwareLevelLegacy
 
     /**
      * Maps [CaptureConfig] to [Request].
@@ -65,7 +63,7 @@ constructor(
      *   surface is not recognized in [UseCaseGraphConfig.surfaceToStreamMap]
      */
     @OptIn(ExperimentalGetImage::class)
-    fun mapToRequest(
+    public fun mapToRequest(
         captureConfig: CaptureConfig,
         requestTemplate: RequestTemplate,
         sessionConfigOptions: Config,
@@ -153,7 +151,7 @@ constructor(
         )
     }
 
-    companion object {
+    public companion object {
         internal fun CaptureConfig.getStillCaptureTemplate(
             sessionTemplate: RequestTemplate,
             isLegacyDevice: Boolean,

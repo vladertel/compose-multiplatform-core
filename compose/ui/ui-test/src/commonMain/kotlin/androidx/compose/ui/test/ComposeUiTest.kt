@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Density
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.TestDispatcher
 
 /**
  * Sets up the test environment, runs the given [test][block] and then tears down the test
@@ -38,7 +40,9 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Keeping a reference to the [ComposeUiTest] outside of this function is an error.
  *
  * @param effectContext The [CoroutineContext] used to run the composition. The context for
- *   `LaunchedEffect`s and `rememberCoroutineScope` will be derived from this context.
+ *   `LaunchedEffect`s and `rememberCoroutineScope` will be derived from this context. If this
+ *   context contains a [TestDispatcher] or [TestCoroutineScheduler] (in that order), it will be
+ *   used for composition and the [MainTestClock].
  * @param block The test function.
  */
 @ExperimentalTestApi
@@ -181,6 +185,26 @@ expect sealed interface ComposeUiTest : SemanticsNodeInteractionsProvider {
      *   doesn't have access to a host to set content in.
      */
     fun setContent(composable: @Composable () -> Unit)
+
+    /**
+     * Enables accessibility checks that will be run before every action that is expected to change
+     * the UI.
+     *
+     * Accessibility checks are platform dependent, refer to the documentation of the platform
+     * specific variant of [ComposeUiTest] to see if it is supported and how you can configure it.
+     *
+     * @sample androidx.compose.ui.test.samples.accessibilityChecks_withComposeUiTest_sample
+     * @see disableAccessibilityChecks
+     */
+    fun enableAccessibilityChecks()
+
+    /**
+     * Disables accessibility checks.
+     *
+     * @sample androidx.compose.ui.test.samples.accessibilityChecks_withComposeUiTest_sample
+     * @see enableAccessibilityChecks
+     */
+    fun disableAccessibilityChecks()
 }
 
 /**

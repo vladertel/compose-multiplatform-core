@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.text.modifiers
 
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.text.DefaultMinLines
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -343,11 +344,11 @@ internal class TextStringSimpleNode(
             // Map<AlignmentLine, Int> required for use in public API `layout` below
             @Suppress("PrimitiveInCollection") var cache = baselineCache
             if (cache == null) {
-                cache = LinkedHashMap(2)
+                cache = HashMap(2)
+                baselineCache = cache
             }
             cache[FirstBaseline] = paragraph.firstBaseline.fastRoundToInt()
             cache[LastBaseline] = paragraph.lastBaseline.fastRoundToInt()
-            baselineCache = cache
         }
 
         // then allow children to measure _inside_ our final box, with the above placeholders
@@ -397,7 +398,7 @@ internal class TextStringSimpleNode(
 
         val layoutCache = getLayoutCache(this)
         val localParagraph =
-            requireNotNull(layoutCache.paragraph) {
+            requirePreconditionNotNull(layoutCache.paragraph) {
                 "no paragraph (layoutCache=$_layoutCache, textSubstitution=$textSubstitution)"
             }
 

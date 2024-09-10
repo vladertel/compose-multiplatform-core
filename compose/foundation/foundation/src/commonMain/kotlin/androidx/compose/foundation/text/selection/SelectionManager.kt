@@ -25,6 +25,9 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitAllPointersUp
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.internal.checkPreconditionNotNull
+import androidx.compose.foundation.internal.requirePrecondition
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextDragObserver
 import androidx.compose.foundation.text.input.internal.coerceIn
@@ -409,8 +412,8 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     /** Returns non-nullable [containerLayoutCoordinates]. */
     internal fun requireContainerCoordinates(): LayoutCoordinates {
         val coordinates = containerLayoutCoordinates
-        requireNotNull(coordinates) { "null coordinates" }
-        require(coordinates.isAttached) { "unattached coordinates" }
+        requirePreconditionNotNull(coordinates) { "null coordinates" }
+        requirePrecondition(coordinates.isAttached) { "unattached coordinates" }
         return coordinates
     }
 
@@ -682,7 +685,9 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 val selection = selection!!
                 val anchor = if (isStartHandle) selection.start else selection.end
                 val selectable =
-                    checkNotNull(selectionRegistrar.selectableMap[anchor.selectableId]) {
+                    checkPreconditionNotNull(
+                        selectionRegistrar.selectableMap[anchor.selectableId]
+                    ) {
                         "SelectionRegistrar should contain the current selection's selectableIds"
                     }
 
@@ -690,7 +695,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
                 // is used to convert the position of the beginning of the drag gesture from the
                 // composable coordinates to selection container coordinates.
                 val beginLayoutCoordinates =
-                    checkNotNull(selectable.getLayoutCoordinates()) {
+                    checkPreconditionNotNull(selectable.getLayoutCoordinates()) {
                         "Current selectable should have layout coordinates."
                     }
 

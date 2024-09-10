@@ -205,7 +205,12 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
     private fun checkClientOpenSession() {
         val adapter = adapter
         if (
-            client == null && adapter != null && windowInputToken != null && width > 0 && height > 0
+            client == null &&
+                adapter != null &&
+                windowInputToken != null &&
+                width > 0 &&
+                height > 0 &&
+                windowVisibility == View.VISIBLE
         ) {
             stateListenerManager.currentUiSessionState = SandboxedSdkUiSessionState.Loading
             client = Client(this)
@@ -221,7 +226,7 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         }
     }
 
-    internal fun requestSize(width: Int, height: Int) {
+    internal fun requestResize(width: Int, height: Int) {
         if (width == this.width && height == this.height) return
         requestedWidth = width
         requestedHeight = height
@@ -358,6 +363,14 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         previousHeight = height
         previousWidth = width
         checkClientOpenSession()
+        signalMeasurer?.maybeSendSignals()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility == VISIBLE) {
+            checkClientOpenSession()
+        }
         signalMeasurer?.maybeSendSignals()
     }
 
@@ -553,7 +566,7 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
 
         override fun onResizeRequested(width: Int, height: Int) {
             if (sandboxedSdkView == null) return
-            sandboxedSdkView?.requestSize(width, height)
+            sandboxedSdkView?.requestResize(width, height)
         }
     }
 
@@ -674,6 +687,7 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
                     object : OnAttachStateChangeListener {
                         override fun onViewAttachedToWindow(view: View) {
                             view.removeOnAttachStateChangeListener(this)
+                            @Suppress("DEPRECATION")
                             sandboxedSdkView.windowInputToken = surfaceView.hostToken
                             sandboxedSdkView.removeTemporarySurfaceView(surfaceView)
                             sandboxedSdkView.checkClientOpenSession()

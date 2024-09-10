@@ -80,8 +80,7 @@ private const val DefaultCacheSize = 8
  *   would miss the cache.
  */
 @Immutable
-class TextMeasurer
-constructor(
+class TextMeasurer(
     private val defaultFontFamilyResolver: FontFamily.Resolver,
     private val defaultDensity: Density,
     private val defaultLayoutDirection: LayoutDirection,
@@ -352,18 +351,38 @@ constructor(
 }
 
 /**
- * Keeps an LRU layout cache of TextLayoutInput, TextLayoutResult pairs. Any non-layout affecting
- * change in TextLayoutInput (color, brush, shadow, TextDecoration) is ignored by this cache.
+ * Keeps a layout cache of TextLayoutInput, TextLayoutResult pairs. Any non-layout affecting change
+ * in TextLayoutInput (color, brush, shadow, TextDecoration) is ignored by this cache.
  *
- * @param capacity Maximum size of LRU cache. Size unit is the number of [CacheTextLayoutInput] and
+ * @param capacity Maximum size of the cache. Size unit is the number of [CacheTextLayoutInput] and
  *   [TextLayoutResult] pairs.
  * @throws IllegalArgumentException if capacity is not a positive integer.
  */
 internal class TextLayoutCache(capacity: Int = DefaultCacheSize) {
-    private val lruCache = LruCache<CacheTextLayoutInput, TextLayoutResult>(capacity)
+    // Do not allocate an LRU cache if the size is just 1.
+    private val cache: LruCache<CacheTextLayoutInput, TextLayoutResult>? =
+        if (capacity != 1) {
+            // 0 or negative cache size is also handled by LruCache.
+            LruCache(capacity)
+        } else {
+            null
+        }
+
+    private var singleSizeCacheInput: CacheTextLayoutInput? = null
+    private var singleSizeCacheResult: TextLayoutResult? = null
 
     fun get(key: TextLayoutInput): TextLayoutResult? {
-        val resultFromCache = lruCache.get(CacheTextLayoutInput(key)) ?: return null
+        val cacheKey = CacheTextLayoutInput(key)
+        val resultFromCache =
+            if (cache != null) {
+                cache[cacheKey]
+            } else if (singleSizeCacheInput == cacheKey) {
+                singleSizeCacheResult
+            } else {
+                return null
+            }
+
+        if (resultFromCache == null) return null
 
         if (resultFromCache.multiParagraph.intrinsics.hasStaleResolvedFonts) {
             // one of the resolved fonts has updated, and this MeasuredText is no longer valid for
@@ -374,12 +393,13 @@ internal class TextLayoutCache(capacity: Int = DefaultCacheSize) {
         return resultFromCache
     }
 
-    fun put(key: TextLayoutInput, value: TextLayoutResult): TextLayoutResult? {
-        return lruCache.put(CacheTextLayoutInput(key), value)
-    }
-
-    fun remove(key: TextLayoutInput): TextLayoutResult? {
-        return lruCache.remove(CacheTextLayoutInput(key))
+    fun put(key: TextLayoutInput, value: TextLayoutResult) {
+        if (cache != null) {
+            cache.put(CacheTextLayoutInput(key), value)
+        } else {
+            singleSizeCacheInput = CacheTextLayoutInput(key)
+            singleSizeCacheResult = value
+        }
     }
 }
 

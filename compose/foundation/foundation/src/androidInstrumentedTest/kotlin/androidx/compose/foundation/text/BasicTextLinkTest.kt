@@ -64,7 +64,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.getPartialBoundsOfLinks
+import androidx.compose.ui.test.getFirstLinkBounds
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -888,6 +888,44 @@ class BasicTextLinkTest {
         assertThat(styles).isEmpty()
     }
 
+    @Test
+    fun links_displayedWithCorrectStyle_onFirstFrame() {
+        val checked = mutableStateOf(false)
+        var calledAfterChecked = false
+
+        rule.setContent {
+            calledAfterChecked = checked.value
+            BasicText(
+                buildAnnotatedString {
+                    withLink(
+                        LinkAnnotation.Clickable(
+                            "tag",
+                            TextLinkStyles(SpanStyle(color = Color.Green))
+                        ) {}
+                    ) {
+                        append("Link")
+                    }
+                },
+                style = TextStyle(Color.Red),
+                onTextLayout = {
+                    // When the flicker happens, the BasicText is first composed and drawn
+                    // with the empty span styles. Only after the recomposition the link
+                    // style is applied. After the fix the first composition happens with
+                    // the correct link color and therefore the span styles will contain it
+                    val colors = it.layoutInput.text.spanStyles.map { it.item.color }
+                    assertThat(colors).isNotEmpty()
+                    assertThat(colors.first()).isEqualTo(Color.Green)
+                }
+            )
+        }
+
+        checked.value = true
+        rule.runOnIdle {
+            // ensures that recomposition happened after a `checked` change
+            assertThat(calledAfterChecked).isTrue()
+        }
+    }
+
     @Composable
     private fun TextWithLinks() =
         with(rule.density) {
@@ -974,16 +1012,16 @@ class BasicTextLinkTest {
         predicate: (AnnotatedString.Range<LinkAnnotation>) -> Boolean = { true },
         block: MouseInjectionScope.(offsetInLink: Offset) -> Unit
     ): SemanticsNodeInteraction {
-        val linkBounds = getPartialBoundsOfLinks(predicate).first()
-        return this.performMouseInput { block(linkBounds.center) }
+        val linkBounds = getFirstLinkBounds(predicate)
+        return this.performMouseInput { block(linkBounds!!.center) }
     }
 
     private fun SemanticsNodeInteraction.performTouchInputOnFirstLink(
         predicate: (AnnotatedString.Range<LinkAnnotation>) -> Boolean = { true },
         block: TouchInjectionScope.(offsetInLink: Offset) -> Unit
     ): SemanticsNodeInteraction {
-        val linkBounds = getPartialBoundsOfLinks(predicate).first()
-        return this.performTouchInput { block(linkBounds.center) }
+        val linkBounds = getFirstLinkBounds(predicate)
+        return this.performTouchInput { block(linkBounds!!.center) }
     }
 }
 

@@ -16,7 +16,6 @@
 package androidx.lifecycle
 
 import android.os.Binder
-import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.Size
@@ -52,25 +51,19 @@ actual class SavedStateHandle {
     private val savedStateProviders = mutableMapOf<String, SavedStateProvider>()
     private val liveDatas = mutableMapOf<String, SavingStateLiveData<*>>()
     private val flows = mutableMapOf<String, MutableStateFlow<Any?>>()
-    private val savedStateProvider =
-        SavedStateProvider {
-            // Get the saved state from each SavedStateProvider registered with this
-            // SavedStateHandle, iterating through a copy to avoid re-entrance
-            val map = savedStateProviders.toMap()
-            for ((key, value) in map) {
-                val savedState = value.saveState()
-                set(key, savedState)
-            }
-            // Convert the Map of current values into a Bundle
-            val keySet: Set<String> = regular.keys
-            val keys: ArrayList<String> = ArrayList(keySet.size)
-            val value: ArrayList<Any?> = ArrayList(keys.size)
-            for (key in keySet) {
-                keys.add(key)
-                value.add(regular[key])
-            }
-            bundleOf(KEYS to keys, VALUES to value)
+    private val savedStateProvider = SavedStateProvider {
+        // Get the saved state from each SavedStateProvider registered with this
+        // SavedStateHandle, iterating through a copy to avoid re-entrance
+        for ((key, provider) in savedStateProviders.toMap()) {
+            set(key, provider.saveState())
         }
+
+        // Convert the Map of current values into a Bundle
+        bundleOf(
+            KEYS to ArrayList(regular.keys),
+            VALUES to ArrayList(regular.values),
+        )
+    }
 
     /**
      * Creates a handle with the given initial arguments.
@@ -78,25 +71,20 @@ actual class SavedStateHandle {
      * @param initialState initial arguments for the SavedStateHandle
      */
     actual constructor(initialState: Map<String, Any?>) {
-        regular.putAll(initialState)
+        regular += initialState
     }
 
     /** Creates a handle with the empty state. */
     actual constructor()
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    actual fun savedStateProvider(): SavedStateProvider {
-        return savedStateProvider
-    }
+    actual fun savedStateProvider(): SavedStateProvider = savedStateProvider
 
     /**
      * @param key The identifier for the value
      * @return true if there is value associated with the given key.
      */
-    @MainThread
-    actual operator fun contains(key: String): Boolean {
-        return regular.containsKey(key)
-    }
+    @MainThread actual operator fun contains(key: String): Boolean = regular.containsKey(key)
 
     /**
      * Returns a [androidx.lifecycle.LiveData] that access data associated with the given key.
@@ -161,22 +149,27 @@ actual class SavedStateHandle {
         hasInitialValue: Boolean,
         initialValue: T
     ): MutableLiveData<T> {
-        @Suppress("UNCHECKED_CAST") val liveData = liveDatas[key] as? MutableLiveData<T>
-        if (liveData != null) {
-            return liveData
+        @Suppress("UNCHECKED_CAST") val previousLiveData = liveDatas[key] as? MutableLiveData<T>
+        if (previousLiveData != null) {
+            return previousLiveData
         }
+
         // double hashing but null is valid value
-        val mutableLd: SavingStateLiveData<T> =
-            if (regular.containsKey(key)) {
-                @Suppress("UNCHECKED_CAST") SavingStateLiveData(this, key, regular[key] as T)
-            } else if (hasInitialValue) {
-                regular[key] = initialValue
-                SavingStateLiveData(this, key, initialValue)
-            } else {
-                SavingStateLiveData(this, key)
+        val newLiveData: SavingStateLiveData<T> =
+            when {
+                regular.containsKey(key) -> {
+                    @Suppress("UNCHECKED_CAST") SavingStateLiveData(this, key, regular[key] as T)
+                }
+                hasInitialValue -> {
+                    regular[key] = initialValue
+                    SavingStateLiveData(this, key, initialValue)
+                }
+                else -> {
+                    SavingStateLiveData(this, key)
+                }
             }
-        liveDatas[key] = mutableLd
-        return mutableLd
+        liveDatas[key] = newLiveData
+        return newLiveData
     }
 
     /**
@@ -272,7 +265,7 @@ actual class SavedStateHandle {
      * Associate the given value with the key. The value must have a type that could be stored in
      * [android.os.Bundle]
      *
-     * This also sets values for any active [LiveData]s or [Flow]s.
+     * This also sets values for any active [LiveData]s or [StateFlow]s.
      *
      * @param key a key used to associate with the given value.
      * @param value object of any type that can be accepted by Bundle.
@@ -280,10 +273,8 @@ actual class SavedStateHandle {
      */
     @MainThread
     actual operator fun <T> set(key: String, value: T?) {
-        if (!validateValue(value)) {
-            throw IllegalArgumentException(
-                "Can't put value with type ${value!!::class.java} into saved state"
-            )
+        require(validateValue(value)) {
+            "Can't put value with type ${value!!::class.java} into saved state"
         }
         @Suppress("UNCHECKED_CAST") val mutableLiveData = liveDatas[key] as? MutableLiveData<T?>?
         if (mutableLiveData != null) {
@@ -425,53 +416,43 @@ actual class SavedStateHandle {
         }
 
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        actual fun validateValue(value: Any?): Boolean {
-            if (value == null) {
-                return true
-            }
-            for (cl in ACCEPTABLE_CLASSES) {
-                if (cl!!.isInstance(value)) {
-                    return true
-                }
-            }
-            return false
-        }
+        actual fun validateValue(value: Any?): Boolean =
+            value == null || ACCEPTABLE_CLASSES.any { classRef -> classRef.isInstance(value) }
 
         // doesn't have Integer, Long etc box types because they are "Serializable"
         private val ACCEPTABLE_CLASSES =
             arrayOf( // baseBundle
-                Boolean::class.javaPrimitiveType,
-                BooleanArray::class.java,
-                Double::class.javaPrimitiveType,
-                DoubleArray::class.java,
-                Int::class.javaPrimitiveType,
-                IntArray::class.java,
-                Long::class.javaPrimitiveType,
-                LongArray::class.java,
-                String::class.java,
-                Array<String>::class.java, // bundle
-                Binder::class.java,
-                Bundle::class.java,
-                Byte::class.javaPrimitiveType,
-                ByteArray::class.java,
-                Char::class.javaPrimitiveType,
-                CharArray::class.java,
-                CharSequence::class.java,
-                Array<CharSequence>::class.java,
-                // type erasure ¯\_(ツ)_/¯, we won't eagerly check elements contents
-                ArrayList::class.java,
-                Float::class.javaPrimitiveType,
-                FloatArray::class.java,
-                Parcelable::class.java,
-                Array<Parcelable>::class.java,
-                Serializable::class.java,
-                Short::class.javaPrimitiveType,
-                ShortArray::class.java,
-                SparseArray::class.java,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) Size::class.java
-                else Int::class.javaPrimitiveType,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) SizeF::class.java
-                else Int::class.javaPrimitiveType
-            )
+                    Boolean::class.javaPrimitiveType,
+                    BooleanArray::class.java,
+                    Double::class.javaPrimitiveType,
+                    DoubleArray::class.java,
+                    Int::class.javaPrimitiveType,
+                    IntArray::class.java,
+                    Long::class.javaPrimitiveType,
+                    LongArray::class.java,
+                    String::class.java,
+                    Array<String>::class.java, // bundle
+                    Binder::class.java,
+                    Bundle::class.java,
+                    Byte::class.javaPrimitiveType,
+                    ByteArray::class.java,
+                    Char::class.javaPrimitiveType,
+                    CharArray::class.java,
+                    CharSequence::class.java,
+                    Array<CharSequence>::class.java,
+                    // type erasure ¯\_(ツ)_/¯, we won't eagerly check elements contents
+                    ArrayList::class.java,
+                    Float::class.javaPrimitiveType,
+                    FloatArray::class.java,
+                    Parcelable::class.java,
+                    Array<Parcelable>::class.java,
+                    Serializable::class.java,
+                    Short::class.javaPrimitiveType,
+                    ShortArray::class.java,
+                    SparseArray::class.java,
+                    Size::class.java,
+                    SizeF::class.java,
+                )
+                .filterNotNull()
     }
 }

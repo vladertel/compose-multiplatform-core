@@ -17,6 +17,7 @@
 package androidx.compose.foundation.lazy.staggeredgrid
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.internal.requirePrecondition
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
 import androidx.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastForEachReversed
@@ -812,6 +814,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 measuredItems,
                 itemScrollOffsets,
                 mainAxisLayoutSize,
+                minOffset,
+                maxOffset
             )
 
         extraItemOffset = itemScrollOffsets[0]
@@ -924,6 +928,8 @@ private fun LazyStaggeredGridMeasureContext.calculateVisibleItems(
     measuredItems: Array<ArrayDeque<LazyStaggeredGridMeasuredItem>>,
     itemScrollOffsets: IntArray,
     mainAxisLayoutSize: Int,
+    minOffset: Int,
+    maxOffset: Int
 ): List<LazyStaggeredGridMeasuredItem> {
     val positionedItems = ArrayList<LazyStaggeredGridMeasuredItem>(measuredItems.sumOf { it.size })
     while (measuredItems.any { it.isNotEmpty() }) {
@@ -938,13 +944,18 @@ private fun LazyStaggeredGridMeasureContext.calculateVisibleItems(
         val spanRange = SpanRange(item.lane, item.span)
         val mainAxisOffset = itemScrollOffsets.maxInRange(spanRange)
         val crossAxisOffset = resolvedSlots.positions[laneIndex]
+        val minEdge = mainAxisOffset
+        val maxEdge = mainAxisOffset + item.mainAxisSize
 
-        item.position(
-            mainAxis = mainAxisOffset,
-            crossAxis = crossAxisOffset,
-            mainAxisLayoutSize = mainAxisLayoutSize,
-        )
-        positionedItems += item
+        // Ensure that the item is positioned only when it is within visible viewport
+        if (maxEdge >= minOffset && minEdge <= maxOffset) {
+            item.position(
+                mainAxis = mainAxisOffset,
+                crossAxis = crossAxisOffset,
+                mainAxisLayoutSize = mainAxisLayoutSize,
+            )
+            positionedItems += item
+        }
         spanRange.forEach { lane ->
             itemScrollOffsets[lane] = mainAxisOffset + item.mainAxisSizeWithSpacings
         }
@@ -1226,7 +1237,7 @@ internal class LazyStaggeredGridMeasuredItem(
 
     fun place(scope: Placeable.PlacementScope, context: LazyStaggeredGridMeasureContext) =
         with(context) {
-            require(mainAxisLayoutSize != Unset) { "position() should be called first" }
+            requirePrecondition(mainAxisLayoutSize != Unset) { "position() should be called first" }
             with(scope) {
                 placeables.fastForEachIndexed { index, placeable ->
                     val minOffset = minMainAxisOffset - placeable.mainAxisSize

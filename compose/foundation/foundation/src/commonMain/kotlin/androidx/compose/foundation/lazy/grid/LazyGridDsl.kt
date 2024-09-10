@@ -18,6 +18,7 @@ package androidx.compose.foundation.lazy.grid
 
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.internal.requirePrecondition
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -155,7 +156,7 @@ private fun rememberColumnWidthSums(
         contentPadding,
     ) {
         GridSlotCache { constraints ->
-            require(constraints.maxWidth != Constraints.Infinity) {
+            requirePrecondition(constraints.maxWidth != Constraints.Infinity) {
                 "LazyVerticalGrid's width should be bound by parent."
             }
             val horizontalPadding =
@@ -189,7 +190,7 @@ private fun rememberRowHeightSums(
         contentPadding,
     ) {
         GridSlotCache { constraints ->
-            require(constraints.maxHeight != Constraints.Infinity) {
+            requirePrecondition(constraints.maxHeight != Constraints.Infinity) {
                 "LazyHorizontalGrid's height should be bound by parent."
             }
             val verticalPadding =
@@ -269,7 +270,7 @@ interface GridCells {
      */
     class Fixed(private val count: Int) : GridCells {
         init {
-            require(count > 0) { "Provided count $count should be larger than zero" }
+            requirePrecondition(count > 0) { "Provided count should be larger than zero" }
         }
 
         override fun Density.calculateCrossAxisCellSizes(
@@ -298,7 +299,7 @@ interface GridCells {
      */
     class Adaptive(private val minSize: Dp) : GridCells {
         init {
-            require(minSize > 0.dp) { "Provided min size $minSize should be larger than zero." }
+            requirePrecondition(minSize > 0.dp) { "Provided min size should be larger than zero." }
         }
 
         override fun Density.calculateCrossAxisCellSizes(
@@ -331,7 +332,7 @@ interface GridCells {
      */
     class FixedSize(private val size: Dp) : GridCells {
         init {
-            require(size > 0.dp) { "Provided size $size should be larger than zero." }
+            requirePrecondition(size > 0.dp) { "Provided size should be larger than zero." }
         }
 
         override fun Density.calculateCrossAxisCellSizes(
@@ -420,6 +421,31 @@ sealed interface LazyGridScope {
         span: (LazyGridItemSpanScope.(index: Int) -> GridItemSpan)? = null,
         contentType: (index: Int) -> Any? = { null },
         itemContent: @Composable LazyGridItemScope.(index: Int) -> Unit
+    )
+
+    /**
+     * Adds a sticky header item, which will remain pinned even when scrolling after it. The header
+     * will remain pinned until the next header will take its place. Sticky Headers are full span
+     * items, that is, they will occupy [LazyGridItemSpanScope.maxLineSpan].
+     *
+     * @sample androidx.compose.foundation.samples.StickyHeaderGridSample
+     * @param key a stable and unique key representing the item. Using the same key for multiple
+     *   items in the list is not allowed. Type of the key should be saveable via Bundle on Android.
+     *   If null is passed the position in the list will represent the key. When you specify the key
+     *   the scroll position will be maintained based on the key, which means if you add/remove
+     *   items before the current visible item the item with the given key will be kept as the first
+     *   visible one. This can be overridden by calling 'requestScrollToItem' on the
+     *   'LazyGridState'.
+     * @param contentType the type of the content of this item. The item compositions of the same
+     *   type could be reused more efficiently. Note that null is a valid type and items of such
+     *   type will be considered compatible.
+     * @param content the content of the header. The header index is provided, this is the item
+     *   position within the total set of items in this lazy list (the global index).
+     */
+    fun stickyHeader(
+        key: Any? = null,
+        contentType: Any? = null,
+        content: @Composable LazyGridItemScope.(Int) -> Unit
     )
 }
 

@@ -18,6 +18,9 @@ package androidx.compose.foundation.lazy.layout
 
 import androidx.collection.mutableObjectLongMapOf
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.internal.checkPrecondition
+import androidx.compose.foundation.internal.requirePrecondition
+import androidx.compose.foundation.internal.requirePreconditionNotNull
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
@@ -72,7 +75,7 @@ class LazyLayoutPrefetchState(
     }
 
     internal fun collectNestedPrefetchRequests(): List<PrefetchRequest> {
-        val onNestedPrefetch = onNestedPrefetch ?: return listOf()
+        val onNestedPrefetch = onNestedPrefetch ?: return emptyList()
 
         return NestedPrefetchScopeImpl().run {
             onNestedPrefetch()
@@ -362,11 +365,11 @@ internal class PrefetchHandleProvider(
         }
 
         private fun performComposition() {
-            require(isValid) {
+            requirePrecondition(isValid) {
                 "Callers should check whether the request is still valid before calling " +
                     "performComposition()"
             }
-            require(precomposeHandle == null) { "Request was already composed!" }
+            requirePrecondition(precomposeHandle == null) { "Request was already composed!" }
             val itemProvider = itemContentFactory.itemProvider()
             val key = itemProvider.getKey(index)
             val contentType = itemProvider.getContentType(index)
@@ -375,14 +378,14 @@ internal class PrefetchHandleProvider(
         }
 
         private fun performMeasure(constraints: Constraints) {
-            require(!isCanceled) {
+            requirePrecondition(!isCanceled) {
                 "Callers should check whether the request is still valid before calling " +
                     "performMeasure()"
             }
-            require(!isMeasured) { "Request was already measured!" }
+            requirePrecondition(!isMeasured) { "Request was already measured!" }
             isMeasured = true
             val handle =
-                requireNotNull(precomposeHandle) {
+                requirePreconditionNotNull(precomposeHandle) {
                     "performComposition() must be called before performMeasure()"
                 }
             repeat(handle.placeablesCount) { placeableIndex ->
@@ -392,7 +395,7 @@ internal class PrefetchHandleProvider(
 
         private fun resolveNestedPrefetchStates(): NestedPrefetchController? {
             val precomposedSlotHandle =
-                requireNotNull(precomposeHandle) {
+                requirePreconditionNotNull(precomposeHandle) {
                     "Should precompose before resolving nested prefetch states"
                 }
 
@@ -421,7 +424,7 @@ internal class PrefetchHandleProvider(
             private var requestIndex: Int = 0
 
             init {
-                require(states.isNotEmpty()) {
+                requirePrecondition(states.isNotEmpty()) {
                     "NestedPrefetchController shouldn't be created with no states"
                 }
             }
@@ -430,7 +433,9 @@ internal class PrefetchHandleProvider(
                 if (stateIndex >= states.size) {
                     return false
                 }
-                check(!isCanceled) { "Should not execute nested prefetch on canceled request" }
+                checkPrecondition(!isCanceled) {
+                    "Should not execute nested prefetch on canceled request"
+                }
 
                 trace("compose:lazy:prefetch:nested") {
                     while (stateIndex < states.size) {

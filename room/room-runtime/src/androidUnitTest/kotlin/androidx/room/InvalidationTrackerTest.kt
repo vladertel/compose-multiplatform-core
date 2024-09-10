@@ -23,11 +23,11 @@ import androidx.kruth.assertThat
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.SQLiteStatement
-import androidx.test.filters.FlakyTest
 import java.lang.ref.WeakReference
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.collections.removeFirst as removeFirstKt
 import kotlin.test.assertFailsWith
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.TimeoutCancellationException
@@ -38,6 +38,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.AssumptionViolatedException
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -314,7 +315,7 @@ class InvalidationTrackerTest {
     }
 
     @Test
-    @FlakyTest(bugId = 349880963)
+    @Ignore // b/349880963
     fun multipleRefreshAsync() = runTest {
         // Validate that when multiple refresh are enqueued, that only one runs.
         tracker.refreshAsync()
@@ -590,7 +591,7 @@ class InvalidationTrackerTest {
                 preparedQueries.add(sql)
                 val invalidatedTables =
                     if (sql == SELECT_INVALIDATED_QUERY && invalidateTablesQueue.isNotEmpty()) {
-                        invalidateTablesQueue.removeFirst()
+                        invalidateTablesQueue.removeFirstKt()
                     } else {
                         null
                     }

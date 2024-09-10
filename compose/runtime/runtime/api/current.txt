@@ -22,6 +22,7 @@ package androidx.compose.runtime {
   }
 
   @kotlin.jvm.JvmDefaultWithCompatibility public interface Applier<N> {
+    method public default void apply(kotlin.jvm.functions.Function2<? super N,java.lang.Object?,kotlin.Unit> block, Object? value);
     method public void clear();
     method public void down(N node);
     method public N getCurrent();
@@ -31,11 +32,13 @@ package androidx.compose.runtime {
     method public default void onBeginChanges();
     method public default void onEndChanges();
     method public void remove(int index, int count);
+    method public default void reuse();
     method public void up();
     property public abstract N current;
   }
 
   public final class BroadcastFrameClock implements androidx.compose.runtime.MonotonicFrameClock {
+    ctor public BroadcastFrameClock();
     ctor public BroadcastFrameClock(optional kotlin.jvm.functions.Function0<kotlin.Unit>? onNewAwaiters);
     method public void cancel(optional java.util.concurrent.CancellationException cancellationException);
     method public boolean getHasAwaiters();
@@ -150,6 +153,7 @@ package androidx.compose.runtime {
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void recordSideEffect(kotlin.jvm.functions.Function0<kotlin.Unit> effect);
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void recordUsed(androidx.compose.runtime.RecomposeScope scope);
     method @androidx.compose.runtime.ComposeCompilerApi public Object? rememberedValue();
+    method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public boolean shouldExecute(boolean parametersChanged, int flags);
     method @androidx.compose.runtime.ComposeCompilerApi public void skipCurrentGroup();
     method @androidx.compose.runtime.ComposeCompilerApi public void skipToGroupEnd();
     method public void sourceInformation(String sourceInformation);
@@ -284,6 +288,7 @@ package androidx.compose.runtime {
     method public void recordModificationsOf(java.util.Set<?> values);
     method public void recordReadOf(Object value);
     method public void recordWriteOf(Object value);
+    method public kotlin.jvm.functions.Function0<java.lang.Boolean>? setShouldPauseCallback(kotlin.jvm.functions.Function0<java.lang.Boolean>? shouldPause);
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void verifyConsistent();
     property public abstract boolean hasPendingChanges;
     property public abstract boolean isComposing;
@@ -457,6 +462,15 @@ package androidx.compose.runtime {
   @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.SOURCE) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.FUNCTION, kotlin.annotation.AnnotationTarget.PROPERTY_GETTER}) public @interface NonSkippableComposable {
   }
 
+  public interface PausableComposition extends androidx.compose.runtime.ReusableComposition {
+    method public androidx.compose.runtime.PausedComposition setPausableContent(kotlin.jvm.functions.Function0<kotlin.Unit> content);
+    method public androidx.compose.runtime.PausedComposition setPausableContentWithReuse(kotlin.jvm.functions.Function0<kotlin.Unit> content);
+  }
+
+  public final class PausableCompositionKt {
+    method public static androidx.compose.runtime.PausableComposition PausableComposition(androidx.compose.runtime.Applier<? extends java.lang.Object?> applier, androidx.compose.runtime.CompositionContext parent);
+  }
+
   public final class PausableMonotonicFrameClock implements androidx.compose.runtime.MonotonicFrameClock {
     ctor public PausableMonotonicFrameClock(androidx.compose.runtime.MonotonicFrameClock frameClock);
     method public boolean isPaused();
@@ -464,6 +478,14 @@ package androidx.compose.runtime {
     method public void resume();
     method public suspend <R> Object? withFrameNanos(kotlin.jvm.functions.Function1<? super java.lang.Long,? extends R> onFrame, kotlin.coroutines.Continuation<? super R>);
     property public final boolean isPaused;
+  }
+
+  public interface PausedComposition {
+    method public void apply();
+    method public void cancel();
+    method public boolean isComplete();
+    method public boolean resume(kotlin.jvm.functions.Function0<java.lang.Boolean> shouldPause);
+    property public abstract boolean isComplete;
   }
 
   public final class PrimitiveSnapshotStateKt {
@@ -690,8 +712,8 @@ package androidx.compose.runtime.collection {
     method public int indexOf(T element);
     method public inline int indexOfFirst(kotlin.jvm.functions.Function1<? super T,java.lang.Boolean> predicate);
     method public inline int indexOfLast(kotlin.jvm.functions.Function1<? super T,java.lang.Boolean> predicate);
-    method public boolean isEmpty();
-    method public boolean isNotEmpty();
+    method public inline boolean isEmpty();
+    method public inline boolean isNotEmpty();
     method public T last();
     method public inline T last(kotlin.jvm.functions.Function1<? super T,java.lang.Boolean> predicate);
     method public int lastIndexOf(T element);
@@ -866,8 +888,8 @@ package androidx.compose.runtime.snapshots {
     method public abstract androidx.compose.runtime.snapshots.Snapshot getRoot();
     method public abstract boolean hasPendingChanges();
     method public abstract androidx.compose.runtime.snapshots.Snapshot takeNestedSnapshot(optional kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? readObserver);
-    method @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeApi public final androidx.compose.runtime.snapshots.Snapshot? unsafeEnter();
-    method @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeApi public final void unsafeLeave(androidx.compose.runtime.snapshots.Snapshot? oldSnapshot);
+    method public final androidx.compose.runtime.snapshots.Snapshot? unsafeEnter();
+    method public final void unsafeLeave(androidx.compose.runtime.snapshots.Snapshot? oldSnapshot);
     property public int id;
     property public abstract boolean readOnly;
     property public abstract androidx.compose.runtime.snapshots.Snapshot root;
@@ -923,7 +945,7 @@ package androidx.compose.runtime.snapshots {
     field public static final androidx.compose.runtime.snapshots.SnapshotApplyResult.Success INSTANCE;
   }
 
-  @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeApi public interface SnapshotContextElement extends kotlin.coroutines.CoroutineContext.Element {
+  public interface SnapshotContextElement extends kotlin.coroutines.CoroutineContext.Element {
     field public static final androidx.compose.runtime.snapshots.SnapshotContextElement.Key Key;
   }
 
@@ -931,7 +953,7 @@ package androidx.compose.runtime.snapshots {
   }
 
   public final class SnapshotContextElementKt {
-    method @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeApi public static androidx.compose.runtime.snapshots.SnapshotContextElement asContextElement(androidx.compose.runtime.snapshots.Snapshot);
+    method public static androidx.compose.runtime.snapshots.SnapshotContextElement asContextElement(androidx.compose.runtime.snapshots.Snapshot);
   }
 
   public final class SnapshotKt {
@@ -1052,6 +1074,30 @@ package androidx.compose.runtime.snapshots {
     ctor public StateRecord();
     method public abstract void assign(androidx.compose.runtime.snapshots.StateRecord value);
     method public abstract androidx.compose.runtime.snapshots.StateRecord create();
+  }
+
+}
+
+package androidx.compose.runtime.snapshots.tooling {
+
+  @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeRuntimeApi public final class SnapshotInstanceObservers {
+    ctor public SnapshotInstanceObservers();
+    ctor public SnapshotInstanceObservers(optional kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? readObserver, optional kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? writeObserver);
+    method public kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? getReadObserver();
+    method public kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? getWriteObserver();
+    property public final kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? readObserver;
+    property public final kotlin.jvm.functions.Function1<java.lang.Object,kotlin.Unit>? writeObserver;
+  }
+
+  @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeRuntimeApi public interface SnapshotObserver {
+    method public default void onApplied(androidx.compose.runtime.snapshots.Snapshot snapshot, java.util.Set<?> changed);
+    method public default void onCreated(androidx.compose.runtime.snapshots.Snapshot snapshot, androidx.compose.runtime.snapshots.Snapshot? parent, androidx.compose.runtime.snapshots.tooling.SnapshotInstanceObservers? observers);
+    method public default androidx.compose.runtime.snapshots.tooling.SnapshotInstanceObservers? onCreating(androidx.compose.runtime.snapshots.Snapshot? parent, boolean readonly);
+    method public default void onDisposing(androidx.compose.runtime.snapshots.Snapshot snapshot);
+  }
+
+  public final class SnapshotObserverKt {
+    method @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeRuntimeApi public static androidx.compose.runtime.snapshots.ObserverHandle observeSnapshots(androidx.compose.runtime.snapshots.Snapshot.Companion, androidx.compose.runtime.snapshots.tooling.SnapshotObserver snapshotObserver);
   }
 
 }

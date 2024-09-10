@@ -191,6 +191,10 @@ package androidx.compose.ui {
   public static final class MotionDurationScale.Key implements kotlin.coroutines.CoroutineContext.Key<androidx.compose.ui.MotionDurationScale> {
   }
 
+  public final class SensitiveContentKt {
+    method public static androidx.compose.ui.Modifier sensitiveContent(androidx.compose.ui.Modifier, optional boolean isContentSensitive);
+  }
+
   @androidx.compose.runtime.ComposableTargetMarker(description="UI Composable") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.FILE, kotlin.annotation.AnnotationTarget.FUNCTION, kotlin.annotation.AnnotationTarget.PROPERTY_GETTER, kotlin.annotation.AnnotationTarget.TYPE, kotlin.annotation.AnnotationTarget.TYPE_PARAMETER}) public @interface UiComposable {
   }
 
@@ -1758,7 +1762,8 @@ package androidx.compose.ui.input.pointer {
   }
 
   @Deprecated public final class ConsumedData {
-    ctor @Deprecated public ConsumedData(optional @Deprecated boolean positionChange, optional @Deprecated boolean downChange);
+    ctor @Deprecated public ConsumedData();
+    ctor @Deprecated public ConsumedData(optional boolean positionChange, optional boolean downChange);
     method @Deprecated public boolean getDownChange();
     method @Deprecated public boolean getPositionChange();
     method @Deprecated public void setDownChange(boolean);
@@ -1785,10 +1790,12 @@ package androidx.compose.ui.input.pointer {
     method public androidx.compose.ui.input.pointer.PointerEvent copy(java.util.List<androidx.compose.ui.input.pointer.PointerInputChange> changes, android.view.MotionEvent? motionEvent);
     method public int getButtons();
     method public java.util.List<androidx.compose.ui.input.pointer.PointerInputChange> getChanges();
+    method public int getClassification();
     method public int getKeyboardModifiers();
     method public int getType();
     property public final int buttons;
     property public final java.util.List<androidx.compose.ui.input.pointer.PointerInputChange> changes;
+    property public final int classification;
     property public final int keyboardModifiers;
     property public final int type;
   }
@@ -1918,6 +1925,7 @@ package androidx.compose.ui.input.pointer {
     method public int getType();
     method public long getUptimeMillis();
     method public boolean isConsumed();
+    property @Deprecated public final androidx.compose.ui.input.pointer.ConsumedData consumed;
     property public final java.util.List<androidx.compose.ui.input.pointer.HistoricalChange> historical;
     property public final long id;
     property public final boolean isConsumed;
@@ -2046,8 +2054,11 @@ package androidx.compose.ui.input.pointer.util {
 
   public final class VelocityTrackerKt {
     method public static void addPointerInputChange(androidx.compose.ui.input.pointer.util.VelocityTracker, androidx.compose.ui.input.pointer.PointerInputChange event);
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static boolean getVelocityTrackerAddPointsFix();
     method @SuppressCompatibility @androidx.compose.ui.input.pointer.util.ExperimentalVelocityTrackerApi public static boolean getVelocityTrackerStrategyUseImpulse();
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static void setVelocityTrackerAddPointsFix(boolean);
     method @SuppressCompatibility @androidx.compose.ui.input.pointer.util.ExperimentalVelocityTrackerApi public static void setVelocityTrackerStrategyUseImpulse(boolean);
+    property @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static final boolean VelocityTrackerAddPointsFix;
     property @SuppressCompatibility @androidx.compose.ui.input.pointer.util.ExperimentalVelocityTrackerApi public static final boolean VelocityTrackerStrategyUseImpulse;
   }
 
@@ -2543,12 +2554,19 @@ package androidx.compose.ui.layout {
 
   public static final class SubcomposeSlotReusePolicy.SlotIdsSet implements java.util.Collection<java.lang.Object?> kotlin.jvm.internal.markers.KMappedMarker {
     method public void clear();
+    method public boolean contains(Object? element);
+    method public boolean containsAll(java.util.Collection<? extends java.lang.Object?> elements);
+    method public void forEach(kotlin.jvm.functions.Function1<java.lang.Object?,kotlin.Unit> block);
+    method public int getSize();
+    method public boolean isEmpty();
     method public java.util.Iterator<java.lang.Object?> iterator();
     method public boolean remove(Object? slotId);
     method public boolean removeAll(java.util.Collection<? extends java.lang.Object?> slotIds);
     method public boolean removeAll(kotlin.jvm.functions.Function1<java.lang.Object?,java.lang.Boolean> predicate);
     method public boolean retainAll(java.util.Collection<? extends java.lang.Object?> slotIds);
     method public boolean retainAll(kotlin.jvm.functions.Function1<java.lang.Object?,java.lang.Boolean> predicate);
+    method public void trimToSize(int maxSlotsToRetainForReuse);
+    property public int size;
   }
 
   public final class VerticalAlignmentLine extends androidx.compose.ui.layout.AlignmentLine {
@@ -3496,13 +3514,14 @@ package androidx.compose.ui.semantics {
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.ScrollAxisRange> getHorizontalScrollAxisRange();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.text.input.ImeAction> getImeAction();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.jvm.functions.Function1<java.lang.Object,java.lang.Integer>> getIndexForKey();
-    method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getInvisibleToUser();
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getInvisibleToUser();
     method @Deprecated public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsContainer();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getIsDialog();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsEditable();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getIsPopup();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsShowingTextSubstitution();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsTraversalGroup();
+    method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getLinkTestMarker();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.LiveRegionMode> getLiveRegion();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Integer> getMaxTextLength();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.String> getPaneTitle();
@@ -3530,13 +3549,14 @@ package androidx.compose.ui.semantics {
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.ScrollAxisRange> HorizontalScrollAxisRange;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.text.input.ImeAction> ImeAction;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.jvm.functions.Function1<java.lang.Object,java.lang.Integer>> IndexForKey;
-    property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> InvisibleToUser;
+    property @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> InvisibleToUser;
     property @Deprecated public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsContainer;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> IsDialog;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsEditable;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> IsPopup;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsShowingTextSubstitution;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsTraversalGroup;
+    property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> LinkTestMarker;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.LiveRegionMode> LiveRegion;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Integer> MaxTextLength;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.String> PaneTitle;
@@ -3599,7 +3619,7 @@ package androidx.compose.ui.semantics {
     method public static void heading(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static void indexForKey(androidx.compose.ui.semantics.SemanticsPropertyReceiver, kotlin.jvm.functions.Function1<java.lang.Object,java.lang.Integer> mapping);
     method public static void insertTextAtCursor(androidx.compose.ui.semantics.SemanticsPropertyReceiver, optional String? label, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString,java.lang.Boolean>? action);
-    method public static void invisibleToUser(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static void invisibleToUser(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method @Deprecated public static boolean isContainer(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static boolean isEditable(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static boolean isShowingTextSubstitution(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
@@ -3719,6 +3739,7 @@ package androidx.compose.ui.window {
   }
 
   @androidx.compose.runtime.Immutable public final class DialogProperties {
+    ctor public DialogProperties();
     ctor @Deprecated public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy);
     ctor public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy, optional boolean usePlatformDefaultWidth, optional boolean decorFitsSystemWindows);
     ctor public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional boolean usePlatformDefaultWidth);

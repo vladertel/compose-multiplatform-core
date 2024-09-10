@@ -188,7 +188,7 @@ internal class AndroidCaptureSessionStateCallback(
     override fun onCaptureQueueEmpty(session: CameraCaptureSession) {
         stateCallback.onCaptureQueueEmpty(getWrapped(session, cameraErrorListener))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Api26CompatImpl.onCaptureQueueEmpty(session, interopSessionStateCallback)
+            Api26Compat.onCaptureQueueEmpty(interopSessionStateCallback, session)
         }
     }
 
@@ -239,17 +239,6 @@ internal class AndroidCaptureSessionStateCallback(
         // Clear out the reference to the previous session, if one was set.
         val previousSession = _lastStateCallback.getAndSet(null)
         previousSession?.let { previousSession.onSessionFinalized() }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private object Api26CompatImpl {
-        @JvmStatic
-        fun onCaptureQueueEmpty(
-            session: CameraCaptureSession,
-            interopSessionStateCallback: CameraCaptureSession.StateCallback?
-        ) {
-            interopSessionStateCallback?.onCaptureQueueEmpty(session)
-        }
     }
 }
 
@@ -391,6 +380,17 @@ internal constructor(
             Log.warn {
                 "Failed to createHighSpeedRequestList from $device because the output surface" +
                     " was destroyed before calling createHighSpeedRequestList."
+            }
+            null
+        } catch (e: UnsupportedOperationException) {
+
+            // b/358592149: When a high speed session is closed, and then another high speed session
+            // is opened, the resources from the previous session might not be available yet.
+            // Since Camera2CaptureSequenceProcessor will try to create the session again, log
+            // and rethrow the error as a standard exception that can be ignored.
+            Log.warn {
+                "Failed to createHighSpeedRequestList from $device because the output surface" +
+                    " was not available."
             }
             null
         }

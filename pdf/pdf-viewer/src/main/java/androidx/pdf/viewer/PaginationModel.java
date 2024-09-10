@@ -16,16 +16,15 @@
 
 package androidx.pdf.viewer;
 
+import android.content.Context;
 import android.graphics.Rect;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.pdf.data.Range;
 import androidx.pdf.models.Dimensions;
-import androidx.pdf.util.ErrorLog;
+import androidx.pdf.util.PaginationUtils;
 import androidx.pdf.util.Preconditions;
-import androidx.pdf.util.Screen;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -51,22 +50,14 @@ import java.util.Set;
  * <ol>
  *   <li>{@link #initialize(int)} with the number of pages it will contain.
  *   <li>{@link #addPage(int, Dimensions)} to set the dimensions for each page.
- *   <li>{@link #setViewArea(Rect)} to report current visible area so pages can be moved
- *       horizontally for maximum visibility.
  * </ol>
  *
  * <p>This model is observable. Any classes implementing {@link PaginationModelObserver} can
  * register themselves via {@link #addObserver(PaginationModelObserver)} and will be notified when
- * pages are added or the {@link #mViewArea} is changed.
+ * pages are added
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class PaginationModel {
-
-    private static final String TAG = PaginationModel.class.getSimpleName();
-
-    /** The spacing added before and after each page, in dip. */
-    private static final int PAGE_SPACING_DP = 4;
-
     /**
      * The spacing added before and after each page (the actual space between 2 consecutive pages is
      * twice this distance), in pixels.
@@ -90,27 +81,10 @@ public class PaginationModel {
 
     private int mAccumulatedPageSize = 0;
 
-    /**
-     * The portion of this model that is currently (or last we knew) exposed on the screen.
-     *
-     * <p>In the co-ordinates of this model - so if this entire model is within the visible area,
-     * then
-     * {@code viewArea} will contain the rect Rect(0, 0, getWidth, getHeight). Current visible area
-     * should be reported to this model via {@link #setViewArea(Rect)}.
-     */
-    private final Rect mViewArea = new Rect();
-
-    /**
-     * A temp working instance for computing {@link #mViewArea} to avoid excessive object
-     * creation.
-     */
-    private final Rect mTempViewArea = new Rect();
-
     private final Set<PaginationModelObserver> mObservers = new HashSet<>();
 
-    public PaginationModel() {
-        Screen screen = PdfViewer.getScreen();
-        mPageSpacingPx = screen.pxFromDp(PAGE_SPACING_DP);
+    public PaginationModel(@NonNull Context context) {
+        mPageSpacingPx = PaginationUtils.getPageSpacingInPixels(context);
     }
 
     /**
@@ -124,8 +98,11 @@ public class PaginationModel {
         Preconditions.checkArgument(numPages >= 0, "Num pages should be >= 0, " + numPages);
         if (isInitialized()) {
             // Already initialized, don't overwrite existing data.
-            ErrorLog.checkState(mMaxPages == numPages, TAG, "init",
-                    String.format("called with different value %d, was %d.", numPages, mMaxPages));
+            if (mMaxPages != numPages) {
+                throw new IllegalArgumentException(
+                        String.format("called with different value %d, was %d.", numPages,
+                                mMaxPages));
+            }
             return;
         }
 
@@ -170,22 +147,21 @@ public class PaginationModel {
                 }
             };
 
+    public void setMaxPages(int maxPages) {
+        mMaxPages = maxPages;
+    }
+
     /** Adds the dimensions of the page at {@code pageNum} to this model. */
     public void addPage(int pageNum, @NonNull Dimensions pageSize) {
         Preconditions.checkNotNull(pageSize);
         if (pageNum < mSize) {
-            ErrorLog.log(TAG, "addPage", String.format("ignored add page#%d < %d", pageNum, mSize));
             return;
         }
         if (pageNum >= mMaxPages) {
-            ErrorLog.log(TAG, "addPage",
-                    String.format("cant add page - not initialized?" + "page#%d >= maxpages:%d",
-                            pageNum, mMaxPages));
             return;
         }
         for (int i = mSize; i < pageNum; i++) {
             // Edge case: there are missing pages. Create them temporarily as clones of this one.
-            ErrorLog.log(TAG, "Backfill page# " + i);
             mPages[i] = pageSize;
         }
         mPages[pageNum] = pageSize;
@@ -203,8 +179,7 @@ public class PaginationModel {
         int p = 0;
         while (p < mSize - 1) {
             if (mPages[p] == null) {
-                ErrorLog.logAndThrow(TAG, "computeTops",
-                        String.format("Missing page %d in (0,%d)", p, mSize));
+                throw new RuntimeException(String.format("Missing page %d in (0,%d)", p, mSize));
             }
             mPageStops[p + 1] = mPageStops[p] + mPages[p].getHeight() + 2 * mPageSpacingPx;
             p++;
@@ -276,7 +251,7 @@ public class PaginationModel {
 
     /** Return the estimated full height. */
     public int getEstimatedFullHeight() {
-        if (!isInitialized()) {
+        if (!isInitialized() || mSize == 0) {
             return 0;
         }
         // If we've rendered the entire document, we know exactly how tall we are
@@ -288,22 +263,7 @@ public class PaginationModel {
                 mMaxPages - mSize + 1));
     }
 
-    /**
-     * Updates the portion of this model that is visible on the screen, in this model's
-     * coordinates -
-     * so relative to (0, 0)-(getWidth(), getHeight()).
-     */
-    public void setViewArea(@NonNull Rect viewArea) {
-        mTempViewArea.set(viewArea);
-        if (!mTempViewArea.intersect(
-                0, 0, getWidth(), getEstimatedFullHeight())) { // Modifies tempViewArea.
-            Log.w(TAG, String.format("PaginationModel is outside view area. %s", mTempViewArea));
-        }
-        if (!mTempViewArea.equals(this.mViewArea)) {
-            this.mViewArea.set(mTempViewArea);
-            notifyViewAreaChanged();
-        }
-    }
+
 
     /**
      * Returns the location of the page in the model.
@@ -318,10 +278,11 @@ public class PaginationModel {
      * </ul>
      *
      * @param pageNum - index of requested page
+     * @param viewArea - the current viewport in content coordinates
      * @return - coordinates of the page within this model
      */
     @NonNull
-    public Rect getPageLocation(int pageNum) {
+    public Rect getPageLocation(int pageNum, @NonNull Rect viewArea) {
         int left = 0;
         int right = getWidth();
         int top = mPageStops[pageNum];
@@ -329,15 +290,15 @@ public class PaginationModel {
         int width = mPages[pageNum].getWidth();
         if (width < right - left) {
             // this page is smaller than the view's width, it may slide left or right.
-            if (width < mViewArea.width()) {
+            if (width < viewArea.width()) {
                 // page is smaller than the view: center (but respect min left margin)
-                left = Math.max(left, mViewArea.left + (mViewArea.width() - width) / 2);
+                left = Math.max(left, viewArea.left + (viewArea.width() - width) / 2);
             } else {
                 // page is larger than view: scroll proportionally between the margins.
-                if (mViewArea.right > right) {
+                if (viewArea.right > right) {
                     left = right - width;
-                } else if (mViewArea.left > left) {
-                    left = mViewArea.left * (right - width) / (right - mViewArea.width());
+                } else if (viewArea.left > left) {
+                    left = viewArea.left * (right - width) / (right - viewArea.width());
                 }
             }
             right = left + width;
@@ -367,20 +328,13 @@ public class PaginationModel {
     }
 
     /**
-     * Returns the intersection of this model and the last viewArea that was reported to this model
-     * via {@link #setViewArea(Rect)}.
+     * Returns the number of pages in the document.
+     *
+     * @throws IllegalStateException if this is called before the model is initialized
      */
-    @NonNull
-    public Rect getViewArea() {
-        return mViewArea;
-    }
-
-    /** Notify all observers that the {@code viewArea} has changed. */
-    private void notifyViewAreaChanged() {
-        Iterator<PaginationModelObserver> iterator = iterator();
-        while (iterator.hasNext()) {
-            iterator.next().onViewAreaChanged();
-        }
+    public int getNumPages() {
+        Preconditions.checkState(mMaxPages != -1, "Model is not initialized");
+        return mMaxPages;
     }
 
     /** Notify all observers that a page has been added to the model. */
@@ -427,18 +381,13 @@ public class PaginationModel {
     @NonNull
     public Iterator<PaginationModelObserver> iterator() {
         synchronized (mObservers) {
-            return new ArrayList<PaginationModelObserver>(mObservers).iterator();
+            return new ArrayList<>(mObservers).iterator();
         }
     }
 
     /** Just makes sure to clear any observers that have been set. */
     @Override
     protected void finalize() throws Throwable {
-        if (!mObservers.isEmpty()) {
-            ErrorLog.log(TAG, String.format(
-                    "PaginationModel still has %d registered observers during garabage "
-                            + "collection. They" + " will be removed.", mObservers.size()));
-        }
         mObservers.clear();
         super.finalize();
     }

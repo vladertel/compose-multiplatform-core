@@ -18,8 +18,6 @@ package androidx.compose.ui.layout
 
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 

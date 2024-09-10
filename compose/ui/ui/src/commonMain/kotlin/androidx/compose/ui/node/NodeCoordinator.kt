@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.node
 
+import androidx.collection.MutableObjectIntMap
+import androidx.collection.mutableObjectIntMapOf
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.MutableRect
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.minus
 import androidx.compose.ui.unit.plus
 import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.util.fastIsFinite
 
 /** Measurable and Placeable type that has a position. */
 internal abstract class NodeCoordinator(
@@ -173,17 +176,20 @@ internal abstract class NodeCoordinator(
                 // We do not simply compare against old.alignmentLines in case this is a
                 // MutableStateMap and the same instance might be passed.
                 if (
-                    (!oldAlignmentLines.isNullOrEmpty() || value.alignmentLines.isNotEmpty()) &&
-                        value.alignmentLines != oldAlignmentLines
+                    ((oldAlignmentLines != null && oldAlignmentLines!!.isNotEmpty()) ||
+                        value.alignmentLines.isNotEmpty()) &&
+                        !compareEquals(oldAlignmentLines, value.alignmentLines)
                 ) {
                     alignmentLinesOwner.alignmentLines.onAlignmentsChanged()
 
                     @Suppress("PrimitiveInCollection")
                     val oldLines =
                         oldAlignmentLines
-                            ?: (mutableMapOf<AlignmentLine, Int>().also { oldAlignmentLines = it })
+                            ?: (mutableObjectIntMapOf<AlignmentLine>().also {
+                                oldAlignmentLines = it
+                            })
                     oldLines.clear()
-                    oldLines.putAll(value.alignmentLines)
+                    value.alignmentLines.forEach { entry -> oldLines[entry.key] = entry.value }
                 }
             }
         }
@@ -191,7 +197,7 @@ internal abstract class NodeCoordinator(
     abstract var lookaheadDelegate: LookaheadDelegate?
         protected set
 
-    private var oldAlignmentLines: MutableMap<AlignmentLine, Int>? = null
+    private var oldAlignmentLines: MutableObjectIntMap<AlignmentLine>? = null
 
     abstract fun ensureLookaheadDelegateCreated()
 
@@ -450,21 +456,41 @@ internal abstract class NodeCoordinator(
         visitNodes(Nodes.LayoutAware) { it.onPlaced(this) }
     }
 
+    private var drawBlockParentLayer: GraphicsLayer? = null
+    private var drawBlockCanvas: Canvas? = null
+
+    private var _drawBlock: ((Canvas, GraphicsLayer?) -> Unit)? = null
+
     // implementation of draw block passed to the OwnedLayer
-    @Suppress("LiftReturnOrAssignment")
-    private val drawBlock: (Canvas, GraphicsLayer?) -> Unit = { canvas, parentLayer ->
-        if (layoutNode.isPlaced) {
-            snapshotObserver.observeReads(this, onCommitAffectingLayer) {
-                drawContainedDrawModifiers(canvas, parentLayer)
+    private val drawBlock: (Canvas, GraphicsLayer?) -> Unit
+        get() {
+            var block = _drawBlock
+            if (block == null) {
+                val drawBlockCallToDrawModifiers = {
+                    drawContainedDrawModifiers(drawBlockCanvas!!, drawBlockParentLayer)
+                }
+                block = { canvas, parentLayer ->
+                    if (layoutNode.isPlaced) {
+                        this.drawBlockCanvas = canvas
+                        this.drawBlockParentLayer = parentLayer
+                        snapshotObserver.observeReads(
+                            this,
+                            onCommitAffectingLayer,
+                            drawBlockCallToDrawModifiers
+                        )
+                        lastLayerDrawingWasSkipped = false
+                    } else {
+                        // The invalidation is requested even for nodes which are not placed. As we
+                        // are not going to display them we skip the drawing. It is safe to just
+                        // draw nothing as the layer will be invalidated again when the node will be
+                        // finally placed.
+                        lastLayerDrawingWasSkipped = true
+                    }
+                }
+                _drawBlock = block
             }
-            lastLayerDrawingWasSkipped = false
-        } else {
-            // The invalidation is requested even for nodes which are not placed. As we are not
-            // going to display them we skip the drawing. It is safe to just draw nothing as the
-            // layer will be invalidated again when the node will be finally placed.
-            lastLayerDrawingWasSkipped = true
+            return block
         }
-    }
 
     fun updateLayerBlock(
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
@@ -610,7 +636,7 @@ internal abstract class NodeCoordinator(
                 val distanceFromEdge =
                     distanceInMinimumTouchTarget(pointerPosition, minimumTouchTargetSize)
                 if (
-                    distanceFromEdge.isFinite() &&
+                    distanceFromEdge.fastIsFinite() &&
                         hitTestResult.isHitInMinimumTouchTargetBetter(distanceFromEdge, false)
                 ) {
                     head.hitNear(
@@ -636,7 +662,7 @@ internal abstract class NodeCoordinator(
                 }
 
             if (
-                distanceFromEdge.isFinite() &&
+                distanceFromEdge.fastIsFinite() &&
                     hitTestResult.isHitInMinimumTouchTargetBetter(distanceFromEdge, isInLayer)
             ) {
                 // Hit closer than existing handlers, so just record it
@@ -1029,14 +1055,13 @@ internal abstract class NodeCoordinator(
     }
 
     protected fun drawBorder(canvas: Canvas, paint: Paint) {
-        val rect =
-            Rect(
-                left = 0.5f,
-                top = 0.5f,
-                right = measuredSize.width.toFloat() - 0.5f,
-                bottom = measuredSize.height.toFloat() - 0.5f
-            )
-        canvas.drawRect(rect, paint)
+        canvas.drawRect(
+            left = 0.5f,
+            top = 0.5f,
+            right = measuredSize.width.toFloat() - 0.5f,
+            bottom = measuredSize.height.toFloat() - 0.5f,
+            paint = paint
+        )
     }
 
     /**
@@ -1384,6 +1409,19 @@ internal abstract class NodeCoordinator(
                     )
             }
     }
+}
+
+@Suppress("PrimitiveInCollection")
+private fun compareEquals(
+    a: MutableObjectIntMap<AlignmentLine>?,
+    b: Map<AlignmentLine, Int>
+): Boolean {
+    if (a == null) return false
+    if (a.size != b.size) return false
+
+    a.forEach { k, v -> if (b[k] != v) return false }
+
+    return true
 }
 
 /**

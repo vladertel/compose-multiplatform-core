@@ -152,9 +152,7 @@ val LocalViewConfiguration =
  */
 val LocalWindowInfo = staticCompositionLocalOf<WindowInfo> { noLocalProvidedFor("LocalWindowInfo") }
 
-/**
- * The CompositionLocal containing the current [LifecycleOwner].
- */
+/** The CompositionLocal containing the current [LifecycleOwner]. */
 @Deprecated(
     "Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.",
     ReplaceWith("androidx.lifecycle.compose.LocalLifecycleOwner"),
@@ -173,7 +171,16 @@ internal val LocalProvidableScrollCaptureInProgress = compositionLocalOf { false
 val LocalScrollCaptureInProgress: CompositionLocal<Boolean>
     get() = LocalProvidableScrollCaptureInProgress
 
-/** Configure the blink timeout, after interaction, for text cursors. */
+/**
+ * Text cursor blinking
+ * - _true_ normal cursor behavior (interactive blink)
+ * - _false_ never blink (always on)
+ *
+ * The default of _true_ is the user-expected system behavior for Text editing.
+ *
+ * Typically you should not set _false_ outside of screenshot tests without also providing a
+ * `cursorBrush` to `BasicTextField` to implement a custom design
+ */
 val LocalCursorBlinkEnabled: ProvidableCompositionLocal<Boolean> = staticCompositionLocalOf { true }
 
 @ExperimentalComposeUiApi

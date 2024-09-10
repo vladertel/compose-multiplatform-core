@@ -71,9 +71,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Velocity
-import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
-import androidx.compose.ui.util.fastForEach
 import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -483,6 +481,20 @@ private class ScrollableNode(
 
     override fun onPreKeyEvent(event: KeyEvent) = false
 
+    // Forward all PointerInputModifierNode method calls to `mmouseWheelScrollNode.pointerInputNode`
+    // See explanation in `MouseWheelScrollNode.pointerInputNode`
+
+    override fun onPointerEvent(
+        pointerEvent: PointerEvent,
+        pass: PointerEventPass,
+        bounds: IntSize
+    ) {
+        if (pointerEvent.changes.fastAny { canDrag.invoke(it) }) {
+            super.onPointerEvent(pointerEvent, pass, bounds)
+        }
+        mouseWheelScrollNode.pointerInputNode.onPointerEvent(pointerEvent, pass, bounds)
+    }
+
     override fun SemanticsPropertyReceiver.applySemantics() {
         if (enabled && (scrollByAction == null || scrollByOffsetAction == null)) {
             setScrollSemanticsActions()
@@ -505,20 +517,6 @@ private class ScrollableNode(
     private fun clearScrollSemanticsActions() {
         scrollByAction = null
         scrollByOffsetAction = null
-    }
-
-    // Forward all PointerInputModifierNode method calls to `mmouseWheelScrollNode.pointerInputNode`
-    // See explanation in `MouseWheelScrollNode.pointerInputNode`
-
-    override fun onPointerEvent(
-        pointerEvent: PointerEvent,
-        pass: PointerEventPass,
-        bounds: IntSize
-    ) {
-        if (pointerEvent.changes.fastAny { canDrag.invoke(it) }) {
-            super.onPointerEvent(pointerEvent, pass, bounds)
-        }
-        mouseWheelScrollNode.pointerInputNode.onPointerEvent(pointerEvent, pass, bounds)
     }
 
     override fun onCancelPointerInput() {

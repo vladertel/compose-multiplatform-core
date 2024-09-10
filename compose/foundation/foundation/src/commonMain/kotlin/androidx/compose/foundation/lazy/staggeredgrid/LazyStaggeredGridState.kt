@@ -25,8 +25,9 @@ import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.internal.checkPrecondition
+import androidx.compose.foundation.internal.requirePrecondition
 import androidx.compose.foundation.lazy.layout.AwaitFirstLayoutModifier
-import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateScrollScope
 import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemProvider
@@ -39,6 +40,7 @@ import androidx.compose.foundation.lazy.layout.animateScrollToItem
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridLaneInfo.Companion.FullSpan
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridLaneInfo.Companion.Unset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
@@ -80,6 +82,7 @@ fun rememberLazyStaggeredGridState(
  * most cases, it should be created via [rememberLazyStaggeredGridState].
  */
 @OptIn(ExperimentalFoundationApi::class)
+@Stable
 class LazyStaggeredGridState
 internal constructor(
     initialFirstVisibleItems: IntArray,
@@ -100,7 +103,9 @@ internal constructor(
     )
 
     /**
-     * Index of the first visible item across all staggered grid lanes.
+     * Index of the first visible item across all staggered grid lanes. This does not include items
+     * in the content padding region. For the first visible item that includes items in the content
+     * padding please use [LazyStaggeredGridLayoutInfo.visibleItemsInfo].
      *
      * This property is observable and when use it in composable function it will be recomposed on
      * each scroll, potentially causing performance issues.
@@ -248,8 +253,8 @@ internal constructor(
         if (distance < 0 && !canScrollForward || distance > 0 && !canScrollBackward) {
             return 0f
         }
-        check(abs(scrollToBeConsumed) <= 0.5f) {
-            "entered drag with non-zero pending scroll: $scrollToBeConsumed"
+        checkPrecondition(abs(scrollToBeConsumed) <= 0.5f) {
+            "entered drag with non-zero pending scroll"
         }
         scrollToBeConsumed += distance
 
@@ -540,7 +545,7 @@ internal constructor(
                 FullSpan -> 0
                 // lane was previously set, keep item to the same lane
                 else -> {
-                    require(previousLane >= 0) {
+                    requirePrecondition(previousLane >= 0) {
                         "Expected positive lane number, got $previousLane instead."
                     }
                     minOf(previousLane, laneCount)

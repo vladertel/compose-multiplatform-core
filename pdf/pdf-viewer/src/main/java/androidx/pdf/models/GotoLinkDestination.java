@@ -17,14 +17,16 @@
 package androidx.pdf.models;
 
 import android.annotation.SuppressLint;
+import android.graphics.pdf.content.PdfPageGotoLinkContent;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.ext.SdkExtensions;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
-
-import com.google.common.base.Preconditions;
+import androidx.core.util.Preconditions;
 
 /**
  * Represents the content associated with the destination where a goto link is directing.
@@ -139,5 +141,21 @@ public class GotoLinkDestination implements Parcelable {
         parcel.writeFloat(mXCoordinate);
         parcel.writeFloat(mYCoordinate);
         parcel.writeFloat(mZoom);
+    }
+
+    /**
+     * Converts android.graphics.pdf.content.PdfPageGotoLinkContent.Destination object to its
+     * androidx.pdf.aidl.GotoLinkDestination representation.
+     */
+    @NonNull
+    public static GotoLinkDestination convert(
+            @NonNull PdfPageGotoLinkContent.Destination pdfPageGotoLinkContentDest) {
+        if (SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 13) {
+            return new GotoLinkDestination(pdfPageGotoLinkContentDest.getPageNumber(),
+                    pdfPageGotoLinkContentDest.getXCoordinate(),
+                    pdfPageGotoLinkContentDest.getYCoordinate(),
+                    pdfPageGotoLinkContentDest.getZoom());
+        }
+        throw new UnsupportedOperationException("Operation support above S");
     }
 }

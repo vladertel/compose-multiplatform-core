@@ -79,9 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
@@ -105,7 +103,6 @@ import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMinByOrNull
 import androidx.compose.ui.util.lerp
 import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min

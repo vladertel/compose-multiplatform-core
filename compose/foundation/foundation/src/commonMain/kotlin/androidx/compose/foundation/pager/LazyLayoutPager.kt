@@ -30,6 +30,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
+import androidx.compose.foundation.internal.requirePrecondition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.layout.IntervalList
 import androidx.compose.foundation.lazy.layout.LazyLayout
@@ -61,6 +62,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 
@@ -99,7 +101,7 @@ internal fun Pager(
     /** The content of the pager */
     pageContent: @Composable PagerScope.(page: Int) -> Unit
 ) {
-    require(beyondViewportPageCount >= 0) {
+    requirePrecondition(beyondViewportPageCount >= 0) {
         "beyondViewportPageCount should be greater than or equal to 0, " +
             "you selected $beyondViewportPageCount"
     }
@@ -373,17 +375,30 @@ private class PagerWrapperFlingBehavior(
 ) : FlingBehavior {
     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
         val scope: ScrollScope = this
-        return with(originalFlingBehavior) {
-            performFling(initialVelocity) { remainingScrollOffset ->
-                val flingPageDisplacement =
-                    if (pagerState.pageSizeWithSpacing != 0) {
-                        remainingScrollOffset / (pagerState.pageSizeWithSpacing)
-                    } else {
-                        0f
-                    }
-                val targetPage = flingPageDisplacement.roundToInt() + pagerState.currentPage
-                with(pagerState) { scope.updateTargetPage(targetPage) }
+        val resultVelocity =
+            with(originalFlingBehavior) {
+                performFling(initialVelocity) { remainingScrollOffset ->
+                    val flingPageDisplacement =
+                        if (pagerState.pageSizeWithSpacing != 0) {
+                            remainingScrollOffset / (pagerState.pageSizeWithSpacing)
+                        } else {
+                            0f
+                        }
+                    val targetPage = flingPageDisplacement.roundToInt() + pagerState.currentPage
+                    with(pagerState) { scope.updateTargetPage(targetPage) }
+                }
             }
+
+        // fling finished, correct snapping for rounding
+        if (
+            pagerState.currentPageOffsetFraction != 0.0f &&
+                pagerState.currentPageOffsetFraction.absoluteValue < 1e-3
+        ) {
+            pagerState.requestScrollToPage(pagerState.currentPage)
+        } else {
+            pagerState.currentPageOffsetFraction
         }
+
+        return resultVelocity
     }
 }

@@ -551,13 +551,13 @@ internal class ScatterSetTest {
     @Test
     fun hashCodeAddValues() {
         val set = mutableScatterSetOf<String?>()
-        assertEquals(0, set.hashCode())
+        assertEquals(217, set.hashCode())
         set += null
-        assertEquals(0, set.hashCode())
+        assertEquals(218, set.hashCode())
         set += "Hello"
-        assertEquals("Hello".hashCode(), set.hashCode())
+        val h1 = set.hashCode()
         set += "World"
-        assertEquals("World".hashCode() + "Hello".hashCode(), set.hashCode())
+        assertNotEquals(h1, set.hashCode())
     }
 
     @Test
@@ -900,5 +900,39 @@ internal class ScatterSetTest {
         for (i in 0..100) {
             assertTrue(map.contains(i), "Map should contain element $i")
         }
+    }
+
+    @Test
+    fun removeWhenIterating() {
+        val set = MutableScatterSet<String>()
+        set.add("Hello")
+        set.add("Bonjour")
+        set.add("Hallo")
+        set.add("Konnichiwa")
+        set.add("Ciao")
+        set.add("Annyeong")
+
+        val iterator = set.asMutableSet().iterator()
+        while (iterator.hasNext()) {
+            iterator.next()
+            iterator.remove()
+        }
+
+        assertEquals(0, set.size)
+    }
+
+    @Test
+    fun removeWhenForEach() {
+        val set = MutableScatterSet<String>()
+        set.add("Hello")
+        set.add("Bonjour")
+        set.add("Hallo")
+        set.add("Konnichiwa")
+        set.add("Ciao")
+        set.add("Annyeong")
+
+        set.forEach { element -> set.remove(element) }
+
+        assertEquals(0, set.size)
     }
 }

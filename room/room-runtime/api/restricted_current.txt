@@ -140,6 +140,7 @@ package androidx.room {
     method @WorkerThread public void addObserver(androidx.room.InvalidationTracker.Observer observer);
     method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) @WorkerThread public void addWeakObserver(androidx.room.InvalidationTracker.Observer observer);
     method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T> androidx.lifecycle.LiveData<T> createLiveData(String[] tableNames, boolean inTransaction, java.util.concurrent.Callable<T?> computeFunction);
+    method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public final <T> androidx.lifecycle.LiveData<T> createLiveData(String[] tableNames, boolean inTransaction, kotlin.jvm.functions.Function1<? super androidx.sqlite.SQLiteConnection,? extends T?> computeFunction);
     method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T> androidx.lifecycle.LiveData<T> createLiveData(String[] tableNames, java.util.concurrent.Callable<T?> computeFunction);
     method public final void refreshAsync();
     method public void refreshVersionsAsync();
@@ -245,6 +246,7 @@ package androidx.room {
     method public androidx.room.RoomDatabase.Builder<T> setJournalMode(androidx.room.RoomDatabase.JournalMode journalMode);
     method @SuppressCompatibility @androidx.room.ExperimentalRoomApi public androidx.room.RoomDatabase.Builder<T> setMultiInstanceInvalidationServiceIntent(android.content.Intent invalidationServiceIntent);
     method public androidx.room.RoomDatabase.Builder<T> setQueryCallback(androidx.room.RoomDatabase.QueryCallback queryCallback, java.util.concurrent.Executor executor);
+    method public final androidx.room.RoomDatabase.Builder<T> setQueryCallback(kotlin.coroutines.CoroutineContext context, androidx.room.RoomDatabase.QueryCallback queryCallback);
     method public final androidx.room.RoomDatabase.Builder<T> setQueryCoroutineContext(kotlin.coroutines.CoroutineContext context);
     method public androidx.room.RoomDatabase.Builder<T> setQueryExecutor(java.util.concurrent.Executor executor);
     method public androidx.room.RoomDatabase.Builder<T> setTransactionExecutor(java.util.concurrent.Executor executor);
@@ -347,6 +349,7 @@ package androidx.room {
     method public void bindNull(int index);
     method public void bindString(int index, String value);
     method public void bindTo(androidx.sqlite.db.SupportSQLiteProgram statement);
+    method public void bindTo(androidx.sqlite.SQLiteStatement statement);
     method public void clearBindings();
     method public void close();
     method public void copyArgumentsFrom(androidx.room.RoomSQLiteQuery other);

@@ -117,6 +117,18 @@ private val Buttons =
         examples = ButtonsExamples,
     )
 
+private val ButtonGroups =
+    Component(
+        id = nextId(),
+        name = "Button Groups",
+        description =
+            "button groups is a container for material components that adds an animation on press",
+        guidelinesUrl = "$ComponentGuidelinesUrl/button-groups",
+        docsUrl = "$PackageSummaryUrl#buttongroups",
+        sourceUrl = "$Material3SourceUrl/ButtonGroup.kt",
+        examples = ButtonGroupsExamples,
+    )
+
 private val Card =
     Component(
         id = nextId(),
@@ -425,6 +437,17 @@ private val SegmentedButtons =
         examples = SegmentedButtonExamples
     )
 
+private val ToggleButtons =
+    Component(
+        id = nextId(),
+        name = "ToggleButtons",
+        description = "Toggle buttons provide a selectable button that animates on press.",
+        guidelinesUrl = "", // No guidelines yet
+        docsUrl = "", // No docs yet
+        sourceUrl = "$Material3SourceUrl/ToggleButton.kt",
+        examples = ToggleButtonsExamples
+    )
+
 private val Sliders =
     Component(
         id = nextId(),
@@ -545,6 +568,7 @@ val Components =
         BottomAppBars,
         BottomSheets,
         Buttons,
+        ButtonGroups,
         Card,
         Carousel,
         Checkboxes,
@@ -575,6 +599,7 @@ val Components =
         Tabs,
         TextFields,
         TimePickers,
+        ToggleButtons,
         Tooltips,
         TopAppBar
     )

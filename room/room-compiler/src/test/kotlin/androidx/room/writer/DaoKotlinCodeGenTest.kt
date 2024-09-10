@@ -21,7 +21,6 @@ import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.compileFiles
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterInjector
-import org.jetbrains.kotlin.config.JvmDefaultMode
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -785,6 +784,9 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
               @Query("SELECT pk FROM MyEntity")
               abstract fun getAllIds(): androidx.paging.PagingSource<Int, MyEntity>
 
+              @Query("SELECT * FROM MyEntity WHERE pk > :gt ORDER BY pk ASC")
+              abstract fun getAllIdsWithArgs(gt: Long): androidx.paging.PagingSource<Int, MyEntity>
+
               @Query("SELECT pk FROM MyEntity")
               abstract fun getAllIdsRx2(): androidx.paging.rxjava2.RxPagingSource<Int, MyEntity>
 
@@ -950,6 +952,9 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
               @Query("INSERT INTO MyEntity (id) VALUES (:id)")
               fun insertEntityReturnLong(id: Long): Long
 
+              @Query("INSERT INTO MyEntity (id) VALUES (:id)")
+              fun insertEntityReturnVoid(id: Long): Void?
+
               @Query("UPDATE MyEntity SET text = :text")
               fun updateEntity(text: String)
 
@@ -996,11 +1001,17 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 @RawQuery
                 fun getEntitySupport(sql: SupportSQLiteQuery): MyEntity
 
+                @RawQuery
+                fun getNullableEntitySupport(sql: SupportSQLiteQuery): MyEntity?
+
                 @RawQuery(observedEntities = [MyEntity::class])
                 fun getEntitySupportFlow(sql: SupportSQLiteQuery): Flow<MyEntity>
 
                 @RawQuery
                 fun getEntity(query: RoomRawQuery): MyEntity
+
+                @RawQuery
+                fun getNullableEntity(query: RoomRawQuery): MyEntity?
 
                 @RawQuery(observedEntities = [MyEntity::class])
                 fun getEntityFlow(query: RoomRawQuery): Flow<MyEntity>
@@ -1024,8 +1035,7 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
 
     @Test
     fun delegatingFunctions_defaultImplBridge(
-        @TestParameter("DISABLE", "ALL_COMPATIBILITY", "ALL_INCOMPATIBLE")
-        jvmDefaultMode: JvmDefaultMode
+        @TestParameter("disable", "all-compatibility", "all") jvmDefaultMode: String
     ) {
         // For parametrized tests, use method name from reflection
         val testName = object {}.javaClass.enclosingMethod!!.name
@@ -1034,7 +1044,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 "MyDao.kt",
                 """
             import androidx.room.*
-            import androidx.sqlite.db.SupportSQLiteQuery
 
             @Dao
             interface MyDao {
@@ -1068,7 +1077,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 "MyDao.kt",
                 """
             import androidx.room.*
-            import androidx.sqlite.db.SupportSQLiteQuery
 
             interface BaseDao<T> {
                 fun getEntity(id: T): MyEntity
@@ -1101,8 +1109,7 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
 
     @Test
     fun transactionMethodAdapter_interface(
-        @TestParameter("DISABLE", "ALL_COMPATIBILITY", "ALL_INCOMPATIBLE")
-        jvmDefaultMode: JvmDefaultMode
+        @TestParameter("disable", "all-compatibility", "all") jvmDefaultMode: String
     ) {
         // For parametrized tests, use method name from reflection
         val testName = object {}.javaClass.enclosingMethod!!.name
@@ -1111,7 +1118,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 "MyDao.kt",
                 """
             import androidx.room.*
-            import androidx.sqlite.db.SupportSQLiteQuery
 
             interface BaseDao {
                 @Transaction
@@ -1180,7 +1186,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 "MyDao.kt",
                 """
             import androidx.room.*
-            import androidx.sqlite.db.SupportSQLiteQuery
 
             interface BaseDao {
                 @Transaction
@@ -1973,18 +1978,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
 
                 @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
                 fun getMaybe(vararg arg: String?): Maybe<MyEntity>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getFlowableNullable(vararg arg: String?): Flowable<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getObservableNullable(vararg arg: String?): Observable<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getSingleNullable(vararg arg: String?): Single<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getMaybeNullable(vararg arg: String?): Maybe<MyEntity?>
             }
 
             @Entity
@@ -2001,13 +1994,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 listOf(
                     src,
                     databaseSrc,
-                    COMMON.RX2_ROOM,
-                    COMMON.RX2_FLOWABLE,
-                    COMMON.RX2_OBSERVABLE,
-                    COMMON.RX2_SINGLE,
-                    COMMON.RX2_MAYBE,
-                    COMMON.PUBLISHER,
-                    COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION
+                ),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX2_ROOM,
+                        COMMON.RX2_FLOWABLE,
+                        COMMON.RX2_OBSERVABLE,
+                        COMMON.RX2_SINGLE,
+                        COMMON.RX2_MAYBE,
+                        COMMON.RX2_COMPLETABLE,
+                        COMMON.PUBLISHER,
+                        COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2035,18 +2034,6 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
 
                 @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
                 fun getMaybe(vararg arg: String?): Maybe<MyEntity>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getFlowableNullable(vararg arg: String?): Flowable<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getObservableNullable(vararg arg: String?): Observable<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getSingleNullable(vararg arg: String?): Single<MyEntity?>
-
-                @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
-                fun getMaybeNullable(vararg arg: String?): Maybe<MyEntity?>
             }
 
             @Entity
@@ -2063,13 +2050,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 listOf(
                     src,
                     databaseSrc,
-                    COMMON.RX3_ROOM,
-                    COMMON.RX3_FLOWABLE,
-                    COMMON.RX3_OBSERVABLE,
-                    COMMON.RX3_SINGLE,
-                    COMMON.RX3_MAYBE,
-                    COMMON.PUBLISHER,
-                    COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION
+                ),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX3_ROOM,
+                        COMMON.RX3_FLOWABLE,
+                        COMMON.RX3_OBSERVABLE,
+                        COMMON.RX3_SINGLE,
+                        COMMON.RX3_MAYBE,
+                        COMMON.RX3_COMPLETABLE,
+                        COMMON.PUBLISHER,
+                        COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2110,14 +2103,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 listOf(
                     src,
                     databaseSrc,
-                    COMMON.RX2_ROOM,
-                    COMMON.RX2_FLOWABLE,
-                    COMMON.RX2_OBSERVABLE,
-                    COMMON.RX2_SINGLE,
-                    COMMON.RX2_MAYBE,
-                    COMMON.RX2_COMPLETABLE,
-                    COMMON.PUBLISHER,
-                    COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION
+                ),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX2_ROOM,
+                        COMMON.RX2_FLOWABLE,
+                        COMMON.RX2_OBSERVABLE,
+                        COMMON.RX2_SINGLE,
+                        COMMON.RX2_MAYBE,
+                        COMMON.RX2_COMPLETABLE,
+                        COMMON.PUBLISHER,
+                        COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2158,14 +2156,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                 listOf(
                     src,
                     databaseSrc,
-                    COMMON.RX3_ROOM,
-                    COMMON.RX3_FLOWABLE,
-                    COMMON.RX3_OBSERVABLE,
-                    COMMON.RX3_SINGLE,
-                    COMMON.RX3_MAYBE,
-                    COMMON.RX3_COMPLETABLE,
-                    COMMON.PUBLISHER,
-                    COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION
+                ),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX3_ROOM,
+                        COMMON.RX3_FLOWABLE,
+                        COMMON.RX3_OBSERVABLE,
+                        COMMON.RX3_SINGLE,
+                        COMMON.RX3_MAYBE,
+                        COMMON.RX3_COMPLETABLE,
+                        COMMON.PUBLISHER,
+                        COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2277,13 +2280,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                     .trimIndent()
             )
         runTest(
-            sources =
-                listOf(
-                    src,
-                    databaseSrc,
-                    COMMON.RX2_SINGLE,
-                    COMMON.RX2_COMPLETABLE,
-                    COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION,
+            sources = listOf(src, databaseSrc),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX2_ROOM,
+                        COMMON.RX2_SINGLE,
+                        COMMON.RX2_MAYBE,
+                        COMMON.RX2_COMPLETABLE,
+                        COMMON.RX2_FLOWABLE,
+                        COMMON.RX2_OBSERVABLE,
+                        COMMON.RX2_EMPTY_RESULT_SET_EXCEPTION,
+                        COMMON.PUBLISHER,
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2335,13 +2344,19 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                     .trimIndent()
             )
         runTest(
-            sources =
-                listOf(
-                    src,
-                    databaseSrc,
-                    COMMON.RX3_SINGLE,
-                    COMMON.RX3_COMPLETABLE,
-                    COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION
+            sources = listOf(src, databaseSrc),
+            compiledFiles =
+                compileFiles(
+                    listOf(
+                        COMMON.RX3_ROOM,
+                        COMMON.RX3_SINGLE,
+                        COMMON.RX3_MAYBE,
+                        COMMON.RX3_COMPLETABLE,
+                        COMMON.RX3_FLOWABLE,
+                        COMMON.RX3_OBSERVABLE,
+                        COMMON.RX3_EMPTY_RESULT_SET_EXCEPTION,
+                        COMMON.PUBLISHER,
+                    )
                 ),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
@@ -2363,6 +2378,12 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
 
                 @Query("SELECT * FROM MyEntity WHERE pk IN (:arg)")
                 fun getListenableFutureNullable(vararg arg: String?): ListenableFuture<MyEntity?>
+
+                @Query("INSERT INTO MyEntity (pk, other) VALUES (:id, :name)")
+                fun insertListenableFuture(id: String, name: String): ListenableFuture<Long>
+
+                @Query("UPDATE MyEntity SET other = :name WHERE pk = :id")
+                fun updateListenableFuture(id: String, name: String): ListenableFuture<Void?>
 
                 @Insert
                 fun insertListenableFuture(vararg entities: MyEntity): ListenableFuture<List<Long>>
@@ -2436,9 +2457,8 @@ class DaoKotlinCodeGenTest : BaseDaoKotlinCodeGenTest() {
                     daoSrc,
                     entitySrc,
                     databaseSrc,
-                    COMMON.LISTENABLE_FUTURE,
-                    COMMON.GUAVA_ROOM,
                 ),
+            compiledFiles = compileFiles(listOf(COMMON.LISTENABLE_FUTURE, COMMON.GUAVA_ROOM)),
             expectedFilePath = getTestGoldenPath(testName.methodName)
         )
     }

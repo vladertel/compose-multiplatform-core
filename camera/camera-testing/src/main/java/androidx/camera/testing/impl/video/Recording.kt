@@ -49,12 +49,13 @@ import java.io.File
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CompletableDeferred
 
-class Recording
+public class Recording
 internal constructor(
     private val context: Context,
     private val recorder: Recorder,
     private val outputOptions: OutputOptions,
     private val withAudio: Boolean,
+    private val initialAudioMuted: Boolean,
     private val asPersistentRecording: Boolean,
     private val recordingStopStrategy: (androidx.camera.video.Recording, Recorder) -> Unit,
     private val callbackExecutor: Executor,
@@ -73,7 +74,7 @@ internal constructor(
             else -> throw AssertionError()
         }.apply {
             if (withAudio) {
-                withAudioEnabled()
+                withAudioEnabled(initialAudioMuted)
             }
             if (asPersistentRecording) {
                 asPersistentRecording()
@@ -81,9 +82,9 @@ internal constructor(
         }
     private lateinit var recording: androidx.camera.video.Recording
     private val listener = MockConsumer<VideoRecordEvent>()
-    val stoppedDeferred = CompletableDeferred<Unit>()
+    public val stoppedDeferred: CompletableDeferred<Unit> = CompletableDeferred()
 
-    fun start(): Recording {
+    public fun start(): Recording {
         recording =
             pendingRecording.start(callbackExecutor) {
                 if (it is Finalize) {
@@ -94,7 +95,7 @@ internal constructor(
         return this
     }
 
-    fun startAndVerify(
+    public fun startAndVerify(
         statusCount: Int = defaultVerifyStatusCount,
     ): Recording {
         start()
@@ -103,7 +104,7 @@ internal constructor(
         return this
     }
 
-    fun verifyStart() {
+    public fun verifyStart() {
         try {
             listener.verifyEvent(Start::class.java).single()
         } catch (t: Throwable) {
@@ -111,7 +112,7 @@ internal constructor(
         }
     }
 
-    fun verifyStatus(
+    public fun verifyStatus(
         statusCount: Int = defaultVerifyStatusCount,
     ): List<Status> {
         try {
@@ -123,7 +124,7 @@ internal constructor(
         }
     }
 
-    fun stop() {
+    public fun stop() {
         if (this::recording.isInitialized) {
             recordingStopStrategy.invoke(recording, recorder)
         } else {
@@ -131,17 +132,17 @@ internal constructor(
         }
     }
 
-    fun stopAndVerify(error: Int? = ERROR_NONE): RecordingResult {
+    public fun stopAndVerify(error: Int? = ERROR_NONE): RecordingResult {
         stop()
         return verifyFinalize(error = error)
     }
 
-    fun recordAndVerify(error: Int? = ERROR_NONE): RecordingResult {
+    public fun recordAndVerify(error: Int? = ERROR_NONE): RecordingResult {
         startAndVerify()
         return stopAndVerify(error = error)
     }
 
-    fun verifyFinalize(
+    public fun verifyFinalize(
         timeoutMs: Long = defaultVerifyTimeoutMs,
         error: Int? = ERROR_NONE,
     ): RecordingResult {
@@ -170,18 +171,18 @@ internal constructor(
         }
     }
 
-    fun pause(): Recording {
+    public fun pause(): Recording {
         recording.pause()
         return this
     }
 
-    fun pauseAndVerify(): Recording {
+    public fun pauseAndVerify(): Recording {
         pause()
         verifyPause()
         return this
     }
 
-    fun verifyPause() {
+    public fun verifyPause() {
         try {
             listener.verifyEvent(Pause::class.java).single()
         } catch (t: Throwable) {
@@ -189,12 +190,12 @@ internal constructor(
         }
     }
 
-    fun resume(): Recording {
+    public fun resume(): Recording {
         recording.resume()
         return this
     }
 
-    fun resumeAndVerify(statusCount: Int = defaultVerifyStatusCount): Recording {
+    public fun resumeAndVerify(statusCount: Int = defaultVerifyStatusCount): Recording {
         resume()
         verifyResume()
         verifyStatus(statusCount)
@@ -210,18 +211,18 @@ internal constructor(
         }
     }
 
-    fun mute(muted: Boolean): Recording {
+    public fun mute(muted: Boolean): Recording {
         recording.mute(muted)
         return this
     }
 
-    fun muteAndVerify(muted: Boolean): Recording {
+    public fun muteAndVerify(muted: Boolean): Recording {
         mute(muted)
         verifyMute(muted)
         return this
     }
 
-    private fun verifyMute(muted: Boolean) {
+    public fun verifyMute(muted: Boolean) {
         // TODO(b/274862085): Change to verify the status events consecutively having MUTED state
         //  by adding the utility to MockConsumer.
         try {
@@ -243,13 +244,14 @@ internal constructor(
         }
     }
 
-    fun clearEvents() = listener.clearAcceptCalls()
+    public fun clearEvents(): Unit = listener.clearAcceptCalls()
 
-    fun getAllEvents(): List<VideoRecordEvent> = listener.getAllEvents(VideoRecordEvent::class.java)
+    public fun getAllEvents(): List<VideoRecordEvent> =
+        listener.getAllEvents(VideoRecordEvent::class.java)
 
-    fun getStatusEvents(): List<Status> = listener.getAllEvents(Status::class.java)
+    public fun getStatusEvents(): List<Status> = listener.getAllEvents(Status::class.java)
 
-    fun verifyNoMoreEvent() = listener.verifyNoMoreAcceptCalls(/* inOrder= */ true)
+    public fun verifyNoMoreEvent(): Unit = listener.verifyNoMoreAcceptCalls(/* inOrder= */ true)
 
     private fun MockConsumer<VideoRecordEvent>.verifyStatus(
         eventCount: Int = defaultVerifyStatusCount,
@@ -275,12 +277,12 @@ internal constructor(
         eventType: Class<in T>
     ): List<T> = verifyEvent(eventType, CallTimesAtLeast(1), inOrder = false)
 
-    class RecordingResult(val finalize: Finalize) {
+    public class RecordingResult(public val finalize: Finalize) {
 
-        val uri: Uri
+        public val uri: Uri
             get() = finalize.outputResults.outputUri
 
-        val file: File by lazy {
+        public val file: File by lazy {
             when (finalize.outputOptions) {
                 is FileOutputOptions -> File(uri.path!!)
                 else -> throw AssertionError()

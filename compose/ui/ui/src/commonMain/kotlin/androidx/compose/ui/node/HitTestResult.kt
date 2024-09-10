@@ -93,7 +93,7 @@ internal class HitTestResult : List<Modifier.Node> {
      * Records [node] as a hit, adding it to the [HitTestResult] or replacing the existing one. Runs
      * [childHitTest] to do further hit testing for children.
      */
-    fun hit(node: Modifier.Node, isInLayer: Boolean, childHitTest: () -> Unit) {
+    inline fun hit(node: Modifier.Node, isInLayer: Boolean, childHitTest: () -> Unit) {
         hitInMinimumTouchTarget(node, -1f, isInLayer, childHitTest)
     }
 
@@ -101,7 +101,7 @@ internal class HitTestResult : List<Modifier.Node> {
      * Records [node] as a hit with [distanceFromEdge] distance, replacing any existing record. Runs
      * [childHitTest] to do further hit testing for children.
      */
-    fun hitInMinimumTouchTarget(
+    inline fun hitInMinimumTouchTarget(
         node: Modifier.Node,
         distanceFromEdge: Float,
         isInLayer: Boolean,
@@ -308,7 +308,7 @@ internal class HitTestResult : List<Modifier.Node> {
 }
 
 @kotlin.jvm.JvmInline
-private value class DistanceAndInLayer(val packedValue: Long) {
+internal value class DistanceAndInLayer(val packedValue: Long) {
     val distance: Float
         get() = unpackFloat1(packedValue)
 
@@ -327,7 +327,7 @@ private value class DistanceAndInLayer(val packedValue: Long) {
 }
 
 private fun DistanceAndInLayer(distance: Float, isInLayer: Boolean): DistanceAndInLayer {
-    val v1 = distance.toBits().toLong()
+    val v1 = distance.toRawBits().toLong()
     val v2 = if (isInLayer) 1L else 0L
     return DistanceAndInLayer(v1.shl(32) or (v2 and 0xFFFFFFFF))
 }

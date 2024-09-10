@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledIconToggleButton
@@ -30,9 +29,11 @@ import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconButtonShapes
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedIconToggleButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 @Composable
 fun IconButtonSample() {
     IconButton(onClick = { /* doSomething() */ }) {
-        Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        Icon(Icons.Filled.Lock, contentDescription = "Localized description")
     }
 }
 
@@ -56,16 +57,23 @@ fun IconButtonSample() {
 @Preview
 @Sampled
 @Composable
-fun SmallSquareNarrowIconButtonSample() {
-    IconButton(
+fun XSmallNarrowSquareIconButtonsSample() {
+    // Small narrow round icon button
+    FilledIconButton(
         onClick = { /* doSomething() */ },
-        modifier = Modifier.size(IconButtonDefaults.SmallNarrowContainerSize),
-        shape = IconButtonDefaults.squareShape
+        modifier =
+            Modifier.minimumInteractiveComponentSize()
+                .size(
+                    IconButtonDefaults.xSmallContainerSize(
+                        IconButtonDefaults.IconButtonWidthOption.Narrow
+                    )
+                ),
+        shape = IconButtonDefaults.xSmallSquareShape
     ) {
         Icon(
-            Icons.Outlined.Lock,
+            Icons.Filled.Lock,
             contentDescription = "Localized description",
-            modifier = Modifier.size(IconButtonDefaults.SmallIconSize)
+            modifier = Modifier.size(IconButtonDefaults.xSmallIconSize)
         )
     }
 }
@@ -74,30 +82,52 @@ fun SmallSquareNarrowIconButtonSample() {
 @Preview
 @Sampled
 @Composable
-fun SmallRoundWideIconButtonSample() {
+fun MediumRoundWideIconButtonSample() {
     IconButton(
         onClick = { /* doSomething() */ },
-        modifier = Modifier.size(IconButtonDefaults.SmallWideContainerSize),
-        shape = IconButtonDefaults.roundShape
+        modifier =
+            Modifier.size(
+                IconButtonDefaults.mediumContainerSize(
+                    IconButtonDefaults.IconButtonWidthOption.Wide
+                )
+            ),
+        shape = IconButtonDefaults.mediumRoundShape
     ) {
         Icon(
-            Icons.Outlined.Lock,
+            Icons.Filled.Lock,
             contentDescription = "Localized description",
-            modifier = Modifier.size(IconButtonDefaults.SmallIconSize)
+            modifier = Modifier.size(IconButtonDefaults.mediumIconSize)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Preview
+@Sampled
+@Composable
+fun LargeRoundUniformOutlinedIconButtonSample() {
+    OutlinedIconButton(
+        onClick = { /* doSomething() */ },
+        modifier = Modifier.size(IconButtonDefaults.largeContainerSize()),
+        shape = IconButtonDefaults.largeRoundShape
+    ) {
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = "Localized description",
+            modifier = Modifier.size(IconButtonDefaults.largeIconSize)
+        )
+    }
+}
+
 @Preview
 @Sampled
 @Composable
 fun TintedIconButtonSample() {
     IconButton(onClick = { /* doSomething() */ }) {
         Icon(
-            rememberVectorPainter(image = Icons.Outlined.Lock),
+            rememberVectorPainter(image = Icons.Filled.Lock),
             contentDescription = "Localized description",
-            tint = { Color.Red }
+            tint = Color.Red
         )
     }
 }
@@ -119,9 +149,23 @@ fun IconToggleButtonSample() {
 @Preview
 @Sampled
 @Composable
+fun IconToggleButtonWithAnimatedShapeSample() {
+    var checked by remember { mutableStateOf(false) }
+    IconToggleButton(checked = checked, onCheckedChange = { checked = it }) {
+        if (checked) {
+            Icon(Icons.Filled.Lock, contentDescription = "Localized description")
+        } else {
+            Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        }
+    }
+}
+
+@Preview
+@Sampled
+@Composable
 fun FilledIconButtonSample() {
     FilledIconButton(onClick = { /* doSomething() */ }) {
-        Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        Icon(Icons.Filled.Lock, contentDescription = "Localized description")
     }
 }
 
@@ -139,12 +183,36 @@ fun FilledIconToggleButtonSample() {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Preview
+@Sampled
+@Composable
+fun FilledIconToggleButtonWithAnimatedShapeSample() {
+    var checked by remember { mutableStateOf(false) }
+    FilledIconToggleButton(
+        checked = checked,
+        onCheckedChange = { checked = it },
+        shapes =
+            IconButtonShapes(
+                shape = IconButtonDefaults.smallRoundShape,
+                pressedShape = IconButtonDefaults.smallPressedShape,
+                checkedShape = IconButtonDefaults.smallSquareShape,
+            )
+    ) {
+        if (checked) {
+            Icon(Icons.Filled.Lock, contentDescription = "Localized description")
+        } else {
+            Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        }
+    }
+}
+
 @Preview
 @Sampled
 @Composable
 fun FilledTonalIconButtonSample() {
     FilledTonalIconButton(onClick = { /* doSomething() */ }) {
-        Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        Icon(Icons.Filled.Lock, contentDescription = "Localized description")
     }
 }
 
@@ -162,12 +230,36 @@ fun FilledTonalIconToggleButtonSample() {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Preview
+@Sampled
+@Composable
+fun FilledTonalIconToggleButtonWithAnimatedShapeSample() {
+    var checked by remember { mutableStateOf(false) }
+    FilledTonalIconToggleButton(
+        checked = checked,
+        onCheckedChange = { checked = it },
+        shapes =
+            IconButtonShapes(
+                shape = IconButtonDefaults.smallRoundShape,
+                pressedShape = IconButtonDefaults.smallPressedShape,
+                checkedShape = IconButtonDefaults.smallSquareShape,
+            )
+    ) {
+        if (checked) {
+            Icon(Icons.Filled.Lock, contentDescription = "Localized description")
+        } else {
+            Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        }
+    }
+}
+
 @Preview
 @Sampled
 @Composable
 fun OutlinedIconButtonSample() {
     OutlinedIconButton(onClick = { /* doSomething() */ }) {
-        Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        Icon(Icons.Filled.Lock, contentDescription = "Localized description")
     }
 }
 
@@ -177,6 +269,30 @@ fun OutlinedIconButtonSample() {
 fun OutlinedIconToggleButtonSample() {
     var checked by remember { mutableStateOf(false) }
     OutlinedIconToggleButton(checked = checked, onCheckedChange = { checked = it }) {
+        if (checked) {
+            Icon(Icons.Filled.Lock, contentDescription = "Localized description")
+        } else {
+            Icon(Icons.Outlined.Lock, contentDescription = "Localized description")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Preview
+@Sampled
+@Composable
+fun OutlinedIconToggleButtonWithAnimatedShapeSample() {
+    var checked by remember { mutableStateOf(false) }
+    OutlinedIconToggleButton(
+        checked = checked,
+        onCheckedChange = { checked = it },
+        shapes =
+            IconButtonShapes(
+                shape = IconButtonDefaults.smallRoundShape,
+                pressedShape = IconButtonDefaults.smallPressedShape,
+                checkedShape = IconButtonDefaults.smallSquareShape,
+            )
+    ) {
         if (checked) {
             Icon(Icons.Filled.Lock, contentDescription = "Localized description")
         } else {

@@ -80,11 +80,9 @@ kotlin {
             }
         }
 
-        androidMain {
+        jvmMain {
             dependsOn(commonMain)
             dependencies {
-                implementation("androidx.core:core-ktx:1.10.0")
-                implementation("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
 
@@ -94,14 +92,16 @@ kotlin {
             }
         }
 
-        androidUnitTest {
-            dependsOn(jvmTest)
+        androidMain {
+            dependsOn(jvmMain)
             dependencies {
-                implementation(libs.testRules)
-                implementation(libs.testRunner)
-                implementation(libs.junit)
-                implementation(libs.truth)
+                implementation("androidx.core:core-ktx:1.10.0")
+                implementation("androidx.annotation:annotation-experimental:1.4.1")
             }
+        }
+
+        desktopMain {
+            dependsOn(jvmMain)
         }
 
         androidInstrumentedTest {

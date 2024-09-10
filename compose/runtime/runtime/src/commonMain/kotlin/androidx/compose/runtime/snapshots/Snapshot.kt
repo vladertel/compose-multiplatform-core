@@ -20,7 +20,7 @@ import androidx.collection.MutableScatterSet
 import androidx.collection.mutableScatterSetOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
-import androidx.compose.runtime.ExperimentalComposeApi
+import androidx.compose.runtime.ExperimentalComposeRuntimeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.SynchronizedObject
 import androidx.compose.runtime.checkPrecondition
@@ -33,6 +33,9 @@ import androidx.compose.runtime.internal.currentThreadId
 import androidx.compose.runtime.requirePrecondition
 import androidx.compose.runtime.snapshots.Snapshot.Companion.takeMutableSnapshot
 import androidx.compose.runtime.snapshots.Snapshot.Companion.takeSnapshot
+import androidx.compose.runtime.snapshots.tooling.creatingSnapshot
+import androidx.compose.runtime.snapshots.tooling.dispatchObserverOnApplied
+import androidx.compose.runtime.snapshots.tooling.dispatchObserverOnDispose
 import androidx.compose.runtime.synchronized
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -165,10 +168,9 @@ sealed class Snapshot(
      * state (or to its parent snapshot if it is a nested snapshot) by calling
      * [MutableSnapshot.apply].
      */
-    @ExperimentalComposeApi fun unsafeEnter(): Snapshot? = makeCurrent()
+    fun unsafeEnter(): Snapshot? = makeCurrent()
 
     /** Leave the snapshot, restoring the [oldSnapshot] before returning. See [unsafeEnter]. */
-    @ExperimentalComposeApi
     fun unsafeLeave(oldSnapshot: Snapshot?) {
         checkPrecondition(threadSnapshot.get() === this) {
             "Cannot leave snapshot; $this is not the current snapshot"
@@ -410,7 +412,11 @@ sealed class Snapshot(
          */
         inline fun <T> global(block: () -> T): T {
             val previous = removeCurrent()
-            return block().also { restoreCurrent(previous) }
+            try {
+                return block()
+            } finally {
+                restoreCurrent(previous)
+            }
         }
 
         /**
@@ -430,9 +436,16 @@ sealed class Snapshot(
         // TODO: determine a good way to prevent/discourage suspending in an inlined [block]
         inline fun <R> withMutableSnapshot(block: () -> R): R =
             takeMutableSnapshot().run {
+                var hasError = false
                 try {
-                    enter(block).also { apply().check() }
+                    enter(block)
+                } catch (e: Throwable) {
+                    hasError = true
+                    throw e
                 } finally {
+                    if (!hasError) {
+                        apply().check()
+                    }
                     dispose()
                 }
             }
@@ -731,25 +744,30 @@ internal constructor(
      * with this snapshot can be collected. Nested active snapshots are still valid after the parent
      * has been disposed but calling [apply] will fail.
      */
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     open fun takeNestedMutableSnapshot(
         readObserver: ((Any) -> Unit)? = null,
         writeObserver: ((Any) -> Unit)? = null
     ): MutableSnapshot {
         validateNotDisposed()
         validateNotAppliedOrPinned()
-        return advance {
-            sync {
-                val newId = nextSnapshotId++
-                openSnapshots = openSnapshots.set(newId)
-                val currentInvalid = invalid
-                this.invalid = currentInvalid.set(newId)
-                NestedMutableSnapshot(
-                    newId,
-                    currentInvalid.addRange(id + 1, newId),
-                    mergedReadObserver(readObserver, this.readObserver),
-                    mergedWriteObserver(writeObserver, this.writeObserver),
-                    this
-                )
+        return creatingSnapshot(this, readObserver, writeObserver, readonly = false) {
+            actualReadObserver,
+            actualWriteObserver ->
+            advance {
+                sync {
+                    val newId = nextSnapshotId++
+                    openSnapshots = openSnapshots.set(newId)
+                    val currentInvalid = invalid
+                    this.invalid = currentInvalid.set(newId)
+                    NestedMutableSnapshot(
+                        newId,
+                        currentInvalid.addRange(id + 1, newId),
+                        mergedReadObserver(actualReadObserver, this.readObserver),
+                        mergedWriteObserver(actualWriteObserver, this.writeObserver),
+                        this
+                    )
+                }
             }
         }
     }
@@ -844,6 +862,8 @@ internal constructor(
             observers.fastForEach { it(modifiedSet, this) }
         }
 
+        dispatchObserverOnApplied(this, modified)
+
         // Wait to release pinned snapshots until after running observers.
         // This permits observers to safely take a nested snapshot of the one that was just applied
         // before unpinning records that need to be retained in this case.
@@ -869,23 +889,32 @@ internal constructor(
         if (!disposed) {
             super.dispose()
             nestedDeactivated(this)
+            dispatchObserverOnDispose(this)
         }
     }
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun takeNestedSnapshot(readObserver: ((Any) -> Unit)?): Snapshot {
         validateNotDisposed()
         validateNotAppliedOrPinned()
         val previousId = id
-        return advance {
-            sync {
-                val readonlyId = nextSnapshotId++
-                openSnapshots = openSnapshots.set(readonlyId)
-                NestedReadonlySnapshot(
-                    id = readonlyId,
-                    invalid = invalid.addRange(previousId + 1, readonlyId),
-                    readObserver = mergedReadObserver(readObserver, this.readObserver),
-                    parent = this
-                )
+        return creatingSnapshot(
+            if (this is GlobalSnapshot) null else this,
+            readObserver = readObserver,
+            writeObserver = null,
+            readonly = true
+        ) { actualReadObserver, _ ->
+            advance {
+                sync {
+                    val readonlyId = nextSnapshotId++
+                    openSnapshots = openSnapshots.set(readonlyId)
+                    NestedReadonlySnapshot(
+                        id = readonlyId,
+                        invalid = invalid.addRange(previousId + 1, readonlyId),
+                        readObserver = mergedReadObserver(actualReadObserver, this.readObserver),
+                        parent = this
+                    )
+                }
             }
         }
     }
@@ -1289,14 +1318,22 @@ internal constructor(id: Int, invalid: SnapshotIdSet, override val readObserver:
         get() = null
         @Suppress("UNUSED_PARAMETER") set(value) = unsupported()
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun takeNestedSnapshot(readObserver: ((Any) -> Unit)?): Snapshot {
         validateOpen(this)
-        return NestedReadonlySnapshot(
-            id = id,
-            invalid = invalid,
-            readObserver = mergedReadObserver(readObserver, this.readObserver),
-            parent = this
-        )
+        return creatingSnapshot(
+            parent = this,
+            readObserver = readObserver,
+            writeObserver = null,
+            readonly = true,
+        ) { actualReadObserver, _ ->
+            NestedReadonlySnapshot(
+                id = id,
+                invalid = invalid,
+                readObserver = mergedReadObserver(actualReadObserver, this.readObserver),
+                parent = this
+            )
+        }
     }
 
     override fun notifyObjectsInitialized() {
@@ -1307,6 +1344,7 @@ internal constructor(id: Int, invalid: SnapshotIdSet, override val readObserver:
         if (!disposed) {
             nestedDeactivated(this)
             super.dispose()
+            dispatchObserverOnDispose(this)
         }
     }
 
@@ -1342,13 +1380,21 @@ internal class NestedReadonlySnapshot(
     override val root: Snapshot
         get() = parent.root
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun takeNestedSnapshot(readObserver: ((Any) -> Unit)?) =
-        NestedReadonlySnapshot(
-            id = id,
-            invalid = invalid,
-            readObserver = mergedReadObserver(readObserver, this.readObserver),
-            parent = parent
-        )
+        creatingSnapshot(
+            parent = this,
+            readObserver = readObserver,
+            writeObserver = null,
+            readonly = true,
+        ) { actualReadObserver, _ ->
+            NestedReadonlySnapshot(
+                id = id,
+                invalid = invalid,
+                readObserver = mergedReadObserver(actualReadObserver, this.readObserver),
+                parent = parent
+            )
+        }
 
     override fun notifyObjectsInitialized() {
         // Nothing to do for read-only snapshots
@@ -1363,6 +1409,7 @@ internal class NestedReadonlySnapshot(
             }
             parent.nestedDeactivated(this)
             super.dispose()
+            dispatchObserverOnDispose(this)
         }
     }
 
@@ -1396,32 +1443,49 @@ internal class GlobalSnapshot(id: Int, invalid: SnapshotIdSet) :
         }
     ) {
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun takeNestedSnapshot(readObserver: ((Any) -> Unit)?): Snapshot =
-        takeNewSnapshot { invalid ->
-            ReadonlySnapshot(
-                id = sync { nextSnapshotId++ },
-                invalid = invalid,
-                readObserver = readObserver
-            )
+        creatingSnapshot(
+            parent = null,
+            readonly = true,
+            readObserver = readObserver,
+            writeObserver = null,
+        ) { actualReadObserver, _ ->
+            takeNewSnapshot { invalid ->
+                ReadonlySnapshot(
+                    id = sync { nextSnapshotId++ },
+                    invalid = invalid,
+                    readObserver = actualReadObserver
+                )
+            }
         }
 
+    @OptIn(ExperimentalComposeRuntimeApi::class)
     override fun takeNestedMutableSnapshot(
         readObserver: ((Any) -> Unit)?,
         writeObserver: ((Any) -> Unit)?
-    ): MutableSnapshot = takeNewSnapshot { invalid ->
-        MutableSnapshot(
-            id = sync { nextSnapshotId++ },
-            invalid = invalid,
-
-            // It is intentional that the global read observers are not merged with mutable
-            // snapshots read observers.
+    ): MutableSnapshot =
+        creatingSnapshot(
+            parent = null,
+            readonly = false,
             readObserver = readObserver,
-
-            // It is intentional that global write observers are not merged with mutable
-            // snapshots write observers.
             writeObserver = writeObserver
-        )
-    }
+        ) { actualReadObserver, actualWriteObserver ->
+            takeNewSnapshot { invalid ->
+                MutableSnapshot(
+                    id = sync { nextSnapshotId++ },
+                    invalid = invalid,
+
+                    // It is intentional that the global read observers are not merged with mutable
+                    // snapshots read observers.
+                    readObserver = actualReadObserver,
+
+                    // It is intentional that global write observers are not merged with mutable
+                    // snapshots write observers.
+                    writeObserver = actualWriteObserver
+                )
+            }
+        }
 
     override fun notifyObjectsInitialized() {
         advanceGlobalSnapshot()
@@ -1510,6 +1574,7 @@ internal class NestedMutableSnapshot(
 
         applied = true
         deactivate()
+        dispatchObserverOnApplied(this, modified)
         return SnapshotApplyResult.Success
     }
 

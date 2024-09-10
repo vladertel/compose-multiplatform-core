@@ -20,9 +20,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
@@ -43,9 +43,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.tokens.MotionTokens
+import androidx.compose.material3.internal.Icons
+import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens.DisabledLabelTextColor
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens.DisabledLabelTextOpacity
@@ -324,9 +323,13 @@ private fun SegmentedButtonContent(
         modifier = Modifier.padding(ButtonDefaults.TextButtonContentPadding)
     ) {
         val typography = OutlinedSegmentedButtonTokens.LabelTextFont.value
+        // TODO Load the motionScheme tokens from the component tokens file
+        val animationSpec = MotionSchemeKeyTokens.FastSpatial.value<Int>()
         ProvideTextStyle(typography) {
             val scope = rememberCoroutineScope()
-            val measurePolicy = remember { SegmentedButtonContentMeasurePolicy(scope) }
+            val measurePolicy = remember {
+                SegmentedButtonContentMeasurePolicy(scope, animationSpec)
+            }
 
             Layout(
                 modifier = Modifier.height(IntrinsicSize.Min),
@@ -337,8 +340,10 @@ private fun SegmentedButtonContent(
     }
 }
 
-internal class SegmentedButtonContentMeasurePolicy(val scope: CoroutineScope) :
-    MultiContentMeasurePolicy {
+internal class SegmentedButtonContentMeasurePolicy(
+    val scope: CoroutineScope,
+    val animationSpec: AnimationSpec<Int>
+) : MultiContentMeasurePolicy {
     var animatable: Animatable<Int, AnimationVector1D>? = null
     private var initialOffset: Int? = null
 
@@ -370,9 +375,7 @@ internal class SegmentedButtonContentMeasurePolicy(val scope: CoroutineScope) :
                 animatable
                     ?: Animatable(initialOffset!!, Int.VectorConverter).also { animatable = it }
             if (anim.targetValue != offsetX) {
-                scope.launch {
-                    anim.animateTo(offsetX, tween(MotionTokens.DurationMedium3.toInt()))
-                }
+                scope.launch { anim.animateTo(offsetX, animationSpec) }
             }
         }
 
@@ -483,7 +486,7 @@ object SegmentedButtonDefaults {
                         activeContainerColor = fromToken(SelectedContainerColor),
                         activeContentColor = fromToken(SelectedLabelTextColor),
                         activeBorderColor = fromToken(OutlineColor),
-                        inactiveContainerColor = surface,
+                        inactiveContainerColor = Color.Transparent,
                         inactiveContentColor = fromToken(UnselectedLabelTextColor),
                         inactiveBorderColor = fromToken(OutlineColor),
                         disabledActiveContainerColor = fromToken(SelectedContainerColor),
@@ -492,7 +495,7 @@ object SegmentedButtonDefaults {
                                 .copy(alpha = DisabledLabelTextOpacity),
                         disabledActiveBorderColor =
                             fromToken(OutlineColor).copy(alpha = DisabledOutlineOpacity),
-                        disabledInactiveContainerColor = surface,
+                        disabledInactiveContainerColor = Color.Transparent,
                         disabledInactiveContentColor = fromToken(DisabledLabelTextColor),
                         disabledInactiveBorderColor = fromToken(OutlineColor),
                     )
@@ -562,21 +565,28 @@ object SegmentedButtonDefaults {
         inactiveContent: (@Composable () -> Unit)? = null
     ) {
         if (inactiveContent == null) {
+            // TODO Load the motionScheme tokens from the component tokens file
             AnimatedVisibility(
                 visible = active,
                 exit = ExitTransition.None,
                 enter =
-                    fadeIn(tween(MotionTokens.DurationMedium3.toInt())) +
+                    fadeIn(MotionSchemeKeyTokens.DefaultEffects.value()) +
                         scaleIn(
                             initialScale = 0f,
                             transformOrigin = TransformOrigin(0f, 1f),
-                            animationSpec = tween(MotionTokens.DurationMedium3.toInt()),
+                            animationSpec = MotionSchemeKeyTokens.FastSpatial.value()
                         ),
             ) {
                 activeContent()
             }
         } else {
-            Crossfade(targetState = active) { if (it) activeContent() else inactiveContent() }
+            Crossfade(
+                targetState = active,
+                // TODO Load the motionScheme tokens from the component tokens file
+                animationSpec = MotionSchemeKeyTokens.DefaultEffects.value()
+            ) {
+                if (it) activeContent() else inactiveContent()
+            }
         }
     }
 

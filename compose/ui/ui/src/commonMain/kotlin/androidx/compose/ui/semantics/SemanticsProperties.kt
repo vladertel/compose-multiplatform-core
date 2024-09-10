@@ -17,6 +17,7 @@
 package androidx.compose.ui.semantics
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.autofill.ContentDataType
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.geometry.Offset
@@ -95,6 +96,9 @@ object SemanticsProperties {
     val IsTraversalGroup = SemanticsPropertyKey<Boolean>("IsTraversalGroup")
 
     /** @see SemanticsPropertyReceiver.invisibleToUser */
+    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
+    @get:ExperimentalComposeUiApi
+    @ExperimentalComposeUiApi
     val InvisibleToUser =
         SemanticsPropertyKey<Unit>(
             name = "InvisibleToUser",
@@ -183,6 +187,18 @@ object SemanticsProperties {
                 // Never merge TestTags, to avoid leaking internal test tags to parents.
                 parentValue
             }
+        )
+
+    /**
+     * Marks a link within a text node (a link is represented by a
+     * [androidx.compose.ui.text.LinkAnnotation]) for identification during automated testing. This
+     * property is for internal use only and not intended for general use by developers.
+     */
+    val LinkTestMarker =
+        SemanticsPropertyKey<Unit>(
+            name = "LinkTestMarker",
+            isImportantForAccessibility = false,
+            mergePolicy = { parentValue, _ -> parentValue }
         )
 
     /** @see SemanticsPropertyReceiver.text */
@@ -832,6 +848,7 @@ var SemanticsPropertyReceiver.isTraversalGroup by SemanticsProperties.IsTraversa
  * redundant with semantics of their parent, consider [SemanticsModifier.clearAndSetSemantics]
  * instead.
  */
+@ExperimentalComposeUiApi
 fun SemanticsPropertyReceiver.invisibleToUser() {
     this[SemanticsProperties.InvisibleToUser] = Unit
 }

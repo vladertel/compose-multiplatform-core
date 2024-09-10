@@ -903,6 +903,16 @@ package androidx.car.app.mediaextensions {
     field public static final String KEY_ROOT_HINT_MEDIA_SESSION_API = "androidx.car.app.mediaextensions.KEY_ROOT_HINT_MEDIA_SESSION_API";
   }
 
+  public class MediaIntentExtras {
+    field public static final String ACTION_MEDIA_TEMPLATE_V2 = "androidx.car.app.mediaextensions.action.MEDIA_TEMPLATE_V2";
+    field public static final String EXTRA_KEY_MEDIA_COMPONENT = "android.car.intent.extra.MEDIA_COMPONENT";
+    field public static final String EXTRA_KEY_MEDIA_ID = "androidx.car.app.mediaextensions.extra.KEY_MEDIA_ID";
+    field public static final String EXTRA_KEY_SEARCH_ACTION = "androidx.car.app.mediaextensions.extra.KEY_SEARCH_ACTION";
+    field public static final String EXTRA_KEY_SEARCH_QUERY = "android.car.media.extra.SEARCH_QUERY";
+    field public static final int EXTRA_VALUE_NO_SEARCH_ACTION = 0; // 0x0
+    field public static final int EXTRA_VALUE_PLAY_FIRST_ITEM_FROM_SEARCH = 1; // 0x1
+  }
+
   public final class MetadataExtras {
     field public static final String KEY_CONTENT_FORMAT_TINTABLE_LARGE_ICON_URI = "androidx.car.app.mediaextensions.KEY_CONTENT_FORMAT_TINTABLE_LARGE_ICON_URI";
     field public static final String KEY_CONTENT_FORMAT_TINTABLE_SMALL_ICON_URI = "androidx.car.app.mediaextensions.KEY_CONTENT_FORMAT_TINTABLE_SMALL_ICON_URI";
@@ -1022,7 +1032,7 @@ package androidx.car.app.messaging {
 
 package androidx.car.app.messaging.model {
 
-  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public class CarMessage {
+  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.RequiresCarApi(7) public class CarMessage {
     method public androidx.car.app.model.CarText? getBody();
     method public String? getMultimediaMimeType();
     method public android.net.Uri? getMultimediaUri();
@@ -1042,17 +1052,17 @@ package androidx.car.app.messaging.model {
     method public androidx.car.app.messaging.model.CarMessage.Builder setSender(androidx.core.app.Person?);
   }
 
-  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi public interface ConversationCallback {
+  @androidx.car.app.annotations.CarProtocol public interface ConversationCallback {
     method public void onMarkAsRead();
     method public void onTextReply(String);
   }
 
-  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public interface ConversationCallbackDelegate {
+  @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.RequiresCarApi(7) public interface ConversationCallbackDelegate {
     method public void sendMarkAsRead(androidx.car.app.OnDoneCallback);
     method public void sendTextReply(String, androidx.car.app.OnDoneCallback);
   }
 
-  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public class ConversationItem implements androidx.car.app.model.Item {
+  @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.RequiresCarApi(7) public class ConversationItem implements androidx.car.app.model.Item {
     method public java.util.List<androidx.car.app.model.Action!> getActions();
     method public androidx.car.app.messaging.model.ConversationCallbackDelegate getConversationCallbackDelegate();
     method public androidx.car.app.model.CarIcon? getIcon();
@@ -1804,13 +1814,9 @@ package androidx.car.app.model {
     field public static final String CONTENT_ID = "TAB_CONTENTS_CONTENT_ID";
   }
 
-  @SuppressCompatibility @androidx.car.app.annotations.ExperimentalCarApi public static final class TabContents.Api8Builder {
-    ctor public TabContents.Api8Builder(androidx.car.app.model.Template);
-    method public androidx.car.app.model.TabContents build();
-  }
-
   public static final class TabContents.Builder {
     ctor public TabContents.Builder(androidx.car.app.model.Template);
+    ctor @SuppressCompatibility @androidx.car.app.annotations.ExperimentalCarApi public TabContents.Builder(androidx.car.app.model.Template, boolean);
     method public androidx.car.app.model.TabContents build();
   }
 

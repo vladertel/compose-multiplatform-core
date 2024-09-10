@@ -17,6 +17,7 @@
 package androidx.compose.foundation
 
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
@@ -36,6 +37,7 @@ import org.hamcrest.CoreMatchers
 // Very low tolerance on the difference
 internal val VelocityTrackerCalculationThreshold = 1
 
+@OptIn(ExperimentalComposeUiApi::class)
 internal suspend fun savePointerInputEvents(
     tracker: VelocityTracker,
     pointerInputScope: PointerInputScope

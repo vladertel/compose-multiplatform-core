@@ -69,8 +69,8 @@ class SplitButtonTest {
                 trailingButton = {
                     SplitButtonDefaults.TrailingButton(
                         modifier = Modifier.size(34.dp).testTag("trailingButton"),
+                        checked = false,
                         onClick = {},
-                        shape = SplitButtonDefaults.TrailingButtonShape,
                     ) {
                         Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Trailing Icon")
                     }
@@ -99,9 +99,9 @@ class SplitButtonTest {
                 },
                 trailingButton = {
                     SplitButtonDefaults.TrailingButton(
-                        modifier = Modifier.size(34.dp).testTag("trailing button"),
                         onClick = {},
-                        shape = SplitButtonDefaults.TrailingButtonShape,
+                        checked = false,
+                        modifier = Modifier.size(34.dp).testTag("trailing button"),
                     ) {
                         Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Trailing Icon")
                     }
@@ -134,9 +134,9 @@ class SplitButtonTest {
                 },
                 trailingButton = {
                     SplitButtonDefaults.TrailingButton(
-                        modifier = Modifier.size(34.dp).testTag("trailing button"),
                         onClick = {},
-                        shape = SplitButtonDefaults.TrailingButtonShape,
+                        checked = false,
+                        modifier = Modifier.size(34.dp).testTag("trailing button"),
                         enabled = false,
                     ) {
                         Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Trailing Icon")
@@ -160,7 +160,7 @@ class SplitButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             FilledSplitButton(
                 onLeadingButtonClick = {},
-                expanded = false,
+                checked = false,
                 onTrailingButtonClick = {},
                 leadingContent = {
                     Icon(
@@ -187,7 +187,7 @@ class SplitButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             TonalSplitButton(
                 onLeadingButtonClick = {},
-                expanded = false,
+                checked = false,
                 onTrailingButtonClick = {},
                 leadingContent = {
                     Icon(
@@ -214,7 +214,7 @@ class SplitButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             ElevatedSplitButton(
                 onLeadingButtonClick = {},
-                expanded = false,
+                checked = false,
                 onTrailingButtonClick = {},
                 leadingContent = {
                     Icon(
@@ -241,7 +241,7 @@ class SplitButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             OutlinedSplitButton(
                 onLeadingButtonClick = {},
-                expanded = false,
+                checked = false,
                 onTrailingButtonClick = {},
                 leadingContent = {
                     Icon(

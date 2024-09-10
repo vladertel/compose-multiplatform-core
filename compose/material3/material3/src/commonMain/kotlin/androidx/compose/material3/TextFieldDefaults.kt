@@ -16,8 +16,8 @@
 
 package androidx.compose.material3
 
+import androidx.annotation.FloatRange
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.InteractionSource
@@ -27,27 +27,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.OutputTransformation
-import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine
 import androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.toTextFieldBuffer
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.internal.CommonDecorationBox
 import androidx.compose.material3.internal.SupportingTopPadding
-import androidx.compose.material3.internal.TextFieldAnimationDuration
 import androidx.compose.material3.internal.TextFieldPadding
 import androidx.compose.material3.internal.TextFieldType
 import androidx.compose.material3.internal.animateBorderStrokeAsState
 import androidx.compose.material3.internal.textFieldBackground
 import androidx.compose.material3.tokens.FilledTextFieldTokens
+import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.material3.tokens.OutlinedTextFieldTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
@@ -117,10 +118,7 @@ object TextFieldDefaults {
      *   [MutableInteractionSource] instance to the [BasicTextField] for it to dispatch events. And
      *   then pass the same instance to this decorator to observe [Interaction]s and customize the
      *   appearance/behavior of the text field in different states.
-     * @param alwaysMinimizeLabel whether to always minimize the label of this text field. Defaults
-     *   to `false`, so the label will expand to occupy the input area when the text field is
-     *   unfocused and empty. When `true`, this allows displaying the [placeholder], [prefix], and
-     *   [suffix] alongside the [label] when the text field is unfocused and empty.
+     * @param labelPosition the position of the label. See [TextFieldLabelPosition].
      * @param label the optional label to be displayed with this text field. The default text style
      *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
      * @param placeholder the optional placeholder to be displayed when the input text is empty. The
@@ -152,8 +150,8 @@ object TextFieldDefaults {
         lineLimits: TextFieldLineLimits,
         outputTransformation: OutputTransformation?,
         interactionSource: InteractionSource,
-        alwaysMinimizeLabel: Boolean = false,
-        label: @Composable (() -> Unit)? = null,
+        labelPosition: TextFieldLabelPosition = TextFieldLabelPosition.Default(),
+        label: @Composable (TextFieldLabelScope.() -> Unit)? = null,
         placeholder: @Composable (() -> Unit)? = null,
         leadingIcon: @Composable (() -> Unit)? = null,
         trailingIcon: @Composable (() -> Unit)? = null,
@@ -163,7 +161,7 @@ object TextFieldDefaults {
         isError: Boolean = false,
         colors: TextFieldColors = colors(),
         contentPadding: PaddingValues =
-            if (label == null) {
+            if (label == null || labelPosition is TextFieldLabelPosition.Above) {
                 contentPaddingWithoutLabel()
             } else {
                 contentPaddingWithLabel()
@@ -183,13 +181,10 @@ object TextFieldDefaults {
         val visualText =
             if (outputTransformation == null) state.text
             else {
-                // TODO: use constructor to create TextFieldBuffer from TextFieldState when
-                // available
-                lateinit var buffer: TextFieldBuffer
-                state.edit { buffer = this }
+                val buffer = state.toTextFieldBuffer()
                 // after edit completes, mutations on buffer are ineffective
                 with(outputTransformation) { buffer.transformOutput() }
-                buffer.asCharSequence()
+                buffer.toString()
             }
 
         CommonDecorationBox(
@@ -197,7 +192,7 @@ object TextFieldDefaults {
             visualText = visualText,
             innerTextField = innerTextField,
             placeholder = placeholder,
-            alwaysMinimizeLabel = alwaysMinimizeLabel,
+            labelPosition = labelPosition,
             label = label,
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
@@ -210,7 +205,7 @@ object TextFieldDefaults {
             interactionSource = interactionSource,
             colors = colors,
             contentPadding = contentPadding,
-            container = container
+            container = container,
         )
     }
 
@@ -245,10 +240,11 @@ object TextFieldDefaults {
         unfocusedIndicatorLineThickness: Dp = UnfocusedIndicatorThickness,
     ) {
         val focused = interactionSource.collectIsFocusedAsState().value
+        // TODO Load the motionScheme tokens from the component tokens file
         val containerColor =
             animateColorAsState(
                 targetValue = colors.containerColor(enabled, isError, focused),
-                animationSpec = tween(durationMillis = TextFieldAnimationDuration),
+                animationSpec = MotionSchemeKeyTokens.FastEffects.value(),
             )
         Box(
             modifier
@@ -424,8 +420,8 @@ object TextFieldDefaults {
             visualText = visualText,
             innerTextField = innerTextField,
             placeholder = placeholder,
-            alwaysMinimizeLabel = false,
-            label = label,
+            labelPosition = TextFieldLabelPosition.Default(),
+            label = label?.let { { it.invoke() } },
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
             prefix = prefix,
@@ -437,14 +433,14 @@ object TextFieldDefaults {
             interactionSource = interactionSource,
             colors = colors,
             contentPadding = contentPadding,
-            container = container
+            container = container,
         )
     }
 
     /**
-     * Default content padding of the input field within the [TextField] when there is a label,
-     * except for the top padding, which instead represents the padding of the label in the focused
-     * state. The input field is placed directly beneath the label.
+     * Default content padding of the input field within the [TextField] when there is an inside
+     * label. Note that the top padding represents the padding above the label in the focused state.
+     * The input field is placed directly beneath the label.
      *
      * Horizontal padding represents the distance between the input field and the leading/trailing
      * icons (if present) or the horizontal edges of the container if there are no icons.
@@ -457,7 +453,8 @@ object TextFieldDefaults {
     ): PaddingValues = PaddingValues(start, top, end, bottom)
 
     /**
-     * Default content padding of the input field within the [TextField] when the label is null.
+     * Default content padding of the input field within the [TextField] when the label is null or
+     * positioned [TextFieldLabelPosition.Above].
      *
      * Horizontal padding represents the distance between the input field and the leading/trailing
      * icons (if present) or the horizontal edges of the container if there are no icons.
@@ -636,7 +633,16 @@ object TextFieldDefaults {
     internal val ColorScheme.defaultTextFieldColors: TextFieldColors
         @Composable
         get() {
-            return defaultTextFieldColorsCached
+            return defaultTextFieldColorsCached?.let { cachedColors ->
+                val localTextSelectionColors = LocalTextSelectionColors.current
+                if (cachedColors.textSelectionColors == localTextSelectionColors) {
+                    cachedColors
+                } else {
+                    cachedColors.copy(textSelectionColors = localTextSelectionColors).also {
+                        defaultTextFieldColorsCached = it
+                    }
+                }
+            }
                 ?: TextFieldColors(
                         focusedTextColor = fromToken(FilledTextFieldTokens.FocusInputColor),
                         unfocusedTextColor = fromToken(FilledTextFieldTokens.InputColor),
@@ -928,10 +934,7 @@ object OutlinedTextFieldDefaults {
      *   [MutableInteractionSource] instance to the [BasicTextField] for it to dispatch events. And
      *   then pass the same instance to this decorator to observe [Interaction]s and customize the
      *   appearance/behavior of the text field in different states.
-     * @param alwaysMinimizeLabel whether to always minimize the label of this text field. Defaults
-     *   to `false`, so the label will expand to occupy the input area when the text field is
-     *   unfocused and empty. When `true`, this allows displaying the [placeholder], [prefix], and
-     *   [suffix] alongside the [label] when the text field is unfocused and empty.
+     * @param labelPosition the position of the label. See [TextFieldLabelPosition].
      * @param label the optional label to be displayed with this text field. The default text style
      *   uses [Typography.bodySmall] when minimized and [Typography.bodyLarge] when expanded.
      * @param placeholder the optional placeholder to be displayed when the input text is empty. The
@@ -964,8 +967,8 @@ object OutlinedTextFieldDefaults {
         lineLimits: TextFieldLineLimits,
         outputTransformation: OutputTransformation?,
         interactionSource: InteractionSource,
-        alwaysMinimizeLabel: Boolean = false,
-        label: @Composable (() -> Unit)? = null,
+        labelPosition: TextFieldLabelPosition = TextFieldLabelPosition.Default(),
+        label: @Composable (TextFieldLabelScope.() -> Unit)? = null,
         placeholder: @Composable (() -> Unit)? = null,
         leadingIcon: @Composable (() -> Unit)? = null,
         trailingIcon: @Composable (() -> Unit)? = null,
@@ -990,13 +993,10 @@ object OutlinedTextFieldDefaults {
         val visualText =
             if (outputTransformation == null) state.text
             else {
-                // TODO: use constructor to create TextFieldBuffer from TextFieldState when
-                // available
-                lateinit var buffer: TextFieldBuffer
-                state.edit { buffer = this }
+                val buffer = state.toTextFieldBuffer()
                 // after edit completes, mutations on buffer are ineffective
                 with(outputTransformation) { buffer.transformOutput() }
-                buffer.asCharSequence()
+                buffer.toString()
             }
 
         CommonDecorationBox(
@@ -1004,7 +1004,7 @@ object OutlinedTextFieldDefaults {
             visualText = visualText,
             innerTextField = innerTextField,
             placeholder = placeholder,
-            alwaysMinimizeLabel = alwaysMinimizeLabel,
+            labelPosition = labelPosition,
             label = label,
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
@@ -1017,7 +1017,7 @@ object OutlinedTextFieldDefaults {
             interactionSource = interactionSource,
             colors = colors,
             contentPadding = contentPadding,
-            container = container
+            container = container,
         )
     }
 
@@ -1059,10 +1059,11 @@ object OutlinedTextFieldDefaults {
                 focusedBorderThickness,
                 unfocusedBorderThickness,
             )
+        // TODO Load the motionScheme tokens from the component tokens file
         val containerColor =
             animateColorAsState(
                 targetValue = colors.containerColor(enabled, isError, focused),
-                animationSpec = tween(durationMillis = TextFieldAnimationDuration),
+                animationSpec = MotionSchemeKeyTokens.FastEffects.value(),
             )
         Box(
             modifier
@@ -1173,8 +1174,8 @@ object OutlinedTextFieldDefaults {
             visualText = visualText,
             innerTextField = innerTextField,
             placeholder = placeholder,
-            alwaysMinimizeLabel = false,
-            label = label,
+            labelPosition = TextFieldLabelPosition.Default(),
+            label = label?.let { { it.invoke() } },
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
             prefix = prefix,
@@ -1186,7 +1187,7 @@ object OutlinedTextFieldDefaults {
             interactionSource = interactionSource,
             colors = colors,
             contentPadding = contentPadding,
-            container = container
+            container = container,
         )
     }
 
@@ -1358,7 +1359,16 @@ object OutlinedTextFieldDefaults {
     internal val ColorScheme.defaultOutlinedTextFieldColors: TextFieldColors
         @Composable
         get() {
-            return defaultOutlinedTextFieldColorsCached
+            return defaultOutlinedTextFieldColorsCached?.let { cachedColors ->
+                val localTextSelectionColors = LocalTextSelectionColors.current
+                if (cachedColors.textSelectionColors == localTextSelectionColors) {
+                    cachedColors
+                } else {
+                    cachedColors.copy(textSelectionColors = localTextSelectionColors).also {
+                        defaultOutlinedTextFieldColorsCached = it
+                    }
+                }
+            }
                 ?: TextFieldColors(
                         focusedTextColor = fromToken(OutlinedTextFieldTokens.FocusInputColor),
                         unfocusedTextColor = fromToken(OutlinedTextFieldTokens.InputColor),
@@ -1982,4 +1992,100 @@ constructor(
         result = 31 * result + errorSuffixColor.hashCode()
         return result
     }
+}
+
+/** The position of the label with respect to the text field. */
+abstract class TextFieldLabelPosition private constructor() {
+    /**
+     * The default label position.
+     *
+     * For [TextField], the label is positioned inside the text field container. For
+     * [OutlinedTextField], the label is positioned inside the text field container when expanded
+     * and cuts into the border when minimized.
+     */
+    class Default(
+        @get:Suppress("GetterSetterNames") override val alwaysMinimize: Boolean = false,
+        override val minimizedAlignment: Alignment.Horizontal = Alignment.Start,
+        override val expandedAlignment: Alignment.Horizontal = Alignment.Start,
+    ) : TextFieldLabelPosition() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Default) return false
+
+            if (alwaysMinimize != other.alwaysMinimize) return false
+            if (minimizedAlignment != other.minimizedAlignment) return false
+            if (expandedAlignment != other.expandedAlignment) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = alwaysMinimize.hashCode()
+            result = 31 * result + minimizedAlignment.hashCode()
+            result = 31 * result + expandedAlignment.hashCode()
+            return result
+        }
+
+        override fun toString(): String {
+            return "Default(" +
+                "alwaysMinimize=$alwaysMinimize, " +
+                "minimizedAlignment=$minimizedAlignment, " +
+                "expandedAlignment=$expandedAlignment" +
+                ")"
+        }
+    }
+
+    /**
+     * The label is positioned above and outside the text field container. This results in the label
+     * always being minimized.
+     */
+    class Above(override val minimizedAlignment: Alignment.Horizontal = Alignment.Start) :
+        TextFieldLabelPosition() {
+        @get:Suppress("GetterSetterNames")
+        override val alwaysMinimize: Boolean
+            get() = true
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Above) return false
+
+            return minimizedAlignment == other.minimizedAlignment
+        }
+
+        override fun hashCode(): Int {
+            return minimizedAlignment.hashCode()
+        }
+
+        override fun toString(): String = "Above(minimizedAlignment=$minimizedAlignment)"
+    }
+
+    /**
+     * Whether to always keep the label of the text field minimized.
+     *
+     * If `false`, the label will expand to occupy the input area when the text field is unfocused
+     * and empty. If `true`, this allows displaying the placeholder, prefix, and suffix alongside
+     * the label when the text field is unfocused and empty.
+     */
+    @get:Suppress("GetterSetterNames") abstract val alwaysMinimize: Boolean
+
+    /** The horizontal alignment of the label when it is minimized. */
+    abstract val minimizedAlignment: Alignment.Horizontal
+
+    /** The horizontal alignment of the label when it is expanded. */
+    open val expandedAlignment: Alignment.Horizontal
+        get() = minimizedAlignment
+}
+
+/** Scope for the label of a [TextField] or [OutlinedTextField]. */
+@Stable
+interface TextFieldLabelScope {
+    /**
+     * The animation progress of a label between its expanded and minimized sizes, where 0
+     * represents an expanded label and 1 represents a minimized label.
+     *
+     * Label animation is handled by the framework when using a component that reads from
+     * [LocalTextStyle], such as the default [Text]. This [progress] value can be used to coordinate
+     * other animations in conjunction with the default animation.
+     */
+    @get:FloatRange(from = 0.0, to = 1.0) val progress: Float
 }

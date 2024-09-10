@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ReusableContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.movableContentOf
@@ -51,14 +50,16 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputMode.Companion.Keyboard
 import androidx.compose.ui.input.InputMode.Companion.Touch
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.InspectableValue
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.platform.testTag
@@ -320,6 +321,107 @@ class CombinedClickableTest {
     }
 
     @Test
+    @LargeTest
+    fun longClick_hapticFeedbackEnabled() {
+        var counter = 0
+        val onClick: () -> Unit = { ++counter }
+        val performedHaptics = mutableListOf<HapticFeedbackType>()
+
+        val hapticFeedback: HapticFeedback =
+            object : HapticFeedback {
+                override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                    performedHaptics += hapticFeedbackType
+                }
+            }
+
+        rule.setContent {
+            CompositionLocalProvider(LocalHapticFeedback provides hapticFeedback) {
+                Box {
+                    BasicText(
+                        "ClickableText",
+                        modifier =
+                            Modifier.testTag("myClickable").combinedClickable(
+                                onLongClick = onClick,
+                                hapticFeedbackEnabled = true
+                            ) {}
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
+
+        // Advance a small amount of time
+        rule.mainClock.advanceTimeBy(100)
+
+        rule.onNodeWithTag("myClickable").performTouchInput { up() }
+
+        // Releasing the press before the long click timeout shouldn't trigger haptic feedback
+        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
+        rule.runOnIdle { assertThat(performedHaptics).isEmpty() }
+
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
+
+        // Advance past the long press timeout
+        rule.mainClock.advanceTimeBy(1000)
+
+        // Long press haptic feedback should be invoked
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
+        rule.runOnIdle {
+            assertThat(performedHaptics).containsExactly(HapticFeedbackType.LongPress)
+        }
+    }
+
+    @Test
+    @LargeTest
+    fun longClick_hapticFeedbackDisabled() {
+        var counter = 0
+        val onClick: () -> Unit = { ++counter }
+        val performedHaptics = mutableListOf<HapticFeedbackType>()
+
+        val hapticFeedback: HapticFeedback =
+            object : HapticFeedback {
+                override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+                    performedHaptics += hapticFeedbackType
+                }
+            }
+
+        rule.setContent {
+            CompositionLocalProvider(LocalHapticFeedback provides hapticFeedback) {
+                Box {
+                    BasicText(
+                        "ClickableText",
+                        modifier =
+                            Modifier.testTag("myClickable").combinedClickable(
+                                onLongClick = onClick,
+                                hapticFeedbackEnabled = false
+                            ) {}
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
+
+        // Advance a small amount of time
+        rule.mainClock.advanceTimeBy(100)
+
+        rule.onNodeWithTag("myClickable").performTouchInput { up() }
+
+        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
+        rule.runOnIdle { assertThat(performedHaptics).isEmpty() }
+
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
+
+        // Advance past the long press timeout
+        rule.mainClock.advanceTimeBy(1000)
+
+        // Long press should be invoked, without any haptics
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
+        rule.runOnIdle { assertThat(performedHaptics).isEmpty() }
+    }
+
+    @Test
     @OptIn(ExperimentalTestApi::class)
     fun longClickWithEnterKeyThenDPadCenter_triggersListenerTwice() {
         var clickCounter = 0
@@ -444,103 +546,6 @@ class CombinedClickableTest {
     }
 
     @Test
-    @OptIn(ExperimentalTestApi::class)
-    fun updateOnLongClickListenerBetweenEnterKeyDownAndUp_callsNewListener() {
-        var clickCounter = 0
-        var longClickCounter = 0
-        var newLongClickCounter = 0
-        var mutableOnLongClick: () -> Unit by mutableStateOf({ ++longClickCounter })
-        val focusRequester = FocusRequester()
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            inputModeManager = LocalInputModeManager.current
-            BasicText(
-                "ClickableText",
-                modifier =
-                    Modifier.testTag("myClickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            onLongClick = mutableOnLongClick,
-                            onClick = { ++clickCounter }
-                        )
-            )
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        rule.onNodeWithTag("myClickable").performKeyInput {
-            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
-            keyDown(Key.Enter)
-            advanceEventTime(100)
-        }
-        mutableOnLongClick = { ++newLongClickCounter }
-        rule.waitForIdle()
-        rule.onNodeWithTag("myClickable").performKeyInput {
-            // The press duration is 100ms longer than the minimum required for a long press.
-            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis + 100
-            advanceEventTime(durationMillis)
-            keyUp(Key.Enter)
-        }
-
-        rule.runOnIdle {
-            assertThat(longClickCounter).isEqualTo(0)
-            assertThat(newLongClickCounter).isEqualTo(1)
-            assertThat(clickCounter).isEqualTo(0)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class)
-    fun modifierReusedBetweenEnterKeyDownAndKeyUp_doesNotCallListeners() {
-        var clickCounter = 0
-        var longClickCounter = 0
-        var reuseKey by mutableStateOf(0)
-        val focusRequester = FocusRequester()
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            inputModeManager = LocalInputModeManager.current
-            ReusableContent(reuseKey) {
-                BasicText(
-                    "ClickableText",
-                    modifier =
-                        Modifier.testTag("myClickable")
-                            .focusRequester(focusRequester)
-                            .combinedClickable(
-                                onLongClick = { ++longClickCounter },
-                                onClick = { ++clickCounter }
-                            )
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        rule.onNodeWithTag("myClickable").performKeyInput {
-            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
-            keyDown(Key.Enter)
-            // Press the Enter key down for 100ms less than the required long press duration.
-            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis - 100
-            advanceEventTime(durationMillis)
-        }
-        rule.runOnIdle { reuseKey = 1 }
-        rule.waitForIdle()
-        rule.onNodeWithTag("myClickable").performKeyInput {
-            // Press the key down for another 200ms to reach the required long press duration.
-            advanceEventTime(200)
-            keyUp(Key.Enter)
-        }
-
-        rule.runOnIdle {
-            assertThat(longClickCounter).isEqualTo(0)
-            assertThat(clickCounter).isEqualTo(0)
-        }
-    }
-
-    @Test
     fun click_withLongClick() {
         var clickCounter = 0
         var longClickCounter = 0
@@ -661,29 +666,175 @@ class CombinedClickableTest {
     }
 
     @Test
-    fun doubleClick() {
-        var counter = 0
-        val onClick: () -> Unit = { ++counter }
-
+    fun doubleClick_withinTimeout_aboveMinimumDuration() {
+        var clickCounter = 0
+        var doubleClickCounter = 0
         rule.setContent {
-            Box {
-                BasicText(
-                    "ClickableText",
-                    modifier =
-                        Modifier.testTag("myClickable").combinedClickable(
-                            onDoubleClick = onClick
-                        ) {}
-                )
-            }
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .combinedClickable(
+                            onDoubleClick = { ++doubleClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
         }
 
-        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            up()
+            advanceEventTime(doubleTapDelay)
+            down(center)
+            up()
+        }
 
-        rule.mainClock.advanceTimeUntil { counter == 1 }
+        // Double click should not trigger click, and the double click should be immediately invoked
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(0)
+            assertThat(doubleClickCounter).isEqualTo(1)
+        }
+    }
 
-        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
+    @Test
+    fun doubleClick_withinTimeout_belowMinimumDuration() {
+        var clickCounter = 0
+        var doubleClickCounter = 0
+        rule.setContent {
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .combinedClickable(
+                            onDoubleClick = { ++doubleClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
 
-        rule.mainClock.advanceTimeUntil { counter == 2 }
+        var doubleTapTimeoutDelay: Long = 0
+
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            doubleTapTimeoutDelay = viewConfiguration.doubleTapTimeoutMillis + 100
+            down(center)
+            up()
+            // Send a second press below the minimum time required for a double tap
+            val minimumDuration = viewConfiguration.doubleTapMinTimeMillis
+            advanceEventTime(minimumDuration / 2)
+            down(center)
+            up()
+        }
+
+        // Because the second tap was below the timeout, it is ignored, and so no click is invoked /
+        // we are still waiting for a second tap to trigger the double click
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(0)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+
+        // After the timeout has run out, the first click will be invoked, and no double click will
+        // be invoked
+        rule.mainClock.advanceTimeBy(doubleTapTimeoutDelay)
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(1)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun doubleClick_outsideTimeout() {
+        var clickCounter = 0
+        var doubleClickCounter = 0
+        rule.setContent {
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .combinedClickable(
+                            onDoubleClick = { ++doubleClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
+
+        var delay: Long = 0
+
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            // Delay slightly past the timeout
+            delay = viewConfiguration.doubleTapTimeoutMillis + 100
+            down(center)
+            up()
+        }
+
+        // The click should not be invoked until the timeout has run out
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(0)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+
+        // After the timeout has run out, the click will be invoked
+        rule.mainClock.advanceTimeBy(delay)
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(1)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+
+        // Perform a second click, after the timeout has elapsed - this should not trigger a double
+        // click
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            up()
+        }
+
+        // The second click should not be invoked until the timeout has run out
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(1)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+
+        // After the timeout has run out, the second click will be invoked, and no double click will
+        // be invoked
+        rule.mainClock.advanceTimeBy(delay)
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(2)
+            assertThat(doubleClickCounter).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun doubleClick_secondClickIsALongClick() {
+        var clickCounter = 0
+        var doubleClickCounter = 0
+        var longClickCounter = 0
+        rule.setContent {
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .combinedClickable(
+                            onDoubleClick = { ++doubleClickCounter },
+                            onClick = { ++clickCounter },
+                            onLongClick = { ++longClickCounter }
+                        )
+            )
+        }
+
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            up()
+            advanceEventTime(doubleTapDelay)
+            down(center)
+        }
+
+        // Wait for the long click
+        rule.mainClock.advanceTimeBy(1000)
+
+        // Long click should cancel double click and click
+        rule.runOnIdle {
+            assertThat(clickCounter).isEqualTo(0)
+            assertThat(doubleClickCounter).isEqualTo(0)
+            assertThat(longClickCounter).isEqualTo(1)
+        }
     }
 
     @Test
@@ -1907,7 +2058,8 @@ class CombinedClickableTest {
                     "onClick",
                     "onDoubleClick",
                     "onLongClick",
-                    "onLongClickLabel"
+                    "onLongClickLabel",
+                    "hapticFeedbackEnabled"
                 )
         }
     }
@@ -1935,7 +2087,8 @@ class CombinedClickableTest {
                     "onLongClick",
                     "onLongClickLabel",
                     "indicationNodeFactory",
-                    "interactionSource"
+                    "interactionSource",
+                    "hapticFeedbackEnabled"
                 )
         }
     }
@@ -2045,192 +2198,6 @@ class CombinedClickableTest {
 
         rule.onNodeWithTag("clickable").performKeyInput { pressKey(Key.Backspace) }
         rule.runOnIdle { assertThat(interactions).isEmpty() }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class)
-    fun doubleEnterKey_emitsFurtherInteractions() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText(
-                    "ClickableText",
-                    modifier =
-                        Modifier.testTag("clickable")
-                            .focusRequester(focusRequester)
-                            .combinedClickable(
-                                interactionSource = interactionSource,
-                                indication = null
-                            ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
-
-        val clickableNode = rule.onNodeWithTag("clickable")
-
-        clickableNode.performKeyInput { pressKey(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(2)
-            assertThat(interactions[0]).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions[1]).isInstanceOf(PressInteraction.Release::class.java)
-        }
-
-        clickableNode.performKeyInput { keyDown(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(3)
-            assertThat(interactions[0]).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions[1]).isInstanceOf(PressInteraction.Release::class.java)
-            assertThat(interactions[2]).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        clickableNode.performKeyInput { keyUp(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(4)
-            assertThat(interactions[0]).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions[1]).isInstanceOf(PressInteraction.Release::class.java)
-            assertThat(interactions[2]).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions[3]).isInstanceOf(PressInteraction.Release::class.java)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class)
-    fun repeatKeyEvents_doNotEmitFurtherInteractions() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        var repeatCounter = 0
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText(
-                    "ClickableText",
-                    modifier =
-                        Modifier.testTag("clickable")
-                            .focusRequester(focusRequester)
-                            .onKeyEvent {
-                                if (it.nativeKeyEvent.repeatCount != 0) repeatCounter++
-                                false
-                            }
-                            .combinedClickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                            ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
-
-        rule.onNodeWithTag("clickable").performKeyInput {
-            keyDown(Key.Enter)
-
-            advanceEventTime(500) // First repeat
-            advanceEventTime(50) // Second repeat
-        }
-
-        rule.runOnIdle {
-            // Ensure that expected number of repeats occurred and did not cause press interactions.
-            assertThat(repeatCounter).isEqualTo(2)
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyUp(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(2)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions.last()).isInstanceOf(PressInteraction.Release::class.java)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class)
-    fun interruptedClick_emitsCancelIndication() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        val enabled = mutableStateOf(true)
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText(
-                    "ClickableText",
-                    modifier =
-                        Modifier.testTag("clickable")
-                            .focusRequester(focusRequester)
-                            .combinedClickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                enabled = enabled.value
-                            ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
-
-        val clickableNode = rule.onNodeWithTag("clickable")
-
-        clickableNode.performKeyInput { keyDown(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        enabled.value = false
-
-        clickableNode.assertIsNotEnabled()
-
-        rule.runOnIdle {
-            // Filter out focus interactions.
-            val pressInteractions = interactions.filterIsInstance<PressInteraction>()
-            assertThat(pressInteractions).hasSize(2)
-            assertThat(pressInteractions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(pressInteractions.last()).isInstanceOf(PressInteraction.Cancel::class.java)
-        }
-
-        // Key releases should not result in interactions.
-        clickableNode.performKeyInput { keyUp(Key.Enter) }
-
-        // Make sure nothing has changed.
-        rule.runOnIdle {
-            val pressInteractions = interactions.filterIsInstance<PressInteraction>()
-            assertThat(pressInteractions).hasSize(2)
-            assertThat(pressInteractions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(pressInteractions.last()).isInstanceOf(PressInteraction.Cancel::class.java)
-        }
     }
 
     // Regression test for b/332814226

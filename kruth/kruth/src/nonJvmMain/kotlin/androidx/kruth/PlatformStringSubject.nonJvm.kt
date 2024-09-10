@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.kruth
+package androidx.compose.ui.test
 
-internal actual interface PlatformStringSubject
+internal actual fun createPlatformTestContext(): PlatformTestContext = implementedInJetBrainsFork()
 
-internal actual class PlatformStringSubjectImpl
-actual constructor(
-    actual: String?,
-    metadata: FailureMetadata,
-) : Subject<String>(actual, metadata, typeDescriptionOverride = null), PlatformStringSubject
+internal actual class PlatformTestContext

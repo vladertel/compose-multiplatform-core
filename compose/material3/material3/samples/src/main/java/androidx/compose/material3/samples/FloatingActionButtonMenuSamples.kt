@@ -19,7 +19,6 @@ package androidx.compose.material3.samples
 import androidx.activity.compose.BackHandler
 import androidx.annotation.Sampled
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,8 +37,9 @@ import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleableFloatingActionButton
-import androidx.compose.material3.ToggleableFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -50,7 +50,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -63,8 +65,11 @@ import androidx.compose.ui.unit.dp
 @Sampled
 @Composable
 fun FloatingActionButtonMenuSample() {
+    val listState = rememberLazyListState()
+    val fabVisible by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+
     Box {
-        LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize()) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             for (index in 0 until 100) {
                 item { Text(text = "List item - $index", modifier = Modifier.padding(24.dp)) }
             }
@@ -84,54 +89,61 @@ fun FloatingActionButtonMenuSample() {
 
         BackHandler(fabMenuExpanded) { fabMenuExpanded = false }
 
-        Column(
-            modifier =
-                Modifier.align(Alignment.BottomEnd).padding(bottom = 16.dp, end = 16.dp).semantics {
-                    isTraversalGroup = true
-                    traversalIndex = -1f
-                },
-            horizontalAlignment = Alignment.End
-        ) {
-            FloatingActionButtonMenu(
-                modifier = Modifier.weight(weight = 1f, fill = false),
-                expanded = fabMenuExpanded,
-                itemsCount = items.size,
-            ) {
-                items.forEachIndexed { i, item ->
-                    FloatingActionButtonMenuItem(
-                        modifier =
-                            Modifier.semantics {
-                                isTraversalGroup = true
-                                traversalIndex = -1f + (items.size - i) * 0.01f
-                            },
-                        onClick = { fabMenuExpanded = false },
-                        icon = { Icon(item.first, contentDescription = null) },
-                        text = { Text(text = item.second) },
-                        itemIndex = i,
+        FloatingActionButtonMenu(
+            modifier = Modifier.align(Alignment.BottomEnd),
+            expanded = fabMenuExpanded,
+            button = {
+                ToggleFloatingActionButton(
+                    modifier =
+                        Modifier.semantics {
+                                traversalIndex = -1f
+                                stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
+                                contentDescription = "Toggle menu"
+                            }
+                            .animateFloatingActionButton(
+                                visible = fabVisible || fabMenuExpanded,
+                                alignment = Alignment.BottomEnd
+                            ),
+                    checked = fabMenuExpanded,
+                    onCheckedChange = { fabMenuExpanded = !fabMenuExpanded }
+                ) {
+                    val imageVector by remember {
+                        derivedStateOf {
+                            if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
+                        }
+                    }
+                    Icon(
+                        painter = rememberVectorPainter(imageVector),
+                        contentDescription = null,
+                        modifier = Modifier.animateIcon({ checkedProgress })
                     )
                 }
             }
-
-            ToggleableFloatingActionButton(
-                modifier =
-                    Modifier.semantics {
-                        isTraversalGroup = true
-                        traversalIndex = -1f
-                        stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
-                        contentDescription = "Toggle menu"
-                    },
-                checked = fabMenuExpanded,
-                onCheckedChange = { fabMenuExpanded = !fabMenuExpanded }
-            ) {
-                val imageVector by remember {
-                    derivedStateOf {
-                        if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
-                    }
-                }
-                Icon(
-                    painter = rememberVectorPainter(imageVector),
-                    contentDescription = null,
-                    modifier = Modifier.animateIcon({ checkedProgress })
+        ) {
+            items.forEachIndexed { i, item ->
+                FloatingActionButtonMenuItem(
+                    modifier =
+                        Modifier.semantics {
+                            isTraversalGroup = true
+                            // Add a custom a11y action to allow closing the menu when focusing
+                            // the last menu item, since the close button comes before the first
+                            // menu item in the traversal order.
+                            if (i == items.size - 1) {
+                                customActions =
+                                    listOf(
+                                        CustomAccessibilityAction(
+                                            label = "Close menu",
+                                            action = {
+                                                fabMenuExpanded = false
+                                                true
+                                            }
+                                        )
+                                    )
+                            }
+                        },
+                    onClick = { fabMenuExpanded = false },
+                    icon = { Icon(item.first, contentDescription = null) },
+                    text = { Text(text = item.second) },
                 )
             }
         }

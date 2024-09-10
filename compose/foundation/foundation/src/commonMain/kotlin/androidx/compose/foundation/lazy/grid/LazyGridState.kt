@@ -25,6 +25,7 @@ import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.internal.checkPrecondition
 import androidx.compose.foundation.lazy.layout.AwaitFirstLayoutModifier
 import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
@@ -140,7 +141,9 @@ constructor(
         LazyGridScrollPosition(firstVisibleItemIndex, firstVisibleItemScrollOffset)
 
     /**
-     * The index of the first item that is visible.
+     * The index of the first item that is visible within the scrollable viewport area, this means,
+     * not including items in the content padding region. For the first visible item that includes
+     * items in the content padding please use [LazyGridLayoutInfo.visibleItemsInfo].
      *
      * Note that this property is observable and if you use it in the composable function it will be
      * recomposed on every change causing potential performance issues.
@@ -385,8 +388,8 @@ constructor(
         if (distance < 0 && !canScrollForward || distance > 0 && !canScrollBackward) {
             return 0f
         }
-        check(abs(scrollToBeConsumed) <= 0.5f) {
-            "entered drag with non-zero pending scroll: $scrollToBeConsumed"
+        checkPrecondition(abs(scrollToBeConsumed) <= 0.5f) {
+            "entered drag with non-zero pending scroll"
         }
         scrollToBeConsumed += distance
 

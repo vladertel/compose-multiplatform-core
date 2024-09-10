@@ -129,6 +129,66 @@ private fun LayoutNode.findClosestParentNode(selector: (LayoutNode) -> Boolean):
     return null
 }
 
+private object TopBottomBoundsComparator : Comparator<Pair<Rect, MutableList<SemanticsNode>>> {
+    override fun compare(
+        a: Pair<Rect, MutableList<SemanticsNode>>,
+        b: Pair<Rect, MutableList<SemanticsNode>>
+    ): Int {
+        val r = a.first.top.compareTo(b.first.top)
+        if (r != 0) return r
+        return a.first.bottom.compareTo(b.first.bottom)
+    }
+}
+
+private object LtrBoundsComparator : Comparator<SemanticsNode> {
+    override fun compare(a: SemanticsNode, b: SemanticsNode): Int {
+        // TODO: boundsInWindow is quite expensive and allocates several objects,
+        // we need to fix this since this is called during sorting
+        val ab = a.boundsInWindow
+        val bb = b.boundsInWindow
+        var r = ab.left.compareTo(bb.left)
+        if (r != 0) return r
+        r = ab.top.compareTo(bb.top)
+        if (r != 0) return r
+        r = ab.bottom.compareTo(bb.bottom)
+        if (r != 0) return r
+        return ab.right.compareTo(bb.right)
+    }
+}
+
+private object RtlBoundsComparator : Comparator<SemanticsNode> {
+    override fun compare(a: SemanticsNode, b: SemanticsNode): Int {
+        // TODO: boundsInWindow is quite expensive and allocates several objects,
+        // we need to fix this since this is called during sorting
+        val ab = a.boundsInWindow
+        val bb = b.boundsInWindow
+        // We want to compare the right-most bounds, with the largest values first — that way
+        // the nodes will be sorted from right to left. Since `compareTo` returns a positive
+        // number if the first object is greater than the second, we want to call
+        // `b.compareTo(a)`, since we want our values in descending order, rather than
+        // ascending order.
+        var r = bb.right.compareTo(ab.right)
+        if (r != 0) return r
+        // Since in RTL layouts we still read from top to bottom, we compare the top and
+        // bottom bounds as usual.
+        r = ab.top.compareTo(bb.top)
+        if (r != 0) return r
+        r = ab.bottom.compareTo(bb.bottom)
+        if (r != 0) return r
+        // We also want to sort the left bounds in descending order, so call `b.compareTo(a)`
+        // here too.
+        return bb.left.compareTo(ab.left)
+    }
+}
+
+// Kotlin `sortWith` should just pull out the highest traversal indices, but keep everything
+// else in place. If the element does not have a `traversalIndex` then `0f` will be used.
+private val UnmergedConfigComparator: (SemanticsNode, SemanticsNode) -> Int = { a, b ->
+    a.unmergedConfig
+        .getOrElse(SemanticsProperties.TraversalIndex) { 0f }
+        .compareTo(b.unmergedConfig.getOrElse(SemanticsProperties.TraversalIndex) { 0f })
+}
+
 @Suppress("NullAnnotationGroup")
 @OptIn(InternalTextApi::class)
 internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidComposeView) :
@@ -208,7 +268,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     // flaky, so we use this callback to test accessibility events.
     @VisibleForTesting
     internal var onSendAccessibilityEvent: (AccessibilityEvent) -> Boolean = {
-        trace("sendAccessibilityEvent") { view.parent.requestSendAccessibilityEvent(view, it) }
+        view.parent.requestSendAccessibilityEvent(view, it)
     }
 
     private val accessibilityManager: AccessibilityManager =
@@ -307,12 +367,9 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         get() {
             if (currentSemanticsNodesInvalidated) { // first instance of retrieving all nodes
                 currentSemanticsNodesInvalidated = false
-                field =
-                    trace("generateCurrentSemanticsNodes") {
-                        view.semanticsOwner.getAllUncoveredSemanticsNodesToIntObjectMap()
-                    }
+                field = view.semanticsOwner.getAllUncoveredSemanticsNodesToIntObjectMap()
                 if (isEnabled) {
-                    trace("setTraversalValues") { setTraversalValues() }
+                    setTraversalValues()
                 }
             }
             return field
@@ -437,43 +494,32 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     }
 
     private fun createNodeInfo(virtualViewId: Int): AccessibilityNodeInfoCompat? {
-        trace("checkIfDestroyed") {
-            if (
-                view.viewTreeOwners?.lifecycleOwner?.lifecycle?.currentState ==
-                    Lifecycle.State.DESTROYED
-            ) {
-                return null
-            }
+        if (
+            view.viewTreeOwners?.lifecycleOwner?.lifecycle?.currentState ==
+                Lifecycle.State.DESTROYED
+        ) {
+            return null
         }
-        val info: AccessibilityNodeInfoCompat =
-            trace("createAccessibilityNodeInfoObject") { AccessibilityNodeInfoCompat.obtain() }
-        val semanticsNodeWithAdjustedBounds =
-            trace("calculateNodeWithAdjustedBounds") { currentSemanticsNodes[virtualViewId] }
-                ?: return null
+        val info: AccessibilityNodeInfoCompat = AccessibilityNodeInfoCompat.obtain()
+        val semanticsNodeWithAdjustedBounds = currentSemanticsNodes[virtualViewId] ?: return null
         val semanticsNode: SemanticsNode = semanticsNodeWithAdjustedBounds.semanticsNode
-        trace("setParentForAccessibility") {
-            if (virtualViewId == AccessibilityNodeProviderCompat.HOST_VIEW_ID) {
-                info.setParent(view.getParentForAccessibility() as? View)
-            } else {
-                var parentId =
-                    checkPreconditionNotNull(semanticsNode.parent?.id) {
-                        "semanticsNode $virtualViewId has null parent"
-                    }
-                if (parentId == view.semanticsOwner.unmergedRootSemanticsNode.id) {
-                    parentId = AccessibilityNodeProviderCompat.HOST_VIEW_ID
+        if (virtualViewId == AccessibilityNodeProviderCompat.HOST_VIEW_ID) {
+            info.setParent(view.getParentForAccessibility() as? View)
+        } else {
+            var parentId =
+                checkPreconditionNotNull(semanticsNode.parent?.id) {
+                    "semanticsNode $virtualViewId has null parent"
                 }
-                info.setParent(view, parentId)
+            if (parentId == view.semanticsOwner.unmergedRootSemanticsNode.id) {
+                parentId = AccessibilityNodeProviderCompat.HOST_VIEW_ID
             }
+            info.setParent(view, parentId)
         }
         info.setSource(view, virtualViewId)
 
-        trace("setBoundsInScreen") {
-            info.setBoundsInScreen(boundsInScreen(semanticsNodeWithAdjustedBounds))
-        }
+        info.setBoundsInScreen(boundsInScreen(semanticsNodeWithAdjustedBounds))
 
-        trace("populateAccessibilityNodeInfoProperties") {
-            populateAccessibilityNodeInfoProperties(virtualViewId, info, semanticsNode)
-        }
+        populateAccessibilityNodeInfoProperties(virtualViewId, info, semanticsNode)
 
         return info
     }
@@ -493,65 +539,58 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         )
     }
 
-    private object TopBottomBoundsComparator : Comparator<Pair<Rect, MutableList<SemanticsNode>>> {
-        override fun compare(
-            a: Pair<Rect, MutableList<SemanticsNode>>,
-            b: Pair<Rect, MutableList<SemanticsNode>>
-        ): Int {
-            val r = a.first.top.compareTo(b.first.top)
-            if (r != 0) return r
-            return a.first.bottom.compareTo(b.first.bottom)
+    private val semanticComparators: Array<Comparator<SemanticsNode>> =
+        Array(2) { index ->
+            val comparator =
+                when (index) {
+                    0 -> RtlBoundsComparator
+                    else -> LtrBoundsComparator
+                }
+            comparator
+                // then compare by layoutNode's zIndex and placement order
+                .thenBy(LayoutNode.ZComparator) { it.layoutNode }
+                // then compare by semanticsId to break the tie somehow
+                .thenBy { it.id }
         }
-    }
-
-    private object LtrBoundsComparator : Comparator<SemanticsNode> {
-        override fun compare(a: SemanticsNode, b: SemanticsNode): Int {
-            // TODO: boundsInWindow is quite expensive and allocates several objects,
-            // we need to fix this since this is called during sorting
-            val ab = a.boundsInWindow
-            val bb = b.boundsInWindow
-            var r = ab.left.compareTo(bb.left)
-            if (r != 0) return r
-            r = ab.top.compareTo(bb.top)
-            if (r != 0) return r
-            r = ab.bottom.compareTo(bb.bottom)
-            if (r != 0) return r
-            return ab.right.compareTo(bb.right)
-        }
-    }
-
-    private object RtlBoundsComparator : Comparator<SemanticsNode> {
-        override fun compare(a: SemanticsNode, b: SemanticsNode): Int {
-            // TODO: boundsInWindow is quite expensive and allocates several objects,
-            // we need to fix this since this is called during sorting
-            val ab = a.boundsInWindow
-            val bb = b.boundsInWindow
-            // We want to compare the right-most bounds, with the largest values first — that way
-            // the nodes will be sorted from right to left. Since `compareTo` returns a positive
-            // number if the first object is greater than the second, we want to call
-            // `b.compareTo(a)`, since we want our values in descending order, rather than
-            // ascending order.
-            var r = bb.right.compareTo(ab.right)
-            if (r != 0) return r
-            // Since in RTL layouts we still read from top to bottom, we compare the top and
-            // bottom bounds as usual.
-            r = ab.top.compareTo(bb.top)
-            if (r != 0) return r
-            r = ab.bottom.compareTo(bb.bottom)
-            if (r != 0) return r
-            // We also want to sort the left bounds in descending order, so call `b.compareTo(a)`
-            // here too.
-            return bb.left.compareTo(ab.left)
-        }
-    }
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun semanticComparator(layoutIsRtl: Boolean): Comparator<SemanticsNode> {
-        return (if (layoutIsRtl) RtlBoundsComparator else LtrBoundsComparator)
-            // then compare by layoutNode's zIndex and placement order
-            .thenBy(LayoutNode.ZComparator) { it.layoutNode }
-            // then compare by semanticsId to break the tie somehow
-            .thenBy { it.id }
+        return semanticComparators[if (layoutIsRtl) 0 else 1]
+    }
+
+    // check to see if this entry overlaps with any groupings in rowGroupings
+    private fun placedEntryRowOverlaps(
+        rowGroupings: ArrayList<Pair<Rect, MutableList<SemanticsNode>>>,
+        node: SemanticsNode
+    ): Boolean {
+        // Conversion to long is needed in order to utilize `until`, which has no float ver
+        val entryTopCoord = node.boundsInWindow.top
+        val entryBottomCoord = node.boundsInWindow.bottom
+        val entryIsEmpty = entryTopCoord >= entryBottomCoord
+
+        for (currIndex in 0..rowGroupings.lastIndex) {
+            val currRect = rowGroupings[currIndex].first
+            val groupIsEmpty = currRect.top >= currRect.bottom
+            val groupOverlapsEntry =
+                !entryIsEmpty &&
+                    !groupIsEmpty &&
+                    max(entryTopCoord, currRect.top) < min(entryBottomCoord, currRect.bottom)
+
+            // If it overlaps with this row group, update cover and add node
+            if (groupOverlapsEntry) {
+                val newRect =
+                    currRect.intersect(0f, entryTopCoord, Float.POSITIVE_INFINITY, entryBottomCoord)
+                // Replace the cover rectangle, copying over the old list of nodes
+                rowGroupings[currIndex] = Pair(newRect, rowGroupings[currIndex].second)
+                // Add current node
+                rowGroupings[currIndex].second.add(node)
+                // We've found an overlapping group, return true
+                return true
+            }
+        }
+
+        // If we've made it here, then there are no groups our entry overlaps with
+        return false
     }
 
     /**
@@ -573,49 +612,13 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     ): MutableList<SemanticsNode> {
         // RowGroupings list consists of pairs, first = a rectangle of the bounds of the row
         // and second = the list of nodes in that row
-        val rowGroupings = ArrayList<Pair<Rect, MutableList<SemanticsNode>>>()
-
-        // check to see if this entry overlaps with any groupings in rowGroupings
-        fun placedEntryRowOverlaps(node: SemanticsNode): Boolean {
-            // Conversion to long is needed in order to utilize `until`, which has no float ver
-            val entryTopCoord = node.boundsInWindow.top
-            val entryBottomCoord = node.boundsInWindow.bottom
-            val entryIsEmpty = entryTopCoord >= entryBottomCoord
-
-            for (currIndex in 0..rowGroupings.lastIndex) {
-                val currRect = rowGroupings[currIndex].first
-                val groupIsEmpty = currRect.top >= currRect.bottom
-                val groupOverlapsEntry =
-                    !entryIsEmpty &&
-                        !groupIsEmpty &&
-                        max(entryTopCoord, currRect.top) < min(entryBottomCoord, currRect.bottom)
-
-                // If it overlaps with this row group, update cover and add node
-                if (groupOverlapsEntry) {
-                    val newRect =
-                        currRect.intersect(
-                            0f,
-                            entryTopCoord,
-                            Float.POSITIVE_INFINITY,
-                            entryBottomCoord
-                        )
-                    // Replace the cover rectangle, copying over the old list of nodes
-                    rowGroupings[currIndex] = Pair(newRect, rowGroupings[currIndex].second)
-                    // Add current node
-                    rowGroupings[currIndex].second.add(node)
-                    // We've found an overlapping group, return true
-                    return true
-                }
-            }
-
-            // If we've made it here, then there are no groups our entry overlaps with
-            return false
-        }
+        val rowGroupings =
+            ArrayList<Pair<Rect, MutableList<SemanticsNode>>>(parentListToSort.size / 2)
 
         for (entryIndex in 0..parentListToSort.lastIndex) {
             val currEntry = parentListToSort[entryIndex]
             // If this is the first entry, or vertical groups don't overlap
-            if (entryIndex == 0 || !placedEntryRowOverlaps(currEntry)) {
+            if (entryIndex == 0 || !placedEntryRowOverlaps(rowGroupings, currEntry)) {
                 val newRect = currEntry.boundsInWindow
                 rowGroupings.add(Pair(newRect, mutableListOf(currEntry)))
             } // otherwise, we've already iterated through, found and placed it in a matching group
@@ -625,19 +628,14 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         rowGroupings.sortWith(TopBottomBoundsComparator)
 
         val returnList = ArrayList<SemanticsNode>()
+        val comparator = semanticComparator(layoutIsRtl)
         rowGroupings.fastForEach { row ->
             // Sort each individual row's parent nodes
-            row.second.sortWith(semanticComparator(layoutIsRtl))
+            row.second.sortWith(comparator)
             returnList.addAll(row.second)
         }
 
-        // Kotlin `sortWith` should just pull out the highest traversal indices, but keep everything
-        // else in place. If the element does not have a `traversalIndex` then `0f` will be used.
-        returnList.sortWith { a, b ->
-            a.unmergedConfig
-                .getOrElse(SemanticsProperties.TraversalIndex) { 0f }
-                .compareTo(b.unmergedConfig.getOrElse(SemanticsProperties.TraversalIndex) { 0f })
-        }
+        returnList.sortWith(UnmergedConfigComparator)
 
         var i = 0
         // Afterwards, go in and add the containers' children.
@@ -688,7 +686,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         if (isTraversalGroup) {
             // Recurse and record the container's children, sorted
             containerMapToChildren[currNode.id] =
-                subtreeSortedByGeometryGrouping(currRTL, currNode.children.toMutableList())
+                subtreeSortedByGeometryGrouping(currRTL, currNode.children)
         } else {
             // Otherwise, continue adding children to the list that'll be sorted regardless of
             // hierarchy
@@ -706,7 +704,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
      */
     private fun subtreeSortedByGeometryGrouping(
         layoutIsRtl: Boolean,
-        listToSort: MutableList<SemanticsNode>
+        listToSort: List<SemanticsNode>
     ): MutableList<SemanticsNode> {
         // This should be mapping of [containerID: listOfSortedChildren], only populated if there
         // are container nodes in this level. If there are container nodes, `containerMapToChildren`
@@ -730,7 +728,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         val hostLayoutIsRtl = hostSemanticsNode.isRtl
 
         val semanticsOrderList =
-            subtreeSortedByGeometryGrouping(hostLayoutIsRtl, mutableListOf(hostSemanticsNode))
+            subtreeSortedByGeometryGrouping(hostLayoutIsRtl, listOf(hostSemanticsNode))
 
         // Iterate through our ordered list, and creating a mapping of current node to next node ID
         // We'll later read through this and set traversal order with IdToBeforeMap
@@ -1558,14 +1556,13 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     @Suppress("DEPRECATION")
     @VisibleForTesting
     private fun createEvent(virtualViewId: Int, eventType: Int): AccessibilityEvent {
-        val event: AccessibilityEvent =
-            trace("obtainAccessibilityEvent") { AccessibilityEvent.obtain(eventType) }
+        val event: AccessibilityEvent = AccessibilityEvent.obtain(eventType)
         event.isEnabled = true
         event.className = ClassName
 
         // Don't allow the client to override these properties.
-        trace("event.packageName") { event.packageName = view.context.packageName }
-        trace("event.setSource") { event.setSource(view, virtualViewId) }
+        event.packageName = view.context.packageName
+        event.setSource(view, virtualViewId)
 
         if (isEnabled) {
             // populate additional information from the node
@@ -1811,19 +1808,19 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 return false
             }
             android.R.id.accessibilityActionPageUp -> {
-                val pageAction = node.unmergedConfig.getOrNull(SemanticsActions.PageUp)
+                val pageAction = node.unmergedConfig.getOrNull(PageUp)
                 return pageAction?.action?.invoke() ?: false
             }
             android.R.id.accessibilityActionPageDown -> {
-                val pageAction = node.unmergedConfig.getOrNull(SemanticsActions.PageDown)
+                val pageAction = node.unmergedConfig.getOrNull(PageDown)
                 return pageAction?.action?.invoke() ?: false
             }
             android.R.id.accessibilityActionPageLeft -> {
-                val pageAction = node.unmergedConfig.getOrNull(SemanticsActions.PageLeft)
+                val pageAction = node.unmergedConfig.getOrNull(PageLeft)
                 return pageAction?.action?.invoke() ?: false
             }
             android.R.id.accessibilityActionPageRight -> {
-                val pageAction = node.unmergedConfig.getOrNull(SemanticsActions.PageRight)
+                val pageAction = node.unmergedConfig.getOrNull(PageRight)
                 return pageAction?.action?.invoke() ?: false
             }
             android.R.id.accessibilityActionSetProgress -> {
@@ -2156,6 +2153,13 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 continue
             }
 
+            // Links in text nodes are semantics children. But for Android accessibility support
+            // we don't publish them to the accessibility services because they are exposed
+            // as UrlSpan/ClickableSpan spans instead
+            if (semanticsNode.config.contains(SemanticsProperties.LinkTestMarker)) {
+                continue
+            }
+
             return virtualViewId
         }
 
@@ -2242,15 +2246,11 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 if (isEnabled) {
                     for (i in subtreeChangedLayoutNodes.indices) {
                         val layoutNode = subtreeChangedLayoutNodes.valueAt(i)
-                        trace("sendSubtreeChangeAccessibilityEvents") {
-                            sendSubtreeChangeAccessibilityEvents(
-                                layoutNode,
-                                subtreeChangedSemanticsNodesIds
-                            )
-                        }
-                        trace("sendTypeViewScrolledAccessibilityEvent") {
-                            sendTypeViewScrolledAccessibilityEvent(layoutNode)
-                        }
+                        sendSubtreeChangeAccessibilityEvents(
+                            layoutNode,
+                            subtreeChangedSemanticsNodesIds
+                        )
+                        sendTypeViewScrolledAccessibilityEvent(layoutNode)
                     }
                     subtreeChangedSemanticsNodesIds.clear()
                     // When the bounds of layout nodes change, we will not always get semantics
@@ -2350,22 +2350,19 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         }
 
         // When we finally send the event, make sure it is an accessibility-focusable node.
-        val id =
-            trace("GetSemanticsNode") {
-                var semanticsNode =
-                    if (layoutNode.nodes.has(Nodes.Semantics)) layoutNode
-                    else layoutNode.findClosestParentNode { it.nodes.has(Nodes.Semantics) }
+        var semanticsNode =
+            if (layoutNode.nodes.has(Nodes.Semantics)) layoutNode
+            else layoutNode.findClosestParentNode { it.nodes.has(Nodes.Semantics) }
 
-                val config = semanticsNode?.collapsedSemantics ?: return
-                if (!config.isMergingSemanticsOfDescendants) {
-                    semanticsNode
-                        .findClosestParentNode {
-                            it.collapsedSemantics?.isMergingSemanticsOfDescendants == true
-                        }
-                        ?.let { semanticsNode = it }
+        val config = semanticsNode?.collapsedSemantics ?: return
+        if (!config.isMergingSemanticsOfDescendants) {
+            semanticsNode
+                .findClosestParentNode {
+                    it.collapsedSemantics?.isMergingSemanticsOfDescendants == true
                 }
-                semanticsNode?.semanticsId ?: return
-            }
+                ?.let { semanticsNode = it }
+        }
+        val id = semanticsNode?.semanticsId ?: return
 
         if (!subtreeChangedSemanticsNodesIds.add(id)) {
             return
@@ -2450,24 +2447,21 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
 
             var propertyChanged = false
 
-            for (entry in newNode.unmergedConfig) {
+            newNode.unmergedConfig.props.forEach { key, value ->
                 var newlyObservingScroll = false
                 if (
-                    entry.key == SemanticsProperties.HorizontalScrollAxisRange ||
-                        entry.key == SemanticsProperties.VerticalScrollAxisRange
+                    key == SemanticsProperties.HorizontalScrollAxisRange ||
+                        key == SemanticsProperties.VerticalScrollAxisRange
                 ) {
                     newlyObservingScroll = registerScrollingId(id, oldScrollObservationScopes)
                 }
-                if (
-                    !newlyObservingScroll &&
-                        entry.value == oldNode.unmergedConfig.getOrNull(entry.key)
-                ) {
-                    continue
+                if (!newlyObservingScroll && value == oldNode.unmergedConfig.getOrNull(key)) {
+                    return@forEach
                 }
                 @Suppress("UNCHECKED_CAST")
-                when (entry.key) {
+                when (key) {
                     SemanticsProperties.PaneTitle -> {
-                        val paneTitle = entry.value as String
+                        val paneTitle = value as String
                         // If oldNode doesn't have pane title, it will be handled in
                         // updateSemanticsNodesCopyAndPanes().
                         if (oldNode.unmergedConfig.contains(SemanticsProperties.PaneTitle)) {
@@ -2571,7 +2565,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                             semanticsNodeIdToAccessibilityVirtualNodeId(id),
                             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
                             AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION,
-                            entry.value as List<String>
+                            value as List<String>
                         )
                     }
                     SemanticsProperties.EditableText -> {
@@ -2705,7 +2699,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                         scheduleScrollEventIfNeeded(scope)
                     }
                     SemanticsProperties.Focused -> {
-                        if (entry.value as Boolean) {
+                        if (value as Boolean) {
                             sendEvent(
                                 createEvent(
                                     semanticsNodeIdToAccessibilityVirtualNodeId(newNode.id),
@@ -2741,10 +2735,8 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     //  selected.
                     else -> {
                         propertyChanged =
-                            if (entry.value is AccessibilityAction<*>) {
-                                !(entry.value as AccessibilityAction<*>).accessibilityEquals(
-                                    oldNode.unmergedConfig.getOrNull(entry.key)
-                                )
+                            if (value is AccessibilityAction<*>) {
+                                !value.accessibilityEquals(oldNode.unmergedConfig.getOrNull(key))
                             } else {
                                 true
                             }
@@ -3161,11 +3153,9 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
 
     private inner class ComposeAccessibilityNodeProvider : AccessibilityNodeProviderCompat() {
         override fun createAccessibilityNodeInfo(virtualViewId: Int): AccessibilityNodeInfoCompat? {
-            return trace("createAccessibilityNodeInfo") {
-                createNodeInfo(virtualViewId).also {
-                    if (sendingFocusAffectingEvent && virtualViewId == focusedVirtualViewId) {
-                        currentlyFocusedANI = it
-                    }
+            return createNodeInfo(virtualViewId).also {
+                if (sendingFocusAffectingEvent && virtualViewId == focusedVirtualViewId) {
+                    currentlyFocusedANI = it
                 }
             }
         }
@@ -3210,12 +3200,12 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         @JvmStatic
         fun addPageActions(info: AccessibilityNodeInfoCompat, semanticsNode: SemanticsNode) {
             if (semanticsNode.enabled()) {
-                semanticsNode.unmergedConfig.getOrNull(SemanticsActions.PageUp)?.let {
+                semanticsNode.unmergedConfig.getOrNull(PageUp)?.let {
                     info.addAction(
                         AccessibilityActionCompat(android.R.id.accessibilityActionPageUp, it.label)
                     )
                 }
-                semanticsNode.unmergedConfig.getOrNull(SemanticsActions.PageDown)?.let {
+                semanticsNode.unmergedConfig.getOrNull(PageDown)?.let {
                     info.addAction(
                         AccessibilityActionCompat(
                             android.R.id.accessibilityActionPageDown,
@@ -3223,7 +3213,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                         )
                     )
                 }
-                semanticsNode.unmergedConfig.getOrNull(SemanticsActions.PageLeft)?.let {
+                semanticsNode.unmergedConfig.getOrNull(PageLeft)?.let {
                     info.addAction(
                         AccessibilityActionCompat(
                             android.R.id.accessibilityActionPageLeft,
@@ -3231,7 +3221,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                         )
                     )
                 }
-                semanticsNode.unmergedConfig.getOrNull(SemanticsActions.PageRight)?.let {
+                semanticsNode.unmergedConfig.getOrNull(PageRight)?.let {
                     info.addAction(
                         AccessibilityActionCompat(
                             android.R.id.accessibilityActionPageRight,

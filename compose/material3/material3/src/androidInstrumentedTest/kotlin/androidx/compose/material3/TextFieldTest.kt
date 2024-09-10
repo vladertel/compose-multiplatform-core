@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:Suppress("DEPRECATION")
-
 package androidx.compose.material3
 
 import android.content.Context
@@ -43,24 +41,28 @@ import androidx.compose.foundation.text.input.delete
 import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.internal.HorizontalIconPadding
+import androidx.compose.material3.internal.AboveLabelBottomPadding
+import androidx.compose.material3.internal.AboveLabelHorizontalPadding
 import androidx.compose.material3.internal.MinFocusedLabelLineHeight
 import androidx.compose.material3.internal.MinSupportingTextLineHeight
 import androidx.compose.material3.internal.MinTextLineHeight
 import androidx.compose.material3.internal.Strings.Companion.DefaultErrorMessage
 import androidx.compose.material3.internal.SupportingTopPadding
-import androidx.compose.material3.internal.TextFieldAnimationDuration
 import androidx.compose.material3.internal.TextFieldPadding
 import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.testutils.assertIsEqualTo
 import androidx.compose.testutils.assertPixels
 import androidx.compose.testutils.assertShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -70,6 +72,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.Ref
@@ -106,6 +109,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
@@ -129,7 +133,7 @@ class TextFieldTest {
     private val ExpectedDefaultTextFieldHeight = TextFieldDefaults.MinHeight
     private val ExpectedDefaultTextFieldWidth = TextFieldDefaults.MinWidth
     private val ExpectedPadding = TextFieldPadding
-    private val IconPadding = HorizontalIconPadding
+    private val IconPadding = 12.dp
     private val TextFieldWidth = 300.dp
     private val TextFieldTag = "textField"
 
@@ -201,6 +205,48 @@ class TextFieldTest {
                 .getBoundsInRoot()
                 .height
                 .assertIsEqualTo(ExpectedDefaultTextFieldHeight)
+
+            rule.mainClock.advanceTimeBy(tick.toLong())
+        }
+    }
+
+    @Test
+    fun testTextField_heightDoesNotChange_duringFocusAnimation_withLargeLabelText() {
+        val numTicks = 5
+        val tick = TextFieldAnimationDuration / numTicks
+        val tfHeight = Ref<Dp>()
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            MaterialTheme(
+                typography =
+                    MaterialTheme.typography.copy(bodyLarge = MaterialTheme.typography.displayLarge)
+            ) {
+                val density = LocalDensity.current
+                TextField(
+                    modifier =
+                        Modifier.testTag(TextFieldTag).onGloballyPositioned {
+                            if (tfHeight.value == null) {
+                                tfHeight.value = with(density) { it.size.height.toDp() }
+                            }
+                        },
+                    state = rememberTextFieldState(),
+                    label = { Text("Label") },
+                )
+            }
+        }
+
+        // click to focus
+        rule.onNodeWithTag(TextFieldTag).performClick()
+
+        repeat(numTicks + 1) {
+            if (tfHeight.value != null) {
+                rule
+                    .onNodeWithTag(TextFieldTag)
+                    .getBoundsInRoot()
+                    .height
+                    .assertIsEqualTo(tfHeight.value!!)
+            }
 
             rule.mainClock.advanceTimeBy(tick.toLong())
         }
@@ -514,6 +560,103 @@ class TextFieldTest {
                 .isWithin(1f)
                 .of(TextFieldWithLabelVerticalPadding.toPx())
         }
+    }
+
+    @Test
+    fun testTextField_labelPosition_whenPositionedAbove() {
+        val labelPosition = Ref<Offset>()
+        rule
+            .setMaterialContentForSizeAssertions {
+                TextField(
+                    state = rememberTextFieldState(),
+                    label = {
+                        Box(
+                            Modifier.size(MinFocusedLabelLineHeight).onGloballyPositioned {
+                                labelPosition.value = it.positionInRoot()
+                            }
+                        )
+                    },
+                    labelPosition = TextFieldLabelPosition.Above(),
+                )
+            }
+            .assertHeightIsEqualTo(
+                MinFocusedLabelLineHeight + AboveLabelBottomPadding + ExpectedDefaultTextFieldHeight
+            )
+
+        rule.runOnIdleWithDensity {
+            // x position is padding
+            assertThat(labelPosition.value?.x).isWithin(1f).of(AboveLabelHorizontalPadding.toPx())
+            // y position is 0
+            assertThat(labelPosition.value?.y).isEqualTo(0f)
+        }
+    }
+
+    @Test
+    fun testTextField_labelPosition_customAlignment() {
+        val labelPosition = Ref<Offset>()
+        val labelSize = MinFocusedLabelLineHeight
+        rule.setMaterialContentForSizeAssertions {
+            TextField(
+                state = rememberTextFieldState(),
+                modifier = Modifier.testTag(TextFieldTag),
+                label = {
+                    Box(
+                        Modifier.size(labelSize).onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
+                    )
+                },
+                labelPosition =
+                    TextFieldLabelPosition.Default(
+                        minimizedAlignment = Alignment.End,
+                        expandedAlignment = Alignment.CenterHorizontally
+                    ),
+            )
+        }
+
+        rule.runOnIdleWithDensity {
+            // centered horizontally
+            assertThat(labelPosition.value?.x)
+                .isWithin(1f)
+                .of(((ExpectedDefaultTextFieldWidth - labelSize) / 2).toPx())
+        }
+
+        rule.onNodeWithTag(TextFieldTag).performClick()
+
+        rule.runOnIdleWithDensity {
+            // end
+            assertThat(labelPosition.value?.x)
+                .isWithin(1f)
+                .of((ExpectedDefaultTextFieldWidth - TextFieldPadding - labelSize).toPx())
+        }
+    }
+
+    @Test
+    fun testTextField_labelScope_progressAndRecomposition() {
+        val progressValue = Ref<Float>()
+        var compositionCount = 0
+        rule.setMaterialContent(lightColorScheme()) {
+            TextField(
+                state = rememberTextFieldState(),
+                modifier = Modifier.testTag(TextFieldTag),
+                label = {
+                    SideEffect { compositionCount++ }
+
+                    // lambda reads `progress` in the draw phase
+                    Box(Modifier.graphicsLayer { progressValue.value = progress })
+                }
+            )
+        }
+
+        assertThat(progressValue.value).isEqualTo(0f)
+        assertThat(compositionCount).isEqualTo(1)
+
+        // click to focus
+        rule.onNodeWithTag(TextFieldTag).performClick()
+        rule.waitForIdle()
+
+        assertThat(progressValue.value).isEqualTo(1f)
+        assertThat(compositionCount).isEqualTo(1)
     }
 
     @Test
@@ -930,7 +1073,7 @@ class TextFieldTest {
                 prefix = { Text(prefixText) },
                 suffix = { Text(suffixText) },
                 placeholder = { Text(placeholderText) },
-                alwaysMinimizeLabel = false,
+                labelPosition = TextFieldLabelPosition.Default(alwaysMinimize = false),
             )
         }
 
@@ -954,7 +1097,30 @@ class TextFieldTest {
                 prefix = { Text(prefixText) },
                 suffix = { Text(suffixText) },
                 placeholder = { Text(placeholderText) },
-                alwaysMinimizeLabel = true,
+                labelPosition = TextFieldLabelPosition.Default(alwaysMinimize = true),
+            )
+        }
+
+        rule.onNodeWithText(labelText).assertIsDisplayed()
+        rule.onNodeWithText(prefixText).assertIsDisplayed()
+        rule.onNodeWithText(suffixText).assertIsDisplayed()
+        rule.onNodeWithText(placeholderText).assertIsDisplayed()
+    }
+
+    @Test
+    fun testTextField_prefixAndSuffixAndPlaceholder_areDisplayed_withLabel_ifLabelIsAbove() {
+        val labelText = "Label"
+        val prefixText = "Prefix"
+        val suffixText = "Suffix"
+        val placeholderText = "Placeholder"
+        rule.setMaterialContent(lightColorScheme()) {
+            TextField(
+                state = rememberTextFieldState(),
+                label = { Text(labelText) },
+                prefix = { Text(prefixText) },
+                suffix = { Text(suffixText) },
+                placeholder = { Text(placeholderText) },
+                labelPosition = TextFieldLabelPosition.Above(),
             )
         }
 
@@ -1718,7 +1884,7 @@ class TextFieldTest {
         rule.runOnUiThread { focusRequester.requestFocus() }
 
         // advance to middle of animation
-        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration.toLong() / 2)
+        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration)
 
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(expectedLabelColor)
@@ -1769,6 +1935,65 @@ class TextFieldTest {
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(bodySmallColor)
             assertThat(contentColor).isEqualTo(focusedLabelColor)
+        }
+    }
+
+    @Test
+    fun testTextField_selectionColors_areCustomizable() {
+        rule.setMaterialContent(lightColorScheme()) {
+            Column {
+                // default colors
+                TextField(
+                    state = rememberTextFieldState(),
+                    label = {
+                        val textSelectionColors = LocalTextSelectionColors.current
+                        assertThat(textSelectionColors.handleColor)
+                            .isEqualTo(MaterialTheme.colorScheme.primary)
+                        assertThat(textSelectionColors.backgroundColor)
+                            .isEqualTo(
+                                MaterialTheme.colorScheme.primary.copy(
+                                    alpha = TextSelectionBackgroundOpacity
+                                )
+                            )
+                    }
+                )
+
+                // set via `colors()`
+                TextField(
+                    state = rememberTextFieldState(),
+                    colors =
+                        TextFieldDefaults.colors(
+                            selectionColors =
+                                TextSelectionColors(
+                                    handleColor = Color.Red,
+                                    backgroundColor = Color.Green
+                                )
+                        ),
+                    label = {
+                        val textSelectionColors = LocalTextSelectionColors.current
+                        assertThat(textSelectionColors.handleColor).isEqualTo(Color.Red)
+                        assertThat(textSelectionColors.backgroundColor).isEqualTo(Color.Green)
+                    }
+                )
+
+                // set via `LocalTextSelectionColors`
+                CompositionLocalProvider(
+                    LocalTextSelectionColors provides
+                        TextSelectionColors(
+                            handleColor = Color.Magenta,
+                            backgroundColor = Color.Yellow
+                        )
+                ) {
+                    TextField(
+                        state = rememberTextFieldState(),
+                        label = {
+                            val textSelectionColors = LocalTextSelectionColors.current
+                            assertThat(textSelectionColors.handleColor).isEqualTo(Color.Magenta)
+                            assertThat(textSelectionColors.backgroundColor).isEqualTo(Color.Yellow)
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -1901,3 +2126,6 @@ private val View.isSoftwareKeyboardShown: Boolean
         //  way to check if the software keyboard is shown.
         return inputMethodManager.isAcceptingText()
     }
+
+// We use springs to animate, so picking an arbitrary duration that work.
+private const val TextFieldAnimationDuration = 75L

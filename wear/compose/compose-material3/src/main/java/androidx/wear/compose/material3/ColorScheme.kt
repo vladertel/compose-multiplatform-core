@@ -207,7 +207,7 @@ class ColorScheme(
 
     // Button Colors
     internal var defaultButtonColorsCached: ButtonColors? = null
-    internal var defaultFilledButtonColorsCached: ButtonColors? = null
+    internal var defaultFilledVariantButtonColorsCached: ButtonColors? = null
     internal var defaultFilledTonalButtonColorsCached: ButtonColors? = null
     internal var defaultOutlinedButtonColorsCached: ButtonColors? = null
     internal var defaultChildButtonColorsCached: ButtonColors? = null
@@ -215,20 +215,22 @@ class ColorScheme(
     // Icon Button
     internal var defaultIconButtonColorsCached: IconButtonColors? = null
     internal var defaultFilledIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultFilledVariantIconButtonColorsCached: IconButtonColors? = null
     internal var defaultFilledTonalIconButtonColorsCached: IconButtonColors? = null
     internal var defaultOutlinedIconButtonColorsCached: IconButtonColors? = null
 
     // Icon Toggle Button
-    internal var defaultIconToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultIconToggleButtonColorsCached: IconToggleButtonColors? = null
 
     // Text Button
     internal var defaultTextButtonColorsCached: TextButtonColors? = null
     internal var defaultFilledTextButtonColorsCached: TextButtonColors? = null
+    internal var defaultFilledVariantTextButtonColorsCached: TextButtonColors? = null
     internal var defaultFilledTonalTextButtonColorsCached: TextButtonColors? = null
     internal var defaultOutlinedTextButtonColorsCached: TextButtonColors? = null
 
     // Text Toggle Button
-    internal var defaultTextToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultTextToggleButtonColorsCached: TextToggleButtonColors? = null
 
     // Card
     internal var defaultCardColorsCached: CardColors? = null
@@ -248,6 +250,21 @@ class ColorScheme(
 
     // Progress Indicator
     internal var defaultProgressIndicatorColorsCached: ProgressIndicatorColors? = null
+
+    // Level Indicator
+    internal var defaultLevelIndicatorColorsCached: LevelIndicatorColors? = null
+
+    // Confirmation
+    internal var defaultConfirmationColorsCached: ConfirmationColors? = null
+    internal var defaultSuccessConfirmationColorsCached: ConfirmationColors? = null
+    internal var defaultFailureConfirmationColorsCached: ConfirmationColors? = null
+
+    // Open on Phone dialog
+    internal var mDefaultOpenOnPhoneDialogColorsCached: OpenOnPhoneDialogColors? = null
+
+    // Picker
+    internal var defaultTimePickerColorsCached: TimePickerColors? = null
+    internal var defaultDatePickerColorsCached: DatePickerColors? = null
 }
 
 /**

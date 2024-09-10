@@ -850,7 +850,7 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
      * place" occurs when the current size is <= 25/32 of the table capacity. The choice of 25/32 is
      * detailed in the implementation of abseil's `raw_hash_set`.
      */
-    private fun adjustStorage() {
+    internal fun adjustStorage() { // Internal to prevent inlining
         if (_capacity > GroupWidth && _size.toULong() * 32UL <= _capacity.toULong() * 25UL) {
             dropDeletes()
         } else {
@@ -858,7 +858,8 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
         }
     }
 
-    private fun dropDeletes() {
+    // Internal to prevent inlining
+    internal fun dropDeletes() {
         val metadata = metadata
         val capacity = _capacity
         val keys = keys
@@ -867,7 +868,6 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
         // Converts Sentinel and Deleted to Empty, and Full to Deleted
         convertMetadataForCleanup(metadata, capacity)
 
-        var swapIndex = -1
         var index = 0
 
         // Drop deleted items and re-hashes surviving entries
@@ -875,7 +875,6 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
             var m = readRawMetadata(metadata, index)
             // Formerly Deleted entry, we can use it as a swap spot
             if (m == Empty) {
-                swapIndex = index
                 index++
                 continue
             }
@@ -922,25 +921,19 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
 
                 values[targetIndex] = values[index]
                 values[index] = null
-
-                swapIndex = index
             } else /* m == Deleted */ {
                 // The target isn't empty so we use an empty slot denoted by
                 // swapIndex to perform the swap
                 val hash2 = h2(hash)
                 writeRawMetadata(metadata, targetIndex, hash2.toLong())
 
-                if (swapIndex == -1) {
-                    swapIndex = findEmptySlot(metadata, index + 1, capacity)
-                }
-
-                keys[swapIndex] = keys[targetIndex]
+                val oldKey = keys[targetIndex]
                 keys[targetIndex] = keys[index]
-                keys[index] = keys[swapIndex]
+                keys[index] = oldKey
 
-                values[swapIndex] = values[targetIndex]
+                val oldValue = values[targetIndex]
                 values[targetIndex] = values[index]
-                values[index] = values[swapIndex]
+                values[index] = oldValue
 
                 // Since we exchanged two slots we must repeat the process with
                 // element we just moved in the current location
@@ -956,7 +949,8 @@ public class MutableIntObjectMap<V>(initialCapacity: Int = DefaultScatterCapacit
         initializeGrowth()
     }
 
-    private fun resizeStorage(newCapacity: Int) {
+    // Internal to prevent inlining
+    internal fun resizeStorage(newCapacity: Int) {
         val previousMetadata = metadata
         val previousKeys = keys
         val previousValues = values
