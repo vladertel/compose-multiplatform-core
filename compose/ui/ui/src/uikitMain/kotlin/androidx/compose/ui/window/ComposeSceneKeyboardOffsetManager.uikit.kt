@@ -21,7 +21,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.scene.ComposeSceneMediator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.OnFocusBehavior
-import androidx.compose.ui.uikit.systemDensity
+import androidx.compose.ui.uikit.density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toDpRect
@@ -245,8 +245,11 @@ internal class ComposeSceneKeyboardOffsetManager(
             return 0.0
         }
         val mediator = composeSceneMediatorProvider()
-        val focusedRect =
-            mediator?.focusManager?.getFocusRect()?.toDpRect(view.systemDensity) ?: return 0.0
+        val focusedRect = mediator
+            ?.focusManager
+            ?.getFocusRect()
+            ?.toDpRect(view.density)
+            ?: return 0.0
 
         val viewHeight = view.frame.useContents { size.height }
 

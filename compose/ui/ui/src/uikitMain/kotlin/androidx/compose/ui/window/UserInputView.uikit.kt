@@ -97,21 +97,21 @@ private val UIGestureRecognizerState.isOngoing: Boolean
         }
 
 /**
- * Enum class representing the possible hit test result of [InteractionUIViewHitTestResult].
+ * Enum class representing the possible hit test result of [UserInputViewHitTestResult].
  * This enum is used solely to determine the strategy of touch event delivery and
  * doesn't require any additional information about the hit-tested view itself.
  */
-private sealed interface InteractionUIViewHitTestResult {
-    data object Self : InteractionUIViewHitTestResult
+private sealed interface UserInputViewHitTestResult {
+    data object Self : UserInputViewHitTestResult
 
-    data object NonCooperativeChildView : InteractionUIViewHitTestResult
+    data object NonCooperativeChildView : UserInputViewHitTestResult
 
     /**
      * Hit test result is Cooperative child view, that allows a delay of [delayMillis] milliseconds.
      */
     class CooperativeChildView(
         val delayMillis: Int
-    ) : InteractionUIViewHitTestResult {
+    ) : UserInputViewHitTestResult {
         val delaySeconds: Double
             get() = delayMillis.toDouble() / 1000.0
     }
@@ -134,7 +134,7 @@ private class GestureRecognizerHandlerImpl(
      * The actual view that was hit-tested by the first touch in the sequence.
      * It could be interop view, for example. If there are tracked touches, assignment is ignored.
      */
-    var hitTestResult: InteractionUIViewHitTestResult? = null
+    var hitTestResult: UserInputViewHitTestResult? = null
         set(value) {
             /**
              * Only remember the first hit-tested view in the sequence.
@@ -187,26 +187,8 @@ private class GestureRecognizerHandlerImpl(
      * Calculates the centroid of the tracked touches.
      */
     private val trackedTouchesCentroidLocation: CValue<CGPoint>?
-        get() {
-            if (trackedTouches.isEmpty()) {
-                return null
-            }
-
-            var centroidX = 0.0
-            var centroidY = 0.0
-
-            for (touch in trackedTouches) {
-                val location = touch.locationInView(view)
-                location.useContents {
-                    centroidX += x
-                    centroidY += y
-                }
-            }
-
-            return CGPointMake(
-                x = centroidX / trackedTouches.size.toDouble(),
-                y = centroidY / trackedTouches.size.toDouble()
-            )
+        get() = view?.let {
+            trackedTouches.centroidLocationInView(it)
         }
 
     /**
@@ -241,7 +223,7 @@ private class GestureRecognizerHandlerImpl(
      *
      */
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
-        if (hitTestResult == InteractionUIViewHitTestResult.NonCooperativeChildView) {
+        if (hitTestResult == UserInputViewHitTestResult.NonCooperativeChildView) {
             // If child view doesn't want delay logic applied, we should immediately fail the gesture
             // and allow touches to go through directly to that view, gesture recognizer should
             // fail immediately, no touches will be received by Compose and the gesture recognizer after
@@ -254,7 +236,7 @@ private class GestureRecognizerHandlerImpl(
 
         onTouchesEvent(trackedTouches, withEvent, TouchesEventKind.BEGAN)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, immediately start/continue the gesture recognizer if possible and pass touches.
             when (gestureRecognizerState) {
                 UIGestureRecognizerStatePossible -> {
@@ -270,10 +252,8 @@ private class GestureRecognizerHandlerImpl(
                 // We are in the scenario (2), we should schedule failure and pass touches to the
                 // interop view.
                 when (val cooperativeChildView = hitTestResult) {
-                    is InteractionUIViewHitTestResult.CooperativeChildView ->
-                        gestureRecognizer?.scheduleFailure(
-                            cooperativeChildView.delaySeconds
-                        )
+                    is UserInputViewHitTestResult.CooperativeChildView ->
+                        gestureRecognizer?.scheduleFailure(cooperativeChildView.delaySeconds)
                     else -> {}
                 }
             } else {
@@ -296,7 +276,7 @@ private class GestureRecognizerHandlerImpl(
     override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
         onTouchesEvent(trackedTouches, withEvent, TouchesEventKind.MOVED)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state and pass touches to
             // the Compose runtime.
 
@@ -326,7 +306,7 @@ private class GestureRecognizerHandlerImpl(
 
         stopTrackingTouches(touches)
 
-        if (gestureRecognizerState.isOngoing || hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (gestureRecognizerState.isOngoing || hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state and pass touches to
             // the Compose runtime.
 
@@ -363,7 +343,7 @@ private class GestureRecognizerHandlerImpl(
 
         stopTrackingTouches(touches)
 
-        if (hitTestResult == InteractionUIViewHitTestResult.Self) {
+        if (hitTestResult == UserInputViewHitTestResult.Self) {
             // Golden path, just update the gesture recognizer state.
 
             if (gestureRecognizerState.isOngoing) {
@@ -497,17 +477,17 @@ private class GestureRecognizerHandlerImpl(
  * @param hitTestInteropView A callback to find an [InteropView] at the given point.
  * @param onTouchesEvent A callback to notify the Compose runtime about touch events.
  * @param onGestureEvent A callback to notify that touches sequence state has began or ended.
- * @param inInteractionBounds A callback to check if the given point is within the interaction
+ * @param isPointInsideInteractionBounds A callback to check if the given point is within the interaction
  * bounds as defined by the owning implementation.
  * @param onKeyboardPresses A callback to notify the Compose runtime about keyboard presses.
  * The parameter is a [Set] of [UIPress] objects. Erasure happens due to K/N not supporting Obj-C
  * lightweight generics.
  */
-internal class InteractionUIView(
+internal class UserInputView(
     private var hitTestInteropView: (point: CValue<CGPoint>, event: UIEvent?) -> UIView?,
     onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: TouchesEventKind) -> Unit,
     onGestureEvent: (GestureEvent) -> Unit,
-    private var inInteractionBounds: (CValue<CGPoint>) -> Boolean,
+    private var isPointInsideInteractionBounds: (CValue<CGPoint>) -> Boolean,
     private var onKeyboardPresses: (Set<*>) -> Unit,
 ) : UIView(CGRectZero.readValue()) {
     private val gestureRecognizerHandler = GestureRecognizerHandlerImpl(
@@ -517,7 +497,6 @@ internal class InteractionUIView(
     )
 
     private val gestureRecognizer = CMPGestureRecognizer()
-
 
     init {
         multipleTouchEnabled = true
@@ -549,7 +528,7 @@ internal class InteractionUIView(
 
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? =
         savingHitTestResult {
-            if (!inInteractionBounds(point)) {
+            if (!isPointInsideInteractionBounds(point)) {
                 null
             } else {
                 // Find if a scene contains an [InteropView]
@@ -582,7 +561,7 @@ internal class InteractionUIView(
 
         hitTestInteropView = { _, _ -> null }
 
-        inInteractionBounds = { false }
+        isPointInsideInteractionBounds = { false }
         onKeyboardPresses = {}
     }
 
@@ -597,7 +576,7 @@ internal class InteractionUIView(
             null
         } else {
             if (result == this) {
-                InteractionUIViewHitTestResult.Self
+                UserInputViewHitTestResult.Self
             } else {
                 // All views beneath are considered to be interop views.
                 // If the hit-tested view is not a descendant of [InteropWrappingView], then it
@@ -607,16 +586,16 @@ internal class InteractionUIView(
 
                 when (interactionMode) {
                     is UIKitInteropInteractionMode.Cooperative -> {
-                        InteractionUIViewHitTestResult.CooperativeChildView(
+                        UserInputViewHitTestResult.CooperativeChildView(
                             delayMillis = interactionMode.delayMillis
                         )
                     }
 
                     is UIKitInteropInteractionMode.NonCooperative -> {
-                        InteractionUIViewHitTestResult.NonCooperativeChildView
+                        UserInputViewHitTestResult.NonCooperativeChildView
                     }
 
-                    null -> InteractionUIViewHitTestResult.Self
+                    null -> UserInputViewHitTestResult.Self
                 }
             }
         }
@@ -638,4 +617,34 @@ private fun UIView.findAncestorInteropWrappingView(): InteropWrappingView? {
         view = view.superview
     }
     return null
+}
+
+/**
+ * Calculate the centroid location of the touches in the given collection.
+ *
+ * @param view The view in which coordinate space calculation is performed.
+ *
+ * @return The centroid location of the touches in [this] collection in the coordinate space
+ * of the given [view]. Or `null` if [this] is empty.
+ */
+internal fun Collection<UITouch>.centroidLocationInView(view: UIView): CValue<CGPoint>? {
+    if (isEmpty()) {
+        return null
+    }
+
+    var centroidX = 0.0
+    var centroidY = 0.0
+
+    for (touch in this) {
+        val location = touch.locationInView(view)
+        location.useContents {
+            centroidX += x
+            centroidY += y
+        }
+    }
+
+    return CGPointMake(
+        x = centroidX / size.toDouble(),
+        y = centroidY / size.toDouble()
+    )
 }

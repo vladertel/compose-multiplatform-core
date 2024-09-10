@@ -249,7 +249,10 @@ internal constructor(
                 if (!keyframes.containsKey(durationMillis)) {
                     times.add(durationMillis)
                 }
-                times.sort()
+
+                //the reason is https://youtrack.jetbrains.com/issue/KT-70005
+                //it was fixed in androidx.collection:collection:1.5.0-alpha01, but we redirect on 1.4.0 yet
+                if (times.isNotEmpty()) times.sort()
                 return@run times
             },
         keyframes =

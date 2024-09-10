@@ -16,18 +16,15 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
 import kotlin.math.floor
 import kotlin.math.roundToLong
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import org.jetbrains.skia.Canvas
-import org.jetbrains.skiko.SkikoRenderDelegate
-import platform.CoreGraphics.CGFloat
 import platform.CoreGraphics.CGRectIsEmpty
-import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSTimeInterval
 import platform.Metal.MTLCreateSystemDefaultDevice
@@ -38,56 +35,57 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIView
 import platform.UIKit.UIViewMeta
 
-internal class RenderingUIView(
-    private val renderDelegate: SkikoRenderDelegate,
-    private val retrieveInteropTransaction: () -> UIKitInteropTransaction,
-) : UIView(
-    frame = CGRectMake(
-        x = 0.0,
-        y = 0.0,
-        width = 1.0, // TODO: Non-zero size need to first render with ComposeSceneLayer
-        height = 1.0
-    )
-) {
+internal class MetalView(
+    retrieveInteropTransaction: () -> UIKitInteropTransaction,
+    render: (Canvas, nanoTime: Long) -> Unit,
+) : UIView(frame = CGRectZero.readValue()) {
     companion object : UIViewMeta() {
+        @BetaInteropApi
         override fun layerClass() = CAMetalLayer
     }
-
-    var onAttachedToWindow: (() -> Unit)? = null
-    private val _isReadyToShowContent: MutableState<Boolean> = mutableStateOf(false)
-    val isReadyToShowContent: State<Boolean> = _isReadyToShowContent
 
     private val device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice()
             ?: throw IllegalStateException("Metal is not supported on this system")
+
     private val metalLayer: CAMetalLayer get() = layer as CAMetalLayer
-    private var _width: CGFloat = 0.0
-    private var _height: CGFloat = 0.0
-    internal val redrawer: MetalRedrawer = MetalRedrawer(
+
+    val redrawer = MetalRedrawer(
         metalLayer,
-        callbacks = object : MetalRedrawerCallbacks {
-            override fun render(canvas: Canvas, targetTimestamp: NSTimeInterval) {
-                renderDelegate.onRender(canvas, _width.toInt(), _height.toInt(), targetTimestamp.toNanoSeconds())
-            }
+        retrieveInteropTransaction,
+    ) { canvas, targetTimestamp ->
+        render(canvas, targetTimestamp.toNanoSeconds())
+    }
 
-            override fun retrieveInteropTransaction(): UIKitInteropTransaction =
-                this@RenderingUIView.retrieveInteropTransaction()
-        }
-    )
+    /**
+     * @see [MetalRedrawer.canBeOpaque]
+     */
+    var canBeOpaque by redrawer::canBeOpaque
 
-    override fun setOpaque(opaque: Boolean) {
-        super.setOpaque(opaque)
+    /**
+     * @see [MetalRedrawer.needsProactiveDisplayLink]
+     */
+    var needsProactiveDisplayLink by redrawer::needsProactiveDisplayLink
 
-        redrawer.opaque = opaque
+    /**
+     * Indicates that the view needs to be drawn synchronously with the next layout pass to avoid
+     * flickering.
+     */
+    private var needsSynchronousDraw = true
+
+    /**
+     * Raise the flag to indicate that the view needs to be drawn synchronously with the next layout.
+     */
+    fun setNeedsSynchronousDrawOnNextLayout() {
+        needsSynchronousDraw = true
     }
 
     init {
         userInteractionEnabled = false
 
         metalLayer.also {
-            // Workaround for KN compiler bug
+            // Workaround for cinterop issue
             // Type mismatch: inferred type is platform.Metal.MTLDeviceProtocol but objcnames.protocols.MTLDeviceProtocol? was expected
-            @Suppress("USELESS_CAST")
             it.device = device as objcnames.protocols.MTLDeviceProtocol?
 
             it.pixelFormat = MTLPixelFormatBGRA8Unorm
@@ -96,28 +94,25 @@ internal class RenderingUIView(
         }
     }
 
-    fun needRedraw() = redrawer.needRedraw()
-
-    var isForcedToPresentWithTransactionEveryFrame by redrawer::isForcedToPresentWithTransactionEveryFrame
-
     fun dispose() {
         redrawer.dispose()
     }
 
     override fun didMoveToWindow() {
         super.didMoveToWindow()
+
         val window = window ?: return
 
         val screen = window.screen
         contentScaleFactor = screen.scale
         redrawer.maximumFramesPerSecond = screen.maximumFramesPerSecond
-        onAttachedToWindow?.invoke()
-        _isReadyToShowContent.value = true
+
         updateMetalLayerSize()
     }
 
     override fun layoutSubviews() {
         super.layoutSubviews()
+
         updateMetalLayerSize()
     }
 
@@ -125,22 +120,18 @@ internal class RenderingUIView(
         if (window == null || CGRectIsEmpty(bounds)) {
             return
         }
-        bounds.useContents {
-            _width = size.width * contentScaleFactor
-            _height = size.height * contentScaleFactor
-        }
 
-        // If drawableSize is zero in any dimension it means that it's a first layout
-        // we need to synchronously dispatch first draw and block until it's presented
-        // so user doesn't have a flicker
-        val needsSynchronousDraw = metalLayer.drawableSize.useContents {
-            width == 0.0 || height == 0.0
+        metalLayer.drawableSize = bounds.useContents {
+            CGSizeMake(
+                width = size.width * contentScaleFactor,
+                height = size.height * contentScaleFactor
+            )
         }
-
-        metalLayer.drawableSize = CGSizeMake(_width, _height)
 
         if (needsSynchronousDraw) {
             redrawer.drawSynchronously()
+
+            needsSynchronousDraw = false
         }
     }
 
