@@ -863,6 +863,8 @@ public class MutableFloatList(
      * Sorts the [MutableFloatList] elements in ascending order.
      */
     public fun sort() {
+        // TODO: remove a return after https://youtrack.jetbrains.com/issue/KT-70005 is fixed
+        if (_size == 0) return
         content.sort(fromIndex = 0, toIndex = _size)
     }
 
@@ -870,6 +872,8 @@ public class MutableFloatList(
      * Sorts the [MutableFloatList] elements in descending order.
      */
     public fun sortDescending() {
+        // TODO: remove a return after https://youtrack.jetbrains.com/issue/KT-70005 is fixed
+        if (_size == 0) return
         content.sortDescending(fromIndex = 0, toIndex = _size)
     }
 }

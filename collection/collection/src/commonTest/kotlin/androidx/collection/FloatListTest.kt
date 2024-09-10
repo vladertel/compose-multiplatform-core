@@ -659,6 +659,14 @@ class FloatListTest {
     }
 
     @Test
+    fun sortEmpty() {
+        val l = MutableFloatList(0)
+        l.sort()
+        l.sortDescending()
+        assertEquals(MutableFloatList(0), l)
+    }
+
+    @Test
     fun testEmptyFloatList() {
         val l = emptyFloatList()
         assertEquals(0, l.size)
