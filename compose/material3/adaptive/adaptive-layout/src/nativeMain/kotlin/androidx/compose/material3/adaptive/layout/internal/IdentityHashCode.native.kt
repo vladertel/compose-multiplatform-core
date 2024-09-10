@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.compose.runtime
+package androidx.compose.material3.adaptive.layout.internal
 
-internal actual class SynchronizedObject : kotlinx.atomicfu.locks.SynchronizedObject()
+import kotlin.native.identityHashCode
 
-@PublishedApi
-internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =
-    kotlinx.atomicfu.locks.synchronized(lock, block)
+internal actual fun identityHashCode(instance: Any?): Int =
+    instance.identityHashCode()

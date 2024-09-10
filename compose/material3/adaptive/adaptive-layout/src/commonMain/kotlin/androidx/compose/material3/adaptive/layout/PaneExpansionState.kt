@@ -27,6 +27,7 @@ import androidx.compose.foundation.gestures.DragScope
 import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.PaneExpansionState.Companion.Unspecified
+import androidx.compose.material3.adaptive.layout.internal.identityHashCode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -71,7 +72,7 @@ sealed interface PaneExpansionStateKey {
         }
 
         override fun hashCode(): Int {
-            return System.identityHashCode(this)
+            return identityHashCode(this)
         }
     }
 
