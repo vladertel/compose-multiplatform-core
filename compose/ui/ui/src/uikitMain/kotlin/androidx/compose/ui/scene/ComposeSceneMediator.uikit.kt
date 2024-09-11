@@ -20,10 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.SessionMutex
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -37,6 +38,10 @@ import androidx.compose.ui.input.pointer.HistoricalChange
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.layout.OffsetToFocusedRect
+import androidx.compose.ui.layout.OverlayLayout
+import androidx.compose.ui.layout.adjustedToFocusedRectOffset
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AccessibilityMediator
 import androidx.compose.ui.platform.AccessibilitySyncOptions
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
@@ -57,12 +62,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.ExclusiveLayoutConstraints
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
+import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -88,6 +94,8 @@ import androidx.compose.ui.window.TouchesEventKind
 import androidx.compose.ui.window.UserInputView
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
@@ -190,7 +198,8 @@ internal class ComposeSceneMediator(
 
     private var onKeyEvent: (KeyEvent) -> Boolean = { false }
 
-    private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
+    private var keyboardOverlapHeight by mutableStateOf(0.dp)
+    private var animateKeyboardOffsetChanges by mutableStateOf(false)
 
     private val viewConfiguration: ViewConfiguration =
         object : ViewConfiguration by EmptyViewConfiguration {
@@ -226,8 +235,6 @@ internal class ComposeSceneMediator(
         set(value) {
             scene.compositionLocalContext = value
         }
-
-    val focusManager get() = scene.focusManager
 
     private val userInputViewConstraints = ExclusiveLayoutConstraints()
 
@@ -280,8 +287,8 @@ internal class ComposeSceneMediator(
     @OptIn(ExperimentalComposeApi::class)
     private val semanticsOwnerListener by lazy {
         SemanticsOwnerListenerImpl(
-            view,
-            coroutineContext,
+            rootView = view,
+            coroutineContext = coroutineContext,
             getAccessibilitySyncOptions = {
                 configuration.accessibilitySyncOptions
             },
@@ -298,18 +305,17 @@ internal class ComposeSceneMediator(
             }
         )
     }
-
+    @OptIn(ExperimentalComposeApi::class)
     private val keyboardManager by lazy {
         ComposeSceneKeyboardOffsetManager(
-            configuration = configuration,
-            keyboardOverlapHeightState = keyboardOverlapHeightState,
-            viewProvider = { viewForKeyboardOffsetTransform },
-            composeSceneMediatorProvider = { this },
-            onComposeSceneOffsetChanged = { offset ->
-                viewForKeyboardOffsetTransform.layer.setAffineTransform(
-                    CGAffineTransformMakeTranslation(0.0, -offset)
-                )
-                scene.invalidatePositionInWindow()
+            view = viewForKeyboardOffsetTransform,
+            keyboardOverlapHeightChanged = { height ->
+                if (configuration.platformLayers) {
+                    if (keyboardOverlapHeight != height) {
+                        animateKeyboardOffsetChanges = false
+                    }
+                }
+                keyboardOverlapHeight = height
             }
         )
     }
@@ -323,6 +329,9 @@ internal class ComposeSceneMediator(
             rootView = view,
             viewConfiguration = viewConfiguration,
             focusStack = focusStack,
+            onInputStarted = {
+                animateKeyboardOffsetChanges = true
+            },
             onKeyboardPresses = ::onKeyboardPresses
         ).also {
             KeyboardVisibilityListener.initialize()
@@ -402,18 +411,38 @@ internal class ComposeSceneMediator(
         view.embedSubview(userInputView)
     }
 
+    private var lastFocusedRect: Rect? = null
+    private fun getFocusedRect(): Rect? {
+        return scene.focusManager.getFocusRect()?.also {
+            lastFocusedRect = it
+        } ?: lastFocusedRect
+    }
+
     fun setContent(content: @Composable () -> Unit) {
         view.runOnceOnAppeared {
             focusStack?.pushAndFocus(userInputView)
 
             scene.setContent {
                 ProvideComposeSceneMediatorCompositionLocals {
-                    interopContainer.TrackInteropPlacementContainer(
-                        content = content
-                    )
+                    FocusAboveKeyboardIfNeeded {
+                        interopContainer.TrackInteropPlacementContainer(content = content)
+                    }
                 }
             }
         }
+    }
+
+    private fun updateViewOffset() {
+        val yOffset = density.adjustedToFocusedRectOffset(
+            insets = PlatformInsets(bottom = keyboardOverlapHeight),
+            focusedRect = getFocusedRect(),
+            size = scene.size,
+            currentOffset = IntOffset.Zero,
+        ).y / density.density
+
+        viewForKeyboardOffsetTransform.layer.setAffineTransform(
+            CGAffineTransformMakeTranslation(0.0, yOffset.toDouble())
+        )
     }
 
     fun performOrientationChangeAnimation(
@@ -485,11 +514,60 @@ internal class ComposeSceneMediator(
     private fun ProvideComposeSceneMediatorCompositionLocals(content: @Composable () -> Unit) =
         CompositionLocalProvider(
             LocalInteropContainer provides interopContainer,
-            LocalKeyboardOverlapHeight provides keyboardOverlapHeightState.value,
+            LocalKeyboardOverlapHeight provides keyboardOverlapHeight,
             LocalSafeArea provides safeArea,
             LocalLayoutMargins provides layoutMargins,
             content = content
         )
+
+    @OptIn(ExperimentalComposeApi::class)
+    @Composable
+    private fun FocusAboveKeyboardIfNeeded(content: @Composable () -> Unit) {
+        if (configuration.onFocusBehavior == OnFocusBehavior.FocusableAboveKeyboard) {
+            if (configuration.platformLayers) {
+                OffsetToFocusedRect(
+                    insets = PlatformInsets(bottom = keyboardOverlapHeight),
+                    getFocusedRect = ::getFocusedRect,
+                    size = scene.size,
+                    animationDuration = if (animateKeyboardOffsetChanges) {
+                        FOCUS_CHANGE_ANIMATION_DURATION
+                    } else {
+                        0.seconds
+                    },
+                    animationCompletion = {
+                        animateKeyboardOffsetChanges = false
+                    },
+                    content = content
+                )
+            } else {
+                LaunchedEffect(keyboardOverlapHeight) {
+                    scene.invalidatePositionInWindow()
+                }
+                LaunchedEffect(animateKeyboardOffsetChanges) {
+                    if (animateKeyboardOffsetChanges) {
+                        UIView.animateWithDuration(
+                            duration = FOCUS_CHANGE_ANIMATION_DURATION.toDouble(
+                                DurationUnit.SECONDS
+                            ),
+                            animations = ::updateViewOffset,
+                            completion = {
+                                scene.invalidatePositionInWindow()
+                                animateKeyboardOffsetChanges = false
+                            }
+                        )
+                    }
+                }
+                OverlayLayout(
+                    modifier = Modifier.onGloballyPositioned {
+                        updateViewOffset()
+                    },
+                    content = content
+                )
+            }
+        } else {
+            content()
+        }
+    }
 
     fun dispose() {
         onPreviewKeyEvent = { false }
@@ -642,8 +720,9 @@ internal class ComposeSceneMediator(
             textInputService.updateState(oldValue = null, newValue = newState)
         }
     }
-
 }
+
+private val FOCUS_CHANGE_ANIMATION_DURATION = 0.15.seconds
 
 private fun TouchesEventKind.toPointerEventType(): PointerEventType =
     when (this) {
