@@ -40,7 +40,7 @@ configurations {
 
 dependencies {
     implementation("com.android.tools.build:gradle:7.3.0")
-    implementation(libs.kotlinGradlePluginz)
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
     api(project(":navigation:navigation-safe-args-generator"))
     api(gradleApi())
     implementation(libs.gson)
