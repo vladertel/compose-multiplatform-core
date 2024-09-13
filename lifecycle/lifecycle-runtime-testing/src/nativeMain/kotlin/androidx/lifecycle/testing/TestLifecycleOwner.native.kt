@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.navigation
+package androidx.lifecycle.testing
 
-import androidx.annotation.RestrictTo
-import androidx.core.bundle.Bundle
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public actual class NoOpNavigator
-actual constructor(): Navigator<NavDestination>("NoOp") {
-    public actual override fun createDestination(): NavDestination = NavDestination(this)
-
-    public actual override fun navigate(
-        destination: NavDestination,
-        args: Bundle?,
-        navOptions: NavOptions?,
-        navigatorExtras: Extras?
-    ): NavDestination = destination
-
-    public actual override fun popBackStack(): Boolean = true
-}
+internal actual fun <T> runBlockingIfPossible(
+    dispatcher: CoroutineDispatcher,
+    block: () -> T
+): T = runBlocking(dispatcher) { block() }
