@@ -85,6 +85,7 @@ internal class UIKitInstrumentedTest {
         private set
     lateinit var hostingViewController: ComposeHostingViewController
         private set
+    val view get() = hostingViewController.view
 
     private val infiniteAnimationPolicy = object : InfiniteAnimationPolicy {
         override suspend fun <R> onInfiniteOperation(block: suspend () -> R): R {

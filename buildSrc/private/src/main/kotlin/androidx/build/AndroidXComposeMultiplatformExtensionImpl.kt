@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithSimulatorTests
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 import org.jetbrains.kotlin.gradle.targets.native.DefaultSimulatorTestRun
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.tomlj.Toml
@@ -260,21 +259,6 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
     private val instrumentedTestAttribute = Attribute.of("instrumentedTest", String::class.java)
     private val instrumentedTestCompilationAttribute = Attribute.of("instrumentedTestCompilation", String::class.java)
 
-//    The consumer was configured to find a library for use during 'kotlin-metadata',
-//    preferably optimized for non-jvm, as well as
-//    attribute 'org.jetbrains.kotlin.platform.type'
-//        with value 'native',
-//    attribute 'org.jetbrains.kotlin.native.target'
-//        with value 'ios_simulator_arm64',
-//    attribute 'instrumentedTest'
-//        with value 'Test'.
-//    However we cannot choose between the following variants of project :compose:ui:ui:
-//        - uikitInstrumentedSimArm64ApiElements
-//        - uikitInstrumentedSimArm64MetadataElements
-//        - uikitSimArm64ApiElements
-//        - uikitSimArm64MetadataElements
-
-
     override fun iosInstrumentedTest(): Unit =
         multiplatformExtension.run {
             fun getDeviceName(): String? {
@@ -298,7 +282,7 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
             }
 
             fun KotlinNativeTargetWithSimulatorTests.configureTestRun() {
-                attributes.attribute(instrumentedTestAttribute, "test")
+                attributes.attribute(instrumentedTestAttribute, targetName)
                 testRuns.forEach {
                     (it as DefaultSimulatorTestRun).executionTask.configure { task ->
                         task.dependsOn(bootTask)
@@ -307,7 +291,7 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
                     }
                 }
                 compilations.forEach {
-                    it.attributes.attribute(instrumentedTestCompilationAttribute, "test")
+                    it.attributes.attribute(instrumentedTestCompilationAttribute, targetName)
                 }
             }
 

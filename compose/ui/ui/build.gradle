@@ -97,6 +97,7 @@ dependencies {
         testImplementation(libs.mockitoKotlin4)
         testImplementation(libs.robolectric)
         testImplementation(project(":compose:ui:ui-test-junit4"))
+        testImplementation(project(":compose:ui:ui-uikit"))
         testImplementation(project(":compose:test-utils"))
 
         androidTestImplementation(libs.testCore)
@@ -344,6 +345,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 languageSettings.optIn("androidx.compose.ui.InternalComposeUiApi")
             }
         }
+
+        configureInstrumentedTestsCInterops(targets.uikitInstrumentedX64)
+        configureInstrumentedTestsCInterops(targets.uikitInstrumentedSimArm64)
     }
     dependencies {
         samples(project(":compose:ui:ui:ui-samples"))
@@ -436,4 +440,37 @@ if (!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     for (variant in ["debug", "release"]) {
         verifyKotlinModule(variant)
     }
+}
+
+private def configureInstrumentedTestsCInterops(target) {
+    def headersPath = new File(project.projectDir, "src/uikitInstrumentedTest/objc/headers")
+    target.compilations.main {
+        cinterops {
+            uikitInstrumentedTest {
+                headersPath.eachFileRecurse {
+                    if (it.name.endsWith('.h')) {
+                        headers(it)
+                    }
+                }
+            }
+        }
+    }
+
+    def systemFrameworks = ["UIKit"]
+    def linkerFlags = ["-ObjC"] + systemFrameworks.collectMany {
+        ["-framework", it]
+    }
+    def compilerArgs = linkerFlags.collectMany {
+        ["-linker-option", it]
+    }
+
+    target.binaries.all {
+        freeCompilerArgs += compilerArgs
+    }
+    target.compilations.all {
+        kotlinOptions {
+            freeCompilerArgs += compilerArgs
+        }
+    }
+
 }

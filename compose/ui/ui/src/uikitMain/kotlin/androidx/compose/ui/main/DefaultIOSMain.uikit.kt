@@ -16,19 +16,31 @@
 
 package androidx.compose.ui.main
 
-import kotlinx.cinterop.*
-import platform.UIKit.*
-import platform.Foundation.*
+import kotlinx.cinterop.ObjCObjectBase
+import kotlinx.cinterop.autoreleasepool
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.toCValues
+import platform.Foundation.NSStringFromClass
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationDelegateProtocol
+import platform.UIKit.UIApplicationDelegateProtocolMeta
+import platform.UIKit.UIApplicationMain
+import platform.UIKit.UIResponder
+import platform.UIKit.UIResponderMeta
+import platform.UIKit.UIScreen
+import platform.UIKit.UIViewController
+import platform.UIKit.UIWindow
 
 private var _rootViewController: UIViewController? = null
 
-fun defaultUIKitMain(executableName: String, rootViewController: UIViewController) {
-    _rootViewController = rootViewController
+fun defaultUIKitMain(executableName: String, rootViewController: () -> UIViewController) {
     val args = emptyArray<String>()
     memScoped {
         val argc = args.size + 1
         val argv = (arrayOf(executableName) + args).map { it.cstr.ptr }.toCValues()
         autoreleasepool {
+            _rootViewController = rootViewController()
             UIApplicationMain(argc, argv, null, NSStringFromClass(DefaultIOSAppDelegate))
         }
     }
