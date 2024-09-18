@@ -234,7 +234,7 @@ tasks.register("printDarwinOnlyKlibApi") {
         // Looking for '// Targets: [xxx. ios|apple, xxx]' pattern
         val regex = "\\/\\/ Targets: \\[([\\w\\d]*, )*($targets)(, [\\w\\d]*)*\\]".toRegex()
         val composeDirectory = file("../compose")
-        // Ignore lines which exposes '$stableprop' only function
+        // Ignore lines that only expose the `$stableprop`
         val ignoreStableprop = true
         val klibDumpSuffix = ".klib.api"
 
