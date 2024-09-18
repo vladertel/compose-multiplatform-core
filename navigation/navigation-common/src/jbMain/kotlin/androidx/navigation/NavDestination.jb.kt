@@ -75,8 +75,7 @@ public actual open class NavDestination actual constructor(
     }
 
     public actual var parent: NavGraph? = null
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        public set
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) public set
 
     public actual var label: CharSequence? = null
     private val deepLinks = mutableListOf<NavDeepLink>()
@@ -106,8 +105,7 @@ public actual open class NavDestination actual constructor(
         }
 
     public actual open val displayName: String
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        get() = navigatorName
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) get() = navigatorName
 
     public actual fun addDeepLink(uriPattern: String) {
         addDeepLink(NavDeepLink.Builder().setUriPattern(uriPattern).build())
@@ -126,6 +124,21 @@ public actual open class NavDestination actual constructor(
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public actual open fun matchDeepLink(route: String): DeepLinkMatch? {
+        val matchingDeepLink =
+            if (this is NavGraph) {
+                matchDeepLinkComprehensive(
+                    route,
+                    searchChildren = false,
+                    searchParent = false,
+                    lastVisited = this
+                )
+            } else {
+                matchDeepLinkRequest(route)
+            }
+        return matchingDeepLink
+    }
+
+    internal fun matchDeepLinkRequest(route: String): DeepLinkMatch? {
         if (deepLinks.isEmpty()) {
             return null
         }

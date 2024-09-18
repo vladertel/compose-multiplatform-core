@@ -1048,7 +1048,9 @@ internal abstract class AbstractClickableNode(
         if (focusState.isFocused) {
             initializeIndicationAndInteractionSourceIfNeeded()
         }
-        focusableNode.onFocusEvent(focusState)
+        if (enabled) {
+            focusableNode.onFocusEvent(focusState)
+        }
     }
 
     final override val shouldMergeDescendantSemantics: Boolean
