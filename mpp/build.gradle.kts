@@ -255,7 +255,7 @@ tasks.register("printDarwinOnlyKlibApi") {
                 if (matchedLines.isNotEmpty()) {
                     println("\n${file.relativeTo(project.rootDir).parentFile.parentFile} : ${matchedLines.count()}")
                     matchedLines.forEach {
-                        println("\n${file}:${it.first} | ${it.second.trimStart()}")
+                        println("${file}:${it.first} | ${it.second.trimStart()}")
                     }
                 }
             }
