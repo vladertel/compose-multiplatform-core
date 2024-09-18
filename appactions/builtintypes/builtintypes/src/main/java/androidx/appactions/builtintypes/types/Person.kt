@@ -59,12 +59,12 @@ public interface Person : Thing {
    *
    * See https://schema.org/telephone for more context.
    */
-  @get:Document.StringProperty
+  @get:Document.StringProperty(name = "telephone")
   public val telephoneNumber: String?
     get() = null
 
   /** Converts this [Person] to its builder with all the properties copied over. */
-  override fun toBuilder(): Builder<*>
+  public override fun toBuilder(): Builder<*>
 
   public companion object {
     /** Returns a default implementation of [Builder]. */
@@ -79,7 +79,7 @@ public interface Person : Thing {
    */
   public interface Builder<Self : Builder<Self>> : Thing.Builder<Self> {
     /** Returns a built [Person]. */
-    override fun build(): Person
+    public override fun build(): Person
 
     /** Sets the `email`. */
     @Suppress("DocumentExceptions")
@@ -102,8 +102,8 @@ public interface Person : Thing {
  * )
  * class MyPerson internal constructor(
  *   person: Person,
- *   @Document.StringProperty val foo: String,
- *   @Document.LongProperty val bars: List<Int>,
+ *   val foo: String,
+ *   val bars: List<Int>,
  * ) : AbstractPerson<
  *   MyPerson,
  *   MyPerson.Builder
@@ -123,7 +123,6 @@ public interface Person : Thing {
  *       .addBars(bars)
  *   }
  *
- *   @Document.BuilderProducer
  *   class Builder :
  *     AbstractPerson.Builder<
  *       Builder,
@@ -139,11 +138,11 @@ public abstract class AbstractPerson<
   Builder : AbstractPerson.Builder<Builder, Self>
 >
 internal constructor(
-  final override val namespace: String,
-  final override val email: String?,
-  final override val telephoneNumber: String?,
-  final override val identifier: String,
-  final override val name: Name?,
+  public final override val namespace: String,
+  public final override val email: String?,
+  public final override val telephoneNumber: String?,
+  public final override val identifier: String,
+  public final override val name: Name?,
 ) : Person {
   /**
    * Human readable name for the concrete [Self] class.
@@ -167,7 +166,7 @@ internal constructor(
   /** Returns a concrete [Builder] with the additional, non-[Person] properties copied over. */
   protected abstract fun toBuilderWithAdditionalPropertiesOnly(): Builder
 
-  final override fun toBuilder(): Builder =
+  public final override fun toBuilder(): Builder =
     toBuilderWithAdditionalPropertiesOnly()
       .setNamespace(namespace)
       .setEmail(email)
@@ -175,7 +174,7 @@ internal constructor(
       .setIdentifier(identifier)
       .setName(name)
 
-  final override fun equals(other: Any?): Boolean {
+  public final override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || this::class.java != other::class.java) return false
     other as Self
@@ -188,10 +187,10 @@ internal constructor(
     return true
   }
 
-  final override fun hashCode(): Int =
+  public final override fun hashCode(): Int =
     Objects.hash(namespace, email, telephoneNumber, identifier, name, additionalProperties)
 
-  final override fun toString(): String {
+  public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
     if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
@@ -218,13 +217,11 @@ internal constructor(
    *
    * Allows for extension like:
    * ```kt
-   * @Document(...)
    * class MyPerson :
    *   : AbstractPerson<
    *     MyPerson,
    *     MyPerson.Builder>(...) {
    *
-   *   @Document.BuilderProducer
    *   class Builder
    *   : AbstractPerson.Builder<
    *       Builder,
@@ -306,36 +303,36 @@ internal constructor(
      */
     @Suppress("BuilderSetStyle") protected abstract fun buildFromPerson(person: Person): Built
 
-    final override fun build(): Built =
+    public final override fun build(): Built =
       buildFromPerson(PersonImpl(namespace, email, telephoneNumber, identifier, name))
 
-    final override fun setNamespace(namespace: String): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
 
-    final override fun setEmail(text: String?): Self {
+    public final override fun setEmail(text: String?): Self {
       this.email = text
       return this as Self
     }
 
-    final override fun setTelephoneNumber(text: String?): Self {
+    public final override fun setTelephoneNumber(text: String?): Self {
       this.telephoneNumber = text
       return this as Self
     }
 
-    final override fun setIdentifier(text: String): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
 
-    final override fun setName(name: Name?): Self {
+    public final override fun setName(name: Name?): Self {
       this.name = name
       return this as Self
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun equals(other: Any?): Boolean {
+    public final override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (other == null || this::class.java != other::class.java) return false
       other as Self
@@ -349,11 +346,11 @@ internal constructor(
     }
 
     @Suppress("BuilderSetStyle")
-    final override fun hashCode(): Int =
+    public final override fun hashCode(): Int =
       Objects.hash(namespace, email, telephoneNumber, identifier, name, additionalProperties)
 
     @Suppress("BuilderSetStyle")
-    final override fun toString(): String {
+    public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
       if (namespace.isNotEmpty()) {
         attributes["namespace"] = namespace

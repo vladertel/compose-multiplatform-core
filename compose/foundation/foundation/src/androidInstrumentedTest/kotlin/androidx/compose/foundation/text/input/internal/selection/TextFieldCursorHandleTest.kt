@@ -16,6 +16,11 @@
 
 package androidx.compose.foundation.text.input.internal.selection
 
+import android.view.InputDevice
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
+import android.view.KeyEvent.ACTION_DOWN
+import android.view.View
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
@@ -25,6 +30,7 @@ import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.text.selection.assertHandlePositionMatches
 import androidx.compose.foundation.text.selection.isSelectionHandle
@@ -35,12 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.isNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -535,12 +544,16 @@ class TextFieldCursorHandleTest : FocusedWindowTest {
         rule.onNode(isSelectionHandle(Handle.Cursor)).assertIsDisplayed()
 
         rule.onNodeWithTag(TAG).performTouchInput {
+            // The swipes are small enough that the selection gesture counts this as a multi-press,
+            // so advance the time so that it isn't counted as a multi press.
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis * 2)
             swipeUp(endY = -bottom)
         }
         rule.waitForIdle()
         rule.onNode(isSelectionHandle(Handle.Cursor)).assertDoesNotExist()
 
         rule.onNodeWithTag(TAG).performTouchInput {
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis * 2)
             swipeDown(endY = 2 * bottom)
         }
         rule.waitForIdle()
@@ -944,6 +957,56 @@ class TextFieldCursorHandleTest : FocusedWindowTest {
     }
 
     // endregion
+
+    @Test
+    fun cursorHandleHides_whenHardwareKeyboardIsUsed_thenComesBackWithTouch() {
+        state = TextFieldState("hello")
+        lateinit var view: View
+        rule.setTextFieldTestContent {
+            view = LocalView.current
+            BasicTextField(
+                state,
+                textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
+                modifier = Modifier.testTag(TAG)
+            )
+        }
+
+        focusAndWait()
+
+        rule.onNodeWithTag(TAG).performTouchInput {
+            click(Offset(fontSize.toPx() * 2, fontSize.toPx() / 2))
+        }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).isDisplayed()
+
+        state.edit { placeCursorAtEnd() }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).isDisplayed()
+
+        // regular `performKeyInput` scope does not set source to InputDevice.SOURCE_KEYBOARD
+        view.dispatchKeyEvent(
+            KeyEvent(
+                /* downTime = */ 0,
+                /* eventTime = */ 0,
+                /* action = */ ACTION_DOWN,
+                /* code = */ KeyEvent.KEYCODE_DPAD_LEFT,
+                /* repeat = */ 0,
+                /* metaState = */ 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD,
+                /* scancode= */ 0,
+                /* flags= */ 0,
+                /* source= */ InputDevice.SOURCE_KEYBOARD
+            )
+        )
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).isNotDisplayed()
+
+        rule.onNodeWithTag(TAG).performTouchInput {
+            click(Offset(fontSize.toPx() * 2, fontSize.toPx() / 2))
+        }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).isDisplayed()
+    }
 
     private fun focusAndWait() {
         rule.onNode(hasSetTextAction()).requestFocus()

@@ -265,16 +265,21 @@ internal class CredentialProviderGetSignInIntentController(private val context: 
 
     companion object {
         private const val TAG = "GetSignInIntent"
+        private var controller: CredentialProviderGetSignInIntentController? = null
 
         /**
-         * Factory method for [CredentialProviderGetSignInIntentController].
+         * This finds a past version of the [CredentialProviderGetSignInIntentController] if it exists,
+         * otherwise it generates a new instance.
          *
          * @param context the calling context for this controller
          * @return a credential provider controller for a specific begin sign in credential request
          */
         @JvmStatic
         fun getInstance(context: Context): CredentialProviderGetSignInIntentController {
-                return CredentialProviderGetSignInIntentController(context)
+            if (controller == null) {
+                controller = CredentialProviderGetSignInIntentController(context)
             }
+            return controller!!
+        }
     }
 }

@@ -51,10 +51,10 @@ fun ColorSchemeDemo() {
             Text("Surfaces", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(16.dp))
             SurfaceColorSwatch(
-                color1 = colorScheme.surface,
-                color1Text = "Surface",
-                color2 = colorScheme.onSurface,
-                color2Text = "On Surface"
+                surface = colorScheme.surface,
+                surfaceText = "Surface",
+                onSurface = colorScheme.onSurface,
+                onSurfaceText = "On Surface"
             )
             Spacer(modifier = Modifier.height(16.dp))
             DoubleTile(
@@ -85,26 +85,42 @@ fun ColorSchemeDemo() {
                     )
                 },
             )
-            Text("Surface Containers", style = MaterialTheme.typography.bodyLarge)
+            Text("Surface Container Variants", style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(16.dp))
+            DoubleTile(
+                leftTile = {
+                    ColorTile(
+                        text = "High Emphasis",
+                        color = colorScheme.surfaceContainerHigh,
+                    )
+                },
+                rightTile = {
+                    ColorTile(
+                        text = "Highest Emphasis",
+                        color = colorScheme.surfaceContainerHighest,
+                    )
+                },
+            )
+            DoubleTile(
+                leftTile = {
+                    ColorTile(
+                        text = "Low Emphasis",
+                        color = colorScheme.surfaceContainerLow,
+                    )
+                },
+                rightTile = {
+                    ColorTile(
+                        text = "Lowest Emphasis",
+                        color = colorScheme.surfaceContainerLowest,
+                    )
+                },
+            )
             Spacer(modifier = Modifier.height(16.dp))
             SurfaceColorSwatch(
-                color1 = colorScheme.surfaceContainerHigh,
-                color1Text = "Surface Container High",
-                color2 = colorScheme.surfaceContainerHighest,
-                color2Text = "Surface Container Highest"
-            )
-            SurfaceColorSwatch(
-                color1 = colorScheme.surfaceContainerLow,
-                color1Text = "Surface Container Low",
-                color2 = colorScheme.surfaceContainerLowest,
-                color2Text = "Surface Container Lowest"
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            SurfaceColorSwatch(
-                color1 = colorScheme.surfaceVariant,
-                color1Text = "Surface Variant",
-                color2 = colorScheme.onSurfaceVariant,
-                color2Text = "On Surface Variant"
+                surface = colorScheme.surfaceVariant,
+                surfaceText = "Surface Variant",
+                onSurface = colorScheme.onSurfaceVariant,
+                onSurfaceText = "On Surface Variant"
             )
             Spacer(modifier = Modifier.height(16.dp))
             DoubleTile(
@@ -204,18 +220,18 @@ fun ColorSchemeDemo() {
 
 @Composable
 private fun SurfaceColorSwatch(
-    color1: Color,
-    color1Text: String,
-    color2: Color,
-    color2Text: String
+    surface: Color,
+    surfaceText: String,
+    onSurface: Color,
+    onSurfaceText: String
 ) {
     ColorTile(
-        text = color1Text,
-        color = color1,
+        text = surfaceText,
+        color = surface,
     )
     ColorTile(
-        text = color2Text,
-        color = color2,
+        text = onSurfaceText,
+        color = onSurface,
     )
 }
 

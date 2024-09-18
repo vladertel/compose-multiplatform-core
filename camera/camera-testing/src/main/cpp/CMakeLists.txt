@@ -14,7 +14,7 @@
 # the License.
 #
 
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.4.1)
 
 project(camera_testing_jni)
 
@@ -28,8 +28,3 @@ add_library(
 find_library(android-lib android)
 
 target_link_libraries(testing_surface_format_jni  ${android-lib})
-target_link_options(
-        testing_surface_format_jni
-        PRIVATE
-        "-Wl,-z,max-page-size=16384"
-)

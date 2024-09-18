@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.testutils.expectAssertionError
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -507,7 +508,7 @@ class SliderTest {
 
         rule.onNodeWithTag(tag)
             .assertWidthIsEqualTo(SliderTokens.HandleWidth)
-            .assertHeightIsEqualTo(SliderTokens.InactiveTrackHeight)
+            .assertHeightIsEqualTo(SliderTokens.HandleHeight)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -738,12 +739,14 @@ class SliderTest {
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun slider_rowWithInfiniteWidth() {
-        rule.setContent {
-            Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
-                Slider(
-                    state = SliderState(0f),
-                    modifier = Modifier.weight(1f)
-                )
+        expectAssertionError(false) {
+            rule.setContent {
+                Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                    Slider(
+                        state = SliderState(0f),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -879,9 +882,7 @@ class SliderTest {
             slop = LocalViewConfiguration.current.touchSlop
             RangeSlider(
                 state = state,
-                modifier = Modifier.testTag(tag),
-                startThumb = { SliderDefaults.Thumb(MutableInteractionSource()) },
-                endThumb = { SliderDefaults.Thumb(MutableInteractionSource()) }
+                modifier = Modifier.testTag(tag)
             )
         }
 
@@ -1373,7 +1374,7 @@ class SliderTest {
 
         rule.runOnIdle {
             Truth.assertThat(recompositionCounter.outerRecomposition).isEqualTo(1)
-            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(3)
+            Truth.assertThat(recompositionCounter.innerRecomposition).isEqualTo(4)
         }
     }
 
@@ -1392,12 +1393,14 @@ class SliderTest {
     @Test
     fun rangeSlider_rowWithInfiniteWidth() {
         val state = RangeSliderState(0f, 1f)
-        rule.setContent {
-            Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
-                RangeSlider(
-                    state = state,
-                    modifier = Modifier.weight(1f)
-                )
+        expectAssertionError(false) {
+            rule.setContent {
+                Row(modifier = Modifier.requiredWidth(Int.MAX_VALUE.dp)) {
+                    RangeSlider(
+                        state = state,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }

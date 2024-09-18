@@ -1,10 +1,3 @@
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 
 plugins {
@@ -14,7 +7,7 @@ plugins {
 
 dependencies {
     api(project(":vectordrawable:vectordrawable"))
-    api("androidx.core:core-animation:1.0.0")
+    api(project(":core:core-animation"))
     implementation("androidx.collection:collection:1.1.0")
 
     androidTestImplementation(libs.testExtJunit)

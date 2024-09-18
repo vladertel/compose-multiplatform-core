@@ -57,8 +57,7 @@ For more information, check out <a href="https://developer.android.com/jetpack/c
 |                         | [DatePickerDialog]             | M3 date picker embeeded in dialog         |
 |                         | [DateRangePicker]              | M3 date range picker                      |
 | **Dialogs**             | [AlertDialog]                  | M3 basic dialog                           |
-| **Dividers**            | [HorizontalDivider]            | M3 horizontal divider                     |
-|                         | [VerticalDivider]              | M3 vertical divider                       |
+| **Dividers**            | [Divider]                      | M3 divider                                |
 | **Extended FAB**        | [ExtendedFloatingActionButton] | M3 extended FAB                           |
 | **FAB**                 | [FloatingActionButton]         | M3 FAB                                    |
 |                         | [SmallFloatingActionButton]    | M3 small FAB                              |
@@ -101,11 +100,7 @@ For more information, check out <a href="https://developer.android.com/jetpack/c
 | **Switch**              | [Switch]                       | M3 switch                                 |
 | **Tabs**                | [Tab]                          | M3 tab                                    |
 |                         | [LeadingIconTab]               | M3 leading icon tab                       |
-|                         | [PrimaryIndicator]             | M3 primary tab indicator                  |
-|                         | [PrimaryTabRow]                | M3 primary tab row                        |
-|                         | [SecondaryIndicator]           | M3 secondary tab indicator                |
-|                         | [SecondaryTabRow]              | M3 secondary tab row                      |
-|                         | [TabRow]                       | M3 fixed tab row                          |
+|                         | [TabRow]                       | M3 tab row                                |
 |                         | [ScrollableTabRow]             | M3 scrollable tab row                     |
 | **Text fields**         | [TextField]                    | M3 filled text field                      |
 |                         | [OutlinedTextField]            | M3 outlined text field                    |

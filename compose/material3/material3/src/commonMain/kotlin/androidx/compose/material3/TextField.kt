@@ -19,7 +19,6 @@ package androidx.compose.material3
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -32,32 +31,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.material3.internal.ContainerId
-import androidx.compose.material3.internal.HorizontalIconPadding
-import androidx.compose.material3.internal.IconDefaultSizeModifier
-import androidx.compose.material3.internal.LabelId
-import androidx.compose.material3.internal.LeadingId
-import androidx.compose.material3.internal.MinFocusedLabelLineHeight
-import androidx.compose.material3.internal.MinSupportingTextLineHeight
-import androidx.compose.material3.internal.MinTextLineHeight
-import androidx.compose.material3.internal.PlaceholderId
-import androidx.compose.material3.internal.PrefixId
-import androidx.compose.material3.internal.PrefixSuffixTextPadding
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.SuffixId
-import androidx.compose.material3.internal.SupportingId
-import androidx.compose.material3.internal.TextFieldId
-import androidx.compose.material3.internal.TextFieldPadding
-import androidx.compose.material3.internal.TrailingId
-import androidx.compose.material3.internal.ZeroConstraints
-import androidx.compose.material3.internal.defaultErrorSemantics
-import androidx.compose.material3.internal.getString
-import androidx.compose.material3.internal.heightOrZero
-import androidx.compose.material3.internal.layoutId
-import androidx.compose.material3.internal.widthOrZero
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +57,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
@@ -181,10 +157,9 @@ import kotlin.math.roundToInt
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param minLines the minimum height in terms of minimum number of visible lines. It is required
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this text field. You can use this to change the text field's
- * appearance or preview the text field in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this text field. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this text field in different states.
  * @param shape defines the shape of this text field's container
  * @param colors [TextFieldColors] that will be used to resolve the colors used for this text field
  * in different states. See [TextFieldDefaults.colors].
@@ -212,20 +187,17 @@ fun TextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     shape: Shape = TextFieldDefaults.shape,
     colors: TextFieldColors = TextFieldDefaults.colors()
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     // If color is not provided via the text style, use content color as a default
     val textColor = textStyle.color.takeOrElse {
-        val focused = interactionSource.collectIsFocusedAsState().value
-        colors.textColor(enabled, isError, focused)
+        colors.textColor(enabled, isError, interactionSource).value
     }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.selectionColors) {
         BasicTextField(
             value = value,
             modifier = modifier
@@ -238,7 +210,7 @@ fun TextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(colors.cursorColor(isError)),
+            cursorBrush = SolidColor(colors.cursorColor(isError).value),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -331,10 +303,9 @@ fun TextField(
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param minLines the minimum height in terms of minimum number of visible lines. It is required
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this text field. You can use this to change the text field's
- * appearance or preview the text field in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this text field. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this text field in different states.
  * @param shape defines the shape of this text field's container
  * @param colors [TextFieldColors] that will be used to resolve the colors used for this text field
  * in different states. See [TextFieldDefaults.colors].
@@ -362,20 +333,17 @@ fun TextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     shape: Shape = TextFieldDefaults.shape,
     colors: TextFieldColors = TextFieldDefaults.colors()
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     // If color is not provided via the text style, use content color as a default
     val textColor = textStyle.color.takeOrElse {
-        val focused = interactionSource.collectIsFocusedAsState().value
-        colors.textColor(enabled, isError, focused)
+        colors.textColor(enabled, isError, interactionSource).value
     }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.selectionColors) {
         BasicTextField(
             value = value,
             modifier = modifier
@@ -388,7 +356,7 @@ fun TextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(colors.cursorColor(isError)),
+            cursorBrush = SolidColor(colors.cursorColor(isError).value),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -419,6 +387,112 @@ fun TextField(
             }
         )
     }
+}
+
+@Deprecated("Use overload with prefix and suffix parameters", level = DeprecationLevel.HIDDEN)
+@ExperimentalMaterial3Api
+@Composable
+fun TextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = TextFieldDefaults.shape,
+    colors: TextFieldColors = TextFieldDefaults.colors()
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        label = label,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        prefix = null,
+        suffix = null,
+        supportingText = supportingText,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        interactionSource = interactionSource,
+        shape = shape,
+        colors = colors,
+    )
+}
+
+@Deprecated("Use overload with prefix and suffix parameters", level = DeprecationLevel.HIDDEN)
+@ExperimentalMaterial3Api
+@Composable
+fun TextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = TextFieldDefaults.shape,
+    colors: TextFieldColors = TextFieldDefaults.colors()
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        label = label,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        prefix = null,
+        suffix = null,
+        supportingText = supportingText,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        interactionSource = interactionSource,
+        shape = shape,
+        colors = colors,
+    )
 }
 
 /**
@@ -964,6 +1038,10 @@ private fun Placeable.PlacementScope.placeWithLabel(
         0,
         Alignment.CenterVertically.align(leadingPlaceable.height, height)
     )
+    trailingPlaceable?.placeRelative(
+        width - trailingPlaceable.width,
+        Alignment.CenterVertically.align(trailingPlaceable.height, height)
+    )
     labelPlaceable?.let {
         // if it's a single line, the label's start position is in the center of the
         // container. When it's a multiline text field, the label's start position is at the
@@ -981,20 +1059,14 @@ private fun Placeable.PlacementScope.placeWithLabel(
     }
 
     prefixPlaceable?.placeRelative(widthOrZero(leadingPlaceable), textPosition)
-
-    val textHorizontalPosition = widthOrZero(leadingPlaceable) + widthOrZero(prefixPlaceable)
-    textfieldPlaceable.placeRelative(textHorizontalPosition, textPosition)
-    placeholderPlaceable?.placeRelative(textHorizontalPosition, textPosition)
-
     suffixPlaceable?.placeRelative(
         width - widthOrZero(trailingPlaceable) - suffixPlaceable.width,
         textPosition,
     )
 
-    trailingPlaceable?.placeRelative(
-        width - trailingPlaceable.width,
-        Alignment.CenterVertically.align(trailingPlaceable.height, height)
-    )
+    val textHorizontalPosition = widthOrZero(leadingPlaceable) + widthOrZero(prefixPlaceable)
+    textfieldPlaceable.placeRelative(textHorizontalPosition, textPosition)
+    placeholderPlaceable?.placeRelative(textHorizontalPosition, textPosition)
 
     supportingPlaceable?.placeRelative(0, height)
 }
@@ -1030,6 +1102,10 @@ private fun Placeable.PlacementScope.placeWithoutLabel(
         0,
         Alignment.CenterVertically.align(leadingPlaceable.height, height)
     )
+    trailingPlaceable?.placeRelative(
+        width - trailingPlaceable.width,
+        Alignment.CenterVertically.align(trailingPlaceable.height, height)
+    )
 
     // Single line text field without label places its text components centered vertically.
     // Multiline text field without label places its text components at the top with padding.
@@ -1046,6 +1122,11 @@ private fun Placeable.PlacementScope.placeWithoutLabel(
         calculateVerticalPosition(prefixPlaceable)
     )
 
+    suffixPlaceable?.placeRelative(
+        width - widthOrZero(trailingPlaceable) - suffixPlaceable.width,
+        calculateVerticalPosition(suffixPlaceable),
+    )
+
     val textHorizontalPosition = widthOrZero(leadingPlaceable) + widthOrZero(prefixPlaceable)
 
     textPlaceable.placeRelative(textHorizontalPosition, calculateVerticalPosition(textPlaceable))
@@ -1055,29 +1136,21 @@ private fun Placeable.PlacementScope.placeWithoutLabel(
         calculateVerticalPosition(placeholderPlaceable)
     )
 
-    suffixPlaceable?.placeRelative(
-        width - widthOrZero(trailingPlaceable) - suffixPlaceable.width,
-        calculateVerticalPosition(suffixPlaceable),
-    )
-
-    trailingPlaceable?.placeRelative(
-        width - trailingPlaceable.width,
-        Alignment.CenterVertically.align(trailingPlaceable.height, height)
-    )
-
     supportingPlaceable?.placeRelative(0, height)
 }
 
 /**
  * A draw modifier that draws a bottom indicator line in [TextField]
  */
-internal fun Modifier.drawIndicatorLine(indicatorBorder: State<BorderStroke>): Modifier {
+internal fun Modifier.drawIndicatorLine(indicatorBorder: BorderStroke): Modifier {
+    val strokeWidthDp = indicatorBorder.width
     return drawWithContent {
         drawContent()
-        val strokeWidth = indicatorBorder.value.width.toPx()
+        if (strokeWidthDp == Dp.Hairline) return@drawWithContent
+        val strokeWidth = strokeWidthDp.value * density
         val y = size.height - strokeWidth / 2
         drawLine(
-            indicatorBorder.value.brush,
+            indicatorBorder.brush,
             Offset(0f, y),
             Offset(size.width, y),
             strokeWidth

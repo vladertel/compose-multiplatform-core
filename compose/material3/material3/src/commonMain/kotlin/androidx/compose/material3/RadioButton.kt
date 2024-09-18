@@ -32,6 +32,7 @@ import androidx.compose.material3.tokens.RadioButtonTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,10 +65,9 @@ import androidx.compose.ui.unit.dp
  * services.
  * @param colors [RadioButtonColors] that will be used to resolve the color used for this radio
  * button in different states. See [RadioButtonDefaults.colors].
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this radio button. You can use this to change the radio button's
- * appearance or preview the radio button in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this radio button. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this radio button in different states.
  */
 @Composable
 fun RadioButton(
@@ -76,7 +76,7 @@ fun RadioButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: RadioButtonColors = RadioButtonDefaults.colors(),
-    interactionSource: MutableInteractionSource? = null
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     val dotRadius = animateDpAsState(
         targetValue = if (selected) RadioButtonDotSize / 2 else 0.dp,
@@ -85,13 +85,14 @@ fun RadioButton(
     val radioColor = colors.radioColor(enabled, selected)
     val selectableModifier =
         if (onClick != null) {
+            @Suppress("DEPRECATION_ERROR")
             Modifier.selectable(
                 selected = selected,
                 onClick = onClick,
                 enabled = enabled,
                 role = Role.RadioButton,
                 interactionSource = interactionSource,
-                indication = rippleOrFallbackImplementation(
+                indication = androidx.compose.material.ripple.rememberRipple(
                     bounded = false,
                     radius = RadioButtonTokens.StateLayerSize / 2
                 )

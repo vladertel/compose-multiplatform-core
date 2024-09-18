@@ -50,6 +50,7 @@ import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalMaterial3Api::class)
 class SegmentedButtonTest {
 
     @get:Rule

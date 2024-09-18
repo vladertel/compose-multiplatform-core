@@ -41,6 +41,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onSibling
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.max
+import androidx.compose.ui.unit.width
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
@@ -138,9 +140,12 @@ class BadgeTest {
             }
         val badge = rule.onNodeWithTag(TestBadgeTag)
         val anchorBounds = rule.onNodeWithTag(TestAnchorTag).getUnclippedBoundsInRoot()
+        val badgeBounds = badge.getUnclippedBoundsInRoot()
         badge.assertPositionInRootIsEqualTo(
-            expectedLeft = anchorBounds.right - BadgeOffset,
-            expectedTop = anchorBounds.top
+            expectedLeft =
+            anchorBounds.right + BadgeOffset +
+                max((BadgeTokens.Size - badgeBounds.width) / 2, 0.dp),
+            expectedTop = -badgeBounds.height / 2
         )
     }
 
@@ -159,12 +164,15 @@ class BadgeTest {
         val badge = rule.onNodeWithTag(TestAnchorTag).onSibling()
         val anchorBounds = rule.onNodeWithTag(TestAnchorTag).getUnclippedBoundsInRoot()
         val badgeBounds = badge.getUnclippedBoundsInRoot()
-
-        val totalBadgeHorizontalOffset = -BadgeWithContentHorizontalOffset +
-            BadgeWithContentHorizontalPadding
         badge.assertPositionInRootIsEqualTo(
-            expectedLeft = anchorBounds.right + totalBadgeHorizontalOffset,
-            expectedTop = -badgeBounds.height + BadgeWithContentVerticalOffset
+            expectedLeft = anchorBounds.right + BadgeWithContentHorizontalOffset + max
+                (
+                (
+                    BadgeTokens.LargeSize - badgeBounds.width
+                    ) / 2,
+                0.dp
+            ),
+            expectedTop = -badgeBounds.height / 2 + BadgeWithContentVerticalOffset
         )
     }
 
@@ -184,11 +192,11 @@ class BadgeTest {
         val anchorBounds = rule.onNodeWithTag(TestAnchorTag).getUnclippedBoundsInRoot()
         val badgeBounds = badge.getUnclippedBoundsInRoot()
 
-        val totalBadgeHorizontalOffset = -BadgeWithContentHorizontalOffset +
+        val totalBadgeHorizontalOffset = BadgeWithContentHorizontalOffset +
             BadgeWithContentHorizontalPadding
         badge.assertPositionInRootIsEqualTo(
             expectedLeft = anchorBounds.right + totalBadgeHorizontalOffset,
-            expectedTop = -badgeBounds.height + BadgeWithContentVerticalOffset
+            expectedTop = -badgeBounds.height / 2 + BadgeWithContentVerticalOffset
         )
     }
 

@@ -123,16 +123,13 @@ class CameraSurfaceManager {
             surfaceToken = SurfaceToken(surface)
             val newUseCount = (useCountMap[surface] ?: 0) + 1
             useCountMap[surface] = newUseCount
-            if (DEBUG) {
-                Log.debug {
-                    "registerSurface: surface=$surface, " +
-                        "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
-                        (if (DEBUG) " from ${Log.readStackTrace()}" else "")
-                }
+            Log.debug {
+                "registerSurface: surface=$surface, " +
+                    "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
+                    (if (DEBUG) " from ${Log.readStackTrace()}" else "")
             }
-
             if (newUseCount == 1) {
-                Log.debug { "$surface for $surfaceToken is active" }
+                Log.debug { "Surface $surface has become active" }
                 listenersToInvoke = listeners.toList()
             }
         }
@@ -151,16 +148,13 @@ class CameraSurfaceManager {
             checkNotNull(useCount) { "Surface $surface ($surfaceToken) has no use count" }
             val newUseCount = useCount - 1
             useCountMap[surface] = newUseCount
-
-            if (DEBUG) {
-                Log.debug {
-                    "onTokenClosed: surface=$surface, " +
-                        "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
-                        (if (DEBUG) " from ${Log.readStackTrace()}" else "")
-                }
+            Log.debug {
+                "onTokenClosed: surface=$surface, " +
+                    "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
+                    (if (DEBUG) " from ${Log.readStackTrace()}" else "")
             }
             if (newUseCount == 0) {
-                Log.debug { "$surface for $surfaceToken is inactive" }
+                Log.debug { "Surface $surface has become inactive" }
                 listenersToInvoke = listeners.toList()
                 useCountMap.remove(surface)
             }

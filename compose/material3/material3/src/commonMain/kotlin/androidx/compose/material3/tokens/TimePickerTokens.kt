@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// VERSION: v0_210
+// VERSION: v0_157
 // GENERATED CODE - DO NOT MODIFY BY HAND
+
 package androidx.compose.material3.tokens
+
 import androidx.compose.ui.unit.dp
+
 internal object TimePickerTokens {
-    val ClockDialColor = ColorSchemeKeyTokens.SurfaceContainerHighest
+    val ClockDialColor = ColorSchemeKeyTokens.SurfaceVariant
     val ClockDialContainerSize = 256.0.dp
     val ClockDialLabelTextFont = TypographyKeyTokens.BodyLarge
     val ClockDialSelectedLabelTextColor = ColorSchemeKeyTokens.OnPrimary
@@ -33,7 +35,7 @@ internal object TimePickerTokens {
     val ClockDialSelectorTrackContainerWidth = 2.0.dp
     val ClockDialShape = ShapeKeyTokens.CornerFull
     val ClockDialUnselectedLabelTextColor = ColorSchemeKeyTokens.OnSurface
-    val ContainerColor = ColorSchemeKeyTokens.SurfaceContainerHigh
+    val ContainerColor = ColorSchemeKeyTokens.Surface
     val ContainerElevation = ElevationTokens.Level3
     val ContainerShape = ShapeKeyTokens.CornerExtraLarge
     val HeadlineColor = ColorSchemeKeyTokens.OnSurfaceVariant
@@ -55,6 +57,7 @@ internal object TimePickerTokens {
     val PeriodSelectorUnselectedPressedLabelTextColor = ColorSchemeKeyTokens.OnSurfaceVariant
     val PeriodSelectorVerticalContainerHeight = 80.0.dp
     val PeriodSelectorVerticalContainerWidth = 52.0.dp
+    val SurfaceTintLayerColor = ColorSchemeKeyTokens.SurfaceTint
     val TimeSelector24HVerticalContainerWidth = 114.0.dp
     val TimeSelectorContainerHeight = 80.0.dp
     val TimeSelectorContainerShape = ShapeKeyTokens.CornerSmall
@@ -67,7 +70,7 @@ internal object TimePickerTokens {
     val TimeSelectorSelectedPressedLabelTextColor = ColorSchemeKeyTokens.OnPrimaryContainer
     val TimeSelectorSeparatorColor = ColorSchemeKeyTokens.OnSurface
     val TimeSelectorSeparatorFont = TypographyKeyTokens.DisplayLarge
-    val TimeSelectorUnselectedContainerColor = ColorSchemeKeyTokens.SurfaceContainerHighest
+    val TimeSelectorUnselectedContainerColor = ColorSchemeKeyTokens.SurfaceVariant
     val TimeSelectorUnselectedFocusLabelTextColor = ColorSchemeKeyTokens.OnSurface
     val TimeSelectorUnselectedHoverLabelTextColor = ColorSchemeKeyTokens.OnSurface
     val TimeSelectorUnselectedLabelTextColor = ColorSchemeKeyTokens.OnSurface

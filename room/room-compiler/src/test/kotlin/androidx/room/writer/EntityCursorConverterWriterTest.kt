@@ -39,7 +39,7 @@ class EntityCursorConverterWriterTest : BaseEntityParserTest() {
             import java.lang.SuppressWarnings;
             import javax.annotation.processing.Generated;
             @Generated("androidx.room.RoomProcessor")
-            @SuppressWarnings({"unchecked", "deprecation", "removal"})
+            @SuppressWarnings({"unchecked", "deprecation"})
             public final class MyContainerClass {
         """.trimIndent()
         const val OUT_SUFFIX = "}"
@@ -122,7 +122,7 @@ class EntityCursorConverterWriterTest : BaseEntityParserTest() {
     ) {
         singleEntity(input) { entity, invocation ->
             val className = XClassName.get("foo.bar", "MyContainerClass")
-            val writer = object : TypeWriter(CodeLanguage.JAVA, true) {
+            val writer = object : TypeWriter(CodeLanguage.JAVA) {
                 override fun createTypeSpecBuilder(): XTypeSpec.Builder {
                     getOrCreateFunction(EntityCursorConverterWriter(entity))
                     return XTypeSpec.classBuilder(codeLanguage, className)

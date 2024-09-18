@@ -26,13 +26,14 @@ import kotlin.String
 public fun exceptDateMapWhenUsage(exceptDate: ExceptDate) =
   exceptDate.mapWhen(
     object : ExceptDate.Mapper<String> {
-      override fun date(instance: LocalDate): String = """Got LocalDate: $instance"""
+      public override fun date(instance: LocalDate): String = """Got LocalDate: $instance"""
 
-      override fun localDateTime(instance: LocalDateTime): String =
+      public override fun localDateTime(instance: LocalDateTime): String =
         """Got a local DateTime: $instance"""
 
-      override fun instant(instance: Instant): String = """Got an absolute DateTime: $instance"""
+      public override fun instant(instance: Instant): String =
+        """Got an absolute DateTime: $instance"""
 
-      override fun orElse(): String = """Got some unrecognized variant: $exceptDate"""
+      public override fun orElse(): String = """Got some unrecognized variant: $exceptDate"""
     }
   )

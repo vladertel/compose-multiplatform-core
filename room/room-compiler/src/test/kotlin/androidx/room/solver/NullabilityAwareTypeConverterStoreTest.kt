@@ -402,8 +402,7 @@ class NullabilityAwareTypeConverterStoreTest {
                 dao = daoProcessor.process(),
                 dbElement = invocation.processingEnv
                     .requireTypeElement("androidx.room.RoomDatabase"),
-                codeLanguage = CodeLanguage.JAVA,
-                javaLambdaSyntaxAvailable = false
+                codeLanguage = CodeLanguage.JAVA
             ).write(invocation.processingEnv)
             invocation.assertCompilationResult {
                 generatedSourceFileWithPath("MyDao_Impl.java").let {

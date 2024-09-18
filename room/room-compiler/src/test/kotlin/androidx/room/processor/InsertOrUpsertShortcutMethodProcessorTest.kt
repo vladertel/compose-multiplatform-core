@@ -1122,8 +1122,7 @@ abstract class InsertOrUpsertShortcutMethodProcessorTest <out T : InsertOrUpsert
         )
 
         runProcessorTest(
-            sources = commonSources + additionalSources + inputSource,
-            options = mapOf(Context.BooleanProcessorOptions.GENERATE_KOTLIN.argName to "false"),
+            sources = commonSources + additionalSources + inputSource
         ) { invocation ->
             val (owner, methods) = invocation.roundEnv
                 .getElementsAnnotatedWith(Dao::class.qualifiedName!!)
@@ -1163,8 +1162,7 @@ abstract class InsertOrUpsertShortcutMethodProcessorTest <out T : InsertOrUpsert
         )
 
         runProcessorTest(
-            sources = commonSources + additionalSources + inputSource,
-            options = mapOf(Context.BooleanProcessorOptions.GENERATE_KOTLIN.argName to "false"),
+            sources = commonSources + additionalSources + inputSource
         ) { invocation ->
             val (owner, methods) = invocation.roundEnv
                 .getElementsAnnotatedWith(Dao::class.qualifiedName!!)

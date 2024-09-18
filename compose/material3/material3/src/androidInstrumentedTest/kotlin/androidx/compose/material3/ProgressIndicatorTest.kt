@@ -22,8 +22,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.testutils.assertPixelColor
+import androidx.compose.testutils.assertPixels
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -252,16 +255,15 @@ class ProgressIndicatorTest {
                 LinearProgressIndicator(
                     modifier = Modifier.size(expectedWidth, expectedHeight),
                     progress = { 1f },
+                    color = Color.Blue,
                 )
             }
         }
 
         rule.onNodeWithTag(tag)
             .captureToImage()
-            .toPixelMap()
-            .let {
-                assertEquals(expectedSize.width, it.width)
-                assertEquals(expectedSize.height, it.height)
+            .assertPixels(expectedSize = expectedSize) {
+                Color.Blue
             }
     }
 
@@ -279,7 +281,7 @@ class ProgressIndicatorTest {
             Box(Modifier.testTag(tag)) {
                 LinearProgressIndicator(
                     modifier = Modifier.size(expectedWidth, expectedHeight),
-                )
+                    color = Color.Blue)
             }
         }
 
@@ -291,6 +293,12 @@ class ProgressIndicatorTest {
             .let {
                 assertEquals(expectedSize.width, it.width)
                 assertEquals(expectedSize.height, it.height)
+                // Assert on the first pixel column, to make sure that the progress indicator draws
+                // to the expect height.
+                // We can't assert width as the width dynamically changes during the animation
+                for (i in 0 until it.height) {
+                    it.assertPixelColor(Color.Blue, 0, i)
+                }
             }
     }
 

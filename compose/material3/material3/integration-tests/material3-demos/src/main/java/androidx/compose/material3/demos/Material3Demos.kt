@@ -26,7 +26,6 @@ val Material3Demos = DemoCategory(
         ComposableDemo("Pull To Refresh") { PullToRefreshDemo() },
         ComposableDemo("Shape") { ShapeDemo() },
         ComposableDemo("Swipe To Dismiss") { SwipeToDismissDemo() },
-        ComposableDemo("Tooltip") { TooltipDemo() },
-        ComposableDemo("Text fields") { MaterialTextFieldDemo() },
+        ComposableDemo("Tooltip") { TooltipDemo() }
     ),
 )

@@ -35,6 +35,7 @@ import androidx.compose.runtime.snapshots.Snapshot.Companion.takeSnapshot
 import androidx.compose.runtime.snapshots.SnapshotApplyResult.Failure
 import androidx.compose.runtime.snapshots.SnapshotApplyResult.Success
 import androidx.compose.runtime.synchronized
+import androidx.compose.runtime.createSynchronizedObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -476,6 +477,8 @@ sealed class Snapshot(
          * @param writeObserver called when a state object is created or just before it is
          * written to the first time in the snapshot or a nested mutable snapshot. This might be
          * called several times for the same object if nested mutable snapshots are created.
+         * @param block the code the [readObserver] and [writeObserver] will be observing. Once
+         * [block] returns, the [readObserver] and [writeObserver] will no longer be called.
          */
         fun <T> observe(
             readObserver: ((Any) -> Unit)? = null,
@@ -1835,7 +1838,7 @@ private val threadSnapshot = SnapshotThreadLocal<Snapshot>()
  * of the fields below.
  */
 @PublishedApi
-internal val lock = Any()
+internal val lock = createSynchronizedObject()
 
 @PublishedApi
 internal inline fun <T> sync(block: () -> T): T = synchronized(lock, block)

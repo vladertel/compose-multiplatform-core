@@ -16,8 +16,6 @@
 
 package androidx.compose.foundation.gestures.snapping
 
-import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.pager.PagerDebugConfig
@@ -31,11 +29,9 @@ import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.sign
 
-@OptIn(ExperimentalFoundationApi::class)
 internal fun SnapLayoutInfoProvider(
     pagerState: PagerState,
     pagerSnapDistance: PagerSnapDistance,
-    decayAnimationSpec: DecayAnimationSpec<Float>,
     calculateFinalSnappingBound: (Float, Float, Float) -> Float
 ): SnapLayoutInfoProvider {
     return object : SnapLayoutInfoProvider {
@@ -46,13 +42,14 @@ internal fun SnapLayoutInfoProvider(
             return this != Float.POSITIVE_INFINITY && this != Float.NEGATIVE_INFINITY
         }
 
-        override fun calculateSnappingOffset(currentVelocity: Float): Float {
+        override fun calculateSnapOffset(velocity: Float): Float {
             val snapPosition = pagerState.layoutInfo.snapPosition
-            val (lowerBoundOffset, upperBoundOffset) = searchForSnappingBounds(snapPosition)
+            val (lowerBoundOffset, upperBoundOffset) =
+                searchForSnappingBounds(snapPosition, velocity)
 
             val finalDistance =
                 calculateFinalSnappingBound(
-                    currentVelocity,
+                    velocity,
                     lowerBoundOffset,
                     upperBoundOffset
                 )
@@ -74,15 +71,17 @@ internal fun SnapLayoutInfoProvider(
             }
         }
 
-        override fun calculateApproachOffset(initialVelocity: Float): Float {
-            debugLog { "Approach Velocity=$initialVelocity" }
+        override fun calculateApproachOffset(
+            velocity: Float,
+            decayOffset: Float
+        ): Float {
+            debugLog { "Approach Velocity=$velocity" }
             val effectivePageSizePx = pagerState.pageSize + pagerState.pageSpacing
 
             // given this velocity, where can I go with a decay animation.
-            val animationOffsetPx =
-                decayAnimationSpec.calculateTargetValue(0f, initialVelocity)
+            val animationOffsetPx = decayOffset
 
-            val startPage = if (initialVelocity < 0) {
+            val startPage = if (velocity < 0) {
                 pagerState.firstVisiblePage + 1
             } else {
                 pagerState.firstVisiblePage
@@ -109,7 +108,7 @@ internal fun SnapLayoutInfoProvider(
             val correctedTargetPage = pagerSnapDistance.calculateTargetPage(
                 startPage,
                 targetPage,
-                initialVelocity,
+                velocity,
                 pagerState.pageSize,
                 pagerState.pageSpacing
             ).coerceIn(0, pagerState.pageCount)
@@ -131,13 +130,16 @@ internal fun SnapLayoutInfoProvider(
             return if (flingApproachOffsetPx == 0) {
                 flingApproachOffsetPx.toFloat()
             } else {
-                flingApproachOffsetPx * initialVelocity.sign
+                flingApproachOffsetPx * velocity.sign
             }.also {
                 debugLog { "Fling Approach Offset=$it" }
             }
         }
 
-        private fun searchForSnappingBounds(snapPosition: SnapPosition): Pair<Float, Float> {
+        private fun searchForSnappingBounds(
+            snapPosition: SnapPosition,
+            velocity: Float
+        ): Pair<Float, Float> {
             debugLog { "Calculating Snapping Bounds" }
             var lowerBoundOffset = Float.NEGATIVE_INFINITY
             var upperBoundOffset = Float.POSITIVE_INFINITY
@@ -174,27 +176,41 @@ internal fun SnapLayoutInfoProvider(
                 upperBoundOffset = lowerBoundOffset
             }
 
-            // Do not move if we can't scroll
+            // Don't move if we are at the bounds
+
             if (!pagerState.canScrollForward) {
                 upperBoundOffset = 0.0f
+                // If we can not scroll forward but are trying to move towards the bound, set both
+                // bounds to 0 as we don't want to move
+                if (pagerState.isScrollingForward(velocity)) {
+                    lowerBoundOffset = 0.0f
+                }
             }
 
             if (!pagerState.canScrollBackward) {
                 lowerBoundOffset = 0.0f
+                // If we can not scroll backward but are trying to move towards the bound, set both
+                // bounds to 0 as we don't want to move
+                if (!pagerState.isScrollingForward(velocity)) {
+                    upperBoundOffset = 0.0f
+                }
             }
             return lowerBoundOffset to upperBoundOffset
         }
     }
 }
 
-private fun PagerState.isLtrDragging() = dragGestureDelta() > 0
-private fun PagerState.isScrollingForward(): Boolean {
+private fun PagerState.isScrollingForward(velocity: Float): Boolean {
     val reverseScrollDirection = layoutInfo.reverseLayout
-    return (isLtrDragging() && reverseScrollDirection ||
-        !isLtrDragging() && !reverseScrollDirection)
+    val isForward = if (isNotGestureAction()) {
+        velocity
+    } else {
+        dragGestureDelta()
+    } < 0
+    return (isForward && reverseScrollDirection ||
+        !isForward && !reverseScrollDirection)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 private fun PagerState.dragGestureDelta() = if (layoutInfo.orientation == Orientation.Horizontal) {
     upDownDifference.x
 } else {
@@ -221,17 +237,18 @@ internal fun calculateFinalSnappingBound(
     upperBoundOffset: Float
 ): Float {
 
+    val isScrollingForward = pagerState.isScrollingForward(flingVelocity)
     val isForward = if (pagerState.layoutInfo.orientation == Orientation.Vertical) {
-        pagerState.isScrollingForward()
+        isScrollingForward
     } else {
         if (layoutDirection == LayoutDirection.Ltr) {
-            pagerState.isScrollingForward()
+            isScrollingForward
         } else {
-            !pagerState.isScrollingForward()
+            !isScrollingForward
         }
     }
     debugLog {
-        "isLtrDragging=${pagerState.isLtrDragging()} " +
+        "isScrollingForward=${isScrollingForward} " +
             "isForward=$isForward " +
             "layoutDirection=$layoutDirection"
     }

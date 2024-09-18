@@ -23,6 +23,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.testutils.assertAgainstGolden
@@ -805,14 +806,12 @@ private fun DefaultPrimaryScrollableTabs(
         Modifier
             .semantics(mergeDescendants = true) {}
             .testTag(TAG)) {
-        PrimaryScrollableTabRow(
-            selectedTabIndex = 0,
-            indicator = {
-                TabRowDefaults.PrimaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(0, matchContentSize = true),
-                )
-            }
-        ) {
+        PrimaryScrollableTabRow(selectedTabIndex = 0, indicator = @Composable { tabPositions ->
+            TabRowDefaults.PrimaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(tabPositions[0]),
+                width = tabPositions[0].contentWidth
+            )
+        }) {
             Tab(
                 selected = true,
                 onClick = {},

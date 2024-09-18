@@ -21,11 +21,8 @@ package androidx.navigation.dynamicfeatures
 import androidx.annotation.IdRes
 import androidx.navigation.NavDestinationBuilder
 import androidx.navigation.NavDestinationDsl
-import androidx.navigation.NavType
 import androidx.navigation.dynamicfeatures.DynamicIncludeGraphNavigator.DynamicIncludeNavGraph
 import androidx.navigation.get
-import kotlin.reflect.KClass
-import kotlin.reflect.KType
 
 /**
  * Construct a new [DynamicIncludeGraphNavigator.DynamicIncludeNavGraph].
@@ -96,23 +93,6 @@ public inline fun DynamicNavGraphBuilder.includeDynamic(
 /**
  * Construct a new [DynamicIncludeGraphNavigator.DynamicIncludeNavGraph].
  *
- * @param T the graph's unique route as a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [T]. May be empty if
- * [T] does not use custom NavTypes.
- * @param moduleName Dynamic feature module name as defined in the module's `AndroidManifest`.
- * This must not be an empty string.
- * @param graphResourceName Graph's resource name without the `navigation` qualifier. This
- * must not be an empty string.
- */
-public inline fun <reified T : Any> DynamicNavGraphBuilder.includeDynamic(
-    moduleName: String,
-    graphResourceName: String,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-): Unit = includeDynamic<T>(moduleName, graphResourceName, typeMap) {}
-
-/**
- * Construct a new [DynamicIncludeGraphNavigator.DynamicIncludeNavGraph].
- *
  * @param route NavGraph route.
  * @param moduleName Dynamic feature module name as defined in the module's `AndroidManifest`.
  * This must not be an empty string.
@@ -129,33 +109,6 @@ public inline fun DynamicNavGraphBuilder.includeDynamic(
     DynamicIncludeNavGraphBuilder(
         provider[DynamicIncludeGraphNavigator::class],
         route,
-        moduleName,
-        graphResourceName
-    ).apply(builder)
-)
-
-/**
- * Construct a new [DynamicIncludeGraphNavigator.DynamicIncludeNavGraph].
- *
- * @param T the graph's unique route as a [KClass]
- * @param typeMap A mapping of KType to custom NavType<*> in the [T]. May be empty if
- * [T] does not use custom NavTypes.
- * @param moduleName Dynamic feature module name as defined in the module's `AndroidManifest`.
- * This must not be an empty string.
- * @param graphResourceName Graph's resource name without the `navigation` qualifier. This
- * must not be an empty string.
- * @param builder Another builder for chaining.
- */
-public inline fun <reified T : Any> DynamicNavGraphBuilder.includeDynamic(
-    moduleName: String,
-    graphResourceName: String,
-    typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
-    builder: DynamicIncludeNavGraphBuilder.() -> Unit
-): Unit = destination(
-    DynamicIncludeNavGraphBuilder(
-        provider[DynamicIncludeGraphNavigator::class],
-        T::class,
-        typeMap,
         moduleName,
         graphResourceName
     ).apply(builder)
@@ -196,31 +149,6 @@ public class DynamicIncludeNavGraphBuilder : NavDestinationBuilder<DynamicInclud
         moduleName: String,
         graphResourceName: String
     ) : super(dynamicIncludeGraphNavigator, route) {
-        this.dynamicIncludeGraphNavigator = dynamicIncludeGraphNavigator
-        this.moduleName = moduleName
-        this.graphResourceName = graphResourceName
-    }
-
-    /**
-     * DSL for constructing a new [DynamicIncludeGraphNavigator.DynamicIncludeNavGraph]
-     *
-     * @param dynamicIncludeGraphNavigator navigator used to create the destination
-     * @param route the graph's unique route as a [KClass]
-     * @param typeMap A mapping of KType to custom NavType<*> in the [route].  May be empty if
-     * [route] does not use custom NavTypes.
-     * @param moduleName Dynamic feature module name as defined in the module's `AndroidManifest`.
-     * This must not be an empty string.
-     * @param graphResourceName Graph's resource name without the `navigation` qualifier. This
-     * must not be an empty string.
-     * @return the newly created NavGraph
-     */
-    public constructor(
-        dynamicIncludeGraphNavigator: DynamicIncludeGraphNavigator,
-        route: KClass<*>,
-        typeMap: Map<KType, @JvmSuppressWildcards NavType<*>>,
-        moduleName: String,
-        graphResourceName: String
-    ) : super(dynamicIncludeGraphNavigator, route, typeMap) {
         this.dynamicIncludeGraphNavigator = dynamicIncludeGraphNavigator
         this.moduleName = moduleName
         this.graphResourceName = graphResourceName

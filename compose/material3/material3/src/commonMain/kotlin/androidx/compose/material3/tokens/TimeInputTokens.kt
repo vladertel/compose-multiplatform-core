@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-// VERSION: v0_210
+// VERSION: v0_159
 // GENERATED CODE - DO NOT MODIFY BY HAND
+
 package androidx.compose.material3.tokens
+
 import androidx.compose.ui.unit.dp
+
 internal object TimeInputTokens {
-    val ContainerColor = ColorSchemeKeyTokens.SurfaceContainerHigh
+    val ContainerColor = ColorSchemeKeyTokens.Surface
     val ContainerElevation = ElevationTokens.Level3
     val ContainerShape = ShapeKeyTokens.CornerExtraLarge
-    val FocusIndicatorColor = ColorSchemeKeyTokens.Secondary
     val HeadlineColor = ColorSchemeKeyTokens.OnSurfaceVariant
     val HeadlineFont = TypographyKeyTokens.LabelMedium
     val PeriodSelectorContainerHeight = 72.0.dp
@@ -40,7 +42,8 @@ internal object TimeInputTokens {
     val PeriodSelectorUnselectedHoverLabelTextColor = ColorSchemeKeyTokens.OnSurfaceVariant
     val PeriodSelectorUnselectedLabelTextColor = ColorSchemeKeyTokens.OnSurfaceVariant
     val PeriodSelectorUnselectedPressedLabelTextColor = ColorSchemeKeyTokens.OnSurfaceVariant
-    val TimeFieldContainerColor = ColorSchemeKeyTokens.SurfaceContainerHighest
+    val SurfaceTintLayerColor = ColorSchemeKeyTokens.SurfaceTint
+    val TimeFieldContainerColor = ColorSchemeKeyTokens.SurfaceVariant
     val TimeFieldContainerHeight = 72.0.dp
     val TimeFieldContainerShape = ShapeKeyTokens.CornerSmall
     val TimeFieldContainerWidth = 96.0.dp

@@ -526,7 +526,7 @@ internal class ContextualFlowItemIterator(
                 measurable
             }
         } else {
-            throw ArrayIndexOutOfBoundsException(
+            throw IndexOutOfBoundsException(
                 "No item returned at index call. Index: $itemIndex"
             )
         }

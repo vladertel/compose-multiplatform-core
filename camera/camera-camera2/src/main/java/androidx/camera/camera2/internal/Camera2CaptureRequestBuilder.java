@@ -137,13 +137,11 @@ class Camera2CaptureRequestBuilder {
      * @param captureConfig        which {@link CaptureConfig} to build {@link CaptureRequest}
      * @param device               {@link CameraDevice} to create the {@link CaptureRequest}
      * @param configuredSurfaceMap A map of {@link DeferrableSurface} to {@link Surface}
-     * @param isRepeatingRequest   whether it is building a repeating request or not
      */
     @Nullable
     public static CaptureRequest build(@NonNull CaptureConfig captureConfig,
             @Nullable CameraDevice device,
-            @NonNull Map<DeferrableSurface, Surface> configuredSurfaceMap,
-            boolean isRepeatingRequest)
+            @NonNull Map<DeferrableSurface, Surface> configuredSurfaceMap)
             throws CameraAccessException {
         if (device == null) {
             return null;
@@ -166,14 +164,7 @@ class Camera2CaptureRequestBuilder {
                     device, (TotalCaptureResult) cameraCaptureResult.getCaptureResult());
         } else {
             Logger.d(TAG, "createCaptureRequest");
-            if (captureConfig.getTemplateType() == CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG) {
-                // Fallback template type to the same as regular capture mode when ZSL is disabled
-                int templateType = isRepeatingRequest ? CameraDevice.TEMPLATE_PREVIEW :
-                        CameraDevice.TEMPLATE_STILL_CAPTURE;
-                builder = device.createCaptureRequest(templateType);
-            } else {
-                builder = device.createCaptureRequest(captureConfig.getTemplateType());
-            }
+            builder = device.createCaptureRequest(captureConfig.getTemplateType());
         }
 
         applyImplementationOptionToCaptureBuilder(builder,

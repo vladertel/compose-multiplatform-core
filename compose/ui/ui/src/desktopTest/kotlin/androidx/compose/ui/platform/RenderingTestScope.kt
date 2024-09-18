@@ -17,28 +17,27 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.ComposeScene
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.scene.MultiLayerComposeScene
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.yield
-import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.FrameDispatcher
+import org.jetbrains.skiko.MainUIDispatcher
 
 internal fun renderingTest(
     width: Int,
     height: Int,
-    context: CoroutineContext = Dispatchers.Swing,
+    context: CoroutineContext = MainUIDispatcher,
     block: suspend RenderingTestScope.() -> Unit
-) = runBlocking(Dispatchers.Swing) {
+) = runBlocking(MainUIDispatcher) {
     val scope = RenderingTestScope(width, height, context)
     try {
         scope.block()
@@ -47,7 +46,6 @@ internal fun renderingTest(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 internal class RenderingTestScope(
     val width: Int,
     val height: Int,
@@ -60,12 +58,12 @@ internal class RenderingTestScope(
     }
 
     val surface: Surface = Surface.makeRasterN32Premul(width, height)
-    val canvas: Canvas = surface.canvas
-    val scene = ComposeScene(
+    private val canvas = surface.canvas.asComposeCanvas()
+    val scene = MultiLayerComposeScene(
         coroutineContext = coroutineContext,
         invalidate = frameDispatcher::scheduleFrame
     ).apply {
-        constraints = Constraints(maxWidth = width, maxHeight = height)
+        size = IntSize(width = width, height = height)
     }
 
     var density: Float
@@ -88,7 +86,7 @@ internal class RenderingTestScope(
     }
 
     private fun onRender(timeNanos: Long) {
-        canvas.clear(Color.Transparent.toArgb())
+        canvas.nativeCanvas.clear(Color.Transparent.toArgb())
         scene.render(canvas, timeNanos)
         onRender.complete(Unit)
     }
@@ -96,6 +94,12 @@ internal class RenderingTestScope(
     suspend fun awaitNextRender() {
         onRender = CompletableDeferred()
         onRender.await()
+    }
+
+    suspend fun skipRenders() {
+        repeat(1000) {
+            yield()
+        }
     }
 
     suspend fun hasRenders(): Boolean {

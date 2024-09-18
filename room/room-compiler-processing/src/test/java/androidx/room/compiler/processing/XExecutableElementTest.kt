@@ -108,7 +108,6 @@ class XExecutableElementTest {
             package foo.bar;
             interface Baz {
                 void method(String... inputs);
-                void methodPrimitive(int... inputs);
             }
             """.trimIndent()
         )
@@ -116,16 +115,7 @@ class XExecutableElementTest {
             sources = listOf(subject)
         ) {
             val element = it.processingEnv.requireTypeElement("foo.bar.Baz")
-            element.getMethodByJvmName("method").let { method ->
-                assertThat(method.isVarArgs()).isTrue()
-                assertThat(method.parameters.single().type.asTypeName()).isEqualTo(
-                    XTypeName.getArrayName(String::class.asClassName()))
-            }
-            element.getMethodByJvmName("methodPrimitive").let { method ->
-                assertThat(method.isVarArgs()).isTrue()
-                assertThat(method.parameters.single().type.asTypeName()).isEqualTo(
-                    XTypeName.getArrayName(XTypeName.PRIMITIVE_INT))
-            }
+            assertThat(element.getMethodByJvmName("method").isVarArgs()).isTrue()
         }
     }
 
@@ -138,7 +128,6 @@ class XExecutableElementTest {
                 fun method(vararg inputs: String)
                 suspend fun suspendMethod(vararg inputs: String)
                 fun method2(vararg inputs: String, arg: Int)
-                fun methodPrimitive(vararg inputs: Int)
                 fun String.extFun(vararg inputs: String)
             }
             """.trimIndent()
@@ -152,10 +141,6 @@ class XExecutableElementTest {
                 assertThat(method.isVarArgs()).isTrue()
                 assertThat(method.parameters).hasSize(1)
                 assertThat(method.parameters.single().isVarArgs()).isTrue()
-                assertThat(method.parameters.single().type.asTypeName()).isEqualTo(
-                    XTypeName.getArrayName(
-                        XTypeName.getProducerExtendsName(String::class.asClassName()))
-                )
             }
 
             element.getMethodByJvmName("suspendMethod").let { suspendMethod ->
@@ -164,12 +149,6 @@ class XExecutableElementTest {
                 assertThat(
                     suspendMethod.parameters.first { it.name == "inputs" }.isVarArgs()
                 ).isTrue()
-                assertThat(
-                    suspendMethod.parameters.first { it.name == "inputs" }.type.asTypeName()
-                ).isEqualTo(
-                    XTypeName.getArrayName(
-                        XTypeName.getProducerExtendsName(String::class.asClassName()))
-                )
             }
 
             element.getMethodByJvmName("extFun").let { extFun ->
@@ -178,10 +157,6 @@ class XExecutableElementTest {
                 // kapt messed with parameter names, sometimes the synthetic parameter can use the
                 // second parameter's name.
                 assertThat(extFun.parameters.get(1).isVarArgs()).isTrue()
-                assertThat(extFun.parameters.get(1).type.asTypeName()).isEqualTo(
-                    XTypeName.getArrayName(
-                        XTypeName.getProducerExtendsName(String::class.asClassName()))
-                )
             }
 
             element.getMethodByJvmName("method2").let { method2 ->
@@ -189,19 +164,6 @@ class XExecutableElementTest {
                 assertThat(method2.parameters).hasSize(2)
                 assertThat(method2.parameters.first { it.name == "inputs" }.isVarArgs())
                     .isTrue()
-                assertThat(method2.parameters.first { it.name == "inputs" }.type.asTypeName())
-                    .isEqualTo(
-                        XTypeName.getArrayName(
-                            XTypeName.getProducerExtendsName(String::class.asClassName()))
-                    )
-            }
-            element.getMethodByJvmName("methodPrimitive").let { method ->
-                assertThat(method.isVarArgs()).isTrue()
-                assertThat(method.parameters).hasSize(1)
-                assertThat(method.parameters.single().isVarArgs()).isTrue()
-                assertThat(method.parameters.single().type.asTypeName()).isEqualTo(
-                    XTypeName.getArrayName(XTypeName.PRIMITIVE_INT)
-                )
             }
         }
     }

@@ -18,13 +18,12 @@ package androidx.benchmark.macro
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE
-import android.content.pm.ApplicationInfo.FLAG_SYSTEM
-import android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.Arguments
+import androidx.benchmark.BenchmarkResult
 import androidx.benchmark.ConfigurationError
 import androidx.benchmark.DeviceInfo
 import androidx.benchmark.InstrumentationResults
@@ -34,8 +33,6 @@ import androidx.benchmark.Shell
 import androidx.benchmark.checkAndGetSuppressionState
 import androidx.benchmark.conditionalError
 import androidx.benchmark.inMemoryTrace
-import androidx.benchmark.json.BenchmarkData
-import androidx.benchmark.perfetto.ExperimentalPerfettoCaptureApi
 import androidx.benchmark.perfetto.PerfettoCapture.PerfettoSdkConfig
 import androidx.benchmark.perfetto.PerfettoCapture.PerfettoSdkConfig.InitialProcessState
 import androidx.benchmark.perfetto.PerfettoCaptureWrapper
@@ -49,11 +46,10 @@ import androidx.tracing.trace
 import java.io.File
 
 /**
- * Get package ApplicationInfo, throw if not found.
+ * Get package ApplicationInfo, throw if not found
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @Suppress("DEPRECATION")
-fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
+internal fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
     val pm = InstrumentationRegistry.getInstrumentation().context.packageManager
     try {
         return pm.getApplicationInfo(packageName, 0)
@@ -63,14 +59,6 @@ fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
             notFoundException
         )
     }
-}
-
-/**
- * @return `true` if the [ApplicationInfo] instance is referring to a system app.
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-fun ApplicationInfo.isSystemApp(): Boolean {
-    return flags and (FLAG_SYSTEM or FLAG_UPDATED_SYSTEM_APP) > 0
 }
 
 internal fun checkErrors(packageName: String): ConfigurationError.SuppressionState? {
@@ -191,7 +179,6 @@ internal fun checkErrors(packageName: String): ConfigurationError.SuppressionSta
  *
  * This function is a building block for public testing APIs
  */
-@ExperimentalPerfettoCaptureApi
 private fun macrobenchmark(
     uniqueName: String,
     className: String,
@@ -202,11 +189,10 @@ private fun macrobenchmark(
     iterations: Int,
     launchWithClearTask: Boolean,
     startupModeMetricHint: StartupMode?,
-    perfettoConfig: PerfettoConfig?,
     perfettoSdkConfig: PerfettoSdkConfig?,
     setupBlock: MacrobenchmarkScope.() -> Unit,
     measureBlock: MacrobenchmarkScope.() -> Unit
-): BenchmarkData.TestResult {
+) {
     require(iterations > 0) {
         "Require iterations > 0 (iterations = $iterations)"
     }
@@ -221,32 +207,20 @@ private fun macrobenchmark(
 
     val startTime = System.nanoTime()
     // Ensure method tracing is explicitly enabled and that we are not running in dry run mode.
-    val requestMethodTracing = Arguments.macrobenchMethodTracingEnabled()
-    val applicationInfo = getInstalledPackageInfo(packageName)
+    val launchWithMethodTracing = Arguments.macrobenchMethodTracingEnabled()
     val scope = MacrobenchmarkScope(
         packageName,
         launchWithClearTask = launchWithClearTask
     )
-    // Capture if the app being benchmarked is a system app.
-    scope.isSystemApp = applicationInfo.isSystemApp()
-
-    if (requestMethodTracing) {
-        scope.startMethodTracing()
-    }
-
+    scope.launchWithMethodTracing = launchWithMethodTracing
     // Ensure the device is awake
     scope.device.wakeUp()
-
-    // Stop Background Dexopt during a Macrobenchmark to improve stability.
-    if (Build.VERSION.SDK_INT >= 33) {
-        scope.cancelBackgroundDexopt()
-    }
 
     // Always kill the process at beginning of test
     scope.killProcess()
 
     inMemoryTrace("compile $packageName") {
-        compilationMode.resetAndCompile(scope) {
+        compilationMode.resetAndCompile(packageName, killProcessBlock = scope::killProcess) {
             setupBlock(scope)
             measureBlock(scope)
         }
@@ -273,16 +247,15 @@ private fun macrobenchmark(
                 }
 
                 scope.iteration = iteration
-
                 inMemoryTrace("setupBlock") {
                     setupBlock(scope)
                 }
 
                 val iterString = iteration.toString().padStart(3, '0')
-                scope.fileLabel = "${uniqueName}_iter$iterString"
+                val fileLabel = "${uniqueName}_iter$iterString"
                 val tracePath = perfettoCollector.record(
-                    fileLabel = scope.fileLabel,
-                    config = perfettoConfig ?: PerfettoConfig.Benchmark(
+                    fileLabel = fileLabel,
+                    config = PerfettoConfig.Benchmark(
                         /**
                          * Prior to API 24, every package name was joined into a single setprop
                          * which can overflow, and disable *ALL* app level tracing.
@@ -309,7 +282,6 @@ private fun macrobenchmark(
                                 it.start()
                             }
                         }
-                        scope.startMethodTracing()
                         trace("measureBlock") {
                             measureBlock(scope)
                         }
@@ -318,7 +290,15 @@ private fun macrobenchmark(
                             metrics.forEach {
                                 it.stop()
                             }
-                            methodTracingResultFiles += scope.stopMethodTracing()
+                            if (launchWithMethodTracing && scope.isMethodTracing) {
+                                val (label, tracePath) = scope.stopMethodTracing(fileLabel)
+                                val resultFile = Profiler.ResultFile(
+                                    label = label,
+                                    absolutePath = tracePath
+                                )
+                                methodTracingResultFiles += resultFile
+                                scope.isMethodTracing = false
+                            }
                         }
                     }
                 }!!
@@ -331,7 +311,7 @@ private fun macrobenchmark(
                         metrics
                             // capture list of Measurements
                             .map {
-                                it.getMeasurements(
+                                it.getResult(
                                     Metric.CaptureInfo(
                                         targetPackageName = packageName,
                                         testPackageName = macrobenchPackageName,
@@ -367,8 +347,13 @@ private fun macrobenchmark(
                 in the measure block?
             """.trimIndent()
         }
-
         InstrumentationResults.instrumentationReport {
+            if (launchWithMethodTracing && methodTracingResultFiles.size < iterations) {
+                warningMessage += "\nNOTE: Method traces cannot be captured during iterations" +
+                    " that start while the target process is already running (including HOT/WARM" +
+                    " launches)."
+            }
+
             reportSummaryToIde(
                 warningMessage = warningMessage,
                 testName = uniqueName,
@@ -391,26 +376,17 @@ private fun macrobenchmark(
             else -> 0
         }
 
-        val mergedProfilerOutputs = (tracePaths.mapIndexed { index, it ->
-            Profiler.ResultFile.ofPerfettoTrace(
-                label = "Trace Iteration $index",
-                absolutePath = it
+        ResultWriter.appendReport(
+            BenchmarkResult(
+                className = className,
+                testName = testName,
+                totalRunTimeNs = System.nanoTime() - startTime,
+                metrics = measurements,
+                repeatIterations = iterations,
+                thermalThrottleSleepSeconds = 0,
+                warmupIterations = warmupIterations
             )
-        } + methodTracingResultFiles).map {
-            BenchmarkData.TestResult.ProfilerOutput(it)
-        }
-        val testResult = BenchmarkData.TestResult(
-            className = className,
-            name = testName,
-            totalRunTimeNs = System.nanoTime() - startTime,
-            metrics = measurements.singleMetrics + measurements.sampledMetrics,
-            repeatIterations = iterations,
-            thermalThrottleSleepSeconds = 0,
-            warmupIterations = warmupIterations,
-            profilerOutputs = mergedProfilerOutputs
         )
-        ResultWriter.appendTestResult(testResult)
-        return testResult
     } finally {
         scope.killProcess()
     }
@@ -420,7 +396,6 @@ private fun macrobenchmark(
  * Run a macrobenchmark with the specified StartupMode
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@ExperimentalPerfettoCaptureApi
 fun macrobenchmarkWithStartupMode(
     uniqueName: String,
     className: String,
@@ -429,11 +404,10 @@ fun macrobenchmarkWithStartupMode(
     metrics: List<Metric>,
     compilationMode: CompilationMode,
     iterations: Int,
-    perfettoConfig: PerfettoConfig?,
     startupMode: StartupMode?,
     setupBlock: MacrobenchmarkScope.() -> Unit,
     measureBlock: MacrobenchmarkScope.() -> Unit
-): BenchmarkData.TestResult {
+) {
     val perfettoSdkConfig =
         if (Arguments.perfettoSdkTracingEnable && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             PerfettoSdkConfig(
@@ -445,7 +419,7 @@ fun macrobenchmarkWithStartupMode(
                 }
             )
         } else null
-    return macrobenchmark(
+    macrobenchmark(
         uniqueName = uniqueName,
         className = className,
         testName = testName,
@@ -454,7 +428,6 @@ fun macrobenchmarkWithStartupMode(
         compilationMode = compilationMode,
         iterations = iterations,
         startupModeMetricHint = startupMode,
-        perfettoConfig = perfettoConfig,
         perfettoSdkConfig = perfettoSdkConfig,
         setupBlock = {
             if (startupMode == StartupMode.COLD) {

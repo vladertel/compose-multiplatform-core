@@ -94,7 +94,6 @@ class XTypeTest {
                             KTypeVariableName(
                                 "InputStreamType",
                                 KClassName("java.io", "InputStream")
-                                    .copy(nullable = true)
                             )
                         )
                 )
@@ -121,14 +120,12 @@ class XTypeTest {
                     val expected = KTypeVariableName(
                         "InputStreamType",
                         KClassName("java.io", "InputStream")
-                            .copy(nullable = true)
                     )
                     assertThat(firstType.asTypeName().kotlin).isEqualTo(expected)
                     assertThat(
                         (firstType.asTypeName().kotlin as KTypeVariableName).bounds
                     ).containsExactly(
                         KClassName("java.io", "InputStream")
-                            .copy(nullable = true)
                     )
                 }
             }
@@ -625,16 +622,8 @@ class XTypeTest {
             assertThat(typeElement.type.asTypeName().java.dumpToString(5))
                 .isEqualTo(expectedTypeStringDump)
             if (invocation.isKsp) {
-                val expectedTypeStringDumpKotlin = """
-                SelfReferencing<T>
-                | T
-                | > SelfReferencing<T>?
-                | > | T
-                | > | > SelfReferencing<T>?
-                | > | > | T
-                """.trimIndent()
                 assertThat(typeElement.type.asTypeName().kotlin.dumpToString(5))
-                    .isEqualTo(expectedTypeStringDumpKotlin)
+                    .isEqualTo(expectedTypeStringDump)
             }
             val expectedParamStringDump = """
                 SelfReferencing
@@ -1915,32 +1904,9 @@ class XTypeTest {
             }
             """.trimIndent()
         )
-        val javaSrc = Source.java(
-            "JavaClass",
-            """
-            import java.util.List;
-            import kotlin.Result;
-            import kotlin.UInt;
-            interface JavaClass {
-                UInt inlineClassDirectUsage();
-                List<UInt> inlineClassIndirectUsage();
-                Result<Integer> genericInlineClassDirectUsage();
-                List<Result<Integer>> genericInlineClassIndirectUsage();
-
-                MyInlineClass customInlineClassDirectUsage();
-                List<MyInlineClass> customInlineClassIndirectUsage();
-                MyGenericInlineClass<Integer> customGenericInlineClassDirectUsage();
-                List<MyGenericInlineClass<Integer>> customGenericInlineClassIndirectUsage();
-            }
-            """.trimIndent()
-        )
         runProcessorTest(
-            sources = if (isPrecompiled) { emptyList() } else { listOf(kotlinSrc, javaSrc) },
-            classpath = if (isPrecompiled) {
-                compileFiles(listOf(kotlinSrc, javaSrc))
-            } else {
-                emptyList()
-            }
+            sources = if (isPrecompiled) { emptyList() } else { listOf(kotlinSrc) },
+            classpath = if (isPrecompiled) { compileFiles(listOf(kotlinSrc)) } else { emptyList() }
         ) { invocation ->
             val kotlinElm = invocation.processingEnv.requireTypeElement("KotlinClass")
             kotlinElm.getMethodByJvmName("kotlinValueClassDirectUsage").apply {
@@ -2022,53 +1988,6 @@ class XTypeTest {
                     assertThat(returnType.asTypeName().kotlin.toString())
                         .isEqualTo("kotlin.collections.List<MyGenericInlineClass<kotlin.Int>>")
                 }
-            }
-
-            val javaElm = invocation.processingEnv.requireTypeElement("JavaClass")
-            javaElm.getMethodByJvmName("inlineClassDirectUsage").apply {
-                if (invocation.isKsp) {
-                    // TODO(kuanyingchou): When an inline type is used in Java we shouldn't replace
-                    // it with the JVM type.
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("int")
-                } else {
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("kotlin.UInt")
-                }
-            }
-            javaElm.getMethodByJvmName("inlineClassIndirectUsage").apply {
-                assertThat(returnType.asTypeName().java.toString())
-                    .isEqualTo("java.util.List<kotlin.UInt>")
-            }
-            javaElm.getMethodByJvmName("customInlineClassDirectUsage").apply {
-                if (invocation.isKsp) {
-                    // TODO(kuanyingchou): When an inline type is used in Java we shouldn't replace
-                    // it with the JVM type.
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("int")
-                } else {
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("MyInlineClass")
-                }
-            }
-            javaElm.getMethodByJvmName("customInlineClassIndirectUsage").apply {
-                assertThat(returnType.asTypeName().java.toString())
-                    .isEqualTo("java.util.List<MyInlineClass>")
-            }
-            javaElm.getMethodByJvmName("customGenericInlineClassDirectUsage").apply {
-                if (invocation.isKsp) {
-                    // TODO(kuanyingchou): When an inline type is used in Java we shouldn't replace
-                    // it with the JVM type.
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("java.lang.Number")
-                } else {
-                    assertThat(returnType.asTypeName().java.toString())
-                        .isEqualTo("MyGenericInlineClass<java.lang.Integer>")
-                }
-            }
-            javaElm.getMethodByJvmName("customGenericInlineClassIndirectUsage").apply {
-                assertThat(returnType.asTypeName().java.toString())
-                    .isEqualTo("java.util.List<MyGenericInlineClass<java.lang.Integer>>")
             }
         }
     }

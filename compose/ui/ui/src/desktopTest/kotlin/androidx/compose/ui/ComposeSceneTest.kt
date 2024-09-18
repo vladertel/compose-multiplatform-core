@@ -20,8 +20,12 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,14 +38,18 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusProperties
@@ -50,17 +58,23 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.keyEvent
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerButtons
-import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.RootMeasurePolicy.measure
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.renderingTest
 import androidx.compose.ui.test.InternalTestApi
 import androidx.compose.ui.test.junit4.DesktopScreenshotTestRule
@@ -68,10 +82,18 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.runApplicationTest
 import com.google.common.truth.Truth.assertThat
-import java.awt.event.KeyEvent
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertFalse
 import org.junit.Ignore
 import org.junit.Rule
@@ -149,6 +171,70 @@ class ComposeSceneTest {
         assertFalse(hasRenders())
     }
 
+    // https://github.com/JetBrains/compose-multiplatform/issues/3137
+    @Test
+    fun `rendering of Text state change`() = renderingTest(width = 400, height = 200) {
+        var text by mutableStateOf("before")
+        setContent {
+            Text(text)
+        }
+        awaitNextRender()
+        val before = surface.makeImageSnapshot().toComposeImageBitmap().toPixelMap().buffer
+
+        text = "after"
+        awaitNextRender()
+        val after = surface.makeImageSnapshot().toComposeImageBitmap().toPixelMap().buffer
+        assertThat(after).isNotEqualTo(before)
+    }
+
+    // Verify that when snapshot state changes in one of the render phases, the change is applied
+    // before the next phase, and is visible there.
+    // Note that it tests the same thing as `rendering of Text state change` is trying to, but at a
+    // lower-level, and without depending on the implementation of Text.
+    @Suppress("UNUSED_EXPRESSION")
+    @Test
+    fun stateChangesAppliedBetweenRenderPhases() = renderingTest(width = 400, height = 200) {
+        var value by mutableStateOf(0)
+        var compositionCount = 0
+        var layoutCount = 0
+        var drawCount = 0
+
+        var layoutScopeInvalidation by mutableStateOf(Unit, neverEqualPolicy())
+        var drawScopeInvalidation by mutableStateOf(Unit, neverEqualPolicy())
+
+        setContent {
+            value
+            compositionCount += 1
+            layoutScopeInvalidation = Unit
+            Layout(
+                modifier = remember {
+                    Modifier.graphicsLayer().drawBehind {
+                        drawScopeInvalidation
+                        drawCount += 1
+                    }
+                },
+                measurePolicy = remember {
+                    MeasurePolicy { measurables, constraints ->
+                        layoutScopeInvalidation
+                        drawScopeInvalidation = Unit
+                        layoutCount += 1
+                        measure(measurables, constraints)
+                    }
+                }
+            )
+        }
+
+        awaitNextRender()
+        assertEquals(compositionCount, layoutCount)
+        assertEquals(layoutCount, drawCount)
+
+        value = 1
+        awaitNextRender()
+        assertTrue(compositionCount >= 2)
+        assertTrue(layoutCount >= compositionCount, "Layout was performed less times than composition")
+        assertTrue(drawCount >= layoutCount, "Draw was performed less times than layout")
+    }
+
     @Test(timeout = 5000)
     fun `rendering of Layout state change`() = renderingTest(width = 40, height = 40) {
         var width by mutableStateOf(10)
@@ -158,8 +244,8 @@ class ComposeSceneTest {
             Row(Modifier.height(height.dp)) {
                 Layout({
                     Box(Modifier.fillMaxSize().background(Color.Green))
-                }) { measureables, constraints ->
-                    val placeables = measureables.map { it.measure(constraints) }
+                }) { measurables, constraints ->
+                    val placeables = measurables.map { it.measure(constraints) }
                     layout(width, constraints.maxHeight) {
                         placeables.forEach { it.place(x, 0) }
                     }
@@ -278,11 +364,20 @@ class ComposeSceneTest {
     @Ignore("b/271123970 Fails in AOSP. Will be fixed after upstreaming Compose for Desktop")
     fun `rendering of clickable`() = renderingTest(width = 40, height = 40) {
         setContent {
-            Box(Modifier.size(20.dp).background(Color.Blue).clickable {})
+            val interactionSource = remember { MutableInteractionSource() }
+            Box(
+                Modifier
+                    .size(20.dp)
+                    .background(Color.Blue)
+                    .clickable(indication = PressIndicationNodeFactory, interactionSource = interactionSource) {}
+            )
         }
         awaitNextRender()
         screenshotRule.snap(surface, "frame1_initial")
         assertFalse(hasRenders())
+
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(2f, 2f))
+        scene.sendPointerEvent(PointerEventType.Move, Offset(2f, 2f))
 
         scene.sendPointerEvent(PointerEventType.Press, Offset(2f, 2f))
         awaitNextRender()
@@ -293,10 +388,18 @@ class ComposeSceneTest {
         assertFalse(hasRenders())
 
         scene.sendPointerEvent(PointerEventType.Release, Offset(1f, 1f))
+
+        scene.sendPointerEvent(PointerEventType.Move, Offset(-1f, -1f))
+        scene.sendPointerEvent(PointerEventType.Exit, Offset(-1f, -1f))
+        awaitNextRender()
+        // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2970)
+        //  fix one-frame lag after a Release
         awaitNextRender()
         screenshotRule.snap(surface, "frame3_onMouseReleased")
 
+        scene.sendPointerEvent(PointerEventType.Enter, Offset(1f, 1f))
         scene.sendPointerEvent(PointerEventType.Move, Offset(1f, 1f))
+
         scene.sendPointerEvent(PointerEventType.Press, Offset(3f, 3f))
         awaitNextRender()
         screenshotRule.snap(surface, "frame4_onMouseMoved_onMousePressed")
@@ -346,6 +449,10 @@ class ComposeSceneTest {
         itemHeight = 5.dp
         awaitNextRender()
         screenshotRule.snap(surface, "frame4_change_height")
+
+        // see https://github.com/JetBrains/compose-jb/issues/2171, we have extra rendered frames here
+        skipRenders()
+
         assertFalse(hasRenders())
     }
 
@@ -541,6 +648,40 @@ class ComposeSceneTest {
         }
     }
 
+    @Test
+    fun stateChangeFromNonUiThreadDoesntCrash() = runApplicationTest {
+        // https://github.com/JetBrains/compose-multiplatform/issues/4546
+        var value by mutableStateOf(0)
+        val done = CompletableDeferred<Unit>()
+        var exceptionThrown: Throwable? = null
+
+        launchTestApplication {
+            Window(onCloseRequest = {}) {
+                Canvas(Modifier.size(100.dp)) {
+                    @Suppress("UNUSED_EXPRESSION")
+                    value
+                }
+                LaunchedEffect(Unit) {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            for (i in 1..50) {
+                                value = i
+                                Snapshot.sendApplyNotifications()
+                                delay(1)
+                            }
+                        } catch (e: Throwable) {
+                            exceptionThrown = e
+                        }
+                        done.complete(Unit)
+                    }
+                }
+            }
+        }
+
+        done.await()
+        assertNull(exceptionThrown, "Exception thrown setting snapshot state from non-UI thread")
+    }
+
     private class TestException : RuntimeException()
 
     @ExperimentalComposeUiApi
@@ -583,7 +724,7 @@ class ComposeSceneTest {
             assertThat(field2FocusState!!.isFocused).isFalse()
         }
 
-        composeRule.onRoot().performKeyPress(keyEvent(Key.Tab, KeyEventType.KeyDown))
+        composeRule.onRoot().performKeyPress(KeyEvent(Key.Tab, KeyEventType.KeyDown))
 
         composeRule.runOnIdle {
             assertThat(field1FocusState!!.isFocused).isFalse()
@@ -591,7 +732,7 @@ class ComposeSceneTest {
         }
 
         composeRule.onRoot().performKeyPress(
-            keyEvent(Key.Tab, KeyEventType.KeyDown, KeyEvent.SHIFT_DOWN_MASK)
+            KeyEvent(Key.Tab, KeyEventType.KeyDown, isShiftPressed = true)
         )
 
         composeRule.runOnIdle {
@@ -599,17 +740,44 @@ class ComposeSceneTest {
             assertThat(field2FocusState!!.isFocused).isFalse()
         }
     }
+}
 
-    private fun Modifier.onPointerEvent(
-        eventType: PointerEventType,
-        onEvent: AwaitPointerEventScope.(event: PointerEvent) -> Unit
-    ) = pointerInput(eventType, onEvent) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.type == eventType) {
-                    onEvent(event)
+private object PressIndicationNodeFactory: IndicationNodeFactory {
+
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        PressIndicationInstance(interactionSource)
+
+    override fun hashCode() = super.hashCode()
+
+    override fun equals(other: Any?) = super.equals(other)
+
+    private class PressIndicationInstance(private val interactionSource: InteractionSource) :
+        Modifier.Node(), DrawModifierNode {
+        private var isPressed = false
+        override fun onAttach() {
+            coroutineScope.launch {
+                var pressCount = 0
+                interactionSource.interactions.collect { interaction ->
+                    when (interaction) {
+                        is PressInteraction.Press -> pressCount++
+                        is PressInteraction.Release -> pressCount--
+                        is PressInteraction.Cancel -> pressCount--
+                    }
+                    val pressed = pressCount > 0
+                    var invalidateNeeded = false
+                    if (isPressed != pressed) {
+                        isPressed = pressed
+                        invalidateNeeded = true
+                    }
+                    if (invalidateNeeded) invalidateDraw()
                 }
+            }
+        }
+
+        override fun ContentDrawScope.draw() {
+            drawContent()
+            if (isPressed) {
+                drawRect(color = Color.Black.copy(alpha = 0.3f), size = size)
             }
         }
     }

@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.lazy.layout
 
+import androidx.collection.mutableObjectLongMapOf
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle
 import androidx.compose.runtime.Stable
@@ -27,7 +28,7 @@ import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAct
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.trace
-import kotlin.system.measureNanoTime
+import kotlin.time.measureTime
 
 /**
  * State for lazy items prefetching, used by lazy layouts to instruct the prefetcher.
@@ -53,13 +54,20 @@ class LazyLayoutPrefetchState(
     internal var prefetchHandleProvider: PrefetchHandleProvider? = null
 
     /**
+     * Schedules precomposition for the new item. If you also want to premeasure the item please
+     * use a second overload accepting a [Constraints] param.
+     *
+     * @param index item index to prefetch.
+     */
+    fun schedulePrefetch(index: Int): PrefetchHandle = schedulePrefetch(index, ZeroConstraints)
+
+    /**
      * Schedules precomposition and premeasure for the new item.
      *
      * @param index item index to prefetch.
-     * @param constraints [Constraints] to use for premeasuring. If null, the child will not
-     * be premeasured.
+     * @param constraints [Constraints] to use for premeasuring.
      */
-    fun schedulePrefetch(index: Int, constraints: Constraints? = null): PrefetchHandle {
+    fun schedulePrefetch(index: Int, constraints: Constraints): PrefetchHandle {
         return prefetchHandleProvider?.schedulePrefetch(index, constraints, prefetchMetrics)
             ?: DummyHandle
     }
@@ -95,8 +103,11 @@ class LazyLayoutPrefetchState(
         val requests: List<PrefetchRequest>
             get() = _requests
         private val _requests: MutableList<PrefetchRequest> = mutableListOf()
+        override fun schedulePrefetch(index: Int) {
+            schedulePrefetch(index, ZeroConstraints)
+        }
 
-        override fun schedulePrefetch(index: Int, constraints: Constraints?) {
+        override fun schedulePrefetch(index: Int, constraints: Constraints) {
             val prefetchHandleProvider = prefetchHandleProvider ?: return
             _requests.add(
                 prefetchHandleProvider.createNestedPrefetchRequest(
@@ -117,11 +128,22 @@ sealed interface NestedPrefetchScope {
 
     /**
      * Requests a child index to be prefetched as part of the prefetch of a parent LazyLayout.
+     *
+     * The prefetch will only do the precomposition for the new item. If you also want to premeasure
+     * please use a second overload accepting a [Constraints] param.
+     *
+     * @param index item index to prefetch.
+     */
+    fun schedulePrefetch(index: Int)
+
+    /**
+     * Requests a child index to be prefetched as part of the prefetch of a parent LazyLayout.
+     *
      * @param index the index of the child to prefetch.
      * @param constraints [Constraints] to use for premeasuring. If null, the child will not
      * be premeasured.
      */
-    fun schedulePrefetch(index: Int, constraints: Constraints? = null)
+    fun schedulePrefetch(index: Int, constraints: Constraints)
 }
 
 /**
@@ -131,6 +153,9 @@ sealed interface NestedPrefetchScope {
  */
 @ExperimentalFoundationApi
 internal class PrefetchMetrics {
+
+    val averageCompositionTimeNanosByContentType = mutableObjectLongMapOf<Any>()
+    val averageMeasureTimeNanosByContentType = mutableObjectLongMapOf<Any>()
 
     /**
      * The current average time composition has taken during prefetches of this LazyLayout.
@@ -148,18 +173,32 @@ internal class PrefetchMetrics {
      * Executes the [doComposition] block and updates [averageCompositionTimeNanos] with the new
      * average.
      */
-    internal inline fun recordCompositionTiming(doComposition: () -> Unit) {
-        val executionTime = measureNanoTime(doComposition)
+    internal inline fun recordCompositionTiming(contentType: Any?, doComposition: () -> Unit) {
+        val executionTime = measureTime(doComposition)
+        contentType?.let {
+            val currentAvgCompositionTimeNanos =
+                averageCompositionTimeNanosByContentType.getOrDefault(contentType, 0L)
+            val newAvgCompositionTimeNanos =
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgCompositionTimeNanos)
+            averageCompositionTimeNanosByContentType[contentType] = newAvgCompositionTimeNanos
+        }
         averageCompositionTimeNanos =
-            calculateAverageTime(executionTime, averageCompositionTimeNanos)
+            calculateAverageTime(executionTime.inWholeNanoseconds, averageCompositionTimeNanos)
     }
 
     /**
      * Executes the [doMeasure] block and updates [averageMeasureTimeNanos] with the new average.
      */
-    internal inline fun recordMeasureTiming(doMeasure: () -> Unit) {
-        val executionTime = measureNanoTime(doMeasure)
-        averageMeasureTimeNanos = calculateAverageTime(executionTime, averageMeasureTimeNanos)
+    internal inline fun recordMeasureTiming(contentType: Any?, doMeasure: () -> Unit) {
+        val executionTime = measureTime(doMeasure)
+        contentType?.let {
+            val currentAvgMeasureTimeNanos =
+                averageMeasureTimeNanosByContentType.getOrDefault(contentType, 0L)
+            val newAvgMeasureTimeNanos =
+                calculateAverageTime(executionTime.inWholeNanoseconds, currentAvgMeasureTimeNanos)
+            averageMeasureTimeNanosByContentType[contentType] = newAvgMeasureTimeNanos
+        }
+        averageMeasureTimeNanos = calculateAverageTime(executionTime.inWholeNanoseconds, averageMeasureTimeNanos)
     }
 
     private fun calculateAverageTime(new: Long, current: Long): Long {
@@ -195,7 +234,7 @@ internal class PrefetchHandleProvider(
 ) {
     fun schedulePrefetch(
         index: Int,
-        constraints: Constraints?,
+        constraints: Constraints,
         prefetchMetrics: PrefetchMetrics
     ): PrefetchHandle =
         HandleAndRequestImpl(index, constraints, prefetchMetrics).also {
@@ -204,7 +243,7 @@ internal class PrefetchHandleProvider(
 
     fun createNestedPrefetchRequest(
         index: Int,
-        constraints: Constraints?,
+        constraints: Constraints,
         prefetchMetrics: PrefetchMetrics,
     ): PrefetchRequest =
         HandleAndRequestImpl(index, constraints = constraints, prefetchMetrics)
@@ -212,7 +251,7 @@ internal class PrefetchHandleProvider(
     @ExperimentalFoundationApi
     private inner class HandleAndRequestImpl(
         private val index: Int,
-        private val constraints: Constraints?,
+        private val constraints: Constraints,
         private val prefetchMetrics: PrefetchMetrics,
     ) : PrefetchHandle, PrefetchRequest {
 
@@ -252,9 +291,16 @@ internal class PrefetchHandleProvider(
                 return false
             }
 
+            val contentType = itemContentFactory.itemProvider().getContentType(index)
+
             if (!isComposed) {
-                if (shouldExecute(prefetchMetrics.averageCompositionTimeNanos)) {
-                    prefetchMetrics.recordCompositionTiming {
+                val estimatedPrecomposeTime: Long =
+                    if (contentType != null && prefetchMetrics
+                        .averageCompositionTimeNanosByContentType.contains(contentType))
+                        prefetchMetrics.averageCompositionTimeNanosByContentType[contentType]
+                    else prefetchMetrics.averageCompositionTimeNanos
+                if (shouldExecute(estimatedPrecomposeTime)) {
+                    prefetchMetrics.recordCompositionTiming(contentType) {
                         trace("compose:lazy:prefetch:compose") {
                             performComposition()
                         }
@@ -291,9 +337,14 @@ internal class PrefetchHandleProvider(
                 }
             }
 
-            if (!isMeasured && constraints != null) {
-                if (shouldExecute(prefetchMetrics.averageMeasureTimeNanos)) {
-                    prefetchMetrics.recordMeasureTiming {
+            if (!isMeasured && !constraints.isZero) {
+                val estimatedPremeasureTime: Long =
+                    if (contentType != null && prefetchMetrics.averageMeasureTimeNanosByContentType
+                        .contains(contentType))
+                        prefetchMetrics.averageMeasureTimeNanosByContentType[contentType]
+                    else prefetchMetrics.averageMeasureTimeNanos
+                if (shouldExecute(estimatedPremeasureTime)) {
+                    prefetchMetrics.recordMeasureTiming(contentType) {
                         trace("compose:lazy:prefetch:measure") {
                             performMeasure(constraints)
                         }
@@ -449,3 +500,5 @@ private data class TraversablePrefetchStateModifierElement(
         value = prefetchState
     }
 }
+
+private val ZeroConstraints = Constraints(maxWidth = 0, maxHeight = 0)

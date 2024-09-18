@@ -23,22 +23,22 @@ import kotlin.String
 public fun dayOfWeekMapWhenUsage(dayOfWeek: DayOfWeek) =
   dayOfWeek.mapWhen(
     object : DayOfWeek.Mapper<String> {
-      override fun friday(): String = "Got Friday"
+      public override fun friday(): String = "Got Friday"
 
-      override fun monday(): String = "Got Monday"
+      public override fun monday(): String = "Got Monday"
 
-      override fun publicHolidays(): String = "Got PublicHolidays"
+      public override fun publicHolidays(): String = "Got PublicHolidays"
 
-      override fun saturday(): String = "Got Saturday"
+      public override fun saturday(): String = "Got Saturday"
 
-      override fun sunday(): String = "Got Sunday"
+      public override fun sunday(): String = "Got Sunday"
 
-      override fun thursday(): String = "Got Thursday"
+      public override fun thursday(): String = "Got Thursday"
 
-      override fun tuesday(): String = "Got Tuesday"
+      public override fun tuesday(): String = "Got Tuesday"
 
-      override fun wednesday(): String = "Got Wednesday"
+      public override fun wednesday(): String = "Got Wednesday"
 
-      override fun orElse(): String = """Got some unrecognized DayOfWeek: $dayOfWeek"""
+      public override fun orElse(): String = """Got some unrecognized DayOfWeek: $dayOfWeek"""
     }
   )

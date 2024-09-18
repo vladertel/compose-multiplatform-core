@@ -27,10 +27,8 @@ val NavigationDemos = DemoCategory(
         ComposableDemo("Nested Nav In Graph Demo") { NestNavInGraphDemo() },
         ComposableDemo("Bottom Bar Nav Demo") { BottomBarNavDemo() },
         ComposableDemo("Navigation with Args") { NavWithArgsDemo() },
-        ComposableDemo("Navigation with Args in Nested Graph") { NavWithArgsInNestedGraphDemo() },
         ComposableDemo("Navigation by DeepLink") { NavByDeepLinkDemo() },
         ComposableDemo("Navigation PopUpTo") { NavPopUpToDemo() },
-        ComposableDemo("Navigation SingleTop") { NavSingleTopDemo() },
-        ComposableDemo("Size Transform Demo") { SizeTransformDemo() }
+        ComposableDemo("Navigation SingleTop") { NavSingleTopDemo() }
     )
 )

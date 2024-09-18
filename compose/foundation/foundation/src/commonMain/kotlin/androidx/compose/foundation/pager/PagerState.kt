@@ -131,7 +131,7 @@ private class DefaultPagerState(
             save = {
                 listOf(
                     it.currentPage,
-                    it.currentPageOffsetFraction,
+                    (it.currentPageOffsetFraction).coerceIn(MinPageOffset, MaxPageOffset),
                     it.pageCount
                 )
             },
@@ -710,7 +710,7 @@ abstract class PagerState internal constructor(
             sign(scrollDelta) == sign(-upDownDifference.x)
         } || isNotGestureAction()
 
-    private fun isNotGestureAction(): Boolean =
+    internal fun isNotGestureAction(): Boolean =
         upDownDifference.x.toInt() == 0 && upDownDifference.y.toInt() == 0
 
     private fun notifyPrefetch(delta: Float, info: PagerLayoutInfo) {

@@ -16,6 +16,11 @@
 
 package androidx.compose.foundation.text.input.internal.selection
 
+import android.view.InputDevice
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
+import android.view.KeyEvent.ACTION_DOWN
+import android.view.View
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.createClipData
@@ -50,6 +55,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.platform.testTag
@@ -102,6 +108,8 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
     private val TAG = "BasicTextField"
 
     private var enabled by mutableStateOf(true)
+
+    private lateinit var view: View
 
     @Test
     fun toolbarAppears_whenCursorHandleIsClicked() {
@@ -356,6 +364,56 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
     }
 
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun toolbarDoesNotShow_ifSelectionInitiatedByHardwareKeyboard() {
+        val textToolbar = FakeTextToolbar()
+        val state = TextFieldState("Hello")
+        setupContent(state, textToolbar)
+
+        rule.onNodeWithTag(TAG).performTouchInput {
+            longClick(Offset(fontSizePx, fontSizePx / 2))
+        }
+
+        rule.runOnIdle {
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
+            assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
+        }
+
+        // regular `performKeyInput` scope does not set source to InputDevice.SOURCE_KEYBOARD
+        view.dispatchKeyEvent(
+            KeyEvent(
+                /* downTime = */ 0,
+                /* eventTime = */ 0,
+                /* action = */ ACTION_DOWN,
+                /* code = */ KeyEvent.KEYCODE_A,
+                /* repeat = */ 0,
+                /* metaState = */ KeyEvent.META_CTRL_ON,
+                KeyCharacterMap.VIRTUAL_KEYBOARD,
+                /* scancode= */ 0,
+                /* flags= */ 0,
+                /* source= */ InputDevice.SOURCE_KEYBOARD
+            )
+        )
+
+        rule.runOnIdle {
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
+            // even though there's selection, toolbar should not show when not in touch mode
+            assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
+        }
+
+        // test the touch interaction again so we know that hardware keyboard changes are not
+        // permanent
+        rule.onNodeWithTag(TAG).performTouchInput {
+            longClick(Offset(fontSizePx, fontSizePx / 2))
+        }
+
+        rule.runOnIdle {
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
+            assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
+        }
+    }
+
     @Test
     fun toolbarTemporarilyHides_whenHandleIsBeingDragged() {
         val textToolbar = FakeTextToolbar()
@@ -399,15 +457,17 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
         }
 
-        rule.onNodeWithTag(TAG).performTouchInput { swipeLeft(startX = fontSizePx * 3, endX = 0f) }
-        rule.runOnIdle {
-            assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
+        rule.onNodeWithTag(TAG).performTouchInput {
+            advanceEventTime(viewConfiguration.doubleTapTimeoutMillis * 2)
+            swipeLeft(startX = fontSizePx * 3, endX = 0f)
         }
+        rule.runOnIdle { assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden) }
 
-        rule.onNodeWithTag(TAG).performTouchInput { swipeRight(startX = 0f, endX = fontSizePx * 3) }
-        rule.runOnIdle {
-            assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
+        rule.onNodeWithTag(TAG).performTouchInput {
+            advanceEventTime(viewConfiguration.doubleTapTimeoutMillis * 2)
+            swipeRight(startX = 0f, endX = fontSizePx * 3)
         }
+        rule.runOnIdle { assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown) }
     }
 
     @Test
@@ -432,6 +492,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.onNodeWithTag(TAG).performTouchInput {
+            advanceEventTime(1_000) // avoid this being interpreted as a multi-tap
             down(center)
             moveBy(Offset(-viewConfiguration.touchSlop - fontSizePx, 0f))
             up()
@@ -891,6 +952,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         filter: InputTransformation? = null,
     ) {
         rule.setTextFieldTestContent {
+            view = LocalView.current
             CompositionLocalProvider(
                 LocalTextToolbar provides toolbar,
                 LocalClipboardManager provides clipboardManager

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ actual fun PathIterator(
     path: Path,
     conicEvaluation: PathIterator.ConicEvaluation,
     tolerance: Float
-): PathIterator = SkikoPathIterator(path, conicEvaluation, tolerance)
+): PathIterator = SkiaPathIterator(path, conicEvaluation, tolerance)
 
 // The code below would be used to handle conic to quadratic conversions.
 // The core Skia API exposed by Skiko accepts a "power of 2" number of
@@ -66,7 +66,7 @@ actual fun PathIterator(
 //     return subdivisions
 // }
 
-class SkikoPathIterator(
+private class SkiaPathIterator(
     override val path: Path,
     override val conicEvaluation: PathIterator.ConicEvaluation,
     override val tolerance: Float
@@ -79,8 +79,8 @@ class SkikoPathIterator(
 
     override fun hasNext(): Boolean = iterator.hasNext()
 
-    override fun next(outPoints: FloatArray, offset: Int): PathSegment.Type {
-        check(outPoints.size - offset >= 8) { "The points array must contain at least 8 floats" }
+    override fun next(points: FloatArray, offset: Int): PathSegment.Type {
+        check(points.size - offset >= 8) { "The points array must contain at least 8 floats" }
 
         if (!hasNext()) return PathSegment.Type.Done
 
@@ -89,47 +89,47 @@ class SkikoPathIterator(
 
         return when (segment.verb) {
             PathVerb.MOVE -> {
-                outPoints[offset] = segment.p0!!.x
-                outPoints[offset + 1] = segment.p0!!.y
+                points[offset] = segment.p0!!.x
+                points[offset + 1] = segment.p0!!.y
                 PathSegment.Type.Move
             }
             PathVerb.LINE -> {
-                outPoints[offset] = segment.p0!!.x
-                outPoints[offset + 1] = segment.p0!!.y
-                outPoints[offset + 2] = segment.p1!!.x
-                outPoints[offset + 3] = segment.p1!!.y
+                points[offset] = segment.p0!!.x
+                points[offset + 1] = segment.p0!!.y
+                points[offset + 2] = segment.p1!!.x
+                points[offset + 3] = segment.p1!!.y
                 PathSegment.Type.Line
             }
             PathVerb.QUAD -> {
-                outPoints[offset] = segment.p0!!.x
-                outPoints[offset + 1] = segment.p0!!.y
-                outPoints[offset + 2] = segment.p1!!.x
-                outPoints[offset + 3] = segment.p1!!.y
-                outPoints[offset + 4] = segment.p2!!.x
-                outPoints[offset + 5] = segment.p2!!.y
+                points[offset] = segment.p0!!.x
+                points[offset + 1] = segment.p0!!.y
+                points[offset + 2] = segment.p1!!.x
+                points[offset + 3] = segment.p1!!.y
+                points[offset + 4] = segment.p2!!.x
+                points[offset + 5] = segment.p2!!.y
                 PathSegment.Type.Quadratic
             }
             // TODO: convert conics to quadratics when conicEvaluation is set to AsQuadratics
             PathVerb.CONIC -> {
-                outPoints[offset] = segment.p0!!.x
-                outPoints[offset + 1] = segment.p0!!.y
-                outPoints[offset + 2] = segment.p1!!.x
-                outPoints[offset + 3] = segment.p1!!.y
-                outPoints[offset + 4] = segment.p2!!.x
-                outPoints[offset + 5] = segment.p2!!.y
-                outPoints[offset + 6] = segment.conicWeight
-                outPoints[offset + 7] = segment.conicWeight
+                points[offset] = segment.p0!!.x
+                points[offset + 1] = segment.p0!!.y
+                points[offset + 2] = segment.p1!!.x
+                points[offset + 3] = segment.p1!!.y
+                points[offset + 4] = segment.p2!!.x
+                points[offset + 5] = segment.p2!!.y
+                points[offset + 6] = segment.conicWeight
+                points[offset + 7] = segment.conicWeight
                 PathSegment.Type.Conic
             }
             PathVerb.CUBIC -> {
-                outPoints[offset] = segment.p0!!.x
-                outPoints[offset + 1] = segment.p0!!.y
-                outPoints[offset + 2] = segment.p1!!.x
-                outPoints[offset + 3] = segment.p1!!.y
-                outPoints[offset + 4] = segment.p2!!.x
-                outPoints[offset + 5] = segment.p2!!.y
-                outPoints[offset + 6] = segment.p3!!.x
-                outPoints[offset + 7] = segment.p3!!.y
+                points[offset] = segment.p0!!.x
+                points[offset + 1] = segment.p0!!.y
+                points[offset + 2] = segment.p1!!.x
+                points[offset + 3] = segment.p1!!.y
+                points[offset + 4] = segment.p2!!.x
+                points[offset + 5] = segment.p2!!.y
+                points[offset + 6] = segment.p3!!.x
+                points[offset + 7] = segment.p3!!.y
                 PathSegment.Type.Cubic
             }
             PathVerb.CLOSE -> PathSegment.Type.Close

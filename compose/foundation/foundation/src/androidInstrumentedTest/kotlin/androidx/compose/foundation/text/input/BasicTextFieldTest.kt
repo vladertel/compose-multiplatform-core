@@ -31,12 +31,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardHelper
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.computeSizeForDefaultText
 import androidx.compose.foundation.text.input.TextFieldBuffer.ChangeList
 import androidx.compose.foundation.text.input.internal.selection.FakeClipboardManager
+import androidx.compose.foundation.text.input.internal.setComposingRegion
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
@@ -89,13 +89,16 @@ import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,8 +107,6 @@ import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.drop
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -413,13 +414,10 @@ internal class BasicTextFieldTest {
     }
 
     @Test
-    fun hideKeyboardWhenDisposed() {
-        val keyboardHelper = KeyboardHelper(rule)
+    fun disposeSession_whenTextFieldIsRemoved() {
         val state = TextFieldState("initial text")
         var toggle by mutableStateOf(true)
-        rule.setContent {
-            keyboardHelper.initialize()
-
+        inputMethodInterceptor.setContent {
             if (toggle) {
                 BasicTextField(
                     state = state,
@@ -429,23 +427,18 @@ internal class BasicTextFieldTest {
         }
 
         rule.onNodeWithTag("TextField").requestFocus()
-        keyboardHelper.waitForKeyboardVisibility(true)
-        assertTrue(keyboardHelper.isSoftwareKeyboardShown())
+        inputMethodInterceptor.assertSessionActive()
 
         toggle = false
-        rule.waitForIdle()
 
-        keyboardHelper.waitForKeyboardVisibility(false)
-        assertFalse(keyboardHelper.isSoftwareKeyboardShown())
+        inputMethodInterceptor.assertNoSessionActive()
     }
 
     @Test
-    fun hideKeyboardWhenFocusCleared() {
-        val keyboardHelper = KeyboardHelper(rule)
+    fun disposeSessionWhenFocusCleared() {
         val state = TextFieldState("initial text")
         lateinit var focusManager: FocusManager
-        rule.setContent {
-            keyboardHelper.initialize()
+        inputMethodInterceptor.setContent {
             focusManager = LocalFocusManager.current
             Row {
                 // Extra focusable that takes initial focus when focus is cleared.
@@ -461,15 +454,14 @@ internal class BasicTextFieldTest {
         }
 
         rule.onNodeWithTag("TextField").requestFocus()
-        keyboardHelper.waitForKeyboardVisibility(true)
-        assertTrue(keyboardHelper.isSoftwareKeyboardShown())
+
+        inputMethodInterceptor.assertSessionActive()
 
         rule.runOnIdle {
             focusManager.clearFocus()
         }
 
-        keyboardHelper.waitForKeyboardVisibility(false)
-        assertFalse(keyboardHelper.isSoftwareKeyboardShown())
+        inputMethodInterceptor.assertNoSessionActive()
     }
 
     @Test
@@ -560,6 +552,25 @@ internal class BasicTextFieldTest {
 
         inputMethodInterceptor.withInputConnection { commitText("hello") }
         rule.onNodeWithTag(Tag).assertTextEquals("")
+    }
+
+    @Test
+    fun textField_appliesFilter_toInputConnection_changingComposition() {
+        val state = TextFieldState()
+        inputMethodInterceptor.setTextFieldTestContent {
+            BasicTextField(
+                state = state,
+                inputTransformation = RejectAllTextFilter,
+                modifier = Modifier.testTag(Tag)
+            )
+        }
+        requestFocus(Tag)
+
+        inputMethodInterceptor.withInputConnection {
+            setComposingText("hello", 1)
+        }
+        rule.onNodeWithTag(Tag).assertTextEquals("")
+        assertThat(state.composition).isNull()
     }
 
     @Test
@@ -1330,6 +1341,131 @@ internal class BasicTextFieldTest {
 
         rule.waitForIdle()
         rule.onNodeWithTag(Tag).captureToImage().assertHorizontallySymmetrical(fontSize)
+    }
+
+    @Test
+    fun changingInputTransformation_doesNotRestartInput() {
+        var inputTransformation by mutableStateOf(InputTransformation.maxLength(10))
+        inputMethodInterceptor.setTextFieldTestContent {
+            val state = remember { TextFieldState() }
+            BasicTextField(
+                state = state,
+                modifier = Modifier.fillMaxSize().testTag(Tag),
+                inputTransformation = inputTransformation
+            )
+        }
+
+        requestFocus(Tag)
+        inputMethodInterceptor.assertSessionActive()
+        inputMethodInterceptor.assertThatSessionCount().isEqualTo(1)
+
+        inputTransformation = InputTransformation.maxLength(15)
+
+        inputMethodInterceptor.assertSessionActive()
+        inputMethodInterceptor.assertThatSessionCount().isEqualTo(1)
+    }
+
+    @Test
+    fun changingInputTransformation_restartsInput_ifKeyboardOptionsChange() {
+        var inputTransformation by mutableStateOf<InputTransformation?>(null)
+        inputMethodInterceptor.setTextFieldTestContent {
+            val state = remember { TextFieldState() }
+            BasicTextField(
+                state = state,
+                modifier = Modifier.fillMaxSize().testTag(Tag),
+                inputTransformation = inputTransformation
+            )
+        }
+
+        requestFocus(Tag)
+        inputMethodInterceptor.assertSessionActive()
+        inputMethodInterceptor.assertThatSessionCount().isEqualTo(1)
+
+        inputTransformation = InputTransformation.allCaps(Locale.current)
+
+        inputMethodInterceptor.assertSessionActive()
+        inputMethodInterceptor.assertThatSessionCount().isEqualTo(2)
+    }
+
+    @Test
+    fun composingRegion_addsUnderlineSpanToLayout() {
+        val state = TextFieldState("Hello, World")
+        var textLayoutProvider: (() -> TextLayoutResult?)? by mutableStateOf(null)
+
+        inputMethodInterceptor.setTextFieldTestContent {
+            BasicTextField(
+                state = state,
+                modifier = Modifier.fillMaxSize().testTag(Tag),
+                onTextLayout = { textLayoutProvider = it }
+            )
+        }
+
+        requestFocus(Tag)
+        inputMethodInterceptor.withInputConnection {
+            setComposingRegion(0, 5)
+        }
+        rule.runOnIdle {
+            val currentTextLayout = textLayoutProvider?.invoke()
+            assertThat(currentTextLayout).isNotNull()
+
+            val expectedSpan = AnnotatedString.Range(
+                item = SpanStyle(textDecoration = TextDecoration.Underline),
+                start = 0,
+                end = 5
+            )
+            assertThat(currentTextLayout!!.multiParagraph.intrinsics.annotatedString.spanStyles)
+                .contains(expectedSpan)
+        }
+    }
+
+    @Test
+    fun composingRegion_changesInvalidateLayout() {
+        val state = TextFieldState("Hello, World")
+        var textLayoutProvider: (() -> TextLayoutResult?)? by mutableStateOf(null)
+        state.editAsUser(inputTransformation = null) { setComposingRegion(0, 5) }
+
+        inputMethodInterceptor.setTextFieldTestContent {
+            BasicTextField(
+                state = state,
+                modifier = Modifier.fillMaxSize().testTag(Tag),
+                onTextLayout = { textLayoutProvider = it }
+            )
+        }
+
+        requestFocus(Tag)
+
+        // assert initial composing region
+        rule.runOnIdle {
+            val initialTextLayout = textLayoutProvider?.invoke()
+            assertThat(initialTextLayout).isNotNull()
+
+            val expectedSpan = AnnotatedString.Range(
+                item = SpanStyle(textDecoration = TextDecoration.Underline),
+                start = 0,
+                end = 5
+            )
+            assertThat(initialTextLayout!!.multiParagraph.intrinsics.annotatedString.spanStyles)
+                .contains(expectedSpan)
+        }
+
+        // change composing region
+        inputMethodInterceptor.withInputConnection {
+            setComposingRegion(7, 12)
+        }
+
+        // assert the changed region
+        rule.runOnIdle {
+            val currentTextLayout = textLayoutProvider?.invoke()
+            assertThat(currentTextLayout).isNotNull()
+
+            val expectedSpan = AnnotatedString.Range(
+                item = SpanStyle(textDecoration = TextDecoration.Underline),
+                start = 7,
+                end = 12
+            )
+            assertThat(currentTextLayout!!.multiParagraph.intrinsics.annotatedString.spanStyles)
+                .contains(expectedSpan)
+        }
     }
 
     private fun requestFocus(tag: String) =

@@ -21,9 +21,9 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,44 +36,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.tokens.ElevationTokens
-import androidx.compose.material3.tokens.ListTokens
 import androidx.compose.material3.tokens.MenuTokens
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Contains default values used for [DropdownMenu] and [DropdownMenuItem].
+ * Contains default values used for [DropdownMenuItem].
  */
 object MenuDefaults {
-    /** The default tonal elevation for a menu. */
-    val TonalElevation = ElevationTokens.Level0
-
-    /** The default shadow elevation for a menu. */
-    val ShadowElevation = MenuTokens.ContainerElevation
-
-    /** The default shape for a menu. */
-    val shape @Composable get() = MenuTokens.ContainerShape.value
-
-    /** The default container color for a menu. */
-    val containerColor @Composable get() = MenuTokens.ContainerColor.value
 
     /**
      * Creates a [MenuItemColors] that represents the default text and icon colors used in a
@@ -116,15 +105,15 @@ object MenuDefaults {
     internal val ColorScheme.defaultMenuItemColors: MenuItemColors
         get() {
             return defaultMenuItemColorsCached ?: MenuItemColors(
-                textColor = fromToken(ListTokens.ListItemLabelTextColor),
-                leadingIconColor = fromToken(ListTokens.ListItemLeadingIconColor),
-                trailingIconColor = fromToken(ListTokens.ListItemTrailingIconColor),
-                disabledTextColor = fromToken(ListTokens.ListItemDisabledLabelTextColor)
-                    .copy(alpha = ListTokens.ListItemDisabledLabelTextOpacity),
-                disabledLeadingIconColor = fromToken(ListTokens.ListItemDisabledLeadingIconColor)
-                    .copy(alpha = ListTokens.ListItemDisabledLeadingIconOpacity),
-                disabledTrailingIconColor = fromToken(ListTokens.ListItemDisabledTrailingIconColor)
-                    .copy(alpha = ListTokens.ListItemDisabledTrailingIconOpacity),
+                textColor = fromToken(MenuTokens.ListItemLabelTextColor),
+                leadingIconColor = fromToken(MenuTokens.ListItemLeadingIconColor),
+                trailingIconColor = fromToken(MenuTokens.ListItemTrailingIconColor),
+                disabledTextColor = fromToken(MenuTokens.ListItemDisabledLabelTextColor)
+                .copy(alpha = MenuTokens.ListItemDisabledLabelTextOpacity),
+                disabledLeadingIconColor = fromToken(MenuTokens.ListItemDisabledLeadingIconColor)
+                .copy(alpha = MenuTokens.ListItemDisabledLeadingIconOpacity),
+                disabledTrailingIconColor = fromToken(MenuTokens.ListItemDisabledTrailingIconColor)
+                .copy(alpha = MenuTokens.ListItemDisabledTrailingIconOpacity),
             ).also {
                 defaultMenuItemColorsCached = it
             }
@@ -190,16 +179,17 @@ class MenuItemColors(
      *
      * @param enabled whether the menu item is enabled
      */
-    @Stable
-    internal fun textColor(enabled: Boolean): Color =
-        if (enabled) textColor else disabledTextColor
+    @Composable
+    internal fun textColor(enabled: Boolean): State<Color> {
+        return rememberUpdatedState(if (enabled) textColor else disabledTextColor)
+    }
 
     /**
      * Represents the leading icon color for a menu item, depending on its [enabled] state.
      *
      * @param enabled whether the menu item is enabled
      */
-    @Stable
+    @Composable
     internal fun leadingIconColor(enabled: Boolean): Color =
         if (enabled) leadingIconColor else disabledLeadingIconColor
 
@@ -208,7 +198,7 @@ class MenuItemColors(
      *
      * @param enabled whether the menu item is enabled
      */
-    @Stable
+    @Composable
     internal fun trailingIconColor(enabled: Boolean): Color =
         if (enabled) trailingIconColor else disabledTrailingIconColor
 
@@ -237,17 +227,110 @@ class MenuItemColors(
     }
 }
 
+/**
+ * <a href="https://m3.material.io/components/menus/overview" class="external" target="_blank">Material Design dropdown menu</a>.
+ *
+ * Menus display a list of choices on a temporary surface. They appear when users interact with a
+ * button, action, or other control.
+ *
+ * ![Dropdown menu image](https://developer.android.com/images/reference/androidx/compose/material3/menu.png)
+ *
+ * A [DropdownMenu] behaves similarly to a [Popup], and will use the position of the parent layout
+ * to position itself on screen. Commonly a [DropdownMenu] will be placed in a [Box] with a sibling
+ * that will be used as the 'anchor'. Note that a [DropdownMenu] by itself will not take up any
+ * space in a layout, as the menu is displayed in a separate window, on top of other content.
+ *
+ * The [content] of a [DropdownMenu] will typically be [DropdownMenuItem]s, as well as custom
+ * content. Using [DropdownMenuItem]s will result in a menu that matches the Material
+ * specification for menus. Also note that the [content] is placed inside a scrollable [Column],
+ * so using a [LazyColumn] as the root layout inside [content] is unsupported.
+ *
+ * [onDismissRequest] will be called when the menu should close - for example when there is a
+ * tap outside the menu, or when the back key is pressed.
+ *
+ * [DropdownMenu] changes its positioning depending on the available space, always trying to be
+ * fully visible. Depending on layout direction, first it will try to align its start to the start
+ * of its parent, then its end to the end of its parent, and then to the edge of the window.
+ * Vertically, it will try to align its top to the bottom of its parent, then its bottom to top of
+ * its parent, and then to the edge of the window.
+ *
+ * An [offset] can be provided to adjust the positioning of the menu for cases when the layout
+ * bounds of its parent do not coincide with its visual bounds.
+ *
+ * Example usage:
+ * @sample androidx.compose.material3.samples.MenuSample
+ *
+ * Example usage with a [ScrollState] to control the menu items scroll position:
+ * @sample androidx.compose.material3.samples.MenuWithScrollStateSample
+ *
+ * @param expanded whether the menu is expanded or not
+ * @param onDismissRequest called when the user requests to dismiss the menu, such as by tapping
+ * outside the menu's bounds
+ * @param modifier [Modifier] to be applied to the menu's content
+ * @param offset [DpOffset] from the original position of the menu. The offset respects the
+ * [LayoutDirection], so the offset's x position will be added in LTR and subtracted in RTL.
+ * @param scrollState a [ScrollState] to used by the menu's content for items vertical scrolling
+ * @param properties [PopupProperties] for further customization of this popup's behavior
+ * @param content the content of this dropdown menu, typically a [DropdownMenuItem]
+ */
+@Composable
+expect fun DropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: DpOffset = DpOffset(0.dp, 0.dp),
+    scrollState: ScrollState = rememberScrollState(),
+    properties: PopupProperties = PopupProperties(focusable = true),
+    content: @Composable ColumnScope.() -> Unit
+)
+
+/**
+ * <a href="https://m3.material.io/components/menus/overview" class="external" target="_blank">Material Design dropdown menu</a> item.
+ *
+ * Menus display a list of choices on a temporary surface. They appear when users interact with a
+ * button, action, or other control.
+ *
+ * ![Dropdown menu image](https://developer.android.com/images/reference/androidx/compose/material3/menu.png)
+ *
+ * Example usage:
+ * @sample androidx.compose.material3.samples.MenuSample
+ *
+ * @param text text of the menu item
+ * @param onClick called when this menu item is clicked
+ * @param modifier the [Modifier] to be applied to this menu item
+ * @param leadingIcon optional leading icon to be displayed at the beginning of the item's text
+ * @param trailingIcon optional trailing icon to be displayed at the end of the item's text. This
+ * trailing icon slot can also accept [Text] to indicate a keyboard shortcut.
+ * @param enabled controls the enabled state of this menu item. When `false`, this component will
+ * not respond to user input, and it will appear visually disabled and disabled to accessibility
+ * services.
+ * @param colors [MenuItemColors] that will be used to resolve the colors used for this menu item in
+ * different states. See [MenuDefaults.itemColors].
+ * @param contentPadding the padding applied to the content of this menu item
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this menu item. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this menu item in different states.
+ */
+@Composable
+expect fun DropdownMenuItem(
+    text: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    enabled: Boolean = true,
+    colors: MenuItemColors = MenuDefaults.itemColors(),
+    contentPadding: PaddingValues = MenuDefaults.DropdownMenuItemContentPadding,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+)
+
+@Suppress("ModifierParameter")
 @Composable
 internal fun DropdownMenuContent(
-    modifier: Modifier,
     expandedState: MutableTransitionState<Boolean>,
     transformOriginState: MutableState<TransformOrigin>,
     scrollState: ScrollState,
-    shape: Shape,
-    containerColor: Color,
-    tonalElevation: Dp,
-    shadowElevation: Dp,
-    border: BorderStroke?,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     // Menu open/close animation.
@@ -295,11 +378,10 @@ internal fun DropdownMenuContent(
             this.alpha = alpha
             transformOrigin = transformOriginState.value
         },
-        shape = shape,
-        color = containerColor,
-        tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation,
-        border = border,
+        shape = MenuTokens.ContainerShape.value,
+        color = MaterialTheme.colorScheme.fromToken(MenuTokens.ContainerColor),
+        tonalElevation = MenuTokens.ContainerElevation,
+        shadowElevation = MenuTokens.ContainerElevation
     ) {
         Column(
             modifier = modifier
@@ -321,38 +403,38 @@ internal fun DropdownMenuItemContent(
     enabled: Boolean,
     colors: MenuItemColors,
     contentPadding: PaddingValues,
-    interactionSource: MutableInteractionSource?
+    interactionSource: MutableInteractionSource
 ) {
+    @Suppress("DEPRECATION_ERROR")
     Row(
         modifier = modifier
             .clickable(
                 enabled = enabled,
                 onClick = onClick,
                 interactionSource = interactionSource,
-                indication = rippleOrFallbackImplementation(true)
+                indication = androidx.compose.material.ripple.rememberRipple(true)
             )
             .fillMaxWidth()
             // Preferred min and max width used during the intrinsic measurement.
             .sizeIn(
                 minWidth = DropdownMenuItemDefaultMinWidth,
                 maxWidth = DropdownMenuItemDefaultMaxWidth,
-                minHeight = MenuListItemContainerHeight
+                minHeight = MenuTokens.ListItemContainerHeight
             )
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // TODO(b/271818892): Align menu list item style with general list item style.
-        ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+        ProvideTextStyle(MaterialTheme.typography.fromToken(MenuTokens.ListItemLabelTextFont)) {
             if (leadingIcon != null) {
                 CompositionLocalProvider(
                     LocalContentColor provides colors.leadingIconColor(enabled),
                 ) {
-                    Box(Modifier.defaultMinSize(minWidth = ListTokens.ListItemLeadingIconSize)) {
+                    Box(Modifier.defaultMinSize(minWidth = MenuTokens.ListItemLeadingIconSize)) {
                         leadingIcon()
                     }
                 }
             }
-            CompositionLocalProvider(LocalContentColor provides colors.textColor(enabled)) {
+            CompositionLocalProvider(LocalContentColor provides colors.textColor(enabled).value) {
                 Box(
                     Modifier
                         .weight(1f)
@@ -376,7 +458,7 @@ internal fun DropdownMenuItemContent(
                 CompositionLocalProvider(
                     LocalContentColor provides colors.trailingIconColor(enabled)
                 ) {
-                    Box(Modifier.defaultMinSize(minWidth = ListTokens.ListItemTrailingIconSize)) {
+                    Box(Modifier.defaultMinSize(minWidth = MenuTokens.ListItemTrailingIconSize)) {
                         trailingIcon()
                     }
                 }
@@ -416,7 +498,6 @@ internal fun calculateTransformOrigin(
 
 // Size defaults.
 internal val MenuVerticalMargin = 48.dp
-private val MenuListItemContainerHeight = 48.dp
 private val DropdownMenuItemHorizontalPadding = 12.dp
 internal val DropdownMenuVerticalPadding = 8.dp
 private val DropdownMenuItemDefaultMinWidth = 112.dp

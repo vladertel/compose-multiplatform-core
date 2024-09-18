@@ -20,7 +20,6 @@ import androidx.room.compiler.processing.XAnnotated
 import androidx.room.compiler.processing.XExecutableParameterElement
 import androidx.room.compiler.processing.XMemberContainer
 import androidx.room.compiler.processing.XType
-import androidx.room.compiler.processing.isArray
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_METHOD_PARAMETER
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
 import androidx.room.compiler.processing.util.sanitizeAsJavaParameterName
@@ -74,15 +73,12 @@ internal class KspExecutableParameterElement(
 
     private fun createAsMemberOf(container: XType?): KspType {
         check(container is KspType?)
-        val resolvedType = parameter.type.resolve()
-        val type = env.wrap(
-            originalAnnotations = parameter.type.annotations,
+        return env.wrap(
+            originatingReference = parameter.type,
             ksType = parameter.typeAsMemberOf(
                 functionDeclaration = enclosingElement.declaration,
-                ksType = container?.ksType,
-                resolved = resolvedType
-            ),
-            allowPrimitives = !resolvedType.isTypeParameter()
+                ksType = container?.ksType
+            )
         ).copyWithScope(
             KSTypeVarianceResolverScope.MethodParameter(
                 kspExecutableElement = enclosingElement,
@@ -92,13 +88,6 @@ internal class KspExecutableParameterElement(
                 asMemberOf = container,
             )
         )
-        // In KSP2 the varargs have the component type instead of the array type. We make it always
-        // return the array type in XProcessing.
-        return if (isVarArgs() && !type.isArray()) {
-            env.getArrayType(type)
-        } else {
-            type
-        }
     }
 
     override fun kindName(): String {

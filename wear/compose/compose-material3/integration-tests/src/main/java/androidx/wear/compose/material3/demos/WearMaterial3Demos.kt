@@ -46,9 +46,6 @@ val WearMaterial3Demos = DemoCategory(
                 ComposableDemo("Child Button") {
                     ChildButtonDemo()
                 },
-                ComposableDemo("Compact Button") {
-                    CompactButtonDemo()
-                },
                 ComposableDemo("Multiline Button") {
                     MultilineButtonDemo()
                 },
@@ -62,10 +59,6 @@ val WearMaterial3Demos = DemoCategory(
                 ListHeaderDemo()
             }
         },
-        DemoCategory(
-            "Time Text",
-            TimeTextDemos
-        ),
         ComposableDemo("Card") {
             CardDemo()
         },
@@ -87,21 +80,13 @@ val WearMaterial3Demos = DemoCategory(
         ComposableDemo("Switch") {
             SwitchDemos()
         },
-        ComposableDemo("Radio") {
-            RadioDemos()
-        },
         ComposableDemo("Radio Button") {
-            RadioButtonDemo()
+            RadioButtonDemos()
         },
-        ComposableDemo("Split Radio Button") {
-            SplitRadioButtonDemo()
-        },
-        ComposableDemo("Toggle Button") {
-            ToggleButtonDemo()
-        },
-        ComposableDemo("Split Toggle Button") {
-            SplitToggleButtonDemo()
-        },
+        DemoCategory(
+            title = "Toggle Button",
+            toggleButtonDemos
+        ),
         DemoCategory(
             "Stepper",
             listOf(
@@ -125,10 +110,6 @@ val WearMaterial3Demos = DemoCategory(
             "Slider",
             SliderDemos
         ),
-        DemoCategory(
-            "Progress Indicator",
-            ProgressIndicatorDemos
-        ),
         ComposableDemo(
             title = "Fixed Font Size"
         ) {
@@ -145,6 +126,5 @@ val WearMaterial3Demos = DemoCategory(
         ComposableDemo("HorizontalPageIndicator") {
             Centralize { HorizontalPageIndicatorSample() }
         },
-        ComposableDemo("Settings Demo") { SettingsDemo() }
     )
 )

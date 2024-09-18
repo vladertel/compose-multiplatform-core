@@ -65,32 +65,32 @@ internal class CameraFactoryAdapter(
             )
             .build()
         debug { "Created CameraFactoryAdapter in ${start.measureNow(timeSource).formatMs()}" }
+        debug { "availableCamerasSelector: $availableCamerasSelector " }
         Debug.traceStop()
         result
     }
-    private val availableCameraIds: LinkedHashSet<String>
+    private var mAvailableCamerasSelector: CameraSelector? = availableCamerasSelector
+    private var mAvailableCameraIds: List<String>
     private val cameraCoordinator: CameraCoordinatorAdapter = CameraCoordinatorAdapter(
         appComponent.getCameraPipe(),
         appComponent.getCameraDevices(),
     )
 
     init {
+        debug { "Created CameraFactoryAdapter" }
+
         val optimizedCameraIds = CameraSelectionOptimizer.getSelectedAvailableCameraIds(
             this,
-            availableCamerasSelector
+            mAvailableCamerasSelector
         )
-
-        // Use a LinkedHashSet to preserve order
-        availableCameraIds = LinkedHashSet(
-            CameraCompatibilityFilter.getBackwardCompatibleCameraIds(
-                appComponent.getCameraDevices(),
-                optimizedCameraIds
-            )
+        mAvailableCameraIds = CameraCompatibilityFilter.getBackwardCompatibleCameraIds(
+            appComponent.getCameraDevices(),
+            optimizedCameraIds
         )
     }
 
     /**
-     * The [getCamera] method is responsible for providing CameraInternal object based on cameraId.
+     * The [getCamera] method is responsible for providing CameraInternal object based on cameraID.
      * Use cameraId from set of cameraIds provided by [getAvailableCameraIds] method.
      */
     override fun getCamera(cameraId: String): CameraInternal {
@@ -102,12 +102,13 @@ internal class CameraFactoryAdapter(
         return cameraInternal
     }
 
-    override fun getAvailableCameraIds(): Set<String> = availableCameraIds
+    override fun getAvailableCameraIds(): Set<String> =
+        // Use a LinkedHashSet to preserve order
+        LinkedHashSet(mAvailableCameraIds)
 
     override fun getCameraCoordinator(): CameraCoordinator {
         return cameraCoordinator
     }
 
-    /** This is an implementation specific object that is specific to the integration package */
     override fun getCameraManager(): Any = appComponent
 }

@@ -85,8 +85,8 @@ internal abstract class NodeCoordinator(
     override val coordinates: LayoutCoordinates
         get() = this
 
-    override val introducesFrameOfReference: Boolean
-        get() = !isPlacedUsingCurrentFrameOfReference
+    override val introducesMotionFrameOfReference: Boolean
+        get() = isPlacedUnderMotionFrameOfReference
 
     private var released = false
 
@@ -222,7 +222,10 @@ internal abstract class NodeCoordinator(
         if (layer != null) {
             layer.resize(IntSize(width, height))
         } else {
-            wrappedBy?.invalidateLayer()
+            // if the node is not placed then this change will not be visible
+            if (layoutNode.isPlaced) {
+                wrappedBy?.invalidateLayer()
+            }
         }
         measuredSize = IntSize(width, height)
         if (layerBlock != null) {
@@ -371,7 +374,13 @@ internal abstract class NodeCoordinator(
                 invalidateParentLayer()
             }
         } else {
-            releaseExplicitLayer()
+            if (this.explicitLayer != null) {
+                this.explicitLayer = null
+                // we need to first release the OwnedLayer created for explicitLayer
+                // as we don't support updating the same OwnedLayer object from using
+                // explicit layer to implicit one.
+                updateLayerBlock(null)
+            }
             updateLayerBlock(layerBlock)
         }
         if (this.position != position) {
@@ -393,10 +402,17 @@ internal abstract class NodeCoordinator(
         }
     }
 
-    fun releaseExplicitLayer() {
-        if (explicitLayer != null) {
-            explicitLayer = null
+    fun releaseLayer() {
+        if (layer != null) {
+            if (explicitLayer != null) {
+                explicitLayer = null
+            }
             updateLayerBlock(null)
+
+            // as we removed the layer the node was placed with, we have to request relayout in
+            // case the node will be reused in future. during the relayout the layer will be
+            // recreated again if needed.
+            layoutNode.requestRelayout()
         }
     }
 
@@ -831,27 +847,23 @@ internal abstract class NodeCoordinator(
     override fun localPositionOf(
         sourceCoordinates: LayoutCoordinates,
         relativeToSource: Offset
-    ): Offset = localPositionOf(sourceCoordinates, relativeToSource, false)
+    ): Offset = localPositionOf(
+        sourceCoordinates = sourceCoordinates,
+        relativeToSource = relativeToSource,
+        includeMotionFrameOfReference = true
+    )
 
-    override fun positionInLocalFrameOfReference(
-        sourceCoordinates: LayoutCoordinates,
-        relativeToSource: Offset
-    ): Offset = localPositionOf(sourceCoordinates, relativeToSource, true)
-
-    /**
-     * Common call
-     */
-    internal fun localPositionOf(
+    override fun localPositionOf(
         sourceCoordinates: LayoutCoordinates,
         relativeToSource: Offset,
-        excludeDirectManipulationOffset: Boolean
+        includeMotionFrameOfReference: Boolean
     ): Offset {
         if (sourceCoordinates is LookaheadLayoutCoordinates) {
             sourceCoordinates.coordinator.onCoordinatesUsed()
             return -sourceCoordinates.localPositionOf(
                 sourceCoordinates = this,
                 relativeToSource = -relativeToSource,
-                excludeDirectManipulationOffset = excludeDirectManipulationOffset
+                includeMotionFrameOfReference = includeMotionFrameOfReference
             )
         }
 
@@ -862,11 +874,11 @@ internal abstract class NodeCoordinator(
         var position = relativeToSource
         var coordinator = nodeCoordinator
         while (coordinator !== commonAncestor) {
-            position = coordinator.toParentPosition(position, excludeDirectManipulationOffset)
+            position = coordinator.toParentPosition(position, includeMotionFrameOfReference)
             coordinator = coordinator.wrappedBy!!
         }
 
-        return ancestorToLocal(commonAncestor, position, excludeDirectManipulationOffset)
+        return ancestorToLocal(commonAncestor, position, includeMotionFrameOfReference)
     }
 
     override fun transformFrom(sourceCoordinates: LayoutCoordinates, matrix: Matrix) {
@@ -949,18 +961,18 @@ internal abstract class NodeCoordinator(
     private fun ancestorToLocal(
         ancestor: NodeCoordinator,
         offset: Offset,
-        excludeDirectManipulationOffset: Boolean,
+        includeMotionFrameOfReference: Boolean,
     ): Offset {
         if (ancestor === this) {
             return offset
         }
         val wrappedBy = wrappedBy
         if (wrappedBy == null || ancestor == wrappedBy) {
-            return fromParentPosition(offset, excludeDirectManipulationOffset)
+            return fromParentPosition(offset, includeMotionFrameOfReference)
         }
         return fromParentPosition(
-            position = wrappedBy.ancestorToLocal(ancestor, offset, excludeDirectManipulationOffset),
-            excludeDirectManipulationOffset = excludeDirectManipulationOffset
+            position = wrappedBy.ancestorToLocal(ancestor, offset, includeMotionFrameOfReference),
+            includeMotionFrameOfReference = includeMotionFrameOfReference
         )
     }
 
@@ -1002,11 +1014,11 @@ internal abstract class NodeCoordinator(
      */
     open fun toParentPosition(
         position: Offset,
-        excludeDirectManipulationOffset: Boolean = false
+        includeMotionFrameOfReference: Boolean = true
     ): Offset {
         val layer = layer
         val targetPosition = layer?.mapOffset(position, inverse = false) ?: position
-        return if (excludeDirectManipulationOffset && isPlacedUsingCurrentFrameOfReference) {
+        return if (!includeMotionFrameOfReference && isPlacedUnderMotionFrameOfReference) {
             targetPosition
         } else {
             targetPosition + this.position
@@ -1019,10 +1031,10 @@ internal abstract class NodeCoordinator(
      */
     open fun fromParentPosition(
         position: Offset,
-        excludeDirectManipulationOffset: Boolean = false
+        includeMotionFrameOfReference: Boolean = true
     ): Offset {
         val relativeToPosition =
-            if (excludeDirectManipulationOffset && isPlacedUsingCurrentFrameOfReference) {
+            if (!includeMotionFrameOfReference && this.isPlacedUnderMotionFrameOfReference) {
                 position
             } else {
                 position - this.position
@@ -1058,7 +1070,6 @@ internal abstract class NodeCoordinator(
      * released or when the [NodeCoordinator] is released (will not be used anymore).
      */
     fun onRelease() {
-        releaseExplicitLayer()
         released = true
         // It is important to call invalidateParentLayer() here, even though updateLayerBlock() may
         // call it. The reason is because we end up calling this from the bottom up, which means
@@ -1067,9 +1078,7 @@ internal abstract class NodeCoordinator(
         // no layers invalidated. By always calling this, we ensure that after all nodes are
         // removed at least one layer is invalidated.
         invalidateParentLayer()
-        if (layer != null) {
-            updateLayerBlock(null)
-        }
+        releaseLayer()
     }
 
     /**
@@ -1215,7 +1224,10 @@ internal abstract class NodeCoordinator(
         val start = headNode(Nodes.PointerInput.includeSelfInTraversal) ?: return false
 
         if (start.isAttached) {
-            start.visitLocalDescendants(Nodes.PointerInput) {
+            // We have to check both the self and local descendants, because the `start` can also
+            // be a `PointerInputModifierNode` (when the first modifier node on the LayoutNode is
+            // a `PointerInputModifierNode`).
+            start.visitSelfAndLocalDescendants(Nodes.PointerInput) {
                 if (it.sharePointerInputWithSiblings()) return true
             }
         }
@@ -1306,6 +1318,7 @@ internal abstract class NodeCoordinator(
         )
     }
 
+    @kotlin.native.concurrent.ThreadLocal
     internal companion object {
         const val ExpectAttachedLayoutCoordinates = "LayoutCoordinate operations are only valid " +
             "when isAttached is true"

@@ -43,7 +43,6 @@ class EmptyNavDeepLinkDetectorTest : LintDetectorTest() {
                         action = ""
                         mimeType = ""
                     }
-                    navDeepLink<TestClass>("basePath")
                     navDeepLink {
                         uriPattern = ""
                         action = ""

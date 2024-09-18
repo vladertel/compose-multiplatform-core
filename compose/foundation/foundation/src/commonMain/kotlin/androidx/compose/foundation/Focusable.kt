@@ -21,6 +21,8 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.relocation.scrollIntoView
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.identityHashCode
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusProperties
@@ -52,6 +54,7 @@ import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.focused
 import androidx.compose.ui.semantics.requestFocus
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -112,6 +115,8 @@ private val focusGroupInspectorInfo = InspectableModifier(
 
 // TODO: b/202856230 - consider either making this / a similar API public, or add a parameter to
 //  focusable to configure this behavior.
+// Consider using Modifier.focusable instead when the goal is only to prevent drawing the Focus indication in Touch mode
+// Modifier.indication prevents drawing the Focus indication in Touch mode under the hood.
 /**
  * [focusable] but only when not in touch mode - when [LocalInputModeManager] is
  * not [InputMode.Touch]
@@ -128,7 +133,9 @@ private val FocusableInNonTouchModeElement =
 
         override fun update(node: FocusableInNonTouchMode) {}
 
-        override fun hashCode(): Int = System.identityHashCode(this)
+        @OptIn(InternalComposeApi::class)
+        private val arbitraryHashCode: Int = identityHashCode(this)
+        override fun hashCode(): Int = arbitraryHashCode
 
         override fun equals(other: Any?): Boolean = this === other
 
@@ -293,8 +300,18 @@ private class FocusableInteractionNode(
 
     private fun MutableInteractionSource.emitWithFallback(interaction: Interaction) {
         if (isAttached) {
+            // If this is being called from inside FocusTargetNode's onDetach(), we are still
+            // attached, but the scope will be cancelled soon after - so the launch {} might not
+            // even start before it is cancelled. We don't want to use CoroutineStart.UNDISPATCHED,
+            // or always call tryEmit() as this will break other timing / cause some events to be
+            // missed for other cases. Instead just make sure we call tryEmit if we cancel the
+            // scope, before we finish emitting.
+            val handler = coroutineScope.coroutineContext[Job]?.invokeOnCompletion {
+                tryEmit(interaction)
+            }
             coroutineScope.launch {
                 emit(interaction)
+                handler?.dispose()
             }
         } else {
             tryEmit(interaction)

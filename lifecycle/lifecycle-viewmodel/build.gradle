@@ -22,6 +22,8 @@
  * modifying its settings.
  */
 
+import androidx.build.JetbrainsAndroidXPlugin
+import androidx.build.KmpPlatformsKt
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
@@ -31,7 +33,13 @@ import org.jetbrains.kotlin.konan.target.Family
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
+    id("JetbrainsAndroidXPlugin")
 }
+
+JetbrainsAndroidXPlugin.applyAndConfigure(project)
+
+def jsEnabled = KmpPlatformsKt.enableJs(project)
+def wasmEnabled = KmpPlatformsKt.enableWasm(project)
 
 androidXMultiplatform {
     android()
@@ -39,12 +47,29 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-
-    kotlin {
-        explicitApi = ExplicitApiMode.Strict
-    }
+    js()
+    wasm()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
+}
+
+kotlin {
+    js {
+        browser()
+    }
+    wasmJs()
+
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
+    // TODO: mingwX64 requires Lock actual implementation.
+    //  Or copy approach from :collection:collection - use unstable atomicFu
+
+    explicitApi = ExplicitApiMode.Strict
 
     sourceSets {
         configureEach {
@@ -108,17 +133,28 @@ androidXMultiplatform {
         darwinMain.dependsOn(nativeMain)
         linuxMain.dependsOn(nativeMain)
 
+        if (jsEnabled || wasmEnabled) {
+            webMain.dependsOn(nonJvmMain)
+        }
+
         targets.all { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family
-                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
+                    if (konanTargetFamily.appleFamily) {
                         dependsOn(darwinMain)
                     } else if (konanTargetFamily == Family.LINUX) {
                         dependsOn(linuxMain)
                     } else {
                         throw new GradleException("unknown native target ${target}")
                     }
+                }
+            } else if (target.platformType in [
+                    KotlinPlatformType.js,
+                    KotlinPlatformType.wasm
+            ]) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(webMain)
                 }
             }
         }

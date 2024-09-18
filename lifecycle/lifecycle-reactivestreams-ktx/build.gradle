@@ -21,7 +21,8 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.LibraryType
+import androidx.build.Publish
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   id("AndroidXPlugin")
@@ -43,7 +44,7 @@ dependencies {
 
 androidx {
   name = "Lifecycle ReactiveStreams KTX"
-  type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
+  publish = Publish.SNAPSHOT_AND_RELEASE
   inceptionYear = "2018"
   description = "Kotlin extensions for Lifecycle ReactiveStreams"
   metalavaK2UastEnabled = true

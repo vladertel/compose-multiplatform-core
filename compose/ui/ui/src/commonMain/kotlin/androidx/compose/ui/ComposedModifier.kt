@@ -25,6 +25,7 @@ import androidx.compose.ui.node.requireLayoutNode
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.InspectorValueInfo
 import androidx.compose.ui.platform.NoInspectorInfo
+import kotlin.jvm.JvmName
 
 /**
  * Declare a just-in-time composition of a [Modifier] that will be composed for each element it
@@ -250,6 +251,16 @@ private class KeyedComposedModifierN(
 // "materialize" JVM name is taken below to solve a backwards-incompatibility
 @JvmName("materializeModifier")
 fun Composer.materialize(modifier: Modifier): Modifier {
+    // A group is required here so the number of slot added to the caller's group
+    // is unconditionally the same (in this case, none) as is now required by the runtime.
+    startReplaceGroup(0x1a365f2c) // Random number for fake group key. Chosen by fair die roll.
+    val result = materializeImpl(modifier)
+    endReplaceGroup()
+    return result
+}
+
+@Suppress("ModifierFactoryExtensionFunction")
+private fun Composer.materializeImpl(modifier: Modifier): Modifier {
     if (modifier.all { it !is ComposedModifier }) {
         return modifier
     }
@@ -268,7 +279,7 @@ fun Composer.materialize(modifier: Modifier): Modifier {
                 @Suppress("UNCHECKED_CAST")
                 val factory = element.factory as Modifier.(Composer, Int) -> Modifier
                 val composedMod = factory(Modifier, this, 0)
-                materialize(composedMod)
+                materializeImpl(composedMod)
             } else {
                 element
             }

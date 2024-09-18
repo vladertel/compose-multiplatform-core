@@ -24,7 +24,6 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.wear.watchface.TapEvent
 import androidx.wear.watchface.WatchFaceService
-import androidx.wear.watchface.complications.data.toApiComplicationData
 import androidx.wear.watchface.control.data.WatchFaceRenderParams
 import androidx.wear.watchface.data.IdAndComplicationDataWireFormat
 import androidx.wear.watchface.data.IdAndComplicationStateWireFormat
@@ -280,33 +279,6 @@ internal class InteractiveWatchFaceImpl(
                 it.complicationSlotsManager.getComplicationSlotAt(xPos, yPos)?.id?.toLong()
             }
                 ?: Long.MIN_VALUE
-        }
-
-    override fun getUserStyleFlavors() =
-        aidlMethod(TAG, "getUserStyleFlavors") {
-            WatchFaceService.awaitDeferredEarlyInitDetailsThenRunOnThread(
-                engine,
-                "InteractiveWatchFaceImpl.getUserStyleFlavors",
-                WatchFaceService.Companion.ExecutionThread.CURRENT
-            ) {
-                it.userStyleFlavors.toWireFormat()
-            }
-        }
-
-    override fun overrideComplicationData(
-        complicationDatumWireFormats: List<IdAndComplicationDataWireFormat>
-    ): Unit = aidlMethod(TAG, "overrideComplicationData") {
-        engine?.overrideComplications(
-            complicationDatumWireFormats.associateBy(
-                { it.id },
-                { it.complicationData.toApiComplicationData() }
-            )
-        )
-    }
-
-    override fun clearComplicationDataOverride(): Unit =
-        aidlMethod(TAG, "overrideComplicationData") {
-            engine?.removeAnyComplicationOverrides()
         }
 
     fun onDestroy() {

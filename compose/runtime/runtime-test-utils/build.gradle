@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Android Open Source Project
+ * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,52 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
+import androidx.build.AndroidXComposePlugin
+import androidx.build.JetbrainsAndroidXPlugin
 import androidx.build.LibraryType
-import androidx.build.PlatformIdentifier
 import androidx.build.Publish
 
 plugins {
     id("AndroidXPlugin")
-    id("com.android.library")
     id("AndroidXComposePlugin")
+    id("com.android.library")
+    id("JetbrainsAndroidXPlugin")
 }
 
-androidXMultiplatform {
+AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
+JetbrainsAndroidXPlugin.applyAndConfigure(project)
+
+androidXComposeMultiplatform {
     android()
     desktop()
+    darwin()
+    js()
+    wasm()
+    linuxX64()
+    linuxArm64()
+}
 
-    defaultPlatform(PlatformIdentifier.ANDROID)
+kotlin {
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
+    mingwX64()
 
     sourceSets {
-        commonMain {
-            dependencies {
-                implementation(libs.kotlinStdlibCommon)
-                implementation(projectOrArtifact(":compose:runtime:runtime"))
-                implementation(projectOrArtifact(":compose:ui:ui-util"))
-                implementation kotlin("test-junit")
-                implementation(libs.kotlinCoroutinesTest)
-                implementation(libs.kotlinReflect)
-            }
-        }
-        androidMain.dependencies {
-        }
-
-        jvmMain {
-            dependsOn(commonMain)
-            dependencies {
-            }
-        }
-
-        androidMain {
-            dependsOn(jvmMain)
-            dependencies {
-            }
-        }
-
-        desktopMain {
-            dependsOn(jvmMain)
-            dependencies {
-            }
+        commonMain.dependencies {
+            implementation(libs.kotlinStdlibCommon)
+            implementation(projectOrArtifact(":compose:runtime:runtime"))
+            implementation kotlin("test-junit")
+            implementation(libs.kotlinCoroutinesTest)
+            implementation(libs.kotlinReflect)
+            implementation(libs.atomicFu)
         }
     }
 }
@@ -66,7 +65,7 @@ androidXMultiplatform {
 androidx {
     name = "Compose Internal Test Utils"
     type = LibraryType.INTERNAL_TEST_LIBRARY
-    publish = Publish.SNAPSHOT_ONLY
+    publish = Publish.NONE
     inceptionYear = "2024"
     description = "Compose runtime test utils shared between runtime and compiler tests."
 }

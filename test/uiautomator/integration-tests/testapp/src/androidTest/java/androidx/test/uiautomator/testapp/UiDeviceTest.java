@@ -140,7 +140,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressMenu();
-        assertTrue(textView.wait(Until.textEquals("keycode menu pressed"), TIMEOUT_MS));
+        assertEquals("keycode menu pressed", textView.getText());
     }
 
     @Test
@@ -149,7 +149,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressBack();
-        assertTrue(textView.wait(Until.textEquals("keycode back pressed"), TIMEOUT_MS));
+        assertEquals("keycode back pressed", textView.getText());
     }
 
     @Test
@@ -158,7 +158,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressSearch();
-        assertTrue(textView.wait(Until.textEquals("keycode search pressed"), TIMEOUT_MS));
+        assertEquals("keycode search pressed", textView.getText());
     }
 
     @Test
@@ -167,7 +167,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDPadCenter();
-        assertTrue(textView.wait(Until.textEquals("keycode dpad center pressed"), TIMEOUT_MS));
+        assertEquals("keycode dpad center pressed", textView.getText());
     }
 
     @Test
@@ -176,7 +176,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDPadDown();
-        assertTrue(textView.wait(Until.textEquals("keycode dpad down pressed"), TIMEOUT_MS));
+        assertEquals("keycode dpad down pressed", textView.getText());
     }
 
     @Test
@@ -185,7 +185,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDPadUp();
-        assertTrue(textView.wait(Until.textEquals("keycode dpad up pressed"), TIMEOUT_MS));
+        assertEquals("keycode dpad up pressed", textView.getText());
     }
 
     @Test
@@ -194,7 +194,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDPadLeft();
-        assertTrue(textView.wait(Until.textEquals("keycode dpad left pressed"), TIMEOUT_MS));
+        assertEquals("keycode dpad left pressed", textView.getText());
     }
 
     @Test
@@ -203,7 +203,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDPadRight();
-        assertTrue(textView.wait(Until.textEquals("keycode dpad right pressed"), TIMEOUT_MS));
+        assertEquals("keycode dpad right pressed", textView.getText());
     }
 
     @Test
@@ -212,7 +212,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressDelete();
-        assertTrue(textView.wait(Until.textEquals("keycode delete pressed"), TIMEOUT_MS));
+        assertEquals("keycode delete pressed", textView.getText());
     }
 
     @Test
@@ -221,7 +221,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressEnter();
-        assertTrue(textView.wait(Until.textEquals("keycode enter pressed"), TIMEOUT_MS));
+        assertEquals("keycode enter pressed", textView.getText());
     }
 
     @Test
@@ -230,7 +230,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressKeyCode(KeyEvent.KEYCODE_0);
-        assertTrue(textView.wait(Until.textEquals("keycode 0 pressed"), TIMEOUT_MS));
+        assertEquals("keycode 0 pressed", textView.getText());
     }
 
     @Test
@@ -240,8 +240,7 @@ public class UiDeviceTest extends BaseTest {
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressKeyCode(KeyEvent.KEYCODE_Z,
                 KeyEvent.META_SHIFT_LEFT_ON | KeyEvent.META_SHIFT_ON);
-        assertTrue(textView.wait(Until.textEquals("keycode Z pressed with meta shift left on"),
-                TIMEOUT_MS));
+        assertEquals("keycode Z pressed with meta shift left on", textView.getText());
     }
 
     @Test
@@ -261,8 +260,7 @@ public class UiDeviceTest extends BaseTest {
 
         UiObject2 textView = mDevice.findObject(By.res(TEST_APP, "text_view"));
         mDevice.pressKeyCodes(new int[]{KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_B});
-        assertTrue(textView.wait(Until.textEquals("keycode A and keycode B are pressed"),
-                TIMEOUT_MS));
+        assertEquals("keycode A and keycode B are pressed", textView.getText());
     }
 
     @Test
@@ -278,6 +276,7 @@ public class UiDeviceTest extends BaseTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = 21) // Quick settings menu might not be present prior to API 21.
     public void testOpenQuickSettings() {
         mDevice.openQuickSettings();
 

@@ -21,7 +21,6 @@ package androidx.compose.material3
 import android.content.Context
 import android.os.Build
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -40,15 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.internal.HorizontalIconPadding
-import androidx.compose.material3.internal.MinFocusedLabelLineHeight
-import androidx.compose.material3.internal.MinSupportingTextLineHeight
-import androidx.compose.material3.internal.MinTextLineHeight
-import androidx.compose.material3.internal.Strings.Companion.DefaultErrorMessage
-import androidx.compose.material3.internal.SupportingTopPadding
-import androidx.compose.material3.internal.TextFieldAnimationDuration
-import androidx.compose.material3.internal.TextFieldPadding
-import androidx.compose.material3.internal.getString
+import androidx.compose.material3.Strings.Companion.DefaultErrorMessage
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,12 +58,11 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.Ref
-import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -97,9 +87,12 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.PlatformTextInputService
+import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Density
@@ -113,11 +106,15 @@ import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
 @OptIn(ExperimentalMaterial3Api::class)
 @MediumTest
@@ -277,6 +274,7 @@ class TextFieldTest {
         }
     }
 
+    @ExperimentalComposeUiApi
     @Test
     fun testTextField_showHideKeyboardBasedOnFocus() {
         val (focusRequester, parentFocusRequester) = FocusRequester.createRefs()
@@ -348,12 +346,11 @@ class TextFieldTest {
                 onValueChange = {},
                 singleLine = true,
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -377,12 +374,11 @@ class TextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -406,12 +402,11 @@ class TextFieldTest {
                 onValueChange = {},
                 modifier = Modifier.height(height),
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -434,12 +429,11 @@ class TextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinFocusedLabelLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinFocusedLabelLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -466,12 +460,11 @@ class TextFieldTest {
                 value = "input",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinFocusedLabelLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinFocusedLabelLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -497,12 +490,11 @@ class TextFieldTest {
                 onValueChange = {},
                 label = { Box(Modifier.size(MinFocusedLabelLineHeight)) },
                 placeholder = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                placeholderPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            placeholderPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -530,12 +522,11 @@ class TextFieldTest {
                 value = "",
                 onValueChange = {},
                 placeholder = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                placeholderPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            placeholderPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -647,21 +638,19 @@ class TextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(labelSize)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(labelSize)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 },
                 placeholder = {
-                    Box(
-                        Modifier
-                            .size(placeholderSize)
-                            .onGloballyPositioned {
-                                placeholderPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(placeholderSize)
+                        .onGloballyPositioned {
+                            placeholderPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -853,22 +842,18 @@ class TextFieldTest {
                     modifier = Modifier.size(TextFieldWidth, textFieldHeight),
                     leadingIcon = {
                         Box(
-                            Modifier
-                                .size(size)
-                                .onGloballyPositioned {
-                                    leadingPosition = it.positionInRoot()
-                                    leadingSize = it.size
-                                }
+                            Modifier.size(size).onGloballyPositioned {
+                                leadingPosition = it.positionInRoot()
+                                leadingSize = it.size
+                            }
                         )
                     },
                     trailingIcon = {
                         Box(
-                            Modifier
-                                .size(size)
-                                .onGloballyPositioned {
-                                    trailingPosition = it.positionInRoot()
-                                    trailingSize = it.size
-                                }
+                            Modifier.size(size).onGloballyPositioned {
+                                trailingPosition = it.positionInRoot()
+                                trailingSize = it.size
+                            }
                         )
                     }
                 )
@@ -916,21 +901,19 @@ class TextFieldTest {
                     modifier = Modifier.width(TextFieldWidth),
                     label = { Box(Modifier.size(MinFocusedLabelLineHeight)) },
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     }
                 )
@@ -971,21 +954,19 @@ class TextFieldTest {
                     onValueChange = {},
                     modifier = Modifier.width(TextFieldWidth),
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     }
                 )
@@ -1022,21 +1003,19 @@ class TextFieldTest {
                     onValueChange = {},
                     modifier = Modifier.width(TextFieldWidth),
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     leadingIcon = { Icon(Icons.Default.Favorite, null) },
@@ -1163,12 +1142,11 @@ class TextFieldTest {
                 onValueChange = {},
                 textStyle = TextStyle(fontSize = 1.sp), // ensure text size is minimum
                 supportingText = {
-                    Box(
-                        Modifier
-                            .size(MinSupportingTextLineHeight)
-                            .onGloballyPositioned {
-                                supportingPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinSupportingTextLineHeight)
+                        .onGloballyPositioned {
+                            supportingPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -1300,22 +1278,17 @@ class TextFieldTest {
         }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun testTextField_imeActionAndKeyboardTypePropagatedDownstream() {
-        var editorInfo: EditorInfo? = null
-        val interceptor = PlatformTextInputInterceptor { request, _ ->
-            EditorInfo().also {
-                request.createInputConnection(it)
-                editorInfo = it
-            }
-            awaitCancellation()
-        }
+        val platformTextInputService = mock<PlatformTextInputService>()
+        val textInputService = TextInputService(platformTextInputService)
         rule.setContent {
-            val text = remember { mutableStateOf("") }
-            InterceptPlatformTextInput(interceptor) {
-                OutlinedTextField(
+            CompositionLocalProvider(
+                LocalTextInputService provides textInputService
+            ) {
+                val text = remember { mutableStateOf("") }
+                TextField(
                     modifier = Modifier.testTag(TextFieldTag),
                     value = text.value,
                     onValueChange = { text.value = it },
@@ -1330,13 +1303,17 @@ class TextFieldTest {
         rule.onNodeWithTag(TextFieldTag).performClick()
 
         rule.runOnIdle {
-            @Suppress("NAME_SHADOWING")
-            val editorInfo = editorInfo ?: throw AssertionError("Input session never started")
-            val expectedOptions = EditorInfo.IME_ACTION_GO
-            val expectedInputType = EditorInfo.TYPE_CLASS_TEXT or
-                EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            assertThat(editorInfo.imeOptions and expectedOptions).isEqualTo(expectedOptions)
-            assertThat(editorInfo.inputType and expectedInputType).isEqualTo(expectedInputType)
+            verify(platformTextInputService, atLeastOnce()).startInput(
+                value = any(),
+                imeOptions = eq(
+                    ImeOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Go
+                    )
+                ),
+                onEditCommand = any(),
+                onImeActionPerformed = any()
+            )
         }
     }
 
@@ -1481,9 +1458,7 @@ class TextFieldTest {
             }
             TransformedText(transformed, mapping)
         }
-        // While surface is not used in TextField, setMaterialContent wraps content in a Surface
-        // component which is checked during assertPixels.
-        rule.setMaterialContent(lightColorScheme(surface = Color.White)) {
+        rule.setMaterialContent(lightColorScheme()) {
             TextField(
                 modifier = Modifier.testTag(TextFieldTag),
                 value = "",
@@ -1729,8 +1704,8 @@ class TextFieldTest {
             focusRequester.requestFocus()
         }
 
-        // advance to middle of animation
-        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration.toLong() / 2)
+        // animation duration is 150, advancing by 75 to get into middle of animation
+        rule.mainClock.advanceTimeBy(75)
 
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(expectedLabelColor)
@@ -1843,11 +1818,7 @@ class TextFieldTest {
         val text = "Long text input. ".repeat(20)
         rule.setMaterialContent(lightColorScheme()) {
             Row {
-                Box(
-                    Modifier
-                        .width(150.dp)
-                        .height(IntrinsicSize.Min)
-                ) {
+                Box(Modifier.width(150.dp).height(IntrinsicSize.Min)) {
                     TextField(
                         value = text,
                         onValueChange = {},
@@ -1919,13 +1890,9 @@ class TextFieldTest {
     fun testTextFields_noCrashConstraintsInfinity() {
 
         rule.setMaterialContent(lightColorScheme()) {
-            Column(
-                modifier = Modifier
-                    .height(IntrinsicSize.Min)
-                    .horizontalScroll(
-                        rememberScrollState()
-                    )
-            ) {
+            Column(modifier = Modifier.height(IntrinsicSize.Min).horizontalScroll(
+                rememberScrollState()
+            )) {
                 TextField(
                     value = "Cat",
                     onValueChange = {},

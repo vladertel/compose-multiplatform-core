@@ -76,22 +76,10 @@ class TorchControl @Inject constructor(
 
     private var _updateSignal: CompletableDeferred<Unit>? = null
 
-    /**
-     * Turn the torch on or off.
-     *
-     * @param torch Whether the torch should be on or off.
-     * @param cancelPreviousTask Whether to cancel the previous task if it's running.
-     * @param ignoreFlashUnitAvailability Whether to ignore the flash unit availability. When true,
-     *      torch mode setting will be attempted even if a physical flash unit is not available.
-     */
-    fun setTorchAsync(
-        torch: Boolean,
-        cancelPreviousTask: Boolean = true,
-        ignoreFlashUnitAvailability: Boolean = false
-    ): Deferred<Unit> {
+    fun setTorchAsync(torch: Boolean, cancelPreviousTask: Boolean = true): Deferred<Unit> {
         val signal = CompletableDeferred<Unit>()
 
-        if (!ignoreFlashUnitAvailability && !hasFlashUnit) {
+        if (!hasFlashUnit) {
             return signal.createFailureResult(IllegalStateException("No flash unit"))
         }
 

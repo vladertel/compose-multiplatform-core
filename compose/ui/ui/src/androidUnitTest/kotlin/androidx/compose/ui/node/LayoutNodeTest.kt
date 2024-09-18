@@ -19,6 +19,7 @@ package androidx.compose.ui.node
 
 import androidx.compose.testutils.TestViewConfiguration
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
@@ -77,6 +78,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.viewinterop.InteropView
 import androidx.compose.ui.zIndex
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.Executors
@@ -652,7 +654,7 @@ class LayoutNodeTest {
     fun testRemoveBeyondIndex() {
         val node = LayoutNode()
         node.insertAt(0, LayoutNode())
-        Assert.assertThrows(IndexOutOfBoundsException::class.java) {
+        Assert.assertThrows(NullPointerException::class.java) {
             node.removeAt(1, 1)
         }
     }
@@ -672,7 +674,7 @@ class LayoutNodeTest {
     fun testRemoveWithIndexBeyondSize() {
         val node = LayoutNode()
         node.insertAt(0, LayoutNode())
-        Assert.assertThrows(IndexOutOfBoundsException::class.java) {
+        Assert.assertThrows(NullPointerException::class.java) {
             node.removeAt(0, 2)
         }
     }
@@ -681,7 +683,7 @@ class LayoutNodeTest {
     @Test
     fun testRemoveWithIndexEqualToSize() {
         val node = LayoutNode()
-        Assert.assertThrows(IndexOutOfBoundsException::class.java) {
+        Assert.assertThrows(NullPointerException::class.java) {
             node.removeAt(0, 1)
         }
     }
@@ -2748,6 +2750,8 @@ internal class MockOwner(
     override fun onLayoutChange(layoutNode: LayoutNode) {
         layoutChangeCount++
     }
+
+    @InternalComposeUiApi override fun onInteropViewLayoutChange(view: InteropView) {}
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         TODO("Not yet implemented")

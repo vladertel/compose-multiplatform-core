@@ -19,6 +19,7 @@
 package androidx.compose.ui.layout
 
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.draganddrop.DragAndDropManager
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.viewinterop.InteropView
 import com.google.common.truth.Truth
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -81,7 +83,7 @@ internal fun createDelegate(
     return delegate
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 private class FakeOwner(
     val delegate: MeasureAndLayoutDelegate,
     val createLayer: () -> OwnedLayer,
@@ -101,6 +103,18 @@ private class FakeOwner(
             delegate.requestLookaheadRemeasure(layoutNode)
         } else {
             delegate.requestRemeasure(layoutNode)
+        }
+    }
+
+    override fun onRequestRelayout(
+        layoutNode: LayoutNode,
+        affectsLookahead: Boolean,
+        forceRequest: Boolean
+    ) {
+        if (affectsLookahead) {
+            delegate.requestLookaheadRelayout(layoutNode, forceRequest)
+        } else {
+            delegate.requestRelayout(layoutNode, forceRequest)
         }
     }
 
@@ -135,6 +149,8 @@ private class FakeOwner(
     }
 
     override fun onLayoutChange(layoutNode: LayoutNode) {}
+
+    override fun onInteropViewLayoutChange(view: InteropView) {}
 
     @OptIn(InternalCoreApi::class)
     override var showLayoutBounds: Boolean = false
@@ -215,12 +231,6 @@ private class FakeOwner(
         invalidateParentLayer: () -> Unit,
         explicitLayer: GraphicsLayer?
     ) = createLayer()
-
-    override fun onRequestRelayout(
-        layoutNode: LayoutNode,
-        affectsLookahead: Boolean,
-        forceRequest: Boolean
-    ) = TODO("Not yet implemented")
 
     override fun requestOnPositionedCallback(layoutNode: LayoutNode) {
         TODO("Not yet implemented")

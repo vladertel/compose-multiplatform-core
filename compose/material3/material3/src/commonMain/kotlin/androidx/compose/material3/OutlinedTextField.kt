@@ -18,7 +18,6 @@ package androidx.compose.material3
 
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -31,29 +30,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.material3.internal.ContainerId
-import androidx.compose.material3.internal.HorizontalIconPadding
-import androidx.compose.material3.internal.IconDefaultSizeModifier
-import androidx.compose.material3.internal.LabelId
-import androidx.compose.material3.internal.LeadingId
-import androidx.compose.material3.internal.MinFocusedLabelLineHeight
-import androidx.compose.material3.internal.MinSupportingTextLineHeight
-import androidx.compose.material3.internal.MinTextLineHeight
-import androidx.compose.material3.internal.PlaceholderId
-import androidx.compose.material3.internal.PrefixId
-import androidx.compose.material3.internal.PrefixSuffixTextPadding
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.SuffixId
-import androidx.compose.material3.internal.SupportingId
-import androidx.compose.material3.internal.TextFieldId
-import androidx.compose.material3.internal.TrailingId
-import androidx.compose.material3.internal.ZeroConstraints
-import androidx.compose.material3.internal.defaultErrorSemantics
-import androidx.compose.material3.internal.getString
-import androidx.compose.material3.internal.heightOrZero
-import androidx.compose.material3.internal.layoutId
-import androidx.compose.material3.internal.widthOrZero
-import androidx.compose.material3.tokens.TypeScaleTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -75,7 +51,6 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layoutId
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -155,10 +130,9 @@ import kotlin.math.roundToInt
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param minLines the minimum height in terms of minimum number of visible lines. It is required
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this text field. You can use this to change the text field's
- * appearance or preview the text field in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this text field. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this text field in different states.
  * @param shape defines the shape of this text field's border
  * @param colors [TextFieldColors] that will be used to resolve the colors used for this text field
  * in different states. See [OutlinedTextFieldDefaults.colors].
@@ -186,36 +160,28 @@ fun OutlinedTextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     shape: Shape = OutlinedTextFieldDefaults.shape,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors()
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     // If color is not provided via the text style, use content color as a default
     val textColor = textStyle.color.takeOrElse {
-        val focused = interactionSource.collectIsFocusedAsState().value
-        colors.textColor(enabled, isError, focused)
+        colors.textColor(enabled, isError, interactionSource).value
     }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    val density = LocalDensity.current
-
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.selectionColors) {
         BasicTextField(
             value = value,
-            modifier = modifier
-                .then(
-                    if (label != null) {
-                        Modifier
-                            // Merge semantics at the beginning of the modifier chain to ensure
-                            // padding is considered part of the text field.
-                            .semantics(mergeDescendants = true) {}
-                            .padding(top = with(density) { OutlinedTextFieldTopPadding.toDp() })
-                    } else {
-                        Modifier
-                    }
-                )
+            modifier = if (label != null) {
+                modifier
+                    // Merge semantics at the beginning of the modifier chain to ensure padding is
+                    // considered part of the text field.
+                    .semantics(mergeDescendants = true) {}
+                    .padding(top = OutlinedTextFieldTopPadding)
+            } else {
+                modifier
+            }
                 .defaultErrorSemantics(isError, getString(Strings.DefaultErrorMessage))
                 .defaultMinSize(
                     minWidth = OutlinedTextFieldDefaults.MinWidth,
@@ -225,7 +191,7 @@ fun OutlinedTextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(colors.cursorColor(isError)),
+            cursorBrush = SolidColor(colors.cursorColor(isError).value),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -251,12 +217,12 @@ fun OutlinedTextField(
                     interactionSource = interactionSource,
                     colors = colors,
                     container = {
-                        OutlinedTextFieldDefaults.Container(
-                            enabled = enabled,
-                            isError = isError,
-                            interactionSource = interactionSource,
-                            colors = colors,
-                            shape = shape,
+                        OutlinedTextFieldDefaults.ContainerBox(
+                            enabled,
+                            isError,
+                            interactionSource,
+                            colors,
+                            shape
                         )
                     }
                 )
@@ -324,10 +290,9 @@ fun OutlinedTextField(
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param minLines the minimum height in terms of minimum number of visible lines. It is required
  * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this text field. You can use this to change the text field's
- * appearance or preview the text field in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this text field. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this text field in different states.
  * @param shape defines the shape of this text field's border
  * @param colors [TextFieldColors] that will be used to resolve the colors used for this text field
  * in different states. See [OutlinedTextFieldDefaults.colors].
@@ -355,36 +320,28 @@ fun OutlinedTextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     shape: Shape = OutlinedTextFieldDefaults.shape,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors()
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     // If color is not provided via the text style, use content color as a default
     val textColor = textStyle.color.takeOrElse {
-        val focused = interactionSource.collectIsFocusedAsState().value
-        colors.textColor(enabled, isError, focused)
+        colors.textColor(enabled, isError, interactionSource).value
     }
     val mergedTextStyle = textStyle.merge(TextStyle(color = textColor))
 
-    val density = LocalDensity.current
-
-    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.selectionColors) {
         BasicTextField(
             value = value,
-            modifier = modifier
-                .then(
-                    if (label != null) {
-                        Modifier
-                            // Merge semantics at the beginning of the modifier chain to ensure
-                            // padding is considered part of the text field.
-                            .semantics(mergeDescendants = true) {}
-                            .padding(top = with(density) { OutlinedTextFieldTopPadding.toDp() })
-                    } else {
-                        Modifier
-                    }
-                )
+            modifier = if (label != null) {
+                modifier
+                    // Merge semantics at the beginning of the modifier chain to ensure padding is
+                    // considered part of the text field.
+                    .semantics(mergeDescendants = true) {}
+                    .padding(top = OutlinedTextFieldTopPadding)
+            } else {
+                modifier
+            }
                 .defaultErrorSemantics(isError, getString(Strings.DefaultErrorMessage))
                 .defaultMinSize(
                     minWidth = OutlinedTextFieldDefaults.MinWidth,
@@ -394,7 +351,7 @@ fun OutlinedTextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = mergedTextStyle,
-            cursorBrush = SolidColor(colors.cursorColor(isError)),
+            cursorBrush = SolidColor(colors.cursorColor(isError).value),
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -420,18 +377,124 @@ fun OutlinedTextField(
                     interactionSource = interactionSource,
                     colors = colors,
                     container = {
-                        OutlinedTextFieldDefaults.Container(
-                            enabled = enabled,
-                            isError = isError,
-                            interactionSource = interactionSource,
-                            colors = colors,
-                            shape = shape,
+                        OutlinedTextFieldDefaults.ContainerBox(
+                            enabled,
+                            isError,
+                            interactionSource,
+                            colors,
+                            shape
                         )
                     }
                 )
             }
         )
     }
+}
+
+@Deprecated("Use overload with prefix and suffix parameters", level = DeprecationLevel.HIDDEN)
+@ExperimentalMaterial3Api
+@Composable
+fun OutlinedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = OutlinedTextFieldDefaults.shape,
+    colors: TextFieldColors = OutlinedTextFieldDefaults.colors()
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        label = label,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        prefix = null,
+        suffix = null,
+        supportingText = supportingText,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        interactionSource = interactionSource,
+        shape = shape,
+        colors = colors,
+    )
+}
+
+@Deprecated("Use overload with prefix and suffix parameters", level = DeprecationLevel.HIDDEN)
+@ExperimentalMaterial3Api
+@Composable
+fun OutlinedTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = LocalTextStyle.current,
+    label: @Composable (() -> Unit)? = null,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    shape: Shape = OutlinedTextFieldDefaults.shape,
+    colors: TextFieldColors = OutlinedTextFieldDefaults.colors()
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        label = label,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        prefix = null,
+        suffix = null,
+        supportingText = supportingText,
+        isError = isError,
+        visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        minLines = minLines,
+        interactionSource = interactionSource,
+        shape = shape,
+        colors = colors,
+    )
 }
 
 /**
@@ -557,6 +620,7 @@ internal fun OutlinedTextFieldLayout(
             }
 
             if (supporting != null) {
+                @OptIn(ExperimentalMaterial3Api::class)
                 Box(Modifier
                     .layoutId(SupportingId)
                     .heightIn(min = MinSupportingTextLineHeight)
@@ -624,10 +688,9 @@ private class OutlinedTextFieldMeasurePolicy(
         )
         val labelPlaceable =
             measurables.fastFirstOrNull { it.layoutId == LabelId }?.measure(labelConstraints)
-        val labelSize = labelPlaceable?.let {
-            Size(it.width.toFloat(), it.height.toFloat())
-        } ?: Size.Zero
-        onLabelMeasured(labelSize)
+        labelPlaceable?.let {
+            onLabelMeasured(Size(it.width.toFloat(), it.height.toFloat()))
+        }
 
         // supporting text must be measured after other elements, but we
         // reserve space for it using its intrinsic height as a heuristic
@@ -991,6 +1054,12 @@ private fun Placeable.PlacementScope.place(
         Alignment.CenterVertically.align(leadingPlaceable.height, height)
     )
 
+    // placed center vertically and to the end edge horizontally
+    trailingPlaceable?.placeRelative(
+        width - trailingPlaceable.width,
+        Alignment.CenterVertically.align(trailingPlaceable.height, height)
+    )
+
     // label position is animated
     // in single line text field, label is centered vertically before animation starts
     labelPlaceable?.let {
@@ -1027,6 +1096,11 @@ private fun Placeable.PlacementScope.place(
         calculateVerticalPosition(prefixPlaceable)
     )
 
+    suffixPlaceable?.placeRelative(
+        width - widthOrZero(trailingPlaceable) - suffixPlaceable.width,
+        calculateVerticalPosition(suffixPlaceable)
+    )
+
     val textHorizontalPosition = widthOrZero(leadingPlaceable) + widthOrZero(prefixPlaceable)
 
     textFieldPlaceable.placeRelative(
@@ -1040,25 +1114,13 @@ private fun Placeable.PlacementScope.place(
         calculateVerticalPosition(placeholderPlaceable)
     )
 
-    suffixPlaceable?.placeRelative(
-        width - widthOrZero(trailingPlaceable) - suffixPlaceable.width,
-        calculateVerticalPosition(suffixPlaceable)
-    )
-
-    // placed center vertically and to the end edge horizontally
-    trailingPlaceable?.placeRelative(
-        width - trailingPlaceable.width,
-        Alignment.CenterVertically.align(trailingPlaceable.height, height)
-    )
-
     // place supporting text
     supportingPlaceable?.placeRelative(0, height)
 }
 
-internal fun Modifier.outlineCutout(labelSize: () -> Size, paddingValues: PaddingValues) =
+internal fun Modifier.outlineCutout(labelSize: Size, paddingValues: PaddingValues) =
     this.drawWithContent {
-        val labelSizeValue = labelSize()
-        val labelWidth = labelSizeValue.width
+        val labelWidth = labelSize.width
         if (labelWidth > 0f) {
             val innerPadding = OutlinedTextFieldInnerPadding.toPx()
             val leftLtr = paddingValues.calculateLeftPadding(layoutDirection).toPx() - innerPadding
@@ -1071,7 +1133,7 @@ internal fun Modifier.outlineCutout(labelSize: () -> Size, paddingValues: Paddin
                 LayoutDirection.Rtl -> size.width - leftLtr.coerceAtLeast(0f)
                 else -> rightLtr
             }
-            val labelHeight = labelSizeValue.height
+            val labelHeight = labelSize.height
             // using label height as a cutout area to make sure that no hairline artifacts are
             // left when we clip the border
             clipRect(left, -labelHeight / 2, right, labelHeight / 2, ClipOp.Difference) {
@@ -1084,10 +1146,10 @@ internal fun Modifier.outlineCutout(labelSize: () -> Size, paddingValues: Paddin
 
 private val OutlinedTextFieldInnerPadding = 4.dp
 
-/**
- * In the focused state, the top half of the label sticks out above the text field. This default
- * padding is a best-effort approximation to keep the label from overlapping with the content
- * above it. It is sufficient when the label is a single line and developers do not override the
- * label's font size/style. Otherwise, developers will need to add additional padding themselves.
- */
-internal val OutlinedTextFieldTopPadding = TypeScaleTokens.BodySmallLineHeight / 2
+/*
+This padding is used to allow label not overlap with the content above it. This 8.dp will work
+for default cases when developers do not override the label's font size. If they do, they will
+need to add additional padding themselves
+*/
+/* @VisibleForTesting */
+internal val OutlinedTextFieldTopPadding = 8.dp

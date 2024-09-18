@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.util.fastAny
+import kotlin.js.JsName
 
 /**
  * Returns whether the node is enabled.
@@ -441,9 +442,10 @@ fun hasScrollToNodeAction() =
 /**
  * Returns whether the node is editable.
  *
- * @see SemanticsProperties.Editable
+ * @see SemanticsProperties.IsEditable
  */
-fun isEditable() = hasKey(SemanticsProperties.Editable)
+fun isEditable() =
+    SemanticsMatcher.expectValue(SemanticsProperties.IsEditable, true)
 
 /**
  * Return whether the node is the root semantics node.
@@ -548,6 +550,7 @@ internal val SemanticsNode.ancestors: Iterable<SemanticsNode>
     get() = object : Iterable<SemanticsNode> {
         override fun iterator(): Iterator<SemanticsNode> {
             return object : Iterator<SemanticsNode> {
+                @JsName("nextVar")
                 var next = parent
                 override fun hasNext(): Boolean {
                     return next != null

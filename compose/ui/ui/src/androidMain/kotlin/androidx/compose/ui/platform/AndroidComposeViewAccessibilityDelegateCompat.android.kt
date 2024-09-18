@@ -77,6 +77,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsActions.CustomActions
+import androidx.compose.ui.semantics.SemanticsActions.PageDown
+import androidx.compose.ui.semantics.SemanticsActions.PageLeft
+import androidx.compose.ui.semantics.SemanticsActions.PageRight
+import androidx.compose.ui.semantics.SemanticsActions.PageUp
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -797,9 +801,13 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         semanticsNode.replacedChildren.fastForEach { child ->
             if (currentSemanticsNodes.contains(child.id)) {
                 val holder = view.androidViewsHandler.layoutNodeToHolder[child.layoutNode]
+                // Do not add children if the ID is not valid.
+                if (child.id == View.NO_ID) {
+                    return@fastForEach
+                }
                 if (holder != null) {
                     info.addChild(holder)
-                } else if (child.id != View.NO_ID) {
+                } else {
                     info.addChild(view, child.id)
                 }
             }
@@ -875,7 +883,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             info.isHeading = true
         }
         info.isPassword = semanticsNode.unmergedConfig.contains(SemanticsProperties.Password)
-        info.isEditable = semanticsNode.unmergedConfig.contains(SemanticsProperties.Editable)
+        info.isEditable = semanticsNode.unmergedConfig.contains(SemanticsProperties.IsEditable)
         info.maxTextLength =
             semanticsNode.unmergedConfig.getOrNull(SemanticsProperties.MaxTextLength) ?: -1
         info.isEnabled = semanticsNode.enabled()
@@ -1767,8 +1775,22 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     if (node.isRtl && (scrollLeft || scrollRight)) {
                         amountToScroll = -amountToScroll
                     }
+
+                    // normal scrollable vs pageable scrollable. If a node can handle
+                    // page actions it will scroll by a full page.
                     if (xScrollState.canScroll(amountToScroll)) {
-                        return scrollAction.action?.invoke(amountToScroll, 0f) ?: false
+                        val canPageHorizontally = node.unmergedConfig.contains(PageLeft) ||
+                            node.unmergedConfig.contains(PageRight)
+                        return if (canPageHorizontally) {
+                            val horizontalPageAction = if (amountToScroll > 0) {
+                                node.unmergedConfig.getOrNull(PageRight)
+                            } else {
+                                node.unmergedConfig.getOrNull(PageLeft)
+                            }
+                            horizontalPageAction?.action?.invoke() ?: false
+                        } else {
+                            scrollAction.action?.invoke(amountToScroll, 0f) ?: false
+                        }
                     }
                 }
 
@@ -1783,8 +1805,22 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     if (yScrollState.reverseScrolling) {
                         amountToScroll = -amountToScroll
                     }
+
+                    // normal scrollable vs pageable scrollable. If a node can handle
+                    // page actions it will scroll by a full page.
                     if (yScrollState.canScroll(amountToScroll)) {
-                        return scrollAction.action?.invoke(0f, amountToScroll) ?: false
+                        val canPageVertically = node.unmergedConfig.contains(PageUp) ||
+                            node.unmergedConfig.contains(PageDown)
+                        return if (canPageVertically) {
+                            val verticalPageAction = if (amountToScroll > 0) {
+                                node.unmergedConfig.getOrNull(PageDown)
+                            } else {
+                                node.unmergedConfig.getOrNull(PageUp)
+                            }
+                            verticalPageAction?.action?.invoke() ?: false
+                        } else {
+                            scrollAction.action?.invoke(0f, amountToScroll) ?: false
+                        }
                     }
                 }
 
@@ -1834,7 +1870,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                         force = false,
                         refreshFocusEvents = true,
                         clearOwnerFocus = true,
-                        focusDirection = Exit
+                        focusDirection = @OptIn(ExperimentalComposeUiApi::class) Exit
                     )
                     true
                 } else {

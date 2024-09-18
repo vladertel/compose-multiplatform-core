@@ -32,8 +32,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.samples.NavigateButton
-import androidx.navigation.toRoute
-import kotlinx.serialization.Serializable
 
 @Composable
 fun NavSingleTopDemo() {
@@ -46,27 +44,20 @@ fun NavSingleTopDemo() {
             placeholder = { Text("Search") }
         )
         NavigateButton("Search") {
-            navController.navigate(SearchScreen(query.value)) {
+            navController.navigate("search/" + query.value) {
                 launchSingleTop = true
             }
         }
-        NavHost(navController, startDestination = StartScreen::class) {
-            composable<StartScreen> { StartScreen() }
-            composable<SearchScreen> { backStackEntry ->
-                val args = backStackEntry.toRoute<SearchScreen>()
+        NavHost(navController, startDestination = "start") {
+            composable("start") { StartScreen() }
+            composable("search/{query}") { backStackEntry ->
                 SearchResultScreen(
-                    args.query
+                    backStackEntry.arguments!!.getString("query", "no query entered")
                 )
             }
         }
     }
 }
-
-@Serializable
-object StartScreen
-
-@Serializable
-data class SearchScreen(val query: String)
 
 @Composable
 fun StartScreen() {

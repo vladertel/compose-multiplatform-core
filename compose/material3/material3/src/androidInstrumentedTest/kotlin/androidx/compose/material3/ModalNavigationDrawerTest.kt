@@ -22,9 +22,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.NavigationDrawerTokens
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -115,102 +112,6 @@ class ModalNavigationDrawerTest {
 
         rule.onNodeWithTag("content")
             .assertLeftPositionInRootIsEqualTo(-NavigationDrawerWidth)
-    }
-
-    @Test
-    fun navigationDrawer_testOffset_customWidthSmaller_whenOpen() {
-        val customWidth = 200.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Open)
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(0.dp)
-    }
-
-    @Test
-    fun navigationDrawer_testOffset_customWidthSmaller_whenClosed() {
-        val customWidth = 200.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(-customWidth)
-    }
-
-    @Test
-    fun navigationDrawer_testOffset_customWidthLarger_whenOpen() {
-        val customWidth = NavigationDrawerWidth + 5.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Open)
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(0.dp)
-    }
-
-    @Test
-    fun navigationDrawer_testOffset_customWidthLarger_whenClosed() {
-        val customWidth = NavigationDrawerWidth + 5.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(-customWidth)
     }
 
     @Test
@@ -667,7 +568,7 @@ class ModalNavigationDrawerTest {
 
     @Test
     @LargeTest
-    fun navigationDrawer_noDismissActionWhenClosed_hasDismissActionWhenOpen(): Unit = runBlocking(
+    fun navigationDrawer_noDismissActionWhenClosed_hasDissmissActionWhenOpen(): Unit = runBlocking(
         AutoTestFrameClock()
     ) {
         lateinit var drawerState: DrawerState

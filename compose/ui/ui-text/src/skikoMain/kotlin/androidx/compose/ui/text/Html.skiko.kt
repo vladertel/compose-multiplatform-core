@@ -16,16 +16,25 @@
 
 package androidx.compose.ui.text
 
+import androidx.compose.ui.text.style.TextDecoration
+
 /**
- * TBD: not yet implemented.
- *
  * Converts a string with HTML tags into [AnnotatedString].
+ *
+ * If you define your string in the resources, make sure to use HTML-escaped opening brackets
+ * "&lt;" instead of "<".
+ *
+ * For a list of supported tags go check
+ * [Styling with HTML markup](https://developer.android.com/guide/topics/resources/string-resource#StylingWithHTML)
+ * guide. Note that bullet lists and custom annotations are not **yet** available.
+ *
+ * Example of displaying styled string from resources
+ * @sample androidx.compose.ui.text.samples.AnnotatedStringFromHtml
  */
 actual fun AnnotatedString.Companion.fromHtml(
     htmlString: String,
-    linkStyle: SpanStyle?,
-    linkFocusedStyle: SpanStyle?,
-    linkHoveredStyle: SpanStyle?,
-    linkPressedStyle: SpanStyle?,
+    linkStyles: TextLinkStyles?,
     linkInteractionListener: LinkInteractionListener?
-): AnnotatedString = AnnotatedString(htmlString)
+): AnnotatedString {
+    throw UnsupportedOperationException("Compose Multiplatform doesn't support fromHtml")
+}

@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 
 plugins {
@@ -43,6 +36,8 @@ dependencies {
 
     compileOnly(fileTree(dir: "../wear_stubs", include: ["com.google.android.wearable-stubs.jar"]))
     compileOnly(project(":annotation:annotation-sampled"))
+
+    samples(project(":wear:wear-input-samples"))
 }
 
 android {
@@ -62,5 +57,4 @@ androidx {
     inceptionYear = "2020"
     description = "Android Wear Support Input"
     metalavaK2UastEnabled = true
-    samples(project(":wear:wear-input-samples"))
 }

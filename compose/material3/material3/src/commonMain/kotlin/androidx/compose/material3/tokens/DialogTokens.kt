@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// VERSION: v0_210
+// VERSION: v0_117
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 package androidx.compose.material3.tokens
@@ -26,9 +26,10 @@ internal object DialogTokens {
     val ActionLabelTextColor = ColorSchemeKeyTokens.Primary
     val ActionLabelTextFont = TypographyKeyTokens.LabelLarge
     val ActionPressedLabelTextColor = ColorSchemeKeyTokens.Primary
-    val ContainerColor = ColorSchemeKeyTokens.SurfaceContainerHigh
+    val ContainerColor = ColorSchemeKeyTokens.Surface
     val ContainerElevation = ElevationTokens.Level3
     val ContainerShape = ShapeKeyTokens.CornerExtraLarge
+    val ContainerSurfaceTintLayerColor = ColorSchemeKeyTokens.SurfaceTint
     val HeadlineColor = ColorSchemeKeyTokens.OnSurface
     val HeadlineFont = TypographyKeyTokens.HeadlineSmall
     val SupportingTextColor = ColorSchemeKeyTokens.OnSurfaceVariant

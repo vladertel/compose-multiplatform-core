@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 import androidx.build.AndroidXConfig
 
@@ -71,12 +64,14 @@ android {
             main.jniLibs.srcDirs += new File(unzippedPrebuiltsAarDir, "jni")
         }
     } else { // build .so files from scratch
-        externalNativeBuild {
-            cmake {
-                path "src/main/cpp/CMakeLists.txt"
-                version libs.versions.cmake.get()
-            }
-        }
+// We don't need NDK for developing Compose Multiplatform.
+// It is only needed for Benchmarking Android target.
+//        externalNativeBuild {
+//            cmake {
+//                path "src/main/cpp/CMakeLists.txt"
+//                version libs.versions.cmake.get()
+//            }
+//        }
     }
     namespace "androidx.tracing.perfetto.binary"
 }
@@ -95,5 +90,4 @@ androidx {
     description = "Provides native binaries required by AndroidX Tracing: Perfetto SDK " +
         "and is not intended to be used outside of that context."
     metalavaK2UastEnabled = true
-    doNotDocumentReason = "No public API"
 }

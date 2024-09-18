@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ import androidx.compose.ui.modifier.ModifierLocalConsumer
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
 import androidx.compose.ui.modifier.ModifierLocalProvider
 import androidx.compose.ui.semantics.SemanticsModifier
+import kotlin.jvm.JvmInline
+import kotlin.jvm.JvmStatic
 
 @Suppress("NOTHING_TO_INLINE")
 @JvmInline
@@ -269,10 +271,18 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
         }
     }
     if (Nodes.LayoutAware in selfKindSet && node is LayoutAwareModifierNode) {
-        node.requireLayoutNode().invalidateMeasurements()
+        // No need to invalidate layout when removing a LayoutAwareModifierNode, as these won't be
+        // invoked anyway
+        if (phase != Removed) {
+            node.requireLayoutNode().invalidateMeasurements()
+        }
     }
     if (Nodes.GlobalPositionAware in selfKindSet && node is GlobalPositionAwareModifierNode) {
-        node.requireLayoutNode().invalidateOnPositioned()
+        // No need to invalidate when removing a GlobalPositionAwareModifierNode, as these won't be
+        // invoked anyway
+        if (phase != Removed) {
+            node.requireLayoutNode().invalidateOnPositioned()
+        }
     }
     if (Nodes.Draw in selfKindSet && node is DrawModifierNode) {
         node.invalidateDraw()
@@ -284,11 +294,8 @@ private fun autoInvalidateNodeSelf(node: Modifier.Node, selfKindSet: Int, phase:
         node.invalidateParentData()
     }
     if (Nodes.FocusTarget in selfKindSet && node is FocusTargetNode) {
-        when (phase) {
-            // when we previously had focus target modifier on a node and then this modifier
-            // is removed we need to notify the focus tree about so the focus state is reset.
-            Removed -> node.onReset()
-            else -> node.requireOwner().focusOwner.scheduleInvalidation(node)
+        if (phase != Removed) {
+            node.invalidateFocusTarget()
         }
     }
     if (

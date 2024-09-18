@@ -56,7 +56,7 @@ internal constructor(
   /** Constructor for the [LocalTime] variant. */
   public constructor(time: LocalTime) : this(asTime = time)
 
-  override fun toString(): String = toString(includeWrapperName = true)
+  public override fun toString(): String = toString(includeWrapperName = true)
 
   internal fun toString(includeWrapperName: Boolean): String =
     when {
@@ -69,12 +69,12 @@ internal constructor(
       else -> error("No variant present in EndTime")
     }
 
-  override fun equals(other: Any?): Boolean {
+  public override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other !is EndTime) return false
     if (asTime != other.asTime) return false
     return true
   }
 
-  override fun hashCode(): Int = Objects.hash(asTime)
+  public override fun hashCode(): Int = Objects.hash(asTime)
 }

@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.material3
 
 import android.os.Build
-import android.text.InputType.TYPE_CLASS_TEXT
-import android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.EditorInfo.IME_ACTION_GO
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -35,21 +33,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.internal.HorizontalIconPadding
-import androidx.compose.material3.internal.MinFocusedLabelLineHeight
-import androidx.compose.material3.internal.MinSupportingTextLineHeight
-import androidx.compose.material3.internal.MinTextLineHeight
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.SupportingTopPadding
-import androidx.compose.material3.internal.TextFieldAnimationDuration
-import androidx.compose.material3.internal.TextFieldPadding
-import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertPixels
 import androidx.compose.testutils.assertShape
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -60,10 +48,9 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.Ref
-import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.PlatformTextInputInterceptor
+import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.error
@@ -85,8 +72,11 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.PlatformTextInputService
+import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -97,11 +87,16 @@ import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlin.math.roundToInt
-import kotlinx.coroutines.awaitCancellation
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
+@OptIn(ExperimentalMaterial3Api::class)
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class OutlinedTextFieldTest {
@@ -210,10 +205,7 @@ class OutlinedTextFieldTest {
         val density = Density(4f)
         rule.setMaterialContent(lightColorScheme()) {
             CompositionLocalProvider(LocalDensity provides density) {
-                Box(
-                    Modifier
-                        .testTag("box")
-                        .background(Color.Red)) {
+                Box(Modifier.testTag("box").background(Color.Red)) {
                     OutlinedTextField(
                         value = "",
                         onValueChange = {},
@@ -246,12 +238,11 @@ class OutlinedTextFieldTest {
                 onValueChange = {},
                 singleLine = true,
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -263,7 +254,7 @@ class OutlinedTextFieldTest {
             // y position is centered, plus additional padding allowance on top
             assertThat(labelPosition.value?.y).isWithin(1f).of(
                 ((ExpectedMinimumTextFieldHeight - MinTextLineHeight) / 2 +
-                    OutlinedTextFieldTopPadding.toDp()).toPx()
+                    OutlinedTextFieldTopPadding).toPx()
             )
         }
     }
@@ -276,12 +267,11 @@ class OutlinedTextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinTextLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinTextLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -292,7 +282,7 @@ class OutlinedTextFieldTest {
             assertThat(labelPosition.value?.x).isWithin(1f).of(ExpectedPadding.toPx())
             // y position is top + default padding + label padding allowance
             assertThat(labelPosition.value?.y).isWithin(1f).of(
-                (ExpectedPadding + OutlinedTextFieldTopPadding.toDp()).toPx()
+                (ExpectedPadding + OutlinedTextFieldTopPadding).toPx()
             )
         }
     }
@@ -330,7 +320,7 @@ class OutlinedTextFieldTest {
             assertThat(labelPosition.value?.x).isWithin(1f).of(ExpectedPadding.toPx())
             // y position is top + default padding + label padding allowance
             assertThat(labelPosition.value?.y).isWithin(1f).of(
-                (ExpectedPadding + OutlinedTextFieldTopPadding.toDp()).toPx()
+                (ExpectedPadding + OutlinedTextFieldTopPadding).toPx()
             )
         }
     }
@@ -346,12 +336,11 @@ class OutlinedTextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(MinFocusedLabelLineHeight)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinFocusedLabelLineHeight)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -377,9 +366,7 @@ class OutlinedTextFieldTest {
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                modifier = Modifier
-                    .testTag(TextFieldTag)
-                    .requiredWidth(textFieldWidth),
+                modifier = Modifier.testTag(TextFieldTag).requiredWidth(textFieldWidth),
                 label = {
                     Text(
                         text = "long long long long long long long long long long long long",
@@ -419,11 +406,9 @@ class OutlinedTextFieldTest {
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                modifier = Modifier
-                    .testTag(TextFieldTag)
-                    .onGloballyPositioned {
-                        tfSize.value = it.size
-                    },
+                modifier = Modifier.testTag(TextFieldTag).onGloballyPositioned {
+                    tfSize.value = it.size
+                },
                 label = {
                     Box(Modifier.size(width = 50.dp, height = labelHeight))
                 },
@@ -445,17 +430,13 @@ class OutlinedTextFieldTest {
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                modifier = Modifier
-                    .testTag(TextFieldTag)
-                    .requiredWidth(textFieldWidth),
+                modifier = Modifier.testTag(TextFieldTag).requiredWidth(textFieldWidth),
                 label = {
                     Text(
                         text = "Label",
-                        modifier = Modifier
-                            .width(labelRequestedWidth)
-                            .onGloballyPositioned {
-                                labelSize.value = it.size
-                            }
+                        modifier = Modifier.width(labelRequestedWidth).onGloballyPositioned {
+                            labelSize.value = it.size
+                        }
                     )
                 },
                 trailingIcon = {
@@ -497,12 +478,11 @@ class OutlinedTextFieldTest {
                 value = "input",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(labelSize)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(labelSize)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -554,12 +534,11 @@ class OutlinedTextFieldTest {
                     onValueChange = {},
                     label = { Box(Modifier.size(MinFocusedLabelLineHeight)) },
                     placeholder = {
-                        Box(
-                            Modifier
-                                .size(placeholderSize)
-                                .onGloballyPositioned {
-                                    placeholderPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(placeholderSize)
+                            .onGloballyPositioned {
+                                placeholderPosition.value = it.positionInRoot()
+                            }
                         )
                     }
                 )
@@ -571,7 +550,7 @@ class OutlinedTextFieldTest {
         rule.runOnIdleWithDensity {
             assertThat(placeholderPosition.value?.x).isWithin(1f).of(ExpectedPadding.toPx())
             assertThat(placeholderPosition.value?.y).isWithin(1f).of(
-                (ExpectedPadding + OutlinedTextFieldTopPadding.toDp()).toPx()
+                (ExpectedPadding + OutlinedTextFieldTopPadding).toPx()
             )
         }
     }
@@ -586,12 +565,11 @@ class OutlinedTextFieldTest {
                 value = "",
                 onValueChange = {},
                 placeholder = {
-                    Box(
-                        Modifier
-                            .size(placeholderSize)
-                            .onGloballyPositioned {
-                                placeholderPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(placeholderSize)
+                        .onGloballyPositioned {
+                            placeholderPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -700,21 +678,19 @@ class OutlinedTextFieldTest {
                 value = "",
                 onValueChange = {},
                 label = {
-                    Box(
-                        Modifier
-                            .size(labelSize)
-                            .onGloballyPositioned {
-                                labelPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(labelSize)
+                        .onGloballyPositioned {
+                            labelPosition.value = it.positionInRoot()
+                        }
                     )
                 },
                 placeholder = {
-                    Box(
-                        Modifier
-                            .size(placeholderSize)
-                            .onGloballyPositioned {
-                                placeholderPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(placeholderSize)
+                        .onGloballyPositioned {
+                            placeholderPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -739,7 +715,7 @@ class OutlinedTextFieldTest {
             // placeholder y position is top + default padding + label padding allowance, then
             // centered within allocated space
             assertThat(placeholderPosition.value?.y).isWithin(1f).of(
-                (ExpectedPadding + OutlinedTextFieldTopPadding.toDp() +
+                (ExpectedPadding + OutlinedTextFieldTopPadding +
                     (MinTextLineHeight - placeholderSize) / 2).toPx()
             )
         }
@@ -832,9 +808,7 @@ class OutlinedTextFieldTest {
                 OutlinedTextField(
                     value = "text",
                     onValueChange = {},
-                    modifier = Modifier
-                        .width(textFieldWidth)
-                        .height(textFieldHeight),
+                    modifier = Modifier.width(textFieldWidth).height(textFieldHeight),
                     leadingIcon = {
                         IconButton(
                             onClick = {},
@@ -896,27 +870,21 @@ class OutlinedTextFieldTest {
                 OutlinedTextField(
                     value = "text",
                     onValueChange = {},
-                    modifier = Modifier
-                        .width(textFieldWidth)
-                        .height(textFieldHeight),
+                    modifier = Modifier.width(textFieldWidth).height(textFieldHeight),
                     leadingIcon = {
                         Box(
-                            Modifier
-                                .size(size)
-                                .onGloballyPositioned {
-                                    leadingPosition = it.positionInRoot()
-                                    leadingSize = it.size
-                                }
+                            Modifier.size(size).onGloballyPositioned {
+                                leadingPosition = it.positionInRoot()
+                                leadingSize = it.size
+                            }
                         )
                     },
                     trailingIcon = {
                         Box(
-                            Modifier
-                                .size(size)
-                                .onGloballyPositioned {
-                                    trailingPosition = it.positionInRoot()
-                                    trailingSize = it.size
-                                }
+                            Modifier.size(size).onGloballyPositioned {
+                                trailingPosition = it.positionInRoot()
+                                trailingSize = it.size
+                            }
                         )
                     },
                 )
@@ -965,21 +933,19 @@ class OutlinedTextFieldTest {
                     modifier = Modifier.width(textFieldWidth),
                     label = { Box(Modifier.size(MinFocusedLabelLineHeight)) },
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     }
                 )
@@ -991,7 +957,7 @@ class OutlinedTextFieldTest {
                 // prefix
                 assertThat(prefixPosition.value?.x).isWithin(1f).of(ExpectedPadding.toPx())
                 assertThat(prefixPosition.value?.y).isWithin(1f).of(
-                    (ExpectedPadding + OutlinedTextFieldTopPadding.toDp()).toPx()
+                    (ExpectedPadding + OutlinedTextFieldTopPadding).toPx()
                 )
 
                 // suffix
@@ -999,7 +965,7 @@ class OutlinedTextFieldTest {
                     (textFieldWidth - ExpectedPadding - suffixSize).toPx()
                 )
                 assertThat(suffixPosition.value?.y).isWithin(1f).of(
-                    (ExpectedPadding + OutlinedTextFieldTopPadding.toDp()).toPx()
+                    (ExpectedPadding + OutlinedTextFieldTopPadding).toPx()
                 )
             }
         }
@@ -1021,21 +987,19 @@ class OutlinedTextFieldTest {
                     onValueChange = {},
                     modifier = Modifier.width(textFieldWidth),
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     }
                 )
@@ -1073,21 +1037,19 @@ class OutlinedTextFieldTest {
                     onValueChange = {},
                     modifier = Modifier.width(textFieldWidth),
                     prefix = {
-                        Box(
-                            Modifier
-                                .size(prefixSize)
-                                .onGloballyPositioned {
-                                    prefixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(prefixSize)
+                            .onGloballyPositioned {
+                                prefixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     suffix = {
-                        Box(
-                            Modifier
-                                .size(suffixSize)
-                                .onGloballyPositioned {
-                                    suffixPosition.value = it.positionInRoot()
-                                }
+                        Box(Modifier
+                            .size(suffixSize)
+                            .onGloballyPositioned {
+                                suffixPosition.value = it.positionInRoot()
+                            }
                         )
                     },
                     leadingIcon = { Icon(Icons.Default.Favorite, null) },
@@ -1214,12 +1176,11 @@ class OutlinedTextFieldTest {
                 onValueChange = {},
                 textStyle = TextStyle(fontSize = 1.sp), // ensure text size is minimum
                 supportingText = {
-                    Box(
-                        Modifier
-                            .size(MinSupportingTextLineHeight)
-                            .onGloballyPositioned {
-                                supportingPosition.value = it.positionInRoot()
-                            }
+                    Box(Modifier
+                        .size(MinSupportingTextLineHeight)
+                        .onGloballyPositioned {
+                            supportingPosition.value = it.positionInRoot()
+                        }
                     )
                 }
             )
@@ -1351,21 +1312,16 @@ class OutlinedTextFieldTest {
         }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.P)
     fun testOutlinedTextField_imeActionAndKeyboardTypePropagatedDownstream() {
-        var editorInfo: EditorInfo? = null
-        val interceptor = PlatformTextInputInterceptor { request, _ ->
-            EditorInfo().also {
-                request.createInputConnection(it)
-                editorInfo = it
-            }
-            awaitCancellation()
-        }
+        val platformTextInputService = mock<PlatformTextInputService>()
+        val textInputService = TextInputService(platformTextInputService)
         rule.setContent {
-            val text = remember { mutableStateOf("") }
-            InterceptPlatformTextInput(interceptor) {
+            CompositionLocalProvider(
+                LocalTextInputService provides textInputService
+            ) {
+                val text = remember { mutableStateOf("") }
                 OutlinedTextField(
                     modifier = Modifier.testTag(TextFieldTag),
                     value = text.value,
@@ -1381,12 +1337,17 @@ class OutlinedTextFieldTest {
         rule.onNodeWithTag(TextFieldTag).performClick()
 
         rule.runOnIdle {
-            @Suppress("NAME_SHADOWING")
-            val editorInfo = editorInfo ?: throw AssertionError("Input session never started")
-            val expectedOptions = IME_ACTION_GO
-            val expectedInputType = TYPE_CLASS_TEXT or TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            assertThat(editorInfo.imeOptions and expectedOptions).isEqualTo(expectedOptions)
-            assertThat(editorInfo.inputType and expectedInputType).isEqualTo(expectedInputType)
+            verify(platformTextInputService, atLeastOnce()).startInput(
+                value = any(),
+                imeOptions = eq(
+                    ImeOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Go
+                    )
+                ),
+                onEditCommand = any(),
+                onImeActionPerformed = any()
+            )
         }
     }
 
@@ -1661,8 +1622,8 @@ class OutlinedTextFieldTest {
             focusRequester.requestFocus()
         }
 
-        // advance to middle of animation
-        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration.toLong() / 2)
+        // animation duration is 150, advancing by 75 to get into middle of animation
+        rule.mainClock.advanceTimeBy(75)
 
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(expectedLabelColor)
@@ -1797,10 +1758,7 @@ class OutlinedTextFieldTest {
         val text = "Long text input. ".repeat(20)
         rule.setMaterialContent(lightColorScheme()) {
             Row {
-                Box(
-                    Modifier
-                        .width(150.dp)
-                        .height(IntrinsicSize.Min)) {
+                Box(Modifier.width(150.dp).height(IntrinsicSize.Min)) {
                     OutlinedTextField(
                         value = text,
                         onValueChange = {},
@@ -1873,11 +1831,9 @@ class OutlinedTextFieldTest {
     fun testTextFields_noCrashConstraintsInfinity() {
 
         rule.setMaterialContent(lightColorScheme()) {
-            Column(modifier = Modifier
-                .height(IntrinsicSize.Min)
-                .horizontalScroll(
-                    rememberScrollState()
-                )) {
+            Column(modifier = Modifier.height(IntrinsicSize.Min).horizontalScroll(
+                rememberScrollState()
+            )) {
                 OutlinedTextField(
                     value = "Cat",
                     onValueChange = {},

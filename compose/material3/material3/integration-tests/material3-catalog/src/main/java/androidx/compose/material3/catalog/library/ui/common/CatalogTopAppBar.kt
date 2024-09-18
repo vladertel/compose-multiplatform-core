@@ -82,19 +82,19 @@ fun CatalogTopAppBar(
                                 MaterialTheme.colorScheme.primary
                             else
                                 LocalContentColor.current,
-                            contentDescription = stringResource(id = R.string.favorite_button)
+                            contentDescription = null
                         )
                     }
                     IconButton(onClick = onThemeClick) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_palette_24dp),
-                            contentDescription = stringResource(id = R.string.change_theme_button)
+                            contentDescription = null
                         )
                     }
                     IconButton(onClick = { moreMenuExpanded = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(id = R.string.more_menu_button)
+                            contentDescription = null
                         )
                     }
                 }
@@ -137,7 +137,7 @@ fun CatalogTopAppBar(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                        contentDescription = stringResource(id = R.string.back_button)
+                        contentDescription = null
                     )
                 }
             }

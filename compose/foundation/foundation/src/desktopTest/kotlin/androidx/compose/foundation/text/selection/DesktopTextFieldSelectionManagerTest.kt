@@ -30,7 +30,6 @@ import androidx.compose.ui.text.TextLayoutInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,7 +70,6 @@ class DesktopTextFieldSelectionManagerTest {
     private val textToolbar = mock<TextToolbar>()
     private val hapticFeedback = mock<HapticFeedback>()
     private val focusRequester = mock<FocusRequester>()
-    private val processor = mock<EditProcessor>()
 
     @OptIn(InternalFoundationTextApi::class)
     @Before
@@ -116,11 +114,7 @@ class DesktopTextFieldSelectionManagerTest {
 
         whenever(layoutResultProxy.value).thenReturn(layoutResult)
 
-        state = LegacyTextFieldState(
-            textDelegate = mock(),
-            recomposeScope = mock(),
-            keyboardController = null
-        )
+        state = LegacyTextFieldState(mock(), mock(), mock())
         state.layoutResult = layoutResultProxy
         state.processor.reset(value, null)
         manager.state = state

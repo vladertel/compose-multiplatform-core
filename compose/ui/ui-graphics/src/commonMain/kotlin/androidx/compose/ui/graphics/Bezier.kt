@@ -23,6 +23,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastMaxOf
 import androidx.compose.ui.util.fastMinOf
 import androidx.compose.ui.util.lerp
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.cos
@@ -31,7 +32,7 @@ import kotlin.math.min
 import kotlin.math.sign
 import kotlin.math.sqrt
 
-private const val Tau = Math.PI * 2.0
+private const val Tau = PI * 2.0
 private const val Epsilon = 1e-7
 // We use a fairly high epsilon here because it's post double->float conversion
 // and because we use a fast approximation of cbrt(). The epsilon we use here is
@@ -547,7 +548,6 @@ fun computeCubicVerticalBounds(
 
     for (i in 0 until count) {
         val t = roots[i]
-        println(t)
         val y = evaluateCubic(p0y, p1y, p2y, p3y, t)
         minY = min(minY, y)
         maxY = max(maxY, y)

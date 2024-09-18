@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 import androidx.build.RunApiTasks
 
@@ -49,7 +42,6 @@ androidx {
             "Interfaces provided in this artifact should be binary compatible to guarantee " +
                     "that old inspectors are compatible with newer Android Studio versions")
     metalavaK2UastEnabled = true
-    doNotDocumentReason = "Not shipped externally"
 }
 
 android {
@@ -58,11 +50,13 @@ android {
         minSdkVersion 26
     }
 
-    externalNativeBuild {
-        cmake {
-            path "src/main/native/CMakeLists.txt"
-            version "3.22.1"
-        }
-    }
+// We don't need NDK for developing Compose Multiplatform.
+// It is only needed for Layout inspector for Android target.
+//    externalNativeBuild {
+//        cmake {
+//            path "src/main/native/CMakeLists.txt"
+//            version "3.22.1"
+//        }
+//    }
     namespace "androidx.inspection"
 }

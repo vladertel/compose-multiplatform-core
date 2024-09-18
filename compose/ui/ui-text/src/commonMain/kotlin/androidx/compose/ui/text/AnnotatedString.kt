@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
+import kotlin.jvm.JvmName
 
 /**
  * The basic data structure of text with multiple styles. To construct an [AnnotatedString] you
@@ -272,9 +273,9 @@ class AnnotatedString internal constructor(
      * [spanStyles], [paragraphStyles], or [text] are different.
      *
      * @param other to compare annotations with
-     * @return true iff this compares equal on annotations with other
+     * @return true if and only if this compares equal on annotations with other
      */
-    fun hasEqualsAnnotations(other: AnnotatedString): Boolean =
+    fun hasEqualAnnotations(other: AnnotatedString): Boolean =
         this.annotations == other.annotations
 
     /**

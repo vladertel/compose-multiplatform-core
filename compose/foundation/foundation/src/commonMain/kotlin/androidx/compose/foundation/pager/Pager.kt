@@ -20,19 +20,19 @@ import androidx.annotation.FloatRange
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.TargetedFlingBehavior
-import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
 import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.calculateFinalSnappingBound
+import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -52,6 +52,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -60,7 +61,7 @@ import kotlinx.coroutines.launch
  * use a snap animation (provided by [flingBehavior] to scroll pages into a specific position). You
  * can use [beyondViewportPageCount] to place more pages before and after the visible pages.
  *
- * If you need snapping with pages of different size, you can use a [SnapFlingBehavior] with a
+ * If you need snapping with pages of different size, you can use a [snapFlingBehavior] with a
  * [SnapLayoutInfoProvider] adapted to a LazyList.
  * @see androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider for the implementation
  * of a [SnapLayoutInfoProvider] that uses [androidx.compose.foundation.lazy.LazyListState].
@@ -148,7 +149,7 @@ fun HorizontalPager(
  * use a snap animation (provided by [flingBehavior] to scroll pages into a specific position). You
  * can use [beyondViewportPageCount] to place more pages before and after the visible pages.
  *
- * If you need snapping with pages of different size, you can use a [SnapFlingBehavior] with a
+ * If you need snapping with pages of different size, you can use a [snapFlingBehavior] with a
  * [SnapLayoutInfoProvider] adapted to a LazyList.
  * @see androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider for the implementation
  * of a [SnapLayoutInfoProvider] that uses [androidx.compose.foundation.lazy.LazyListState].
@@ -235,9 +236,9 @@ fun VerticalPager(
 object PagerDefaults {
 
     /**
-     * A [SnapFlingBehavior] that will snap pages to the start of the layout. One can use the
+     * A [snapFlingBehavior] that will snap pages to the start of the layout. One can use the
      * given parameters to control how the snapping animation will happen.
-     * @see androidx.compose.foundation.gestures.snapping.SnapFlingBehavior for more information
+     * @see androidx.compose.foundation.gestures.snapping.snapFlingBehavior for more information
      * on what which parameter controls in the overall snapping animation.
      *
      * The animation specs used by the fling behavior will depend on 2 factors:
@@ -293,7 +294,10 @@ object PagerDefaults {
         state: PagerState,
         pagerSnapDistance: PagerSnapDistance = PagerSnapDistance.atMost(1),
         decayAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
-        snapAnimationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow),
+        snapAnimationSpec: AnimationSpec<Float> = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = Int.VisibilityThreshold.toFloat()
+        ),
         @FloatRange(from = 0.0, to = 1.0) snapPositionalThreshold: Float = 0.5f
     ): TargetedFlingBehavior {
         require(snapPositionalThreshold in 0f..1f) {
@@ -313,8 +317,7 @@ object PagerDefaults {
             val snapLayoutInfoProvider =
                 SnapLayoutInfoProvider(
                     state,
-                    pagerSnapDistance,
-                    decayAnimationSpec
+                    pagerSnapDistance
                 ) { flingVelocity, lowerBound, upperBound ->
                     calculateFinalSnappingBound(
                         pagerState = state,
@@ -326,7 +329,7 @@ object PagerDefaults {
                     )
                 }
 
-            SnapFlingBehavior(
+            snapFlingBehavior(
                 snapLayoutInfoProvider = snapLayoutInfoProvider,
                 decayAnimationSpec = decayAnimationSpec,
                 snapAnimationSpec = snapAnimationSpec
@@ -397,7 +400,7 @@ private class DefaultPagerNestedScrollConnection(
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         return if (
         // rounding error and drag only
-            source == NestedScrollSource.UserInput && abs(state.currentPageOffsetFraction) > 0e-6
+            source == NestedScrollSource.UserInput && abs(state.currentPageOffsetFraction) > 1e-6
         ) {
             // find the current and next page (in the direction of dragging)
             val currentPageOffset = state.currentPageOffsetFraction * state.pageSize
@@ -435,7 +438,7 @@ private class DefaultPagerNestedScrollConnection(
         source: NestedScrollSource
     ): Offset {
         if (source == NestedScrollSource.SideEffect && available.mainAxis() != 0f) {
-            throw CancellationException()
+            throw CancellationException("End of scrollable area reached")
         }
         return Offset.Zero
     }
@@ -448,10 +451,12 @@ private class DefaultPagerNestedScrollConnection(
         if (orientation == Orientation.Horizontal) this.x else this.y
 }
 
-@Suppress("ComposableModifierFactory")
-@Composable
-internal fun Modifier.pagerSemantics(state: PagerState, isVertical: Boolean): Modifier {
-    val scope = rememberCoroutineScope()
+internal fun Modifier.pagerSemantics(
+    state: PagerState,
+    isVertical: Boolean,
+    scope: CoroutineScope,
+    userScrollEnabled: Boolean
+): Modifier {
     fun performForwardPaging(): Boolean {
         return if (state.canScrollForward) {
             scope.launch {
@@ -474,15 +479,19 @@ internal fun Modifier.pagerSemantics(state: PagerState, isVertical: Boolean): Mo
         }
     }
 
-    return this.then(Modifier.semantics {
-        if (isVertical) {
-            pageUp { performBackwardPaging() }
-            pageDown { performForwardPaging() }
-        } else {
-            pageLeft { performBackwardPaging() }
-            pageRight { performForwardPaging() }
-        }
-    })
+    return if (userScrollEnabled) {
+        this.then(Modifier.semantics {
+            if (isVertical) {
+                pageUp { performBackwardPaging() }
+                pageDown { performForwardPaging() }
+            } else {
+                pageLeft { performBackwardPaging() }
+                pageRight { performForwardPaging() }
+            }
+        })
+    } else {
+        this then Modifier
+    }
 }
 
 private inline fun debugLog(generateMsg: () -> String) {

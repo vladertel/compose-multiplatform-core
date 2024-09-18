@@ -22,9 +22,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.NavigationDrawerTokens
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -136,102 +133,6 @@ class DismissibleNavigationDrawerTest {
 
         rule.onNodeWithTag("content")
             .assertLeftPositionInRootIsEqualTo(-NavigationDrawerWidth)
-    }
-
-    @Test
-    fun dismissibleNavigationDrawer_testOffset_customWidthSmaller_whenOpen() {
-        val customWidth = 200.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Open)
-            DismissibleNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(0.dp)
-    }
-
-    @Test
-    fun dismissibleNavigationDrawer_testOffset_customWidthSmaller_whenClosed() {
-        val customWidth = 200.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-            DismissibleNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(-customWidth)
-    }
-
-    @Test
-    fun dismissibleNavigationDrawer_testOffset_customWidthLarger_whenOpen() {
-        val customWidth = NavigationDrawerWidth + 5.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Open)
-            DismissibleNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(0.dp)
-    }
-
-    @Test
-    fun dismissibleNavigationDrawer_testOffset_customWidthLarger_whenClosed() {
-        val customWidth = NavigationDrawerWidth + 5.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-            DismissibleNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet(Modifier.width(customWidth)) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .testTag("content")
-                        )
-                    }
-                },
-                content = {}
-            )
-        }
-
-        rule.onNodeWithTag("content")
-            .assertLeftPositionInRootIsEqualTo(-customWidth)
     }
 
     @Test
@@ -616,7 +517,7 @@ class DismissibleNavigationDrawerTest {
 
     @Test
     @LargeTest
-    fun dismissibleNavigationDrawer_noDismissActionWhenClosed_hasDismissActionWhenOpen(): Unit =
+    fun dismissibleNavigationDrawer_noDismissActionWhenClosed_hasDissmissActionWhenOpen(): Unit =
         runBlocking(
             AutoTestFrameClock()
         ) {

@@ -58,9 +58,9 @@ class DaoProcessor(
                 type = element.type,
                 queryMethods = emptyList(),
                 rawQueryMethods = emptyList(),
-                insertMethods = emptyList(),
-                upsertMethods = emptyList(),
-                deleteMethods = emptyList(),
+                insertionMethods = emptyList(),
+                upsertionMethods = emptyList(),
+                deletionMethods = emptyList(),
                 updateMethods = emptyList(),
                 transactionMethods = emptyList(),
                 kotlinBoxedPrimitiveMethodDelegates = emptyList(),
@@ -142,16 +142,16 @@ class DaoProcessor(
             ).process()
         } ?: emptyList()
 
-        val insertMethods = methods[Insert::class]?.map {
-            InsertMethodProcessor(
+        val insertionMethods = methods[Insert::class]?.map {
+            InsertionMethodProcessor(
                 baseContext = context,
                 containing = declaredType,
                 executableElement = it
             ).process()
         } ?: emptyList()
 
-        val deleteMethods = methods[Delete::class]?.map {
-            DeleteMethodProcessor(
+        val deletionMethods = methods[Delete::class]?.map {
+            DeletionMethodProcessor(
                 baseContext = context,
                 containing = declaredType,
                 executableElement = it
@@ -166,8 +166,8 @@ class DaoProcessor(
             ).process()
         } ?: emptyList()
 
-        val upsertMethods = methods[Upsert::class]?.map {
-            UpsertMethodProcessor(
+        val upsertionMethods = methods[Upsert::class]?.map {
+            UpsertionMethodProcessor(
                 baseContext = context,
                 containing = declaredType,
                 executableElement = it
@@ -246,10 +246,10 @@ class DaoProcessor(
             type = declaredType,
             queryMethods = queryMethods,
             rawQueryMethods = rawQueryMethods,
-            insertMethods = insertMethods,
-            deleteMethods = deleteMethods,
+            insertionMethods = insertionMethods,
+            deletionMethods = deletionMethods,
             updateMethods = updateMethods,
-            upsertMethods = upsertMethods,
+            upsertionMethods = upsertionMethods,
             transactionMethods = transactionMethods.toList(),
             kotlinBoxedPrimitiveMethodDelegates = kotlinBoxedPrimitiveBridgeMethods,
             kotlinDefaultMethodDelegates = kotlinDefaultMethodDelegates.toList(),

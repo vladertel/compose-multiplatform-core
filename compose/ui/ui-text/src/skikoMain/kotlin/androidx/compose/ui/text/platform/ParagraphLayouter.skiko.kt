@@ -16,10 +16,17 @@
 
 package androidx.compose.ui.text.platform
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isUnspecified
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -27,6 +34,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Density
+import kotlin.math.abs
+import org.jetbrains.skia.paragraph.LineMetrics
 import org.jetbrains.skia.paragraph.Paragraph
 
 /**
@@ -36,7 +45,7 @@ import org.jetbrains.skia.paragraph.Paragraph
  * An alternative to passing and reusing existed paragraph is to build it again, but it is 2.5x
  * slower.
  *
- * LayoutedParagraph should has only one owner to avoid concurrent usage.
+ * LayoutedParagraph should have only one owner to avoid concurrent usage.
  *
  * Tests:
  *
@@ -48,7 +57,7 @@ import org.jetbrains.skia.paragraph.Paragraph
  * reusedParagraph.layout(300f): 10.004400ms
  * builder.build().layout(300f): 23.421500ms
  */
-class ParagraphLayouter(
+internal class ParagraphLayouter(
     val text: String,
     textDirection: ResolvedTextDirection,
     style: TextStyle,
@@ -66,42 +75,148 @@ class ParagraphLayouter(
         density = density,
         textDirection = textDirection
     )
-    private var para = builder.build()
+    private var paragraphCache: Paragraph? = null
+    private var updateForeground = false
+    private var width: Float = Float.NaN
 
-    private var width: Float = -1f
+    val defaultFont get() = builder.defaultFont
+    val textStyle get() = builder.textStyle
 
-    val defaultHeight get() = builder.defaultHeight
+    private fun invalidateParagraph(onlyForeground: Boolean = false) {
+        // skia's updateForegroundPaint applies the same style to every span,
+        // so if we have any, we need to rebuild the entire paragraph :'(
+        if (onlyForeground && builder.spanStyles.isEmpty()) {
+            updateForeground = true
+        } else {
+            paragraphCache = null
+        }
+    }
 
-    fun layoutParagraph(
-        width: Float = this.width,
-        maxLines: Int = builder.maxLines,
-        ellipsis: String = builder.ellipsis,
-        color: Color = builder.textStyle.color,
-        shadow: Shadow? = builder.textStyle.shadow,
-        textDecoration: TextDecoration? = builder.textStyle.textDecoration,
-    ): Paragraph {
-        val actualColor = color.takeOrElse { builder.textStyle.color }
-        if (
-            builder.maxLines != maxLines ||
-            builder.ellipsis != ellipsis ||
-            builder.textStyle.color != actualColor ||
-            builder.textStyle.shadow != shadow ||
-            builder.textStyle.textDecoration != textDecoration
+    internal fun emptyLineMetrics(paragraph: Paragraph): Array<LineMetrics> =
+        builder.emptyLineMetrics(paragraph)
+
+    fun setParagraphStyle(
+        maxLines: Int,
+        ellipsis: String
+    ) {
+        if (builder.maxLines != maxLines ||
+            builder.ellipsis != ellipsis
         ) {
-            this.width = width
             builder.maxLines = maxLines
             builder.ellipsis = ellipsis
+            invalidateParagraph()
+        }
+    }
+
+    fun setColor(
+        color: Color,
+    ) {
+        val actualColor = color.takeOrElse { builder.textStyle.color }
+        if (builder.textStyle.color != actualColor) {
             builder.textStyle = builder.textStyle.copy(
                 color = actualColor,
-                shadow = shadow,
-                textDecoration = textDecoration
             )
-            para = builder.build()
-            para.layout(width)
-        } else if (this.width != width) {
-            this.width = width
-            para.layout(width)
+            invalidateParagraph(onlyForeground = true)
         }
-        return para
     }
+
+    fun setBrush(
+        brush: Brush?,
+        brushSize: Size,
+        alpha: Float,
+    ) {
+        val actualSize = builder.brushSize
+        if (builder.textStyle.brush != brush ||
+            actualSize.isUnspecified ||
+            !actualSize.width.sameValueAs(brushSize.width) ||
+            !actualSize.height.sameValueAs(brushSize.height) ||
+            !builder.textStyle.alpha.sameValueAs(alpha)
+        ) {
+            builder.textStyle = builder.textStyle.copy(
+                brush = brush,
+                alpha = alpha,
+            )
+            builder.brushSize = brushSize
+            invalidateParagraph(onlyForeground = true)
+        }
+    }
+
+    fun setBrushSize(
+        brushSize: Size,
+    ) {
+        if (builder.brushSize != brushSize) {
+            builder.brushSize = brushSize
+
+            // [brushSize] requires only for shader recreation and does not require re-layout,
+            // but we have to invalidate it because it's backed into skia's paragraph.
+            // Since it affects only [ShaderBrush] we can keep the cache if it's not used.
+            if (builder.textStyle.brush is ShaderBrush ||
+                builder.spanStyles.any { it.item.brush is ShaderBrush }) {
+                invalidateParagraph(onlyForeground = true)
+            }
+        }
+    }
+
+    fun setTextStyle(
+        shadow: Shadow?,
+        textDecoration: TextDecoration?,
+    ) {
+        if (builder.textStyle.shadow != shadow ||
+            builder.textStyle.textDecoration != textDecoration
+        ) {
+            builder.textStyle = builder.textStyle.copy(
+                shadow = shadow,
+                textDecoration = textDecoration,
+            )
+            invalidateParagraph()
+        }
+    }
+
+    fun setDrawStyle(drawStyle: DrawStyle?) {
+        if (builder.drawStyle != drawStyle) {
+            builder.drawStyle = drawStyle
+            invalidateParagraph(onlyForeground = true)
+        }
+    }
+
+    fun setBlendMode(blendMode: BlendMode) {
+        if (builder.blendMode != blendMode) {
+            builder.blendMode = blendMode
+            invalidateParagraph()
+        }
+    }
+
+    fun layoutParagraph(width: Float): Paragraph {
+        var paragraph = paragraphCache
+        return if (paragraph != null) {
+            var layoutRequired = false
+            if (updateForeground) {
+                builder.updateForegroundPaint(paragraph)
+                updateForeground = false
+
+                // Skia caches everything internally, so to actually apply it
+                // markDirty + layout is required.
+                paragraph.markDirty()
+                layoutRequired = true
+            }
+            if (!this.width.sameValueAs(width)) {
+                this.width = width
+                layoutRequired = true
+            }
+            if (layoutRequired) {
+                paragraph.layout(width)
+            }
+            paragraph
+        } else {
+            paragraph = builder.build()
+            paragraph.layout(width)
+            paragraphCache = paragraph
+            updateForeground = false
+            return paragraph
+        }
+    }
+}
+
+private fun Float.sameValueAs(other: Float) : Boolean {
+    return abs(this - other) < 0.00001f
 }

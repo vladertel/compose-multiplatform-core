@@ -32,11 +32,11 @@ import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.foundation.text.input.TextFieldCharSequence
 import androidx.compose.foundation.text.input.internal.HandwritingGestureApi34.performHandwritingGesture
 import androidx.compose.foundation.text.input.internal.HandwritingGestureApi34.previewHandwritingGesture
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.KeyboardType
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -87,7 +87,15 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                 val oldComposition = oldValue.composition
                 val newComposition = newValue.composition
 
-                if ((oldSelection != newSelection) || oldComposition != newComposition) {
+                // No need to restart the IME if there wasn't a composing region. This is useful
+                // to not unnecessarily restart filtered digit only, or password fields.
+                if (restartImeIfContentChanges &&
+                    oldValue.composition != null &&
+                    !oldValue.contentEquals(newValue)
+                ) {
+                    composeImm.restartInput()
+                } else if (oldSelection != newSelection || oldComposition != newComposition) {
+                    // Don't call updateSelection if input is going to be restarted anyway
                     composeImm.updateSelection(
                         selectionStart = newSelection.min,
                         selectionEnd = newSelection.max,
@@ -95,21 +103,19 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                         compositionEnd = newComposition?.max ?: -1
                     )
                 }
-
-                // No need to restart the IME if keyboard type is configured as Password. IME
-                // should not keep an internal input state if the content needs to be secured.
-                if (restartImeIfContentChanges &&
-                    !oldValue.contentEquals(newValue) &&
-                    imeOptions.keyboardType != KeyboardType.Password
-                ) {
-                    composeImm.restartInput()
-                }
             }
         }
 
         stylusHandwritingTrigger?.let {
-            launch(start = CoroutineStart.UNDISPATCHED) {
-                it.collect { composeImm.startStylusHandwriting() }
+            launch {
+                // When the editor is just focused, we need to wait for imm.startInput
+                // before calling startStylusHandwriting. We need to wait for one frame
+                // because TextInputService.startInput also waits for one frame before
+                // actually calling imm.restartInput.
+                withFrameMillis { }
+                it.collect {
+                    composeImm.startStylusHandwriting()
+                }
             }
         }
 

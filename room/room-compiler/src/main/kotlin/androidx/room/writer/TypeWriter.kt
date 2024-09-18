@@ -36,10 +36,7 @@ import kotlin.reflect.KClass
 /**
  * Base class for all writers that can produce a class.
  */
-abstract class TypeWriter(
-    val codeLanguage: CodeLanguage,
-    val javaLambdaSyntaxAvailable: Boolean,
-) {
+abstract class TypeWriter(val codeLanguage: CodeLanguage) {
     private val sharedFieldSpecs = mutableMapOf<String, XPropertySpec>()
     private val sharedMethodSpecs = mutableMapOf<String, XFunSpec>()
     private val sharedFieldNames = mutableSetOf<String>()
@@ -84,12 +81,7 @@ abstract class TypeWriter(
             javaTypeBuilder = {
                 addAnnotation(
                     com.squareup.javapoet.AnnotationSpec.builder(SuppressWarnings::class.java)
-                        .addMember(
-                            "value", "{\$S, \$S, \$S}",
-                            "unchecked",
-                            "deprecation",
-                            "removal"
-                        )
+                        .addMember("value", "{\$S, \$S}", "unchecked", "deprecation")
                         .build()
                 )
             },
@@ -97,11 +89,10 @@ abstract class TypeWriter(
                 addAnnotation(
                     com.squareup.kotlinpoet.AnnotationSpec.builder(Suppress::class)
                         .addMember(
-                            "names = [%S, %S, %S, %S]",
+                            "names = [%S, %S, %S]",
                             "UNCHECKED_CAST",
                             "DEPRECATION",
-                            "REDUNDANT_PROJECTION",
-                            "REMOVAL"
+                            "REDUNDANT_PROJECTION"
                         )
                         .build()
                 )

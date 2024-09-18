@@ -20,7 +20,6 @@ import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.internal.BasicTooltipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -494,52 +493,7 @@ class TooltipTest {
             )
         }
 
-        assertThat(anchorBounds.left).isWithin(0.001f).of(expectedAnchorBounds.left)
-        assertThat(anchorBounds.top).isWithin(0.001f).of(expectedAnchorBounds.top)
-        assertThat(anchorBounds.right).isWithin(0.001f).of(expectedAnchorBounds.right)
-        assertThat(anchorBounds.bottom).isWithin(0.001f).of(expectedAnchorBounds.bottom)
-    }
-
-    @Test
-    fun richTooltip_caretAnchorPositioning() {
-        var anchorBounds = Rect.Zero
-        rule.setContent {
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
-                state = rememberTooltipState(initialIsVisible = true, isPersistent = true),
-                tooltip = {
-                    RichTooltip(
-                        modifier = Modifier.drawCaret {
-                            it?.let { anchorBounds = it.boundsInWindow() }
-                            onDrawBehind {}
-                        }
-                    ) {}
-                }
-            ) {
-                Icon(
-                    Icons.Filled.Favorite,
-                    modifier = Modifier.testTag(AnchorTestTag),
-                    contentDescription = null
-                )
-            }
-        }
-
-        rule.waitForIdle()
-        val expectedAnchorBoundsDp =
-            rule.onNodeWithTag(AnchorTestTag, true).getUnclippedBoundsInRoot()
-        val expectedAnchorBounds = with(rule.density) {
-            Rect(
-                expectedAnchorBoundsDp.left.roundToPx().toFloat(),
-                expectedAnchorBoundsDp.top.roundToPx().toFloat(),
-                expectedAnchorBoundsDp.right.roundToPx().toFloat(),
-                expectedAnchorBoundsDp.bottom.roundToPx().toFloat()
-            )
-        }
-
-        assertThat(anchorBounds.left).isWithin(0.001f).of(expectedAnchorBounds.left)
-        assertThat(anchorBounds.top).isWithin(0.001f).of(expectedAnchorBounds.top)
-        assertThat(anchorBounds.right).isWithin(0.001f).of(expectedAnchorBounds.right)
-        assertThat(anchorBounds.bottom).isWithin(0.001f).of(expectedAnchorBounds.bottom)
+        assertThat(anchorBounds == expectedAnchorBounds).isTrue()
     }
 
     @Test

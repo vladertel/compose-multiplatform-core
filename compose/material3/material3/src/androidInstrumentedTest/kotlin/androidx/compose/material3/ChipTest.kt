@@ -241,18 +241,14 @@ class ChipTest {
                     Icon(
                         Icons.Filled.Settings,
                         contentDescription = "Localized description",
-                        modifier = Modifier
-                            .testTag("Leading")
-                            .size(AssistChipDefaults.IconSize)
+                        modifier = Modifier.testTag("Leading").size(AssistChipDefaults.IconSize)
                     )
                 },
                 trailingIcon = {
                     Icon(
                         Icons.Filled.Settings,
                         contentDescription = "Localized description",
-                        modifier = Modifier
-                            .testTag("Trailing")
-                            .size(AssistChipDefaults.IconSize)
+                        modifier = Modifier.testTag("Trailing").size(AssistChipDefaults.IconSize)
                     )
                 },
             )
@@ -551,9 +547,7 @@ class ChipTest {
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = "Localized Description",
-                        modifier = Modifier
-                            .testTag("Trailing")
-                            .size(FilterChipDefaults.IconSize)
+                        modifier = Modifier.testTag("Trailing").size(FilterChipDefaults.IconSize)
                     )
                 }
             )
@@ -591,35 +585,6 @@ class ChipTest {
 
         rule.runOnIdle {
             assertThat(contentColor).isEqualTo(expectedLabelColor)
-        }
-    }
-
-    @Test
-    fun defaultColors_elevatedFilterChip() {
-        rule.setMaterialContent(lightColorScheme()) {
-            val expectedColors = SelectableChipColors(
-                containerColor = FilterChipTokens.ElevatedUnselectedContainerColor.value,
-                labelColor = FilterChipTokens.UnselectedLabelTextColor.value,
-                leadingIconColor = FilterChipTokens.UnselectedLeadingIconColor.value,
-                trailingIconColor = FilterChipTokens.UnselectedLeadingIconColor.value,
-                disabledContainerColor = FilterChipTokens.ElevatedDisabledContainerColor.value
-                    .copy(alpha = FilterChipTokens.ElevatedDisabledContainerOpacity),
-                disabledLabelColor = FilterChipTokens.DisabledLabelTextColor.value
-                    .copy(alpha = FilterChipTokens.DisabledLabelTextOpacity),
-                disabledLeadingIconColor = FilterChipTokens.DisabledLeadingIconColor.value
-                    .copy(alpha = FilterChipTokens.DisabledLeadingIconOpacity),
-                disabledTrailingIconColor = FilterChipTokens.DisabledLeadingIconColor.value
-                    .copy(alpha = FilterChipTokens.DisabledLeadingIconOpacity),
-                selectedContainerColor = FilterChipTokens.ElevatedSelectedContainerColor.value,
-                disabledSelectedContainerColor =
-                FilterChipTokens.ElevatedDisabledContainerColor.value
-                    .copy(alpha = FilterChipTokens.ElevatedDisabledContainerOpacity),
-                selectedLabelColor = FilterChipTokens.SelectedLabelTextColor.value,
-                selectedLeadingIconColor = FilterChipTokens.SelectedLeadingIconColor.value,
-                selectedTrailingIconColor = FilterChipTokens.SelectedLeadingIconColor.value
-            )
-            val colors = FilterChipDefaults.elevatedFilterChipColors()
-            assertThat(colors).isEqualTo(expectedColors)
         }
     }
 
@@ -1088,7 +1053,7 @@ class ChipTest {
             SuggestionChip(onClick = {}, label = {
                 textStyle = LocalTextStyle.current
                 body2TextStyle =
-                    SuggestionChipTokens.LabelTextFont.value
+                    MaterialTheme.typography.fromToken(SuggestionChipTokens.LabelTextFont)
             })
         }
 

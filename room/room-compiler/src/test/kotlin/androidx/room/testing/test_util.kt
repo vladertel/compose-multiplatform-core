@@ -332,7 +332,7 @@ object COMMON {
 
 fun testCodeGenScope(): CodeGenScope {
     return CodeGenScope(
-        object : TypeWriter(CodeLanguage.JAVA, true) {
+        object : TypeWriter(CodeLanguage.JAVA) {
             override fun createTypeSpecBuilder(): XTypeSpec.Builder {
                 return XTypeSpec.classBuilder(codeLanguage, XClassName.get("test", "Foo"))
             }
@@ -354,11 +354,6 @@ fun loadTestSource(fileName: String, qName: String): Source {
     val contents = File("src/test/test-data/$fileName")
     val relativePath = qName.replace('.', File.separatorChar) + "." + contents.extension
     return Source.load(contents, qName, relativePath)
-}
-
-fun writeTestSource(source: Source, fileName: String) {
-    val contents = File("src/test/test-data/$fileName")
-    contents.writeText(source.contents)
 }
 
 fun createVerifierFromEntitiesAndViews(invocation: XTestInvocation): DatabaseVerifier {

@@ -26,6 +26,7 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.M
 import android.os.Build.VERSION_CODES.N
 import android.os.Build.VERSION_CODES.O
+import android.os.Build.VERSION_CODES.P
 import android.os.Build.VERSION_CODES.Q
 import android.os.Build.VERSION_CODES.S
 import android.os.Looper
@@ -192,6 +193,7 @@ import androidx.compose.ui.util.fastLastOrNull
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.trace
 import androidx.compose.ui.viewinterop.AndroidViewHolder
+import androidx.compose.ui.viewinterop.InteropView
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.InputDeviceCompat.SOURCE_ROTARY_ENCODER
 import androidx.core.view.MotionEventCompat.AXIS_SCROLL
@@ -444,6 +446,7 @@ internal class AndroidComposeView(
     private var postponedDirtyLayers: MutableList<OwnedLayer>? = null
 
     private var isDrawingContent = false
+    private var isPendingInteropViewLayoutChangeDispatch = false
 
     private val motionEventAdapter = MotionEventAdapter()
     private val pointerInputEventProcessor = PointerInputEventProcessor(root)
@@ -485,6 +488,11 @@ internal class AndroidComposeView(
             if (_androidViewsHandler == null) {
                 _androidViewsHandler = AndroidViewsHandler(context)
                 addView(_androidViewsHandler)
+                // Ensure that AndroidViewsHandler is measured and laid out after creation, so that
+                // it can report correct bounds on screen (for semantics, etc).
+                // Normally this is done by addView, but here we disabled it for optimization
+                // purposes.
+                requestLayout()
             }
             return _androidViewsHandler!!
         }
@@ -798,6 +806,19 @@ internal class AndroidComposeView(
         } ?: super.getFocusedRect(rect)
     }
 
+    /**
+     * Avoid Android 8 crash by not traversing assist structure. Autofill assistStructure will be
+     * dispatched via `dispatchProvideAutofillStructure`, not this method. See b/251152083 for more
+     * details.
+     */
+    override fun dispatchProvideStructure(structure: ViewStructure) {
+        if (SDK_INT == 26 || SDK_INT == 27) {
+            AndroidComposeViewAssistHelperMethodsO.setClassName(structure)
+        } else {
+            super.dispatchProvideStructure(structure)
+        }
+    }
+
     private val scrollCapture = if (SDK_INT >= 31) ScrollCapture() else null
     internal val scrollCaptureInProgress: Boolean
         get() = if (SDK_INT >= 31) {
@@ -960,9 +981,9 @@ internal class AndroidComposeView(
      * This function is used by the delegate file to set the time interval between sending
      * accessibility events in milliseconds.
      */
-    override fun setAccessibilityEventBatchIntervalMillis(accessibilityInterval: Long) {
+    override fun setAccessibilityEventBatchIntervalMillis(intervalMillis: Long) {
         composeAccessibilityDelegate.SendRecurringAccessibilityEventsIntervalMillis =
-            accessibilityInterval
+            intervalMillis
     }
 
     override fun onAttach(node: LayoutNode) {
@@ -1254,6 +1275,7 @@ internal class AndroidComposeView(
                     requestLayout()
                 }
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+                dispatchPendingInteropLayoutCallbacks()
             }
         }
     }
@@ -1266,7 +1288,15 @@ internal class AndroidComposeView(
             // it allows us to not traverse the hierarchy twice.
             if (!measureAndLayoutDelegate.hasPendingMeasureOrLayout) {
                 measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+                dispatchPendingInteropLayoutCallbacks()
             }
+        }
+    }
+
+    private fun dispatchPendingInteropLayoutCallbacks() {
+        if (isPendingInteropViewLayoutChangeDispatch) {
+            viewTreeObserver.dispatchOnGlobalLayout()
+            isPendingInteropViewLayoutChangeDispatch = false
         }
     }
 
@@ -1426,20 +1456,22 @@ internal class AndroidComposeView(
             return layer
         }
 
+        // enable new layers on versions supporting render nodes
+        if (isHardwareAccelerated && SDK_INT >= M && SDK_INT != P) {
+            return GraphicsLayerOwnerLayer(
+                graphicsLayer = graphicsContext.createGraphicsLayer(),
+                context = graphicsContext,
+                ownerView = this,
+                drawBlock = drawBlock,
+                invalidateParentLayer = invalidateParentLayer
+            )
+        }
+
         // RenderNode is supported on Q+ for certain, but may also be supported on M-O.
         // We can't be confident that RenderNode is supported, so we try and fail over to
         // the ViewLayer implementation. We'll try even on on P devices, but it will fail
         // until ART allows things on the unsupported list on P.
         if (isHardwareAccelerated && SDK_INT >= M && isRenderNodeCompatible) {
-            if (SDK_INT >= Q) {
-                return GraphicsLayerOwnerLayer(
-                    graphicsLayer = graphicsContext.createGraphicsLayer(),
-                    context = graphicsContext,
-                    ownerView = this,
-                    drawBlock = drawBlock,
-                    invalidateParentLayer = invalidateParentLayer
-                )
-            }
             try {
                 return RenderNodeLayer(
                     this,
@@ -1471,14 +1503,9 @@ internal class AndroidComposeView(
      * Returns `true` if it was recycled or `false` if it will be discarded.
      */
     internal fun recycle(layer: OwnedLayer): Boolean {
-        // L throws during RenderThread when reusing the Views. The stack trace
-        // wasn't easy to decode, so this work-around keeps up to 10 Views active
-        // only for L. On other versions, it uses the WeakHashMap to retain as many
-        // as are convenient.
         val cacheValue = viewLayersContainer == null ||
             ViewLayer.shouldUseDispatchDraw ||
-            SDK_INT >= M ||
-            layerCache.size < MaximumLayerCacheSize
+            SDK_INT >= M // L throws during RenderThread when reusing the Views.
         if (cacheValue) {
             layerCache.push(layer)
         }
@@ -1493,6 +1520,10 @@ internal class AndroidComposeView(
     override fun onLayoutChange(layoutNode: LayoutNode) {
         composeAccessibilityDelegate.onLayoutChange(layoutNode)
         contentCaptureManager.onLayoutChange(layoutNode)
+    }
+
+    override fun onInteropViewLayoutChange(view: InteropView) {
+        isPendingInteropViewLayoutChangeDispatch = true
     }
 
     override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
@@ -2343,7 +2374,6 @@ internal class AndroidComposeView(
     override fun shouldDelayChildPressedState(): Boolean = false
 
     companion object {
-        private const val MaximumLayerCacheSize = 10
         private var systemPropertiesClass: Class<*>? = null
         private var getBooleanMethod: Method? = null
 
@@ -2413,6 +2443,15 @@ private object AndroidComposeViewVerificationHelperMethodsO {
         view.focusable = focusable
         // not to add the default focus highlight to the whole compose view
         view.defaultFocusHighlightEnabled = defaultFocusHighlightEnabled
+    }
+}
+
+@RequiresApi(M)
+private object AndroidComposeViewAssistHelperMethodsO {
+    @RequiresApi(M)
+    @DoNotInline
+    fun setClassName(structure: ViewStructure) {
+        structure.setClassName(javaClass.name)
     }
 }
 

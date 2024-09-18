@@ -44,16 +44,10 @@ import androidx.compose.runtime.mock.revalidate
 import androidx.compose.runtime.mock.skip
 import androidx.compose.runtime.mock.validate
 import androidx.compose.runtime.snapshots.Snapshot
-import java.lang.Integer.min
 import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.reflect.KProperty
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -65,17 +59,20 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.TestResult
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.test.IgnoreJsTarget
 import kotlinx.coroutines.withContext
+import kotlinx.test.IgnoreJsAndNative
 
 @Composable
 fun Container(content: @Composable () -> Unit) = content()
 
 @Stable
-@OptIn(InternalComposeApi::class)
+@OptIn(InternalComposeApi::class, ExperimentalCoroutinesApi::class)
 @Suppress("unused")
 class CompositionTests {
     @Test
@@ -669,6 +666,7 @@ class CompositionTests {
     }
 
     @Test
+    @IgnoreJsAndNative
     fun testSkippingNestedLambda() = compositionTest {
         val data = mutableStateOf(0)
 
@@ -2363,6 +2361,7 @@ class CompositionTests {
     }
 
     @Test
+    @IgnoreJsTarget
     fun testRememberObserver_Abandon_Recompose() {
         val abandonedObjects = mutableListOf<RememberObserver>()
         val observed = object : RememberObserver {
@@ -3607,6 +3606,8 @@ class CompositionTests {
     }
 
     @Test // Regression test for b/249050560
+    @IgnoreJsTarget
+    // TODO(o.k.): fails due to old js-only change in ComposerLambdaMemoization.rememberExpression
     fun testFunctionInstances() = compositionTest {
         var state by mutableStateOf(0)
         functionInstance = { -1 }
@@ -4095,7 +4096,7 @@ class CompositionTests {
         var seen = emptyList<Any?>()
 
         fun seen(list: List<Any>) {
-            for (i in 0 until min(list.size, seen.size)) {
+            for (i in 0 until minOf(list.size, seen.size)) {
                 assertEquals(list[i], seen[i])
             }
             seen = list
@@ -4161,9 +4162,9 @@ class CompositionTests {
         }
     }
 
-    @Test(timeout = 10000)
-    fun testCompositionAndRecomposerDeadlock() {
-        runBlocking {
+    @Test
+    fun testCompositionAndRecomposerDeadlock(): TestResult {
+        return runTest(timeoutMs = 10_000, context = UnconfinedTestDispatcher()) {
             withGlobalSnapshotManager {
                 repeat(100) {
                     val job = Job(parent = coroutineContext[Job])
@@ -4345,6 +4346,8 @@ class CompositionTests {
             invokeCount++
         }
     }
+    // TODO reenable in https://youtrack.jetbrains.com/issue/COMPOSE-1504/Compose-1.7.-Enable-Strong-Skipping-mode-for-the-sources
+    @Ignore
     @Test
     fun composableWithUnstableParameters_skipped() = compositionTest {
         val consumer = UnstableCompConsumer()
@@ -4580,6 +4583,60 @@ class CompositionTests {
 
         state.value = true
         advance()
+    }
+
+    @Test // regression test for 339618126
+    fun removeGroupAtEndOfGroup() = compositionTest {
+        // Ensure the runtime handles aberrant code generation
+        val state = mutableStateOf(true)
+        compose {
+            InlineLinear {
+                InlineLinear {
+                    explicitStartReplaceGroup(-0x7e52e5de) {
+                        Text("Before")
+                    }
+                    explicitStartReplaceGroup(0x9222f9c, insertGroup = state.value) { }
+                    explicitStartReplaceGroup(0x22d2581c) {
+                        Text("After")
+                    }
+                }
+                InlineLinear {
+                    Text("State is ${state.value}")
+                }
+                if (state.value) {
+                    Text("State is on")
+                }
+                if (!state.value) {
+                    Text("State is off")
+                }
+            }
+        }
+
+        validate {
+            Linear {
+                Linear {
+                    Text("Before")
+                    Text("After")
+                }
+                Linear {
+                    Text("State is ${state.value}")
+                }
+                if (state.value) {
+                    Text("State is on")
+                }
+                if (!state.value) {
+                    Text("State is off")
+                }
+            }
+        }
+
+        state.value = false
+        advance()
+        revalidate()
+
+        state.value = true
+        advance()
+        revalidate()
     }
 
     private inline fun CoroutineScope.withGlobalSnapshotManager(block: CoroutineScope.() -> Unit) {
@@ -4915,3 +4972,16 @@ fun ListContentItem(
 data class ListViewItem(val id: Int)
 
 private fun <T> unused(@Suppress("UNUSED_PARAMETER") value: T) { }
+
+// Part of regression test for 339618126
+@Composable
+@ExplicitGroupsComposable
+inline fun explicitStartReplaceGroup(
+    key: Int,
+    insertGroup: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    if (insertGroup) currentComposer.startReplaceGroup(key)
+    content()
+    if (insertGroup) currentComposer.endReplaceGroup()
+}

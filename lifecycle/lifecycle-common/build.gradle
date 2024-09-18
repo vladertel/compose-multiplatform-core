@@ -21,6 +21,9 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+
+import androidx.build.JetbrainsAndroidXPlugin
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
@@ -28,7 +31,10 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     id("AndroidXPlugin")
+    id("JetbrainsAndroidXPlugin")
 }
+
+JetbrainsAndroidXPlugin.applyAndConfigure(project)
 
 androidXMultiplatform {
     jvm {
@@ -37,12 +43,28 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-
-    kotlin {
-        explicitApi = ExplicitApiMode.Strict
-    }
+    js()
+    wasm()
 
     defaultPlatform(PlatformIdentifier.JVM)
+}
+
+kotlin {
+    js {
+        browser()
+    }
+    wasmJs()
+
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
+    mingwX64()
+
+    explicitApi = ExplicitApiMode.Strict
 
     sourceSets {
         commonMain {
@@ -53,7 +75,9 @@ androidXMultiplatform {
             }
         }
 
-        jvmMain.dependsOn(commonMain)
+        jvmMain {
+            dependsOn(commonMain)
+        }
 
         jvmTest {
             dependencies {
@@ -84,4 +108,9 @@ androidx {
     publish = Publish.SNAPSHOT_AND_RELEASE
     inceptionYear = "2017"
     description = "Android Lifecycle-Common"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }

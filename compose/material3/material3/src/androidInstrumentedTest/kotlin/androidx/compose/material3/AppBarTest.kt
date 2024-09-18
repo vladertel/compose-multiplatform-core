@@ -160,7 +160,7 @@ class AppBarTest {
                 Text("Title")
                 textStyle = LocalTextStyle.current
                 expectedTextStyle =
-                    TopAppBarSmallTokens.HeadlineFont.value
+                    MaterialTheme.typography.fromToken(TopAppBarSmallTokens.HeadlineFont)
             }
             )
         }
@@ -275,28 +275,6 @@ class AppBarTest {
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    @Test
-    fun smallTopAppBar_customHeight() {
-        lateinit var scrollBehavior: TopAppBarScrollBehavior
-        val expandedHeightDp = 50.dp
-        var expandedHeightDpPx = 0f
-
-        rule.setMaterialContent(lightColorScheme()) {
-            scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-            expandedHeightDpPx = with(LocalDensity.current) { expandedHeightDp.toPx() }
-            TopAppBar(
-                title = { Text("Title", Modifier.testTag(TitleTestTag)) },
-                modifier = Modifier.testTag(TopAppBarTestTag),
-                expandedHeight = expandedHeightDp,
-                scrollBehavior = scrollBehavior
-            )
-        }
-
-        assertThat(scrollBehavior.state.heightOffsetLimit).isEqualTo(-expandedHeightDpPx)
-        rule.onNodeWithTag(TopAppBarTestTag).assertHeightIsEqualTo(expandedHeightDp)
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun smallTopAppBar_transparentContainerColor() {
@@ -390,7 +368,7 @@ class AppBarTest {
             .assertLeftPositionInRootIsEqualTo(AppBarStartAndEndPadding + padding)
             // Navigation icon should be centered within the height of the app bar.
             .assertTopPositionInRootIsEqualTo(
-                appBarBottomEdgeY - DefaultAppBarTopAndBottomPadding - padding - FakeIconSize
+                appBarBottomEdgeY - AppBarTopAndBottomPadding - padding - FakeIconSize
             )
     }
 
@@ -475,7 +453,9 @@ class AppBarTest {
                     Text("Title")
                     textStyle = LocalTextStyle.current
                     expectedTextStyle =
-                            TopAppBarSmallCenteredTokens.HeadlineFont.value
+                        MaterialTheme.typography.fromToken(
+                            TopAppBarSmallCenteredTokens.HeadlineFont
+                        )
                 }
             )
         }
@@ -618,38 +598,7 @@ class AppBarTest {
 
         // The bottom text baseline should be 24.dp from the bottom of the app bar.
         assertMediumOrLargeDefaultPositioning(
-            appBarCollapsedHeight = TopAppBarSmallTokens.ContainerHeight,
-            appBarExpandedHeight = TopAppBarMediumTokens.ContainerHeight,
-            bottomTextPadding = 24.dp
-        )
-    }
-
-    @Test
-    fun mediumTopAppBar_customHeight_expanded_positioning() {
-        val collapsedHeightDp = 36.dp
-        val expandedHeightDp = 112.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            Box(Modifier.testTag(TopAppBarTestTag)) {
-                MediumTopAppBar(
-                    navigationIcon = {
-                        FakeIcon(Modifier.testTag(NavigationIconTestTag))
-                    },
-                    title = {
-                        Text("Title", Modifier.testTag(TitleTestTag))
-                    },
-                    actions = {
-                        FakeIcon(Modifier.testTag(ActionsTestTag))
-                    },
-                    collapsedHeight = collapsedHeightDp,
-                    expandedHeight = expandedHeightDp
-                )
-            }
-        }
-
-        // The bottom text baseline should be 24.dp from the bottom of the app bar.
-        assertMediumOrLargeDefaultPositioning(
-            appBarCollapsedHeight = collapsedHeightDp,
-            appBarExpandedHeight = expandedHeightDp,
+            expectedAppBarHeight = TopAppBarMediumTokens.ContainerHeight,
             bottomTextPadding = 24.dp
         )
     }
@@ -677,38 +626,6 @@ class AppBarTest {
         assertMediumOrLargeScrolledHeight(
             TopAppBarMediumTokens.ContainerHeight,
             TopAppBarSmallTokens.ContainerHeight,
-            windowInsets,
-            content
-        )
-    }
-
-    @Test
-    fun mediumTopAppBar_customHeight_scrolled_positioning() {
-        val collapsedHeightDp = 40.dp
-        val expandedHeightDp = 120.dp
-        val windowInsets = WindowInsets(13.dp, 13.dp, 13.dp, 13.dp)
-        val content = @Composable { scrollBehavior: TopAppBarScrollBehavior? ->
-            Box(Modifier.testTag(TopAppBarTestTag)) {
-                MediumTopAppBar(
-                    navigationIcon = {
-                        FakeIcon(Modifier.testTag(NavigationIconTestTag))
-                    },
-                    title = {
-                        Text("Title", Modifier.testTag(TitleTestTag))
-                    },
-                    actions = {
-                        FakeIcon(Modifier.testTag(ActionsTestTag))
-                    },
-                    collapsedHeight = collapsedHeightDp,
-                    expandedHeight = expandedHeightDp,
-                    windowInsets = windowInsets,
-                    scrollBehavior = scrollBehavior,
-                )
-            }
-        }
-        assertMediumOrLargeScrolledHeight(
-            appBarMaxHeight = expandedHeightDp,
-            appBarMinHeight = collapsedHeightDp,
             windowInsets,
             content
         )
@@ -839,38 +756,7 @@ class AppBarTest {
 
         // The bottom text baseline should be 28.dp from the bottom of the app bar.
         assertMediumOrLargeDefaultPositioning(
-            appBarCollapsedHeight = TopAppBarSmallTokens.ContainerHeight,
-            appBarExpandedHeight = TopAppBarLargeTokens.ContainerHeight,
-            bottomTextPadding = 28.dp
-        )
-    }
-
-    @Test
-    fun largeTopAppBar_customHeight_expanded_positioning() {
-        val collapsedHeightDp = 30.dp
-        val expandedHeightDp = 130.dp
-        rule.setMaterialContent(lightColorScheme()) {
-            Box(Modifier.testTag(TopAppBarTestTag)) {
-                LargeTopAppBar(
-                    navigationIcon = {
-                        FakeIcon(Modifier.testTag(NavigationIconTestTag))
-                    },
-                    title = {
-                        Text("Title", Modifier.testTag(TitleTestTag))
-                    },
-                    actions = {
-                        FakeIcon(Modifier.testTag(ActionsTestTag))
-                    },
-                    collapsedHeight = collapsedHeightDp,
-                    expandedHeight = expandedHeightDp
-                )
-            }
-        }
-
-        // The bottom text baseline should be 28.dp from the bottom of the app bar.
-        assertMediumOrLargeDefaultPositioning(
-            appBarCollapsedHeight = collapsedHeightDp,
-            appBarExpandedHeight = expandedHeightDp,
+            expectedAppBarHeight = TopAppBarLargeTokens.ContainerHeight,
             bottomTextPadding = 28.dp
         )
     }
@@ -898,38 +784,6 @@ class AppBarTest {
         assertMediumOrLargeScrolledHeight(
             TopAppBarLargeTokens.ContainerHeight,
             TopAppBarSmallTokens.ContainerHeight,
-            windowInsets,
-            content
-        )
-    }
-
-    @Test
-    fun largeTopAppBar_customHeight_scrolled_positioning() {
-        val collapsedHeightDp = 30.dp
-        val expandedHeightDp = 130.dp
-        val windowInsets = WindowInsets(4.dp, 4.dp, 4.dp, 4.dp)
-        val content = @Composable { scrollBehavior: TopAppBarScrollBehavior? ->
-            Box(Modifier.testTag(TopAppBarTestTag)) {
-                LargeTopAppBar(
-                    navigationIcon = {
-                        FakeIcon(Modifier.testTag(NavigationIconTestTag))
-                    },
-                    title = {
-                        Text("Title", Modifier.testTag(TitleTestTag))
-                    },
-                    actions = {
-                        FakeIcon(Modifier.testTag(ActionsTestTag))
-                    },
-                    collapsedHeight = collapsedHeightDp,
-                    expandedHeight = expandedHeightDp,
-                    windowInsets = windowInsets,
-                    scrollBehavior = scrollBehavior
-                )
-            }
-        }
-        assertMediumOrLargeScrolledHeight(
-            appBarMaxHeight = expandedHeightDp,
-            appBarMinHeight = collapsedHeightDp,
             windowInsets,
             content
         )
@@ -1553,7 +1407,7 @@ class AppBarTest {
             .assertLeftPositionInRootIsEqualTo(AppBarStartAndEndPadding)
             // Navigation icon should be centered within the height of the app bar.
             .assertTopPositionInRootIsEqualTo(
-                appBarBottomEdgeY - DefaultAppBarTopAndBottomPadding - FakeIconSize
+                appBarBottomEdgeY - AppBarTopAndBottomPadding - FakeIconSize
             )
 
         val titleNode = rule.onNodeWithTag(TitleTestTag)
@@ -1575,7 +1429,7 @@ class AppBarTest {
             .assertLeftPositionInRootIsEqualTo(expectedActionPosition(appBarBounds.width))
             // Action should be 8.dp from the top
             .assertTopPositionInRootIsEqualTo(
-                appBarBottomEdgeY - DefaultAppBarTopAndBottomPadding - FakeIconSize
+                appBarBottomEdgeY - AppBarTopAndBottomPadding - FakeIconSize
             )
     }
 
@@ -1584,12 +1438,11 @@ class AppBarTest {
      * [LargeTopAppBar].
      */
     private fun assertMediumOrLargeDefaultPositioning(
-        appBarCollapsedHeight: Dp,
-        appBarExpandedHeight: Dp,
+        expectedAppBarHeight: Dp,
         bottomTextPadding: Dp
     ) {
         val appBarBounds = rule.onNodeWithTag(TopAppBarTestTag).getUnclippedBoundsInRoot()
-        appBarBounds.height.assertIsEqualTo(appBarExpandedHeight, "top app bar height")
+        appBarBounds.height.assertIsEqualTo(expectedAppBarHeight, "top app bar height")
 
         // Expecting the title composable to be reused for the top and bottom rows of the top app
         // bar, so obtaining the node with the title tag should return two nodes, one for each row.
@@ -1600,16 +1453,15 @@ class AppBarTest {
 
         val topTitleBounds = topTitleNode.getUnclippedBoundsInRoot()
         val bottomTitleBounds = bottomTitleNode.getUnclippedBoundsInRoot()
-        val topAppBarBottomEdgeY = appBarBounds.top + appBarCollapsedHeight
+        val topAppBarBottomEdgeY = appBarBounds.top + TopAppBarSmallTokens.ContainerHeight
         val bottomAppBarBottomEdgeY = appBarBounds.top + appBarBounds.height
 
-        val topAndBottomPadding = (appBarCollapsedHeight - FakeIconSize) / 2
         rule.onNodeWithTag(NavigationIconTestTag)
             // Navigation icon should be 4.dp from the start
             .assertLeftPositionInRootIsEqualTo(AppBarStartAndEndPadding)
             // Navigation icon should be centered within the height of the top part of the app bar.
             .assertTopPositionInRootIsEqualTo(
-                topAppBarBottomEdgeY - topAndBottomPadding - FakeIconSize
+                topAppBarBottomEdgeY - AppBarTopAndBottomPadding - FakeIconSize
             )
 
         rule.onNodeWithTag(ActionsTestTag)
@@ -1617,7 +1469,7 @@ class AppBarTest {
             .assertLeftPositionInRootIsEqualTo(expectedActionPosition(appBarBounds.width))
             // Action should be 8.dp from the top
             .assertTopPositionInRootIsEqualTo(
-                topAppBarBottomEdgeY - topAndBottomPadding - FakeIconSize
+                topAppBarBottomEdgeY - AppBarTopAndBottomPadding - FakeIconSize
             )
 
         topTitleNode
@@ -1874,12 +1726,7 @@ class AppBarTest {
 
     private val FakeIconSize = 48.dp
     private val AppBarStartAndEndPadding = 4.dp
-
-    /**
-     * Top and bottom padding for all the built-in app bars that have a top part (or only part) with
-     * a height of TopAppBarSmallTokens.ContainerHeight
-     */
-    private val DefaultAppBarTopAndBottomPadding =
+    private val AppBarTopAndBottomPadding =
         (TopAppBarSmallTokens.ContainerHeight - FakeIconSize) / 2
 
     private val LazyListTag = "lazyList"

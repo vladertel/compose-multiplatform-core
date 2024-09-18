@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.DeviceConfigurationOverride
-import androidx.compose.ui.test.RoundScreen
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -40,9 +38,7 @@ class HorizontalPageIndicatorTest {
     @Test
     public fun supports_testtag_circular() {
         rule.setContentWithTheme {
-            DeviceConfigurationOverride(
-                DeviceConfigurationOverride.RoundScreen(isScreenRound = true)
-            ) {
+            ConfiguredShapeScreen(isRound = true) {
                 HorizontalPageIndicator(
                     modifier = Modifier.testTag(TEST_TAG),
                     pageIndicatorState = pageIndicatorState()
@@ -55,9 +51,7 @@ class HorizontalPageIndicatorTest {
     @Test
     public fun supports_testtag_linear() {
         rule.setContentWithTheme {
-            DeviceConfigurationOverride(
-                DeviceConfigurationOverride.RoundScreen(isScreenRound = false)
-            ) {
+            ConfiguredShapeScreen(isRound = false) {
                 HorizontalPageIndicator(
                     modifier = Modifier.testTag(TEST_TAG),
                     pageIndicatorState = pageIndicatorState()
@@ -89,7 +83,7 @@ class HorizontalPageIndicatorTest {
 
     private fun position_is_selected(isRound: Boolean) {
         rule.setContentWithTheme {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(isRound)) {
+            ConfiguredShapeScreen(isRound) {
                 HorizontalPageIndicator(
                     modifier = Modifier
                         .testTag(TEST_TAG)
@@ -115,7 +109,7 @@ class HorizontalPageIndicatorTest {
 
     private fun in_between_positions(isRound: Boolean) {
         rule.setContentWithTheme {
-            DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(isRound)) {
+            ConfiguredShapeScreen(isRound) {
                 HorizontalPageIndicator(
                     modifier = Modifier
                         .testTag(TEST_TAG)
@@ -150,8 +144,8 @@ class HorizontalPageIndicatorTest {
             selectedPage: Int = 1,
             pageCount: Int = 4
         ) = object : PageIndicatorState {
-            override fun selectedPageWithOffsetFraction(): Float =
-                selectedPage + pageOffset
+            override val selectedPageWithOffset: () -> Float
+                get() = { selectedPage + pageOffset }
             override val pageCount: Int
                 get() = pageCount
         }

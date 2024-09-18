@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// VERSION: v0_210
+// VERSION: v0_161
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 package androidx.compose.material3.tokens
@@ -21,10 +21,11 @@ package androidx.compose.material3.tokens
 import androidx.compose.ui.unit.dp
 
 internal object DatePickerModalTokens {
-    val ContainerColor = ColorSchemeKeyTokens.SurfaceContainerHigh
+    val ContainerColor = ColorSchemeKeyTokens.Surface
     val ContainerElevation = ElevationTokens.Level3
     val ContainerHeight = 568.0.dp
     val ContainerShape = ShapeKeyTokens.CornerExtraLarge
+    val ContainerSurfaceTintLayerColor = ColorSchemeKeyTokens.SurfaceTint
     val ContainerWidth = 360.0.dp
     val DateContainerHeight = 40.0.dp
     val DateContainerShape = ShapeKeyTokens.CornerFull

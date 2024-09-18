@@ -20,11 +20,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.internal.CalendarDate
-import androidx.compose.material3.internal.CalendarModel
-import androidx.compose.material3.internal.DateInputFormat
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -190,7 +185,7 @@ internal fun DateInputTextField(
         isError = errorText.value.isNotBlank(),
         visualTransformation = DateVisualTransformation(dateInputFormat),
         keyboardOptions = KeyboardOptions(
-            autoCorrectEnabled = false,
+            autoCorrect = false,
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done
         ),
@@ -295,7 +290,7 @@ internal class DateInputValidator(
  * when validating the user input, and especially when validating an input range.
  */
 @Immutable
-@JvmInline
+@kotlin.jvm.JvmInline
 internal value class InputIdentifier internal constructor(internal val value: Int) {
 
     companion object {

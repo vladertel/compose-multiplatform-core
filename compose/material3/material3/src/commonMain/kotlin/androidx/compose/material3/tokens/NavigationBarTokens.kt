@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// VERSION: v0_210
+// VERSION: v0_103
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 package androidx.compose.material3.tokens
@@ -33,11 +33,11 @@ internal object NavigationBarTokens {
     val ActiveLabelTextColor = ColorSchemeKeyTokens.OnSurface
     val ActivePressedIconColor = ColorSchemeKeyTokens.OnSecondaryContainer
     val ActivePressedLabelTextColor = ColorSchemeKeyTokens.OnSurface
-    val ContainerColor = ColorSchemeKeyTokens.SurfaceContainer
+    val ContainerColor = ColorSchemeKeyTokens.Surface
     val ContainerElevation = ElevationTokens.Level2
     val ContainerHeight = 80.0.dp
     val ContainerShape = ShapeKeyTokens.CornerNone
-    val FocusIndicatorColor = ColorSchemeKeyTokens.Secondary
+    val ContainerSurfaceTintLayerColor = ColorSchemeKeyTokens.SurfaceTint
     val IconSize = 24.0.dp
     val InactiveFocusIconColor = ColorSchemeKeyTokens.OnSurface
     val InactiveFocusLabelTextColor = ColorSchemeKeyTokens.OnSurface

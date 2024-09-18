@@ -28,7 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusEventModifierNode
+import androidx.compose.ui.focus.FocusRequesterModifierNode
 import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.requestFocus
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -461,7 +463,7 @@ internal fun Modifier.genericClickableWithoutGesture(
             .detectPressAndClickFromKey()
             .indication(interactionSource, indication)
             .hoverable(enabled = enabled, interactionSource = interactionSource)
-            .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
+            .focusable(enabled = enabled, interactionSource = interactionSource)
 }
 
 private class ClickableElement(
@@ -633,6 +635,7 @@ internal open class ClickableNode(
         detectTapAndPress(
             onPress = { offset ->
                 if (enabled) {
+                    focusableNode.requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -777,13 +780,14 @@ private class CombinedClickableNodeImpl(
     override suspend fun PointerInputScope.clickPointerInput() {
         detectTapGestures(
             onDoubleTap = if (enabled && onDoubleClick != null) {
-                { onDoubleClick?.invoke() }
+                { focusableNode.requestFocusWhenInMouseInputMode(); onDoubleClick?.invoke() }
             } else null,
             onLongPress = if (enabled && onLongClick != null) {
-                { onLongClick?.invoke() }
+                { focusableNode.requestFocusWhenInMouseInputMode(); onLongClick?.invoke() }
             } else null,
             onPress = { offset ->
                 if (enabled) {
+                    focusableNode.requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -880,8 +884,7 @@ internal abstract class AbstractClickableNode(
 
     final override val shouldAutoInvalidate: Boolean = false
 
-    private val focusableInNonTouchMode: FocusableInNonTouchMode = FocusableInNonTouchMode()
-    private val focusableNode: FocusableNode = FocusableNode(interactionSource)
+    protected val focusableNode: FocusableNode = FocusableNode(interactionSource)
     private var pointerInputNode: SuspendingPointerInputModifierNode? = null
     private var indicationNode: DelegatableNode? = null
 
@@ -929,11 +932,9 @@ internal abstract class AbstractClickableNode(
         }
         if (this.enabled != enabled) {
             if (enabled) {
-                delegate(focusableInNonTouchMode)
                 delegate(focusableNode)
             } else {
                 // TODO: Should we remove indicationNode? Previously we always emitted indication
-                undelegate(focusableInNonTouchMode)
                 undelegate(focusableNode)
                 disposeInteractions()
             }
@@ -964,7 +965,7 @@ internal abstract class AbstractClickableNode(
                 initializeIndicationAndInteractionSourceIfNeeded()
             }
         }
-        focusableNode.update(interactionSource)
+        focusableNode.update(this.interactionSource)
     }
 
     final override fun onAttach() {
@@ -972,13 +973,21 @@ internal abstract class AbstractClickableNode(
             initializeIndicationAndInteractionSourceIfNeeded()
         }
         if (enabled) {
-            delegate(focusableInNonTouchMode)
             delegate(focusableNode)
         }
     }
 
     final override fun onDetach() {
         disposeInteractions()
+        // If we lazily created an interaction source, reset it in case we are reused / moved. Note
+        // that we need to do it here instead of onReset() - since onReset won't be called in the
+        // movableContent case but we still want to dispose for that case
+        if (userProvidedInteractionSource == null) {
+            interactionSource = null
+        }
+        // Remove indication in case we are reused / moved - we will create a new node when needed
+        indicationNode?.let { undelegate(it) }
+        indicationNode = null
     }
 
     protected fun disposeInteractions() {
@@ -1232,7 +1241,7 @@ private class ClickableSemanticsElement(
     }
 }
 
-private class ClickableSemanticsNode(
+internal class ClickableSemanticsNode(
     private var enabled: Boolean,
     private var onClickLabel: String?,
     private var role: Role?,
@@ -1286,4 +1295,10 @@ internal fun TraversableNode.hasScrollableContainer(): Boolean {
         !hasScrollable
     }
     return hasScrollable
+}
+
+private fun FocusRequesterModifierNode.requestFocusWhenInMouseInputMode() {
+    if (isMouseInputWorkaround()) {
+        requestFocus()
+    }
 }

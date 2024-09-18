@@ -22,7 +22,7 @@ import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection.Companion.Exit
+import androidx.compose.ui.draw.CacheDrawModifierNode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -48,6 +48,7 @@ import androidx.compose.ui.node.LayoutNode.LayoutState.LayingOut
 import androidx.compose.ui.node.LayoutNode.LayoutState.LookaheadLayingOut
 import androidx.compose.ui.node.LayoutNode.LayoutState.LookaheadMeasuring
 import androidx.compose.ui.node.LayoutNode.LayoutState.Measuring
+import androidx.compose.ui.node.Nodes.Draw
 import androidx.compose.ui.node.Nodes.FocusEvent
 import androidx.compose.ui.node.Nodes.FocusProperties
 import androidx.compose.ui.node.Nodes.FocusTarget
@@ -336,8 +337,10 @@ internal class LayoutNode(
             "count ($count) must be greater than 0"
         }
         for (i in index + count - 1 downTo index) {
+            // Call detach callbacks before removing from _foldedChildren, so the child is still
+            // visible to parents traversing downwards, such as when clearing focus.
+            onChildRemoved(_foldedChildren[i])
             val child = _foldedChildren.removeAt(i)
-            onChildRemoved(child)
             if (DebugChanges) {
                 println("$child removed from $this at index $i")
             }
@@ -522,7 +525,6 @@ internal class LayoutNode(
         checkPreconditionNotNull(owner) {
             "Cannot detach node that is already detached!  Tree: " + parent?.debugTreeToString()
         }
-        invalidateFocusOnDetach()
         val parent = this.parent
         if (parent != null) {
             parent.invalidateLayer()
@@ -699,8 +701,15 @@ internal class LayoutNode(
                 field = value
                 onDensityOrLayoutDirectionChanged()
 
-                nodes.headToTail(type = PointerInput) {
-                    it.onDensityChange()
+                nodes.headToTail {
+                    if (it.isKind(PointerInput)) {
+                        (it as PointerInputModifierNode).onDensityChange()
+                    } else if (it is CacheDrawModifierNode) {
+                        // b/340662451 Replace both usages of DelegatableNode#onDensityChanged and
+                        // DelegatableNode#onLayoutDirectionChanged when API changes can be
+                        // made again
+                        it.invalidateDrawCache()
+                    }
                 }
             }
         }
@@ -713,6 +722,12 @@ internal class LayoutNode(
             if (field != value) {
                 field = value
                 onDensityOrLayoutDirectionChanged()
+
+                nodes.headToTail(Draw) {
+                    if (it is CacheDrawModifierNode) {
+                        it.invalidateDrawCache()
+                    }
+                }
             }
         }
 
@@ -1058,7 +1073,8 @@ internal class LayoutNode(
      */
     internal fun requestRemeasure(
         forceRequest: Boolean = false,
-        scheduleMeasureAndLayout: Boolean = true
+        scheduleMeasureAndLayout: Boolean = true,
+        invalidateIntrinsics: Boolean = true
     ) {
         if (!ignoreRemeasureRequests && !isVirtual) {
             val owner = owner ?: return
@@ -1067,7 +1083,9 @@ internal class LayoutNode(
                 forceRequest = forceRequest,
                 scheduleMeasureAndLayout = scheduleMeasureAndLayout
             )
-            measurePassDelegate.invalidateIntrinsicsParent(forceRequest)
+            if (invalidateIntrinsics) {
+                measurePassDelegate.invalidateIntrinsicsParent(forceRequest)
+            }
         }
     }
 
@@ -1077,7 +1095,8 @@ internal class LayoutNode(
      */
     internal fun requestLookaheadRemeasure(
         forceRequest: Boolean = false,
-        scheduleMeasureAndLayout: Boolean = true
+        scheduleMeasureAndLayout: Boolean = true,
+        invalidateIntrinsics: Boolean = true
     ) {
         checkPrecondition(lookaheadRoot != null) {
             "Lookahead measure cannot be requested on a node that is not a part of the" +
@@ -1091,7 +1110,9 @@ internal class LayoutNode(
                 forceRequest = forceRequest,
                 scheduleMeasureAndLayout = scheduleMeasureAndLayout
             )
-            lookaheadPassDelegate!!.invalidateIntrinsicsParent(forceRequest)
+            if (invalidateIntrinsics) {
+                lookaheadPassDelegate!!.invalidateIntrinsicsParent(forceRequest)
+            }
         }
     }
 
@@ -1119,20 +1140,6 @@ internal class LayoutNode(
                 if (it.isKind(FocusTarget) or it.isKind(FocusProperties) or it.isKind(FocusEvent)) {
                     autoInvalidateInsertedNode(it)
                 }
-            }
-        }
-    }
-
-    private fun invalidateFocusOnDetach() {
-        nodes.tailToHead(FocusTarget) {
-            if (it.focusState.isFocused) {
-                requireOwner().focusOwner.clearFocus(
-                    force = true,
-                    refreshFocusEvents = false,
-                    clearOwnerFocus = true,
-                    focusDirection = Exit
-                )
-                it.scheduleInvalidationForFocusEvents()
             }
         }
     }
@@ -1407,7 +1414,6 @@ internal class LayoutNode(
             // we don't need to reset state as it was done when deactivated
         } else {
             resetModifierState()
-            resetExplicitLayers()
         }
         // resetModifierState detaches all nodes, so we need to re-attach them upon reuse.
         semanticsId = generateSemanticsId()
@@ -1424,13 +1430,6 @@ internal class LayoutNode(
         // if the node is detached the semantics were already updated without this node.
         if (isAttached) {
             invalidateSemantics()
-        }
-        resetExplicitLayers()
-    }
-
-    private fun resetExplicitLayers() {
-        forEachCoordinatorIncludingInner {
-            it.releaseExplicitLayer()
         }
     }
 

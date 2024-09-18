@@ -28,7 +28,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.material3.internal.animateElevation
 import androidx.compose.material3.tokens.ElevatedCardTokens
 import androidx.compose.material3.tokens.FilledCardTokens
 import androidx.compose.material3.tokens.OutlinedCardTokens
@@ -88,6 +87,7 @@ fun Card(
         shape = shape,
         color = colors.containerColor(enabled = true),
         contentColor = colors.contentColor(enabled = true),
+        tonalElevation = elevation.tonalElevation(enabled = true),
         shadowElevation = elevation.shadowElevation(enabled = true, interactionSource = null).value,
         border = border,
     ) {
@@ -123,10 +123,10 @@ fun Card(
  * [ColorScheme.surface], this controls the amount of primary color applied as an overlay. See also:
  * [Surface].
  * @param border the border to draw around the container of this card
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this card. You can use this to change the card's appearance
- * or preview the card in different states. Note that if `null` is provided, interactions will
- * still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this card. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this card in different states.
+ *
  */
 @Composable
 fun Card(
@@ -137,11 +137,9 @@ fun Card(
     colors: CardColors = CardDefaults.cardColors(),
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable ColumnScope.() -> Unit
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
         modifier = modifier,
@@ -149,6 +147,7 @@ fun Card(
         shape = shape,
         color = colors.containerColor(enabled),
         contentColor = colors.contentColor(enabled),
+        tonalElevation = elevation.tonalElevation(enabled),
         shadowElevation = elevation.shadowElevation(enabled, interactionSource).value,
         border = border,
         interactionSource = interactionSource,
@@ -223,10 +222,9 @@ fun ElevatedCard(
  * This controls the size of the shadow below the card. Additionally, when the container color is
  * [ColorScheme.surface], this controls the amount of primary color applied as an overlay. See also:
  * [Surface].
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this card. You can use this to change the card's appearance
- * or preview the card in different states. Note that if `null` is provided, interactions will
- * still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this card. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this card in different states.
  */
 @Composable
 fun ElevatedCard(
@@ -236,7 +234,7 @@ fun ElevatedCard(
     shape: Shape = CardDefaults.elevatedShape,
     colors: CardColors = CardDefaults.elevatedCardColors(),
     elevation: CardElevation = CardDefaults.elevatedCardElevation(),
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable ColumnScope.() -> Unit
 ) = Card(
     onClick = onClick,
@@ -319,10 +317,9 @@ fun OutlinedCard(
  * [ColorScheme.surface], this controls the amount of primary color applied as an overlay. See also:
  * [Surface].
  * @param border the border to draw around the container of this card
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this card. You can use this to change the card's appearance
- * or preview the card in different states. Note that if `null` is provided, interactions will
- * still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this card. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this card in different states.
  */
 @Composable
 fun OutlinedCard(
@@ -333,7 +330,7 @@ fun OutlinedCard(
     colors: CardColors = CardDefaults.outlinedCardColors(),
     elevation: CardElevation = CardDefaults.outlinedCardElevation(),
     border: BorderStroke = CardDefaults.outlinedCardBorder(enabled),
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable ColumnScope.() -> Unit
 ) = Card(
     onClick = onClick,
@@ -478,9 +475,15 @@ object CardDefaults {
             return defaultCardColorsCached ?: CardColors(
                 containerColor = fromToken(FilledCardTokens.ContainerColor),
                 contentColor = contentColorFor(fromToken(FilledCardTokens.ContainerColor)),
-                disabledContainerColor = fromToken(FilledCardTokens.DisabledContainerColor)
+                disabledContainerColor = fromToken(
+                    FilledCardTokens.DisabledContainerColor
+                )
                     .copy(alpha = FilledCardTokens.DisabledContainerOpacity)
-                    .compositeOver(fromToken(FilledCardTokens.ContainerColor)),
+                    .compositeOver(
+                        surfaceColorAtElevation(
+                            FilledCardTokens.DisabledContainerElevation
+                        )
+                    ),
                 disabledContentColor =
                 contentColorFor(fromToken(FilledCardTokens.ContainerColor)).copy(DisabledAlpha),
             ).also {
@@ -525,7 +528,11 @@ object CardDefaults {
                 disabledContainerColor =
                 fromToken(ElevatedCardTokens.DisabledContainerColor)
                     .copy(alpha = ElevatedCardTokens.DisabledContainerOpacity)
-                    .compositeOver(fromToken(ElevatedCardTokens.DisabledContainerColor)),
+                    .compositeOver(
+                        surfaceColorAtElevation(
+                            ElevatedCardTokens.DisabledContainerElevation
+                        )
+                    ),
                 disabledContentColor =
                 contentColorFor(fromToken(ElevatedCardTokens.ContainerColor)).copy(DisabledAlpha),
             ).also {
@@ -587,7 +594,11 @@ object CardDefaults {
         } else {
             OutlinedCardTokens.DisabledOutlineColor.value
                 .copy(alpha = OutlinedCardTokens.DisabledOutlineOpacity)
-                .compositeOver(ElevatedCardTokens.ContainerColor.value)
+                .compositeOver(
+                    MaterialTheme.colorScheme.surfaceColorAtElevation(
+                        OutlinedCardTokens.DisabledContainerElevation
+                    )
+                )
         }
         return remember(color) { BorderStroke(OutlinedCardTokens.OutlineWidth, color) }
     }
@@ -610,10 +621,26 @@ class CardElevation internal constructor(
     private val disabledElevation: Dp
 ) {
     /**
+     * Represents the tonal elevation used in a card, depending on its [enabled].
+     *
+     * Tonal elevation is used to apply a color shift to the surface to give the it higher emphasis.
+     * When surface's color is [ColorScheme.surface], a higher elevation will result in a darker
+     * color in light theme and lighter color in dark theme.
+     *
+     * See [shadowElevation] which controls the elevation of the shadow drawn around the card.
+     *
+     * @param enabled whether the card is enabled
+     */
+    internal fun tonalElevation(enabled: Boolean): Dp =
+        if (enabled) defaultElevation else disabledElevation
+
+    /**
      * Represents the shadow elevation used in a card, depending on its [enabled] state and
      * [interactionSource].
      *
      * Shadow elevation is used to apply a shadow around the card to give it higher emphasis.
+     *
+     * See [tonalElevation] which controls the elevation with a color shift to the surface.
      *
      * @param enabled whether the card is enabled
      * @param interactionSource the [InteractionSource] for this card

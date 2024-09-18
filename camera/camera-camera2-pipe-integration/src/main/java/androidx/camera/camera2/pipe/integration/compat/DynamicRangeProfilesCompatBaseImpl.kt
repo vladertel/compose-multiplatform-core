@@ -24,9 +24,6 @@ import androidx.core.util.Preconditions
 @RequiresApi(21)
 internal class DynamicRangeProfilesCompatBaseImpl :
     DynamicRangeProfilesCompat.DynamicRangeProfilesCompatImpl {
-    override val supportedDynamicRanges: Set<DynamicRange>
-        get() = SDR_ONLY
-
     override fun getDynamicRangeCaptureRequestConstraints(
         dynamicRange: DynamicRange
     ): Set<DynamicRange> {
@@ -34,6 +31,10 @@ internal class DynamicRangeProfilesCompatBaseImpl :
             DynamicRange.SDR == dynamicRange,
             "DynamicRange is not supported: $dynamicRange"
         )
+        return SDR_ONLY
+    }
+
+    override fun getSupportedDynamicRanges(): Set<DynamicRange> {
         return SDR_ONLY
     }
 

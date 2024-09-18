@@ -23,6 +23,7 @@ import android.os.Build
 import android.view.View
 import android.view.View.OnAttachStateChangeListener
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayerV23
@@ -47,6 +48,8 @@ private class AndroidGraphicsContext(private val ownerView: ViewGroup) : Graphic
     private val layerManager = LayerManager(CanvasHolder())
     private var viewLayerContainer: DrawChildContainer? = null
     private var componentCallbackRegistered = false
+    private var predrawListenerRegistered = false
+
     private val componentCallback = object : ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: Configuration) {
             // NO-OP
@@ -66,8 +69,21 @@ private class AndroidGraphicsContext(private val ownerView: ViewGroup) : Graphic
             if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
                 // HardwareRenderer instances would be discarded by HWUI so we need to discard
                 // the existing underlying ImageReader instance and do a placeholder render
-                // to increment the refcount of any outstanding layers again
-                layerManager.updateLayerPersistence()
+                // to increment the refcount of any outstanding layers again the next time the
+                // content is drawn
+                if (!predrawListenerRegistered) {
+                    layerManager.destroy()
+                    ownerView.viewTreeObserver.addOnPreDrawListener(
+                        object : ViewTreeObserver.OnPreDrawListener {
+                            override fun onPreDraw(): Boolean {
+                                layerManager.updateLayerPersistence()
+                                ownerView.viewTreeObserver.removeOnPreDrawListener(this)
+                                predrawListenerRegistered = false
+                                return true
+                            }
+                        })
+                    predrawListenerRegistered = true
+                }
             }
         }
     }
@@ -108,31 +124,32 @@ private class AndroidGraphicsContext(private val ownerView: ViewGroup) : Graphic
     override fun createGraphicsLayer(): GraphicsLayer {
         synchronized(lock) {
             val ownerId = getUniqueDrawingId(ownerView)
-            val layerImpl = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                GraphicsLayerV29(ownerId)
-            } else if (isRenderNodeCompatible && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                try {
-                    GraphicsLayerV23(ownerView, ownerId)
-                } catch (_: Throwable) {
-                    // If we ever failed to create an instance of the RenderNode stub based
-                    // GraphicsLayer, always fallback to creation of View based layers as it is
-                    // unlikely that subsequent attempts to create a GraphicsLayer with RenderNode
-                    // stubs would be successful.
-                    isRenderNodeCompatible = false
-                    GraphicsViewLayer(
-                        obtainViewLayerContainer(ownerView),
-                        ownerId
-                    )
-                }
+            val reusedLayer = layerManager.takeFromCache(ownerId)
+            val layer = if (reusedLayer != null) {
+                reusedLayer
             } else {
-                GraphicsViewLayer(
-                    obtainViewLayerContainer(ownerView),
-                    ownerId
-                )
+                val layerImpl = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    GraphicsLayerV29()
+                } else if (isRenderNodeCompatible &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ) {
+                    try {
+                        GraphicsLayerV23(ownerView)
+                    } catch (_: Throwable) {
+                        // If we ever failed to create an instance of the RenderNode stub based
+                        // GraphicsLayer, always fallback to creation of View based layers as it is
+                        // unlikely that subsequent attempts to create a GraphicsLayer with RenderNode
+                        // stubs would be successful.
+                        isRenderNodeCompatible = false
+                        GraphicsViewLayer(obtainViewLayerContainer(ownerView))
+                    }
+                } else {
+                    GraphicsViewLayer(obtainViewLayerContainer(ownerView))
+                }
+                GraphicsLayer(layerImpl, layerManager, ownerId)
             }
-            return GraphicsLayer(layerImpl, layerManager).also { layer ->
-                layerManager.persist(layer)
-            }
+            layerManager.persist(layer)
+            return layer
         }
     }
 

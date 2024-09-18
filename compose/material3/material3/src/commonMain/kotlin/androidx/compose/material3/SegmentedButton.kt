@@ -116,16 +116,16 @@ import kotlinx.coroutines.launch
  * @param colors [SegmentedButtonColors] that will be used to resolve the colors used for this
  * @param border the border for this button, see [SegmentedButtonColors]
  * Button in different states
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this button. You can use this to change the button's
- * appearance or preview the button in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this button. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this button in different states.
  * @param icon the icon slot for this button, you can pass null in unchecked, in which case
  * the content will displace to show the checked icon, or pass different icon lambdas for
  * unchecked and checked in which case the icons will crossfade.
  * @param label content to be rendered inside this button
  */
 @Composable
+@ExperimentalMaterial3Api
 fun MultiChoiceSegmentedButtonRowScope.SegmentedButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -136,12 +136,10 @@ fun MultiChoiceSegmentedButtonRowScope.SegmentedButton(
     border: BorderStroke = SegmentedButtonDefaults.borderStroke(
         colors.borderColor(enabled, checked)
     ),
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     icon: @Composable () -> Unit = { SegmentedButtonDefaults.Icon(checked) },
     label: @Composable () -> Unit,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     val containerColor = colors.containerColor(enabled, checked)
     val contentColor = colors.contentColor(enabled, checked)
     val interactionCount = interactionSource.interactionCountAsState()
@@ -193,16 +191,16 @@ fun MultiChoiceSegmentedButtonRowScope.SegmentedButton(
  * @param colors [SegmentedButtonColors] that will be used to resolve the colors used for this
  * @param border the border for this button, see [SegmentedButtonColors]
  * Button in different states
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this button. You can use this to change the button's
- * appearance or preview the button in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this button. You can create and pass in your own `remember`ed instance to observe
+ * [Interaction]s and customize the appearance / behavior of this button in different states.
  * @param icon the icon slot for this button, you can pass null in unchecked, in which case
  * the content will displace to show the checked icon, or pass different icon lambdas for
  * unchecked and checked in which case the icons will crossfade.
  * @param label content to be rendered inside this button
  */
 @Composable
+@ExperimentalMaterial3Api
 fun SingleChoiceSegmentedButtonRowScope.SegmentedButton(
     selected: Boolean,
     onClick: () -> Unit,
@@ -213,12 +211,10 @@ fun SingleChoiceSegmentedButtonRowScope.SegmentedButton(
     border: BorderStroke = SegmentedButtonDefaults.borderStroke(
         colors.borderColor(enabled, selected)
     ),
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     icon: @Composable () -> Unit = { SegmentedButtonDefaults.Icon(selected) },
     label: @Composable () -> Unit,
 ) {
-    @Suppress("NAME_SHADOWING")
-    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     val containerColor = colors.containerColor(enabled, selected)
     val contentColor = colors.contentColor(enabled, selected)
     val interactionCount = interactionSource.interactionCountAsState()
@@ -262,6 +258,7 @@ fun SingleChoiceSegmentedButtonRowScope.SegmentedButton(
  * [SegmentedButton]s
  */
 @Composable
+@ExperimentalMaterial3Api
 fun SingleChoiceSegmentedButtonRow(
     modifier: Modifier = Modifier,
     space: Dp = SegmentedButtonDefaults.BorderWidth,
@@ -299,6 +296,7 @@ fun SingleChoiceSegmentedButtonRow(
  *
  */
 @Composable
+@ExperimentalMaterial3Api
 fun MultiChoiceSegmentedButtonRow(
     modifier: Modifier = Modifier,
     space: Dp = SegmentedButtonDefaults.BorderWidth,
@@ -316,6 +314,7 @@ fun MultiChoiceSegmentedButtonRow(
     }
 }
 
+@ExperimentalMaterial3Api
 @Composable
 private fun SegmentedButtonContent(
     icon: @Composable () -> Unit,
@@ -325,7 +324,8 @@ private fun SegmentedButtonContent(
         contentAlignment = Alignment.Center,
         modifier = Modifier.padding(ButtonDefaults.TextButtonContentPadding)
     ) {
-        val typography = OutlinedSegmentedButtonTokens.LabelTextFont.value
+        val typography =
+            MaterialTheme.typography.fromToken(OutlinedSegmentedButtonTokens.LabelTextFont)
         ProvideTextStyle(typography) {
             val scope = rememberCoroutineScope()
             val measurePolicy = remember { SegmentedButtonContentMeasurePolicy(scope) }
@@ -345,6 +345,7 @@ internal class SegmentedButtonContentMeasurePolicy(
     var animatable: Animatable<Int, AnimationVector1D>? = null
     private var initialOffset: Int? = null
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun MeasureScope.measure(
         measurables: List<List<Measurable>>,
         constraints: Constraints
@@ -418,12 +419,15 @@ private fun InteractionSource.interactionCountAsState(): State<Int> {
 }
 
 /** Scope for the children of a [SingleChoiceSegmentedButtonRow] */
+@ExperimentalMaterial3Api
 interface SingleChoiceSegmentedButtonRowScope : RowScope
 
 /** Scope for the children of a [MultiChoiceSegmentedButtonRow] */
+@ExperimentalMaterial3Api
 interface MultiChoiceSegmentedButtonRowScope : RowScope
 
 /* Contains defaults to be used with [SegmentedButtonRow] and [SegmentedButton] */
+@ExperimentalMaterial3Api
 @Stable
 object SegmentedButtonDefaults {
 
@@ -620,6 +624,7 @@ object SegmentedButtonDefaults {
  * @param disabledInactiveBorderColor the color used for the border when disabled and inactive
  */
 @Immutable
+@ExperimentalMaterial3Api
 class SegmentedButtonColors(
     // enabled & active
     val activeContainerColor: Color,
@@ -771,8 +776,10 @@ private fun Modifier.interactionZIndex(checked: Boolean, interactionCount: State
 private const val CheckedZIndexFactor = 5f
 private val IconSpacing = 8.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 private class SingleChoiceSegmentedButtonScopeWrapper(scope: RowScope) :
     SingleChoiceSegmentedButtonRowScope, RowScope by scope
 
+@OptIn(ExperimentalMaterial3Api::class)
 private class MultiChoiceSegmentedButtonScopeWrapper(scope: RowScope) :
     MultiChoiceSegmentedButtonRowScope, RowScope by scope

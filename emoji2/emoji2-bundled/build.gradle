@@ -1,10 +1,3 @@
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 
 plugins {
@@ -60,12 +53,12 @@ androidx {
             "devices to avoid the empty emoji characters."
     metalavaK2UastEnabled = true
 
-    extraLicense {
+    license {
         name = "SIL Open Font License, Version 1.1"
         url = "http://scripts.sil.org/cms/scripts/page.php?item_id=OFL_web"
     }
 
-    extraLicense {
+    license {
         name = "Unicode, Inc. License"
         url = "http://www.unicode.org/copyright.html#License"
     }

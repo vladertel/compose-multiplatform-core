@@ -27,18 +27,15 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.samples.Dashboard
-import androidx.navigation.compose.samples.Dialog
-import androidx.navigation.compose.samples.DialogContent
 import androidx.navigation.compose.samples.Profile
+import androidx.navigation.compose.samples.Screen
 import androidx.navigation.compose.samples.Scrollable
 
 @Composable
@@ -46,9 +43,9 @@ fun BottomBarNavDemo() {
     val navController = rememberNavController()
 
     val items = listOf(
-        stringResource(R.string.profile) to Profile,
-        stringResource(R.string.dashboard) to Dashboard(),
-        stringResource(R.string.scrollable) to Scrollable
+        stringResource(R.string.profile) to Screen.Profile.route,
+        stringResource(R.string.dashboard) to Screen.Dashboard.route,
+        stringResource(R.string.scrollable) to Screen.Scrollable.route
     )
 
     Scaffold(
@@ -56,15 +53,13 @@ fun BottomBarNavDemo() {
             BottomNavigation {
                 val navBackStackEntry = navController.currentBackStackEntryAsState().value
                 val currentDestination = navBackStackEntry?.destination
-                items.forEach { (name, destination) ->
+                items.forEach { (name, route) ->
                     BottomNavigationItem(
                         icon = { Icon(Icons.Filled.Favorite, contentDescription = null) },
                         label = { Text(name) },
-                        selected = currentDestination?.hierarchy?.any {
-                            it.hasRoute(destination::class)
-                        } == true,
+                        selected = currentDestination?.hierarchy?.any { it.route == route } == true,
                         onClick = {
-                            navController.navigate(destination) {
+                            navController.navigate(route) {
                                 launchSingleTop = true
                                 restoreState = true
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -77,11 +72,10 @@ fun BottomBarNavDemo() {
             }
         }
     ) { innerPadding ->
-        NavHost(navController, Profile, Modifier.padding(innerPadding)) {
-            composable<Profile> { Profile(navController) }
-            composable<Dashboard> { Dashboard(navController) }
-            composable<Scrollable> { Scrollable(navController) }
-            dialog<Dialog> { DialogContent(navController) }
+        NavHost(navController, Screen.Profile.route, Modifier.padding(innerPadding)) {
+            composable(Screen.Profile.route) { Profile(navController) }
+            composable(Screen.Dashboard.route) { Dashboard(navController) }
+            composable(Screen.Scrollable.route) { Scrollable(navController) }
         }
     }
 }

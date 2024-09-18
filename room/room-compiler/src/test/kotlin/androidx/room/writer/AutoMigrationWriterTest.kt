@@ -21,6 +21,7 @@ import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
 import androidx.room.compiler.processing.util.runJavaProcessorTest
 import androidx.room.compiler.processing.util.runKspTest
+import androidx.room.compiler.processing.util.runProcessorTest
 import androidx.room.migration.bundle.FieldBundle
 import androidx.room.processor.Context
 import androidx.room.util.SchemaDiffResult
@@ -111,11 +112,9 @@ class AutoMigrationWriterTest(
                 isSpecProvided = false
             )
             AutoMigrationWriter(
-                autoMigration = autoMigrationResultWithNewAddedColumn,
-                dbElement =
-                    invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
-                codeLanguage = codeLanguage,
-                javaLambdaSyntaxAvailable = false
+                invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
+                autoMigrationResultWithNewAddedColumn,
+                codeLanguage
             ).write(invocation.processingEnv)
 
             val expectedFile = when (codeLanguage) {
@@ -187,11 +186,9 @@ class AutoMigrationWriterTest(
                 isSpecProvided = false
             )
             AutoMigrationWriter(
-                autoMigration = autoMigrationResultWithNewAddedColumn,
-                dbElement =
-                    invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
-                codeLanguage = codeLanguage,
-                javaLambdaSyntaxAvailable = false
+                invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
+                autoMigrationResultWithNewAddedColumn,
+                codeLanguage
             ).write(invocation.processingEnv)
 
             val expectedFile = when (codeLanguage) {
@@ -271,11 +268,9 @@ class AutoMigrationWriterTest(
                 isSpecProvided = true
             )
             AutoMigrationWriter(
-                autoMigration = autoMigrationResultWithNewAddedColumn,
-                dbElement =
-                    invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
-                codeLanguage = codeLanguage,
-                javaLambdaSyntaxAvailable = false
+                invocation.processingEnv.requireTypeElement("foo.bar.MyDatabase"),
+                autoMigrationResultWithNewAddedColumn,
+                codeLanguage
             ).write(invocation.processingEnv)
 
             val expectedFile = when (codeLanguage) {

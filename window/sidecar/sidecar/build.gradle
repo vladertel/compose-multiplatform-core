@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * This file was created using the `create_project.py` script located in the
- * `<AndroidX root>/development/project-creator` directory.
- *
- * Please use that script when creating a new project, rather than copying an existing project and
- * modifying its settings.
- */
 import androidx.build.Publish
 import androidx.build.RunApiTasks
 
@@ -41,7 +34,6 @@ androidx {
     description = "This version of the OEM extension is deprecated. Please use window:extensions:extensions." +
             "module instead."
     metalavaK2UastEnabled = true
-    doNotDocumentReason = "Should not be published"
 }
 
 android {

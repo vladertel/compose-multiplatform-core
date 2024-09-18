@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.packInts
 import androidx.compose.ui.util.unpackInt1
 import androidx.compose.ui.util.unpackInt2
+import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sign
@@ -263,8 +264,6 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 consumedScroll = 0,
                 layoutWidth = layoutWidth,
                 layoutHeight = layoutHeight,
-                beforeContentPadding = beforeContentPadding,
-                afterContentPadding = afterContentPadding,
                 positionedItems = mutableListOf(),
                 keyIndexMap = measuredItemProvider.keyIndexMap,
                 itemProvider = measuredItemProvider,
@@ -272,6 +271,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 isVertical = isVertical,
                 isLookingAhead = false,
                 hasLookaheadOccurred = false,
+                layoutMinOffset = 0,
+                layoutMaxOffset = 0,
                 coroutineScope = coroutineScope,
                 graphicsContext = graphicsContext
             )
@@ -872,8 +873,6 @@ private fun LazyStaggeredGridMeasureContext.measure(
             consumedScroll = consumedScroll.toInt(),
             layoutWidth = layoutWidth,
             layoutHeight = layoutHeight,
-            beforeContentPadding = beforeContentPadding,
-            afterContentPadding = afterContentPadding,
             positionedItems = positionedItems,
             keyIndexMap = measuredItemProvider.keyIndexMap,
             itemProvider = measuredItemProvider,
@@ -881,6 +880,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
             laneCount = laneCount,
             isLookingAhead = false,
             hasLookaheadOccurred = false,
+            layoutMinOffset = firstItemOffsets.min(),
+            layoutMaxOffset = currentItemOffsets.max() + contentPadding,
             coroutineScope = coroutineScope,
             graphicsContext = graphicsContext
         )
@@ -960,10 +961,6 @@ private fun LazyStaggeredGridMeasureContext.calculateVisibleItems(
         val mainAxisOffset = itemScrollOffsets.maxInRange(spanRange)
         val crossAxisOffset = resolvedSlots.positions[laneIndex]
 
-        if (item.placeablesCount == 0) {
-            // nothing to place, ignore spacings
-            continue
-        }
         item.position(
             mainAxis = mainAxisOffset,
             crossAxis = crossAxisOffset,

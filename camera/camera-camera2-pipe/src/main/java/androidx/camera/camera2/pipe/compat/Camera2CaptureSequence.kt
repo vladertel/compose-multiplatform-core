@@ -33,7 +33,6 @@ import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestFailure
 import androidx.camera.camera2.pipe.RequestMetadata
 import androidx.camera.camera2.pipe.RequestNumber
-import androidx.camera.camera2.pipe.SensorTimestamp
 import androidx.camera.camera2.pipe.StreamId
 import kotlinx.coroutines.CompletableDeferred
 
@@ -128,23 +127,6 @@ internal class Camera2CaptureSequence(
         invokeOnRequest(request) { it.onPartialCaptureResult(request, frameNumber, frameMetadata) }
     }
 
-    override fun onReadoutStarted(
-        session: CameraCaptureSession,
-        captureRequest: CaptureRequest,
-        captureTimestamp: Long,
-        captureFrameNumber: Long
-    ) {
-        val requestNumber = readRequestNumber(captureRequest)
-        val readoutTimestamp = SensorTimestamp(captureTimestamp)
-        val frameNumber = FrameNumber(captureFrameNumber)
-
-        // Load the request and throw if we are not able to find an associated request. Under
-        // normal circumstances this should never happen.
-        val request = readRequestMetadata(requestNumber)
-
-        invokeOnRequest(request) { it.onReadoutStarted(request, frameNumber, readoutTimestamp) }
-    }
-
     override fun onCaptureCompleted(
         captureSession: CameraCaptureSession,
         captureRequest: CaptureRequest,
@@ -212,16 +194,17 @@ internal class Camera2CaptureSequence(
 
         // Load the request and throw if we are not able to find an associated request. Under
         // normal circumstances this should never happen.
-        val requestMetadata = readRequestMetadata(requestNumber)
+        val request = readRequestMetadata(requestNumber)
 
-        val extensionRequestFailure = ExtensionRequestFailure(
-            requestMetadata,
+        val simpleCaptureFailure = SimpleCaptureFailure(
+            request,
             false,
             frameNumber,
-            CaptureFailure.REASON_ERROR
+            CaptureFailure.REASON_ERROR,
+            null
         )
 
-        invokeCaptureFailure(requestMetadata, frameNumber, extensionRequestFailure)
+        invokeCaptureFailure(request, frameNumber, simpleCaptureFailure)
     }
 
     override fun onCaptureBufferLost(

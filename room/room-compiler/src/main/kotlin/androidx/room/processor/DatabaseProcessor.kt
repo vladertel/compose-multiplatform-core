@@ -22,12 +22,14 @@ import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.processing.XAnnotationBox
 import androidx.room.compiler.processing.XElement
+import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.ext.RoomTypeNames
 import androidx.room.migration.bundle.DatabaseBundle
 import androidx.room.migration.bundle.SchemaBundle
 import androidx.room.processor.ProcessorErrors.AUTO_MIGRATION_FOUND_BUT_EXPORT_SCHEMA_OFF
 import androidx.room.processor.ProcessorErrors.AUTO_MIGRATION_SCHEMA_IN_FOLDER_NULL
+import androidx.room.processor.ProcessorErrors.autoMigrationSchemaIsEmpty
 import androidx.room.processor.ProcessorErrors.invalidAutoMigrationSchema
 import androidx.room.util.SchemaFileResolver
 import androidx.room.verifier.DatabaseVerificationErrors
@@ -41,7 +43,6 @@ import androidx.room.vo.FtsEntity
 import androidx.room.vo.Warning
 import androidx.room.vo.columnNames
 import androidx.room.vo.findFieldByColumnName
-import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.Path
 import java.util.Locale
@@ -49,8 +50,8 @@ import java.util.Locale
 class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
     val context = baseContext.fork(element)
 
-    private val roomDatabaseTypeElement: XTypeElement by lazy {
-        context.processingEnv.requireTypeElement(RoomTypeNames.ROOM_DB)
+    val roomDatabaseType: XType by lazy {
+        context.processingEnv.requireType(RoomTypeNames.ROOM_DB)
     }
 
     fun process(): Database {
@@ -69,7 +70,7 @@ class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
         validateForeignKeys(element, entities)
         validateExternalContentFts(element, entities)
 
-        val extendsRoomDb = roomDatabaseTypeElement.type.isAssignableFrom(element.type)
+        val extendsRoomDb = roomDatabaseType.isAssignableFrom(element.type)
         context.checker.check(extendsRoomDb, element, ProcessorErrors.DB_MUST_EXTEND_ROOM_DB)
 
         val views = resolveDatabaseViews(viewsMap.values.toList())
@@ -127,15 +128,6 @@ class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
 
         val hasForeignKeys = entities.any { it.foreignKeys.isNotEmpty() }
 
-        val hasClearAllTables = roomDatabaseTypeElement.getDeclaredMethods()
-            .any { it.name == "clearAllTables" }
-
-        context.checker.check(
-            predicate = dbAnnotation.value.version > 0,
-            element = element,
-            errorMsg = ProcessorErrors.INVALID_DATABASE_VERSION
-        )
-
         val database = Database(
             version = dbAnnotation.value.version,
             element = element,
@@ -144,8 +136,7 @@ class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
             views = views,
             daoMethods = daoMethods,
             exportSchema = dbAnnotation.value.exportSchema,
-            enableForeignKeys = hasForeignKeys,
-            overrideClearAllTables = hasClearAllTables,
+            enableForeignKeys = hasForeignKeys
         )
         database.autoMigrations = processAutoMigrations(element, database.bundle)
         return database
@@ -200,7 +191,7 @@ class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
                 }
             AutoMigrationProcessor(
                 context = context,
-                spec = annotationBox.getAsType("spec"),
+                spec = annotationBox.getAsType("spec")!!,
                 fromSchemaBundle = fromSchemaBundle,
                 toSchemaBundle = toSchemaBundle
             ).process()
@@ -230,25 +221,24 @@ class DatabaseProcessor(baseContext: Context, val element: XTypeElement) {
             schemaStream.use {
                 SchemaBundle.deserialize(schemaStream)
             }
-        } catch (ex: FileNotFoundException) {
-            context.logger.e(
-                element,
-                ProcessorErrors.autoMigrationSchemasNotFound(
-                    version,
-                    schemaFolderPath.toString()
-                ),
-            )
-            null
         } catch (th: Throwable) {
-            // For debugging support include exception message in an error too.
-            context.logger.e("Unable to read schema file: ${th.message ?: ""}")
-            context.logger.e(
-                element,
-                invalidAutoMigrationSchema(
-                    version,
-                    schemaFolderPath.toString()
+            if (th is SchemaBundle.EmptySchemaException) {
+                context.logger.e(
+                    element,
+                    autoMigrationSchemaIsEmpty(
+                        version,
+                        schemaFolderPath.toString()
+                    ),
                 )
-            )
+            } else {
+                context.logger.e(
+                    element,
+                    invalidAutoMigrationSchema(
+                        version,
+                        schemaFolderPath.toString()
+                    )
+                )
+            }
             null
         }
         return bundle?.database

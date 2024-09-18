@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsMatcher.Companion.expectValue
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
@@ -709,15 +710,15 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
 
         enabled = true
         readOnly = true
-        rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Editable))
+        rule.onNodeWithTag(Tag).assert(expectValue(SemanticsProperties.IsEditable, false))
 
         enabled = false
         readOnly = false
-        rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Editable))
+        rule.onNodeWithTag(Tag).assert(expectValue(SemanticsProperties.IsEditable, false))
 
         enabled = false
         readOnly = true
-        rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Editable))
+        rule.onNodeWithTag(Tag).assert(expectValue(SemanticsProperties.IsEditable, false))
 
         // Make editable again.
         enabled = true
@@ -784,12 +785,6 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).assertKey(10, SemanticsProperties.MaxTextLength)
     }
 
-    private fun SemanticsNodeInteraction.assertSelection(expected: TextRange) {
-        val selection = fetchSemanticsNode().config
-            .getOrNull(SemanticsProperties.TextSelectionRange)
-        assertThat(selection).isEqualTo(expected)
-    }
-
     private fun SemanticsNodeInteraction.assertKey(expected: Int, key: SemanticsPropertyKey<Int>) {
         assertThat(fetchSemanticsNode().config.getOrNull(key)).isEqualTo(expected)
     }
@@ -802,4 +797,10 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 it.config.getOrNull(SemanticsProperties.EditableText)?.text.equals(value)
             }
         )
+}
+
+internal fun SemanticsNodeInteraction.assertSelection(expected: TextRange) {
+    val selection = fetchSemanticsNode().config
+        .getOrNull(SemanticsProperties.TextSelectionRange)
+    assertThat(selection).isEqualTo(expected)
 }

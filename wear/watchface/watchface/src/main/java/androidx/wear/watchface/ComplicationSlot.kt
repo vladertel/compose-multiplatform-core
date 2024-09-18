@@ -22,6 +22,7 @@ import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.support.wearable.complications.ComplicationData as WireComplicationData
 import androidx.annotation.ColorInt
 import androidx.annotation.IntDef
 import androidx.annotation.Px
@@ -49,7 +50,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.util.ArrayList
 import java.util.Objects
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -1047,27 +1047,17 @@ internal constructor(
      * [complicationData] is selected.
      */
     private var timelineComplicationData: ComplicationData = NoDataComplicationData()
-    private var timelineEntries: List<ApiTimelineEntry>? = null
-
-    private class ApiTimelineEntry(
-        val timelineStartEpochSecond: Long?,
-        val timelineEndEpochSecond: Long?,
-        val complicationData: ComplicationData
-    )
+    private var timelineEntries: List<WireComplicationData>? = null
 
     /**
      * Sets the current [ComplicationData] and if it's a timeline, the correct override for
      * [instant] is chosen. Any images associated with the complication are loaded asynchronously
      * and the complication history is updated.
      */
-    internal fun setComplicationData(
-        complicationData: ComplicationData,
-        instant: Instant,
-        forceLoad: Boolean = false,
-    ) {
+    internal fun setComplicationData(complicationData: ComplicationData, instant: Instant) {
         complicationHistory?.push(ComplicationDataHistoryEntry(complicationData, instant))
         setTimelineData(complicationData, instant)
-        selectComplicationDataForInstant(instant, forceUpdate = true, forceLoad = forceLoad)
+        selectComplicationDataForInstant(instant, forceUpdate = true)
     }
 
     /**
@@ -1087,12 +1077,16 @@ internal constructor(
             // Avoid overwriting a change made by someone else, can still race.
             if (timelineComplicationData !== complicationData) return@AutoCloseable
             setTimelineData(originalComplicationData, originalInstant)
-            selectComplicationDataForInstant(originalInstant, forceUpdate = true)
+            selectComplicationDataForInstant(
+                originalInstant,
+                forceUpdate = true,
+                forScreenshot = false,
+            )
         }
 
         try {
             setTimelineData(complicationData, instant)
-            selectComplicationDataForInstant(instant, forceUpdate = true, forceLoad = true)
+            selectComplicationDataForInstant(instant, forceUpdate = true, forScreenshot = true)
         } catch (e: Throwable) {
             // Cleanup on failure.
             restore.close()
@@ -1104,15 +1098,7 @@ internal constructor(
     private fun setTimelineData(data: ComplicationData, instant: Instant) {
         lastComplicationUpdate = instant
         timelineComplicationData = data
-        timelineEntries = data.asWireComplicationData()
-            .timelineEntries
-            ?.mapTo(ArrayList<ApiTimelineEntry>()) {
-                ApiTimelineEntry(
-                    it.timelineStartEpochSecond,
-                    it.timelineEndEpochSecond,
-                    it.toApiComplicationData()
-                )
-            }
+        timelineEntries = data.asWireComplicationData().timelineEntries?.toList()
     }
 
     private fun loadData(data: ComplicationData, loadDrawablesAsynchronous: Boolean = false) {
@@ -1127,7 +1113,7 @@ internal constructor(
     internal fun selectComplicationDataForInstant(
         instant: Instant,
         forceUpdate: Boolean,
-        forceLoad: Boolean = false,
+        forScreenshot: Boolean = false
     ) {
         var previousShortest = Long.MAX_VALUE
         val time = instant.epochSecond
@@ -1135,14 +1121,14 @@ internal constructor(
 
         // Select the shortest valid timeline entry.
         timelineEntries?.let {
-            for (entry in it) {
-                val start = entry.timelineStartEpochSecond
-                val end = entry.timelineEndEpochSecond
+            for (wireEntry in it) {
+                val start = wireEntry.timelineStartEpochSecond
+                val end = wireEntry.timelineEndEpochSecond
                 if (start != null && end != null && time >= start && time < end) {
                     val duration = end - start
                     if (duration < previousShortest) {
                         previousShortest = duration
-                        best = entry.complicationData
+                        best = wireEntry.toApiComplicationData()
                     }
                 }
             }
@@ -1157,13 +1143,11 @@ internal constructor(
             best = screenLockedFallback // This is NoDataComplicationData.
         }
 
-        // When b/323483515 is fixed, go back to using regular equality rather than reference
-        // equality.
-        if (!forceUpdate && selectedData === best) return
+        if (!forceUpdate && selectedData == best) return
 
         val frozen = frozenDataSourceForEdit != null
-        if (!frozen || forceLoad) {
-            loadData(best, loadDrawablesAsynchronous = !forceLoad)
+        if (!frozen || forScreenshot) {
+            loadData(best, loadDrawablesAsynchronous = !forScreenshot)
         } else {
             // Restoring frozen slot to empty in case it was changed for screenshot.
             loadData(EmptyComplicationData())

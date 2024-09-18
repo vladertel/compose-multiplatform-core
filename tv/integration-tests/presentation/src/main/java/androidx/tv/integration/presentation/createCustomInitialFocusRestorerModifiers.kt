@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.FocusRequester.Companion.Cancel
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 
@@ -42,6 +41,7 @@ data class FocusRequesterModifiers(
     val childModifier: Modifier
 )
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun createCustomInitialFocusRestorerModifiers(): FocusRequesterModifiers {
     val focusRequester = remember { FocusRequester() }
@@ -51,13 +51,14 @@ fun createCustomInitialFocusRestorerModifiers(): FocusRequesterModifiers {
         .focusRequester(focusRequester)
         .focusProperties {
             exit = {
-                @OptIn(ExperimentalComposeUiApi::class)
                 focusRequester.saveFocusedChild()
                 FocusRequester.Default
             }
             enter = {
-                @OptIn(ExperimentalComposeUiApi::class)
-                if (!focusRequester.restoreFocusedChild()) childFocusRequester else Cancel
+                if (!focusRequester.restoreFocusedChild())
+                    childFocusRequester
+                else
+                    FocusRequester.Cancel
             }
         }
 

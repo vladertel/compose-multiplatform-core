@@ -14,71 +14,57 @@
  * limitations under the License.
  */
 
+@file:JvmName("KeyEvent_desktopKt")
+@file:JvmMultifileClass
+
 package androidx.compose.ui.input.key
 
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
+import java.awt.Toolkit
+import java.awt.event.KeyEvent.KEY_LOCATION_STANDARD
+import java.awt.event.KeyEvent.KEY_LOCATION_UNKNOWN
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.KEY_RELEASED
 
-/**
- * The native desktop [KeyEvent][KeyEventAwt].
- */
-actual typealias NativeKeyEvent = java.awt.event.KeyEvent
+private val java.awt.event.KeyEvent.keyLocationForCompose get() =
+    if (keyLocation == KEY_LOCATION_UNKNOWN) KEY_LOCATION_STANDARD else keyLocation
 
-/**
- * The key that was pressed.
- */
-actual val KeyEvent.key: Key
-    get() = Key(nativeKeyEvent.keyCode, nativeKeyEvent.keyLocation)
+internal fun java.awt.event.KeyEvent.toComposeEvent() = KeyEvent(
+    nativeKeyEvent = InternalKeyEvent(
+        key = Key(
+            nativeKeyCode = keyCode,
+            nativeKeyLocation = keyLocationForCompose
+        ),
+        type = when (id) {
+            KEY_PRESSED -> KeyEventType.KeyDown
+            KEY_RELEASED -> KeyEventType.KeyUp
+            else -> KeyEventType.Unknown
+        },
+        codePoint = keyChar.code,
+        modifiers = toPointerKeyboardModifiers(),
+        nativeEvent = this
+    )
+)
 
-/**
- * The UTF16 value corresponding to the key event that was pressed. The unicode character
- * takes into account any meta keys that are pressed (eg. Pressing shift results in capital
- * alphabets). The UTF16 value uses the
- * [U+n notation][http://www.unicode.org/reports/tr27/#notation] of the Unicode Standard.
- *
- * An [Int] is used instead of a [Char] so that we can support supplementary characters. The
- * Unicode Standard allows for characters whose representation requires more than 16 bits.
- * The range of legal code points is U+0000 to U+10FFFF, known as Unicode scalar value.
- *
- * The set of characters from U+0000 to U+FFFF is sometimes referred to as the Basic
- * Multilingual Plane (BMP). Characters whose code points are greater than U+FFFF are called
- * supplementary characters. In this representation, supplementary characters are represented
- * as a pair of char values, the first from the high-surrogates range, (\uD800-\uDBFF), the
- * second from the low-surrogates range (\uDC00-\uDFFF).
- */
-actual val KeyEvent.utf16CodePoint: Int
-    get() = nativeKeyEvent.keyChar.code
+private fun getLockingKeyStateSafe(
+    mask: Int
+): Boolean = try {
+    Toolkit.getDefaultToolkit().getLockingKeyState(mask)
+} catch (_: Exception) {
+    false
+}
 
-/**
- * The [type][KeyEventType] of key event.
- */
-actual val KeyEvent.type: KeyEventType
-    get() = when (nativeKeyEvent.id) {
-        KEY_PRESSED -> KeyEventType.KeyDown
-        KEY_RELEASED -> KeyEventType.KeyUp
-        else -> KeyEventType.Unknown
-    }
-
-/**
- * Indicates whether the Alt key is pressed.
- */
-actual val KeyEvent.isAltPressed: Boolean
-    get() = nativeKeyEvent.isAltDown || nativeKeyEvent.isAltGraphDown
-
-/**
- * Indicates whether the Ctrl key is pressed.
- */
-actual val KeyEvent.isCtrlPressed: Boolean
-    get() = nativeKeyEvent.isControlDown
-
-/**
- * Indicates whether the Meta key is pressed.
- */
-actual val KeyEvent.isMetaPressed: Boolean
-    get() = nativeKeyEvent.isMetaDown
-
-/**
- * Indicates whether the Shift key is pressed.
- */
-actual val KeyEvent.isShiftPressed: Boolean
-    get() = nativeKeyEvent.isShiftDown
+private fun java.awt.event.KeyEvent.toPointerKeyboardModifiers(): PointerKeyboardModifiers {
+    return PointerKeyboardModifiers(
+        isCtrlPressed = isControlDown,
+        isMetaPressed = isMetaDown,
+        isAltPressed = isAltDown,
+        isShiftPressed = isShiftDown,
+        isAltGraphPressed = isAltGraphDown,
+        isSymPressed = false, // no sym in awtEvent?
+        isFunctionPressed = false, // no Fn in awtEvent?
+        isCapsLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_CAPS_LOCK),
+        isScrollLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_SCROLL_LOCK),
+        isNumLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_NUM_LOCK),
+    )
+}

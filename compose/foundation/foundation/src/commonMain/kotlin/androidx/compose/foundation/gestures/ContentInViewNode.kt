@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package androidx.compose.foundation.gestures
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.Orientation.Horizontal
 import androidx.compose.foundation.gestures.Orientation.Vertical
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.LayoutAwareModifierNode
@@ -65,13 +67,14 @@ private const val MinScrollThreshold = 0.5f
 @OptIn(ExperimentalFoundationApi::class)
 internal class ContentInViewNode(
     private var orientation: Orientation,
-    private var scrollState: ScrollableState,
+    private val scrollingLogic: ScrollingLogic,
     private var reverseDirection: Boolean,
     private var bringIntoViewSpec: BringIntoViewSpec?
 ) : Modifier.Node(), BringIntoViewResponder, LayoutAwareModifierNode,
     CompositionLocalConsumerModifierNode {
 
     override val shouldAutoInvalidate: Boolean = false
+
     /**
      * Ongoing requests from [bringChildIntoView], with the invariant that it is always sorted by
      * overlapping order: each item's [Rect] completely overlaps the next item.
@@ -190,7 +193,7 @@ internal class ContentInViewNode(
 
             try {
                 isAnimationRunning = true
-                scrollState.scroll {
+                scrollingLogic.scroll(scrollPriority = MutatePriority.Default) {
                     animationState.value = calculateScrollDelta(bringIntoViewSpec)
                     if (DEBUG) println(
                         "[$TAG] Starting scroll animation down from ${animationState.value}…"
@@ -208,7 +211,12 @@ internal class ContentInViewNode(
                                     "${animationState.value}, scrolling by $adjustedDelta " +
                                     "(reverseDirection=$reverseDirection)"
                             )
-                            val consumedScroll = scrollMultiplier * scrollBy(adjustedDelta)
+                            val consumedScroll = with(scrollingLogic) {
+                                scrollMultiplier * scrollBy(
+                                    offset = adjustedDelta.toOffset().reverseIfNeeded(),
+                                    source = NestedScrollSource.UserInput
+                                ).reverseIfNeeded().toFloat()
+                            }
                             if (DEBUG) println("[$TAG] Consumed $consumedScroll of scroll")
                             if (consumedScroll.absoluteValue < delta.absoluteValue) {
                                 // If the scroll state didn't consume all the scroll on this frame,
@@ -220,7 +228,7 @@ internal class ContentInViewNode(
                                 // TODO(b/239671493) Should this trigger nested scrolling?
                                 animationJob.cancel(
                                     "Scroll animation cancelled because scroll was not consumed " +
-                                        "($consumedScroll < $delta)"
+                                        "(${abs(consumedScroll)} < ${abs(delta)})"
                                 )
                             }
                         },
@@ -397,12 +405,10 @@ internal class ContentInViewNode(
 
     fun update(
         orientation: Orientation,
-        state: ScrollableState,
         reverseDirection: Boolean,
         bringIntoViewSpec: BringIntoViewSpec?
     ) {
         this.orientation = orientation
-        this.scrollState = state
         this.reverseDirection = reverseDirection
         this.bringIntoViewSpec = bringIntoViewSpec
     }

@@ -37,6 +37,7 @@ import androidx.compose.material3.tokens.PrimaryNavigationTabTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,10 +82,9 @@ import kotlin.math.max
  * @param selectedContentColor the color for the content of this tab when selected, and the color
  * of the ripple.
  * @param unselectedContentColor the color for the content of this tab when not selected
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this tab. You can use this to change the tab's
- * appearance or preview the tab in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this tab. You can create and pass in your own `remember`ed instance to observe [Interaction]s
+ * and customize the appearance / behavior of this tab in different states.
  *
  * @see LeadingIconTab
  */
@@ -98,11 +98,12 @@ fun Tab(
     icon: @Composable (() -> Unit)? = null,
     selectedContentColor: Color = LocalContentColor.current,
     unselectedContentColor: Color = selectedContentColor,
-    interactionSource: MutableInteractionSource? = null
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     val styledText: @Composable (() -> Unit)? = text?.let {
         @Composable {
-            val style = PrimaryNavigationTabTokens.LabelTextFont.value
+            val style =
+                MaterialTheme.typography.fromToken(PrimaryNavigationTabTokens.LabelTextFont)
                 .copy(textAlign = TextAlign.Center)
             ProvideTextStyle(style, content = text)
         }
@@ -143,10 +144,9 @@ fun Tab(
  * @param selectedContentColor the color for the content of this tab when selected, and the color
  * of the ripple.
  * @param unselectedContentColor the color for the content of this tab when not selected
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this tab. You can use this to change the tab's
- * appearance or preview the tab in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this tab. You can create and pass in your own `remember`ed instance to observe [Interaction]s
+ * and customize the appearance / behavior of this tab in different states.
  *
  * @see Tab
  */
@@ -160,12 +160,16 @@ fun LeadingIconTab(
     enabled: Boolean = true,
     selectedContentColor: Color = LocalContentColor.current,
     unselectedContentColor: Color = selectedContentColor,
-    interactionSource: MutableInteractionSource? = null
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     // The color of the Ripple should always the be selected color, as we want to show the color
     // before the item is considered selected, and hence before the new contentColor is
     // provided by TabTransition.
-    val ripple = rippleOrFallbackImplementation(bounded = true, color = selectedContentColor)
+    @Suppress("DEPRECATION_ERROR")
+    val ripple = androidx.compose.material.ripple.rememberRipple(
+        bounded = true,
+        color = selectedContentColor
+    )
 
     TabTransition(selectedContentColor, unselectedContentColor, selected) {
         Row(
@@ -186,7 +190,7 @@ fun LeadingIconTab(
         ) {
             icon()
             Spacer(Modifier.requiredWidth(TextDistanceFromLeadingIcon))
-            val style = PrimaryNavigationTabTokens.LabelTextFont.value
+            val style = MaterialTheme.typography.fromToken(PrimaryNavigationTabTokens.LabelTextFont)
                 .copy(textAlign = TextAlign.Center)
             ProvideTextStyle(style, content = text)
         }
@@ -217,10 +221,9 @@ fun LeadingIconTab(
  * @param selectedContentColor the color for the content of this tab when selected, and the color
  * of the ripple.
  * @param unselectedContentColor the color for the content of this tab when not selected
- * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
- * emitting [Interaction]s for this tab. You can use this to change the tab's
- * appearance or preview the tab in different states. Note that if `null` is provided,
- * interactions will still happen internally.
+ * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
+ * for this tab. You can create and pass in your own `remember`ed instance to observe [Interaction]s
+ * and customize the appearance / behavior of this tab in different states.
  * @param content the content of this tab
  */
 @Composable
@@ -231,13 +234,17 @@ fun Tab(
     enabled: Boolean = true,
     selectedContentColor: Color = LocalContentColor.current,
     unselectedContentColor: Color = selectedContentColor,
-    interactionSource: MutableInteractionSource? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable ColumnScope.() -> Unit
 ) {
     // The color of the Ripple should always the selected color, as we want to show the color
     // before the item is considered selected, and hence before the new contentColor is
     // provided by TabTransition.
-    val ripple = rippleOrFallbackImplementation(bounded = true, color = selectedContentColor)
+    @Suppress("DEPRECATION_ERROR")
+    val ripple = androidx.compose.material.ripple.rememberRipple(
+        bounded = true,
+        color = selectedContentColor
+    )
 
     TabTransition(selectedContentColor, unselectedContentColor, selected) {
         Column(
@@ -435,13 +442,10 @@ internal val HorizontalTextPadding = 16.dp
 // Distance from the top of the indicator to the text baseline when there is one line of text and an
 // icon
 private val SingleLineTextBaselineWithIcon = 14.dp
-
 // Distance from the top of the indicator to the last text baseline when there are two lines of text
 // and an icon
 private val DoubleLineTextBaselineWithIcon = 6.dp
-
 // Distance from the first text baseline to the bottom of the icon in a combined tab
 private val IconDistanceFromBaseline = 20.sp
-
 // Distance from the end of the leading icon to the start of the text
 private val TextDistanceFromLeadingIcon = 8.dp

@@ -51,7 +51,9 @@ import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalMaterial3Api::class)
 class SwipeToDismissTest {
+
     @get:Rule
     val rule = createComposeRule()
 
@@ -88,39 +90,16 @@ class SwipeToDismissTest {
                 state = rememberSwipeToDismissBoxState(SwipeToDismissBoxValue.StartToEnd),
                 backgroundContent = { }
             ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .testTag(dismissContentTag)
-                )
-            }
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .testTag(dismissContentTag)
+                    ) }
         }
 
         val width = rule.rootWidth()
         rule.onNodeWithTag(dismissContentTag)
             .assertLeftPositionInRootIsEqualTo(width)
-    }
-
-    @Test
-    fun swipeDismiss_testOffset_whenDismissedToEnd_rtl() {
-        rule.setContent {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                SwipeToDismissBox(
-                    state = rememberSwipeToDismissBoxState(SwipeToDismissBoxValue.StartToEnd),
-                    backgroundContent = { }
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .testTag(dismissContentTag)
-                    )
-                }
-            }
-        }
-
-        val width = rule.rootWidth()
-        rule.onNodeWithTag(dismissContentTag)
-            .assertLeftPositionInRootIsEqualTo(-width)
     }
 
     @Test
@@ -130,39 +109,16 @@ class SwipeToDismissTest {
                 state = rememberSwipeToDismissBoxState(SwipeToDismissBoxValue.EndToStart),
                 backgroundContent = { },
             ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .testTag(dismissContentTag)
-                )
-            }
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .testTag(dismissContentTag)
+                    ) }
         }
 
         val width = rule.rootWidth()
         rule.onNodeWithTag(dismissContentTag)
             .assertLeftPositionInRootIsEqualTo(-width)
-    }
-
-    @Test
-    fun swipeDismiss_testOffset_whenDismissedToStart_rtl() {
-        rule.setContent {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                SwipeToDismissBox(
-                    state = rememberSwipeToDismissBoxState(SwipeToDismissBoxValue.EndToStart),
-                    backgroundContent = { },
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .testTag(dismissContentTag)
-                    )
-                }
-            }
-        }
-
-        val width = rule.rootWidth()
-        rule.onNodeWithTag(dismissContentTag)
-            .assertLeftPositionInRootIsEqualTo(width)
     }
 
     @Test
@@ -392,37 +348,5 @@ class SwipeToDismissTest {
         assertWithMessage("Expected item $newItemIndex anchors to have been initialized")
             .that(newItem!!.anchoredDraggableState.anchors.size)
             .isAtLeast(1)
-    }
-
-    @Test
-    fun swipeDismiss_respectsGesturesEnabled() {
-        lateinit var swipeToDismissBoxState: SwipeToDismissBoxState
-        rule.setContent {
-            swipeToDismissBoxState = rememberSwipeToDismissBoxState(SwipeToDismissBoxValue.Settled)
-            SwipeToDismissBox(
-                state = swipeToDismissBoxState,
-                modifier = Modifier.testTag(swipeDismissTag),
-                gesturesEnabled = false,
-                backgroundContent = { }
-            ) { Box(Modifier.fillMaxSize()) }
-        }
-
-        rule.onNodeWithTag(swipeDismissTag).performTouchInput { swipeRight() }
-
-        advanceClock()
-
-        rule.runOnIdle {
-            assertThat(swipeToDismissBoxState.currentValue)
-                .isEqualTo(SwipeToDismissBoxValue.Settled)
-        }
-
-        rule.onNodeWithTag(swipeDismissTag).performTouchInput { swipeLeft() }
-
-        advanceClock()
-
-        rule.runOnIdle {
-            assertThat(swipeToDismissBoxState.currentValue)
-                .isEqualTo(SwipeToDismissBoxValue.Settled)
-        }
     }
 }

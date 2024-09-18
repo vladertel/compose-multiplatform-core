@@ -619,13 +619,15 @@ fun composableLambdaInstance(
 ): ComposableLambda =
     ComposableLambdaImpl(key, tracked, block)
 
-@Suppress("unused")
-@Composable
-@ComposeCompilerApi
-fun rememberComposableLambda(
-    key: Int,
-    tracked: Boolean,
-    block: Any
-): ComposableLambda = remember { ComposableLambdaImpl(key, tracked, block) }.also {
-    it.update(block)
-}
+// TODO fix wasm
+
+//@Suppress("unused")
+//@Composable
+//@ComposeCompilerApi
+//fun rememberComposableLambda(
+//    key: Int,
+//    tracked: Boolean,
+//    block: Any
+//): ComposableLambda = remember { ComposableLambdaImpl(key, tracked, block) }.also {
+//    it.update(block)
+//}

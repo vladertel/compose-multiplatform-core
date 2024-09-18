@@ -18,6 +18,7 @@ package androidx.compose.foundation.text.selection
 
 import androidx.compose.foundation.text.ContextMenuArea
 import androidx.compose.foundation.text.detectDownAndDragGesturesWithObserver
+import androidx.compose.foundation.text.rememberClipboardEventsHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -36,6 +37,12 @@ import androidx.compose.ui.util.fastForEach
 
 /**
  * Enables text selection for its direct or indirect children.
+ *
+ * Use of a lazy layout, such as [LazyRow][androidx.compose.foundation.lazy.LazyRow] or
+ * [LazyColumn][androidx.compose.foundation.lazy.LazyColumn], within a [SelectionContainer]
+ * has undefined behavior on text items that aren't composed. For example, texts that aren't
+ * composed will not be included in copy operations and select all will not expand the
+ * selection to include them.
  *
  * @sample androidx.compose.foundation.samples.SelectionSample
  */
@@ -95,6 +102,11 @@ internal fun SelectionContainer(
     manager.onSelectionChange = onSelectionChange
     manager.selection = selection
 
+    rememberClipboardEventsHandler(
+        onCopy = { manager.getSelectedText()?.text },
+        isEnabled = manager.isNonEmptySelection()
+    )
+
     ContextMenuArea(manager) {
         CompositionLocalProvider(LocalSelectionRegistrar provides registrarImpl) {
             // Get the layout coordinates of the selection container. This is for hit test of
@@ -125,11 +137,17 @@ internal fun SelectionContainer(
                                 it.end.direction
                             }
 
+                            val lineHeight = if (isStartHandle) {
+                                manager.startHandleLineHeight
+                            } else {
+                                manager.endHandleLineHeight
+                            }
                             SelectionHandle(
                                 offsetProvider = positionProvider,
                                 isStartHandle = isStartHandle,
                                 direction = direction,
                                 handlesCrossed = it.handlesCrossed,
+                                lineHeight = lineHeight,
                                 modifier = Modifier.pointerInput(observer) {
                                     detectDownAndDragGesturesWithObserver(observer)
                                 },

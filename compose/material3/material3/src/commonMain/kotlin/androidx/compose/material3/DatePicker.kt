@@ -34,8 +34,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
-import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
-import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,18 +63,8 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.OutlinedTextFieldDefaults.defaultOutlinedTextFieldColors
-import androidx.compose.material3.internal.CalendarModel
-import androidx.compose.material3.internal.CalendarMonth
-import androidx.compose.material3.internal.DaysInWeek
-import androidx.compose.material3.internal.MillisecondsIn24Hours
-import androidx.compose.material3.internal.ProvideContentColorTextStyle
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.createCalendarModel
-import androidx.compose.material3.internal.formatWithSkeleton
-import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.DatePickerModalTokens
 import androidx.compose.material3.tokens.DividerTokens
-import androidx.compose.material3.tokens.ElevationTokens
 import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -124,6 +112,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
+import kotlin.jvm.JvmInline
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -199,9 +188,11 @@ fun DatePicker(
         } else {
             null
         },
-        headlineTextStyle = DatePickerModalTokens.HeaderHeadlineFont.value,
+        headlineTextStyle = MaterialTheme.typography.fromToken(
+            DatePickerModalTokens.HeaderHeadlineFont
+        ),
         headerMinHeight = DatePickerModalTokens.HeaderContainerHeight,
-        colors = colors,
+        colors = colors
     ) {
         SwitchableDateEntryContent(
             selectedDateMillis = state.selectedDateMillis,
@@ -709,18 +700,13 @@ object DatePickerDefaults {
         lazyListState: LazyListState,
         decayAnimationSpec: DecayAnimationSpec<Float> = exponentialDecay()
     ): FlingBehavior {
-        return remember(decayAnimationSpec, lazyListState) {
-            val original = SnapLayoutInfoProvider(lazyListState)
-            val snapLayoutInfoProvider = object : SnapLayoutInfoProvider by original {
-                override fun calculateApproachOffset(initialVelocity: Float): Float {
-                    return 0.0f
-                }
-            }
-
+        val density = LocalDensity.current
+        return remember(density) {
             SnapFlingBehavior(
-                snapLayoutInfoProvider = snapLayoutInfoProvider,
+                lazyListState = lazyListState,
                 decayAnimationSpec = decayAnimationSpec,
-                snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                density = density
             )
         }
     }
@@ -729,7 +715,7 @@ object DatePickerDefaults {
     val YearRange: IntRange = IntRange(1900, 2100)
 
     /** The default tonal elevation used for [DatePickerDialog]. */
-    val TonalElevation: Dp = ElevationTokens.Level0
+    val TonalElevation: Dp = DatePickerModalTokens.ContainerElevation
 
     /** The default shape for date picker dialogs. */
     val shape: Shape @Composable get() = DatePickerModalTokens.ContainerShape.value
@@ -1323,7 +1309,6 @@ internal fun DateEntryContainer(
                 @Suppress("DEPRECATION")
                 isContainer = true
             }
-            .background(colors.containerColor)
     ) {
         DatePickerHeader(
             modifier = Modifier,
@@ -1621,11 +1606,13 @@ internal fun DatePickerHeader(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         if (title != null) {
-            val textStyle = DatePickerModalTokens.HeaderSupportingTextFont.value
+            val textStyle =
+                MaterialTheme.typography.fromToken(
+                    DatePickerModalTokens.HeaderSupportingTextFont
+                )
             ProvideContentColorTextStyle(
                 contentColor = titleContentColor,
-                textStyle = textStyle
-            ) {
+                textStyle = textStyle) {
                 Box(contentAlignment = Alignment.BottomStart) {
                     title()
                 }
@@ -1660,7 +1647,9 @@ private fun HorizontalMonthsList(
             month = 1 // January
         )
     }
-    ProvideTextStyle(DatePickerModalTokens.DateLabelTextFont.value) {
+    ProvideTextStyle(
+        MaterialTheme.typography.fromToken(DatePickerModalTokens.DateLabelTextFont)
+    ) {
         LazyRow(
             // Apply this to prevent the screen reader from scrolling to the next or previous month,
             // and instead, traverse outside the Month composable when swiping from a focused first
@@ -1669,6 +1658,8 @@ private fun HorizontalMonthsList(
                 horizontalScrollAxisRange = ScrollAxisRange(value = { 0f }, maxValue = { 0f })
             },
             state = lazyListState,
+            // TODO(b/264687693): replace with the framework's rememberSnapFlingBehavior
+            //  (lazyListState) when promoted to stable
             flingBehavior = DatePickerDefaults.rememberSnapFlingBehavior(lazyListState)
         ) {
             items(numberOfMonthsInRange(yearRange)) {
@@ -1740,7 +1731,8 @@ internal fun WeekDays(colors: DatePickerColors, calendarModel: CalendarModel) {
     for (i in 0 until firstDayOfWeek - 1) {
         dayNames.add(weekdays[i])
     }
-    val textStyle = DatePickerModalTokens.WeekdaysLabelTextFont.value
+    val textStyle =
+        MaterialTheme.typography.fromToken(DatePickerModalTokens.WeekdaysLabelTextFont)
 
     Row(
         modifier = Modifier
@@ -2001,7 +1993,9 @@ private fun YearPicker(
     yearRange: IntRange,
     colors: DatePickerColors
 ) {
-    ProvideTextStyle(value = DatePickerModalTokens.SelectionYearLabelTextFont.value) {
+    ProvideTextStyle(
+        value = MaterialTheme.typography.fromToken(DatePickerModalTokens.SelectionYearLabelTextFont)
+    ) {
         val currentYear = calendarModel.getMonth(calendarModel.today).year
         val displayedYear = calendarModel.getMonth(displayedMonthMillis).year
         val lazyGridState =
@@ -2013,7 +2007,10 @@ private fun YearPicker(
                 )
             )
         // Match the years container color to any elevated surface color that is composed under it.
-        val containerColor = colors.containerColor
+        val containerColor = MaterialTheme.colorScheme.applyTonalElevation(
+            backgroundColor = colors.containerColor,
+            elevation = LocalAbsoluteTonalElevation.current
+        )
         val coroutineScope = rememberCoroutineScope()
         val scrollToEarlierYearsLabel = getString(Strings.DatePickerScrollToShowEarlierYears)
         val scrollToLaterYearsLabel = getString(Strings.DatePickerScrollToShowLaterYears)

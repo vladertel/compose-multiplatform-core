@@ -462,7 +462,7 @@ fun CustomOutlinedTextFieldBasedOnDecorationBox() {
                 colors = colors,
                 // update border thickness and shape
                 container = {
-                    OutlinedTextFieldDefaults.Container(
+                    OutlinedTextFieldDefaults.ContainerBox(
                         enabled = enabled,
                         isError = false,
                         colors = colors,

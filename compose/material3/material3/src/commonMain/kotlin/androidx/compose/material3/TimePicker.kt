@@ -48,9 +48,6 @@ import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.internal.Strings
-import androidx.compose.material3.internal.getString
-import androidx.compose.material3.internal.rememberAccessibilityServiceState
 import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.material3.tokens.TimeInputTokens
 import androidx.compose.material3.tokens.TimeInputTokens.PeriodSelectorContainerHeight
@@ -138,7 +135,6 @@ import androidx.compose.ui.node.requireDensity
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.InspectorValueInfo
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -161,7 +157,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
@@ -211,21 +206,21 @@ fun TimePicker(
     colors: TimePickerColors = TimePickerDefaults.colors(),
     layoutType: TimePickerLayoutType = TimePickerDefaults.layoutType(),
 ) {
-    val a11yServicesEnabled by rememberAccessibilityServiceState()
+    val touchExplorationServicesEnabled by touchExplorationState()
 
     if (layoutType == TimePickerLayoutType.Vertical) {
         VerticalTimePicker(
             state = state,
             modifier = modifier,
             colors = colors,
-            autoSwitchToMinute = !a11yServicesEnabled
+            autoSwitchToMinute = !touchExplorationServicesEnabled
         )
     } else {
         HorizontalTimePicker(
             state = state,
             modifier = modifier,
             colors = colors,
-            autoSwitchToMinute = !a11yServicesEnabled
+            autoSwitchToMinute = !touchExplorationServicesEnabled
         )
     }
 }
@@ -573,7 +568,7 @@ fun rememberTimePickerState(
  * Represents the different configurations for the layout of the Time Picker
  */
 @Immutable
-@JvmInline
+@kotlin.jvm.JvmInline
 @ExperimentalMaterial3Api
 value class TimePickerLayoutType internal constructor(internal val value: Int) {
 
@@ -645,6 +640,7 @@ class TimePickerState(
     internal var selection by mutableStateOf(Selection.Hour)
     internal var isAfternoonToggle by mutableStateOf(initialHour >= 12 && !is24Hour)
     internal var isInnerCircle by mutableStateOf(initialHour >= 12)
+
     internal var hourAngle by mutableFloatStateOf(
         RadiansPerHour * (initialHour % 12) - FullCircle / 4
     )
@@ -653,24 +649,17 @@ class TimePickerState(
     )
 
     private val mutex = MutatorMutex()
-    private val isAfternoon
-        get() = is24hour && isInnerCircle || isAfternoonToggle
+    private val isAfternoon by derivedStateOf { is24hour && isInnerCircle || isAfternoonToggle }
 
-    internal var currentAngle = Animatable(hourAngle)
+    internal val currentAngle = Animatable(hourAngle)
 
     internal fun setMinute(minute: Int) {
         minuteAngle = RadiansPerMinute * minute - FullCircle / 4
-        if (selection == Selection.Minute) {
-            currentAngle = Animatable(minuteAngle)
-        }
     }
 
     internal fun setHour(hour: Int) {
         isInnerCircle = hour >= 12
         hourAngle = RadiansPerHour * (hour % 12) - FullCircle / 4
-        if (selection == Selection.Hour) {
-            currentAngle = Animatable(hourAngle)
-        }
     }
 
     internal fun moveSelector(x: Float, y: Float, maxDist: Float) {
@@ -678,6 +667,13 @@ class TimePickerState(
             isInnerCircle = dist(x, y, center.x, center.y) < maxDist
         }
     }
+
+    internal fun isSelected(value: Int): Boolean =
+        if (selection == Selection.Minute) {
+            value == minute
+        } else {
+            hour == (value + if (isAfternoon) 12 else 0)
+        }
 
     internal suspend fun update(value: Float, fromTap: Boolean = false) {
         mutex.mutate(MutatePriority.UserInput) {
@@ -826,98 +822,85 @@ private fun TimeInputImpl(
     var minuteValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(text = state.minute.toLocalString(minDigits = 2)))
     }
+
     Row(
         modifier = modifier.padding(bottom = TimeInputBottomPadding),
         verticalAlignment = Alignment.Top
     ) {
-        val textStyle = TimeInputTokens.TimeFieldLabelTextFont.value
+        val textStyle = MaterialTheme.typography.fromToken(TimeInputTokens.TimeFieldLabelTextFont)
             .copy(
                 textAlign = TextAlign.Center,
                 color = colors.timeSelectorContentColor(true)
             )
 
-        CompositionLocalProvider(
-            LocalTextStyle provides textStyle,
-            // Always display the time input text field from left to right.
-            LocalLayoutDirection provides LayoutDirection.Ltr
-        ) {
-            Row {
-                TimePickerTextField(
-                    modifier = Modifier
-                        .onKeyEvent { event ->
-                            // Zero == 48, Nine == 57
-                            val switchFocus = event.utf16CodePoint in 48..57 &&
-                                hourValue.selection.start == 2 && hourValue.text.length == 2
+        CompositionLocalProvider(LocalTextStyle provides textStyle) {
 
-                            if (switchFocus) {
-                                state.selection = Selection.Minute
-                            }
+            TimePickerTextField(
+                modifier = Modifier
+                    .onKeyEvent { event ->
+                        // Zero == 48, Nine == 57
+                        val switchFocus = event.utf16CodePoint in 48..57 &&
+                            hourValue.selection.start == 2 && hourValue.text.length == 2
 
-                            false
-                        },
-                    value = hourValue,
-                    onValueChange = { newValue ->
-                        timeInputOnChange(
-                            selection = Selection.Hour,
-                            state = state,
-                            value = newValue,
-                            prevValue = hourValue,
-                            max = if (state.is24hour) 23 else 12,
-                        ) { hourValue = it }
+                        if (switchFocus) {
+                            state.selection = Selection.Minute
+                        }
+
+                        false
                     },
-                    state = state,
-                    selection = Selection.Hour,
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Next,
-                        keyboardType = KeyboardType.Number
-                    ),
-                    keyboardActions = KeyboardActions(onNext = {
-                        state.selection = Selection.Minute
-                    }),
-                    colors = colors,
-                )
-                DisplaySeparator(
-                    Modifier.size(
-                        DisplaySeparatorWidth,
-                        PeriodSelectorContainerHeight
-                    )
-                )
-                TimePickerTextField(
-                    modifier = Modifier
-                        .onPreviewKeyEvent { event ->
-                            // 0 == KEYCODE_DEL
-                            val switchFocus = event.utf16CodePoint == 0 &&
-                                minuteValue.selection.start == 0
+                value = hourValue,
+                onValueChange = { newValue ->
+                    timeInputOnChange(
+                        selection = Selection.Hour,
+                        state = state,
+                        value = newValue,
+                        prevValue = hourValue,
+                        max = if (state.is24hour) 23 else 12,
+                    ) { hourValue = it }
+                },
+                state = state,
+                selection = Selection.Hour,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    keyboardType = KeyboardType.Number
+                ),
+                keyboardActions = KeyboardActions(onNext = { state.selection = Selection.Minute }),
+                colors = colors,
+            )
+            DisplaySeparator(Modifier.size(DisplaySeparatorWidth, PeriodSelectorContainerHeight))
+            TimePickerTextField(
+                modifier = Modifier
+                    .onPreviewKeyEvent { event ->
+                        // 0 == KEYCODE_DEL
+                        val switchFocus = event.utf16CodePoint == 0 &&
+                            minuteValue.selection.start == 0
 
-                            if (switchFocus) {
-                                state.selection = Selection.Hour
-                            }
+                        if (switchFocus) {
+                            state.selection = Selection.Hour
+                        }
 
-                            switchFocus
-                        },
-
-                    value = minuteValue,
-                    onValueChange = { newValue ->
-                        timeInputOnChange(
-                            selection = Selection.Minute,
-                            state = state,
-                            value = newValue,
-                            prevValue = minuteValue,
-                            max = 59,
-                        ) { minuteValue = it }
+                        switchFocus
                     },
-                    state = state,
-                    selection = Selection.Minute,
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done,
-                        keyboardType = KeyboardType.Number
-                    ),
-                    keyboardActions = KeyboardActions(onNext = {
-                        state.selection = Selection.Minute
-                    }),
-                    colors = colors,
-                )
-            }
+
+                value = minuteValue,
+                onValueChange = { newValue ->
+                    timeInputOnChange(
+                        selection = Selection.Minute,
+                        state = state,
+                        value = newValue,
+                        prevValue = minuteValue,
+                        max = 59,
+                    ) { minuteValue = it }
+                },
+                state = state,
+                selection = Selection.Minute,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    keyboardType = KeyboardType.Number
+                ),
+                keyboardActions = KeyboardActions(onNext = { state.selection = Selection.Minute }),
+                colors = colors,
+            )
         }
 
         if (!state.is24hour) {
@@ -979,9 +962,7 @@ private fun ClockDisplayNumbers(
     colors: TimePickerColors
 ) {
     CompositionLocalProvider(
-        LocalTextStyle provides TimeSelectorLabelTextFont.value,
-        // Always display the TimeSelectors from left to right.
-        LocalLayoutDirection provides LayoutDirection.Ltr
+        LocalTextStyle provides MaterialTheme.typography.fromToken(TimeSelectorLabelTextFont)
     ) {
         Row {
             TimeSelector(
@@ -1485,7 +1466,7 @@ private fun ClockText(
     value: Int,
     autoSwitchToMinute: Boolean
 ) {
-    val style = ClockDialLabelTextFont.value
+    val style = MaterialTheme.typography.fromToken(ClockDialLabelTextFont)
     val maxDist = with(LocalDensity.current) { MaxDistance.toPx() }
     var center by remember { mutableStateOf(Offset.Zero) }
     val scope = rememberCoroutineScope()
@@ -1653,7 +1634,7 @@ private fun TimePickerTextField(
                     interactionSource = interactionSource,
                     contentPadding = PaddingValues(0.dp),
                     container = {
-                        OutlinedTextFieldDefaults.Container(
+                        OutlinedTextFieldDefaults.ContainerBox(
                             enabled = true,
                             isError = false,
                             interactionSource = interactionSource,
@@ -1677,7 +1658,9 @@ private fun TimePickerTextField(
                 }
             ),
             color = TimeInputTokens.TimeFieldSupportingTextColor.value,
-            style = TimeInputTokens.TimeFieldSupportingTextFont.value
+            style = MaterialTheme
+                .typography
+                .fromToken(TimeInputTokens.TimeFieldSupportingTextFont)
         )
     }
 
@@ -1748,7 +1731,7 @@ internal fun numberContentDescription(
         Strings.TimePickerHourSuffix
     }
 
-    return getString(id, number)
+    return getString(id).format(number)
 }
 
 private fun valuesForAnimation(current: Float, new: Float): Pair<Float, Float> {
@@ -1782,12 +1765,18 @@ private enum class LayoutId {
     Selector, InnerCircle,
 }
 
+// TODO(https://github.com/JetBrains/compose-multiplatform/issues/3373) fix expect composable getter
 @OptIn(ExperimentalMaterial3Api::class)
-internal expect val defaultTimePickerLayoutType: TimePickerLayoutType
+internal val defaultTimePickerLayoutType: TimePickerLayoutType
     @Composable
-    @ReadOnlyComposable get
+    @ReadOnlyComposable get() = defaultTimePickerLayoutType()
 
-@JvmInline
+@Composable
+@ReadOnlyComposable
+@OptIn(ExperimentalMaterial3Api::class)
+internal expect fun defaultTimePickerLayoutType() : TimePickerLayoutType
+
+@kotlin.jvm.JvmInline
 internal value class Selection private constructor(val value: Int) {
     companion object {
         val Hour = Selection(0)
