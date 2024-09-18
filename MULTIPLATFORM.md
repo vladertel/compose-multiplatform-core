@@ -56,7 +56,13 @@ To fix this error:
 3. If there are only additions - there is no binary incompatible change.
 4. If there are some removals - most probably there is a binary incompatible change and it needs to be fixed before merging it to the main branch.
 
-Note that only desktop has API checks at the moment, but in the future it will be added for all targets.
+To print a dump of the darwin(apple)-only API, use the following command.
+Note that `klibApiDump` is an experimental feature, that collects API from all targets,
+including WASM and JS.
+To extract iOS-only API, use the `:mpp:printDarwinOnlyKlibApi` task.
+```bash
+./gradlew klibApiDump && ./gradlew :mpp:printDarwinOnlyKlibApi
+```
 
 ### Publishing
 Compose Multiplatform core libraries can be published to local Maven with the following steps:

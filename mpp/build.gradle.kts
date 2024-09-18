@@ -1,6 +1,12 @@
+
 import androidx.build.jetbrains.ArtifactRedirecting
 import androidx.build.jetbrains.artifactRedirecting
-import org.jetbrains.compose.internal.publishing.*
+import org.jetbrains.compose.internal.publishing.DownloadFromSpaceMavenRepoTask
+import org.jetbrains.compose.internal.publishing.FindModulesInSpaceTask
+import org.jetbrains.compose.internal.publishing.FixModulesBeforePublishingTask
+import org.jetbrains.compose.internal.publishing.MavenCentralProperties
+import org.jetbrains.compose.internal.publishing.ModuleToUpload
+import org.jetbrains.compose.internal.publishing.UploadToSonatypeTask
 
 plugins {
     signing
@@ -212,6 +218,48 @@ tasks.register("testUIKit") {
     dependsOn(":compose:material3:material3:$uikitTestSubtaskName")
     dependsOn(":compose:foundation:foundation:$uikitTestSubtaskName")
     dependsOn(":collection:collection:$uikitTestSubtaskName")
+}
+
+/**
+ * Prints all darwin(ios/apple) related APIs from "*.klib.api" files.
+ * Use this task after `./gradlew klibApiDump`
+ */
+tasks.register("printDarwinOnlyKlibApi") {
+    doLast {
+        val targets = listOf(
+            "ios",
+            "apple"
+        ).joinToString("|")
+
+        // Looking for '// Targets: [xxx. ios|apple, xxx]' pattern
+        val regex = "\\/\\/ Targets: \\[([\\w\\d]*, )*($targets)(, [\\w\\d]*)*\\]".toRegex()
+        val composeDirectory = file("../compose")
+        // Ignore lines which exposes '$stableprop' only function
+        val ignoreStableprop = true
+        val klibDumpSuffix = ".klib.api"
+
+        composeDirectory.walkTopDown()
+            .filter { it.isFile && it.name.endsWith(klibDumpSuffix) }
+            .forEach { file ->
+                val lines = file.readLines()
+                val matchedLines = lines.mapIndexed { index, line ->
+                    if (line.contains(regex)) {
+                        ((index + 2) to lines[index + 1]).takeIf {
+                            !(ignoreStableprop && it.second.contains("\$stableprop"))
+                        }
+                    } else {
+                        null
+                    }
+                }.filterNotNull()
+
+                if (matchedLines.isNotEmpty()) {
+                    println("\n${file.relativeTo(project.rootDir).parentFile.parentFile} : ${matchedLines.count()}")
+                    matchedLines.forEach {
+                        println("\n${file}:${it.first} | ${it.second.trimStart()}")
+                    }
+                }
+            }
+    }
 }
 
 tasks.register("testRuntimeNative") {
