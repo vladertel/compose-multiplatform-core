@@ -111,7 +111,8 @@ internal class ComposeHostingViewController(
         InterfaceOrientation.Portrait
     )
     private val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
-    private val focusStack = FocusStack()
+
+    var focusStack: FocusStack? = FocusStack()
     private val windowContext = PlatformWindowContext().apply {
         isWindowFocused = true
     }
@@ -274,7 +275,7 @@ internal class ComposeHostingViewController(
         return object : ComposeSceneContext {
             override val platformContext: PlatformContext = platformContext
 
-            override fun createPlatformLayer(
+            override fun createLayer(
                 density: Density,
                 layoutDirection: LayoutDirection,
                 focusable: Boolean,
@@ -321,9 +322,7 @@ internal class ComposeHostingViewController(
             density = view.density,
             layoutDirection = layoutDirection,
             coroutineContext = coroutineContext,
-            composeSceneContext = createComposeSceneContext(
-                platformContext = platformContext
-            ),
+            platformContext = platformContext,
             invalidate = invalidate,
         )
     }
