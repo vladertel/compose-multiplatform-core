@@ -17,16 +17,18 @@
 package androidx.compose.material3
 
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -35,7 +37,6 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -46,7 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.screenshot.AndroidXScreenshotTestRule
+import org.junit.After
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,14 +58,19 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-@OptIn(ExperimentalTestApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 class IconButtonScreenshotTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-    @get:Rule
-    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
+    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
+
+    // TODO(b/267253920): Add a compose test API to set/reset InputMode.
+    @After
+    fun resetTouchMode() =
+        with(InstrumentationRegistry.getInstrumentation()) {
+            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
+        }
 
     private val wrap = Modifier.wrapContentSize(Alignment.TopStart)
     private val wrapperTestTag = "iconButtonWrapper"
@@ -83,10 +92,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconButton(onClick = { /* doSomething() */ }) {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -106,6 +112,7 @@ class IconButtonScreenshotTest {
     }
 
     @Test
+    @Ignore("b/355413615")
     fun iconButton_lightTheme_pressed() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
@@ -116,8 +123,7 @@ class IconButtonScreenshotTest {
         }
 
         rule.mainClock.autoAdvance = false
-        rule.onNode(hasClickAction())
-            .performTouchInput { down(center) }
+        rule.onNode(hasClickAction()).performTouchInput { down(center) }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -139,9 +145,7 @@ class IconButtonScreenshotTest {
                 }
             }
         }
-        rule.onNodeWithTag(wrapperTestTag).performMouseInput {
-            enter(center)
-        }
+        rule.onNodeWithTag(wrapperTestTag).performMouseInput { enter(center) }
 
         assertAgainstGolden("iconButton_lightTheme_hovered")
     }
@@ -156,8 +160,7 @@ class IconButtonScreenshotTest {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconButton(
                     onClick = { /* doSomething() */ },
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
+                    modifier = Modifier.focusRequester(focusRequester)
                 ) {
                     Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
@@ -165,7 +168,6 @@ class IconButtonScreenshotTest {
         }
 
         rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
             localInputModeManager!!.requestInputMode(InputMode.Keyboard)
             focusRequester.requestFocus()
         }
@@ -178,10 +180,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconButton(onClick = { /* doSomething() */ }) {
-                    Box(
-                        Modifier
-                            .size(100.dp)
-                            .background(Color.Blue))
+                    Box(Modifier.size(100.dp).background(Color.Blue))
                 }
             }
         }
@@ -193,7 +192,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconToggleButton(checked = false, onCheckedChange = { /* doSomething() */ }) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -205,7 +204,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconToggleButton(checked = false, onCheckedChange = { /* doSomething() */ }) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -241,10 +240,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 IconToggleButton(checked = true, onCheckedChange = { /* doSomething() */ }) {
-                    Box(
-                        Modifier
-                            .size(100.dp)
-                            .background(Color.Blue))
+                    Box(Modifier.size(100.dp).background(Color.Blue))
                 }
             }
         }
@@ -268,10 +264,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 FilledIconButton(onClick = { /* doSomething() */ }) {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -283,7 +276,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 FilledIconToggleButton(checked = false, onCheckedChange = { /* doSomething() */ }) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -299,7 +292,7 @@ class IconButtonScreenshotTest {
                     onCheckedChange = { /* doSomething() */ },
                     enabled = false
                 ) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -311,7 +304,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 FilledIconToggleButton(checked = false, onCheckedChange = { /* doSomething() */ }) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -358,10 +351,7 @@ class IconButtonScreenshotTest {
     fun filledTonalIconButton_lightTheme_disabled() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
-                FilledTonalIconButton(
-                    onClick = { /* doSomething() */ },
-                    enabled = false
-                ) {
+                FilledTonalIconButton(onClick = { /* doSomething() */ }, enabled = false) {
                     Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
@@ -374,10 +364,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 FilledTonalIconButton(onClick = { /* doSomething() */ }) {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -392,7 +379,7 @@ class IconButtonScreenshotTest {
                     checked = false,
                     onCheckedChange = { /* doSomething() */ }
                 ) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -407,7 +394,7 @@ class IconButtonScreenshotTest {
                     checked = false,
                     onCheckedChange = { /* doSomething() */ }
                 ) {
-                    Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
+                    Icon(Icons.Outlined.Favorite, contentDescription = "Localized description")
                 }
             }
         }
@@ -449,10 +436,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconButton(onClick = { /* doSomething() */ }) {
-                    Icon(
-                        Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.FavoriteBorder, contentDescription = "Localized description")
                 }
             }
         }
@@ -464,10 +448,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconButton(onClick = { /* doSomething() */ }, enabled = false) {
-                    Icon(
-                        Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.FavoriteBorder, contentDescription = "Localized description")
                 }
             }
         }
@@ -479,10 +460,7 @@ class IconButtonScreenshotTest {
         rule.setMaterialContent(darkColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconButton(onClick = { /* doSomething() */ }) {
-                    Icon(
-                        Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Localized description"
-                    )
+                    Icon(Icons.Filled.FavoriteBorder, contentDescription = "Localized description")
                 }
             }
         }
@@ -495,7 +473,8 @@ class IconButtonScreenshotTest {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconToggleButton(
                     checked = false,
-                    onCheckedChange = { /* doSomething() */ }) {
+                    onCheckedChange = { /* doSomething() */ }
+                ) {
                     Icon(
                         Icons.Outlined.FavoriteBorder,
                         contentDescription = "Localized description"
@@ -512,7 +491,8 @@ class IconButtonScreenshotTest {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconToggleButton(
                     checked = false,
-                    onCheckedChange = { /* doSomething() */ }) {
+                    onCheckedChange = { /* doSomething() */ }
+                ) {
                     Icon(
                         Icons.Outlined.FavoriteBorder,
                         contentDescription = "Localized description"
@@ -529,7 +509,8 @@ class IconButtonScreenshotTest {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconToggleButton(
                     checked = true,
-                    onCheckedChange = { /* doSomething() */ }) {
+                    onCheckedChange = { /* doSomething() */ }
+                ) {
                     Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
@@ -543,7 +524,8 @@ class IconButtonScreenshotTest {
             Box(wrap.testTag(wrapperTestTag)) {
                 OutlinedIconToggleButton(
                     checked = true,
-                    onCheckedChange = { /* doSomething() */ }) {
+                    onCheckedChange = { /* doSomething() */ }
+                ) {
                     Icon(Icons.Filled.Favorite, contentDescription = "Localized description")
                 }
             }
@@ -552,7 +534,8 @@ class IconButtonScreenshotTest {
     }
 
     private fun assertAgainstGolden(goldenName: String) {
-        rule.onNodeWithTag(wrapperTestTag)
+        rule
+            .onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }

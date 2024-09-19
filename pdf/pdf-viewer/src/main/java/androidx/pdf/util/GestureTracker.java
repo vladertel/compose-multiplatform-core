@@ -18,7 +18,6 @@ package androidx.pdf.util;
 
 import android.content.Context;
 import android.graphics.PointF;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.MotionEvent;
@@ -28,6 +27,7 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.ViewConfiguration;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 
@@ -135,8 +135,6 @@ public class GestureTracker implements OnTouchListener {
             }
         }
     }
-
-    private final String mViewTag;
     private final int mMoveSlop;
 
     private final ScaleGestureDetector mZoomDetector;
@@ -167,10 +165,9 @@ public class GestureTracker implements OnTouchListener {
 
     private final QuickScaleBypassDecider mQuickScaleBypassDecider;
 
-    public GestureTracker(String tag, Context context) {
+    public GestureTracker(@NonNull Context context) {
         ViewConfiguration config = ViewConfiguration.get(context);
         mMoveSlop = config.getScaledTouchSlop();
-        mViewTag = tag;
         DetectorListener listener = new DetectorListener();
         mMoveDetector = new GestureDetector(context, listener);
         mZoomDetector = new ScaleGestureDetector(context, listener);
@@ -187,7 +184,7 @@ public class GestureTracker implements OnTouchListener {
      * Set a delegate {@link GestureHandler} that will receive all relevant event-handling
      * callbacks.
      */
-    public void setDelegateHandler(GestureHandler handler) {
+    public void setDelegateHandler(@NonNull GestureHandler handler) {
         mDelegate = handler;
     }
 
@@ -198,7 +195,7 @@ public class GestureTracker implements OnTouchListener {
      * @param handle Should this event be handled, i.e. forwarded to any delegate.
      * @return true if the event was recorded, false if it was discarded (as a duplicate).
      */
-    public boolean feed(MotionEvent event, boolean handle) {
+    public boolean feed(@NonNull MotionEvent event, boolean handle) {
         // If the tracking of the previous gesture was interrupted, reset tracking now.
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && mTracking && mInterrupted) {
             initTracking(event.getX(), event.getY());
@@ -228,7 +225,6 @@ public class GestureTracker implements OnTouchListener {
             // Call onGestureStart as soon as we start handling a gesture - even if we
             // missed the ACTION_DOWN part of the gesture.
             if (mDelegate != null && handle && !mHandling) {
-                log("Gesture start");
                 mDelegate.onGestureStart();
             }
             mHandling = handle;
@@ -236,9 +232,7 @@ public class GestureTracker implements OnTouchListener {
             mLog.append(getEventTag(event));
             mMoveDetector.onTouchEvent(event);
 
-            if (mQuickScaleBypassDecider.shouldSkipZoomDetector(event, mLastEvent)) {
-                log("Skipping zoom detector!");
-            } else {
+            if (!mQuickScaleBypassDecider.shouldSkipZoomDetector(event, mLastEvent)) {
                 mZoomDetector.onTouchEvent(event);
             }
             mDoubleTapDetector.onTouchEvent(event);
@@ -295,12 +289,11 @@ public class GestureTracker implements OnTouchListener {
      *
      * @param ev The intercepted event. Must be called at least on the ACTION_UP event.
      */
-    public void handleDoubleTap(MotionEvent ev) {
+    public void handleDoubleTap(@NonNull MotionEvent ev) {
         if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
             if (mDetectedGesture == Gesture.DOUBLE_TAP && mDelegate != null) {
                 // tracking might be false, if this happens after the regular endGesture() has
                 // been called.
-                log("handle double tap ");
                 mDelegate.onDoubleTap(ev);
                 endGesture();
             }
@@ -310,7 +303,6 @@ public class GestureTracker implements OnTouchListener {
     private void endGesture() {
         mTracking = false;
         mLog.append('/');
-        log("End gesture");
         if (mHandling && mDelegate != null) {
             mDelegate.onGestureEnd(mDetectedGesture);
         }
@@ -329,7 +321,7 @@ public class GestureTracker implements OnTouchListener {
     /**
      * Returns whether the currently detected gesture matches any of the one(s) passed as argument.
      */
-    public boolean matches(Gesture... gestures) {
+    public boolean matches(@NonNull Gesture... gestures) {
         for (Gesture g : gestures) {
             if (mDetectedGesture == g) {
                 return true;
@@ -347,6 +339,7 @@ public class GestureTracker implements OnTouchListener {
     }
 
     /** Get a textual representation of the gesture's stream of events so far. */
+    @NonNull
     public String getLog() {
         return mDetectedGesture == null ? mLog.toString() : String.format("%s: %s",
                 mDetectedGesture,
@@ -416,14 +409,6 @@ public class GestureTracker implements OnTouchListener {
         mLog.setLength(0);
         mTouchDown.set(x, y);
         mDetectedGesture = Gesture.TOUCH;
-        log(String.format("Start tracking (%d, %d)", (int) x, (int) y));
-    }
-
-    private void log(String msg) {
-        Log.v(TAG,
-                String.format("[%s] %s %s (%s) [Handling: %s]", mViewTag, msg, mDetectedGesture,
-                        mLog,
-                        mHandling));
     }
 
     /** A recipient for all gesture handling. */
@@ -431,17 +416,17 @@ public class GestureTracker implements OnTouchListener {
             implements OnScaleGestureListener {
 
         @Override
-        public boolean onScale(ScaleGestureDetector detector) {
+        public boolean onScale(@NonNull ScaleGestureDetector detector) {
             return false;
         }
 
         @Override
-        public boolean onScaleBegin(ScaleGestureDetector detector) {
+        public boolean onScaleBegin(@NonNull ScaleGestureDetector detector) {
             return false;
         }
 
         @Override
-        public void onScaleEnd(ScaleGestureDetector detector) {
+        public void onScaleEnd(@NonNull ScaleGestureDetector detector) {
         }
 
         /** Called at the start of any gesture, before any other callback. */
@@ -453,7 +438,7 @@ public class GestureTracker implements OnTouchListener {
          *
          * @param gesture The detected gesture that just ended.
          */
-        protected void onGestureEnd(Gesture gesture) {
+        protected void onGestureEnd(@NonNull Gesture gesture) {
         }
     }
 
@@ -515,7 +500,7 @@ public class GestureTracker implements OnTouchListener {
         }
 
         @Override
-        public void onLongPress(MotionEvent e) {
+        public void onLongPress(@NonNull MotionEvent e) {
             detected(Gesture.LONG_PRESS);
             if (mHandling && mDelegate != null) {
                 mDelegate.onLongPress(e);
@@ -523,7 +508,8 @@ public class GestureTracker implements OnTouchListener {
         }
 
         @Override
-        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2, float velocityX,
+                float velocityY) {
             detected(Gesture.FLING);
             if (mHandling && mDelegate != null) {
                 mDelegate.onFling(e1, e2, velocityX, velocityY);
@@ -532,7 +518,7 @@ public class GestureTracker implements OnTouchListener {
         }
 
         @Override
-        public boolean onScale(ScaleGestureDetector detector) {
+        public boolean onScale(@NonNull ScaleGestureDetector detector) {
             if (mHandling && mDelegate != null) {
                 mDelegate.onScale(detector);
             }
@@ -541,7 +527,7 @@ public class GestureTracker implements OnTouchListener {
         }
 
         @Override
-        public boolean onScaleBegin(ScaleGestureDetector detector) {
+        public boolean onScaleBegin(@NonNull ScaleGestureDetector detector) {
             detected(Gesture.ZOOM);
             if (mHandling && mDelegate != null) {
                 mDelegate.onScaleBegin(detector);
@@ -551,7 +537,7 @@ public class GestureTracker implements OnTouchListener {
         }
 
         @Override
-        public void onScaleEnd(ScaleGestureDetector detector) {
+        public void onScaleEnd(@NonNull ScaleGestureDetector detector) {
             if (mHandling && mDelegate != null) {
                 mDelegate.onScaleEnd(detector);
             }

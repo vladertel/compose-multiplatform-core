@@ -29,8 +29,6 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
     interface Parameters : BuildServiceParameters {
         var tomlFileName: String
         var tomlFileContents: Provider<String>
-        var composeCustomVersion: Provider<String>
-        var composeCustomGroup: Provider<String>
     }
 
     private val parsedTomlFile: TomlParseResult by lazy {
@@ -54,14 +52,7 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
     val libraryVersions: Map<String, Version> by lazy {
         val versions = getTable("versions")
         versions.keySet().associateWith { versionName ->
-            val versionValue =
-                if (
-                    versionName.startsWith("COMPOSE") && parameters.composeCustomVersion.isPresent
-                ) {
-                    parameters.composeCustomVersion.get()
-                } else {
-                    versions.getString(versionName)!!
-                }
+            val versionValue = versions.getString(versionName)!!
             Version.parseOrNull(versionValue)
                 ?: throw GradleException(
                     "$versionName does not match expected format - $versionValue"
@@ -134,10 +125,6 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
             // get group name
             val groupDefinition = groups.getTable(name)!!
             val groupName = groupDefinition.getString("group")!!
-            val finalGroupName =
-                if (name.startsWith("COMPOSE") && parameters.composeCustomGroup.isPresent) {
-                    groupName.replace("androidx.compose", parameters.composeCustomGroup.get())
-                } else groupName
 
             // get group version, if any
             val atomicGroupVersion =
@@ -151,14 +138,14 @@ abstract class LibraryVersionsService : BuildService<LibraryVersionsService.Para
                     it as String
                 }
 
-            val group = LibraryGroup(finalGroupName, atomicGroupVersion)
+            val group = LibraryGroup(groupName, atomicGroupVersion)
             LibraryGroupAssociation(name, group, overrideApplyToProjects)
         }
     }
 }
 
 // a LibraryGroupSpec knows how to associate a LibraryGroup with the appropriate projects
-data class LibraryGroupAssociation(
+private data class LibraryGroupAssociation(
     // the name of the variable to which it is assigned in the toml file
     val declarationName: String,
     // the group

@@ -35,11 +35,13 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
+    watchos()
+    tvos()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
     sourceSets {
-        all {
+        configureEach {
             languageSettings.optIn("kotlin.RequiresOptIn")
         }
 
@@ -63,27 +65,28 @@ androidXMultiplatform {
                 api(libs.kotlinTestCommon)
                 api(libs.kotlinTestAnnotationsCommon)
                 api(libs.kotlinCoroutinesTest)
-                api(project(":internal-testutils-datastore"))
-                api(project(":kruth:kruth"))
+                implementation(project(":internal-testutils-datastore"))
             }
         }
         jvmTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(libs.kotlinTest)
                 implementation(libs.kotlinTestAnnotationsCommon)
-                api(project(":internal-testutils-datastore"))
+                implementation(project(":internal-testutils-datastore"))
                 api(project(":kruth:kruth"))
             }
         }
 
         nativeMain {
+            dependsOn(commonMain)
             dependencies {
                 implementation(libs.atomicFu)
             }
         }
 
-        targets.all { target ->
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nativeMain)
@@ -98,4 +101,5 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2020"
     description = "Android DataStore Core Okio- contains APIs to use datastore-core in multiplatform via okio"
+    metalavaK2UastEnabled = false
 }

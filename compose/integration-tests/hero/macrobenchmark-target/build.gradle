@@ -22,11 +22,8 @@ plugins {
 }
 
 android {
+    compileSdkVersion 35
     namespace "androidx.compose.integration.hero.macrobenchmark.target"
-
-    defaultConfig {
-        minSdkVersion 21
-    }
 
     buildTypes {
         release {
@@ -45,6 +42,7 @@ dependencies {
     implementation(project(":activity:activity-compose"))
     implementation("androidx.appcompat:appcompat:1.4.1")
     implementation("androidx.cardview:cardview:1.0.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation(project(":compose:foundation:foundation-layout"))
     implementation(project(":compose:foundation:foundation"))
     implementation(project(":compose:material:material"))

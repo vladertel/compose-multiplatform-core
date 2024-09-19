@@ -16,11 +16,11 @@
 
 package androidx.build
 
+import androidx.build.gradle.extraPropertyOrNull
 import java.util.Locale
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.findByType
-import org.jetbrains.kotlin.konan.target.HostManager
 
 /**
  * A comma-separated list of target platform groups you wish to enable or disable.
@@ -34,6 +34,7 @@ const val ENABLED_KMP_TARGET_PLATFORMS = "androidx.enabled.kmp.target.platforms"
 enum class PlatformGroup {
     JVM,
     JS,
+    WASM,
     MAC,
     WINDOWS,
     LINUX,
@@ -50,17 +51,16 @@ enum class PlatformGroup {
          * Do *not* enable [JS] unless you have read and understand this:
          * https://blog.jetbrains.com/kotlin/2021/10/important-ua-parser-js-exploit-and-kotlin-js/
          */
-        val enabledByDefault = listOf(JVM, DESKTOP, MAC, LINUX, WINDOWS, ANDROID_NATIVE)
+        val enabledByDefault = listOf(JVM, DESKTOP, MAC, LINUX, WINDOWS, ANDROID_NATIVE, WASM)
     }
 }
 
 /** Target platforms supported by the AndroidX implementation of Kotlin multi-platform. */
-enum class PlatformIdentifier(
-    val id: String,
-    @Suppress("unused") private val group: PlatformGroup
-) {
+enum class PlatformIdentifier(val id: String, val group: PlatformGroup) {
     JVM("jvm", PlatformGroup.JVM),
+    JVM_STUBS("jvmStubs", PlatformGroup.JVM),
     JS("js", PlatformGroup.JS),
+    WASM_JS("wasmJs", PlatformGroup.WASM),
     ANDROID("android", PlatformGroup.JVM),
     ANDROID_NATIVE_ARM32("androidNativeArm32", PlatformGroup.ANDROID_NATIVE),
     ANDROID_NATIVE_ARM64("androidNativeArm64", PlatformGroup.ANDROID_NATIVE),
@@ -70,7 +70,8 @@ enum class PlatformIdentifier(
     MAC_OSX_64("macosx64", PlatformGroup.MAC),
     MINGW_X_64("mingwx64", PlatformGroup.WINDOWS),
     LINUX_ARM_64("linuxarm64", PlatformGroup.LINUX),
-    LINUX_64("linuxx64", PlatformGroup.LINUX),
+    LINUX_X_64("linuxx64", PlatformGroup.LINUX),
+    LINUX_X_64_STUBS("linuxx64Stubs", PlatformGroup.LINUX),
     IOS_SIMULATOR_ARM_64("iossimulatorarm64", PlatformGroup.MAC),
     IOS_X_64("iosx64", PlatformGroup.MAC),
     IOS_ARM_64("iosarm64", PlatformGroup.MAC),
@@ -78,6 +79,7 @@ enum class PlatformIdentifier(
     WATCHOS_X_64("watchosx64", PlatformGroup.MAC),
     WATCHOS_ARM_32("watchosarm64", PlatformGroup.MAC),
     WATCHOS_ARM_64("watchosarm64", PlatformGroup.MAC),
+    WATCHOS_DEVICE_ARM_64("watchosdevicearm64", PlatformGroup.MAC),
     TVOS_SIMULATOR_ARM_64("tvossimulatorarm64", PlatformGroup.MAC),
     TVOS_X_64("tvosx64", PlatformGroup.MAC),
     TVOS_ARM_64("tvosarm64", PlatformGroup.MAC),
@@ -126,7 +128,9 @@ private val Project.enabledKmpPlatforms: Set<PlatformGroup>
 /** Extension used to store parsed KMP configuration information. */
 private open class KmpPlatformsExtension(project: Project) {
     val enabledKmpPlatforms =
-        parseTargetPlatformsFlag(project.findProperty(ENABLED_KMP_TARGET_PLATFORMS) as? String)
+        parseTargetPlatformsFlag(
+            project.extraPropertyOrNull(ENABLED_KMP_TARGET_PLATFORMS) as? String
+        )
 }
 
 fun Project.enableJs(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.JS)
@@ -134,8 +138,7 @@ fun Project.enableJs(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.JS)
 fun Project.enableAndroidNative(): Boolean =
     enabledKmpPlatforms.contains(PlatformGroup.ANDROID_NATIVE)
 
-fun Project.enableMac(): Boolean =
-    enabledKmpPlatforms.contains(PlatformGroup.MAC) && HostManager.hostIsMac
+fun Project.enableMac(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.MAC)
 
 fun Project.enableWindows(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.WINDOWS)
 
@@ -144,3 +147,5 @@ fun Project.enableLinux(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.
 fun Project.enableJvm(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.JVM)
 
 fun Project.enableDesktop(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.DESKTOP)
+
+fun Project.enableWasmJs(): Boolean = enabledKmpPlatforms.contains(PlatformGroup.WASM)

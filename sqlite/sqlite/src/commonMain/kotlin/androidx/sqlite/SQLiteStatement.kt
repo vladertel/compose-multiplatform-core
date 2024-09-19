@@ -19,20 +19,21 @@ package androidx.sqlite
 /**
  * SQLite statement definition.
  *
- * A prepared statement is a resource that must be released once it is no longer needed
- * via its [close] function.
+ * A prepared statement is a resource that must be released once it is no longer needed via its
+ * [close] function.
  *
  * See also [Prepared Statement](https://www.sqlite.org/c3ref/stmt.html)
  */
-@Suppress("NotCloseable") // TODO(b/315461431): No common Closeable interface in KMP
-interface SQLiteStatement {
+// TODO(b/315461431): No common Closeable interface in KMP
+@Suppress("NotCloseable", "AcronymName") // SQL is a known term and should remain capitalized
+public interface SQLiteStatement {
     /**
      * Binds a ByteArray value to this statement at an index.
      *
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindBlob(index: Int, value: ByteArray)
+    public fun bindBlob(index: Int, value: ByteArray)
 
     /**
      * Binds a Double value to this statement at an index.
@@ -40,7 +41,7 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindDouble(index: Int, value: Double)
+    public fun bindDouble(index: Int, value: Double)
 
     /**
      * Binds a Float value to this statement at an index.
@@ -48,7 +49,7 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindFloat(index: Int, value: Float) {
+    public fun bindFloat(index: Int, value: Float) {
         bindDouble(index, value.toDouble())
     }
 
@@ -58,7 +59,7 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindLong(index: Int, value: Long)
+    public fun bindLong(index: Int, value: Long)
 
     /**
      * Binds a Int value to this statement at an index.
@@ -66,7 +67,7 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindInt(index: Int, value: Int) {
+    public fun bindInt(index: Int, value: Int) {
         bindLong(index, value.toLong())
     }
 
@@ -76,7 +77,7 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindBoolean(index: Int, value: Boolean) {
+    public fun bindBoolean(index: Int, value: Boolean) {
         bindLong(index, if (value) 1L else 0L)
     }
 
@@ -86,14 +87,14 @@ interface SQLiteStatement {
      * @param index the 1-based index of the parameter to bind
      * @param value the value to bind
      */
-    fun bindText(index: Int, value: String)
+    public fun bindText(index: Int, value: String)
 
     /**
      * Binds a NULL value to this statement at an index.
      *
      * @param index the 1-based index of the parameter to bind
      */
-    fun bindNull(index: Int)
+    public fun bindNull(index: Int)
 
     /**
      * Returns the value of the column at [index] as a ByteArray.
@@ -101,7 +102,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getBlob(index: Int): ByteArray
+    public fun getBlob(index: Int): ByteArray
 
     /**
      * Returns the value of the column at [index] as a Double.
@@ -109,7 +110,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getDouble(index: Int): Double
+    public fun getDouble(index: Int): Double
 
     /**
      * Returns the value of the column at [index] as a Float.
@@ -117,7 +118,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getFloat(index: Int): Float {
+    public fun getFloat(index: Int): Float {
         return getDouble(index).toFloat()
     }
 
@@ -127,7 +128,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getLong(index: Int): Long
+    public fun getLong(index: Int): Long
 
     /**
      * Returns the value of the column at [index] as a Int.
@@ -135,7 +136,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getInt(index: Int): Int {
+    public fun getInt(index: Int): Int {
         return getLong(index).toInt()
     }
 
@@ -145,7 +146,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getBoolean(index: Int): Boolean {
+    public fun getBoolean(index: Int): Boolean {
         return getLong(index) != 0L
     }
 
@@ -155,7 +156,7 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the value of the column
      */
-    fun getText(index: Int): String
+    public fun getText(index: Int): String
 
     /**
      * Returns true if the value of the column at [index] is NULL.
@@ -163,14 +164,14 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return true if the column value is NULL, false otherwise
      */
-    fun isNull(index: Int): Boolean
+    public fun isNull(index: Int): Boolean
 
     /**
      * Returns the number of columns in the result of the statement.
      *
      * @return the number of columns
      */
-    fun getColumnCount(): Int
+    public fun getColumnCount(): Int
 
     /**
      * Returns the name of a column at [index] in the result of the statement.
@@ -178,38 +179,36 @@ interface SQLiteStatement {
      * @param index the 0-based index of the column
      * @return the name of the column
      */
-    fun getColumnName(index: Int): String
+    public fun getColumnName(index: Int): String
 
     /**
      * Returns the name of the columns in the result of the statement ordered by their index.
      *
      * @return the names of the columns
      */
-    fun getColumnNames(): List<String> {
-       return List(getColumnCount()) { i -> getColumnName(i) }
+    public fun getColumnNames(): List<String> {
+        return List(getColumnCount()) { i -> getColumnName(i) }
     }
 
     /**
      * Executes the statement and evaluates the next result row if available.
      *
-     * A statement is initially prepared and compiled but is not executed until one or more calls
-     * to this function. If the statement execution produces result rows then this function will
-     * return `true` indicating there is a new row of data ready to be read.
+     * A statement is initially prepared and compiled but is not executed until one or more calls to
+     * this function. If the statement execution produces result rows then this function will return
+     * `true` indicating there is a new row of data ready to be read.
      *
      * @return true if there are more rows to evaluate or false if the statement is done executing
      */
-    fun step(): Boolean
+    public fun step(): Boolean
 
     /**
-     * Resets the prepared statement back to initial state so that it can be re-executed via
-     * [step]. Any parameter bound via the bind*() APIs will retain their value.
+     * Resets the prepared statement back to initial state so that it can be re-executed via [step].
+     * Any parameter bound via the bind*() APIs will retain their value.
      */
-    fun reset()
+    public fun reset()
 
-    /**
-     * Clears all parameter bindings. Unset bindings are treated as NULL.
-     */
-    fun clearBindings()
+    /** Clears all parameter bindings. Unset bindings are treated as NULL. */
+    public fun clearBindings()
 
     /**
      * Closes the statement.
@@ -217,5 +216,5 @@ interface SQLiteStatement {
      * Once a statement is closed it should no longer be used. Calling this function on an already
      * closed statement is a no-op.
      */
-    fun close()
+    public fun close()
 }

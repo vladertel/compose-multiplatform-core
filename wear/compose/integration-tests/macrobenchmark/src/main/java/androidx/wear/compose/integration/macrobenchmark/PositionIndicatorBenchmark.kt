@@ -24,8 +24,6 @@ import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.testutils.createCompilationParams
-import androidx.wear.compose.integration.macrobenchmark.test.disableChargingExperience
-import androidx.wear.compose.integration.macrobenchmark.test.enableChargingExperience
 import java.lang.Thread.sleep
 import org.junit.After
 import org.junit.Before
@@ -36,11 +34,8 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class PositionIndicatorBenchmark(
-    private val compilationMode: CompilationMode
-) {
-    @get:Rule
-    val benchmarkRule = MacrobenchmarkRule()
+class PositionIndicatorBenchmark(private val compilationMode: CompilationMode) {
+    @get:Rule val benchmarkRule = MacrobenchmarkRule()
 
     @Before
     fun setUp() {
@@ -56,14 +51,12 @@ class PositionIndicatorBenchmark(
     fun start() {
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics = listOf(
-                FrameTimingMetric()
-            ),
+            metrics = listOf(FrameTimingMetric()),
             compilationMode = compilationMode,
             iterations = 5,
             setupBlock = {
                 val intent = Intent()
-                intent.action = ACTION
+                intent.action = POSITION_INDICATOR_ACTIVITY
                 startActivityAndWait(intent)
             }
         ) {
@@ -117,9 +110,8 @@ class PositionIndicatorBenchmark(
 
     companion object {
         private const val PACKAGE_NAME = "androidx.wear.compose.integration.macrobenchmark.target"
-        private const val ACTION =
-            "androidx.wear.compose.integration.macrobenchmark.target" +
-                ".POSITION_INDICATOR_ACTIVITY"
+        private const val POSITION_INDICATOR_ACTIVITY =
+            "${PACKAGE_NAME}.POSITION_INDICATOR_ACTIVITY"
         private const val INCREASE_POSITION = "PI_INCREASE_POSITION"
         private const val DECREASE_POSITION = "PI_DECREASE_POSITION"
         private const val CHANGE_VISIBILITY_SHOW = "PI_VISIBILITY_SHOW"

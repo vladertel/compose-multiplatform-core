@@ -19,12 +19,11 @@ package androidx.pdf.util;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
-import androidx.pdf.aidl.Dimensions;
+import androidx.pdf.models.Dimensions;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,7 +46,7 @@ public class TileBoard {
     private static final String TAG_PREFIX = String.format("%s #", TAG);
     private final String mTag;
 
-    static final Dimensions TILE_SIZE = new Dimensions(800, 800);
+    public static final Dimensions TILE_SIZE = new Dimensions(800, 800);
 
     public static final BitmapRecycler DEFAULT_RECYCLER = new BitmapRecycler();
 
@@ -146,13 +145,11 @@ public class TileBoard {
     }
 
     /** Returns true if the tile is still relevant and was saved. */
-    public boolean setTile(TileInfo tileInfo, Bitmap tile) {
+    public boolean setTile(@NonNull TileInfo tileInfo, @NonNull Bitmap tile) {
         if (!isTileVisible(tileInfo)) {
-            Log.v(mTag, String.format("Request to set tile %s outside visible area", tileInfo));
             return false;
         }
         if (!tileInfo.belongsTo(this)) {
-            Log.v(mTag, String.format("Discard %s (%s)", tileInfo, mBounds.getWidth()));
             return false;
         }
         mTiles[tileInfo.getIndex()] = tile;
@@ -180,7 +177,8 @@ public class TileBoard {
      * To be called when the viewing area moves on the image. The given viewArea is assumed to be
      * clipped to the actual image dimensions.
      */
-    public boolean updateViewArea(Rect viewArea, ViewAreaUpdateCallback callback) {
+    public boolean updateViewArea(@NonNull Rect viewArea,
+            @NonNull ViewAreaUpdateCallback callback) {
         Preconditions.checkArgument(
                 viewArea.top >= 0
                         && viewArea.left >= 0
@@ -197,7 +195,6 @@ public class TileBoard {
 
         // Accumulate tiles that we still need here, then replace 'tiles' with it.
         Bitmap[] retainedTiles = new Bitmap[mTiles.length];
-        int retainedCount = 0;
         List<TileInfo> newTiles = new ArrayList<>(mVisibleArea.size());
         List<Integer> retainRequests = new ArrayList<>(mPendingTileRequests.size());
         for (int k : areaIndexes(mVisibleArea)) {
@@ -211,7 +208,6 @@ public class TileBoard {
                 }
             } else {
                 retainedTiles[k] = tile;
-                retainedCount++;
                 mTiles[k] = null;
             }
         }
@@ -244,16 +240,6 @@ public class TileBoard {
 
         System.arraycopy(retainedTiles, 0, mTiles, 0, mTiles.length);
         if (!newTiles.isEmpty()) {
-            Log.v(
-                    mTag,
-                    String.format(
-                            "ViewArea has %d new tiles (had tiles: %d), discard: %d, cancel: %d,"
-                                    + "pending requests(%d)",
-                            newTiles.size(),
-                            retainedCount,
-                            disposed.size(),
-                            staleRequests.size(),
-                            retainRequests.size()));
             callback.requestNewTiles(newTiles);
             for (TileInfo requestedTile : newTiles) {
                 mPendingTileRequests.add(requestedTile.getIndex());
@@ -262,27 +248,29 @@ public class TileBoard {
         return true;
     }
 
-    protected Area getExpandedArea(Rect viewArea) {
+    @NonNull
+    protected Area getExpandedArea(@NonNull Rect viewArea) {
         return Area.expandFromArea(viewArea, mNumCols, numRows());
     }
 
     /** Callback for cancelling on-going tile requests */
     public interface CancelTilesCallback {
         /** Notifies of cancelling the tile requests for given tile indices */
-        void cancelTiles(Iterable<Integer> tileIds);
+        void cancelTiles(@NonNull Iterable<Integer> tileIds);
     }
 
     /** Callback for {@link #updateViewArea}. */
     public interface ViewAreaUpdateCallback {
 
         /** Notifies of new tiles required after the latest change in view area. */
-        void requestNewTiles(Iterable<TileInfo> tiles);
+        void requestNewTiles(@NonNull Iterable<TileInfo> tiles);
 
         /** Notifies of tiles are no longer needed after the latest change in view area. */
-        void discardTiles(Iterable<Integer> tileIds);
+        void discardTiles(@NonNull Iterable<Integer> tileIds);
     }
 
     /** Lists the indexes of the tiles that are currently visible. */
+    @NonNull
     public Iterable<Integer> getVisibleTileIndexes() {
         return areaIndexes(mVisibleArea);
     }
@@ -290,7 +278,7 @@ public class TileBoard {
     /**
      *
      */
-    public boolean isTileVisible(TileInfo tileInfo) {
+    public boolean isTileVisible(@NonNull TileInfo tileInfo) {
         return mVisibleArea != null
                 && tileInfo.mRow >= mVisibleArea.mTop
                 && tileInfo.mRow <= mVisibleArea.mBottom
@@ -302,6 +290,7 @@ public class TileBoard {
     private Iterable<Integer> areaIndexes(final Area area) {
         return new Iterable<Integer>() {
 
+            @NonNull
             @Override
             public Iterator<Integer> iterator() {
                 return new Iterator<Integer>() {
@@ -338,42 +327,26 @@ public class TileBoard {
         };
     }
 
+    @NonNull
     @Override
     public String toString() {
         return String.format(mTag + " (%s x %s), vis: %s", numRows(), mNumCols, mVisibleArea);
     }
 
     private void logMem() {
-        int memSize = 0;
-        int count = 0;
         int i = 0;
         StringBuilder out = new StringBuilder();
         for (Bitmap bitmap : mTiles) {
             if (bitmap != null) {
-                count++;
-                memSize += BitmapRecycler.getMemSizeKb(bitmap);
                 out.append(i).append(",");
             }
             i++;
         }
-        Log.v(
-                mTag,
-                String.format(
-                        "Tile Mem usage (%s): %d tiles (out of %d) / %d K. %s",
-                        mTag, count, mTiles.length, memSize, out));
     }
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-        int k = 0;
-        for (Bitmap tile : mTiles) {
-            if (tile != null) {
-                ErrorLog.log(mTag,
-                        "Finalize -- Memory leak candidate (bitmap not null) " + mTileInfos[k]);
-            }
-            k++;
-        }
     }
 
     /**
@@ -381,7 +354,8 @@ public class TileBoard {
      * covered by
      * {@code rects}.
      */
-    public List<TileInfo> findTileInfosForRects(List<Rect> rects) {
+    @NonNull
+    public List<TileInfo> findTileInfosForRects(@NonNull List<Rect> rects) {
         Set<Integer> tileNums = new HashSet<>();
         for (Rect rect : rects) {
             tileNums.addAll(findTilesForRect(rect));
@@ -434,7 +408,7 @@ public class TileBoard {
         /**
          *
          */
-        public boolean belongsTo(TileBoard board) {
+        public boolean belongsTo(@NonNull TileBoard board) {
             return TileBoard.this == board;
         }
 
@@ -443,11 +417,13 @@ public class TileBoard {
         }
 
         /** Returns the standard size of a tile. */
+        @NonNull
         public Dimensions getSize() {
             return TILE_SIZE;
         }
 
         /** Returns the exact size of this tile, cropped to the page's bounds. */
+        @NonNull
         public Dimensions getExactSize() {
             if (mRow < numRows() - 1 && mCol < mNumCols - 1) {
                 return TILE_SIZE;
@@ -458,6 +434,7 @@ public class TileBoard {
                     Math.min(TILE_SIZE.getHeight(), mBounds.getHeight() - offset.y));
         }
 
+        @NonNull
         public Point getOffset() {
             return new Point(mCol * TILE_SIZE.getWidth(), mRow * TILE_SIZE.getHeight());
         }
@@ -467,6 +444,7 @@ public class TileBoard {
          * this
          * tile anymore.
          */
+        @NonNull
         public Rect getBounds() {
             Point offset = getOffset();
             return new Rect(offset.x, offset.y, offset.x + TILE_SIZE.getWidth(),
@@ -491,6 +469,7 @@ public class TileBoard {
             return 31 + TileBoard.this.hashCode() + getIndex();
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("Tile %d @(%d, %d)", getIndex(), mRow, mCol);
@@ -558,6 +537,7 @@ public class TileBoard {
             return result;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("Area [%d tiles] (%d %d - %d %d)", size(), mTop, mLeft, mBottom,

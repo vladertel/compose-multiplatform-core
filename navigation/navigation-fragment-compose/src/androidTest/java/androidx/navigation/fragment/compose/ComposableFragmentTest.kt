@@ -35,24 +35,39 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ComposableFragmentTest {
 
-    @get:Rule
-    val testRule = createAndroidComposeRule<TestActivity>()
+    @get:Rule val testRule = createAndroidComposeRule<TestActivity>()
 
     @Test
     fun showContent() {
-        val composableFragment = ComposableFragment(
-            "androidx.navigation.fragment.compose.ComposableFragmentTestKt\$Content"
-        )
+        val composableFragment =
+            ComposableFragment(
+                "androidx.navigation.fragment.compose.ComposableFragmentTestKt\$Content"
+            )
         val fragmentManager = testRule.activity.supportFragmentManager
         testRule.runOnUiThread {
-            fragmentManager.commitNow {
-                add(R.id.fragment_container, composableFragment)
-            }
+            fragmentManager.commitNow { add(R.id.fragment_container, composableFragment) }
         }
 
         testRule.waitForIdle()
 
         testRule.onNodeWithText("ComposableFragment").assertIsDisplayed()
+    }
+
+    @Test
+    fun showContentWithArgs() {
+        val composableFragment =
+            ComposableFragment(
+                    "androidx.navigation.fragment.compose.ComposableFragmentTestKt\$ContentWithArgs"
+                )
+                .apply { requireArguments().putString("test", "argument") }
+        val fragmentManager = testRule.activity.supportFragmentManager
+        testRule.runOnUiThread {
+            fragmentManager.commitNow { add(R.id.fragment_container, composableFragment) }
+        }
+
+        testRule.waitForIdle()
+
+        testRule.onNodeWithText("ComposableFragment: argument").assertIsDisplayed()
     }
 }
 
@@ -60,4 +75,12 @@ class ComposableFragmentTest {
 @Composable
 fun Content() {
     Text("ComposableFragment")
+}
+
+@Suppress("TestFunctionName")
+@Composable
+fun ContentWithArgs() {
+    val args = LocalFragment.current.requireArguments()
+    val testArgument = args.getString("test")
+    Text("ComposableFragment: $testArgument")
 }

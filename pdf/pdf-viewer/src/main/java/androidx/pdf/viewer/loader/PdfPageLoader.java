@@ -19,23 +19,23 @@ package androidx.pdf.viewer.loader;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.Point;
-import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.pdf.R;
-import androidx.pdf.aidl.Dimensions;
-import androidx.pdf.aidl.LinkRects;
-import androidx.pdf.aidl.MatchRects;
-import androidx.pdf.aidl.PageSelection;
-import androidx.pdf.aidl.SelectionBoundary;
-import androidx.pdf.pdflib.PdfDocumentRemoteProto;
-import androidx.pdf.util.BitmapParcel;
-import androidx.pdf.util.StrictModeUtils;
+import androidx.pdf.models.Dimensions;
+import androidx.pdf.models.GotoLink;
+import androidx.pdf.models.LinkRects;
+import androidx.pdf.models.MatchRects;
+import androidx.pdf.models.PageSelection;
+import androidx.pdf.models.SelectionBoundary;
+import androidx.pdf.service.PdfDocumentRemoteProto;
 import androidx.pdf.util.TileBoard.TileInfo;
 
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -49,7 +49,6 @@ import java.util.Objects;
  * a new request is accepted.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
-@SuppressWarnings("BanConcurrentHashMap")
 public class PdfPageLoader {
     public static final String TAG = PdfPageLoader.class.getSimpleName();
 
@@ -59,13 +58,6 @@ public class PdfPageLoader {
     private final PdfLoader mParent;
     private final int mPageNum;
     private final boolean mHideTextAnnotations;
-
-    /**
-     * This flag is set when this page makes pdfClient crash, and we'd better avoid crashing it
-     * again.
-     */
-    private boolean mIsBroken = false;
-
     /** Currently scheduled tasks - null if no task of this type is scheduled. */
     GetDimensionsTask mDimensionsTask;
     RenderBitmapTask mBitmapTask;
@@ -73,6 +65,8 @@ public class PdfPageLoader {
     SearchPageTextTask mSearchPageTextTask;
     SelectionTask mSelectionTask;
     GetPageLinksTask mLinksTask;
+    GetPageGotoLinksTask mGotoLinksTask;
+    ReleasePageTask mReleasePageTask;
 
     /**
      * All currently scheduled tile tasks.
@@ -80,20 +74,17 @@ public class PdfPageLoader {
      * <p>Map is preferred to SparseArray because of frequent access by key, and leaner API (e.g.
      * combined remove-get).
      */
-    @SuppressLint("UseSparseArrays")
+    @SuppressLint({"UseSparseArrays", "BanConcurrentHashMap"})
     Map<Integer, RenderTileTask> mTileTasks =
             new java.util.concurrent.ConcurrentHashMap<Integer, RenderTileTask>();
 
     /** The reference pageWidth for all tile related tasks. */
     int mTilePageWidth;
-
-    static {
-        // TODO: StrictMode- disk read 14ms.
-        // NOTE: this line can break when running with --noforge, such as when debugging with
-        // Android Studio. You may need to comment it out locally if you see errors like
-        // `java.lang.UnsatisfiedLinkError: no bitmap_parcel in java.library.path`.
-        StrictModeUtils.bypass(() -> BitmapParcel.loadNdkLib());
-    }
+    /**
+     * This flag is set when this page makes pdfClient crash, and we'd better avoid crashing it
+     * again.
+     */
+    private boolean mIsBroken = false;
 
     PdfPageLoader(PdfLoader parent, int pageNum, boolean hideTextAnnotations) {
         this.mParent = parent;
@@ -121,7 +112,7 @@ public class PdfPageLoader {
     }
 
     /** Schedule task to render a page as a bitmap. */
-    public void loadPageBitmap(Dimensions pageSize) {
+    public void loadPageBitmap(@NonNull Dimensions pageSize) {
         if (mBitmapTask != null && mBitmapTask.mDimensions.getWidth() < pageSize.getWidth()) {
             cancelPageBitmap();
         }
@@ -147,7 +138,7 @@ public class PdfPageLoader {
      * this one, they are all canceled. If any tile request is a duplicate, it will not be
      * scheduled.
      */
-    public void loadTilesBitmaps(Dimensions pageSize, Iterable<TileInfo> tiles) {
+    public void loadTilesBitmaps(@NonNull Dimensions pageSize, @NonNull Iterable<TileInfo> tiles) {
         if (!mTileTasks.isEmpty() && mTilePageWidth != pageSize.getWidth()) {
             cancelAllTileBitmaps();
         }
@@ -201,7 +192,7 @@ public class PdfPageLoader {
     }
 
     /** Schedule task to search a page's text. */
-    public void searchPageText(String query) {
+    public void searchPageText(@NonNull String query) {
         if (!mIsBroken && mSearchPageTextTask != null && !mSearchPageTextTask.mQuery.equals(
                 query)) {
             cancelSearch();
@@ -220,7 +211,7 @@ public class PdfPageLoader {
     }
 
     /** Schedule task to select some of the page text. */
-    public void selectPageText(SelectionBoundary start, SelectionBoundary stop) {
+    public void selectPageText(@NonNull SelectionBoundary start, @NonNull SelectionBoundary stop) {
         // These tasks will be requested almost continuously as long as the user
         // is dragging a handle - only start a new one if we finished the last one.
         if (mSelectionTask != null) {
@@ -258,6 +249,22 @@ public class PdfPageLoader {
         }
     }
 
+    /** Schedule task to get a page's goto links. */
+    public void loadPageGotoLinks() {
+        if (!mIsBroken && mGotoLinksTask == null) {
+            mGotoLinksTask = new GetPageGotoLinksTask();
+            mParent.mExecutor.schedule(mGotoLinksTask);
+        }
+    }
+
+    /** Releases object in memory related to a page when that page is no longer visible. */
+    public void releasePage() {
+        if (mReleasePageTask == null) {
+            mReleasePageTask = new ReleasePageTask();
+            mParent.mExecutor.schedule(mReleasePageTask);
+        }
+    }
+
     /**
      *
      */
@@ -279,7 +286,6 @@ public class PdfPageLoader {
     private void setBroken() {
         // TODO: Track the broken state of the FileInfo object.
         if (!mIsBroken) {
-            Log.w(TAG, String.format("Page %d is broken", mPageNum));
             mIsBroken = true;
         }
     }
@@ -318,11 +324,6 @@ public class PdfPageLoader {
         protected void cleanup() {
             mDimensionsTask = null;
         }
-
-        @Override
-        public String toString() {
-            return String.format("GetDimensionsTask(page=%d)", mPageNum);
-        }
     }
 
     /** AsyncTask for rendering a page as a bitmap. */
@@ -342,23 +343,9 @@ public class PdfPageLoader {
 
         @Override
         protected Bitmap doInBackground(PdfDocumentRemoteProto pdfDocument) throws RemoteException {
-            Bitmap bitmap = mParent.mBitmapRecycler.obtainBitmap(mDimensions);
-            if (bitmap != null) {
-                BitmapParcel bitmapParcel = null;
-                try {
-                    bitmapParcel = new BitmapParcel(bitmap);
-                    ParcelFileDescriptor fd = bitmapParcel.openOutputFd();
-                    if (fd != null) {
-                        pdfDocument.getPdfDocumentRemote().renderPage(mPageNum, mDimensions,
-                                mHideTextAnnotations, fd);
-                    }
-                } finally {
-                    if (bitmapParcel != null) {
-                        bitmapParcel.close();
-                    }
-                }
-            }
-            return bitmap;
+            return pdfDocument.getPdfDocumentRemote().renderPage(mPageNum, mDimensions.getWidth(),
+                    mDimensions.getHeight(),
+                    mHideTextAnnotations);
         }
 
         @Override
@@ -379,10 +366,45 @@ public class PdfPageLoader {
             callbacks.pageBroken(mPageNum);
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("RenderBitmapTask(page=%d width=%d height=%d)",
                     mPageNum, mDimensions.getWidth(), mDimensions.getHeight());
+        }
+    }
+
+    /** AsyncTask for releasing page objects from memory after it is no longer visible. */
+    class ReleasePageTask extends AbstractPdfTask<Void> {
+        ReleasePageTask() {
+            super(mParent, Priority.RELEASE);
+        }
+
+        @Override
+        protected String getLogTag() {
+            return "ReleasePageTask";
+        }
+
+        @Override
+        protected Void doInBackground(PdfDocumentRemoteProto pdfDocument) throws RemoteException {
+            pdfDocument.getPdfDocumentRemote().releasePage(mPageNum);
+            return null;
+        }
+
+        @Override
+        protected void doCallback(PdfLoaderCallbacks callbacks, Void unused) {
+            /* no-op */
+        }
+
+        @Override
+        protected void cleanup() {
+            mReleasePageTask = null;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return String.format("ReleasePageTask(page=%d)", mPageNum);
         }
     }
 
@@ -404,33 +426,16 @@ public class PdfPageLoader {
 
         @Override
         protected Bitmap doInBackground(PdfDocumentRemoteProto pdfDocument) throws RemoteException {
-            Bitmap bitmap = mParent.mBitmapRecycler.obtainBitmap(mTileInfo.getSize());
-            if (bitmap != null) {
-                Point offset = mTileInfo.getOffset();
-
-                BitmapParcel bitmapParcel = null;
-                try {
-                    bitmapParcel = new BitmapParcel(bitmap);
-                    ParcelFileDescriptor fd = bitmapParcel.openOutputFd();
-                    if (fd != null) {
-                        pdfDocument.getPdfDocumentRemote().renderTile(
-                                mPageNum,
-                                mPageSize.getWidth(),
-                                mPageSize.getHeight(),
-                                offset.x,
-                                offset.y,
-                                mTileInfo.getSize(),
-                                mHideTextAnnotations,
-                                fd);
-                    }
-                } finally {
-                    if (bitmapParcel != null) {
-                        bitmapParcel.close();
-                    }
-                }
-
-            }
-            return bitmap;
+            Point offset = mTileInfo.getOffset();
+            return pdfDocument.getPdfDocumentRemote().renderTile(
+                    mPageNum,
+                    mTileInfo.getSize().getWidth(),
+                    mTileInfo.getSize().getHeight(),
+                    mPageSize.getWidth(),
+                    mPageSize.getHeight(),
+                    offset.x,
+                    offset.y,
+                    mHideTextAnnotations);
         }
 
         @Override
@@ -445,6 +450,7 @@ public class PdfPageLoader {
             mTileTasks.remove(mTileInfo.getIndex());
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("RenderTileTask(page=%d width=%d height=%d tile=%s)",
@@ -505,14 +511,10 @@ public class PdfPageLoader {
             mTextTask = null;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("GetPageTextTask(page=%d)", mPageNum);
-        }
-
-        @Override
-        public String resultToString(String result) {
-            return result.length() + "characters";
         }
     }
 
@@ -546,6 +548,7 @@ public class PdfPageLoader {
             mSearchPageTextTask = null;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("SearchPageTextTask(page=%d, query=\"%s\")", mPageNum, mQuery);
@@ -584,6 +587,7 @@ public class PdfPageLoader {
             mSelectionTask = null;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("SelectionTask(page=%d, start=%s, stop=%s)", mPageNum, mStart,
@@ -622,9 +626,49 @@ public class PdfPageLoader {
             mLinksTask = null;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return String.format("GetPageLinksTask(page=%d)", mPageNum);
+        }
+    }
+
+    /** AsyncTask for getting a page's go-to links. */
+    class GetPageGotoLinksTask extends AbstractPdfTask<List<GotoLink>> {
+        GetPageGotoLinksTask() {
+            // Go-to links are a subset of links so we will follow all link settings.
+            super(mParent, Priority.LINKS);
+        }
+
+        @Override
+        protected String getLogTag() {
+            return "GetPageGotoLinksTask";
+        }
+
+        @Override
+        protected List<GotoLink> doInBackground(PdfDocumentRemoteProto pdfDocument)
+                throws RemoteException {
+            if (TaskDenyList.sDisableLinks) {
+                return Collections.emptyList();
+            } else {
+                return pdfDocument.getPdfDocumentRemote().getPageGotoLinks(mPageNum);
+            }
+        }
+
+        @Override
+        protected void doCallback(PdfLoaderCallbacks callbacks, List<GotoLink> links) {
+            callbacks.setPageGotoLinks(mPageNum, links);
+        }
+
+        @Override
+        protected void cleanup() {
+            mGotoLinksTask = null;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return String.format("GetPageGotoLinksTask(page=%d)", mPageNum);
         }
     }
 }

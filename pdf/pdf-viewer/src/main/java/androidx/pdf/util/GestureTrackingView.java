@@ -22,6 +22,8 @@ import android.view.GestureDetector.OnGestureListener;
 import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.pdf.util.GestureTracker.Gesture;
 
@@ -41,24 +43,26 @@ public abstract class GestureTrackingView extends FrameLayout {
 
     protected final GestureTracker mGestureTracker;
 
-    public GestureTrackingView(Context context) {
+    public GestureTrackingView(@NonNull Context context) {
         super(context);
     }
 
-    public GestureTrackingView(Context context, AttributeSet attrs) {
+    public GestureTrackingView(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public GestureTrackingView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public GestureTrackingView(@NonNull Context context, @Nullable AttributeSet attrs,
+            int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public GestureTrackingView(Context ctx, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public GestureTrackingView(@NonNull Context ctx, @Nullable AttributeSet attrs, int defStyleAttr,
+            int defStyleRes) {
         super(ctx, attrs, defStyleAttr, defStyleRes);
     }
 
     {
-        mGestureTracker = new GestureTracker(getClass().getSimpleName(), getContext());
+        mGestureTracker = new GestureTracker(getContext());
     }
 
     @Override
@@ -124,9 +128,10 @@ public abstract class GestureTrackingView extends FrameLayout {
      * @param gestureTracker The {@link GestureTracker} with the current gesture.
      * @return True if this View should capture the gesture, false if it doesn't bother.
      */
-    protected abstract boolean interceptGesture(GestureTracker gestureTracker);
+    protected abstract boolean interceptGesture(@NonNull GestureTracker gestureTracker);
 
-    protected OnGestureListener patchGestureListener(OnGestureListener original) {
+    @NonNull
+    protected OnGestureListener patchGestureListener(@NonNull OnGestureListener original) {
         return new PatchedSimpleGestureHandler(original);
     }
 
@@ -146,7 +151,8 @@ public abstract class GestureTrackingView extends FrameLayout {
         }
 
         @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        public boolean onScroll(MotionEvent e1, @NonNull MotionEvent e2, float distanceX,
+                float distanceY) {
             if (mDiscardFirstScroll) {
                 mDiscardFirstScroll = false;
                 return true;
@@ -160,27 +166,28 @@ public abstract class GestureTrackingView extends FrameLayout {
         }
 
         @Override
-        public boolean onDown(MotionEvent e) {
+        public boolean onDown(@NonNull MotionEvent e) {
             return mHandler.onDown(e);
         }
 
         @Override
-        public void onShowPress(MotionEvent e) {
+        public void onShowPress(@NonNull MotionEvent e) {
             mHandler.onShowPress(e);
         }
 
         @Override
-        public boolean onSingleTapUp(MotionEvent e) {
+        public boolean onSingleTapUp(@NonNull MotionEvent e) {
             return mHandler.onSingleTapUp(e);
         }
 
         @Override
-        public void onLongPress(MotionEvent e) {
+        public void onLongPress(@NonNull MotionEvent e) {
             mHandler.onLongPress(e);
         }
 
         @Override
-        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2, float velocityX,
+                float velocityY) {
             return mHandler.onFling(e1, e2, velocityX, velocityY);
         }
     }

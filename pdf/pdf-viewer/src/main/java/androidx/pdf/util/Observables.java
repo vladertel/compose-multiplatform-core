@@ -18,6 +18,7 @@ package androidx.pdf.util;
 
 import android.util.SparseArray;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
@@ -48,6 +49,7 @@ public class Observables {
 
         private final Set<O> mObservers = new HashSet<O>();
 
+        @NonNull
         @CanIgnoreReturnValue
         @Override
         public Object addObserver(O observer) {
@@ -61,7 +63,7 @@ public class Observables {
         }
 
         @Override
-        public void removeObserver(Object observer) {
+        public void removeObserver(@NonNull Object observer) {
             synchronized (mObservers) {
                 Preconditions.checkArgument(
                         mObservers.remove(observer),
@@ -78,13 +80,10 @@ public class Observables {
 
         @Override
         protected void finalize() throws Throwable {
-            if (hasObservers()) {
-                ErrorLog.log(TAG, "Leaking " + mObservers.size() + " observers, e.g. "
-                        + mObservers.iterator().next());
-            }
             super.finalize();
         }
 
+        @NonNull
         @Override
         public Iterator<O> iterator() {
             Iterator<O> iterator;
@@ -148,11 +147,13 @@ public class Observables {
     }
 
     /** Shortcut method for creating a new {@link ExposedValue} instance. */
+    @NonNull
     public static <V> ExposedValue<V> newExposedValue() {
         return new ExposedValue<V>(null);
     }
 
     /** Shortcut method for creating a new {@link ExposedValue} instance with an initial value. */
+    @NonNull
     public static <V> ExposedValue<V> newExposedValueWithInitialValue(V initialValue) {
         return new ExposedValue<V>(initialValue);
     }
@@ -183,6 +184,7 @@ public class Observables {
         /**
          *
          */
+        @NonNull
         @Override
         public Iterable<Integer> keys() {
             return CollectUtils.iterableKeys(mArray);
@@ -228,6 +230,7 @@ public class Observables {
     }
 
     /** Shortcut method for creating a new {@link ExposedArray} instance. */
+    @NonNull
     public static <V> ExposedArray<V> newExposedArray() {
         return new ExposedArray<V>();
     }
@@ -240,16 +243,18 @@ public class Observables {
     public abstract static class AbstractObservable<O> implements Observable<O> {
         protected final MultiObservers<O> mObservers = new MultiObservers<O>();
 
+        @NonNull
         @Override
         public Object addObserver(O observer) {
             return mObservers.addObserver(observer);
         }
 
         @Override
-        public void removeObserver(Object observer) {
+        public void removeObserver(@NonNull Object observer) {
             mObservers.removeObserver(observer);
         }
 
+        @NonNull
         protected Iterable<O> getObservers() {
             return mObservers;
         }

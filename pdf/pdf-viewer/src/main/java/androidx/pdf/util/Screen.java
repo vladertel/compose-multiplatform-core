@@ -19,8 +19,8 @@ package androidx.pdf.util;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.core.graphics.Insets;
 import androidx.core.view.WindowInsetsCompat;
@@ -40,10 +40,9 @@ public class Screen {
 
     private boolean mHasSoftBottomNavInsets;
 
-    public Screen(Context ctx) {
+    public Screen(@NonNull Context ctx) {
         this.mCtx = ctx.getApplicationContext();
         mRes = this.mCtx.getResources();
-        Log.v(TAG, "10dp = " + pxFromDp(10) + "; dpi = " + getDensityDpi());
     }
 
     /** Converts a value given in dp to pixels, based on the screen density. */
@@ -85,7 +84,8 @@ public class Screen {
     }
 
     /** Shortcut method for getting a string from its resource id. */
-    public String getString(int id, Object... formatArgs) {
+    @NonNull
+    public String getString(int id, @NonNull Object... formatArgs) {
         return mRes.getString(id, formatArgs);
     }
 
@@ -123,7 +123,7 @@ public class Screen {
     }
 
     /** Notifies this class of new WindowInsets which can be used to detect navbar. */
-    public void reportWindowInsets(WindowInsetsCompat windowInsets) {
+    public void reportWindowInsets(@NonNull WindowInsetsCompat windowInsets) {
         Insets gestureInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures());
         Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
         mHasSoftBottomNavInsets = gestureInsets.bottom > 0 || navInsets.bottom > 0;

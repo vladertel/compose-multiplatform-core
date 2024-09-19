@@ -17,11 +17,11 @@
 package androidx.pdf.util;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
-import androidx.pdf.aidl.Dimensions;
+import androidx.pdf.models.Dimensions;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class BitmapRecycler {
      * @return A recycled or new {@link Bitmap}, or null if there's not enough memory to create one.
      */
     @Nullable
-    public Bitmap obtainBitmap(Dimensions dimensions) {
+    public Bitmap obtainBitmap(@NonNull Dimensions dimensions) {
         Bitmap bitmap;
         Iterator<WeakReference<Bitmap>> iterator = null;
         synchronized (mPool) {
@@ -59,9 +59,6 @@ public class BitmapRecycler {
                 } else if (bitmap.getWidth() == dimensions.getWidth()
                         && bitmap.getHeight() == dimensions.getHeight()) {
                     iterator.remove();
-                    Log.v(TAG,
-                            "Recycle bitmap dim=" + dimensions + ", [" + getMemSizeKb(bitmap)
-                                    + "K]");
                     return bitmap;
                 }
             }
@@ -89,18 +86,16 @@ public class BitmapRecycler {
             Bitmap bitmap =
                     Bitmap.createBitmap(dimensions.getWidth(), dimensions.getHeight(),
                             Bitmap.Config.ARGB_8888);
-            Log.v(TAG, "Allocated bitmap dim=" + dimensions + ", [" + getMemSizeKb(bitmap) + "K]");
             dump();
             return bitmap;
         } catch (OutOfMemoryError e) {
-            Log.w(TAG, "Can't allocate bitmap dim=" + dimensions);
             dump();
             return null;
         }
     }
 
     /** Returns the memory usage of a {@link Bitmap} (in kb). */
-    public static int getMemSizeKb(Bitmap bitmap) {
+    public static int getMemSizeKb(@NonNull Bitmap bitmap) {
         return bitmap.getByteCount() / 1024; // could use getAllocationByteCount() for API >= 19
     }
 
@@ -119,9 +114,6 @@ public class BitmapRecycler {
         }
 
         sb.append(") /mem = " + mem);
-        if (mem != 0) {
-            Log.v(TAG, String.valueOf(sb));
-        }
     }
 
     @SuppressWarnings("ObjectToString")

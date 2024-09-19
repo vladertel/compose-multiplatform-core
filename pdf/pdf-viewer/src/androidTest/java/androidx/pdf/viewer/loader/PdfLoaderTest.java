@@ -16,7 +16,6 @@
 
 package androidx.pdf.viewer.loader;
 
-
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.fail;
@@ -30,15 +29,17 @@ import android.graphics.Rect;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 
-import androidx.pdf.aidl.Dimensions;
-import androidx.pdf.aidl.LinkRects;
-import androidx.pdf.aidl.MatchRects;
-import androidx.pdf.aidl.PageSelection;
-import androidx.pdf.aidl.PdfDocumentRemote;
-import androidx.pdf.aidl.SelectionBoundary;
+import androidx.annotation.NonNull;
 import androidx.pdf.data.DisplayData;
 import androidx.pdf.data.Opener;
 import androidx.pdf.data.PdfStatus;
+import androidx.pdf.models.Dimensions;
+import androidx.pdf.models.GotoLink;
+import androidx.pdf.models.LinkRects;
+import androidx.pdf.models.MatchRects;
+import androidx.pdf.models.PageSelection;
+import androidx.pdf.models.PdfDocumentRemote;
+import androidx.pdf.models.SelectionBoundary;
 import androidx.pdf.util.RectUtils;
 import androidx.pdf.util.TileBoard;
 import androidx.pdf.util.TileBoard.CancelTilesCallback;
@@ -59,6 +60,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -227,6 +229,7 @@ public class PdfLoaderTest {
         assertThat(mPdfLoader.getPageLoader(PAGE).mSelectionTask).isNotNull();
     }
 
+    @Ignore // b/342212541
     @Test
     @UiThreadTest
     public void testLoadTiles() {
@@ -267,13 +270,9 @@ public class PdfLoaderTest {
 
     @Test
     @UiThreadTest
-    public void testCloneWithoutSecurity() throws InterruptedException, RemoteException {
-        CountDownLatch latch = new CountDownLatch(1);
-        mWeakPdfLoaderCallbacks.setClonedLatch(latch);
-        mPdfLoader.cloneWithoutSecurity(mFileOutputStream);
-        /** Wait for {@link TestCallbacks#documentCloned(boolean)} to be called. */
-        latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        verify(mPdfDocument).cloneWithoutSecurity(any(ParcelFileDescriptor.class));
+    public void testGotoLinksTask() throws RemoteException, InterruptedException {
+        getGotoLinks(mPdfLoader);
+        verify(mPdfDocument).getPageGotoLinks(PAGE);
     }
 
     @Test
@@ -281,6 +280,8 @@ public class PdfLoaderTest {
     public void testLoadDocumentTask() throws InterruptedException, RemoteException {
         CountDownLatch latch = new CountDownLatch(1);
         mWeakPdfLoaderCallbacks.setDocumentLoadedLatch(latch);
+        // ensure document is not already loaded
+        when(mConnection.isLoaded()).thenReturn(false);
         mPdfLoader.applyPassword(TEST_PW);
         /** Wait for {@link TestCallbacks#documentLoaded(int)} ()} to be called. */
         latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
@@ -310,6 +311,14 @@ public class PdfLoaderTest {
         /** Wait for {@link TestCallbacks#setPageUrlLinks(int, LinkRects)} to be called. */
         latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(mPdfDocument).getPageLinks(PAGE);
+    }
+    private void getGotoLinks(PdfLoader pdfLoader) throws InterruptedException, RemoteException {
+        when(mPdfDocument.getPageGotoLinks(anyInt())).thenReturn(new ArrayList<GotoLink>());
+        CountDownLatch latch = new CountDownLatch(1);
+        mWeakPdfLoaderCallbacks.setGotoLinksLatch(latch);
+        pdfLoader.loadPageGotoLinks(PAGE);
+        /** Wait for {@link TestCallbacks#setPageGotoLinks(int, List)} to be called. */
+        latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
     }
 
     private List<TileInfo> getSomeTiles(Dimensions pageSize) {
@@ -341,22 +350,15 @@ public class PdfLoaderTest {
         private CountDownLatch mSearchLatch;
         private CountDownLatch mDocumentLoadedLatch;
         private CountDownLatch mLinksUrlLatch;
+        private CountDownLatch mGotoLinksLatch;
 
         private TestCallbacks() {
             super(null);
         }
 
         @Override
-        public void documentCloned(boolean result) {
-            super.documentCloned(result);
-            if (mClonedLatch != null) {
-                mClonedLatch.countDown();
-            }
-        }
-
-        @Override
-        public void documentLoaded(int numPages) {
-            super.documentLoaded(numPages);
+        public void documentLoaded(int numPages, @NonNull DisplayData data) {
+            super.documentLoaded(numPages, data);
             if (mDocumentLoadedLatch != null) {
                 mDocumentLoadedLatch.countDown();
             }
@@ -377,6 +379,13 @@ public class PdfLoaderTest {
                 mLinksUrlLatch.countDown();
             }
         }
+        @Override
+        public void setPageGotoLinks(int pageNum, List<GotoLink> links) {
+            super.setPageGotoLinks(pageNum, links);
+            if (mLinksUrlLatch != null) {
+                mLinksUrlLatch.countDown();
+            }
+        }
 
         public void setClonedLatch(CountDownLatch latch) {
             mClonedLatch = latch;
@@ -392,6 +401,10 @@ public class PdfLoaderTest {
 
         public void setUrlLinksLatch(CountDownLatch linksLatch) {
             this.mLinksUrlLatch = linksLatch;
+        }
+
+        public void setGotoLinksLatch(CountDownLatch linksLatch) {
+            this.mGotoLinksLatch = linksLatch;
         }
     }
 }

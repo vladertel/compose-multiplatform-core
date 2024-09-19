@@ -87,6 +87,7 @@ private val excludeTaskNames =
         "bundleAndroidMainAar",
         "bundleAndroidMainLocalLintAar",
         "repackageAndroidMainAar",
+        "repackageAarWithResourceApiAndroidMain"
     )
 
 /**
@@ -134,7 +135,6 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
         return listOf() // we don't publish integration tests
     if (taskName.startsWith("zip") && taskName.contains("ResultsOf") && taskName.contains("Test"))
         return listOf() // we don't publish test results
-    if (projectPath == ":compose:compiler:compiler" && taskName == "embeddedPlugin") return listOf()
 
     // ShadowJar tasks have a `configurations` property that lists the configurations that
     // are inputs to the task, but they don't also list file inputs
@@ -348,6 +348,7 @@ fun Project.getSbomPublishDir(): File {
 
 private const val MAVEN_CENTRAL_REPO_URL = "https://repo.maven.apache.org/maven2"
 private const val GMAVEN_REPO_URL = "https://dl.google.com/android/maven2"
+
 /** Returns a mapping from local repo url to public repo url */
 private fun Project.getRepoPublicUrls(): Map<String, String> {
     return if (ProjectLayoutType.isPlayground(this)) {
@@ -363,5 +364,4 @@ private fun Project.getRepoPublicUrls(): Map<String, String> {
     }
 }
 
-private fun Project.appliesShadowPlugin() =
-    pluginManager.hasPlugin("com.github.johnrengelman.shadow")
+private fun Project.appliesShadowPlugin() = pluginManager.hasPlugin("com.gradleup.shadow")

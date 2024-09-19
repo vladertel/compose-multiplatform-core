@@ -16,6 +16,7 @@
 package androidx.health.connect.client.permission
 
 import androidx.annotation.RestrictTo
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
@@ -42,11 +43,13 @@ import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SexualActivityRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
@@ -150,10 +153,13 @@ internal constructor(
          *
          * An attempt to read data in background without this permission may result in an error.
          *
+         * This feature is dependent on the version of HealthConnect installed on the device. To
+         * check if it's available call [HealthConnectFeatures.getFeatureStatus] and pass
+         * [HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND] as an argument.
+         *
          * @sample androidx.health.connect.client.samples.RequestBackgroundReadPermission
          * @sample androidx.health.connect.client.samples.ReadRecordsInBackground
          */
-        @RestrictTo(RestrictTo.Scope.LIBRARY) // Hidden for now
         const val PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND =
             PERMISSION_PREFIX + "READ_HEALTH_DATA_IN_BACKGROUND"
 
@@ -169,6 +175,7 @@ internal constructor(
             PERMISSION_PREFIX + "READ_TOTAL_CALORIES_BURNED"
         internal const val READ_VO2_MAX = PERMISSION_PREFIX + "READ_VO2_MAX"
         internal const val READ_WHEELCHAIR_PUSHES = PERMISSION_PREFIX + "READ_WHEELCHAIR_PUSHES"
+        internal const val READ_PLANNED_EXERCISE = PERMISSION_PREFIX + "READ_PLANNED_EXERCISE"
         internal const val READ_POWER = PERMISSION_PREFIX + "READ_POWER"
         internal const val READ_SPEED = PERMISSION_PREFIX + "READ_SPEED"
 
@@ -180,12 +187,8 @@ internal constructor(
         internal const val READ_BONE_MASS = PERMISSION_PREFIX + "READ_BONE_MASS"
         internal const val READ_HEIGHT = PERMISSION_PREFIX + "READ_HEIGHT"
 
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        internal const val READ_HIP_CIRCUMFERENCE = PERMISSION_PREFIX + "READ_HIP_CIRCUMFERENCE"
         internal const val READ_LEAN_BODY_MASS = PERMISSION_PREFIX + "READ_LEAN_BODY_MASS"
 
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        internal const val READ_WAIST_CIRCUMFERENCE = PERMISSION_PREFIX + "READ_WAIST_CIRCUMFERENCE"
         internal const val READ_WEIGHT = PERMISSION_PREFIX + "READ_WEIGHT"
 
         // Read permissions for CYCLE_TRACKING.
@@ -217,6 +220,7 @@ internal constructor(
         internal const val READ_OXYGEN_SATURATION = PERMISSION_PREFIX + "READ_OXYGEN_SATURATION"
         internal const val READ_RESPIRATORY_RATE = PERMISSION_PREFIX + "READ_RESPIRATORY_RATE"
         internal const val READ_RESTING_HEART_RATE = PERMISSION_PREFIX + "READ_RESTING_HEART_RATE"
+        internal const val READ_SKIN_TEMPERATURE = PERMISSION_PREFIX + "READ_SKIN_TEMPERATURE"
 
         // Write permissions for ACTIVITY.
         internal const val WRITE_ACTIVE_CALORIES_BURNED =
@@ -230,6 +234,7 @@ internal constructor(
             PERMISSION_PREFIX + "WRITE_TOTAL_CALORIES_BURNED"
         internal const val WRITE_VO2_MAX = PERMISSION_PREFIX + "WRITE_VO2_MAX"
         internal const val WRITE_WHEELCHAIR_PUSHES = PERMISSION_PREFIX + "WRITE_WHEELCHAIR_PUSHES"
+        internal const val WRITE_PLANNED_EXERCISE = PERMISSION_PREFIX + "WRITE_PLANNED_EXERCISE"
         internal const val WRITE_POWER = PERMISSION_PREFIX + "WRITE_POWER"
         internal const val WRITE_SPEED = PERMISSION_PREFIX + "WRITE_SPEED"
 
@@ -241,13 +246,8 @@ internal constructor(
         internal const val WRITE_BONE_MASS = PERMISSION_PREFIX + "WRITE_BONE_MASS"
         internal const val WRITE_HEIGHT = PERMISSION_PREFIX + "WRITE_HEIGHT"
 
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        internal const val WRITE_HIP_CIRCUMFERENCE = PERMISSION_PREFIX + "WRITE_HIP_CIRCUMFERENCE"
         internal const val WRITE_LEAN_BODY_MASS = PERMISSION_PREFIX + "WRITE_LEAN_BODY_MASS"
 
-        @RestrictTo(RestrictTo.Scope.LIBRARY)
-        internal const val WRITE_WAIST_CIRCUMFERENCE =
-            PERMISSION_PREFIX + "WRITE_WAIST_CIRCUMFERENCE"
         internal const val WRITE_WEIGHT = PERMISSION_PREFIX + "WRITE_WEIGHT"
 
         // Write permissions for CYCLE_TRACKING.
@@ -279,6 +279,7 @@ internal constructor(
         internal const val WRITE_OXYGEN_SATURATION = PERMISSION_PREFIX + "WRITE_OXYGEN_SATURATION"
         internal const val WRITE_RESPIRATORY_RATE = PERMISSION_PREFIX + "WRITE_RESPIRATORY_RATE"
         internal const val WRITE_RESTING_HEART_RATE = PERMISSION_PREFIX + "WRITE_RESTING_HEART_RATE"
+        internal const val WRITE_SKIN_TEMPERATURE = PERMISSION_PREFIX + "WRITE_SKIN_TEMPERATURE"
 
         internal const val READ_PERMISSION_PREFIX = PERMISSION_PREFIX + "READ_"
         internal const val WRITE_PERMISSION_PREFIX = PERMISSION_PREFIX + "WRITE_"
@@ -330,6 +331,8 @@ internal constructor(
                     READ_OVULATION_TEST.substringAfter(READ_PERMISSION_PREFIX),
                 OxygenSaturationRecord::class to
                     READ_OXYGEN_SATURATION.substringAfter(READ_PERMISSION_PREFIX),
+                PlannedExerciseSessionRecord::class to
+                    READ_PLANNED_EXERCISE.substringAfter(READ_PERMISSION_PREFIX),
                 PowerRecord::class to READ_POWER.substringAfter(READ_PERMISSION_PREFIX),
                 RespiratoryRateRecord::class to
                     READ_RESPIRATORY_RATE.substringAfter(READ_PERMISSION_PREFIX),
@@ -339,6 +342,8 @@ internal constructor(
                     READ_SEXUAL_ACTIVITY.substringAfter(READ_PERMISSION_PREFIX),
                 SleepSessionRecord::class to READ_SLEEP.substringAfter(READ_PERMISSION_PREFIX),
                 SpeedRecord::class to READ_SPEED.substringAfter(READ_PERMISSION_PREFIX),
+                SkinTemperatureRecord::class to
+                    READ_SKIN_TEMPERATURE.substringAfter(READ_PERMISSION_PREFIX),
                 StepsCadenceRecord::class to READ_STEPS.substringAfter(READ_PERMISSION_PREFIX),
                 StepsRecord::class to READ_STEPS.substringAfter(READ_PERMISSION_PREFIX),
                 TotalCaloriesBurnedRecord::class to
@@ -348,6 +353,23 @@ internal constructor(
                 WheelchairPushesRecord::class to
                     READ_WHEELCHAIR_PUSHES.substringAfter(READ_PERMISSION_PREFIX),
             )
+
+        /**
+         * Exposes all write and read permissions.
+         *
+         * @return A list of permissions as Strings
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @JvmField
+        public val ALL_PERMISSIONS: List<String> = buildList {
+            addAll(
+                RECORD_TYPE_TO_PERMISSION.flatMap {
+                    listOf(WRITE_PERMISSION_PREFIX + it.value, READ_PERMISSION_PREFIX + it.value)
+                }
+            )
+            add(PERMISSION_WRITE_EXERCISE_ROUTE)
+            add(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)
+        }
     }
 
     override fun equals(other: Any?): Boolean {

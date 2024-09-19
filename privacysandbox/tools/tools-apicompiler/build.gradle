@@ -21,6 +21,8 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 import androidx.build.SdkHelperKt
 import androidx.build.AndroidXConfig
@@ -58,7 +60,7 @@ dependencies {
 
 // Get AIDL compiler path and framework.aidl path and pass to tests for code generation.
 def aidlCompilerPath = "${SdkHelperKt.getSdkPath(project)}/build-tools/$buildToolsVersion/aidl"
-def frameworkAidlPath = "${SdkHelperKt.getSdkPath(project)}/platforms/$compileSdk/framework.aidl"
+def frameworkAidlPath = "${SdkHelperKt.getSdkPath(project)}/platforms/android-$compileSdk/framework.aidl"
 def testGeneratedSourcesPath = "${project.buildDir}/testGeneratedSources"
 tasks.withType(Test).configureEach { test ->
     test.inputs.files(aidlCompilerPath)
@@ -80,4 +82,5 @@ androidx {
     type = LibraryType.ANNOTATION_PROCESSOR
     inceptionYear = "2022"
     description = "Compiler for Privacy Sandbox API annotations."
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

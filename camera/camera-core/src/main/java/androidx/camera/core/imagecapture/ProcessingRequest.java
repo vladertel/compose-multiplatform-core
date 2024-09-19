@@ -21,12 +21,10 @@ import static java.util.Objects.requireNonNull;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.Rect;
-import android.os.Build;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
@@ -41,7 +39,6 @@ import java.util.List;
 /**
  * A post-processing request and its callback.
  */
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class ProcessingRequest {
     private final int mRequestId;
     @Nullable
@@ -60,6 +57,8 @@ class ProcessingRequest {
     private final List<Integer> mStageIds;
 
     @NonNull final ListenableFuture<Void> mCaptureFuture;
+    static final int PROGRESS_NOT_RECEIVED = -1;
+    private int mLastCaptureProcessProgressed = PROGRESS_NOT_RECEIVED;
 
     ProcessingRequest(
             @NonNull CaptureBundle captureBundle,
@@ -149,7 +148,10 @@ class ProcessingRequest {
 
     @MainThread
     void onCaptureProcessProgressed(int progress) {
-        mCallback.onCaptureProcessProgressed(progress);
+        if (mLastCaptureProcessProgressed != progress) {
+            mLastCaptureProcessProgressed = progress;
+            mCallback.onCaptureProcessProgressed(progress);
+        }
     }
 
     /**
@@ -157,6 +159,11 @@ class ProcessingRequest {
      */
     @MainThread
     void onImageCaptured() {
+        // If process progress has ever been sent, ensure progress 100 is sent before image sent.
+        if (mLastCaptureProcessProgressed != PROGRESS_NOT_RECEIVED) {
+            onCaptureProcessProgressed(100);
+        }
+
         mCallback.onImageCaptured();
     }
 

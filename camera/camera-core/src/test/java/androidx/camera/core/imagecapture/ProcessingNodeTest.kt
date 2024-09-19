@@ -18,6 +18,7 @@ package androidx.camera.core.imagecapture
 
 import android.graphics.ImageFormat
 import android.graphics.Rect
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Build
 import android.os.Looper.getMainLooper
 import androidx.camera.core.ImageCaptureException
@@ -43,23 +44,24 @@ import com.google.common.truth.Truth.assertThat
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.internal.DoNotInstrument
 import org.robolectric.util.ReflectionHelpers.setStaticField
 
-/**
- * Unit tests for [ProcessingNode].
- */
+/** Unit tests for [ProcessingNode]. */
 @RunWith(RobolectricTestRunner::class)
 @DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class ProcessingNodeTest {
 
     private lateinit var processingNodeIn: ProcessingNode.In
+    private var cameraCharacteristics: CameraCharacteristics =
+        mock(CameraCharacteristics::class.java)
 
-    private var node = ProcessingNode(mainThreadExecutor())
+    private var node = ProcessingNode(mainThreadExecutor(), cameraCharacteristics)
 
     @Before
     fun setUp() {
@@ -71,16 +73,17 @@ class ProcessingNodeTest {
     fun processRequest_hasDiskResult() {
         // Arrange: create a request with callback.
         val callback = FakeTakePictureCallback()
-        val request = ProcessingRequest(
-            { listOf() },
-            OUTPUT_FILE_OPTIONS,
-            Rect(0, 0, WIDTH, HEIGHT),
-            ROTATION_DEGREES,
-            /*jpegQuality=*/100,
-            SENSOR_TO_BUFFER,
-            callback,
-            Futures.immediateFuture(null)
-        )
+        val request =
+            ProcessingRequest(
+                { listOf() },
+                OUTPUT_FILE_OPTIONS,
+                Rect(0, 0, WIDTH, HEIGHT),
+                ROTATION_DEGREES,
+                /*jpegQuality=*/ 100,
+                SENSOR_TO_BUFFER,
+                callback,
+                Futures.immediateFuture(null)
+            )
 
         // Act: process the request.
         val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
@@ -97,16 +100,17 @@ class ProcessingNodeTest {
     fun processRequest_hasDiskResult_whenFormatIsJpegr() {
         // Arrange: create a request with callback.
         val callback = FakeTakePictureCallback()
-        val request = ProcessingRequest(
-            { listOf() },
-            OUTPUT_FILE_OPTIONS,
-            Rect(0, 0, WIDTH, HEIGHT),
-            ROTATION_DEGREES,
-            /*jpegQuality=*/100,
-            SENSOR_TO_BUFFER,
-            callback,
-            Futures.immediateFuture(null)
-        )
+        val request =
+            ProcessingRequest(
+                { listOf() },
+                OUTPUT_FILE_OPTIONS,
+                Rect(0, 0, WIDTH, HEIGHT),
+                ROTATION_DEGREES,
+                /*jpegQuality=*/ 100,
+                SENSOR_TO_BUFFER,
+                callback,
+                Futures.immediateFuture(null)
+            )
 
         // Act: process the request.
         val jpegBytes = createJpegrBytes(WIDTH, HEIGHT)
@@ -123,16 +127,17 @@ class ProcessingNodeTest {
         // Arrange: create a request with aborted callback.
         val callback = FakeTakePictureCallback()
         callback.aborted = true
-        val request = ProcessingRequest(
-            { listOf() },
-            OUTPUT_FILE_OPTIONS,
-            Rect(0, 0, WIDTH, HEIGHT),
-            ROTATION_DEGREES,
-            /*jpegQuality=*/100,
-            SENSOR_TO_BUFFER,
-            callback,
-            Futures.immediateFuture(null)
-        )
+        val request =
+            ProcessingRequest(
+                { listOf() },
+                OUTPUT_FILE_OPTIONS,
+                Rect(0, 0, WIDTH, HEIGHT),
+                ROTATION_DEGREES,
+                /*jpegQuality=*/ 100,
+                SENSOR_TO_BUFFER,
+                callback,
+                Futures.immediateFuture(null)
+            )
 
         // Act: process the request.
         val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
@@ -148,16 +153,17 @@ class ProcessingNodeTest {
     fun processRequest_postviewImagePropagated() {
         // Arrange: create a request with callback.
         val callback = FakeTakePictureCallback()
-        val request = ProcessingRequest(
-            { listOf() },
-            OUTPUT_FILE_OPTIONS,
-            Rect(0, 0, WIDTH, HEIGHT),
-            ROTATION_DEGREES,
-            /*jpegQuality=*/100,
-            SENSOR_TO_BUFFER,
-            callback,
-            Futures.immediateFuture(null)
-        )
+        val request =
+            ProcessingRequest(
+                { listOf() },
+                OUTPUT_FILE_OPTIONS,
+                Rect(0, 0, WIDTH, HEIGHT),
+                ROTATION_DEGREES,
+                /*jpegQuality=*/ 100,
+                SENSOR_TO_BUFFER,
+                callback,
+                Futures.immediateFuture(null)
+            )
 
         // Act: input the postview image.
         val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
@@ -174,16 +180,17 @@ class ProcessingNodeTest {
         // Arrange: create a request with aborted callback.
         val callback = FakeTakePictureCallback()
         callback.aborted = true
-        val request = ProcessingRequest(
-            { listOf() },
-            OUTPUT_FILE_OPTIONS,
-            Rect(0, 0, WIDTH, HEIGHT),
-            ROTATION_DEGREES,
-            /*jpegQuality=*/100,
-            SENSOR_TO_BUFFER,
-            callback,
-            Futures.immediateFuture(null)
-        )
+        val request =
+            ProcessingRequest(
+                { listOf() },
+                OUTPUT_FILE_OPTIONS,
+                Rect(0, 0, WIDTH, HEIGHT),
+                ROTATION_DEGREES,
+                /*jpegQuality=*/ 100,
+                SENSOR_TO_BUFFER,
+                callback,
+                Futures.immediateFuture(null)
+            )
 
         // Act: input the postview image.
         val jpegBytes = createJpegBytes(WIDTH, HEIGHT)
@@ -199,8 +206,7 @@ class ProcessingNodeTest {
     fun saveIncorrectImage_getsErrorCallback() {
         // Arrange: create an invalid ImageProxy.
         val takePictureCallback = FakeTakePictureCallback()
-        val image =
-            FakeImageProxy(FakeImageInfo())
+        val image = FakeImageProxy(FakeImageInfo())
         val processingRequest = createProcessingRequest(takePictureCallback)
         val input = ProcessingNode.InputPacket.of(processingRequest, image)
 
@@ -218,8 +224,12 @@ class ProcessingNodeTest {
         listOf("sm-a520w", "motog3").forEach { model ->
             setStaticField(Build::class.java, "MODEL", model)
             assertThat(
-                isSequentialExecutor(ProcessingNode(mainThreadExecutor()).mBlockingExecutor)
-            ).isTrue()
+                    isSequentialExecutor(
+                        ProcessingNode(mainThreadExecutor(), cameraCharacteristics)
+                            .mBlockingExecutor
+                    )
+                )
+                .isTrue()
         }
     }
 
@@ -229,7 +239,7 @@ class ProcessingNodeTest {
         setStaticField(Build::class.java, "DEVICE", "a24")
 
         // Creates the ProcessingNode after updating the device name to load the correct quirks
-        node = ProcessingNode(mainThreadExecutor())
+        node = ProcessingNode(mainThreadExecutor(), cameraCharacteristics)
 
         processingNodeIn = ProcessingNode.In.of(ImageFormat.JPEG, ImageFormat.JPEG)
         node.transform(processingNodeIn)
@@ -237,12 +247,13 @@ class ProcessingNodeTest {
         // Arrange: create an invalid ImageProxy.
         val takePictureCallback = FakeTakePictureCallback()
         val brokenJpegByteArray = createA24ProblematicJpegByteArray(WIDTH, HEIGHT)
-        val image = createJpegFakeImageProxy(
-            CameraCaptureResultImageInfo(CAMERA_CAPTURE_RESULT),
-            brokenJpegByteArray,
-            WIDTH,
-            HEIGHT
-        )
+        val image =
+            createJpegFakeImageProxy(
+                CameraCaptureResultImageInfo(CAMERA_CAPTURE_RESULT),
+                brokenJpegByteArray,
+                WIDTH,
+                HEIGHT
+            )
         val processingRequest = createProcessingRequest(takePictureCallback)
         val input = ProcessingNode.InputPacket.of(processingRequest, image)
 

@@ -31,7 +31,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.internal.tasks.userinput.UserInputHandler
-import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.internal.service.ServiceRegistry
@@ -146,7 +145,6 @@ abstract class StudioTask : DefaultTask() {
             )
             println("Extracting archive...")
             extractStudioArchive()
-            with(platformUtilities) { updateJvmHeapSize() }
             // Finish install process
             successfulInstallFile.createNewFile()
         }
@@ -227,9 +225,7 @@ abstract class StudioTask : DefaultTask() {
             "Invalid Studio vm options file location: ${vmOptions.canonicalPath}"
         }
         val pid = with(platformUtilities) { findProcess() }
-        check(pid == null) {
-            "Found managed instance of Studio already running as PID $pid"
-        }
+        check(pid == null) { "Found managed instance of Studio already running as PID $pid" }
         val logFile = File(System.getProperty("user.home"), ".AndroidXStudioLog")
         ProcessBuilder().apply {
             // Can't just use inheritIO due to https://github.com/gradle/gradle/issues/16719
@@ -271,9 +267,7 @@ abstract class StudioTask : DefaultTask() {
 
             val userInput = services.get(UserInputHandler::class.java)
             val acceptAgreement =
-                userInput.askYesNoQuestion(
-                    "Do you accept the license agreement at $licensePath?"
-                )
+                userInput.askYesNoQuestion("Do you accept the license agreement at $licensePath?")
             if (acceptAgreement == null || !acceptAgreement) {
                 return false
             }
@@ -288,7 +282,12 @@ abstract class StudioTask : DefaultTask() {
         filename: String,
         destinationPath: String
     ) {
-        val url = "https://dl.google.com/dl/android/studio/ide-zips/$studioVersion/$filename"
+        val url =
+            if (filename.contains("-mac")) {
+                "https://dl.google.com/dl/android/studio/install/$studioVersion/$filename"
+            } else {
+                "https://dl.google.com/dl/android/studio/ide-zips/$studioVersion/$filename"
+            }
         val tmpDownloadPath = File("$destinationPath.tmp").absolutePath
         println("Downloading $url to $tmpDownloadPath")
         execOperations.exec { execSpec ->
@@ -306,9 +305,7 @@ abstract class StudioTask : DefaultTask() {
         val fromPath = studioArchivePath
         val toPath = studioInstallationDir.absolutePath
         println("Extracting to $toPath...")
-        execOperations.exec { execSpec ->
-            platformUtilities.extractArchive(fromPath, toPath, execSpec)
-        }
+        platformUtilities.extractArchive(fromPath, toPath, execOperations)
         // Remove studio archive once done
         File(studioArchivePath).delete()
     }
@@ -339,9 +336,7 @@ abstract class RootStudioTask : StudioTask() {
 abstract class PlaygroundStudioTask : RootStudioTask() {
     @get:Internal
     val supportRootFolder =
-        (project.rootProject.property("ext") as ExtraPropertiesExtension).let {
-            it.get("supportRootFolder") as File
-        }
+        (project.rootProject.extensions.extraProperties).let { it.get("supportRootFolder") as File }
 
     /** Playground projects have only 1 setup so there is no need to specify the project list. */
     override val requiresProjectList

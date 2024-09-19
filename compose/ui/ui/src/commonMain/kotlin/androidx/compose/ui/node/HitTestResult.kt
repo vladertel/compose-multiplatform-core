@@ -23,8 +23,8 @@ import kotlin.math.sign
 
 /**
  * This tracks the hit test results to allow for minimum touch target and single-pass hit testing.
- * If there is a hit at the minimum touch target, searching for a hit within the layout bounds
- * can still continue, but the near miss is still tracked.
+ * If there is a hit at the minimum touch target, searching for a hit within the layout bounds can
+ * still continue, but the near miss is still tracked.
  *
  * The List<T> interface should only be used after hit testing has completed.
  *
@@ -41,8 +41,8 @@ internal class HitTestResult : List<Modifier.Node> {
         private set
 
     /**
-     * `true` when there has been a direct hit within touch bounds ([hit] called) or
-     * `false` otherwise.
+     * `true` when there has been a direct hit within touch bounds ([hit] called) or `false`
+     * otherwise.
      */
     fun hasHit(): Boolean {
         val distance = findBestHitDistance()
@@ -50,8 +50,8 @@ internal class HitTestResult : List<Modifier.Node> {
     }
 
     /**
-     * Accepts all hits for a child and moves the hit depth. This should only be called
-     * within [siblingHits] to allow multiple siblings to have hit results.
+     * Accepts all hits for a child and moves the hit depth. This should only be called within
+     * [siblingHits] to allow multiple siblings to have hit results.
      */
     fun acceptHits() {
         hitDepth = size - 1
@@ -90,18 +90,18 @@ internal class HitTestResult : List<Modifier.Node> {
     }
 
     /**
-     * Records [node] as a hit, adding it to the [HitTestResult] or replacing the existing one.
-     * Runs [childHitTest] to do further hit testing for children.
+     * Records [node] as a hit, adding it to the [HitTestResult] or replacing the existing one. Runs
+     * [childHitTest] to do further hit testing for children.
      */
-    fun hit(node: Modifier.Node, isInLayer: Boolean, childHitTest: () -> Unit) {
+    inline fun hit(node: Modifier.Node, isInLayer: Boolean, childHitTest: () -> Unit) {
         hitInMinimumTouchTarget(node, -1f, isInLayer, childHitTest)
     }
 
     /**
-     * Records [node] as a hit with [distanceFromEdge] distance, replacing any existing record.
-     * Runs [childHitTest] to do further hit testing for children.
+     * Records [node] as a hit with [distanceFromEdge] distance, replacing any existing record. Runs
+     * [childHitTest] to do further hit testing for children.
      */
-    fun hitInMinimumTouchTarget(
+    inline fun hitInMinimumTouchTarget(
         node: Modifier.Node,
         distanceFromEdge: Float,
         isInLayer: Boolean,
@@ -119,10 +119,9 @@ internal class HitTestResult : List<Modifier.Node> {
     }
 
     /**
-     * Temporarily records [node] as a hit with [distanceFromEdge] distance and calls
-     * [childHitTest] to record hits for children. If no children have hits, then
-     * the hit is discarded. If a child had a hit, then [node] replaces an existing
-     * hit.
+     * Temporarily records [node] as a hit with [distanceFromEdge] distance and calls [childHitTest]
+     * to record hits for children. If no children have hits, then the hit is discarded. If a child
+     * had a hit, then [node] replaces an existing hit.
      */
     fun speculativeHit(
         node: Modifier.Node,
@@ -171,9 +170,8 @@ internal class HitTestResult : List<Modifier.Node> {
     }
 
     /**
-     * Allow multiple sibling children to have a target hit within a Layout.
-     * Use [acceptHits] within [block] to mark a child's hits as accepted and
-     * proceed to hit test more children.
+     * Allow multiple sibling children to have a target hit within a Layout. Use [acceptHits] within
+     * [block] to mark a child's hits as accepted and proceed to hit test more children.
      */
     inline fun siblingHits(block: () -> Unit) {
         val depth = hitDepth
@@ -232,9 +230,7 @@ internal class HitTestResult : List<Modifier.Node> {
     override fun subList(fromIndex: Int, toIndex: Int): List<Modifier.Node> =
         SubList(fromIndex, toIndex)
 
-    /**
-     * Clears all entries to make an empty list.
-     */
+    /** Clears all entries to make an empty list. */
     fun clear() {
         hitDepth = -1
         resizeToHitDepth()
@@ -260,10 +256,7 @@ internal class HitTestResult : List<Modifier.Node> {
         override fun previousIndex(): Int = index - minIndex - 1
     }
 
-    private inner class SubList(
-        val minIndex: Int,
-        val maxIndex: Int
-    ) : List<Modifier.Node> {
+    private inner class SubList(val minIndex: Int, val maxIndex: Int) : List<Modifier.Node> {
         override val size: Int
             get() = maxIndex - minIndex
 
@@ -315,7 +308,7 @@ internal class HitTestResult : List<Modifier.Node> {
 }
 
 @kotlin.jvm.JvmInline
-private value class DistanceAndInLayer(val packedValue: Long) {
+internal value class DistanceAndInLayer(val packedValue: Long) {
     val distance: Float
         get() = unpackFloat1(packedValue)
 
@@ -334,7 +327,7 @@ private value class DistanceAndInLayer(val packedValue: Long) {
 }
 
 private fun DistanceAndInLayer(distance: Float, isInLayer: Boolean): DistanceAndInLayer {
-    val v1 = distance.toBits().toLong()
+    val v1 = distance.toRawBits().toLong()
     val v2 = if (isInLayer) 1L else 0L
     return DistanceAndInLayer(v1.shl(32) or (v2 and 0xFFFFFFFF))
 }

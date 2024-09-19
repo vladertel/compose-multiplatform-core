@@ -36,13 +36,12 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
 
     @JvmField val AllLibraryGroups: List<LibraryGroup>
 
-    val libraryGroupsByGroupId: Map<String, LibraryGroup>
-    val overrideLibraryGroupsByProjectPath: Map<String, LibraryGroup>
+    private val libraryGroupsByGroupId: Map<String, LibraryGroup>
+    private val overrideLibraryGroupsByProjectPath: Map<String, LibraryGroup>
 
     val mavenGroup: LibraryGroup?
 
-    val listProjectsService: Provider<ListProjectsService>
-
+    private val listProjectsService: Provider<ListProjectsService>
     private val versionService: LibraryVersionsService
 
     val deviceTests = DeviceTests.register(project.extensions)
@@ -51,23 +50,12 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
         val tomlFileName = "libraryversions.toml"
         val toml = lazyReadFile(tomlFileName)
 
-        // These parameters are used when building pre-release binaries for androidxdev.
-        // These parameters are only expected to be compatible with :compose:compiler:compiler .
-        // To use them may require specifying specific projects and disabling some checks
-        // like this:
-        // `./gradlew :compose:compiler:compiler:publishToMavenLocal
-        // -Pandroidx.versionExtraCheckEnabled=false`
-        val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
-        val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
-        // service that can compute group/version for a project
         versionService =
             project.gradle.sharedServices
                 .registerIfAbsent("libraryVersionsService", LibraryVersionsService::class.java) {
                     spec ->
                     spec.parameters.tomlFileName = tomlFileName
                     spec.parameters.tomlFileContents = toml
-                    spec.parameters.composeCustomVersion = composeCustomVersion
-                    spec.parameters.composeCustomGroup = composeCustomGroup
                 }
                 .get()
         AllLibraryGroups = versionService.libraryGroups.values.toList()
@@ -90,8 +78,29 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
                 spec.parameters.settingsFile = settings
             }
 
-        kotlinTarget.set(KotlinTarget.DEFAULT)
+        kotlinTarget.set(
+            if (project.shouldForceKotlin20Target().get()) KotlinTarget.KOTLIN_2_0
+            else KotlinTarget.DEFAULT
+        )
         kotlinTestTarget.set(kotlinTarget)
+    }
+
+    /**
+     * Map of maven coordinates (e.g. "androidx.core:core") to a Gradle project path (e.g.
+     * ":core:core")
+     */
+    val mavenCoordinatesToProjectPathMap: Map<String, String> by lazy {
+        val newProjectMap: MutableMap<String, String> = mutableMapOf()
+        listProjectsService.get().allPossibleProjects.forEach {
+            val group =
+                overrideLibraryGroupsByProjectPath[it.gradlePath]
+                    ?: getLibraryGroupFromProjectPath(it.gradlePath, null)
+            if (group != null) {
+                newProjectMap["${group.group}:${substringAfterLastColon(it.gradlePath)}"] =
+                    it.gradlePath
+            }
+        }
+        newProjectMap
     }
 
     var name: Property<String?> = project.objects.property(String::class.java)
@@ -150,6 +159,11 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
         return projectPath.substring(0, lastColonIndex)
     }
 
+    private fun substringAfterLastColon(projectPath: String): String {
+        val lastColonIndex = projectPath.lastIndexOf(":")
+        return projectPath.substring(lastColonIndex + 1)
+    }
+
     // gets the library group from the project path, including special cases
     private fun getLibraryGroupFromProjectPath(
         projectPath: String,
@@ -202,18 +216,17 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     }
 
     /**
-     * Sets a group for the project based on its path.
-     * This ensures we always use a known value for the project group instead of what Gradle assigns
-     * by default. Furthermore, it also helps make them consistent between the main build and
-     * the playground builds.
+     * Sets a group for the project based on its path. This ensures we always use a known value for
+     * the project group instead of what Gradle assigns by default. Furthermore, it also helps make
+     * them consistent between the main build and the playground builds.
      */
     private fun setDefaultGroupFromProjectPath() {
-        project.group = project.path
-            .split(":")
-            .filter {
-                it.isNotEmpty()
-            }.dropLast(1)
-            .joinToString(separator = ".", prefix = "androidx.")
+        project.group =
+            project.path
+                .split(":")
+                .filter { it.isNotEmpty() }
+                .dropLast(1)
+                .joinToString(separator = ".", prefix = "androidx.")
     }
 
     private fun chooseProjectVersion() {
@@ -303,10 +316,11 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     var inceptionYear: String? = null
 
     /* The main license to add when publishing. Default is Apache 2. */
-    var license: License = License().apply {
-        name = "The Apache Software License, Version 2.0"
-        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-    }
+    var license: License =
+        License().apply {
+            name = "The Apache Software License, Version 2.0"
+            url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
 
     private var extraLicenses: MutableCollection<License> = ArrayList()
 
@@ -365,18 +379,23 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
 
     var bypassCoordinateValidation = false
 
-    var metalavaK2UastEnabled = false
+    var metalavaK2UastEnabled = true
 
     val additionalDeviceTestApkKeys = mutableListOf<String>()
 
     val additionalDeviceTestTags: MutableList<String> by lazy {
-        when {
-            project.path.startsWith(":privacysandbox:ads:") ->
-                mutableListOf("privacysandbox", "privacysandbox_ads")
-            project.path.startsWith(":privacysandbox:") -> mutableListOf("privacysandbox")
-            project.path.startsWith(":wear:") -> mutableListOf("wear")
-            else -> mutableListOf()
+        val tags =
+            when {
+                project.path.startsWith(":privacysandbox:ads:") ->
+                    mutableListOf("privacysandbox", "privacysandbox_ads")
+                project.path.startsWith(":privacysandbox:") -> mutableListOf("privacysandbox")
+                project.path.startsWith(":wear:") -> mutableListOf("wear")
+                else -> mutableListOf()
+            }
+        if (deviceTests.enableAlsoRunningOnPhysicalDevices) {
+            tags.add("all_run_on_physical_device")
         }
+        return@lazy tags
     }
 
     fun shouldEnforceKotlinStrictApiMode(): Boolean {
@@ -436,11 +455,15 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
         const val DEFAULT_UNSPECIFIED_VERSION = "unspecified"
     }
 
+    internal var samplesProjects: MutableCollection<Project> = mutableSetOf()
+
     /**
-     * Used to register a project that will be providing documentation samples for this project.
-     * Can only be called once so only one samples library can exist per library b/318840087.
+     * Used to register a project that will be providing documentation samples for this project. Can
+     * only be called once so only one samples library can exist per library b/318840087.
      */
-    fun samples(samplesProject: Project) = registerSamplesLibrary(samplesProject)
+    fun samples(samplesProject: Project) {
+        samplesProjects.add(samplesProject)
+    }
 }
 
 class License {
@@ -462,4 +485,5 @@ abstract class DeviceTests {
     var enabled = true
     var targetAppProject: Project? = null
     var targetAppVariant = "debug"
+    var enableAlsoRunningOnPhysicalDevices = false
 }

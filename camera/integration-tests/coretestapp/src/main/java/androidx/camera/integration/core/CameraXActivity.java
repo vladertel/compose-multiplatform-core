@@ -16,6 +16,8 @@
 
 package androidx.camera.integration.core;
 
+import static android.os.Environment.getExternalStoragePublicDirectory;
+
 import static androidx.camera.core.ImageCapture.ERROR_CAMERA_CLOSED;
 import static androidx.camera.core.ImageCapture.ERROR_CAPTURE_FAILED;
 import static androidx.camera.core.ImageCapture.ERROR_FILE_IO;
@@ -27,6 +29,7 @@ import static androidx.camera.core.ImageCapture.FLASH_MODE_ON;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_SCREEN;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR;
+import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_RAW;
 import static androidx.camera.core.ImageCapture.getImageCaptureCapabilities;
 import static androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY;
 import static androidx.camera.integration.core.CameraXViewModel.getConfiguredCameraXCameraImplementation;
@@ -36,6 +39,7 @@ import static androidx.camera.testing.impl.FileUtil.createParentFolder;
 import static androidx.camera.testing.impl.FileUtil.generateVideoFileOutputOptions;
 import static androidx.camera.testing.impl.FileUtil.generateVideoMediaStoreOptions;
 import static androidx.camera.testing.impl.FileUtil.getAbsolutePathFromUri;
+import static androidx.camera.testing.impl.FileUtil.writeTextToExternalFile;
 import static androidx.camera.video.VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED;
 import static androidx.camera.video.VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED;
 import static androidx.camera.video.VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE;
@@ -87,7 +91,6 @@ import android.widget.ToggleButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.DoNotInline;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -143,8 +146,7 @@ import androidx.camera.video.VideoCapabilities;
 import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.ScreenFlashView;
-import androidx.camera.viewfinder.core.ZoomGestureDetector;
-import androidx.camera.viewfinder.core.ZoomGestureDetector.ZoomEvent;
+import androidx.camera.view.impl.ZoomGestureDetector;
 import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
 import androidx.core.util.Consumer;
@@ -157,10 +159,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -250,6 +249,8 @@ public class CameraXActivity extends AppCompatActivity {
     private static final String INTENT_EXTRA_E2E_TEST_CASE = "e2e_test_case";
     // Launch the activity with the specified video quality.
     private static final String INTENT_EXTRA_VIDEO_QUALITY = "video_quality";
+    // Launch the activity with the view finder position log into a text file.
+    private static final String INTENT_EXTRA_LOG_VIEWFINDER_POSITION = "log_view_finder_position";
     // Launch the activity with the specified video mirror mode.
     private static final String INTENT_EXTRA_VIDEO_MIRROR_MODE = "video_mirror_mode";
     public static final String INTENT_EXTRA_CAMERA_IMPLEMENTATION = "camera_implementation";
@@ -362,6 +363,7 @@ public class CameraXActivity extends AppCompatActivity {
     private RecordUi mRecordUi;
     private DynamicRangeUi mDynamicRangeUi;
     private Quality mVideoQuality;
+    private boolean mAudioMuted = false;
     private DynamicRange mDynamicRange = DynamicRange.SDR;
     private @ImageCapture.OutputFormat int mImageOutputFormat = OUTPUT_FORMAT_JPEG;
     private Set<DynamicRange> mDisplaySupportedHighDynamicRanges = Collections.emptySet();
@@ -694,7 +696,7 @@ public class CameraXActivity extends AppCompatActivity {
                         pendingRecording.asPersistentRecording();
                     }
                     mActiveRecording = pendingRecording
-                            .withAudioEnabled()
+                            .withAudioEnabled(mAudioMuted)
                             .start(ContextCompat.getMainExecutor(CameraXActivity.this),
                                     mVideoRecordEventListener);
                     mRecordUi.setState(RecordUi.State.RECORDING);
@@ -778,6 +780,17 @@ public class CameraXActivity extends AppCompatActivity {
             });
 
             popup.show();
+        });
+
+        Runnable buttonMuteUpdater = () -> mRecordUi.getButtonMute().setImageResource(
+                mAudioMuted ? R.drawable.ic_mic_off : R.drawable.ic_mic_on);
+        buttonMuteUpdater.run();
+        mRecordUi.getButtonMute().setOnClickListener(view -> {
+            mAudioMuted = !mAudioMuted;
+            if (mActiveRecording != null) {
+                mActiveRecording.mute(mAudioMuted);
+            }
+            buttonMuteUpdater.run();
         });
     }
 
@@ -971,19 +984,9 @@ public class CameraXActivity extends AppCompatActivity {
                     public void onClick(View view) {
                         mImageSavedIdlingResource.increment();
                         mStartCaptureTime = SystemClock.elapsedRealtime();
-                        createDefaultPictureFolderIfNotExist();
-                        Format formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS",
-                                Locale.US);
-                        String fileName = "CoreTestApp-" + formatter.format(
-                                Calendar.getInstance().getTime()) + ".jpg";
-                        ContentValues contentValues = new ContentValues();
-                        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-                        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+
                         ImageCapture.OutputFileOptions outputFileOptions =
-                                new ImageCapture.OutputFileOptions.Builder(
-                                        getContentResolver(),
-                                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                                        contentValues).build();
+                                createOutputFileOptions(mImageOutputFormat);
                         getImageCapture().takePicture(outputFileOptions,
                                 mImageCaptureExecutorService,
                                 new ImageCapture.OnImageSavedCallback() {
@@ -1026,6 +1029,40 @@ public class CameraXActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    @SuppressLint("RestrictedApiAndroidX")
+    @NonNull
+    private ImageCapture.OutputFileOptions createOutputFileOptions(
+            @ImageCapture.OutputFormat int imageOutputFormat) {
+        createDefaultPictureFolderIfNotExist();
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS",
+                Locale.US);
+
+        String suffix = "";
+        String mimetype = "";
+        switch (imageOutputFormat) {
+            case OUTPUT_FORMAT_RAW:
+                suffix = ".dng";
+                mimetype = "image/x-adobe-dng";
+                break;
+            case OUTPUT_FORMAT_JPEG_ULTRA_HDR:
+            case OUTPUT_FORMAT_JPEG:
+                suffix = ".jpg";
+                mimetype = "image/jpeg";
+                break;
+        }
+        String fileName = "CoreTestApp-" + formatter.format(
+                Calendar.getInstance().getTime()) + suffix;
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, mimetype);
+        return new ImageCapture.OutputFileOptions.Builder(
+                        getContentResolver(),
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        contentValues).build();
+    }
+
 
     private String getImageCaptureErrorMessage(@NonNull ImageCaptureException exception) {
         String errorCodeString;
@@ -1489,17 +1526,17 @@ public class CameraXActivity extends AppCompatActivity {
                         return;
                     }
 
-                    String testCase = bundle.getString(INTENT_EXTRA_E2E_TEST_CASE);
-                    if (!Objects.equals(testCase, PREVIEW_TEST_CASE)) {
+                    if (!bundle.getBoolean(INTENT_EXTRA_LOG_VIEWFINDER_POSITION)) {
                         return;
                     }
 
                     Rect rect = new Rect();
                     v.getGlobalVisibleRect(rect);
+
                     String viewFinderPositionText =
                             rect.left + "," + rect.top + "," + rect.right + "," + rect.bottom;
-                    writeTextToExternalCache(viewFinderPositionText,
-                            "camerax_view_finder_position.txt");
+                    String fileName = "camerax_view_finder_position_" + System.currentTimeMillis();
+                    writeTextToExternalStorage(viewFinderPositionText, fileName, "txt");
                 });
 
         mVideoToggle = findViewById(R.id.VideoToggle);
@@ -1533,6 +1570,7 @@ public class CameraXActivity extends AppCompatActivity {
                 findViewById(R.id.video_stats),
                 findViewById(R.id.video_quality),
                 findViewById(R.id.video_persistent),
+                findViewById(R.id.video_mute),
                 (newState) -> updateDynamicRangeUiState()
         );
 
@@ -1653,18 +1691,12 @@ public class CameraXActivity extends AppCompatActivity {
     }
 
     /**
-     * Writes text data to a cache file in primary external directory for reading during tests.
+     * Writes text data to a file in public external directory for reading during tests.
      */
-    private void writeTextToExternalCache(@NonNull String text, @NonNull String filename) {
+    private void writeTextToExternalStorage(@NonNull String text, @NonNull String filename,
+            @NonNull String extension) {
         mFileWriterExecutorService.execute(() -> {
-            File outputFile = new File(getExternalCacheDir(), filename);
-
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
-                writer.write(text);
-                Log.d(TAG, "Wrote [" + text + "] to " + outputFile);
-            } catch (IOException e) {
-                Log.e(TAG, "writeViewFinderPositionToFile: failed to write to " + outputFile, e);
-            }
+            writeTextToExternalFile(text, filename, extension);
         });
     }
 
@@ -2000,8 +2032,7 @@ public class CameraXActivity extends AppCompatActivity {
     }
 
     void createDefaultPictureFolderIfNotExist() {
-        File pictureFolder = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
+        File pictureFolder = getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         if (createFolder(pictureFolder)) {
             Log.e(TAG, "Failed to create directory: " + pictureFolder);
         }
@@ -2046,12 +2077,14 @@ public class CameraXActivity extends AppCompatActivity {
         mZoomRatioLabel.setTextColor(getResources().getColor(R.color.zoom_ratio_set));
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     ZoomGestureDetector.OnZoomGestureListener mZoomGestureListener = zoomEvent -> {
-        if (mCamera != null && zoomEvent instanceof ZoomEvent.Move) {
+        if (mCamera != null && zoomEvent instanceof ZoomGestureDetector.ZoomEvent.Move) {
             CameraInfo cameraInfo = mCamera.getCameraInfo();
             float newZoom =
                     requireNonNull(cameraInfo.getZoomState().getValue()).getZoomRatio()
-                            * ((ZoomEvent.Move) zoomEvent).getScaleFactor();
+                            * ((ZoomGestureDetector.ZoomEvent.Move) zoomEvent)
+                            .getIncrementalScaleFactor();
             setZoomRatio(newZoom);
         }
         return true;
@@ -2199,6 +2232,7 @@ public class CameraXActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(CameraXActivity.this));
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     private void setupViewFinderGestureControls() {
         GestureDetector tapGestureDetector = new GestureDetector(this, onTapGestureListener);
         ZoomGestureDetector scaleDetector = new ZoomGestureDetector(this, mZoomGestureListener);
@@ -2306,19 +2340,21 @@ public class CameraXActivity extends AppCompatActivity {
         private final TextView mTextStats;
         private final Button mButtonQuality;
         private final ToggleButton mButtonPersistent;
+        private final ImageButton mButtonMute;
         private boolean mEnabled = false;
         private State mState = State.IDLE;
         private final Consumer<State> mNewStateConsumer;
 
         RecordUi(@NonNull Button buttonRecord, @NonNull Button buttonPause,
                 @NonNull TextView textStats, @NonNull Button buttonQuality,
-                @NonNull ToggleButton buttonPersistent,
+                @NonNull ToggleButton buttonPersistent, @NonNull ImageButton buttonMute,
                 @NonNull Consumer<State> onNewState) {
             mButtonRecord = buttonRecord;
             mButtonPause = buttonPause;
             mTextStats = textStats;
             mButtonQuality = buttonQuality;
             mButtonPersistent = buttonPersistent;
+            mButtonMute = buttonMute;
             mNewStateConsumer = onNewState;
         }
 
@@ -2329,6 +2365,7 @@ public class CameraXActivity extends AppCompatActivity {
                 mTextStats.setVisibility(View.VISIBLE);
                 mButtonQuality.setVisibility(View.VISIBLE);
                 mButtonPersistent.setVisibility(View.VISIBLE);
+                mButtonMute.setVisibility(View.VISIBLE);
                 updateUi();
             } else {
                 mButtonRecord.setText("Record");
@@ -2337,6 +2374,7 @@ public class CameraXActivity extends AppCompatActivity {
                 mButtonQuality.setVisibility(View.INVISIBLE);
                 mTextStats.setVisibility(View.GONE);
                 mButtonPersistent.setVisibility(View.INVISIBLE);
+                mButtonMute.setVisibility(View.INVISIBLE);
             }
         }
 
@@ -2358,6 +2396,7 @@ public class CameraXActivity extends AppCompatActivity {
             mButtonPause.setVisibility(View.GONE);
             mTextStats.setVisibility(View.GONE);
             mButtonPersistent.setVisibility(View.GONE);
+            mButtonMute.setVisibility(View.GONE);
         }
 
         private void updateUi() {
@@ -2371,6 +2410,7 @@ public class CameraXActivity extends AppCompatActivity {
                     mButtonPause.setText("Pause");
                     mButtonPause.setVisibility(View.INVISIBLE);
                     mButtonPersistent.setEnabled(true);
+                    mButtonMute.setEnabled(true);
                     mButtonQuality.setEnabled(true);
                     break;
                 case RECORDING:
@@ -2379,6 +2419,7 @@ public class CameraXActivity extends AppCompatActivity {
                     mButtonPause.setText("Pause");
                     mButtonPause.setVisibility(View.VISIBLE);
                     mButtonPersistent.setEnabled(false);
+                    mButtonMute.setEnabled(true);
                     mButtonQuality.setEnabled(false);
                     break;
                 case STOPPING:
@@ -2387,6 +2428,7 @@ public class CameraXActivity extends AppCompatActivity {
                     mButtonPause.setText("Pause");
                     mButtonPause.setVisibility(View.INVISIBLE);
                     mButtonPersistent.setEnabled(false);
+                    mButtonMute.setEnabled(false);
                     mButtonQuality.setEnabled(true);
                     break;
                 case PAUSED:
@@ -2395,6 +2437,7 @@ public class CameraXActivity extends AppCompatActivity {
                     mButtonPause.setText("Resume");
                     mButtonPause.setVisibility(View.VISIBLE);
                     mButtonPersistent.setEnabled(false);
+                    mButtonMute.setEnabled(true);
                     mButtonQuality.setEnabled(true);
                     break;
             }
@@ -2419,6 +2462,10 @@ public class CameraXActivity extends AppCompatActivity {
 
         ToggleButton getButtonPersistent() {
             return mButtonPersistent;
+        }
+
+        ImageButton getButtonMute() {
+            return mButtonMute;
         }
     }
 
@@ -2598,36 +2645,46 @@ public class CameraXActivity extends AppCompatActivity {
         return DYNAMIC_RANGE_UI_DATA.get(itemId).mDynamicRange;
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     @NonNull
     private static String getImageOutputFormatIconName(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return "Jpeg";
         } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return "Ultra HDR";
+        } else if (format == OUTPUT_FORMAT_RAW) {
+            return "Raw";
         }
         return "?";
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     @NonNull
     private static String getImageOutputFormatMenuItemName(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return "Jpeg";
         } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return "Ultra HDR";
+        } else if (format == OUTPUT_FORMAT_RAW) {
+            return "Raw";
         }
         return "Unknown format";
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     private static int imageOutputFormatToItemId(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return 0;
         } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return 1;
+        } else if (format == OUTPUT_FORMAT_RAW) {
+            return 2;
         } else {
             throw new IllegalArgumentException("Undefined output format: " + format);
         }
     }
 
+    @SuppressLint("RestrictedApiAndroidX")
     @ImageCapture.OutputFormat
     private static int itemIdToImageOutputFormat(int itemId) {
         switch (itemId) {
@@ -2635,6 +2692,8 @@ public class CameraXActivity extends AppCompatActivity {
                 return OUTPUT_FORMAT_JPEG;
             case 1:
                 return OUTPUT_FORMAT_JPEG_ULTRA_HDR;
+            case 2:
+                return OUTPUT_FORMAT_RAW;
             default:
                 throw new IllegalArgumentException("Undefined item id: " + itemId);
         }
@@ -2757,7 +2816,6 @@ public class CameraXActivity extends AppCompatActivity {
             // This class is not instantiable.
         }
 
-        @DoNotInline
         static void setColorMode(@NonNull Window window, int colorMode) {
             window.setColorMode(colorMode);
         }

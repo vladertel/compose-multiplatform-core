@@ -18,11 +18,11 @@ package androidx.camera.camera2.pipe.graph
 
 import android.os.Build
 import android.view.Surface
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.AudioRestrictionMode
 import androidx.camera.camera2.pipe.CameraBackend
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.GraphState
 import androidx.camera.camera2.pipe.StreamGraph
@@ -43,20 +43,19 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 
-@RequiresApi(21)
 @CameraGraphScope
 internal class CameraGraphImpl
 @Inject
 constructor(
     graphConfig: CameraGraph.Config,
     metadata: CameraMetadata,
-    private val cameraGraphId: CameraGraphId,
     private val graphLifecycleManager: GraphLifecycleManager,
     private val graphProcessor: GraphProcessor,
     private val graphListener: GraphListener,
@@ -68,7 +67,8 @@ constructor(
     private val listener3A: Listener3A,
     private val frameDistributor: FrameDistributor,
     private val frameCaptureQueue: FrameCaptureQueue,
-    private val audioRestrictionController: AudioRestrictionController
+    private val audioRestrictionController: AudioRestrictionController,
+    override val id: CameraGraphId
 ) : CameraGraph {
     private val sessionMutex = Mutex()
     private val controller3A = Controller3A(graphProcessor, metadata, graphState3A, listener3A)
@@ -89,9 +89,8 @@ constructor(
             }
 
             // Streams must be preview and/or video for high speed sessions
-            val allStreamsValidForHighSpeedOperatingMode = this.streamGraph.outputs.all {
-                it.isValidForHighSpeedOperatingMode()
-            }
+            val allStreamsValidForHighSpeedOperatingMode =
+                this.streamGraph.outputs.all { it.isValidForHighSpeedOperatingMode() }
 
             require(allStreamsValidForHighSpeedOperatingMode) {
                 "HIGH_SPEED CameraGraph must only contain Preview and/or Video " +
@@ -100,9 +99,7 @@ constructor(
         }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            require(graphConfig.input == null) {
-                "Reprocessing not supported under Android M"
-            }
+            require(graphConfig.input == null) { "Reprocessing not supported under Android M" }
         }
         if (graphConfig.input != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             require(graphConfig.input.isNotEmpty()) {
@@ -167,32 +164,46 @@ constructor(
 
     override suspend fun <T> useSession(
         action: suspend CoroutineScope.(CameraGraph.Session) -> T
-    ): T = acquireSession().use {
-        // Wrap the block in a coroutineScope to ensure all operations are completed before
-        // releasing the lock.
-        coroutineScope { action(it) }
-    }
+    ): T =
+        acquireSession().use {
+            // Wrap the block in a coroutineScope to ensure all operations are completed before
+            // releasing the lock.
+            coroutineScope { action(it) }
+        }
 
     override fun <T> useSessionIn(
         scope: CoroutineScope,
         action: suspend CoroutineScope.(CameraGraph.Session) -> T
-    ): Deferred<T> = scope.async(start = CoroutineStart.UNDISPATCHED) {
-        ensureActive() // Exit early if the parent scope has been canceled.
+    ): Deferred<T> {
+        // https://github.com/Kotlin/kotlinx.coroutines/issues/1578
+        // To handle `runBlocking` we need to use `job.complete()` in `result.invokeOnCompletion`.
+        // However, if we do this directly on the scope that is provided it will cause
+        // SupervisorScopes to block and never complete. To work around this, we create a childJob,
+        // propagate the existing context, and use that as the context for scope.async.
+        val childJob = Job(scope.coroutineContext[Job])
+        val context = scope.coroutineContext + childJob
+        val result =
+            scope.async(context = context, start = CoroutineStart.UNDISPATCHED) {
+                ensureActive() // Exit early if the parent scope has been canceled.
 
-        // It is very important to acquire *and* suspend here. Invoking a coroutine using
-        // UNDISPATCHED will execute on the current thread until the suspension point, and this will
-        // force the execution to switch to the provided scope after ensuring the lock is acquired
-        // or in the queue. This guarantees exclusion, ordering, and execution within the correct
-        // scope.
-        val token = sessionMutex.acquireTokenAndSuspend()
+                // It is very important to acquire *and* suspend here. Invoking a coroutine using
+                // UNDISPATCHED will execute on the current thread until the suspension point, and
+                // this will force the execution to switch to the provided scope after ensuring the
+                // lock is acquired or in the queue. This guarantees exclusion, ordering, and
+                // execution within the correct scope.
+                val token = sessionMutex.acquireTokenAndSuspend()
 
-        // Create and use the session.
-        createSessionFromToken(token).use {
-            // Wrap the block in a coroutineScope to ensure all operations are completed before
-            // exiting and releasing the lock. The lock can be released early if the calling action
-            // decided to call session.close() early.
-            coroutineScope { action(it) }
-        }
+                // Create and use the session
+                createSessionFromToken(token).use {
+                    // Wrap the block in a coroutineScope to ensure all operations are completed
+                    // before exiting and releasing the lock. The lock can be released early if the
+                    // calling action decides to call session.close() early.
+                    coroutineScope { action(it) }
+                }
+            }
+
+        result.invokeOnCompletion { childJob.complete() }
+        return result
     }
 
     private fun createSessionFromToken(token: Token) =
@@ -227,5 +238,5 @@ constructor(
         }
     }
 
-    override fun toString(): String = cameraGraphId.toString()
+    override fun toString(): String = id.toString()
 }

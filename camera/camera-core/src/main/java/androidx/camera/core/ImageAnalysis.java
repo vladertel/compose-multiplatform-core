@@ -40,7 +40,6 @@ import static androidx.camera.core.impl.UseCaseConfig.OPTION_SESSION_CONFIG_UNPA
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SURFACE_OCCUPANCY_PRIORITY;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_TARGET_CLASS;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_TARGET_NAME;
-import static androidx.camera.core.impl.UseCaseConfig.OPTION_USE_CASE_EVENT_CALLBACK;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_ZSL_DISABLED;
 import static androidx.camera.core.internal.ThreadConfig.OPTION_BACKGROUND_EXECUTOR;
 
@@ -112,7 +111,6 @@ import java.util.concurrent.Executor;
  * Failing to close the image will cause future images to be stalled or dropped depending on the
  * backpressure strategy.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ImageAnalysis extends UseCase {
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,6 +222,8 @@ public final class ImageAnalysis extends UseCase {
 
     @Nullable
     private DeferrableSurface mDeferrableSurface;
+    @Nullable
+    private SessionConfig.CloseableErrorListener mCloseableErrorListener;
 
     /**
      * Creates a new image analysis use case from the given configuration.
@@ -424,24 +424,33 @@ public final class ImageAnalysis extends UseCase {
 
         sessionConfigBuilder.setExpectedFrameRateRange(streamSpec.getExpectedFrameRateRange());
 
-        sessionConfigBuilder.addSurface(mDeferrableSurface, streamSpec.getDynamicRange(), null);
+        sessionConfigBuilder.addSurface(mDeferrableSurface,
+                streamSpec.getDynamicRange(),
+                null,
+                MirrorMode.MIRROR_MODE_UNSPECIFIED);
 
-        sessionConfigBuilder.addErrorListener((sessionConfig, error) -> {
-            clearPipeline();
-            // Clear cache so app won't get a outdated image.
-            mImageAnalysisAbstractAnalyzer.clearCache();
-            // Ensure the attached camera has not changed before resetting.
-            // TODO(b/143915543): Ensure this never gets called by a camera that is not attached
-            //  to this use case so we don't need to do this check.
-            if (isCurrentCamera(cameraId)) {
-                // Only reset the pipeline when the bound camera is the same.
-                SessionConfig.Builder errorSessionConfigBuilder = createPipeline(cameraId, config,
-                        streamSpec);
-                updateSessionConfig(errorSessionConfigBuilder.build());
+        if (mCloseableErrorListener != null) {
+            mCloseableErrorListener.close();
+        }
+        mCloseableErrorListener = new SessionConfig.CloseableErrorListener(
+                (sessionConfig, error) -> {
+                    // Do nothing when the use case has been unbound.
+                    if (getCamera() == null) {
+                        return;
+                    }
 
-                notifyReset();
-            }
-        });
+                    clearPipeline();
+                    // Clear cache so app won't get a outdated image.
+                    mImageAnalysisAbstractAnalyzer.clearCache();
+                    // Only reset the pipeline when the bound camera is the same.
+                    mSessionConfigBuilder = createPipeline(getCameraId(),
+                            (ImageAnalysisConfig) getCurrentConfig(),
+                            Preconditions.checkNotNull(getAttachedStreamSpec()));
+                    updateSessionConfig(List.of(mSessionConfigBuilder.build()));
+                    notifyReset();
+                });
+
+        sessionConfigBuilder.setErrorListener(mCloseableErrorListener);
 
         return sessionConfigBuilder;
     }
@@ -452,6 +461,13 @@ public final class ImageAnalysis extends UseCase {
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
     void clearPipeline() {
         Threads.checkMainThread();
+
+        // Closes the old error listener
+        if (mCloseableErrorListener != null) {
+            mCloseableErrorListener.close();
+            mCloseableErrorListener = null;
+        }
+
         if (mDeferrableSurface != null) {
             mDeferrableSurface.close();
             mDeferrableSurface = null;
@@ -769,14 +785,16 @@ public final class ImageAnalysis extends UseCase {
     @Override
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
-    protected StreamSpec onSuggestedStreamSpecUpdated(@NonNull StreamSpec suggestedStreamSpec) {
+    protected StreamSpec onSuggestedStreamSpecUpdated(
+            @NonNull StreamSpec primaryStreamSpec,
+            @Nullable StreamSpec secondaryStreamSpec) {
         final ImageAnalysisConfig config = (ImageAnalysisConfig) getCurrentConfig();
 
         mSessionConfigBuilder = createPipeline(getCameraId(), config,
-                suggestedStreamSpec);
-        updateSessionConfig(mSessionConfigBuilder.build());
+                primaryStreamSpec);
+        updateSessionConfig(List.of(mSessionConfigBuilder.build()));
 
-        return suggestedStreamSpec;
+        return primaryStreamSpec;
     }
 
     /**
@@ -787,7 +805,7 @@ public final class ImageAnalysis extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     protected StreamSpec onSuggestedStreamSpecImplementationOptionsUpdated(@NonNull Config config) {
         mSessionConfigBuilder.addImplementationOptions(config);
-        updateSessionConfig(mSessionConfigBuilder.build());
+        updateSessionConfig(List.of(mSessionConfigBuilder.build()));
         return getAttachedStreamSpec().toBuilder().setImplementationOptions(config).build();
     }
 
@@ -1567,15 +1585,6 @@ public final class ImageAnalysis extends UseCase {
         @NonNull
         public Builder setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
-            return this;
-        }
-
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @Override
-        @NonNull
-        public Builder setUseCaseEventCallback(
-                @NonNull UseCase.EventCallback useCaseEventCallback) {
-            getMutableConfig().insertOption(OPTION_USE_CASE_EVENT_CALLBACK, useCaseEventCallback);
             return this;
         }
 

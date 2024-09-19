@@ -46,7 +46,7 @@ abstract class SdkResourceGenerator : DefaultTask() {
     @get:[InputFile PathSensitive(PathSensitivity.NONE)]
     abstract val debugKeystore: RegularFileProperty
 
-    @get:Input abstract val compileSdkVersion: Property<String>
+    @get:Input abstract val compileSdk: Property<Int>
 
     @get:Input abstract val buildToolsVersion: Property<String>
 
@@ -54,8 +54,7 @@ abstract class SdkResourceGenerator : DefaultTask() {
 
     @get:Input val agpDependency: String = AGP_LATEST
 
-    @get:Input
-    val navigationRuntime: String = "androidx.navigation:navigation-runtime:2.4.0"
+    @get:Input val navigationRuntime: String = "androidx.navigation:navigation-runtime:2.4.0"
 
     @get:Input abstract val kotlinStdlib: Property<String>
 
@@ -101,7 +100,7 @@ abstract class SdkResourceGenerator : DefaultTask() {
             writer.write("agpDependency=$agpDependency\n")
             writer.write("navigationRuntime=$navigationRuntime\n")
             writer.write("kotlinStdlib=${kotlinStdlib.get()}\n")
-            writer.write("compileSdkVersion=${compileSdkVersion.get()}\n")
+            writer.write("compileSdk=${compileSdk.get()}\n")
             writer.write("buildToolsVersion=${buildToolsVersion.get()}\n")
             writer.write("minSdkVersion=${minSdkVersion.get()}\n")
             writer.write("kgpVersion=${kgpVersion.get()}\n")
@@ -135,7 +134,7 @@ abstract class SdkResourceGenerator : DefaultTask() {
                     project.provider { project.defaultAndroidConfig.buildToolsVersion }
                 )
                 it.minSdkVersion.set(project.defaultAndroidConfig.minSdk)
-                it.compileSdkVersion.set(project.defaultAndroidConfig.compileSdk)
+                it.compileSdk.set(project.defaultAndroidConfig.compileSdk)
                 it.kotlinStdlib.set(
                     project.androidXConfiguration.kotlinBomVersion.map { version ->
                         "org.jetbrains.kotlin:kotlin-stdlib:$version"

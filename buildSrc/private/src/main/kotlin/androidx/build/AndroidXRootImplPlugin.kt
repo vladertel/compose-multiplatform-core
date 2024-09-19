@@ -16,7 +16,6 @@
 
 package androidx.build
 
-import androidx.build.AndroidXImplPlugin.Companion.CREATE_LIBRARY_BUILD_INFO_FILES_TASK
 import androidx.build.AndroidXImplPlugin.Companion.FINALIZE_TEST_CONFIGS_WITH_APKS_TASK
 import androidx.build.AndroidXImplPlugin.Companion.ZIP_TEST_CONFIGS_WITH_APKS_TASK
 import androidx.build.buildInfo.CreateAggregateLibraryBuildInfoFileTask
@@ -35,9 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.file.RelativePath
-import org.gradle.api.plugins.JvmEcosystemPlugin
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.bundling.ZipEntryCompression
@@ -46,14 +43,11 @@ import org.gradle.kotlin.dsl.extra
 
 abstract class AndroidXRootImplPlugin : Plugin<Project> {
     @get:javax.inject.Inject abstract val registry: BuildEventsListenerRegistry
+
     override fun apply(project: Project) {
         if (!project.isRoot) {
             throw Exception("This plugin should only be applied to root project")
         }
-        // workaround for https://github.com/gradle/gradle/issues/20145
-        // note that a future KMP plugin(1.8+) will apply this and then we can remove the following
-        // line.
-        project.plugins.apply(JvmEcosystemPlugin::class.java)
         project.configureRootProject()
     }
 
@@ -61,14 +55,13 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         project.validateAllAndroidxArgumentsAreRecognized()
         tasks.register("listAndroidXProperties", ListAndroidXPropertiesTask::class.java)
         setDependencyVersions()
-        configureKtlintCheckFile()
+        configureKtfmtCheckFile()
         tasks.register(CheckExternalDependencyLicensesTask.TASK_NAME)
-
         maybeRegisterFilterableTask()
 
         // If we're running inside Studio, validate the Android Gradle Plugin version.
         val expectedAgpVersion = System.getenv("EXPECTED_AGP_VERSION")
-        if (properties.containsKey("android.injected.invoked.from.ide")) {
+        if (providers.gradleProperty("android.injected.invoked.from.ide").isPresent) {
             if (expectedAgpVersion != ANDROID_GRADLE_PLUGIN_VERSION) {
                 throw GradleException(
                     """
@@ -92,7 +85,6 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
                 CreateAggregateLibraryBuildInfoFileTask::class.java
             )
         )
-        buildOnServerTask.dependsOn(tasks.register(CREATE_LIBRARY_BUILD_INFO_FILES_TASK))
 
         VerifyPlaygroundGradleConfigurationTask.createIfNecessary(project)?.let {
             buildOnServerTask.dependsOn(it)
@@ -101,8 +93,8 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         extra.set("projects", ConcurrentHashMap<String, String>())
 
         /**
-         * Copy PrivacySandbox related APKs into [getTestConfigDirectory] before zipping.
-         * Flatten directory hierarchy as both TradeFed and FTL work with flat hierarchy.
+         * Copy PrivacySandbox related APKs into [getTestConfigDirectory] before zipping. Flatten
+         * directory hierarchy as both TradeFed and FTL work with flat hierarchy.
          */
         val finalizeConfigsTask =
             project.tasks.register(FINALIZE_TEST_CONFIGS_WITH_APKS_TASK, Copy::class.java) {
@@ -130,43 +122,6 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         AffectedModuleDetector.configure(gradle, this)
 
         registerOwnersServiceTasks()
-
-        // If useMaxDepVersions is set, iterate through all the project and substitute any androidx
-        // artifact dependency with the local tip of tree version of the library.
-        if (project.usingMaxDepVersions()) {
-            // This requires evaluating all sub-projects to create the module:project map
-            // and project dependencies.
-            allprojects { project2 ->
-                // evaluationDependsOnChildren isn't transitive so we must call it on each project
-                project2.evaluationDependsOnChildren()
-            }
-            val projectModules = getProjectsMap()
-            subprojects { subproject ->
-                // TODO(153485458) remove most of these exceptions
-                if (
-                    !subproject.name.contains("hilt") &&
-                        subproject.name != "docs-public" &&
-                        subproject.name != "docs-tip-of-tree" &&
-                        subproject.name != "camera-testapp-timing" &&
-                        subproject.name != "room-testapp"
-                ) {
-                    subproject.configurations.all { configuration ->
-                        configuration.resolutionStrategy.dependencySubstitution.apply {
-                            all { dep ->
-                                val requested = dep.requested
-                                if (requested is ModuleComponentSelector) {
-                                    val module = requested.group + ":" + requested.module
-                                    if (projectModules.containsKey(module)) {
-                                        dep.useTarget(project(projectModules[module]!!))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         registerStudioTask()
 
         project.tasks.register("listTaskOutputs", ListTaskOutputsTask::class.java) { task ->
@@ -178,11 +133,25 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         project.zipComposeCompilerReports()
 
         TaskUpToDateValidator.setup(project, registry)
+
+        /**
+         * Add dependency analysis plugin and add buildHealth task to buildOnServer when
+         * maxDepVersions is not enabled
+         */
+        if (!project.usingMaxDepVersions()) {
+            project.plugins.apply("com.autonomousapps.dependency-analysis")
+
+            // Ignore advice regarding ktx dependencies
+            val dependencyAnalysis =
+                project.extensions.getByType(
+                    com.autonomousapps.DependencyAnalysisExtension::class.java
+                )
+            dependencyAnalysis.structure { it.ignoreKtx(true) }
+        }
     }
 
     private fun Project.setDependencyVersions() {
         androidx.build.dependencies.kotlinGradlePluginVersion = getVersionByName("kotlin")
-        androidx.build.dependencies.kotlinNativeVersion = getVersionByName("kotlinNative")
         androidx.build.dependencies.kspVersion = getVersionByName("ksp")
         androidx.build.dependencies.agpVersion = getVersionByName("androidGradlePlugin")
         androidx.build.dependencies.guavaVersion = getVersionByName("guavaJre")

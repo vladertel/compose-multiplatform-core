@@ -37,6 +37,8 @@ androidXMultiplatform {
     jvm()
     mac()
     ios()
+    watchos()
+    tvos()
     linux()
     android()
 
@@ -47,7 +49,7 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
-                api("androidx.annotation:annotation:1.2.0")
+                api("androidx.annotation:annotation:1.8.1")
                 api(project(":datastore:datastore-core"))
                 api(project(":datastore:datastore-core-okio"))
             }
@@ -100,17 +102,6 @@ androidXMultiplatform {
                 implementation(libs.testCore)
             }
 
-        }
-
-        targets.all { target ->
-            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
-                target.compilations["main"].defaultSourceSet {
-                    dependsOn(nativeMain)
-                }
-                target.compilations["test"].defaultSourceSet {
-                    dependsOn(nativeTest)
-                }
-            }
         }
     }
 }

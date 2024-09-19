@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.wear.compose.integration.macrobenchmark.test
+package androidx.wear.compose.integration.macrobenchmark
 
 import android.content.Intent
 import android.graphics.Point
@@ -33,11 +33,8 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class ScrollBenchmark(
-    private val compilationMode: CompilationMode
-) {
-    @get:Rule
-    val benchmarkRule = MacrobenchmarkRule()
+class ScrollBenchmark(private val compilationMode: CompilationMode) {
+    @get:Rule val benchmarkRule = MacrobenchmarkRule()
 
     @Before
     fun setUp() {
@@ -58,7 +55,7 @@ class ScrollBenchmark(
             iterations = 10,
             setupBlock = {
                 val intent = Intent()
-                intent.action = ACTION
+                intent.action = SCROLL_ACTIVITY
                 startActivityAndWait(intent)
             }
         ) {
@@ -74,8 +71,7 @@ class ScrollBenchmark(
 
     companion object {
         private const val PACKAGE_NAME = "androidx.wear.compose.integration.macrobenchmark.target"
-        private const val ACTION =
-            "androidx.wear.compose.integration.macrobenchmark.target.SCROLL_ACTIVITY"
+        private const val SCROLL_ACTIVITY = "${PACKAGE_NAME}.SCROLL_ACTIVITY"
 
         @Parameterized.Parameters(name = "compilation={0}")
         @JvmStatic
