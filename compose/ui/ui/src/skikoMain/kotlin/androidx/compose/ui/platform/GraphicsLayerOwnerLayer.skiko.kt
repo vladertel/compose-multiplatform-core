@@ -49,9 +49,11 @@ internal class GraphicsLayerOwnerLayer(
     private val context: GraphicsContext?,
     drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
     invalidateParentLayer: () -> Unit,
+    requestDraw: () -> Unit,
 ) : OwnedLayer {
     private var drawBlock: ((canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit)? = drawBlock
     private var invalidateParentLayer: (() -> Unit)? = invalidateParentLayer
+    private var requestDraw: (() -> Unit)? = requestDraw
 
     private var size: IntSize = IntSize(Int.MAX_VALUE, Int.MAX_VALUE)
     private var isDestroyed = false
@@ -223,6 +225,7 @@ internal class GraphicsLayerOwnerLayer(
         if (!isDirty && !isDestroyed) {
             // Parent layer caches drawing into skia's picture, so we need to reset it
             invalidateParentLayer?.invoke()
+            requestDraw?.invoke()
             isDirty = true
         }
     }
@@ -230,6 +233,7 @@ internal class GraphicsLayerOwnerLayer(
     override fun destroy() {
         drawBlock = null
         invalidateParentLayer = null
+        requestDraw = null
         isDestroyed = true
         isDirty = false
         context?.releaseGraphicsLayer(graphicsLayer)

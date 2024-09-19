@@ -20,7 +20,6 @@ import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -34,7 +33,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.SkiaGraphicsContext
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -65,7 +63,6 @@ import androidx.compose.ui.platform.PlatformClipboardManager
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformRootForTest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
-import androidx.compose.ui.platform.RenderNodeLayer
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
@@ -224,10 +221,12 @@ internal class RootNodeOwner(
     }
 
     fun draw(canvas: Canvas) = trace("RootNodeOwner:draw") {
-        owner.root.draw(
-            canvas = canvas,
-            graphicsLayer = null // the root node will provide the root graphics layer
-        )
+        graphicsContext.drawIntoCanvas(canvas) {
+            owner.root.draw(
+                canvas = it,
+                graphicsLayer = null // the root node will provide the root graphics layer
+            )
+        }
         clearInvalidObservations()
     }
 
@@ -441,38 +440,16 @@ internal class RootNodeOwner(
                     graphicsLayer = explicitLayer,
                     context = null,
                     drawBlock = drawBlock,
-                    invalidateParentLayer = {
-                        invalidateParentLayer()
-                        snapshotInvalidationTracker.requestDraw()
-                    },
+                    invalidateParentLayer = invalidateParentLayer,
+                    requestDraw = snapshotInvalidationTracker::requestDraw,
                 )
             } else {
-                /*
-                TODO: Use GraphicsLayerOwnerLayer instead of RenderNodeLayer
                 GraphicsLayerOwnerLayer(
                     graphicsLayer = graphicsContext.createGraphicsLayer(),
                     context = graphicsContext,
                     drawBlock = drawBlock,
-                    invalidateParentLayer = {
-                        invalidateParentLayer()
-                        snapshotInvalidationTracker.requestDraw()
-                    },
-                )
-                */
-                RenderNodeLayer(
-                    density = Snapshot.withoutReadObservation {
-                        // density is a mutable state that is observed whenever layer is created. the layer
-                        // is updated manually on draw, so not observing the density changes here helps with
-                        // performance in layout.
-                        density
-                    },
-                    measureDrawBounds = platformContext.measureDrawLayerBounds,
-                    invalidateParentLayer = {
-                        invalidateParentLayer()
-                        snapshotInvalidationTracker.requestDraw()
-                    },
-                    drawBlock = drawBlock,
-                    onDestroy = { needClearObservations = true }
+                    invalidateParentLayer = invalidateParentLayer,
+                    requestDraw = snapshotInvalidationTracker::requestDraw,
                 )
             }
 

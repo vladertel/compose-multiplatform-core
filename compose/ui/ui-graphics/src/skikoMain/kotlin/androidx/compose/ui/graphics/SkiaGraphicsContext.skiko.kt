@@ -19,9 +19,14 @@ package androidx.compose.ui.graphics
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.LayerManager
+import org.jetbrains.skia.Matrix33
+import org.jetbrains.skia.Paint
+import org.jetbrains.skia.Picture
 
 @InternalComposeUiApi
 class SkiaGraphicsContext() : GraphicsContext {
+    private val layerManager = LayerManager()
     private val snapshotObserver = SnapshotStateObserver { command ->
         command()
     }
@@ -35,8 +40,19 @@ class SkiaGraphicsContext() : GraphicsContext {
         snapshotObserver.clear()
     }
 
+    fun drawIntoCanvas(canvas: Canvas, block: (Canvas) -> Unit) {
+        val wrapperCanvas = object : org.jetbrains.skia.PictureFilterCanvas(canvas.nativeCanvas) {
+            override fun onDrawPicture(
+                picture: Picture,
+                matrix: Matrix33?,
+                paint: Paint?
+            ): Boolean = layerManager.drawPlaceholder(picture, this) // Shouldn't this be [canvas.nativeCanvas]?
+        }
+        block(wrapperCanvas.asComposeCanvas())
+    }
+
     override fun createGraphicsLayer(): GraphicsLayer {
-        return GraphicsLayer(snapshotObserver)
+        return GraphicsLayer(snapshotObserver, layerManager)
     }
 
     override fun releaseGraphicsLayer(layer: GraphicsLayer) {

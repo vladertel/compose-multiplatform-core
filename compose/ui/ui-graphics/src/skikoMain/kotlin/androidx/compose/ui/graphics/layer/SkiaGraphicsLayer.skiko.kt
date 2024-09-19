@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.graphics.layer
 
+import org.jetbrains.skia.Canvas as SkCanvas
+import org.jetbrains.skia.Rect as SkRect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
@@ -25,7 +27,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isUnspecified
-import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -47,7 +48,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.prepareTransformationMatrix
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toSkia
-import androidx.compose.ui.graphics.toSkiaRect
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -58,12 +58,18 @@ import org.jetbrains.skia.Picture
 import org.jetbrains.skia.PictureRecorder
 import org.jetbrains.skia.Point3
 
+private var globalId = 0
+
 actual class GraphicsLayer internal constructor(
-    private val snapshotObserver: SnapshotStateObserver
+    private val snapshotObserver: SnapshotStateObserver,
+    private val layerManager: LayerManager
 ) {
+    private val id = globalId++
+
     private val pictureDrawScope = CanvasDrawScope()
     private val pictureRecorder = PictureRecorder()
     private var picture: Picture? = null
+    private var placeholder: Picture? = null
 
     // Composable state marker for tracking drawing invalidations.
     private val drawState = mutableStateOf(Unit, neverEqualPolicy())
@@ -92,7 +98,12 @@ actual class GraphicsLayer internal constructor(
         }
 
     actual var size: IntSize = IntSize.Zero
-        private set
+        private set(value) {
+            if (field != value) {
+                field = value
+                updatePlaceholder()
+            }
+        }
 
     actual var alpha: Float = 1f
         set(value) {
@@ -172,12 +183,24 @@ actual class GraphicsLayer internal constructor(
         invalidateMatrix(requestDraw)
     }
 
+    private fun updatePlaceholder() {
+        layerManager.unregisterPlaceholder(placeholder)
+        placeholder?.close()
+        val bounds = SkRect.makeLTRB(
+            0f, 0f, size.width.toFloat(), size.height.toFloat()
+        )
+        placeholder = Picture.makePlaceholder(bounds)
+        layerManager.registerPlaceholder(placeholder!!, this)
+    }
+
     actual fun record(
         density: Density,
         layoutDirection: LayoutDirection,
         size: IntSize,
         block: DrawScope.() -> Unit
     ) {
+        println("GraphicsLayer(id=$id) record")
+
         // Close previous picture
         picture?.close()
         picture = null
@@ -190,7 +213,9 @@ actual class GraphicsLayer internal constructor(
             // It's designed to be handled externally.
             requestDraw = false
         )
-        val bounds = size.toSize().toRect().toSkiaRect()
+        val bounds = SkRect.makeLTRB(
+            0f, 0f, size.width.toFloat(), size.height.toFloat()
+        )
         val canvas = pictureRecorder.beginRecording(bounds)
         val skiaCanvas = canvas.asComposeCanvas() as SkiaBackedCanvas
         skiaCanvas.alphaMultiplier = if (compositingStrategy == CompositingStrategy.ModulateAlpha) {
@@ -291,6 +316,7 @@ actual class GraphicsLayer internal constructor(
     }
 
     internal actual fun draw(canvas: Canvas, parentLayer: GraphicsLayer?) {
+        println("GraphicsLayer(id=$id) draw")
         if (isReleased) return
 
         var restoreCount = 0
@@ -299,63 +325,68 @@ actual class GraphicsLayer internal constructor(
         // Read the state because any changes to the state should trigger re-drawing.
         drawState.value
 
-        picture?.let {
-            configureOutline()
+        configureOutline()
 
-            updateMatrix()
+        updateMatrix()
 
+        canvas.save()
+        restoreCount++
+
+        canvas.concat(matrix)
+        canvas.translate(topLeft.x.toFloat(), topLeft.y.toFloat())
+
+        if (shadowElevation > 0) {
+            drawShadow(canvas)
+        }
+
+        if (clip || shadowElevation > 0f) {
             canvas.save()
             restoreCount++
 
-            canvas.concat(matrix)
-            canvas.translate(topLeft.x.toFloat(), topLeft.y.toFloat())
-
-            if (shadowElevation > 0) {
-                drawShadow(canvas)
-            }
-
-            if (clip || shadowElevation > 0f) {
-                canvas.save()
-                restoreCount++
-
-                when (val outline = internalOutline) {
-                    is Outline.Rectangle ->
-                        canvas.clipRect(outline.rect)
-                    is Outline.Rounded ->
-                        (canvas as SkiaBackedCanvas).clipRoundRect(outline.roundRect)
-                    is Outline.Generic ->
-                        canvas.clipPath(outline.path)
-                    null -> {
-                        canvas.clipRect(0f, 0f, size.width.toFloat(), size.height.toFloat())
-                    }
+            when (val outline = internalOutline) {
+                is Outline.Rectangle ->
+                    canvas.clipRect(outline.rect)
+                is Outline.Rounded ->
+                    (canvas as SkiaBackedCanvas).clipRoundRect(outline.roundRect)
+                is Outline.Generic ->
+                    canvas.clipPath(outline.path)
+                null -> {
+                    canvas.clipRect(0f, 0f, size.width.toFloat(), size.height.toFloat())
                 }
             }
-
-            val useLayer = requiresLayer()
-            if (useLayer) {
-                canvas.saveLayer(
-                    Rect(0f, 0f, size.width.toFloat(), size.height.toFloat()),
-                    Paint().apply {
-                        this.alpha = this@GraphicsLayer.alpha
-                        this.asFrameworkPaint().apply {
-                            this.imageFilter = this@GraphicsLayer.renderEffect?.asSkiaImageFilter()
-                            this.colorFilter = this@GraphicsLayer.colorFilter?.asSkiaColorFilter()
-                            this.blendMode = this@GraphicsLayer.blendMode.toSkia()
-                        }
-                    }
-                )
-                restoreCount++
-            } else {
-                canvas.save()
-                restoreCount++
-            }
-
-            canvas.nativeCanvas.drawPicture(it, null, null)
-
-            repeat(restoreCount) {
-                canvas.restore()
-            }
         }
+
+        val useLayer = requiresLayer()
+        if (useLayer) {
+            canvas.saveLayer(
+                Rect(0f, 0f, size.width.toFloat(), size.height.toFloat()),
+                Paint().apply {
+                    this.alpha = this@GraphicsLayer.alpha
+                    this.asFrameworkPaint().apply {
+                        this.imageFilter = this@GraphicsLayer.renderEffect?.asSkiaImageFilter()
+                        this.colorFilter = this@GraphicsLayer.colorFilter?.asSkiaColorFilter()
+                        this.blendMode = this@GraphicsLayer.blendMode.toSkia()
+                    }
+                }
+            )
+            restoreCount++
+        } else {
+            canvas.save()
+            restoreCount++
+        }
+
+        placeholder?.let {
+            canvas.nativeCanvas.drawPicture(it, null, null)
+        }
+
+        repeat(restoreCount) {
+            canvas.restore()
+        }
+    }
+
+    internal fun drawPlaceholder(canvas: SkCanvas) {
+        val recordedPicture = picture ?: return
+        canvas.drawPicture(recordedPicture, null, null)
     }
 
     private fun onAddedToParentLayer() {
