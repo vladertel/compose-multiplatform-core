@@ -18,9 +18,10 @@
 
 package androidx.compose.ui.layout
 
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.autofill.SemanticAutofill
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.geometry.MutableRect
@@ -50,6 +51,7 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextInputService
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.viewinterop.InteropView
 import com.google.common.truth.Truth
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -73,15 +76,13 @@ internal fun createDelegate(
     val delegate = MeasureAndLayoutDelegate(root)
     root.attach(FakeOwner(delegate, createLayer))
     if (firstMeasureCompleted) {
-        delegate.updateRootConstraints(
-            defaultRootConstraints()
-        )
+        delegate.updateRootConstraints(defaultRootConstraints())
         Truth.assertThat(delegate.measureAndLayout()).isTrue()
     }
     return delegate
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(InternalComposeUiApi::class)
 private class FakeOwner(
     val delegate: MeasureAndLayoutDelegate,
     val createLayer: () -> OwnedLayer,
@@ -104,6 +105,18 @@ private class FakeOwner(
         }
     }
 
+    override fun onRequestRelayout(
+        layoutNode: LayoutNode,
+        affectsLookahead: Boolean,
+        forceRequest: Boolean
+    ) {
+        if (affectsLookahead) {
+            delegate.requestLookaheadRelayout(layoutNode, forceRequest)
+        } else {
+            delegate.requestRelayout(layoutNode, forceRequest)
+        }
+    }
+
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         delegate.measureAndLayout()
     }
@@ -120,7 +133,8 @@ private class FakeOwner(
 
     override val modifierLocalManager: ModifierLocalManager = ModifierLocalManager(this)
 
-    override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
+    override val dragAndDropManager: DragAndDropManager
+        get() = TODO("Not yet implemented")
 
     override fun registerOnEndApplyChangesListener(listener: () -> Unit) {
         TODO("Not yet implemented")
@@ -136,34 +150,49 @@ private class FakeOwner(
 
     override fun onLayoutChange(layoutNode: LayoutNode) {}
 
-    @OptIn(InternalCoreApi::class)
-    override var showLayoutBounds: Boolean = false
+    override fun onLayoutNodeDeactivated(layoutNode: LayoutNode) {}
+
+    override fun onInteropViewLayoutChange(view: InteropView) {}
+
+    @OptIn(InternalCoreApi::class) override var showLayoutBounds: Boolean = false
 
     override fun onAttach(node: LayoutNode) {}
+
     override fun onDetach(node: LayoutNode) {}
 
     override val root: LayoutNode
         get() = TODO("Not yet implemented")
+
     override val sharedDrawScope: LayoutNodeDrawScope
         get() = TODO("Not yet implemented")
+
     override val rootForTest: RootForTest
         get() = TODO("Not yet implemented")
+
     override val hapticFeedBack: HapticFeedback
         get() = TODO("Not yet implemented")
+
     override val inputModeManager: InputModeManager
         get() = TODO("Not yet implemented")
+
     override val clipboardManager: ClipboardManager
         get() = TODO("Not yet implemented")
+
     override val accessibilityManager: AccessibilityManager
         get() = TODO("Not yet implemented")
+
     override val graphicsContext: GraphicsContext
         get() = TODO("Not yet implemented")
+
     override val textToolbar: TextToolbar
         get() = TODO("Not yet implemented")
+
     override val density: Density
         get() = TODO("Not yet implemented")
+
     override val textInputService: TextInputService
         get() = TODO("Not yet implemented")
+
     override val softwareKeyboardController: SoftwareKeyboardController
         get() = TODO("Not yet implemented")
 
@@ -181,16 +210,16 @@ private class FakeOwner(
         TODO("Not yet implemented")
     }
 
-    override fun localToScreen(localTransform: Matrix) {
-        TODO("Not yet implemented")
-    }
-
     override val pointerIconService: PointerIconService
         get() = TODO("Not yet implemented")
+
     override val focusOwner: FocusOwner
         get() = TODO("Not yet implemented")
+
     override val windowInfo: WindowInfo
         get() = TODO("Not yet implemented")
+
+    override val rectManager: RectManager = RectManager()
 
     @Deprecated(
         "fontLoader is deprecated, use fontFamilyResolver",
@@ -199,37 +228,44 @@ private class FakeOwner(
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override val fontLoader: Font.ResourceLoader
         get() = TODO("Not yet implemented")
+
     override val fontFamilyResolver: FontFamily.Resolver
         get() = TODO("Not yet implemented")
+
     override val layoutDirection: LayoutDirection
         get() = LayoutDirection.Ltr
+
     override val viewConfiguration: ViewConfiguration
         get() = TODO("Not yet implemented")
+
     override val autofillTree: AutofillTree
         get() = TODO("Not yet implemented")
+
     override val autofill: Autofill
         get() = TODO("Not yet implemented")
 
-    override fun createLayer(
-        drawBlock: (Canvas) -> Unit,
-        invalidateParentLayer: () -> Unit,
-        explicitLayer: GraphicsLayer?
-    ) = createLayer()
+    override val semanticAutofill: SemanticAutofill?
+        get() = TODO("Not yet implemented")
 
-    override fun onRequestRelayout(
-        layoutNode: LayoutNode,
-        affectsLookahead: Boolean,
-        forceRequest: Boolean
-    ) = TODO("Not yet implemented")
+    override fun createLayer(
+        drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
+        invalidateParentLayer: () -> Unit,
+        explicitLayer: GraphicsLayer?,
+        forceUseOldLayers: Boolean
+    ): OwnedLayer = createLayer()
 
     override fun requestOnPositionedCallback(layoutNode: LayoutNode) {
         TODO("Not yet implemented")
     }
 
     override fun calculatePositionInWindow(localPosition: Offset) = TODO("Not yet implemented")
+
     override fun calculateLocalPosition(positionInWindow: Offset) = TODO("Not yet implemented")
+
     override fun requestFocus() = TODO("Not yet implemented")
+
     override fun onSemanticsChange() {}
+
     override fun getFocusDirection(keyEvent: KeyEvent) = TODO("Not yet implemented")
 }
 
@@ -283,28 +319,19 @@ internal fun assertLayoutRequired(node: LayoutNode) {
     Truth.assertThat(node.layoutPending).isTrue()
 }
 
-internal fun assertRemeasured(
-    modifier: SpyLayoutModifier,
-    block: () -> Unit
-) {
+internal fun assertRemeasured(modifier: SpyLayoutModifier, block: () -> Unit) {
     val measuresCountBefore = modifier.measuresCount
     block()
     Truth.assertThat(modifier.measuresCount).isEqualTo(measuresCountBefore + 1)
 }
 
-internal fun assertNotRemeasured(
-    modifier: SpyLayoutModifier,
-    block: () -> Unit
-) {
+internal fun assertNotRemeasured(modifier: SpyLayoutModifier, block: () -> Unit) {
     val measuresCountBefore = modifier.measuresCount
     block()
     Truth.assertThat(modifier.measuresCount).isEqualTo(measuresCountBefore)
 }
 
-internal fun assertRelaidOut(
-    modifier: SpyLayoutModifier,
-    block: () -> Unit
-) {
+internal fun assertRelaidOut(modifier: SpyLayoutModifier, block: () -> Unit) {
     val layoutsCountBefore = modifier.layoutsCount
     block()
     Truth.assertThat(modifier.layoutsCount).isEqualTo(layoutsCountBefore + 1)
@@ -352,8 +379,10 @@ internal fun LayoutNode.runDuringLayout(once: Boolean = true, block: () -> Unit)
     (measurePolicy as SmartMeasurePolicy).shouldClearPreLayoutCallback = once
 }
 
-internal val LayoutNode.first: LayoutNode get() = children.first()
-internal val LayoutNode.second: LayoutNode get() = children[1]
+internal val LayoutNode.first: LayoutNode
+    get() = children.first()
+internal val LayoutNode.second: LayoutNode
+    get() = children[1]
 internal val LayoutNode.measuresCount: Int
     get() = (measurePolicy as SmartMeasurePolicy).measuresCount
 internal val LayoutNode.layoutsCount: Int
@@ -391,8 +420,10 @@ internal val TestAlignmentLine = HorizontalAlignmentLine(::min)
 internal abstract class SmartMeasurePolicy : LayoutNode.NoIntrinsicsMeasurePolicy("") {
     var measuresCount = 0
         protected set
+
     var layoutsCount = 0
         protected set
+
     open var wrapChildren = false
     open var queryAlignmentLinesDuringMeasure = false
     var preMeasureCallback: (() -> Unit)? = null
@@ -401,6 +432,7 @@ internal abstract class SmartMeasurePolicy : LayoutNode.NoIntrinsicsMeasurePolic
     var shouldClearPreLayoutCallback = false
     var measuredLayoutDirection: LayoutDirection? = null
         protected set
+
     var childrenLayoutDirection: LayoutDirection? = null
 
     // child size is used when null
@@ -419,15 +451,14 @@ internal class MeasureInMeasureBlock : SmartMeasurePolicy() {
         if (shouldClearPreMeasureCallback) {
             preMeasureCallback = null
         }
-        val childConstraints = if (size == null) {
-            constraints
-        } else {
-            val size = size!!
-            constraints.copy(maxWidth = size, maxHeight = size)
-        }
-        val placeables = measurables.map {
-            it.measure(childConstraints)
-        }
+        val childConstraints =
+            if (size == null) {
+                constraints
+            } else {
+                val size = size!!
+                constraints.copy(maxWidth = size, maxHeight = size)
+            }
+        val placeables = measurables.map { it.measure(childConstraints) }
         if (queryAlignmentLinesDuringMeasure) {
             placeables.forEach { it[TestAlignmentLine] }
         }
@@ -476,8 +507,7 @@ internal class MeasureInLayoutBlock : SmartMeasurePolicy() {
         set(value) {
             if (value) {
                 throw IllegalArgumentException(
-                    "MeasureInLayoutBlock cannot query alignment " +
-                        "lines during measure"
+                    "MeasureInLayoutBlock cannot query alignment " + "lines during measure"
                 )
             }
         }
@@ -491,12 +521,13 @@ internal class MeasureInLayoutBlock : SmartMeasurePolicy() {
         if (shouldClearPreMeasureCallback) {
             preMeasureCallback = null
         }
-        val childConstraints = if (size == null) {
-            constraints
-        } else {
-            val size = size!!
-            constraints.copy(maxWidth = size, maxHeight = size)
-        }
+        val childConstraints =
+            if (size == null) {
+                constraints
+            } else {
+                val size = size!!
+                constraints.copy(maxWidth = size, maxHeight = size)
+            }
         return layout(childConstraints.maxWidth, childConstraints.maxHeight) {
             preLayoutCallback?.invoke()
             if (shouldClearPreLayoutCallback) {
@@ -524,8 +555,7 @@ internal class NoMeasure : SmartMeasurePolicy() {
         set(value) {
             if (value) {
                 throw IllegalArgumentException(
-                    "MeasureInLayoutBlock cannot query alignment " +
-                        "lines during measure"
+                    "MeasureInLayoutBlock cannot query alignment " + "lines during measure"
                 )
             }
         }
@@ -570,47 +600,35 @@ internal class SpyLayoutModifier : LayoutModifier {
 
 internal open class MockLayer() : OwnedLayer {
 
-    override fun updateLayerProperties(
-        scope: ReusableGraphicsLayerScope,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ) {
-    }
+    override fun updateLayerProperties(scope: ReusableGraphicsLayerScope) {}
 
     override fun isInLayer(position: Offset) = true
 
-    override fun move(position: IntOffset) {
-    }
+    override fun move(position: IntOffset) {}
 
-    override fun resize(size: IntSize) {
-    }
+    override fun resize(size: IntSize) {}
 
-    override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {
-    }
+    override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {}
 
-    override fun updateDisplayList() {
-    }
+    override fun updateDisplayList() {}
 
-    override fun invalidate() {
-    }
+    override fun invalidate() {}
 
-    override fun destroy() {
-    }
+    override fun destroy() {}
 
-    override fun mapBounds(rect: MutableRect, inverse: Boolean) {
-    }
+    override fun mapBounds(rect: MutableRect, inverse: Boolean) {}
 
     override fun reuseLayer(
-        drawBlock: (Canvas) -> Unit,
+        drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
         invalidateParentLayer: () -> Unit
-    ) {
-    }
+    ) {}
 
-    override fun transform(matrix: Matrix) {
-    }
+    override fun transform(matrix: Matrix) {}
 
-    override fun inverseTransform(matrix: Matrix) {
-    }
+    override val underlyingMatrix: Matrix
+        get() = Matrix()
+
+    override fun inverseTransform(matrix: Matrix) {}
 
     override fun mapOffset(point: Offset, inverse: Boolean) = point
 }

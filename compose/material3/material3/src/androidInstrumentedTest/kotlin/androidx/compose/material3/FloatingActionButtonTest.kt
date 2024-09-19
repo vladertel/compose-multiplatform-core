@@ -16,27 +16,37 @@
 
 package androidx.compose.material3
 
+import android.os.Build
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.tokens.ExtendedFabPrimaryTokens
-import androidx.compose.material3.tokens.FabPrimaryLargeTokens
-import androidx.compose.material3.tokens.FabPrimarySmallTokens
-import androidx.compose.material3.tokens.FabPrimaryTokens
+import androidx.compose.material3.tokens.FabBaselineTokens
+import androidx.compose.material3.tokens.FabLargeTokens
+import androidx.compose.material3.tokens.FabSmallTokens
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.testutils.assertShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -52,6 +62,7 @@ import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -62,8 +73,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.ColorUtils
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
+import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlin.math.abs
 import org.junit.Rule
@@ -74,8 +87,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class FloatingActionButtonTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @Test
     fun fabDefaultSemantics() {
@@ -87,7 +99,8 @@ class FloatingActionButtonTest {
             }
         }
 
-        rule.onNodeWithTag("myButton")
+        rule
+            .onNodeWithTag("myButton")
             .assertIsEnabled()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
     }
@@ -99,17 +112,12 @@ class FloatingActionButtonTest {
         val text = "myButton"
 
         rule.setMaterialContent(lightColorScheme()) {
-            Box {
-                ExtendedFloatingActionButton(onClick = onClick, content = { Text(text) })
-            }
+            Box { ExtendedFloatingActionButton(onClick = onClick, content = { Text(text) }) }
         }
 
-        rule.onNodeWithText(text)
-            .performClick()
+        rule.onNodeWithText(text).performClick()
 
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(1)
-        }
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
     }
 
     @Test
@@ -117,18 +125,15 @@ class FloatingActionButtonTest {
         rule
             .setMaterialContentForSizeAssertions {
                 FloatingActionButton(onClick = {}) {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        null,
-                        modifier = Modifier.testTag("icon"))
+                    Icon(Icons.Filled.Favorite, null, modifier = Modifier.testTag("icon"))
                 }
             }
-            .assertIsSquareWithSize(FabPrimaryTokens.ContainerHeight)
+            .assertIsSquareWithSize(FabBaselineTokens.ContainerHeight)
 
         rule
             .onNodeWithTag("icon", useUnmergedTree = true)
-            .assertHeightIsEqualTo(FabPrimaryTokens.IconSize)
-            .assertWidthIsEqualTo(FabPrimaryTokens.IconSize)
+            .assertHeightIsEqualTo(FabBaselineTokens.IconSize)
+            .assertWidthIsEqualTo(FabBaselineTokens.IconSize)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -136,25 +141,19 @@ class FloatingActionButtonTest {
     fun smallFabHasSizeFromSpec() {
         rule
             .setMaterialContentForSizeAssertions {
-                CompositionLocalProvider(
-                    LocalMinimumInteractiveComponentSize provides Dp.Unspecified
-                ) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                     SmallFloatingActionButton(onClick = {}) {
-                        Icon(
-                            Icons.Filled.Favorite,
-                            null,
-                            modifier = Modifier.testTag("icon")
-                        )
+                        Icon(Icons.Filled.Favorite, null, modifier = Modifier.testTag("icon"))
                     }
                 }
             }
             // Expecting the size to be equal to the token size.
-            .assertIsSquareWithSize(FabPrimarySmallTokens.ContainerHeight)
+            .assertIsSquareWithSize(FabSmallTokens.ContainerHeight)
 
         rule
             .onNodeWithTag("icon", useUnmergedTree = true)
-            .assertHeightIsEqualTo(FabPrimarySmallTokens.IconSize)
-            .assertWidthIsEqualTo(FabPrimarySmallTokens.IconSize)
+            .assertHeightIsEqualTo(FabSmallTokens.IconSize)
+            .assertWidthIsEqualTo(FabSmallTokens.IconSize)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -162,9 +161,7 @@ class FloatingActionButtonTest {
     fun smallFabHasMinTouchTarget() {
         rule
             .setMaterialContentForSizeAssertions {
-                SmallFloatingActionButton(onClick = {}) {
-                    Icon(Icons.Filled.Favorite, null)
-                }
+                SmallFloatingActionButton(onClick = {}) { Icon(Icons.Filled.Favorite, null) }
             }
             // Expecting the size to be equal to the minimum touch target.
             .assertTouchWidthIsEqualTo(48.dp)
@@ -181,13 +178,13 @@ class FloatingActionButtonTest {
                     Icon(
                         Icons.Filled.Favorite,
                         null,
-                        modifier = Modifier
-                            .size(FloatingActionButtonDefaults.LargeIconSize)
-                            .testTag("icon")
+                        modifier =
+                            Modifier.size(FloatingActionButtonDefaults.LargeIconSize)
+                                .testTag("icon")
                     )
                 }
             }
-            .assertIsSquareWithSize(FabPrimaryLargeTokens.ContainerHeight)
+            .assertIsSquareWithSize(FabLargeTokens.ContainerHeight)
 
         rule
             .onNodeWithTag("icon", useUnmergedTree = true)
@@ -206,9 +203,10 @@ class FloatingActionButtonTest {
             )
         }
 
-        rule.onNodeWithTag("FAB")
+        rule
+            .onNodeWithTag("FAB")
             .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.ContainerHeight)
-            .assertWidthIsAtLeast(FabPrimaryTokens.ContainerHeight)
+            .assertWidthIsAtLeast(FabBaselineTokens.ContainerHeight)
     }
 
     @Test
@@ -221,7 +219,8 @@ class FloatingActionButtonTest {
             )
         }
 
-        rule.onNodeWithTag("FAB")
+        rule
+            .onNodeWithTag("FAB")
             .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.ContainerHeight)
             .assertWidthIsEqualTo(80.dp)
     }
@@ -282,8 +281,7 @@ class FloatingActionButtonTest {
                     }
                 )
             }
-            expectedTextStyle =
-                ExtendedFabPrimaryTokens.LabelTextFont.value
+            expectedTextStyle = ExtendedFabPrimaryTokens.LabelTextFont.value
         }
         rule.runOnIdle {
             assertThat(fontFamily).isEqualTo(expectedTextStyle!!.fontFamily)
@@ -301,29 +299,22 @@ class FloatingActionButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             Column {
                 Spacer(
-                    Modifier
-                        .requiredSize(10.dp)
-                        .weight(1f)
-                        .onGloballyPositioned {
-                            item1Bounds = it.boundsInRoot()
-                        }
+                    Modifier.requiredSize(10.dp).weight(1f).onGloballyPositioned {
+                        item1Bounds = it.boundsInRoot()
+                    }
                 )
 
                 FloatingActionButton(
                     onClick = {},
-                    modifier = Modifier
-                        .weight(1f)
-                        .onGloballyPositioned {
+                    modifier =
+                        Modifier.weight(1f).onGloballyPositioned {
                             buttonBounds = it.boundsInRoot()
                         }
                 ) {
                     Text("Button")
                 }
 
-                Spacer(
-                    Modifier
-                        .requiredSize(10.dp)
-                        .weight(1f))
+                Spacer(Modifier.requiredSize(10.dp).weight(1f))
             }
         }
 
@@ -337,17 +328,8 @@ class FloatingActionButtonTest {
         var contentCoordinates: LayoutCoordinates? = null
         rule.setMaterialContent(lightColorScheme()) {
             Box {
-                FloatingActionButton(
-                    {},
-                    Modifier.onGloballyPositioned {
-                        buttonCoordinates = it
-                    }
-                ) {
-                    Box(
-                        Modifier
-                            .size(2.dp)
-                            .onGloballyPositioned { contentCoordinates = it }
-                    )
+                FloatingActionButton({}, Modifier.onGloballyPositioned { buttonCoordinates = it }) {
+                    Box(Modifier.size(2.dp).onGloballyPositioned { contentCoordinates = it })
                 }
             }
         }
@@ -375,11 +357,7 @@ class FloatingActionButtonTest {
                     onClick = {},
                     modifier = Modifier.onGloballyPositioned { buttonCoordinates = it },
                 ) {
-                    Box(
-                        Modifier
-                            .size(2.dp)
-                            .onGloballyPositioned { contentCoordinates = it }
-                    )
+                    Box(Modifier.size(2.dp).onGloballyPositioned { contentCoordinates = it })
                 }
             }
         }
@@ -406,18 +384,10 @@ class FloatingActionButtonTest {
             Box {
                 ExtendedFloatingActionButton(
                     text = {
-                        Box(
-                            Modifier
-                                .size(2.dp)
-                                .onGloballyPositioned { textCoordinates = it }
-                        )
+                        Box(Modifier.size(2.dp).onGloballyPositioned { textCoordinates = it })
                     },
                     icon = {
-                        Box(
-                            Modifier
-                                .size(10.dp)
-                                .onGloballyPositioned { iconCoordinates = it }
-                        )
+                        Box(Modifier.size(10.dp).onGloballyPositioned { iconCoordinates = it })
                     },
                     onClick = {},
                     modifier = Modifier.onGloballyPositioned { buttonCoordinates = it }
@@ -459,7 +429,7 @@ class FloatingActionButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             ExtendedFloatingActionButton(
                 expanded = true,
-                onClick = { },
+                onClick = {},
                 icon = {
                     Icon(
                         Icons.Filled.Favorite,
@@ -477,7 +447,8 @@ class FloatingActionButtonTest {
             .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.IconSize)
             .assertWidthIsEqualTo(ExtendedFabPrimaryTokens.IconSize)
 
-        rule.onNodeWithTag("FAB")
+        rule
+            .onNodeWithTag("FAB")
             .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.ContainerHeight)
             .assertWidthIsAtLeast(80.dp)
 
@@ -490,21 +461,14 @@ class FloatingActionButtonTest {
         rule.setMaterialContent(lightColorScheme()) {
             ExtendedFloatingActionButton(
                 expanded = false,
-                onClick = { },
-                icon = {
-                    Icon(
-                        Icons.Filled.Favorite,
-                        "Add",
-                        modifier = Modifier.testTag("icon")
-                    )
-                },
+                onClick = {},
+                icon = { Icon(Icons.Filled.Favorite, "Add", modifier = Modifier.testTag("icon")) },
                 text = { Text(text = "FAB", modifier = Modifier.testTag("text")) },
                 modifier = Modifier.testTag("FAB"),
             )
         }
 
-        rule.onNodeWithTag("FAB")
-            .assertIsSquareWithSize(FabPrimaryTokens.ContainerHeight)
+        rule.onNodeWithTag("FAB").assertIsSquareWithSize(FabBaselineTokens.ContainerHeight)
 
         rule
             .onNodeWithTag("icon", useUnmergedTree = true)
@@ -524,11 +488,41 @@ class FloatingActionButtonTest {
             ExtendedFloatingActionButton(
                 expanded = expanded,
                 onClick = {},
+                icon = { Icon(Icons.Filled.Favorite, "Add", modifier = Modifier.testTag("icon")) },
+                text = { Text(text = "FAB", modifier = Modifier.testTag("text")) },
+                modifier = Modifier.testTag("FAB"),
+            )
+        }
+
+        rule
+            .onNodeWithTag("FAB")
+            .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.ContainerHeight)
+            .assertWidthIsAtLeast(80.dp)
+
+        rule.runOnIdle { expanded = false }
+        rule.mainClock.advanceTimeBy(200)
+
+        rule
+            .onNodeWithTag("FAB")
+            .assertIsSquareWithSize(FabBaselineTokens.ContainerHeight)
+            .assertHeightIsEqualTo(FabBaselineTokens.ContainerHeight)
+            .assertWidthIsEqualTo(FabBaselineTokens.ContainerWidth)
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Test
+    fun expandedLargeExtendedFabTextAndIconHaveSizeFromSpecAndVisible() {
+        rule.setMaterialContent(lightColorScheme()) {
+            LargeExtendedFloatingActionButton(
+                expanded = true,
+                onClick = {},
                 icon = {
                     Icon(
                         Icons.Filled.Favorite,
                         "Add",
-                        modifier = Modifier.testTag("icon")
+                        modifier =
+                            Modifier.size(FloatingActionButtonDefaults.LargeIconSize)
+                                .testTag("icon"),
                     )
                 },
                 text = { Text(text = "FAB", modifier = Modifier.testTag("text")) },
@@ -536,17 +530,83 @@ class FloatingActionButtonTest {
             )
         }
 
-        rule.onNodeWithTag("FAB")
-            .assertHeightIsEqualTo(ExtendedFabPrimaryTokens.ContainerHeight)
-            .assertWidthIsAtLeast(80.dp)
+        rule
+            .onNodeWithTag("icon", useUnmergedTree = true)
+            .assertHeightIsEqualTo(FloatingActionButtonDefaults.LargeIconSize)
+            .assertWidthIsEqualTo(FloatingActionButtonDefaults.LargeIconSize)
+
+        rule.onNodeWithTag("FAB").assertHeightIsEqualTo(96.dp).assertWidthIsAtLeast(112.dp)
+
+        rule.onNodeWithTag("text", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithTag("icon", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Test
+    fun collapsedLargeExtendedFabTextAndIconHaveSizeFromSpecAndTextNotVisible() {
+        rule.setMaterialContent(lightColorScheme()) {
+            LargeExtendedFloatingActionButton(
+                expanded = false,
+                onClick = {},
+                icon = {
+                    Icon(
+                        Icons.Filled.Favorite,
+                        "Add",
+                        modifier =
+                            Modifier.size(FloatingActionButtonDefaults.LargeIconSize)
+                                .testTag("icon")
+                    )
+                },
+                text = { Text(text = "FAB", modifier = Modifier.testTag("text")) },
+                modifier = Modifier.testTag("FAB"),
+            )
+        }
+
+        rule.onNodeWithTag("FAB").assertIsSquareWithSize(96.dp)
+
+        rule
+            .onNodeWithTag("icon", useUnmergedTree = true)
+            .assertHeightIsEqualTo(FloatingActionButtonDefaults.LargeIconSize)
+            .assertWidthIsEqualTo(FloatingActionButtonDefaults.LargeIconSize)
+
+        rule.onNodeWithTag("text", useUnmergedTree = true).assertDoesNotExist()
+        rule.onNodeWithTag("icon", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Test
+    fun largeExtendedFabAnimates() {
+        rule.mainClock.autoAdvance = false
+
+        var expanded by mutableStateOf(true)
+        rule.setMaterialContent(lightColorScheme()) {
+            LargeExtendedFloatingActionButton(
+                expanded = expanded,
+                onClick = {},
+                icon = {
+                    Icon(
+                        Icons.Filled.Favorite,
+                        "Add",
+                        modifier =
+                            Modifier.size(FloatingActionButtonDefaults.LargeIconSize)
+                                .testTag("icon")
+                    )
+                },
+                text = { Text(text = "FAB", modifier = Modifier.testTag("text")) },
+                modifier = Modifier.testTag("FAB"),
+            )
+        }
+
+        rule.onNodeWithTag("FAB").assertHeightIsEqualTo(96.dp).assertWidthIsAtLeast(112.dp)
 
         rule.runOnIdle { expanded = false }
-        rule.mainClock.advanceTimeBy(200)
+        rule.mainClock.advanceTimeBy(400)
 
-        rule.onNodeWithTag("FAB")
-            .assertIsSquareWithSize(FabPrimaryTokens.ContainerHeight)
-            .assertHeightIsEqualTo(FabPrimaryTokens.ContainerHeight)
-            .assertWidthIsEqualTo(FabPrimaryTokens.ContainerWidth)
+        rule
+            .onNodeWithTag("FAB")
+            .assertIsSquareWithSize(96.dp)
+            .assertHeightIsEqualTo(96.dp)
+            .assertWidthIsEqualTo(96.dp)
     }
 
     @Test
@@ -560,12 +620,13 @@ class FloatingActionButtonTest {
         lateinit var shadowElevation: State<Dp>
 
         rule.setMaterialContent(lightColorScheme()) {
-            val fabElevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = defaultElevation,
-                pressedElevation = pressedElevation,
-                hoveredElevation = hoveredElevation,
-                focusedElevation = focusedElevation
-            )
+            val fabElevation =
+                FloatingActionButtonDefaults.elevation(
+                    defaultElevation = defaultElevation,
+                    pressedElevation = pressedElevation,
+                    hoveredElevation = hoveredElevation,
+                    focusedElevation = focusedElevation
+                )
 
             tonalElevation = fabElevation.tonalElevation()
             shadowElevation = fabElevation.shadowElevation(interactionSource)
@@ -576,9 +637,7 @@ class FloatingActionButtonTest {
             assertThat(shadowElevation.value).isEqualTo(defaultElevation)
         }
 
-        rule.runOnIdle {
-            interactionSource.tryEmit(PressInteraction.Press(Offset.Zero))
-        }
+        rule.runOnIdle { interactionSource.tryEmit(PressInteraction.Press(Offset.Zero)) }
 
         rule.runOnIdle {
             assertThat(tonalElevation).isEqualTo(defaultElevation)
@@ -597,12 +656,13 @@ class FloatingActionButtonTest {
         lateinit var shadowElevation: State<Dp>
 
         rule.setMaterialContent(lightColorScheme()) {
-            val fabElevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = defaultElevation,
-                pressedElevation = pressedElevation,
-                hoveredElevation = hoveredElevation,
-                focusedElevation = focusedElevation
-            )
+            val fabElevation =
+                FloatingActionButtonDefaults.elevation(
+                    defaultElevation = defaultElevation,
+                    pressedElevation = pressedElevation,
+                    hoveredElevation = hoveredElevation,
+                    focusedElevation = focusedElevation
+                )
 
             tonalElevation = fabElevation.tonalElevation()
             shadowElevation = fabElevation.shadowElevation(interactionSource)
@@ -613,9 +673,7 @@ class FloatingActionButtonTest {
             assertThat(shadowElevation.value).isEqualTo(defaultElevation)
         }
 
-        rule.runOnIdle {
-            defaultElevation = 5.dp
-        }
+        rule.runOnIdle { defaultElevation = 5.dp }
 
         rule.runOnIdle {
             assertThat(tonalElevation).isEqualTo(5.dp)
@@ -634,12 +692,13 @@ class FloatingActionButtonTest {
         lateinit var shadowElevation: State<Dp>
 
         rule.setMaterialContent(lightColorScheme()) {
-            val fabElevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = defaultElevation,
-                pressedElevation = pressedElevation,
-                hoveredElevation = hoveredElevation,
-                focusedElevation = focusedElevation
-            )
+            val fabElevation =
+                FloatingActionButtonDefaults.elevation(
+                    defaultElevation = defaultElevation,
+                    pressedElevation = pressedElevation,
+                    hoveredElevation = hoveredElevation,
+                    focusedElevation = focusedElevation
+                )
 
             tonalElevation = fabElevation.tonalElevation()
             shadowElevation = fabElevation.shadowElevation(interactionSource)
@@ -650,18 +709,14 @@ class FloatingActionButtonTest {
             assertThat(shadowElevation.value).isEqualTo(defaultElevation)
         }
 
-        rule.runOnIdle {
-            interactionSource.tryEmit(PressInteraction.Press(Offset.Zero))
-        }
+        rule.runOnIdle { interactionSource.tryEmit(PressInteraction.Press(Offset.Zero)) }
 
         rule.runOnIdle {
             assertThat(tonalElevation).isEqualTo(defaultElevation)
             assertThat(shadowElevation.value).isEqualTo(pressedElevation)
         }
 
-        rule.runOnIdle {
-            pressedElevation = 5.dp
-        }
+        rule.runOnIdle { pressedElevation = 5.dp }
 
         // We are still pressed, so we should now show the updated value for the pressed state
         rule.runOnIdle {
@@ -669,7 +724,298 @@ class FloatingActionButtonTest {
             assertThat(shadowElevation.value).isEqualTo(5.dp)
         }
     }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun animateFloatingActionButton_hideBottomEnd_scalesAndFadesCorrectly() {
+        val visible = mutableStateOf(true)
+
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(
+                modifier =
+                    Modifier.background(Color.Red)
+                        .size(100.dp)
+                        .testTag(AnimateFloatingActionButtonTestTag)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.animateFloatingActionButton(
+                                visible = visible.value,
+                                alignment = Alignment.BottomEnd,
+                                targetScale = 0.2f,
+                                scaleAnimationSpec = tween(100, easing = LinearEasing),
+                                alphaAnimationSpec = tween(100, easing = LinearEasing)
+                            )
+                            .background(Color.Blue, CircleShape)
+                            .fillMaxSize()
+                )
+            }
+        }
+
+        rule.runOnIdle { visible.value = false }
+
+        // Wait for initial recomposition / measure after state change
+        rule.mainClock.advanceTimeByFrame()
+
+        // Run half of the animation
+        rule.mainClock.advanceTimeBy(50)
+
+        rule
+            .onNodeWithTag(AnimateFloatingActionButtonTestTag)
+            .captureToImage()
+            .assertShape(
+                density = rule.density,
+                shape = CircleShape,
+                shapeColor =
+                    Color(
+                        ColorUtils.compositeColors(
+                            Color.Blue.copy(alpha = 0.5f).toArgb(),
+                            Color.Red.toArgb()
+                        )
+                    ),
+                backgroundColor = Color.Red,
+                sizeX = with(rule.density) { 60.dp.toPx() },
+                sizeY = with(rule.density) { 60.dp.toPx() },
+                shapeSizeX = with(rule.density) { 60.dp.toPx() },
+                shapeSizeY = with(rule.density) { 60.dp.toPx() },
+                centerX = with(rule.density) { 70.dp.toPx() },
+                centerY = with(rule.density) { 70.dp.toPx() },
+                shapeOverlapPixelCount = with(rule.density) { 3.dp.toPx() }
+            )
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun animateFloatingActionButton_hideCenter_scalesAndFadesCorrectly() {
+        val visible = mutableStateOf(true)
+
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(
+                modifier =
+                    Modifier.background(Color.Red)
+                        .size(100.dp)
+                        .testTag(AnimateFloatingActionButtonTestTag)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.animateFloatingActionButton(
+                                visible = visible.value,
+                                alignment = Alignment.Center,
+                                targetScale = 0.2f,
+                                scaleAnimationSpec = tween(100, easing = LinearEasing),
+                                alphaAnimationSpec = tween(100, easing = LinearEasing)
+                            )
+                            .background(Color.Blue, CircleShape)
+                            .fillMaxSize()
+                )
+            }
+        }
+
+        rule.runOnIdle { visible.value = false }
+
+        // Wait for initial recomposition / measure after state change
+        rule.mainClock.advanceTimeByFrame()
+
+        // Run half of the animation
+        rule.mainClock.advanceTimeBy(50)
+
+        rule
+            .onNodeWithTag(AnimateFloatingActionButtonTestTag)
+            .captureToImage()
+            .assertShape(
+                density = rule.density,
+                shape = CircleShape,
+                shapeColor =
+                    Color(
+                        ColorUtils.compositeColors(
+                            Color.Blue.copy(alpha = 0.5f).toArgb(),
+                            Color.Red.toArgb()
+                        )
+                    ),
+                backgroundColor = Color.Red,
+                sizeX = with(rule.density) { 60.dp.toPx() },
+                sizeY = with(rule.density) { 60.dp.toPx() },
+                shapeSizeX = with(rule.density) { 60.dp.toPx() },
+                shapeSizeY = with(rule.density) { 60.dp.toPx() },
+                centerX = with(rule.density) { 50.dp.toPx() },
+                centerY = with(rule.density) { 50.dp.toPx() },
+                shapeOverlapPixelCount = with(rule.density) { 2.dp.toPx() }
+            )
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun animateFloatingActionButton_hideTopStart_scalesAndFadesCorrectly() {
+        val visible = mutableStateOf(true)
+
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(
+                modifier =
+                    Modifier.background(Color.Red)
+                        .size(100.dp)
+                        .testTag(AnimateFloatingActionButtonTestTag)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.animateFloatingActionButton(
+                                visible = visible.value,
+                                alignment = Alignment.TopStart,
+                                targetScale = 0.2f,
+                                scaleAnimationSpec = tween(100, easing = LinearEasing),
+                                alphaAnimationSpec = tween(100, easing = LinearEasing)
+                            )
+                            .background(Color.Blue, CircleShape)
+                            .fillMaxSize()
+                )
+            }
+        }
+
+        rule.runOnIdle { visible.value = false }
+
+        // Wait for initial recomposition / measure after state change
+        rule.mainClock.advanceTimeByFrame()
+
+        // Run half of the animation
+        rule.mainClock.advanceTimeBy(50)
+
+        rule
+            .onNodeWithTag(AnimateFloatingActionButtonTestTag)
+            .captureToImage()
+            .assertShape(
+                density = rule.density,
+                shape = CircleShape,
+                shapeColor =
+                    Color(
+                        ColorUtils.compositeColors(
+                            Color.Blue.copy(alpha = 0.5f).toArgb(),
+                            Color.Red.toArgb()
+                        )
+                    ),
+                backgroundColor = Color.Red,
+                sizeX = with(rule.density) { 60.dp.toPx() },
+                sizeY = with(rule.density) { 60.dp.toPx() },
+                shapeSizeX = with(rule.density) { 60.dp.toPx() },
+                shapeSizeY = with(rule.density) { 60.dp.toPx() },
+                centerX = with(rule.density) { 30.dp.toPx() },
+                centerY = with(rule.density) { 30.dp.toPx() },
+                shapeOverlapPixelCount = with(rule.density) { 2.dp.toPx() }
+            )
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun animateFloatingActionButton_show_noScaleOrFadeAfterAnimation() {
+        val visible = mutableStateOf(false)
+
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(
+                modifier =
+                    Modifier.background(Color.Red)
+                        .size(100.dp)
+                        .testTag(AnimateFloatingActionButtonTestTag)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.animateFloatingActionButton(
+                                visible = visible.value,
+                                alignment = Alignment.BottomEnd,
+                                targetScale = 0.2f,
+                                scaleAnimationSpec = tween(100, easing = LinearEasing),
+                                alphaAnimationSpec = tween(100, easing = LinearEasing)
+                            )
+                            .background(Color.Blue, CircleShape)
+                            .fillMaxSize()
+                )
+            }
+        }
+
+        rule.runOnIdle { visible.value = true }
+
+        // Wait for initial recomposition / measure after state change
+        rule.mainClock.advanceTimeByFrame()
+        rule.mainClock.advanceTimeByFrame()
+
+        // Run full animation
+        rule.mainClock.advanceTimeBy(100)
+
+        rule
+            .onNodeWithTag(AnimateFloatingActionButtonTestTag)
+            .captureToImage()
+            .assertShape(
+                density = rule.density,
+                shape = CircleShape,
+                shapeColor = Color.Blue,
+                backgroundColor = Color.Red,
+                sizeX = with(rule.density) { 100.dp.toPx() },
+                sizeY = with(rule.density) { 100.dp.toPx() },
+                shapeSizeX = with(rule.density) { 100.dp.toPx() },
+                shapeSizeY = with(rule.density) { 100.dp.toPx() },
+                centerX = with(rule.density) { 50.dp.toPx() },
+                centerY = with(rule.density) { 50.dp.toPx() },
+                shapeOverlapPixelCount = with(rule.density) { 2.dp.toPx() }
+            )
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
+    @Test
+    fun animateFloatingActionButton_show_noScaleOrFadeBeforeAnimation() {
+        rule.mainClock.autoAdvance = false
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(
+                modifier =
+                    Modifier.background(Color.Red)
+                        .size(100.dp)
+                        .testTag(AnimateFloatingActionButtonTestTag)
+            ) {
+                Box(
+                    modifier =
+                        Modifier.animateFloatingActionButton(
+                                visible = true,
+                                alignment = Alignment.BottomEnd,
+                                targetScale = 0.2f,
+                                scaleAnimationSpec = tween(100, easing = LinearEasing),
+                                alphaAnimationSpec = tween(100, easing = LinearEasing)
+                            )
+                            .background(Color.Blue, CircleShape)
+                            .fillMaxSize()
+                )
+            }
+        }
+
+        rule
+            .onNodeWithTag(AnimateFloatingActionButtonTestTag)
+            .captureToImage()
+            .assertShape(
+                density = rule.density,
+                shape = CircleShape,
+                shapeColor = Color.Blue,
+                backgroundColor = Color.Red,
+                sizeX = with(rule.density) { 100.dp.toPx() },
+                sizeY = with(rule.density) { 100.dp.toPx() },
+                shapeSizeX = with(rule.density) { 100.dp.toPx() },
+                shapeSizeY = with(rule.density) { 100.dp.toPx() },
+                centerX = with(rule.density) { 50.dp.toPx() },
+                centerY = with(rule.density) { 50.dp.toPx() },
+                shapeOverlapPixelCount = with(rule.density) { 2.dp.toPx() }
+            )
+    }
 }
+
+private val AnimateFloatingActionButtonTestTag = "AnimateFloatingActionButton"
 
 fun assertWithinOnePixel(expected: Offset, actual: Offset) {
     assertWithinOnePixel(expected.x, actual.x)

@@ -28,6 +28,7 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.Interaction
@@ -47,6 +48,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.matchers.isZero
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.currentComposer
@@ -77,6 +81,7 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.pointer.util.VelocityTrackerAddPointsFix
 import androidx.compose.ui.materialize
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.TraversableNode
@@ -86,8 +91,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsActions.ScrollBy
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.ScrollWheel
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -95,6 +104,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -106,6 +116,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeWithVelocity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.times
 import androidx.compose.ui.util.fastForEach
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.CoordinatesProvider
@@ -139,8 +150,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ScrollableTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private val scrollableBoxTag = "scrollableBox"
 
@@ -167,17 +177,15 @@ class ScrollableTest {
     @Test
     fun scrollable_horizontalScroll() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Horizontal
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Horizontal)
         }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
@@ -187,10 +195,11 @@ class ScrollableTest {
             )
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -199,9 +208,7 @@ class ScrollableTest {
             )
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -209,66 +216,55 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_horizontalScroll_mouseWheel() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Horizontal
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Horizontal)
         }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Horizontal)
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0)
+                total
+            }
 
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Vertical)
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(100f, ScrollWheel.Horizontal)
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_horizontalScroll_mouseWheel_badMotionEvent() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Horizontal
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Horizontal)
         }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(Float.NaN, ScrollWheel.Horizontal)
@@ -287,51 +283,46 @@ class ScrollableTest {
     fun scrollable_horizontalScroll_keyboardPageUpAndDown() {
         var scrollAmount = 0f
 
-        val scrollableState = ScrollableState(
-            consumeScrollDelta = {
-                scrollAmount += it
-                it
-            }
-        )
+        val scrollableState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    scrollAmount += it
+                    it
+                }
+            )
 
         rule.setContent {
             Row(
-                Modifier
-                    .fillMaxHeight()
+                Modifier.fillMaxHeight()
                     .wrapContentWidth()
                     .background(Color.Red)
-                    .scrollable(
-                        state = scrollableState,
-                        orientation = Orientation.Horizontal
-                    )
+                    .scrollable(state = scrollableState, orientation = Orientation.Horizontal)
                     .padding(10.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .testTag(scrollableBoxTag)
-                        .width(50.dp)
-                        .background(Color.Blue)
-                        // Required for keyboard scrolling (page up/down keys) to work.
-                        .focusable()
-                        .padding(10.dp)
+                    modifier =
+                        Modifier.fillMaxHeight()
+                            .testTag(scrollableBoxTag)
+                            .width(50.dp)
+                            .background(Color.Blue)
+                            // Required for keyboard scrolling (page up/down keys) to work.
+                            .focusable()
+                            .padding(10.dp)
                 )
 
                 Spacer(modifier = Modifier.size(10.dp))
 
                 for (i in 0 until 40) {
-                    val color = if (i % 2 == 0) {
-                        Color.Yellow
-                    } else {
-                        Color.Green
-                    }
+                    val color =
+                        if (i % 2 == 0) {
+                            Color.Yellow
+                        } else {
+                            Color.Green
+                        }
 
                     Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(50.dp)
-                            .background(color)
-                            .padding(10.dp)
+                        modifier =
+                            Modifier.fillMaxHeight().width(50.dp).background(color).padding(10.dp)
                     )
                     Spacer(modifier = Modifier.size(10.dp))
                 }
@@ -339,34 +330,27 @@ class ScrollableTest {
         }
 
         rule.onNodeWithTag(scrollableBoxTag).requestFocus()
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageDown)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageDown) }
 
-        rule.runOnIdle {
-            assertThat(scrollAmount).isLessThan(0f)
-        }
+        rule.runOnIdle { assertThat(scrollAmount).isLessThan(0f) }
 
         scrollAmount = 0f
 
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageUp)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageUp) }
 
-        rule.runOnIdle {
-            assertThat(scrollAmount).isGreaterThan(0f)
-        }
+        rule.runOnIdle { assertThat(scrollAmount).isGreaterThan(0f) }
     }
 
     @Test
     fun scrollable_horizontalScroll_reverse() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             Modifier.scrollable(
                 reverseDirection = true,
@@ -382,10 +366,11 @@ class ScrollableTest {
             )
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isLessThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isLessThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -394,9 +379,7 @@ class ScrollableTest {
             )
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -404,21 +387,19 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_horizontalScroll_reverse_mouseWheel() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             Modifier.scrollable(
                 reverseDirection = true,
@@ -430,39 +411,34 @@ class ScrollableTest {
             this.scroll(-100f, ScrollWheel.Horizontal)
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isLessThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isLessThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Vertical)
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(100f, ScrollWheel.Horizontal)
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
     @Test
     fun scrollable_verticalScroll() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Vertical
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Vertical)
         }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
@@ -472,10 +448,11 @@ class ScrollableTest {
             )
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -484,9 +461,7 @@ class ScrollableTest {
             )
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -494,65 +469,54 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_verticalScroll_mouseWheel() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Vertical
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Vertical)
         }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Vertical)
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Horizontal)
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(100f, ScrollWheel.Vertical)
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_verticalScroll_mouseWheel_badMotionEvent() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Vertical
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Vertical)
         }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(Float.NaN, ScrollWheel.Vertical)
@@ -571,50 +535,45 @@ class ScrollableTest {
     fun scrollable_verticalScroll_keyboardPageUpAndDown() {
         var scrollAmount = 0f
 
-        val scrollableState = ScrollableState(
-            consumeScrollDelta = {
-                scrollAmount += it
-                it
-            }
-        )
+        val scrollableState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    scrollAmount += it
+                    it
+                }
+            )
 
         rule.setContent {
             Column(
-                Modifier
-                    .fillMaxWidth()
+                Modifier.fillMaxWidth()
                     .background(Color.Red)
-                    .scrollable(
-                        state = scrollableState,
-                        orientation = Orientation.Vertical
-                    )
+                    .scrollable(state = scrollableState, orientation = Orientation.Vertical)
                     .padding(10.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(scrollableBoxTag)
-                        .height(50.dp)
-                        .background(Color.Blue)
-                        // Required for keyboard scrolling (page up/down keys) to work.
-                        .focusable()
-                        .padding(10.dp)
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .testTag(scrollableBoxTag)
+                            .height(50.dp)
+                            .background(Color.Blue)
+                            // Required for keyboard scrolling (page up/down keys) to work.
+                            .focusable()
+                            .padding(10.dp)
                 )
 
                 Spacer(modifier = Modifier.size(10.dp))
 
                 for (i in 0 until 40) {
-                    val color = if (i % 2 == 0) {
-                        Color.Yellow
-                    } else {
-                        Color.Green
-                    }
+                    val color =
+                        if (i % 2 == 0) {
+                            Color.Yellow
+                        } else {
+                            Color.Green
+                        }
 
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .background(color)
-                            .padding(10.dp)
+                        modifier =
+                            Modifier.fillMaxWidth().height(50.dp).background(color).padding(10.dp)
                     )
                     Spacer(modifier = Modifier.size(10.dp))
                 }
@@ -622,34 +581,27 @@ class ScrollableTest {
         }
 
         rule.onNodeWithTag(scrollableBoxTag).requestFocus()
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageDown)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageDown) }
 
-        rule.runOnIdle {
-            assertThat(scrollAmount).isLessThan(0f)
-        }
+        rule.runOnIdle { assertThat(scrollAmount).isLessThan(0f) }
 
         scrollAmount = 0f
 
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageUp)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageUp) }
 
-        rule.runOnIdle {
-            assertThat(scrollAmount).isGreaterThan(0f)
-        }
+        rule.runOnIdle { assertThat(scrollAmount).isGreaterThan(0f) }
     }
 
     @Test
     fun scrollable_verticalScroll_reversed() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             Modifier.scrollable(
                 reverseDirection = true,
@@ -665,10 +617,11 @@ class ScrollableTest {
             )
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isLessThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isLessThan(0)
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -677,9 +630,7 @@ class ScrollableTest {
             )
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -687,21 +638,19 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_verticalScroll_reversed_mouseWheel() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             Modifier.scrollable(
                 reverseDirection = true,
@@ -713,36 +662,34 @@ class ScrollableTest {
             this.scroll(-100f, ScrollWheel.Vertical)
         }
 
-        val lastTotal = rule.runOnIdle {
-            assertThat(total).isLessThan(0)
-            total
-        }
+        val lastTotal =
+            rule.runOnIdle {
+                assertThat(total).isLessThan(0)
+                total
+            }
 
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(-100f, ScrollWheel.Horizontal)
         }
 
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(lastTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(lastTotal) }
         rule.onNodeWithTag(scrollableBoxTag).performMouseInput {
             this.scroll(100f, ScrollWheel.Vertical)
         }
-        rule.runOnIdle {
-            assertThat(total).isLessThan(0.01f)
-        }
+        rule.runOnIdle { assertThat(total).isLessThan(0.01f) }
     }
 
     @Test
     fun scrollable_disabledWontCallLambda() {
         val enabled = mutableStateOf(true)
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -757,11 +704,12 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        val prevTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0f)
-            enabled.value = false
-            total
-        }
+        val prevTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0f)
+                enabled.value = false
+                total
+            }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             this.swipe(
                 start = this.center,
@@ -769,26 +717,22 @@ class ScrollableTest {
                 durationMillis = 100
             )
         }
-        rule.runOnIdle {
-            assertThat(total).isEqualTo(prevTotal)
-        }
+        rule.runOnIdle { assertThat(total).isEqualTo(prevTotal) }
     }
 
     @Test
     fun scrollable_startWithoutSlop_ifFlinging() {
         rule.mainClock.autoAdvance = false
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                state = controller,
-                orientation = Orientation.Horizontal
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(state = controller, orientation = Orientation.Horizontal)
         }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
             swipeWithVelocity(
@@ -819,28 +763,24 @@ class ScrollableTest {
     fun scrollable_blocksDownEvents_ifFlingingCaught() {
         rule.mainClock.autoAdvance = false
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         rule.setContent {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            orientation = Orientation.Horizontal,
-                            state = controller
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(orientation = Orientation.Horizontal, state = controller)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .testTag(scrollableBoxTag)
-                            .clickable {
+                        modifier =
+                            Modifier.size(300.dp).testTag(scrollableBoxTag).clickable {
                                 assertWithMessage("Clickable shouldn't click when fling caught")
                                     .fail()
                             }
@@ -874,30 +814,24 @@ class ScrollableTest {
     @Test
     fun scrollable_snappingScrolling() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
-        setScrollableContent {
-            Modifier.scrollable(
-                orientation = Orientation.Vertical,
-                state = controller
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
             )
+        setScrollableContent {
+            Modifier.scrollable(orientation = Orientation.Vertical, state = controller)
         }
         rule.waitForIdle()
         assertThat(total).isEqualTo(0f)
 
-        scope.launch {
-            controller.animateScrollBy(1000f)
-        }
+        scope.launch { controller.animateScrollBy(1000f) }
         rule.waitForIdle()
         assertThat(total).isWithin(0.001f).of(1000f)
 
-        scope.launch {
-            controller.animateScrollBy(-200f)
-        }
+        scope.launch { controller.animateScrollBy(-200f) }
         rule.waitForIdle()
         assertThat(total).isWithin(0.001f).of(800f)
     }
@@ -908,19 +842,19 @@ class ScrollableTest {
         val emit = mutableStateOf(true)
         val expectEmission = mutableStateOf(true)
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                assertWithMessage("Animating after dispose!").that(expectEmission.value).isTrue()
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    assertWithMessage("Animating after dispose!")
+                        .that(expectEmission.value)
+                        .isTrue()
+                    total += it
+                    it
+                }
+            )
         setScrollableContent {
             if (emit.value) {
-                Modifier.scrollable(
-                    orientation = Orientation.Horizontal,
-                    state = controller
-                )
+                Modifier.scrollable(orientation = Orientation.Horizontal, state = controller)
             } else {
                 Modifier
             }
@@ -939,16 +873,12 @@ class ScrollableTest {
         rule.mainClock.advanceTimeByFrame()
         rule.mainClock.advanceTimeByFrame()
         // flip the emission
-        rule.runOnUiThread {
-            emit.value = false
-        }
+        rule.runOnUiThread { emit.value = false }
         // propagate the emit flip and record the value
         rule.mainClock.advanceTimeByFrame()
         val prevTotal = total
         // make sure we don't receive any deltas
-        rule.runOnUiThread {
-            expectEmission.value = false
-        }
+        rule.runOnUiThread { expectEmission.value = false }
 
         // pump the clock until idle
         rule.mainClock.autoAdvance = true
@@ -962,38 +892,37 @@ class ScrollableTest {
     fun scrollable_nestedDrag() {
         var innerDrag = 0f
         var outerDrag = 0f
-        val outerState = ScrollableState(
-            consumeScrollDelta = {
-                outerDrag += it
-                it
-            }
-        )
-        val innerState = ScrollableState(
-            consumeScrollDelta = {
-                innerDrag += it / 2
-                it / 2
-            }
-        )
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = outerState,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag(scrollableBoxTag)
-                            .size(300.dp)
-                            .scrollable(
-                                state = innerState,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(300.dp)
+                                .scrollable(
+                                    state = innerState,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1006,13 +935,14 @@ class ScrollableTest {
                 endVelocity = 0f
             )
         }
-        val lastEqualDrag = rule.runOnIdle {
-            assertThat(innerDrag).isGreaterThan(0f)
-            assertThat(outerDrag).isGreaterThan(0f)
-            // we consumed half delta in child, so exactly half should go to the parent
-            assertThat(outerDrag).isEqualTo(innerDrag)
-            innerDrag
-        }
+        val lastEqualDrag =
+            rule.runOnIdle {
+                assertThat(innerDrag).isGreaterThan(0f)
+                assertThat(outerDrag).isGreaterThan(0f)
+                // we consumed half delta in child, so exactly half should go to the parent
+                assertThat(outerDrag).isEqualTo(innerDrag)
+                innerDrag
+            }
         rule.runOnIdle {
             // values should be the same since no fling
             assertThat(innerDrag).isEqualTo(lastEqualDrag)
@@ -1020,45 +950,43 @@ class ScrollableTest {
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun scrollable_nestedScroll_childPartialConsumptionForMouseWheel() {
         var innerDrag = 0f
         var outerDrag = 0f
-        val outerState = ScrollableState(
-            consumeScrollDelta = {
-                // Since the child has already consumed half, the parent will consume the rest.
-                outerDrag += it
-                it
-            }
-        )
-        val innerState = ScrollableState(
-            consumeScrollDelta = {
-                // Child consumes half, leaving the rest for the parent to consume.
-                innerDrag += it / 2
-                it / 2
-            }
-        )
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Since the child has already consumed half, the parent will consume the rest.
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Child consumes half, leaving the rest for the parent to consume.
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = outerState,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag(scrollableBoxTag)
-                            .size(300.dp)
-                            .scrollable(
-                                state = innerState,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(300.dp)
+                                .scrollable(
+                                    state = innerState,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1086,46 +1014,45 @@ class ScrollableTest {
     fun scrollable_nestedScroll_childPartialConsumptionForKeyboardPageUpAndDown() {
         var innerDrag = 0f
         var outerDrag = 0f
-        val outerState = ScrollableState(
-            consumeScrollDelta = {
-                // Since the child has already consumed half, the parent will consume the rest.
-                outerDrag += it
-                it
-            }
-        )
-        val innerState = ScrollableState(
-            consumeScrollDelta = {
-                // Child consumes half, leaving the rest for the parent to consume.
-                innerDrag += it / 2
-                it / 2
-            }
-        )
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Since the child has already consumed half, the parent will consume the rest.
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Child consumes half, leaving the rest for the parent to consume.
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
 
         rule.setContent {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = outerState,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .scrollable(
-                                state = innerState,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.size(300.dp)
+                                .scrollable(
+                                    state = innerState,
+                                    orientation = Orientation.Horizontal
+                                )
                     ) {
                         Box(
-                            modifier = Modifier
-                                .testTag(scrollableBoxTag)
-                                // Required for keyboard scrolling (page up/down keys) to work.
-                                .focusable()
-                                .size(300.dp)
+                            modifier =
+                                Modifier.testTag(scrollableBoxTag)
+                                    // Required for keyboard scrolling (page up/down keys) to work.
+                                    .focusable()
+                                    .size(300.dp)
                         )
                     }
                 }
@@ -1133,9 +1060,7 @@ class ScrollableTest {
         }
 
         rule.onNodeWithTag(scrollableBoxTag).requestFocus()
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageDown)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageDown) }
 
         rule.runOnIdle {
             assertThat(outerDrag).isLessThan(0f)
@@ -1148,9 +1073,7 @@ class ScrollableTest {
         outerDrag = 0f
         innerDrag = 0f
 
-        rule.onNodeWithTag(scrollableBoxTag).performKeyInput {
-            pressKey(Key.PageUp)
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performKeyInput { pressKey(Key.PageUp) }
 
         rule.runOnIdle {
             assertThat(outerDrag).isGreaterThan(0f)
@@ -1162,41 +1085,176 @@ class ScrollableTest {
     }
 
     @Test
-    fun scrollable_nestedFling() {
+    fun scrollable_nestedScroll_childPartialConsumptionForSemantics_horizontal() {
         var innerDrag = 0f
         var outerDrag = 0f
-        val outerState = ScrollableState(
-            consumeScrollDelta = {
-                outerDrag += it
-                it
-            }
-        )
-        val innerState = ScrollableState(
-            consumeScrollDelta = {
-                innerDrag += it / 2
-                it / 2
-            }
-        )
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Since the child has already consumed half, the parent will consume the rest.
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    // Child consumes half, leaving the rest for the parent to consume.
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = outerState,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag(scrollableBoxTag)
-                            .size(300.dp)
-                            .scrollable(
-                                state = innerState,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(300.dp)
+                                .scrollable(
+                                    state = innerState,
+                                    orientation = Orientation.Horizontal
+                                )
+                    )
+                }
+            }
+        }
+        rule.onNodeWithTag(scrollableBoxTag).performSemanticsAction(ScrollBy) {
+            it.invoke(200f, 0f)
+        }
+
+        rule.runOnIdle {
+            assertThat(innerDrag).isGreaterThan(0f)
+            assertThat(outerDrag).isGreaterThan(0f)
+            assertThat(innerDrag).isEqualTo(outerDrag)
+            innerDrag
+        }
+    }
+
+    @Test
+    fun scrollable_nestedScroll_childPartialConsumptionForSemantics_vertical() {
+        var innerDrag = 0f
+        var outerDrag = 0f
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
+
+        rule.setContentAndGetScope {
+            Box {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Vertical)
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(300.dp)
+                                .scrollable(state = innerState, orientation = Orientation.Vertical)
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithTag(scrollableBoxTag).performSemanticsAction(ScrollBy) {
+            it.invoke(0f, 200f)
+        }
+
+        rule.runOnIdle {
+            assertThat(innerDrag).isGreaterThan(0f)
+            assertThat(outerDrag).isGreaterThan(0f)
+            assertThat(innerDrag).isEqualTo(outerDrag)
+            innerDrag
+        }
+    }
+
+    @Test
+    fun focusScroll_nestedScroll_childPartialConsumptionForSemantics() {
+        var outerDrag = 0f
+        val requester = BringIntoViewRequester()
+        val connection =
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    outerDrag += available.x
+                    return super.onPreScroll(available, source)
+                }
+            }
+        val scrollState = ScrollState(0)
+        rule.setContentAndGetScope {
+            Box(Modifier.nestedScroll(connection)) {
+                Row(modifier = Modifier.size(300.dp).horizontalScroll(scrollState)) {
+                    repeat(5) { Box(modifier = Modifier.testTag(scrollableBoxTag).size(100.dp)) }
+                    Box(
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(100.dp)
+                                .bringIntoViewRequester(requester)
+                    )
+                }
+            }
+        }
+
+        rule.runOnIdle { scope.launch { requester.bringIntoView() } }
+
+        rule.runOnIdle {
+            assertThat(outerDrag).isNonZero()
+            assertThat(outerDrag).isWithin(1f).of(-scrollState.value.toFloat())
+        }
+    }
+
+    @Test
+    fun scrollable_nestedFling() {
+        var innerDrag = 0f
+        var outerDrag = 0f
+        val outerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    outerDrag += it
+                    it
+                }
+            )
+        val innerState =
+            ScrollableState(
+                consumeScrollDelta = {
+                    innerDrag += it / 2
+                    it / 2
+                }
+            )
+
+        rule.setContentAndGetScope {
+            Box {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = outerState, orientation = Orientation.Horizontal)
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(300.dp)
+                                .scrollable(
+                                    state = innerState,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1226,42 +1284,42 @@ class ScrollableTest {
         var value = 0f
         var lastReceivedPreScrollAvailable = 0f
         val preConsumeFraction = 0.7f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                val expected = lastReceivedPreScrollAvailable * (1 - preConsumeFraction)
-                assertThat(it - expected).isWithin(0.01f)
-                value += it
-                it
-            }
-        )
-        val preConsumingParent = object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                lastReceivedPreScrollAvailable = available.x
-                return available * preConsumeFraction
-            }
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    val expected = lastReceivedPreScrollAvailable * (1 - preConsumeFraction)
+                    assertThat(it - expected).isWithin(0.01f)
+                    value += it
+                    it
+                }
+            )
+        val preConsumingParent =
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    lastReceivedPreScrollAvailable = available.x
+                    return available * preConsumeFraction
+                }
 
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                // consume all velocity
-                return available
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    // consume all velocity
+                    return available
+                }
             }
-        }
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .nestedScroll(preConsumingParent)
+                    modifier = Modifier.size(300.dp).nestedScroll(preConsumingParent)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .testTag(scrollableBoxTag)
-                            .scrollable(
-                                state = controller,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.size(300.dp)
+                                .testTag(scrollableBoxTag)
+                                .scrollable(
+                                    state = controller,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1288,52 +1346,52 @@ class ScrollableTest {
         var value = 0f
         var expectedLeft = 0f
         val velocityFlung = 5000f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                val toConsume = it * 0.345f
-                value += toConsume
-                expectedLeft = it - toConsume
-                toConsume
-            }
-        )
-        val parent = object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                // we should get in post scroll as much as left in controller callback
-                assertThat(available.x).isEqualTo(expectedLeft)
-                return if (source == NestedScrollSource.SideEffect) Offset.Zero else available
-            }
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    val toConsume = it * 0.345f
+                    value += toConsume
+                    expectedLeft = it - toConsume
+                    toConsume
+                }
+            )
+        val parent =
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource
+                ): Offset {
+                    // we should get in post scroll as much as left in controller callback
+                    assertThat(available.x).isEqualTo(expectedLeft)
+                    return if (source == NestedScrollSource.SideEffect) Offset.Zero else available
+                }
 
-            override suspend fun onPostFling(
-                consumed: Velocity,
-                available: Velocity
-            ): Velocity {
-                val expected = velocityFlung - consumed.x
-                assertThat(consumed.x).isLessThan(velocityFlung)
-                assertThat(abs(available.x - expected)).isLessThan(0.1f)
-                return available
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    val expected = velocityFlung - consumed.x
+                    assertThat(consumed.x).isLessThan(velocityFlung)
+                    assertThat(abs(available.x - expected)).isLessThan(0.1f)
+                    return available
+                }
             }
-        }
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .nestedScroll(parent)
+                    modifier = Modifier.size(300.dp).nestedScroll(parent)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .testTag(scrollableBoxTag)
-                            .scrollable(
-                                state = controller,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.size(300.dp)
+                                .testTag(scrollableBoxTag)
+                                .scrollable(
+                                    state = controller,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1357,53 +1415,53 @@ class ScrollableTest {
         var value = 0f
         var expectedLeft = 0f
         val velocityFlung = 5000f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                val toConsume = it * 0.345f
-                value += toConsume
-                expectedLeft = it - toConsume
-                toConsume
-            }
-        )
-        val parent = object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                // we should get in post scroll as much as left in controller callback
-                assertThat(available.x).isEqualTo(-expectedLeft)
-                return if (source == NestedScrollSource.SideEffect) Offset.Zero else available
-            }
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    val toConsume = it * 0.345f
+                    value += toConsume
+                    expectedLeft = it - toConsume
+                    toConsume
+                }
+            )
+        val parent =
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource
+                ): Offset {
+                    // we should get in post scroll as much as left in controller callback
+                    assertThat(available.x).isEqualTo(-expectedLeft)
+                    return if (source == NestedScrollSource.SideEffect) Offset.Zero else available
+                }
 
-            override suspend fun onPostFling(
-                consumed: Velocity,
-                available: Velocity
-            ): Velocity {
-                val expected = velocityFlung - consumed.x
-                assertThat(consumed.x).isLessThan(velocityFlung)
-                assertThat(abs(available.x - expected)).isLessThan(0.1f)
-                return available
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    val expected = velocityFlung - consumed.x
+                    assertThat(consumed.x).isLessThan(velocityFlung)
+                    assertThat(abs(available.x - expected)).isLessThan(0.1f)
+                    return available
+                }
             }
-        }
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .nestedScroll(parent)
+                    modifier = Modifier.size(300.dp).nestedScroll(parent)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .testTag(scrollableBoxTag)
-                            .scrollable(
-                                state = controller,
-                                reverseDirection = true,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.size(300.dp)
+                                .testTag(scrollableBoxTag)
+                                .scrollable(
+                                    state = controller,
+                                    reverseDirection = true,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1426,29 +1484,26 @@ class ScrollableTest {
     fun scrollable_nestedScrollBelow_listensDispatches() {
         var value = 0f
         var expectedConsumed = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                expectedConsumed = it * 0.3f
-                value += expectedConsumed
-                expectedConsumed
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    expectedConsumed = it * 0.3f
+                    value += expectedConsumed
+                    expectedConsumed
+                }
+            )
         val child = object : NestedScrollConnection {}
         val dispatcher = NestedScrollDispatcher()
 
         rule.setContentAndGetScope {
             Box {
                 Box(
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(state = controller, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        Modifier
-                            .size(200.dp)
+                        Modifier.size(200.dp)
                             .testTag(scrollableBoxTag)
                             .nestedScroll(child, dispatcher)
                     )
@@ -1456,20 +1511,22 @@ class ScrollableTest {
             }
         }
 
-        val lastValueBeforeFling = rule.runOnIdle {
-            val preScrollConsumed = dispatcher
-                .dispatchPreScroll(Offset(20f, 20f), NestedScrollSource.UserInput)
-            // scrollable is not interested in pre scroll
-            assertThat(preScrollConsumed).isEqualTo(Offset.Zero)
+        val lastValueBeforeFling =
+            rule.runOnIdle {
+                val preScrollConsumed =
+                    dispatcher.dispatchPreScroll(Offset(20f, 20f), NestedScrollSource.UserInput)
+                // scrollable is not interested in pre scroll
+                assertThat(preScrollConsumed).isEqualTo(Offset.Zero)
 
-            val consumed = dispatcher.dispatchPostScroll(
-                Offset(20f, 20f),
-                Offset(50f, 50f),
-                NestedScrollSource.UserInput
-            )
-            assertThat(consumed.x - expectedConsumed).isWithin(0.001f)
-            value
-        }
+                val consumed =
+                    dispatcher.dispatchPostScroll(
+                        Offset(20f, 20f),
+                        Offset(50f, 50f),
+                        NestedScrollSource.UserInput
+                    )
+                assertThat(consumed.x - expectedConsumed).isWithin(0.001f)
+                value
+            }
 
         scope.launch {
             val preFlingConsumed = dispatcher.dispatchPreFling(Velocity(50f, 50f))
@@ -1479,10 +1536,7 @@ class ScrollableTest {
         rule.waitForIdle()
 
         scope.launch {
-            dispatcher.dispatchPostFling(
-                Velocity(1000f, 1000f),
-                Velocity(2000f, 2000f)
-            )
+            dispatcher.dispatchPostFling(Velocity(1000f, 1000f), Velocity(2000f, 2000f))
         }
 
         rule.runOnIdle {
@@ -1495,32 +1549,33 @@ class ScrollableTest {
     fun scrollable_nestedScroll_allowParentWhenDisabled() {
         var childValue = 0f
         var parentValue = 0f
-        val childController = ScrollableState(
-            consumeScrollDelta = {
-                childValue += it
-                it
-            }
-        )
-        val parentController = ScrollableState(
-            consumeScrollDelta = {
-                parentValue += it
-                it
-            }
-        )
+        val childController =
+            ScrollableState(
+                consumeScrollDelta = {
+                    childValue += it
+                    it
+                }
+            )
+        val parentController =
+            ScrollableState(
+                consumeScrollDelta = {
+                    parentValue += it
+                    it
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 Box(
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = parentController,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(
+                                state = parentController,
+                                orientation = Orientation.Horizontal
+                            )
                 ) {
                     Box(
-                        Modifier
-                            .size(200.dp)
+                        Modifier.size(200.dp)
                             .testTag(scrollableBoxTag)
                             .scrollable(
                                 enabled = false,
@@ -1537,10 +1592,9 @@ class ScrollableTest {
             assertThat(childValue).isEqualTo(0f)
         }
 
-        rule.onNodeWithTag(scrollableBoxTag)
-            .performTouchInput {
-                swipe(center, center.copy(x = center.x + 100f))
-            }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
+            swipe(center, center.copy(x = center.x + 100f))
+        }
 
         rule.runOnIdle {
             assertThat(childValue).isEqualTo(0f)
@@ -1553,38 +1607,40 @@ class ScrollableTest {
         var childValue = 0f
         var parentValue = 0f
         var selfValue = 0f
-        val childController = ScrollableState(
-            consumeScrollDelta = {
-                childValue += it / 2
-                it / 2
-            }
-        )
-        val middleController = ScrollableState(
-            consumeScrollDelta = {
-                selfValue += it / 2
-                it / 2
-            }
-        )
-        val parentController = ScrollableState(
-            consumeScrollDelta = {
-                parentValue += it / 2
-                it / 2
-            }
-        )
+        val childController =
+            ScrollableState(
+                consumeScrollDelta = {
+                    childValue += it / 2
+                    it / 2
+                }
+            )
+        val middleController =
+            ScrollableState(
+                consumeScrollDelta = {
+                    selfValue += it / 2
+                    it / 2
+                }
+            )
+        val parentController =
+            ScrollableState(
+                consumeScrollDelta = {
+                    parentValue += it / 2
+                    it / 2
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 Box(
-                    modifier = Modifier
-                        .size(300.dp)
-                        .scrollable(
-                            state = parentController,
-                            orientation = Orientation.Horizontal
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .scrollable(
+                                state = parentController,
+                                orientation = Orientation.Horizontal
+                            )
                 ) {
                     Box(
-                        Modifier
-                            .size(200.dp)
+                        Modifier.size(200.dp)
                             .scrollable(
                                 enabled = false,
                                 orientation = Orientation.Horizontal,
@@ -1592,8 +1648,7 @@ class ScrollableTest {
                             )
                     ) {
                         Box(
-                            Modifier
-                                .size(200.dp)
+                            Modifier.size(200.dp)
                                 .testTag(scrollableBoxTag)
                                 .scrollable(
                                     orientation = Orientation.Horizontal,
@@ -1611,10 +1666,9 @@ class ScrollableTest {
             assertThat(childValue).isEqualTo(0f)
         }
 
-        rule.onNodeWithTag(scrollableBoxTag)
-            .performTouchInput {
-                swipe(center, center.copy(x = center.x + 100f))
-            }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
+            swipe(center, center.copy(x = center.x + 100f))
+        }
 
         rule.runOnIdle {
             assertThat(childValue).isGreaterThan(0f)
@@ -1633,27 +1687,28 @@ class ScrollableTest {
             childDeltas += it
             it
         }
-        val flingCancellationParent = object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                if (source == NestedScrollSource.SideEffect && available != Offset.Zero) {
-                    throw CancellationException()
+        val flingCancellationParent =
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource
+                ): Offset {
+                    if (source == NestedScrollSource.SideEffect && available != Offset.Zero) {
+                        throw CancellationException()
+                    }
+                    return Offset.Zero
                 }
-                return Offset.Zero
             }
-        }
 
         rule.setContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Box(modifier = Modifier.nestedScroll(flingCancellationParent)) {
                 Box(
-                    modifier = Modifier
-                        .size(600.dp)
-                        .testTag("childScrollable")
-                        .scrollable(childController, Orientation.Horizontal)
+                    modifier =
+                        Modifier.size(600.dp)
+                            .testTag("childScrollable")
+                            .scrollable(childController, Orientation.Horizontal)
                 )
             }
         }
@@ -1665,9 +1720,7 @@ class ScrollableTest {
             up()
         }
 
-        rule.runOnIdle {
-            assertThat(childDeltas).isEqualTo(100f - touchSlop)
-        }
+        rule.runOnIdle { assertThat(childDeltas).isEqualTo(100f - touchSlop) }
 
         childDeltas = 0f
         var dragged = 0f
@@ -1681,47 +1734,161 @@ class ScrollableTest {
     }
 
     @Test
+    fun scrollable_nestedFling_shouldCancelWhenHitTheBounds() {
+        var latestAvailableVelocity = Velocity.Zero
+        var onPostFlingCalled = false
+        val connection =
+            object : NestedScrollConnection {
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    latestAvailableVelocity = available
+                    onPostFlingCalled = true
+                    return super.onPostFling(consumed, available)
+                }
+            }
+        rule.setContent {
+            Box(
+                Modifier.scrollable(
+                    state = rememberScrollableState { it },
+                    orientation = Orientation.Vertical
+                )
+            ) {
+                Box(Modifier.nestedScroll(connection)) {
+                    Column(
+                        Modifier.testTag("column")
+                            .verticalScroll(
+                                rememberScrollState(with(rule.density) { (5 * 200.dp).roundToPx() })
+                            )
+                    ) {
+                        repeat(10) { Box(Modifier.size(200.dp)) }
+                    }
+                }
+            }
+        }
+
+        rule.onNodeWithTag("column").performTouchInput { swipeDown() }
+
+        /**
+         * Because previously the animation was being completely consumed by the child fling, the
+         * nested scroll connection in the middle would see a zero post fling velocity, even if the
+         * child hit the bounds.
+         */
+        rule.runOnIdle {
+            assertThat(onPostFlingCalled).isTrue()
+            assertThat(latestAvailableVelocity.y).isNonZero()
+        }
+    }
+
+    @Test
+    fun scrollable_nestedFling_parentShouldFlingWithVelocityLeft() {
+        var postFlingCalled = false
+        var lastPostFlingVelocity = Velocity.Zero
+        var flingDelta = 0.0f
+        val fling =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    assertThat(initialVelocity).isEqualTo(lastPostFlingVelocity.y)
+                    scrollBy(100f)
+                    return initialVelocity
+                }
+            }
+        val topConnection =
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    // accumulate deltas for second fling only
+                    if (source == NestedScrollSource.SideEffect && postFlingCalled) {
+                        flingDelta += available.y
+                    }
+                    return super.onPreScroll(available, source)
+                }
+            }
+
+        val middleConnection =
+            object : NestedScrollConnection {
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    postFlingCalled = true
+                    lastPostFlingVelocity = available
+                    return super.onPostFling(consumed, available)
+                }
+            }
+        val columnState = ScrollState(with(rule.density) { (5 * 200.dp).roundToPx() })
+        rule.setContent {
+            Box(
+                Modifier.nestedScroll(topConnection)
+                    .scrollable(
+                        flingBehavior = fling,
+                        state = rememberScrollableState { it },
+                        orientation = Orientation.Vertical
+                    )
+            ) {
+                Column(
+                    Modifier.nestedScroll(middleConnection)
+                        .testTag("column")
+                        .verticalScroll(columnState)
+                ) {
+                    repeat(10) { Box(Modifier.size(200.dp)) }
+                }
+            }
+        }
+
+        rule.onNodeWithTag("column").performTouchInput { swipeDown() }
+
+        rule.runOnIdle {
+            assertThat(columnState.value).isZero() // column is at the bounds
+            assertThat(postFlingCalled)
+                .isTrue() // we fired a post fling call after the cancellation
+            assertThat(lastPostFlingVelocity.y)
+                .isNonZero() // the post child fling velocity was not zero
+            assertThat(flingDelta).isEqualTo(100f) // the fling delta as propagated correctly
+        }
+    }
+
+    @Test
     fun scrollable_bothOrientations_proxiesPostFling() {
         val velocityFlung = 5000f
         val outerState = ScrollableState(consumeScrollDelta = { 0f })
         val innerState = ScrollableState(consumeScrollDelta = { 0f })
-        val innerFlingBehavior = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                return initialVelocity
+        val innerFlingBehavior =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    return initialVelocity
+                }
             }
-        }
-        val parent = object : NestedScrollConnection {
-            override suspend fun onPostFling(
-                consumed: Velocity,
-                available: Velocity
-            ): Velocity {
-                assertThat(consumed.x).isEqualTo(0f)
-                assertThat(available.x).isWithin(0.1f).of(velocityFlung)
-                return available
+        val parent =
+            object : NestedScrollConnection {
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    assertThat(consumed.x).isEqualTo(0f)
+                    assertThat(available.x).isWithin(0.1f).of(velocityFlung)
+                    return available
+                }
             }
-        }
 
         rule.setContentAndGetScope {
             Box {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(300.dp)
-                        .nestedScroll(parent)
-                        .scrollable(
-                            state = outerState,
-                            orientation = Orientation.Vertical
-                        )
+                    modifier =
+                        Modifier.size(300.dp)
+                            .nestedScroll(parent)
+                            .scrollable(state = outerState, orientation = Orientation.Vertical)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(300.dp)
-                            .testTag(scrollableBoxTag)
-                            .scrollable(
-                                state = innerState,
-                                flingBehavior = innerFlingBehavior,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.size(300.dp)
+                                .testTag(scrollableBoxTag)
+                                .scrollable(
+                                    state = innerState,
+                                    flingBehavior = innerFlingBehavior,
+                                    orientation = Orientation.Horizontal
+                                )
                     )
                 }
             }
@@ -1744,12 +1911,13 @@ class ScrollableTest {
     fun scrollable_interactionSource() {
         val interactionSource = MutableInteractionSource()
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
 
         setScrollableContent {
             Modifier.scrollable(
@@ -1761,36 +1929,27 @@ class ScrollableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag(scrollableBoxTag)
-            .performTouchInput {
-                down(Offset(visibleSize.width / 4f, visibleSize.height / 2f))
-                moveBy(Offset(visibleSize.width / 2f, 0f))
-            }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
+            down(Offset(visibleSize.width / 4f, visibleSize.height / 2f))
+            moveBy(Offset(visibleSize.width / 2f, 0f))
+        }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(1)
             assertThat(interactions.first()).isInstanceOf(DragInteraction.Start::class.java)
         }
 
-        rule.onNodeWithTag(scrollableBoxTag)
-            .performTouchInput {
-                up()
-            }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
             assertThat(interactions.first()).isInstanceOf(DragInteraction.Start::class.java)
             assertThat(interactions[1]).isInstanceOf(DragInteraction.Stop::class.java)
-            assertThat((interactions[1] as DragInteraction.Stop).start)
-                .isEqualTo(interactions[0])
+            assertThat((interactions[1] as DragInteraction.Stop).start).isEqualTo(interactions[0])
         }
     }
 
@@ -1799,25 +1958,26 @@ class ScrollableTest {
         val interactionSource = MutableInteractionSource()
         var emitScrollableBox by mutableStateOf(true)
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
 
         rule.setContentAndGetScope {
             Box {
                 if (emitScrollableBox) {
                     Box(
-                        modifier = Modifier
-                            .testTag(scrollableBoxTag)
-                            .size(100.dp)
-                            .scrollable(
-                                interactionSource = interactionSource,
-                                orientation = Orientation.Horizontal,
-                                state = controller
-                            )
+                        modifier =
+                            Modifier.testTag(scrollableBoxTag)
+                                .size(100.dp)
+                                .scrollable(
+                                    interactionSource = interactionSource,
+                                    orientation = Orientation.Horizontal,
+                                    state = controller
+                                )
                     )
                 }
             }
@@ -1825,19 +1985,14 @@ class ScrollableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag(scrollableBoxTag)
-            .performTouchInput {
-                down(Offset(visibleSize.width / 4f, visibleSize.height / 2f))
-                moveBy(Offset(visibleSize.width / 2f, 0f))
-            }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
+            down(Offset(visibleSize.width / 4f, visibleSize.height / 2f))
+            moveBy(Offset(visibleSize.width / 2f, 0f))
+        }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(1)
@@ -1845,37 +2000,36 @@ class ScrollableTest {
         }
 
         // Dispose scrollable
-        rule.runOnIdle {
-            emitScrollableBox = false
-        }
+        rule.runOnIdle { emitScrollableBox = false }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
             assertThat(interactions.first()).isInstanceOf(DragInteraction.Start::class.java)
             assertThat(interactions[1]).isInstanceOf(DragInteraction.Cancel::class.java)
-            assertThat((interactions[1] as DragInteraction.Cancel).start)
-                .isEqualTo(interactions[0])
+            assertThat((interactions[1] as DragInteraction.Cancel).start).isEqualTo(interactions[0])
         }
     }
 
     @Test
     fun scrollable_flingBehaviourCalled_whenVelocity0() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         var flingCalled = 0
         var flingVelocity: Float = Float.MAX_VALUE
-        val flingBehaviour = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                flingCalled++
-                flingVelocity = initialVelocity
-                return 0f
+        val flingBehaviour =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    flingCalled++
+                    flingVelocity = initialVelocity
+                    return 0f
+                }
             }
-        }
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -1896,21 +2050,23 @@ class ScrollableTest {
     @Test
     fun scrollable_flingBehaviourCalled() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         var flingCalled = 0
         var flingVelocity: Float = Float.MAX_VALUE
-        val flingBehaviour = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                flingCalled++
-                flingVelocity = initialVelocity
-                return 0f
+        val flingBehaviour =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    flingCalled++
+                    flingVelocity = initialVelocity
+                    return 0f
+                }
             }
-        }
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -1919,11 +2075,7 @@ class ScrollableTest {
             )
         }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeWithVelocity(
-                this.center,
-                this.center + Offset(115f, 0f),
-                endVelocity = 1000f
-            )
+            swipeWithVelocity(this.center, this.center + Offset(115f, 0f), endVelocity = 1000f)
         }
         assertThat(flingCalled).isEqualTo(1)
         assertThat(flingVelocity).isWithin(5f).of(1000f)
@@ -1932,21 +2084,23 @@ class ScrollableTest {
     @Test
     fun scrollable_flingBehaviourCalled_reversed() {
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         var flingCalled = 0
         var flingVelocity: Float = Float.MAX_VALUE
-        val flingBehaviour = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                flingCalled++
-                flingVelocity = initialVelocity
-                return 0f
+        val flingBehaviour =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    flingCalled++
+                    flingVelocity = initialVelocity
+                    return 0f
+                }
             }
-        }
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -1956,11 +2110,7 @@ class ScrollableTest {
             )
         }
         rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeWithVelocity(
-                this.center,
-                this.center + Offset(115f, 0f),
-                endVelocity = 1000f
-            )
+            swipeWithVelocity(this.center, this.center + Offset(115f, 0f), endVelocity = 1000f)
         }
         assertThat(flingCalled).isEqualTo(1)
         assertThat(flingVelocity).isWithin(5f).of(-1000f)
@@ -1970,18 +2120,20 @@ class ScrollableTest {
     fun scrollable_flingBehaviourCalled_correctScope() {
         var total = 0f
         var returned = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
+        val flingBehaviour =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    returned = scrollBy(123f)
+                    return 0f
+                }
             }
-        )
-        val flingBehaviour = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                returned = scrollBy(123f)
-                return 0f
-            }
-        }
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -1994,14 +2146,13 @@ class ScrollableTest {
             moveBy(Offset(x = 100f, y = 0f))
         }
 
-        val prevTotal = rule.runOnIdle {
-            assertThat(total).isGreaterThan(0f)
-            total
-        }
+        val prevTotal =
+            rule.runOnIdle {
+                assertThat(total).isGreaterThan(0f)
+                total
+            }
 
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            up()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(total).isEqualTo(prevTotal + 123)
@@ -2013,18 +2164,20 @@ class ScrollableTest {
     fun scrollable_flingBehaviourCalled_reversed_correctScope() {
         var total = 0f
         var returned = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
+        val flingBehaviour =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    returned = scrollBy(123f)
+                    return 0f
+                }
             }
-        )
-        val flingBehaviour = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                returned = scrollBy(123f)
-                return 0f
-            }
-        }
         setScrollableContent {
             Modifier.scrollable(
                 state = controller,
@@ -2038,14 +2191,13 @@ class ScrollableTest {
             moveBy(Offset(x = 100f, y = 0f))
         }
 
-        val prevTotal = rule.runOnIdle {
-            assertThat(total).isLessThan(0f)
-            total
-        }
+        val prevTotal =
+            rule.runOnIdle {
+                assertThat(total).isLessThan(0f)
+                total
+            }
 
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            up()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(total).isEqualTo(prevTotal + 123)
@@ -2062,23 +2214,20 @@ class ScrollableTest {
         rule.setContent {
             Box {
                 Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .then(
-                            ScrollableContainerReaderNodeElement {
-                                isOuterInScrollableContainer = it
-                            }
-                        )
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal
-                        )
-                        .then(
-                            ScrollableContainerReaderNodeElement {
-                                isInnerInScrollableContainer = it
-                            }
-                        )
+                    modifier =
+                        Modifier.testTag(scrollableBoxTag)
+                            .size(100.dp)
+                            .then(
+                                ScrollableContainerReaderNodeElement {
+                                    isOuterInScrollableContainer = it
+                                }
+                            )
+                            .scrollable(state = controller, orientation = Orientation.Horizontal)
+                            .then(
+                                ScrollableContainerReaderNodeElement {
+                                    isInnerInScrollableContainer = it
+                                }
+                            )
                 )
             }
         }
@@ -2098,24 +2247,24 @@ class ScrollableTest {
         rule.setContent {
             Box {
                 Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .then(
-                            ScrollableContainerReaderNodeElement {
-                                isOuterInScrollableContainer = it
-                            }
-                        )
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal,
-                            enabled = false
-                        )
-                        .then(
-                            ScrollableContainerReaderNodeElement {
-                                isInnerInScrollableContainer = it
-                            }
-                        )
+                    modifier =
+                        Modifier.testTag(scrollableBoxTag)
+                            .size(100.dp)
+                            .then(
+                                ScrollableContainerReaderNodeElement {
+                                    isOuterInScrollableContainer = it
+                                }
+                            )
+                            .scrollable(
+                                state = controller,
+                                orientation = Orientation.Horizontal,
+                                enabled = false
+                            )
+                            .then(
+                                ScrollableContainerReaderNodeElement {
+                                    isInnerInScrollableContainer = it
+                                }
+                            )
                 )
             }
         }
@@ -2135,34 +2284,28 @@ class ScrollableTest {
         rule.setContent {
             Box {
                 Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal,
-                            enabled = enabled.value
-                        )
-                        .then(
-                            ScrollableContainerReaderNodeElement {
-                                isInnerInScrollableContainer = it
-                            }
-                        )
+                    modifier =
+                        Modifier.testTag(scrollableBoxTag)
+                            .size(100.dp)
+                            .scrollable(
+                                state = controller,
+                                orientation = Orientation.Horizontal,
+                                enabled = enabled.value
+                            )
+                            .then(
+                                ScrollableContainerReaderNodeElement {
+                                    isInnerInScrollableContainer = it
+                                }
+                            )
                 )
             }
         }
 
-        rule.runOnIdle {
-            assertThat(isInnerInScrollableContainer).isTrue()
-        }
+        rule.runOnIdle { assertThat(isInnerInScrollableContainer).isTrue() }
 
-        rule.runOnIdle {
-            enabled.value = false
-        }
+        rule.runOnIdle { enabled.value = false }
 
-        rule.runOnIdle {
-            assertThat(isInnerInScrollableContainer).isFalse()
-        }
+        rule.runOnIdle { assertThat(isInnerInScrollableContainer).isFalse() }
     }
 
     @Test
@@ -2170,20 +2313,18 @@ class ScrollableTest {
         rule.mainClock.autoAdvance = false
 
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         rule.setContentAndGetScope {
             Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .scrollable(
-                        state = controller,
-                        orientation = Orientation.Horizontal
-                    )
+                modifier =
+                    Modifier.size(100.dp)
+                        .scrollable(state = controller, orientation = Orientation.Horizontal)
             )
         }
 
@@ -2250,45 +2391,34 @@ class ScrollableTest {
         rule.mainClock.autoAdvance = false
 
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         rule.setContentAndGetScope {
             Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .scrollable(
-                        state = controller,
-                        orientation = Orientation.Horizontal
-                    )
+                modifier =
+                    Modifier.size(100.dp)
+                        .scrollable(state = controller, orientation = Orientation.Horizontal)
             )
         }
 
         lateinit var animateJob: Job
 
         rule.runOnIdle {
-            animateJob = scope.launch {
-                controller.animateScrollBy(
-                    100f,
-                    tween(1000)
-                )
-            }
+            animateJob = scope.launch { controller.animateScrollBy(100f, tween(1000)) }
         }
 
         rule.mainClock.advanceTimeBy(500)
-        rule.runOnIdle {
-            assertThat(controller.isScrollInProgress).isTrue()
-        }
+        rule.runOnIdle { assertThat(controller.isScrollInProgress).isTrue() }
 
         // Stop halfway through the animation
         animateJob.cancel()
 
-        rule.runOnIdle {
-            assertThat(controller.isScrollInProgress).isFalse()
-        }
+        rule.runOnIdle { assertThat(controller.isScrollInProgress).isFalse() }
     }
 
     @Test
@@ -2296,48 +2426,32 @@ class ScrollableTest {
         rule.mainClock.autoAdvance = false
 
         var total = 0f
-        val controller = ScrollableState(
-            consumeScrollDelta = {
-                total += it
-                it
-            }
-        )
+        val controller =
+            ScrollableState(
+                consumeScrollDelta = {
+                    total += it
+                    it
+                }
+            )
         rule.setContentAndGetScope {
             Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .scrollable(
-                        state = controller,
-                        orientation = Orientation.Horizontal
-                    )
+                modifier =
+                    Modifier.size(100.dp)
+                        .scrollable(state = controller, orientation = Orientation.Horizontal)
             )
         }
 
-        rule.runOnIdle {
-            scope.launch {
-                controller.animateScrollBy(
-                    100f,
-                    tween(1000)
-                )
-            }
-        }
+        rule.runOnIdle { scope.launch { controller.animateScrollBy(100f, tween(1000)) } }
 
         rule.mainClock.advanceTimeBy(500)
         rule.runOnIdle {
             assertThat(total).isGreaterThan(0f)
             assertThat(total).isLessThan(100f)
             assertThat(controller.isScrollInProgress).isTrue()
-            scope.launch {
-                controller.animateScrollBy(
-                    -100f,
-                    tween(1000)
-                )
-            }
+            scope.launch { controller.animateScrollBy(-100f, tween(1000)) }
         }
 
-        rule.runOnIdle {
-            assertThat(controller.isScrollInProgress).isTrue()
-        }
+        rule.runOnIdle { assertThat(controller.isScrollInProgress).isTrue() }
 
         rule.mainClock.advanceTimeBy(1000)
         rule.mainClock.advanceTimeByFrame()
@@ -2372,33 +2486,22 @@ class ScrollableTest {
 
         rule.setContentAndGetScope {
             Box(
-                modifier = Modifier
-                    .testTag("outerScrollable")
-                    .size(300.dp)
-                    .scrollable(
-                        outerStateController,
-                        orientation = Orientation.Horizontal
-                    )
-
+                modifier =
+                    Modifier.testTag("outerScrollable")
+                        .size(300.dp)
+                        .scrollable(outerStateController, orientation = Orientation.Horizontal)
             ) {
                 Box(
-                    modifier = Modifier
-                        .testTag("middleScrollable")
-                        .size(300.dp)
-                        .scrollable(
-                            middleController,
-                            orientation = Orientation.Vertical
-                        )
-
+                    modifier =
+                        Modifier.testTag("middleScrollable")
+                            .size(300.dp)
+                            .scrollable(middleController, orientation = Orientation.Vertical)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag("innerScrollable")
-                            .size(300.dp)
-                            .scrollable(
-                                innerController,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.testTag("innerScrollable")
+                                .size(300.dp)
+                                .scrollable(innerController, orientation = Orientation.Horizontal)
                     )
                 }
             }
@@ -2443,45 +2546,34 @@ class ScrollableTest {
         rule.setContentAndGetScope {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Box(
-                modifier = Modifier
-                    .testTag("outerScrollable")
-                    .size(600.dp)
-                    .background(Color.Red)
-                    .scrollable(
-                        outerStateController,
-                        orientation = Orientation.Vertical
-                    ),
+                modifier =
+                    Modifier.testTag("outerScrollable")
+                        .size(600.dp)
+                        .background(Color.Red)
+                        .scrollable(outerStateController, orientation = Orientation.Vertical),
                 contentAlignment = Alignment.BottomStart
             ) {
                 Box(
-                    modifier = Modifier
-                        .testTag("middleScrollable")
-                        .size(300.dp)
-                        .background(Color.Blue)
-                        .scrollable(
-                            middleController,
-                            orientation = Orientation.Vertical
-                        ),
+                    modifier =
+                        Modifier.testTag("middleScrollable")
+                            .size(300.dp)
+                            .background(Color.Blue)
+                            .scrollable(middleController, orientation = Orientation.Vertical),
                     contentAlignment = Alignment.BottomStart
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag("innerScrollable")
-                            .size(50.dp)
-                            .background(Color.Yellow)
-                            .scrollable(
-                                innerController,
-                                orientation = Orientation.Vertical
-                            )
+                        modifier =
+                            Modifier.testTag("innerScrollable")
+                                .size(50.dp)
+                                .background(Color.Yellow)
+                                .scrollable(innerController, orientation = Orientation.Vertical)
                     )
                 }
             }
         }
 
         rule.mainClock.autoAdvance = false
-        rule.onNodeWithTag("innerScrollable").performTouchInput {
-            swipeUp()
-        }
+        rule.onNodeWithTag("innerScrollable").performTouchInput { swipeUp() }
 
         rule.mainClock.advanceTimeByFrame()
         rule.mainClock.advanceTimeByFrame()
@@ -2496,9 +2588,7 @@ class ScrollableTest {
 
         rule.mainClock.autoAdvance = true
 
-        rule.runOnIdle {
-            assertThat(outerDelta).isEqualTo(previousOuter + touchSlop / 2)
-        }
+        rule.runOnIdle { assertThat(outerDelta).isEqualTo(previousOuter + touchSlop / 2) }
     }
 
     @Test
@@ -2507,42 +2597,30 @@ class ScrollableTest {
         rule.setContentAndGetScope {
             LazyColumn(Modifier.testTag("column")) {
                 item {
-                    Box(modifier = Modifier
-                        .size(20.dp)
-                        .background(Color.Red)
-                        .clickable { clicked++ })
+                    Box(
+                        modifier =
+                            Modifier.size(20.dp).background(Color.Red).clickable { clicked++ }
+                    )
                 }
                 item {
                     LazyRow(Modifier.testTag("list")) {
-                        items(100) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(Color.Blue)
-                            )
-                        }
+                        items(100) { Box(modifier = Modifier.size(20.dp).background(Color.Blue)) }
                     }
                 }
             }
         }
 
         rule.mainClock.autoAdvance = false
-        rule.onNodeWithTag("list", useUnmergedTree = true).performTouchInput {
-            swipeLeft()
-        }
+        rule.onNodeWithTag("list", useUnmergedTree = true).performTouchInput { swipeLeft() }
 
         rule.mainClock.advanceTimeByFrame()
         rule.mainClock.advanceTimeByFrame()
 
-        rule.onNodeWithTag("column").performTouchInput {
-            click(Offset(10f, 10f))
-        }
+        rule.onNodeWithTag("column").performTouchInput { click(Offset(10f, 10f)) }
 
         rule.mainClock.autoAdvance = true
 
-        rule.runOnIdle {
-            assertThat(clicked).isEqualTo(1)
-        }
+        rule.runOnIdle { assertThat(clicked).isEqualTo(1) }
     }
 
     // b/179417109 Double checks that in a nested scroll cycle, the parent post scroll
@@ -2567,44 +2645,38 @@ class ScrollableTest {
             it / 2
         }
 
-        val connection = object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                preScrollAvailable += available
-                return Offset.Zero
-            }
+        val connection =
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    preScrollAvailable += available
+                    return Offset.Zero
+                }
 
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource
-            ): Offset {
-                consumedPostScroll += consumed
-                postScrollAvailable += available
-                return Offset.Zero
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource
+                ): Offset {
+                    consumedPostScroll += consumed
+                    postScrollAvailable += available
+                    return Offset.Zero
+                }
             }
-        }
 
         rule.setContent {
             touchSlop = LocalViewConfiguration.current.touchSlop
             Box(modifier = Modifier.nestedScroll(connection)) {
                 Box(
-                    modifier = Modifier
-                        .testTag("outerScrollable")
-                        .size(300.dp)
-                        .scrollable(
-                            outerStateController,
-                            orientation = Orientation.Horizontal
-                        )
-
+                    modifier =
+                        Modifier.testTag("outerScrollable")
+                            .size(300.dp)
+                            .scrollable(outerStateController, orientation = Orientation.Horizontal)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .testTag("innerScrollable")
-                            .size(300.dp)
-                            .scrollable(
-                                innerController,
-                                orientation = Orientation.Horizontal
-                            )
+                        modifier =
+                            Modifier.testTag("innerScrollable")
+                                .size(300.dp)
+                                .scrollable(innerController, orientation = Orientation.Horizontal)
                     )
                 }
             }
@@ -2631,28 +2703,26 @@ class ScrollableTest {
 
     @Test
     fun testInspectorValue() {
-        val controller = ScrollableState(
-            consumeScrollDelta = { it }
-        )
+        val controller = ScrollableState(consumeScrollDelta = { it })
         rule.setContentAndGetScope {
             val modifier =
                 Modifier.scrollable(controller, Orientation.Vertical).first() as InspectableValue
             assertThat(modifier.nameFallback).isEqualTo("scrollable")
             assertThat(modifier.valueOverride).isNull()
-            assertThat(modifier.inspectableElements.map { it.name }.asIterable()).containsExactly(
-                "orientation",
-                "state",
-                "overscrollEffect",
-                "enabled",
-                "reverseDirection",
-                "flingBehavior",
-                "interactionSource",
-                "bringIntoViewSpec",
-            )
+            assertThat(modifier.inspectableElements.map { it.name }.asIterable())
+                .containsExactly(
+                    "orientation",
+                    "state",
+                    "overscrollEffect",
+                    "enabled",
+                    "reverseDirection",
+                    "flingBehavior",
+                    "interactionSource",
+                    "bringIntoViewSpec",
+                )
         }
     }
 
-    @OptIn(ExperimentalFoundationApi::class)
     @Test
     fun producingEqualMaterializedModifierAfterRecomposition() {
         val state = ScrollableState { it }
@@ -2661,13 +2731,10 @@ class ScrollableTest {
 
         rule.setContent {
             counter.value // just to trigger recomposition
-            materialized = currentComposer.materialize(
-                Modifier.scrollable(
-                    state,
-                    Orientation.Vertical,
-                    NoOpOverscrollEffect
+            materialized =
+                currentComposer.materialize(
+                    Modifier.scrollable(state, Orientation.Vertical, NoOpOverscrollEffect)
                 )
-            )
         }
 
         lateinit var first: Modifier
@@ -2691,29 +2758,16 @@ class ScrollableTest {
         rule.setContent {
             focusManager = LocalFocusManager.current
             Column {
-                Column(
-                    Modifier
-                        .size(10.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Box(
-                        Modifier
-                            .size(10.dp)
-                            .focusRequester(initialFocus)
-                            .focusable()
-                    )
+                Column(Modifier.size(10.dp).verticalScroll(rememberScrollState())) {
+                    Box(Modifier.size(10.dp).focusRequester(initialFocus).focusable())
                     Box(Modifier.size(10.dp))
                     Box(
-                        Modifier
-                            .size(10.dp)
+                        Modifier.size(10.dp)
                             .onFocusChanged { nextItemIsFocused = it.isFocused }
-                            .focusable())
+                            .focusable()
+                    )
                 }
-                Box(
-                    Modifier
-                        .size(10.dp)
-                        .focusable()
-                )
+                Box(Modifier.size(10.dp).focusable())
             }
         }
 
@@ -2728,27 +2782,23 @@ class ScrollableTest {
         // arrange
         val tracker = VelocityTracker()
         var velocity = Velocity.Zero
-        val capturingScrollConnection = object : NestedScrollConnection {
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                velocity += available
-                return Velocity.Zero
+        val capturingScrollConnection =
+            object : NestedScrollConnection {
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    velocity += available
+                    return Velocity.Zero
+                }
             }
-        }
         val controller = ScrollableState { _ -> 0f }
 
         setScrollableContent {
-            Modifier
-                .pointerInput(Unit) {
-                    savePointerInputEvents(tracker, this)
-                }
+            Modifier.pointerInput(Unit) { savePointerInputEvents(tracker, this) }
                 .nestedScroll(capturingScrollConnection)
                 .scrollable(controller, Orientation.Vertical)
         }
 
         // act
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeUp()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { swipeUp() }
 
         // assert
         rule.runOnIdle {
@@ -2759,9 +2809,7 @@ class ScrollableTest {
         velocity = Velocity.Zero
 
         // act
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeDown()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { swipeDown() }
 
         // assert
         rule.runOnIdle {
@@ -2775,27 +2823,23 @@ class ScrollableTest {
         // arrange
         val tracker = VelocityTracker()
         var velocity = Velocity.Zero
-        val capturingScrollConnection = object : NestedScrollConnection {
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                velocity += available
-                return Velocity.Zero
+        val capturingScrollConnection =
+            object : NestedScrollConnection {
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    velocity += available
+                    return Velocity.Zero
+                }
             }
-        }
         val controller = ScrollableState { _ -> 0f }
 
         setScrollableContent {
-            Modifier
-                .pointerInput(Unit) {
-                    savePointerInputEvents(tracker, this)
-                }
+            Modifier.pointerInput(Unit) { savePointerInputEvents(tracker, this) }
                 .nestedScroll(capturingScrollConnection)
                 .scrollable(controller, Orientation.Horizontal)
         }
 
         // act
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeLeft()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { swipeLeft() }
 
         // assert
         rule.runOnIdle {
@@ -2806,9 +2850,7 @@ class ScrollableTest {
         velocity = Velocity.Zero
 
         // act
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeRight()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { swipeRight() }
 
         // assert
         rule.runOnIdle {
@@ -2823,32 +2865,28 @@ class ScrollableTest {
         var velocity = Velocity.Zero
         val fullScreen = mutableStateOf(false)
         lateinit var scrollState: LazyListState
-        val capturingScrollConnection = object : NestedScrollConnection {
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                velocity += available
-                return Velocity.Zero
+        val capturingScrollConnection =
+            object : NestedScrollConnection {
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    velocity += available
+                    return Velocity.Zero
+                }
             }
-        }
         rule.setContent {
             scrollState = rememberLazyListState()
             Column(modifier = Modifier.nestedScroll(capturingScrollConnection)) {
                 if (!fullScreen.value) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Black)
-                            .height(400.dp)
-                    )
+                    Box(modifier = Modifier.fillMaxWidth().background(Color.Black).height(400.dp))
                 }
 
                 LazyColumn(state = scrollState) {
                     items(100) {
                         Box(
-                            modifier = Modifier
-                                .padding(10.dp)
-                                .background(Color.Red)
-                                .fillMaxWidth()
-                                .height(50.dp)
+                            modifier =
+                                Modifier.padding(10.dp)
+                                    .background(Color.Red)
+                                    .fillMaxWidth()
+                                    .height(50.dp)
                         )
                     }
                 }
@@ -2862,20 +2900,14 @@ class ScrollableTest {
         velocity = Velocity.Zero
         // Remove offset and restart scroll
         fullScreen.value = true
-        rule.runOnIdle {
-            runBlocking {
-                scrollState.scrollToItem(0)
-            }
-        }
+        rule.runOnIdle { runBlocking { scrollState.scrollToItem(0) } }
         rule.waitForIdle()
         // Register generated velocity without offset, should be larger as there was more
         // screen to cover.
         composeViewSwipeUp()
 
         // assert
-        rule.runOnIdle {
-            assertThat(abs(previousVelocity.y)).isNotEqualTo(abs(velocity.y))
-        }
+        rule.runOnIdle { assertThat(abs(previousVelocity.y)).isNotEqualTo(abs(velocity.y)) }
     }
 
     @Test
@@ -2893,11 +2925,7 @@ class ScrollableTest {
         }
 
         scope.launch {
-            controller.scroll {
-                defaultFlingBehavior?.let {
-                    with(it) { performFling(1000f) }
-                }
-            }
+            controller.scroll { defaultFlingBehavior?.let { with(it) { performFling(1000f) } } }
         }
 
         rule.runOnIdle {
@@ -2908,9 +2936,7 @@ class ScrollableTest {
         scope.launch {
             controller.scroll {
                 withContext(TestScrollMotionDurationScale(0f)) {
-                    defaultFlingBehavior?.let {
-                        with(it) { performFling(1000f) }
-                    }
+                    defaultFlingBehavior?.let { with(it) { performFling(1000f) } }
                 }
             }
         }
@@ -2933,37 +2959,33 @@ class ScrollableTest {
                 defaultFlingBehavior =
                     DefaultFlingBehavior(flingSpec, TestScrollMotionDurationScale(1f))
                 Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal,
-                            flingBehavior = defaultFlingBehavior
-                        )
+                    modifier =
+                        Modifier.testTag(scrollableBoxTag)
+                            .size(100.dp)
+                            .scrollable(
+                                state = controller,
+                                orientation = Orientation.Horizontal,
+                                flingBehavior = defaultFlingBehavior
+                            )
                 )
             } else {
                 defaultFlingBehavior =
                     DefaultFlingBehavior(flingSpec, TestScrollMotionDurationScale(0f))
                 Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .scrollable(
-                            state = controller,
-                            orientation = Orientation.Horizontal,
-                            flingBehavior = defaultFlingBehavior
-                        )
+                    modifier =
+                        Modifier.testTag(scrollableBoxTag)
+                            .size(100.dp)
+                            .scrollable(
+                                state = controller,
+                                orientation = Orientation.Horizontal,
+                                flingBehavior = defaultFlingBehavior
+                            )
                 )
             }
         }
 
         scope.launch {
-            controller.scroll {
-                defaultFlingBehavior?.let {
-                    with(it) { performFling(1000f) }
-                }
-            }
+            controller.scroll { defaultFlingBehavior?.let { with(it) { performFling(1000f) } } }
         }
 
         rule.runOnIdle {
@@ -2974,16 +2996,10 @@ class ScrollableTest {
         rule.waitForIdle()
 
         scope.launch {
-            controller.scroll {
-                defaultFlingBehavior?.let {
-                    with(it) { performFling(1000f) }
-                }
-            }
+            controller.scroll { defaultFlingBehavior?.let { with(it) { performFling(1000f) } } }
         }
 
-        rule.runOnIdle {
-            assertThat(defaultFlingBehavior?.lastAnimationCycleCount).isEqualTo(1)
-        }
+        rule.runOnIdle { assertThat(defaultFlingBehavior?.lastAnimationCycleCount).isEqualTo(1) }
     }
 
     @Test
@@ -3020,11 +3036,12 @@ class ScrollableTest {
             0f
         }
 
-        val nanGenerator = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                return scrollBy(Float.NaN)
+        val nanGenerator =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    return scrollBy(Float.NaN)
+                }
             }
-        }
 
         setScrollableContent {
             Modifier.scrollable(
@@ -3034,9 +3051,7 @@ class ScrollableTest {
             )
         }
 
-        rule.onNodeWithTag(scrollableBoxTag).performTouchInput {
-            swipeLeft()
-        }
+        rule.onNodeWithTag(scrollableBoxTag).performTouchInput { swipeLeft() }
     }
 
     @Test
@@ -3054,15 +3069,10 @@ class ScrollableTest {
 
     @Test
     fun scrollableState_checkLastScrollDirection() {
-        val controller = ScrollableState {
-            it
-        }
+        val controller = ScrollableState { it }
 
         setScrollableContent {
-            Modifier.scrollable(
-                orientation = Orientation.Horizontal,
-                state = controller
-            )
+            Modifier.scrollable(orientation = Orientation.Horizontal, state = controller)
         }
 
         // Assert both isLastScrollForward and isLastScrollBackward are false before any scroll
@@ -3074,17 +3084,13 @@ class ScrollableTest {
         lateinit var animateJob: Job
 
         rule.runOnIdle {
-            animateJob = scope.launch {
-                controller.animateScrollBy(
-                    100f,
-                    tween(1000)
-                )
-            }
+            animateJob = scope.launch { controller.animateScrollBy(100f, tween(1000)) }
         }
 
         rule.mainClock.advanceTimeBy(500)
 
-        // Assert isLastScrollForward is true during forward-scroll and isLastScrollBackward is false
+        // Assert isLastScrollForward is true during forward-scroll and isLastScrollBackward is
+        // false
         rule.runOnIdle {
             assertThat(controller.lastScrolledForward).isTrue()
             assertThat(controller.lastScrolledBackward).isFalse()
@@ -3100,17 +3106,13 @@ class ScrollableTest {
         }
 
         rule.runOnIdle {
-            animateJob = scope.launch {
-                controller.animateScrollBy(
-                    -100f,
-                    tween(1000)
-                )
-            }
+            animateJob = scope.launch { controller.animateScrollBy(-100f, tween(1000)) }
         }
 
         rule.mainClock.advanceTimeBy(500)
 
-        // Assert isLastScrollForward is false during backward-scroll and isLastScrollBackward is true
+        // Assert isLastScrollForward is false during backward-scroll and isLastScrollBackward is
+        // true
         rule.runOnIdle {
             assertThat(controller.lastScrolledForward).isFalse()
             assertThat(controller.lastScrolledBackward).isTrue()
@@ -3119,23 +3121,61 @@ class ScrollableTest {
         // Stop halfway through the animation
         animateJob.cancel()
 
-        // Assert isLastScrollForward is false after backward-scroll and isLastScrollBackward is true
+        // Assert isLastScrollForward is false after backward-scroll and isLastScrollBackward is
+        // true
         rule.runOnIdle {
             assertThat(controller.lastScrolledForward).isFalse()
             assertThat(controller.lastScrolledBackward).isTrue()
         }
     }
 
+    @Test
+    fun enabledChange_semanticsShouldBeCleared() {
+        var enabled by mutableStateOf(true)
+        rule.setContentAndGetScope {
+            Box(
+                modifier =
+                    Modifier.testTag(scrollableBoxTag)
+                        .size(100.dp)
+                        .scrollable(
+                            state = rememberScrollableState { it },
+                            orientation = Orientation.Horizontal,
+                            enabled = enabled
+                        )
+            )
+        }
+
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy))
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollByOffset))
+
+        rule.runOnIdle { enabled = false }
+
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.ScrollBy))
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.ScrollByOffset))
+
+        rule.runOnIdle { enabled = true }
+
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollBy))
+        rule
+            .onNodeWithTag(scrollableBoxTag)
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollByOffset))
+    }
+
     private fun setScrollableContent(scrollableModifierFactory: @Composable () -> Modifier) {
         rule.setContentAndGetScope {
             Box {
                 val scrollable = scrollableModifierFactory()
-                Box(
-                    modifier = Modifier
-                        .testTag(scrollableBoxTag)
-                        .size(100.dp)
-                        .then(scrollable)
-                )
+                Box(modifier = Modifier.testTag(scrollableBoxTag).size(100.dp).then(scrollable))
             }
         }
     }
@@ -3149,10 +3189,13 @@ internal suspend fun savePointerInputEvents(
     tracker: VelocityTracker,
     pointerInputScope: PointerInputScope
 ) {
-    savePointerInputEventsWithFix(tracker, pointerInputScope)
+    if (VelocityTrackerAddPointsFix) {
+        savePointerInputEventsWithFix(tracker, pointerInputScope)
+    } else {
+        savePointerInputEventsLegacy(tracker, pointerInputScope)
+    }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 internal suspend fun savePointerInputEventsWithFix(
     tracker: VelocityTracker,
     pointerInputScope: PointerInputScope
@@ -3163,17 +3206,13 @@ internal suspend fun savePointerInputEventsWithFix(
                 while (true) {
                     var event: PointerInputChange? = awaitFirstDown()
                     while (event != null && !event.changedToUpIgnoreConsumed()) {
-                        val currentEvent = awaitPointerEvent().changes
-                            .firstOrNull()
+                        val currentEvent = awaitPointerEvent().changes.firstOrNull()
 
                         if (currentEvent != null && !currentEvent.changedToUpIgnoreConsumed()) {
                             currentEvent.historical.fastForEach {
                                 tracker.addPosition(it.uptimeMillis, it.position)
                             }
-                            tracker.addPosition(
-                                currentEvent.uptimeMillis,
-                                currentEvent.position
-                            )
+                            tracker.addPosition(currentEvent.uptimeMillis, currentEvent.position)
                         }
 
                         event = currentEvent
@@ -3184,7 +3223,6 @@ internal suspend fun savePointerInputEventsWithFix(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 internal suspend fun savePointerInputEventsLegacy(
     tracker: VelocityTracker,
     pointerInputScope: PointerInputScope
@@ -3196,17 +3234,13 @@ internal suspend fun savePointerInputEventsLegacy(
                     var event = awaitFirstDown()
                     tracker.addPosition(event.uptimeMillis, event.position)
                     while (!event.changedToUpIgnoreConsumed()) {
-                        val currentEvent = awaitPointerEvent().changes
-                            .firstOrNull()
+                        val currentEvent = awaitPointerEvent().changes.firstOrNull()
 
                         if (currentEvent != null) {
                             currentEvent.historical.fastForEach {
                                 tracker.addPosition(it.uptimeMillis, it.position)
                             }
-                            tracker.addPosition(
-                                currentEvent.uptimeMillis,
-                                currentEvent.position
-                            )
+                            tracker.addPosition(currentEvent.uptimeMillis, currentEvent.position)
                             event = currentEvent
                         }
                     }
@@ -3218,52 +3252,29 @@ internal suspend fun savePointerInputEventsLegacy(
 
 internal fun composeViewSwipeUp() {
     onView(allOf(instanceOf(AbstractComposeView::class.java)))
-        .perform(
-            espressoSwipe(
-                GeneralLocation.CENTER,
-                GeneralLocation.TOP_CENTER
-            )
-        )
+        .perform(espressoSwipe(GeneralLocation.CENTER, GeneralLocation.TOP_CENTER))
 }
 
 internal fun composeViewSwipeDown() {
     onView(allOf(instanceOf(AbstractComposeView::class.java)))
-        .perform(
-            espressoSwipe(
-                GeneralLocation.CENTER,
-                GeneralLocation.BOTTOM_CENTER
-            )
-        )
+        .perform(espressoSwipe(GeneralLocation.CENTER, GeneralLocation.BOTTOM_CENTER))
 }
 
 internal fun composeViewSwipeLeft() {
     onView(allOf(instanceOf(AbstractComposeView::class.java)))
-        .perform(
-            espressoSwipe(
-                GeneralLocation.CENTER,
-                GeneralLocation.CENTER_LEFT
-            )
-        )
+        .perform(espressoSwipe(GeneralLocation.CENTER, GeneralLocation.CENTER_LEFT))
 }
 
 internal fun composeViewSwipeRight() {
     onView(allOf(instanceOf(AbstractComposeView::class.java)))
-        .perform(
-            espressoSwipe(
-                GeneralLocation.CENTER,
-                GeneralLocation.CENTER_RIGHT
-            )
-        )
+        .perform(espressoSwipe(GeneralLocation.CENTER, GeneralLocation.CENTER_RIGHT))
 }
 
 private fun espressoSwipe(
     start: CoordinatesProvider,
     end: CoordinatesProvider
 ): GeneralSwipeAction {
-    return GeneralSwipeAction(
-        Swipe.FAST, start, end,
-        Press.FINGER
-    )
+    return GeneralSwipeAction(Swipe.FAST, start, end, Press.FINGER)
 }
 
 internal class TestScrollMotionDurationScale(override val scaleFactor: Float) : MotionDurationScale
@@ -3295,8 +3306,7 @@ private class ScrollableContainerReaderNodeElement(val hasScrollableBlock: (Bool
 }
 
 private class ScrollableContainerReaderNode(var hasScrollableBlock: (Boolean) -> Unit) :
-    Modifier.Node(),
-    TraversableNode {
+    Modifier.Node(), TraversableNode {
     override val traverseKey: Any = TraverseKey
 
     override fun onAttach() {

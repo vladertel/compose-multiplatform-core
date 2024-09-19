@@ -35,7 +35,6 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
@@ -108,7 +107,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * </ul>
  */
 @OptIn(markerClass = ExperimentalCamera2Interop.class)
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class Camera2CameraControlImpl implements CameraControlInternal {
     private static final String TAG = "Camera2CameraControlImp";
     private static final int DEFAULT_TEMPLATE = CameraDevice.TEMPLATE_PREVIEW;
@@ -130,6 +128,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
     ZslControl mZslControl;
     private final Camera2CameraControl mCamera2CameraControl;
     private final Camera2CapturePipeline mCamera2CapturePipeline;
+    private final VideoUsageControl mVideoUsageControl;
     @GuardedBy("mLock")
     private int mUseCount = 0;
 
@@ -149,6 +148,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
     @NonNull
     private volatile ListenableFuture<Void> mFlashModeChangeSessionUpdateFuture =
             Futures.immediateFuture(null);
+
     //******************** Should only be accessed by executor *****************************//
     private int mTemplate = DEFAULT_TEMPLATE;
     // SessionUpdateId will auto-increment every time session updates.
@@ -187,6 +187,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         mCameraCharacteristics = cameraCharacteristics;
         mControlUpdateCallback = controlUpdateCallback;
         mExecutor = executor;
+        mVideoUsageControl = new VideoUsageControl(executor);
         mSessionCallback = new CameraControlSessionCallback(mExecutor);
         mSessionConfigBuilder.setTemplateType(mTemplate);
         mSessionConfigBuilder.addRepeatingCameraCaptureCallback(
@@ -307,9 +308,12 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
      *
      * <p>Most operations during inactive state do nothing. Some states are reset to default
      * once it is changed to inactive state.
+     *
+     * <p>This method should be executed by {@link #mExecutor} only.
      */
     @ExecutedBy("mExecutor")
     void setActive(boolean isActive) {
+        Logger.d(TAG, "setActive: isActive = " + isActive);
         mFocusMeteringControl.setActive(isActive);
         mZoomControl.setActive(isActive);
         mTorchControl.setActive(isActive);
@@ -317,6 +321,10 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         mCamera2CameraControl.setActive(isActive);
         if (!isActive) {
             mScreenFlash = null;
+            // Since the camera is no longer active, there should not be any recording ongoing with
+            // this camera. If something like persistent recording wants to resume recording with
+            // this camera again, it should update recording status again when being attached.
+            mVideoUsageControl.resetDirectly(); // already in mExecutor i.e. camera thread
         }
     }
 
@@ -832,6 +840,23 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         return mCurrentSessionUpdateId;
     }
 
+    @Override
+    public void incrementVideoUsage() {
+        mVideoUsageControl.incrementUsage();
+    }
+
+    @Override
+    public void decrementVideoUsage() {
+        mVideoUsageControl.decrementUsage();
+    }
+
+    @Override
+    public boolean isInVideoUsage() {
+        int currentVal = mVideoUsageControl.getUsage();
+        Logger.d(TAG, "isInVideoUsage: mVideoUsageControl value = " + currentVal);
+        return currentVal > 0;
+    }
+
     /** An interface to listen to camera capture results. */
     public interface CaptureResultListener {
         /**
@@ -889,7 +914,6 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
      * A set of {@link CameraCaptureCallback}s which is capable of adding/removing callbacks
      * dynamically.
      */
-    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     static final class CameraCaptureCallbackSet extends CameraCaptureCallback {
         Set<CameraCaptureCallback> mCallbacks = new HashSet<>();
         Map<CameraCaptureCallback, Executor> mCallbackExecutors = new ArrayMap<>();

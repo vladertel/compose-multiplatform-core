@@ -16,12 +16,12 @@
 
 package androidx.camera.camera2.pipe.compat
 
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraBackend
 import androidx.camera.camera2.pipe.CameraBackendId
 import androidx.camera.camera2.pipe.CameraContext
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.CameraStatusMonitor.CameraStatus
@@ -37,9 +37,9 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
 
 /** This is the default [CameraBackend] implementation for CameraPipe based on Camera2. */
-@RequiresApi(21)
 internal class Camera2Backend
-@Inject constructor(
+@Inject
+constructor(
     private val threads: Threads,
     private val camera2DeviceCache: Camera2DeviceCache,
     private val camera2MetadataCache: Camera2MetadataCache,
@@ -49,12 +49,14 @@ internal class Camera2Backend
 ) : CameraBackend {
     override val id: CameraBackendId
         get() = CameraBackendId("CXCP-Camera2")
+
     override val cameraStatus: Flow<CameraStatus>
         get() = camera2CameraStatusMonitor.cameraStatus
 
     override suspend fun getCameraIds(): List<CameraId> = camera2DeviceCache.getCameraIds()
 
     override fun awaitCameraIds(): List<CameraId>? = camera2DeviceCache.awaitCameraIds()
+
     override fun awaitConcurrentCameraIds(): Set<Set<CameraId>>? =
         camera2DeviceCache.awaitConcurrentCameraIds()
 
@@ -95,16 +97,24 @@ internal class Camera2Backend
 
     override fun createCameraController(
         cameraContext: CameraContext,
+        graphId: CameraGraphId,
         graphConfig: CameraGraph.Config,
         graphListener: GraphListener,
         streamGraph: StreamGraph
     ): CameraController {
         // Use Dagger to create the camera2 controller component, then create the CameraController.
-        val cameraControllerComponent = camera2CameraControllerComponent.camera2ControllerConfig(
-            Camera2ControllerConfig(
-                this, graphConfig, graphListener, streamGraph as StreamGraphImpl
-            )
-        ).build()
+        val cameraControllerComponent =
+            camera2CameraControllerComponent
+                .camera2ControllerConfig(
+                    Camera2ControllerConfig(
+                        this,
+                        graphId,
+                        graphConfig,
+                        graphListener,
+                        streamGraph as StreamGraphImpl
+                    )
+                )
+                .build()
 
         // Create and return a Camera2 CameraController object.
         return cameraControllerComponent.cameraController()

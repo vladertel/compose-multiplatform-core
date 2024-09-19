@@ -29,6 +29,11 @@ import androidx.annotation.RestrictTo;
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class Intents {
+
+    /**
+     * Private constructor to prevent instantiation
+     */
+    private Intents() {}
     private static final String TAG = Intents.class.getSimpleName();
 
     /** A safe version of {@link Context#startActivity} that handles exceptions. */
@@ -38,7 +43,6 @@ public class Intents {
             context.startActivity(intent);
             return true;
         } catch (Exception e) {
-            ErrorLog.log(logTag, "startActivity: " + toLongString(intent), e);
             return false;
         }
     }

@@ -21,6 +21,8 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 
 plugins {
@@ -46,12 +48,15 @@ dependencies {
 }
 
 android {
+    compileSdk 35
     namespace "androidx.navigation.fragment.compose"
 }
 
 androidx {
     name = "Navigation with Fragments with Compose"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2024"
     description = "Add Compose destinations to Navigation with Fragments"
+    legacyDisableKotlinStrictApiMode = true
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

@@ -21,7 +21,9 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+
+import androidx.build.KotlinTarget
+import androidx.build.LibraryType
 import androidx.build.AndroidXConfig
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -61,13 +63,13 @@ android {
 }
 
 dependencies {
+    api(project(":benchmark:benchmark-common"))
     api(libs.junit)
     api(libs.kotlinStdlib)
-    api("androidx.annotation:annotation:1.1.0")
+    api("androidx.annotation:annotation:1.8.1")
 
-    implementation(project(":benchmark:benchmark-common"))
     implementation("androidx.core:core:1.9.0")
-    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.0")
     implementation("androidx.tracing:tracing-ktx:1.1.0")
     implementation("androidx.tracing:tracing-perfetto:1.0.0")
     implementation("androidx.tracing:tracing-perfetto-binary:1.0.0")
@@ -75,6 +77,7 @@ dependencies {
     implementation("androidx.test:core:1.5.0")
     implementation(libs.testUiautomator)
     implementation(libs.wireRuntime)
+    implementation(libs.testExtJunit)
 
     androidTestImplementation(project(":benchmark:benchmark-junit4"))
     androidTestImplementation(project(":internal-testutils-ktx"))
@@ -89,10 +92,13 @@ dependencies {
 
 androidx {
     name = "Benchmark - Macrobenchmark"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2020"
     description = "Android Benchmark - Macrobenchmark"
-    metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    deviceTests {
+        enableAlsoRunningOnPhysicalDevices = true
+    }
 }
 
 tasks.withType(KotlinCompile).configureEach {
@@ -165,7 +171,7 @@ afterEvaluate {
     def installTask = tasks.findByPath(
             ":benchmark:integration-tests:macrobenchmark-target:installRelease")
     if (installTask != null) {
-        tasks.getByPath(":benchmark:benchmark-macro:connectedDebugAndroidTest")
+        tasks.getByPath(":benchmark:benchmark-macro:connectedReleaseAndroidTest")
                 .dependsOn(installTask)
     }
 }
@@ -175,4 +181,5 @@ androidx {
         targetAppProject = project(":benchmark:integration-tests:macrobenchmark-target")
         targetAppVariant = "release"
     }
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

@@ -184,9 +184,9 @@ public abstract class PasswordDialog extends DialogFragment {
     @Override
     public void onStart() {
         super.onStart();
-        mTextDefaultColor = getResources().getColor(R.color.text_default);
-        mTextErrorColor = getResources().getColor(R.color.text_error);
-        mBlueColor = getResources().getColor(R.color.google_blue);
+        mTextDefaultColor = getResources().getColor(R.color.pdf_viewer_color_on_surface);
+        mTextErrorColor = getResources().getColor(R.color.pdf_viewer_color_error);
+        mBlueColor = getResources().getColor(R.color.pdf_viewer_color_primary);
 
         EditText textField = (EditText) getDialog().findViewById(R.id.password);
         textField.getBackground().setColorFilter(mBlueColor, PorterDuff.Mode.SRC_ATOP);
@@ -206,7 +206,7 @@ public abstract class PasswordDialog extends DialogFragment {
     }
 
     @Override
-    public void onCancel(DialogInterface dialog) {
+    public void onCancel(@NonNull DialogInterface dialog) {
         if (mFinishOnCancel) {
             getActivity().finish();
         } else {
@@ -216,7 +216,7 @@ public abstract class PasswordDialog extends DialogFragment {
     }
 
     /** Set the password input by the user. */
-    public abstract void sendPassword(EditText textField);
+    public abstract void sendPassword(@NonNull EditText textField);
 
     /** Show error when user cancels password prompt dialog. */
     public abstract void showErrorOnDialogCancel();
@@ -256,7 +256,7 @@ public abstract class PasswordDialog extends DialogFragment {
     private void swapBackground(EditText textField, boolean reverse) {
         if (!reverse) {
             textField.setBackground(
-                    getResources().getDrawable(R.drawable.textfield_default_mtrl_alpha));
+                    getResources().getDrawable(R.drawable.drag_indicator));
         } else {
             EditText sample = new EditText(getActivity());
             textField.setBackground(sample.getBackground());

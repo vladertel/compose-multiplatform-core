@@ -10,11 +10,29 @@
          <key-server uri="https://keys.openpgp.org"/>
       </key-servers>
       <trusted-artifacts>
+         <trust file="apiLevels.json" reason="We do not sign this metadata"/>
+         <trust group="com.android.ndk.thirdparty" reason="b/215430394"/>
+         <trust group="com.android.tools" name="desugar_jdk_libs" reason="b/215430394"/>
+         <trust group="com.android.tools" name="desugar_jdk_libs_configuration" reason="b/215430394"/>
+         <trust group="com.android.tools" name="r8" reason="b/215430394"/>
+         <trust group="com.android.tools.build" name="aapt2" version="7.3.0-8691043" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2" version="8.0.0-9289358" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2" version="8.1.0-10154469" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2" version="8.5.0-alpha05-11315950" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2-proto" version="7.3.0-8691043" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2-proto" version="8.0.0-9289358" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2-proto" version="8.1.0-10154469" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="aapt2-proto" version="8.5.0-alpha05-11315950" reason="old version, before signing"/>
+         <trust group="com.android.tools.build" name="bundletool" reason="b/215430394"/>
+         <trust group="com.android.tools.build" name="transform-api" reason="b/215430394"/>
+         <trust group="com.android.tools.build.jetifier" reason="b/215430394"/>
+         <trust group="com.android.tools.metalava" reason="developed by our own team, not signed yet"/>
          <trust group="com.google.ads.interactivemedia.v3" reason="b/303057272"/>
          <trust group="com.google.android.datatransport" reason="b/215442095"/>
          <trust group="com.google.android.gms" reason="b/215442095"/>
          <trust group="com.google.android.material" reason="b/216192082"/>
          <trust group="com.google.android.play" reason="b/255621183"/>
+         <trust group="com.google.android.tv" reason="b/345483744"/>
          <trust group="com.google.devsite" reason="developed by our own team, not signed yet"/>
          <trust group="com.google.firebase" reason="b/223907608"/>
          <trust group="com.google.mlkit" reason="b/223907608"/>
@@ -22,9 +40,25 @@
          <trust group="gradle" name="gradle"/>
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
+         <trust file=".*-versionMetadata[.]json" regex="true" reason="We do not sign this metadata"/>
          <trust file=".*[.]asc" regex="true"/>
-         <trust group="^androidx(?!\.compose.compiler\b)\..*" regex="true" reason="not signed yet"/>
-         <trust group="^com[.]android($|([.].*))" regex="true" reason="b/215430394"/>
+         <trust group="^androidx(?!\.compose.compiler\b)(?!\.annotation\b)(?!\.collection\b)\..*" regex="true" reason="not signed yet"/>
+         <trust group="^com[.]android($|([.].*))" version="30.0.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="30.0.4" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="30.3.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="31.0.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="31.1.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="31.5.0-alpha05" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="7.0.4" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="7.3.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="8.0.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="8.1.0" regex="true" reason="old version, before signing"/>
+         <trust group="^com[.]android($|([.].*))" version="8.5.0-alpha05" regex="true" reason="old version, before signing"/>
+         <trust group="androidx[.]annotation" version="1\.9\.0-alpha[0-9][2-9]" regex="true" reason="New versions, not yet signed"/>
+         <trust group="androidx[.]annotation" version="1\.9\.0-beta[0-9][1-9]" regex="true" reason="New versions, not yet signed"/>
+         <trust group="androidx[.]annotation" version="1\.[0-7]\..*" regex="true" reason="Old versions, before signing"/>
+         <trust group="androidx[.]collection" version="1\.5\.0-alpha[0-9][1-9]" regex="true" reason="Old versions, before signing"/>
+         <trust group="androidx[.]collection" version="1\.[0-3]\..*" regex="true" reason="Old versions, before signing"/>
       </trusted-artifacts>
       <trusted-keys>
          <trusted-key id="00089EE8C3AFA95A854D0F1DF800DD0933ECF7F7" group="com.google.guava"/>
@@ -89,6 +123,7 @@
          <trusted-key id="1F47744C9B6E14F2049C2857F1F111AF65925306" group="io.github.classgraph"/>
          <trusted-key id="1FA37FBE4453C1073E7EF61D6449005F96BC97A3" group="de.undercouch"/>
          <trusted-key id="20723A6399BC060154283B37CFAE163B64AC9189" group="org.jetbrains.skiko"/>
+         <trusted-key id="217BFC8CA98788CB33198A8E7FAC222BF1FC0C12" group="net.thauvin.erik.urlencoder"/>
          <trusted-key id="22B79F456B06F4E75B8B579DB57BD58EF6D0A713" group="com.google.protobuf"/>
          <trusted-key id="24D04176586361FDA94EE0315F7786DF73E61F56" group="com.google.devtools.ksp"/>
          <trusted-key id="26063B04869F7D235CCC057447586A1B75EF0DE5" group="com.squareup.wire"/>
@@ -122,6 +157,7 @@
          <trusted-key id="2E5B73C6EFD2EB453104C2EAE6EC76B4C6D3AE8E" group="com.google.protobuf"/>
          <trusted-key id="2E92113263FC31C74CCBAAB20E91C2DE43B72BB1" group="org.ec4j.core"/>
          <trusted-key id="3051D45031E13516A6E8FAFF280D66A55F5316C5" group="org.bitbucket.b_c"/>
+         <trusted-key id="313A77FE5D9A16573F433D74E3706F202E9D239F" group="co.touchlab"/>
          <trusted-key id="31BAE2E51D95E0F8AD9B7BCC40A3C4432BD7308C" group="com.googlecode.juniversalchardet"/>
          <trusted-key id="31FAE244A81D64507B47182E1B2718089CE964B8" group="com.thoughtworks.qdox"/>
          <trusted-key id="3288B8BE8512D6C0CA185268C51E6CBC7FF46F0B">
@@ -143,6 +179,7 @@
             <trusting group="com.google.testing.compile"/>
             <trusting group="com.google.truth"/>
             <trusting group="com.google.truth.extensions"/>
+            <trusting group="org.jspecify"/>
          </trusted-key>
          <trusted-key id="44FBDBBC1A00FE414F1C1873586654072EAD6677" group="org.sonatype.oss"/>
          <trusted-key id="47504B76CF89C15C0512D9AFE16AB52D79FD224F">
@@ -167,9 +204,11 @@
             <trusting group="^com[.]jakewharton($|([.].*))" regex="true"/>
          </trusted-key>
          <trusted-key id="47EB6836245D2D40E89DFB4136D4E9618F3ADAB5" group="io.github.microutils" name="kotlin-logging-jvm"/>
+         <trusted-key id="4857D1CE04E78FAB2A172E8F39B48E1BADDB933F" group="com.gradleup.shadow"/>
          <trusted-key id="4BF79B8259007B566D2FCE82296CD27F60EED12C" group="com.google.crypto.tink"/>
          <trusted-key id="4DADED739CDF2CD0E48E0EC44044EDF1BB73EFEA" group="jaxen" name="jaxen"/>
          <trusted-key id="4DB1A49729B053CAF015CEE9A6ADFC93EF34893E" group="org.hamcrest"/>
+         <trusted-key id="4F332021E20F59100C978257021E3BE573F727ED" group="net.java.dev.msv"/>
          <trusted-key id="4F7E32D440EF90A83011A8FC6425559C47CC79C4">
             <trusting group="com.sun.activation"/>
             <trusting group="javax.activation"/>
@@ -223,12 +262,16 @@
          <trusted-key id="6A814B1F869C2BBEAB7CB7271A2A1C94BDE89688" group="org.codehaus.plexus"/>
          <trusted-key id="6BDACA2C0493CCA133B372D09C4F7E9D98B1CC53" group="org.apache"/>
          <trusted-key id="6CB87B18A453990EAC9453F87D713008CC07E9AD" group="xerces" name="xercesImpl"/>
+         <trusted-key id="6D98490C6F1ACDDD448E45954F77679369475BAA" group="com.yarnpkg"/>
          <trusted-key id="6DD3B8C64EF75253BEB2C53AD908A43FB7EC07AC">
             <trusting group="com.sun.activation"/>
             <trusting group="jakarta.activation"/>
          </trusted-key>
          <trusted-key id="6EAD752B3E2B38E8E2236D7BA9321EDAA5CB3202" group="ch.randelshofer" name="fastdoubleparser"/>
          <trusted-key id="6F538074CCEBF35F28AF9B066A0975F8B1127B83">
+            <trusting group="" name="kotlin-native-prebuilt-linux-x86_64"/>
+            <trusting group="" name="kotlin-native-prebuilt-macos-aarch64"/>
+            <trusting group="" name="kotlin-native-prebuilt-macos-x86_64"/>
             <trusting group="org.jetbrains.kotlin"/>
             <trusting group="org.jetbrains.kotlin.jvm"/>
             <trusting group="org.jetbrains.kotlin.plugin.serialization"/>
@@ -252,6 +295,7 @@
          </trusted-key>
          <trusted-key id="713DA88BE50911535FE716F5208B0AB1D63011C7" group="org.apache.tomcat" name="annotations-api"/>
          <trusted-key id="7186BBF993566D8C2F4F7ED7D945E643368FEF62" group="io.github.eisop"/>
+         <trusted-key id="719F7C29985A8E95F58F47194D8159D6A1159B69" group="dev.zacsweers.moshix"/>
          <trusted-key id="720746177725A89207A7075BFD5DEA07FCB690A8" group="org.codehaus.mojo"/>
          <trusted-key id="73976C9C39C1479B84E2641A5A68A2249128E2C6" group="com.google.crypto.tink" name="tink-android"/>
          <trusted-key id="748F15B2CF9BA8F024155E6ED7C92B70FA1C814D" group="org.apache.logging.log4j"/>
@@ -272,6 +316,7 @@
          <trusted-key id="7FE5E98DF3A5C0DC34663AB7C1ADD37CA0069309" group="org.spdx" name="spdx-gradle-plugin"/>
          <trusted-key id="808D78B17A5A2D7C3668E31FBFFC9B54721244AD" group="org.apache.commons"/>
          <trusted-key id="80F6D6B0D90C6747753344CAB5A9E81B565E89E0" group="org.tomlj"/>
+         <trusted-key id="8247F88933C2D56F830AF73436AB7ACFFF2027B1" group="it.krzeminski"/>
          <trusted-key id="8254180BFC943B816E0B5E2E5E2F2B3D474EFE6B" group="it.unimi.dsi"/>
          <trusted-key id="82C9EC0E52C47A936A849E0113D979595E6D01E1" group="org.apache.maven.shared" name="maven-shared-utils"/>
          <trusted-key id="82F833963889D7ED06F1E4DC6525FD70CC303655" group="org.codehaus.mojo"/>
@@ -292,6 +337,7 @@
             <trusting group="org.jetbrains.kotlinx"/>
             <trusting group="^org[.]jetbrains($|([.].*))" regex="true"/>
          </trusted-key>
+         <trusted-key id="87DFB6E009B27CA622B9204EC730DCAEF653215C" group="com.ibm.icu"/>
          <trusted-key id="8858D45BE9B276802318155B96FB9DB219F3338D" group="kr.motd.maven"/>
          <trusted-key id="88CD390855DF292E2172DA9742575E0CCD6BA16A" group="org.xerial"/>
          <trusted-key id="8A10792983023D5D14C93B488D7F1BEC1E2ECAE7">
@@ -300,14 +346,16 @@
             <trusting group="com.fasterxml.jackson.core"/>
             <trusting group="com.fasterxml.jackson.module"/>
          </trusted-key>
+         <trusted-key id="8B39C4ACE0F448789FE19C8BAC0E2034B1389C89" group="androidx.build.gradle.gcpbuildcache" name="gcpbuildcache"/>
          <trusted-key id="8DF3B0AA23ED78BE5233F6C2DEA3D207428EF16D" group="com.linkedin.dexmaker"/>
-         <trusted-key id="8E3A02905A1AE67E7B0F9ACD3967D4EDA591B991" group="org.jetbrains.kotlinx" name="kotlinx-html-jvm"/>
+         <trusted-key id="8E3A02905A1AE67E7B0F9ACD3967D4EDA591B991" group="org.jetbrains.kotlinx"/>
          <trusted-key id="8F9A3C6D105B9F57844A721D79E193516BE7998F" group="org.dom4j" name="dom4j"/>
          <trusted-key id="908366594E746BF3C449F5622BE5D98F751F4136" group="org.pcollections"/>
          <trusted-key id="90EE19787A7BCF6FD37A1E9180C08B1C29100955">
             <trusting group="com.jakewharton.android.repackaged"/>
             <trusting group="com.squareup" name="javawriter"/>
             <trusting group="com.squareup.retrofit2"/>
+            <trusting group="com.squareup.wire"/>
          </trusted-key>
          <trusted-key id="95115197C5227C0887299D000F9FE62F88E938D8" group="com.google.dagger"/>
          <trusted-key id="98465301A4939C0279F2E847D89D05374952262B" group="org.jetbrains.dokka"/>
@@ -339,7 +387,24 @@
          <trusted-key id="A4FD709CC4B0515F2E6AF04E218FA0F6A941A037" group="com.github.kevinstern"/>
          <trusted-key id="A5B2DDE7843E7CA3E8CAABD02383163BC40844FD" group="org.reactivestreams"/>
          <trusted-key id="A5BD02B93E7A40482EB1D66A5F69AD087600B22C" group="org.ow2.asm"/>
-         <trusted-key id="A5F483CD733A4EBAEA378B2AE88979FB9B30ACF2" group="^androidx\..*" regex="true"/>
+         <trusted-key id="A5F483CD733A4EBAEA378B2AE88979FB9B30ACF2">
+            <trusting group="com.android"/>
+            <trusting group="com.android.databinding"/>
+            <trusting group="com.android.kotlin.multiplatform.library"/>
+            <trusting group="com.android.settings"/>
+            <trusting group="com.android.tools"/>
+            <trusting group="com.android.tools.analytics-library"/>
+            <trusting group="com.android.tools.build"/>
+            <trusting group="com.android.tools.build.jetifier"/>
+            <trusting group="com.android.tools.ddms"/>
+            <trusting group="com.android.tools.emulator"/>
+            <trusting group="com.android.tools.external.com-intellij"/>
+            <trusting group="com.android.tools.external.org-jetbrains"/>
+            <trusting group="com.android.tools.layoutlib"/>
+            <trusting group="com.android.tools.lint"/>
+            <trusting group="com.android.tools.utp"/>
+            <trusting group="^androidx\..*" regex="true"/>
+         </trusted-key>
          <trusted-key id="A6D6C97108B8585F91B158748671A8DF71296252" group="^com[.]squareup($|([.].*))" regex="true"/>
          <trusted-key id="A7892505CF1A58076453E52D7999BEFBA1039E8B" group="net.bytebuddy"/>
          <trusted-key id="AA417737BD805456DB3CBDDE6601E5C08DCCBB96" group="info.picocli" name="picocli"/>
@@ -372,7 +437,12 @@
          <trusted-key id="BAE5C184E3B70CB15617700598FE03A974CE0A0B" group="org.jetbrains.kotlin"/>
          <trusted-key id="BC87A3FD0A54480F0BADBEBD21939FF0CA2A6567" group="commons-codec"/>
          <trusted-key id="BCC135FC7ED8214F823D73E97FE9900F412D622E" group="com.google.flatbuffers"/>
-         <trusted-key id="BDB5FA4FE719D787FB3D3197F6D4A1D411E9D1AE" group="com.google.guava"/>
+         <trusted-key id="BDB5FA4FE719D787FB3D3197F6D4A1D411E9D1AE">
+            <trusting group="com.google.guava"/>
+            <trusting group="com.google.j2objc" name="j2objc-annotations" version="3.0.0"/>
+            <trusting group="com.google.truth"/>
+            <trusting group="com.google.truth.extensions"/>
+         </trusted-key>
          <trusted-key id="BE685132AFD2740D9095F9040CC0B712FEE75827" group="org.assertj"/>
          <trusted-key id="C1CBA75EC9BD0BAF8061935459E05CE618187ED4" group="org.xerial"/>
          <trusted-key id="C5AA57F4A38EBA7B7F9156DDAB2DA4527F6FFC0B" group="com.squareup"/>
@@ -404,10 +474,13 @@
             <trusting group="org.apache.commons"/>
          </trusted-key>
          <trusted-key id="CF17E92C9FFA55316B5DB83901D734EE5EE9C3F8" group="org.eclipse.sisu"/>
-         <trusted-key id="D066F5C471D32A00D244F99D6ED0F678B90EB06E" group="com.github.johnrengelman"/>
+         <trusted-key id="CF4B3A3F53BEF9A2CE2CBFB895962C5E716C39AA" group="com.autonomousapps"/>
          <trusted-key id="D196A5E3E70732EEB2E5007F1861C322C56014B2" group="commons-lang"/>
          <trusted-key id="D433F9C895710DB8AB087FA6B7C3B43D18EAA8B7" group="org.codehaus.mojo"/>
-         <trusted-key id="D477D51812E692011DB11E66A6EA2E2BF22E0543" group="io.github.java-diff-utils"/>
+         <trusted-key id="D477D51812E692011DB11E66A6EA2E2BF22E0543">
+            <trusting group="com.github.jsqlparser"/>
+            <trusting group="io.github.java-diff-utils"/>
+         </trusted-key>
          <trusted-key id="D4C89EA4AAF455FD88B22087EFE8086F9E93774E" group="junit"/>
          <trusted-key id="D54A395B5CF3F86EB45F6E426B1B008864323B92" group="org.antlr"/>
          <trusted-key id="D5F46BC0B86AF5DC56DF58F05E975CB00C643DBF" group="com.google.inject"/>
@@ -424,6 +497,7 @@
          <trusted-key id="DB0597E3144342256BC81E3EC727D053C4481CF5" group="org.tensorflow"/>
          <trusted-key id="DBD744ACE7ADE6AA50DD591F66B50994442D2D40">
             <trusting group="com.squareup"/>
+            <trusting group="com.squareup.moshi"/>
             <trusting group="com.squareup.okhttp3"/>
             <trusting group="com.squareup.okio"/>
             <trusting group="com.squareup.wire"/>
@@ -437,6 +511,7 @@
          <trusted-key id="E01ED293981AE484403B65D7DA70BCBA6D76AD03" group="com.charleskorn.kaml"/>
          <trusted-key id="E0D98C5FD55A8AF232290E58DEE12B9896F97E34" group="org.pcollections"/>
          <trusted-key id="E2ACB037933CDEAAB7BF77D49A2C7A98E457C53D" group="org.springframework"/>
+         <trusted-key id="E376140124BED4E3C06D227581C27DE945332233" group="com.google.auto"/>
          <trusted-key id="E3A9F95079E84CE201F7CF60BEDE11EAF1164480" group="org.hamcrest"/>
          <trusted-key id="E62231331BCA7E1F292C9B88C1B12A5D99C0729D" group="org.jetbrains"/>
          <trusted-key id="E77417AC194160A3FABD04969A259C7EE636C5ED">
@@ -456,7 +531,10 @@
          <trusted-key id="EAA526B91DD83BA3E1B9636FA730529CA355A63E" group="org.ccil.cowan.tagsoup"/>
          <trusted-key id="EB1B3DE71713C9EC2E87CC26EE92349AD86DE446" group="com.google.j2objc"/>
          <trusted-key id="EC86F41279F2EC8FFD2F54906CCC36CC6C69FC17" group="com.google"/>
-         <trusted-key id="EE0CA873074092F806F59B65D364ABAA39A47320" group="com.google.errorprone"/>
+         <trusted-key id="EE0CA873074092F806F59B65D364ABAA39A47320">
+            <trusting group="com.google.errorprone"/>
+            <trusting group="com.google.googlejavaformat"/>
+         </trusted-key>
          <trusted-key id="F06E94A01B835825E6AB4DA369B8E32E23138662" group="org.spdx"/>
          <trusted-key id="F1A51E051F527E0C8E24D54D4B1E11D5A4B91E89" group="com.google.protobuf"/>
          <trusted-key id="F254B35617DC255D9344BCFA873A8E86B4372146">
@@ -489,19 +567,12 @@
       </trusted-keys>
    </configuration>
    <components>
-      <component group="" name="kotlin-native-prebuilt-linux-x86_64" version="1.9.23">
-         <artifact name="kotlin-native-prebuilt-linux-x86_64-1.9.23.tar.gz">
-            <sha256 value="ffab3a3c870bbc99770ce3971e04823cc7a7d215fee0eb496ea4af1df7e90e19" origin="Hand-built using sha256sum kotlin-native-prebuilt-linux-x86_64-1.9.23.tar.gz" reason="https://youtrack.jetbrains.com/issue/KT-52483"/>
+      <component group="androidx.compose.compiler" name="compiler" version="1.5.14">
+         <artifact name="compiler-1.5.14.jar">
+            <sha256 value="1ed55641e81177b693aa01f832bb1fd80bfb354caa8a9307c390f7a6738c803c" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
-      </component>
-      <component group="" name="kotlin-native-prebuilt-macos-aarch64" version="1.9.23">
-         <artifact name="kotlin-native-prebuilt-macos-aarch64-1.9.23.tar.gz">
-            <sha256 value="9a3a9e94ac63b66477896b79a398a5dd84517054c848191edb18954443428b5a" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-aarch64-1.9.23.tar.gz" reason="https://youtrack.jetbrains.com/issue/KT-52483"/>
-         </artifact>
-      </component>
-      <component group="" name="kotlin-native-prebuilt-macos-x86_64" version="1.9.23">
-         <artifact name="kotlin-native-prebuilt-macos-x86_64-1.9.23.tar.gz">
-            <sha256 value="dd50c2e01db9e7232eed72c8de391a5016e8ef8edab4f5fdbd679034852e72b5" origin="Hand-built using sha256sum kotlin-native-prebuilt-macos-x86_64-1.9.23.tar.gz" reason="https://youtrack.jetbrains.com/issue/KT-52483"/>
+         <artifact name="compiler-1.5.14.module">
+            <sha256 value="c0139c356c39bfa9c1d289953fd372e8bed06175f83680fa3f7431533e906cac" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
       <component group="aopalliance" name="aopalliance" version="1.0">
@@ -512,9 +583,9 @@
             <sha256 value="26e82330157d6b844b67a8064945e206581e772977183e3e31fec6058aa9a59b" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
-      <component group="com.github.johnrengelman.shadow" name="com.github.johnrengelman.shadow.gradle.plugin" version="8.1.1">
-         <artifact name="com.github.johnrengelman.shadow.gradle.plugin-8.1.1.pom">
-            <sha256 value="3cb3886b97df6e066f108c316b219f262c97c3cb2df6da78927e645deb643cb0" origin="Generated by Gradle" reason="Artifact is not signed"/>
+      <component group="com.github.webassembly" name="binaryen" version="117">
+         <artifact name="binaryen-117-x86_64-linux.tar.gz">
+            <sha256 value="3dc677006555b355ea2da5e82602065a161d5e83eaefd3f759afa00b96e83212" origin="Generated by Gradle" reason="https://github.com/WebAssembly/binaryen/issues/6783"/>
          </artifact>
       </component>
       <component group="com.google" name="google" version="1">
@@ -544,6 +615,14 @@
          </artifact>
          <artifact name="accessibility-test-framework-3.1.2.pom">
             <sha256 value="bc787098a208e6bdc8d93720a162bbea01df1b26394d1c1ef5ec523b1d604e8b" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
+      <component group="com.google.android.apps.common.testing.accessibility.framework" name="accessibility-test-framework" version="4.1.1">
+         <artifact name="accessibility-test-framework-4.1.1.aar">
+            <sha256 value="f19c550163f277a2aebe7e002a7988c3544c693ee29dd7ac4d4747c2971e2c45" origin="Generated by Gradle" reason="Artifact is not signed. b/359566848"/>
+         </artifact>
+         <artifact name="accessibility-test-framework-4.1.1.pom">
+            <sha256 value="c038e90864935f4b4fe50ece742c41ee33ca490149f780328929811e8548c1b6" origin="Generated by Gradle" reason="Artifact is not signed. b/359566848"/>
          </artifact>
       </component>
       <component group="com.google.android.libraries.identity.googleid" name="googleid" version="0.0.2">
@@ -602,14 +681,6 @@
             <sha256 value="c6898b1f71e69b15bf90c31fc3ef2de1cffbf454a770700f755b5a47ea48b540" origin="Generated by Gradle"/>
          </artifact>
       </component>
-      <component group="com.google.android.tv" name="tv-ads" version="1.0.0-alpha02">
-         <artifact name="tv-ads-1.0.0-alpha02.aar">
-            <sha256 value="d92a8eb07b926cdd199f3bdaf33478565cab125b92859e84f7abb5b7219bc5e4" origin="Generated by Gradle" reason="Artifact is not signed"/>
-         </artifact>
-         <artifact name="tv-ads-1.0.0-alpha02.pom">
-            <sha256 value="7b4315f0127628f2203ab66dfe490a9a07e06a38fb8e15ea2df1a35f1619308d" origin="Generated by Gradle" reason="Artifact is not signed"/>
-         </artifact>
-      </component>
       <component group="com.google.camerax.effects" name="portrait" version="0.0.1">
          <artifact name="portrait-0.0.1.aar">
             <sha256 value="86d3e99a6123e3f830bf3f70392b30fc8d238374104ce00a02de20d8613af607" origin="Generated by Gradle"/>
@@ -636,7 +707,37 @@
       </component>
       <component group="com.google.guava" name="guava" version="32.1.3-android">
          <artifact name="guava-32.1.3-jre.jar">
-            <sha256 value="6d4e2b5a118aab62e6e5e29d185a0224eed82c85c40ac3d33cf04a270c3b3744" origin="Generated by Gradle" reason="Artifact is not signed"/>
+            <sha256 value="6d4e2b5a118aab62e6e5e29d185a0224eed82c85c40ac3d33cf04a270c3b3744" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava" version="32.1.3-jre">
+         <artifact name="guava-32.1.3-android.jar">
+            <sha256 value="20e6ac8902ddf49e7806cc70f3054c8d91accb5eefdc10f3207e80e0a336b263" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava" version="33.0.0-android">
+         <artifact name="guava-33.0.0-jre.jar">
+            <sha256 value="f4d85c3e4d411694337cb873abea09b242b664bb013320be6105327c45991537" origin="Generated by Gradle" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava" version="33.0.0-jre">
+         <artifact name="guava-33.0.0-android.jar">
+            <sha1 value="cfbbdc54f232feedb85746aeeea0722f5244bb9a" origin="Generated by Gradle" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava" version="33.2.1-jre">
+         <artifact name="guava-33.2.1-android.jar">
+            <sha256 value="6b55fbe6ffee621454c03df7bea720d189789e136391a524e29506ff40654180" origin="Generated by Gradle" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava-parent" version="23.5-jre">
+         <artifact name="guava-parent-23.5-jre.pom">
+            <sha256 value="d69af85990f77ef54b4aa8e744c014de811cad8a62e790b177c219b59c75d918" reason="https://github.com/google/guava/issues/7154"/>
+         </artifact>
+      </component>
+      <component group="com.google.j2objc" name="j2objc-annotations" version="3.0.0">
+         <artifact name="j2objc-annotations-3.0.0.pom">
+            <pgp value="BDB5FA4FE719D787FB3D3197F6D4A1D411E9D1AE"/>
          </artifact>
       </component>
       <component group="com.google.prefab" name="cli" version="2.1.0">
@@ -840,6 +941,14 @@
             <sha256 value="06d119f29e22323371017da67d10c74a156b15f20d9c82116a57fee1454c6c68" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
+      <component group="org.jetbrains.kotlinx" name="kotlinx-benchmark-plugin" version="0.4.11">
+         <artifact name="kotlinx-benchmark-plugin-0.4.11.jar">
+            <sha256 value="5c337e082137eb3cdf64b27b11e16b97e5dd0a7905aa9c2d7c8c323601e5c31b" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+         <artifact name="kotlinx-benchmark-plugin-0.4.11.module">
+            <sha256 value="af5e8d80674cd6f5bce92451296f3238c6524b880179d56f08187cef3de723ec" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
       <component group="org.jetbrains.kotlinx" name="kotlinx-benchmark-plugin" version="0.4.8">
          <artifact name="kotlinx-benchmark-plugin-0.4.8.jar">
             <sha256 value="dcae0aabbae9374f6326e2dd26493dafaac0a7790d2d982a61fa3c779eea660c" origin="Generated by Gradle" reason="Artifact is not signed"/>
@@ -866,9 +975,9 @@
             <sha256 value="c6c38e1fb8d99d1d41728b0f055e490d5e463c1252f13e7bb6f7015c22c95ab6" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
-      <component group="org.jetbrains.kotlinx.benchmark" name="org.jetbrains.kotlinx.benchmark.gradle.plugin" version="0.4.8">
-         <artifact name="org.jetbrains.kotlinx.benchmark.gradle.plugin-0.4.8.pom">
-            <sha256 value="094140c425967f8ca98a2bdaf4bf293315b057e141c1dec85b1898d78b601536" origin="Generated by Gradle" reason="Artifact is not signed"/>
+      <component group="org.jetbrains.kotlinx.benchmark" name="org.jetbrains.kotlinx.benchmark.gradle.plugin" version="0.4.11">
+         <artifact name="org.jetbrains.kotlinx.benchmark.gradle.plugin-0.4.11.pom">
+            <sha256 value="35428beab195a9a9df2afd6614ff1e4e4feac1a2c689006b1d649abe4a9391e7" origin="Generated by Gradle" reason="Artifact is not signed"/>
          </artifact>
       </component>
       <component group="org.jetbrains.skiko" name="skiko" version="0.7.7">
@@ -879,6 +988,17 @@
       <component group="org.json" name="json" version="20231013">
          <artifact name="json-20231013.pom">
             <pgp value="FB35C8D02B4724DADA23DE0AFD116C1969FCCFF3"/>
+         </artifact>
+      </component>
+      <component group="org.nodejs" name="node" version="16.20.2">
+         <artifact name="node-16.20.2-darwin-arm64.tar.gz">
+            <sha256 value="6a5c4108475871362d742b988566f3fe307f6a67ce14634eb3fbceb4f9eea88c" origin="Generated by Node" reason="Artifact is not signed. Remove when https://github.com/nodejs/node/issues/53917 is resolved"/>
+         </artifact>
+         <artifact name="node-16.20.2-darwin-x64.tar.gz">
+            <sha256 value="d7a46eaf2b57ffddeda16ece0d887feb2e31a91ad33f8774da553da0249dc4a6" origin="Generated by Node" reason="Artifact is not signed. Remove when https://github.com/nodejs/node/issues/53917 is resolved"/>
+         </artifact>
+         <artifact name="node-16.20.2-linux-x64.tar.gz">
+            <sha256 value="c9193e6c414891694759febe846f4f023bf48410a6924a8b1520c46565859665" origin="Generated by Node" reason="Artifact is not signed. Remove when https://github.com/nodejs/node/issues/53917 is resolved"/>
          </artifact>
       </component>
       <component group="org.ow2" name="ow2" version="1.5">
@@ -962,6 +1082,14 @@
          </artifact>
          <artifact name="pull-parser-2.pom">
             <sha256 value="4823677670797c2b71e8ebbe5437c41151f4e8edb7c6c0d473279715070f36d3" origin="Generated by Gradle" reason="Artifact is not signed"/>
+         </artifact>
+      </component>
+      <component group="relaxngDatatype" name="relaxngDatatype" version="20020414">
+         <artifact name="relaxngDatatype-20020414.jar">
+            <sha1 value="de7952cecd05b65e0e4370cc93fc03035175eef5" origin="Generated by relaxngDatatype" reason="Artifact from 2002. No SHA256"/>
+         </artifact>
+         <artifact name="relaxngDatatype-20020414.pom">
+            <sha1 value="4b062d8eb2bd190074fc686daea9531411b1e123" origin="Generated by relaxngDatatype" reason="Artifact from 2002. No SHA256"/>
          </artifact>
       </component>
       <component group="xmlpull" name="xmlpull" version="1.1.3.1">

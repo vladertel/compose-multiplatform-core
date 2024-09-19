@@ -24,8 +24,8 @@ import android.graphics.Matrix;
 import android.graphics.Point;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
-import androidx.pdf.util.ErrorLog;
 import androidx.pdf.util.Preconditions;
 import androidx.pdf.util.TileBoard.TileInfo;
 
@@ -43,7 +43,7 @@ public class TileView extends View {
     final TileInfo mTileInfo;
     private Bitmap mBitmap;
 
-    public TileView(Context context, TileInfo tileInfo) {
+    public TileView(@NonNull Context context, @NonNull TileInfo tileInfo) {
         super(context);
         this.mTileInfo = tileInfo;
     }
@@ -51,9 +51,6 @@ public class TileView extends View {
     void setBitmap(TileInfo tileInfo, Bitmap bitmap) {
         Preconditions.checkArgument(Objects.equals(tileInfo, this.mTileInfo),
                 String.format("Got wrong tileId %s : %s", this.mTileInfo, tileInfo));
-        if (this.mBitmap != null) {
-            ErrorLog.log(getLogTag(), "Used tile receiving new bitmap " + tileInfo);
-        }
         this.mBitmap = bitmap;
         // This View is already properly laid out, but without this requestLayout, it doesn't draw.
         requestLayout();
@@ -68,10 +65,12 @@ public class TileView extends View {
         return mBitmap != null;
     }
 
+    @NonNull
     public Point getOffset() {
         return mTileInfo != null ? mTileInfo.getOffset() : ZERO;
     }
 
+    @NonNull
     public TileInfo getTileInfo() {
         return mTileInfo;
     }
@@ -82,7 +81,7 @@ public class TileView extends View {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         if (mBitmap != null) {
             canvas.drawBitmap(mBitmap, IDENTITY, null);

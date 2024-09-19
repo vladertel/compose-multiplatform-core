@@ -32,7 +32,7 @@ plugins {
 
 androidXMultiplatform {
     android()
-    desktop()
+    jvmStubs()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -55,40 +55,25 @@ androidXMultiplatform {
         jvmMain {
             dependsOn(commonMain)
             dependencies {
-                implementation(libs.kotlinStdlib)
-            }
-        }
-
-        skikoMain {
-            dependsOn(commonMain)
-            dependencies {
             }
         }
 
         androidMain {
             dependsOn(jvmMain)
             dependencies {
-                api("androidx.annotation:annotation:1.1.0")
-                api("androidx.annotation:annotation-experimental:1.4.0")
+                api("androidx.annotation:annotation:1.8.1")
+                api("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
 
-        desktopMain {
-            dependsOn(skikoMain)
+        jvmStubsMain {
             dependsOn(jvmMain)
-            dependencies {
-
-            }
-        }
-
-        jvmTest {
-            dependsOn(commonTest)
             dependencies {
             }
         }
 
         androidInstrumentedTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(project(":compose:ui:ui-test-junit4"))
 
@@ -106,16 +91,9 @@ androidXMultiplatform {
         }
 
         androidUnitTest {
-            dependsOn(jvmTest)
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.truth)
-            }
-        }
-
-        desktopTest {
-            dependsOn(jvmTest)
-            dependencies {
-
             }
         }
     }
@@ -123,7 +101,7 @@ androidXMultiplatform {
 
 androidx {
     name = "Compose Tooling Data"
-    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2021"
     description = "Compose tooling library data. This library provides data about compose" +
             " for different tooling purposes."
@@ -131,5 +109,6 @@ androidx {
 }
 
 android {
+    compileSdk 35
     namespace "androidx.compose.ui.tooling.data"
 }

@@ -47,9 +47,9 @@ dependencies {
     implementation("androidx.compose.ui:ui:1.2.1")
     implementation("androidx.compose.ui:ui-text:1.2.1")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
+    implementation("androidx.compose.ui:ui-tooling:1.4.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.4.1")
-
-    debugImplementation("androidx.compose.ui:ui-tooling:1.4.1")
+    implementation("androidx.graphics:graphics-shapes:1.0.1")
 }
 
 androidx {
@@ -60,15 +60,9 @@ androidx {
 }
 
 android {
-    namespace "androidx.compose.material3.samples"
-}
+    compileSdk 35
 
-// Workaround for https://github.com/gradle/gradle/issues/19882
-configurations.all {
-    resolutionStrategy.dependencySubstitution {
-        substitute(module("androidx.lifecycle:lifecycle-common-java8:")).
-                using project(":lifecycle:lifecycle-common-java8")
-        substitute(module("androidx.lifecycle:lifecycle-common:")).
-                using project(":lifecycle:lifecycle-common")
-    }
+    namespace "androidx.compose.material3.samples"
+    // TODO(b/328001575)
+    experimentalProperties["android.lint.useK2Uast"] = false
 }

@@ -675,6 +675,13 @@ public class EditorSessionTest {
                 ) {
                     lastOverrideComplications = slotIdToComplicationData
                 }
+
+                override fun clearComplicationSlotAfterEditing(
+                    slotId: Int,
+                    previewData: ComplicationData
+                ) {}
+
+                override fun dontClearAnyComplicationSlotsAfterEditing() {}
             }
         if (!shouldTimeout) {
             WatchFace.registerEditorDelegate(watchComponentName, editorDelegate)
@@ -1256,10 +1263,6 @@ public class EditorSessionTest {
                 chosenComplicationDataSource.complicationDataSourceInfo
             )
 
-            // This should set the interactive complication to empty, preventing briefly seeing the
-            // old complication.
-            assertThat(leftComplication.complicationData.value).isEqualTo(EmptyComplicationData())
-
             // This should update the preview data to point to the updated DataSource3 data.
             val previewComplication =
                 editorSession.complicationsPreviewData.value[LEFT_COMPLICATION_ID]
@@ -1656,25 +1659,29 @@ public class EditorSessionTest {
 
     @Test
     public fun setOverrideComplications() {
-        val scenario = createOnWatchFaceEditingTestActivity(
-            emptyList(),
-            listOf(leftComplication, rightComplication)
-        )
-        val leftComplicationData = ShortTextComplicationData.Builder(
-            PlainComplicationText.Builder("Left").build(),
-            ComplicationText.EMPTY
-        )
-            .build()
-        val rightComplicationData = ShortTextComplicationData.Builder(
-            PlainComplicationText.Builder("Right").build(),
-            ComplicationText.EMPTY
-        )
-            .build()
+        val scenario =
+            createOnWatchFaceEditingTestActivity(
+                emptyList(),
+                listOf(leftComplication, rightComplication)
+            )
+        val leftComplicationData =
+            ShortTextComplicationData.Builder(
+                    PlainComplicationText.Builder("Left").build(),
+                    ComplicationText.EMPTY
+                )
+                .build()
+        val rightComplicationData =
+            ShortTextComplicationData.Builder(
+                    PlainComplicationText.Builder("Right").build(),
+                    ComplicationText.EMPTY
+                )
+                .build()
 
-        val complicationsMap = mapOf(
-            leftComplication.id to leftComplicationData,
-            rightComplication.id to rightComplicationData
-        )
+        val complicationsMap =
+            mapOf(
+                leftComplication.id to leftComplicationData,
+                rightComplication.id to rightComplicationData
+            )
 
         scenario.onActivity {
             it.editorSession.setOverrideComplications(complicationsMap)
@@ -2032,9 +2039,6 @@ public class EditorSessionTest {
         runBlocking {
             activity.editorSession.openComplicationDataSourceChooser(LEFT_COMPLICATION_ID)
         }
-        // This should set the interactive complication to empty, preventing briefly seeing the
-        // old complication.
-        assertThat(leftComplication.complicationData.value).isEqualTo(EmptyComplicationData())
 
         // This should cause the style on the to be reverted back to the initial style.
         activity.editorSession.commitChangesOnClose = false

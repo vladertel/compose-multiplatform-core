@@ -26,6 +26,7 @@ class ConfigBuilder {
     lateinit var applicationId: String
     var isMicrobenchmark: Boolean = false
     var isMacrobenchmark: Boolean = false
+    var enablePrivacySandbox: Boolean = false
     var isPostsubmit: Boolean = true
     lateinit var minSdk: String
     val tags = mutableListOf<String>()
@@ -56,6 +57,10 @@ class ConfigBuilder {
 
     fun isPostsubmit(isPostsubmit: Boolean) = apply { this.isPostsubmit = isPostsubmit }
 
+    fun enablePrivacySandbox(enablePrivacySandbox: Boolean) = apply {
+        this.enablePrivacySandbox = enablePrivacySandbox
+    }
+
     fun minSdk(minSdk: String) = apply { this.minSdk = minSdk }
 
     fun tag(tag: String) = apply { this.tags.add(tag) }
@@ -75,9 +80,7 @@ class ConfigBuilder {
         val instrumentationArgsList = mutableListOf<InstrumentationArg>()
         instrumentationArgsMap
             .filter { it.key !in INST_ARG_BLOCKLIST }
-            .forEach { (key, value) ->
-                instrumentationArgsList.add(InstrumentationArg(key, value))
-            }
+            .forEach { (key, value) -> instrumentationArgsList.add(InstrumentationArg(key, value)) }
         instrumentationArgsList.addAll(
             if (isMicrobenchmark && !isPostsubmit) {
                 listOf(
@@ -122,14 +125,12 @@ class ConfigBuilder {
                     """
                     <option name="instrumentation-arg" key="$key" value="$value" />
 
-                    """.trimIndent()
+                    """
+                        .trimIndent()
                 )
             }
-        sb.append(SETUP_INCLUDE)
-            .append(TARGET_PREPARER_OPEN.replace("CLEANUP_APKS", "true"))
-        initialSetupApks.forEach { apk ->
-            sb.append(APK_INSTALL_OPTION.replace("APK_NAME", apk))
-        }
+        sb.append(SETUP_INCLUDE).append(TARGET_PREPARER_OPEN.replace("CLEANUP_APKS", "true"))
+        initialSetupApks.forEach { apk -> sb.append(APK_INSTALL_OPTION.replace("APK_NAME", apk)) }
         sb.append(APK_INSTALL_OPTION.replace("APK_NAME", testApkName))
         if (!appApkName.isNullOrEmpty()) {
             if (appSplits.isEmpty()) {
@@ -143,6 +144,9 @@ class ConfigBuilder {
         // Post install commands after SuiteApkInstaller is declared
         if (isMicrobenchmark) {
             sb.append(benchmarkPostInstallCommandOption(applicationId))
+        }
+        if (enablePrivacySandbox) {
+            sb.append(PRIVACY_SANDBOX_ENABLE_PREPARER)
         }
         sb.append(TEST_BLOCK_OPEN)
             .append(RUNNER_OPTION.replace("TEST_RUNNER", testRunner))
@@ -374,17 +378,14 @@ private val BENCHMARK_PRESUBMIT_INST_ARGS =
 """
         .trimIndent()
 
-/**
- * These args may never be passed in CI, even if they are set per module
- */
-private val INST_ARG_BLOCKLIST = listOf(
-    "androidx.benchmark.profiling.skipWhenDurationRisksAnr"
-)
+/** These args may never be passed in CI, even if they are set per module */
+private val INST_ARG_BLOCKLIST = listOf("androidx.benchmark.profiling.skipWhenDurationRisksAnr")
 
 private val MICROBENCHMARK_POSTSUBMIT_LISTENERS =
     """
     <option name="device-listeners" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
     <option name="device-listeners" value="androidx.benchmark.junit4.SideEffectRunListener" />
+    <option name="instrumentation-arg" key="androidx.benchmark.cpuEventCounter.enable" value="true" />
 
 """
         .trimIndent()
@@ -402,6 +403,18 @@ private val MACROBENCHMARK_POSTSUBMIT_LISTENERS =
 private val FLAKY_TEST_OPTION =
     """
     <option name="instrumentation-arg" key="notAnnotation" value="androidx.test.filters.FlakyTest" />
+
+"""
+        .trimIndent()
+
+private val PRIVACY_SANDBOX_ENABLE_PREPARER =
+    """
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+    <option name="run-command" value="cmd sdk_sandbox set-state --enabled"/>
+    <option name="run-command" value="device_config set_sync_disabled_for_tests persistent" />
+    <option name="teardown-command" value="cmd sdk_sandbox set-state --reset"/>
+    <option name="teardown-command" value="device_config set_sync_disabled_for_tests none" />
+    </target_preparer>
 
 """
         .trimIndent()

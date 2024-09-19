@@ -38,7 +38,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
@@ -78,7 +77,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Implementation detail of the submitStillCaptures method.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class Camera2CapturePipeline {
 
     private static final String TAG = "Camera2CapturePipeline";
@@ -170,8 +168,12 @@ class Camera2CapturePipeline {
         } else {
             if (mHasFlashUnit) {
                 if (isTorchAsFlash(flashType)) {
-                    pipeline.addTask(
-                            new TorchTask(mCameraControl, flashMode, mExecutor, mScheduler));
+                    // TODO: b/339846763 - Disable AE precap only for the quirks where AE precapture
+                    //  is problematic, instead of all TorchAsFlash quirks.
+                    boolean triggerAePrecapture = !mUseTorchAsFlash.shouldUseTorchAsFlash()
+                            && !mCameraControl.isInVideoUsage();
+                    pipeline.addTask(new TorchTask(mCameraControl, flashMode, mExecutor, mScheduler,
+                            triggerAePrecapture));
                 } else {
                     pipeline.addTask(new AePreCaptureTask(mCameraControl, flashMode, aeQuirk));
                 }
@@ -557,13 +559,16 @@ class Camera2CapturePipeline {
         @CameraExecutor
         private final Executor mExecutor;
         private final ScheduledExecutorService mScheduler;
+        private final boolean mTriggerAePrecapture;
 
         TorchTask(@NonNull Camera2CameraControlImpl cameraControl, @FlashMode int flashMode,
-                @NonNull Executor executor, ScheduledExecutorService scheduler) {
+                @NonNull Executor executor, ScheduledExecutorService scheduler,
+                boolean triggerAePrecapture) {
             mCameraControl = cameraControl;
             mFlashMode = flashMode;
             mExecutor = executor;
             mScheduler = scheduler;
+            mTriggerAePrecapture = triggerAePrecapture;
         }
 
         @ExecutedBy("mExecutor")
@@ -582,6 +587,15 @@ class Camera2CapturePipeline {
                         return "TorchOn";
                     });
                     return FutureChain.from(future).transformAsync(
+                            input -> {
+                                if (mTriggerAePrecapture) {
+                                    return mCameraControl.getFocusMeteringControl()
+                                            .triggerAePrecapture();
+                                }
+                                return Futures.immediateFuture(null);
+                            },
+                            mExecutor
+                    ).transformAsync(
                             input -> waitForResult(CHECK_3A_WITH_TORCH_TIMEOUT_IN_NS, mScheduler,
                                     mCameraControl, (result) -> is3AConverged(result, true)),
                             mExecutor).transform(input -> false, CameraXExecutors.directExecutor());
@@ -602,7 +616,10 @@ class Camera2CapturePipeline {
         public void postCapture() {
             if (mIsExecuted) {
                 mCameraControl.getTorchControl().enableTorchInternal(null, false);
-                Logger.d(TAG, "Turn off torch");
+                Logger.d(TAG, "Turning off torch");
+                if (mTriggerAePrecapture) {
+                    mCameraControl.getFocusMeteringControl().cancelAfAeTrigger(false, true);
+                }
             }
         }
     }
@@ -830,9 +847,9 @@ class Camera2CapturePipeline {
         }
     }
 
+    /** Whether torch flash should be used due to quirk or VideoCapture binding. */
     private boolean isTorchAsFlash(@FlashType int flashType) {
         return mUseTorchAsFlash.shouldUseTorchAsFlash() || mTemplate == CameraDevice.TEMPLATE_RECORD
                 || flashType == FLASH_TYPE_USE_TORCH_AS_FLASH;
     }
-
 }

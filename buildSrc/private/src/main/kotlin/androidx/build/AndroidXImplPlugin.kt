@@ -27,25 +27,28 @@ import androidx.build.checkapi.LibraryApiTaskConfig
 import androidx.build.checkapi.configureProjectForApiTasks
 import androidx.build.docs.CheckTipOfTreeDocsTask.Companion.setUpCheckDocsTask
 import androidx.build.gradle.isRoot
+import androidx.build.license.addLicensesToPublishedArtifacts
 import androidx.build.license.configureExternalDependencyLicenseCheck
 import androidx.build.resources.CopyPublicResourcesDirTask
 import androidx.build.resources.configurePublicResourcesStub
 import androidx.build.sbom.configureSbomPublishing
 import androidx.build.sbom.validateAllArchiveInputsRecognized
 import androidx.build.studio.StudioTask
-import androidx.build.testConfiguration.ModuleInfoGenerator
-import androidx.build.testConfiguration.TestModule
 import androidx.build.testConfiguration.addAppApkToTestConfigGeneration
+import androidx.build.testConfiguration.addToModuleInfo
 import androidx.build.testConfiguration.configureTestConfigGeneration
 import androidx.build.uptodatedness.TaskUpToDateValidator
 import androidx.build.uptodatedness.cacheEvenIfNoOutputs
-import com.android.build.api.artifact.Artifacts
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.CommonExtension
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTarget
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTestOnDeviceCompilation
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTestOnJvmCompilation
+import com.android.build.api.dsl.LibraryExtension
 import com.android.build.api.dsl.PrivacySandboxSdkExtension
+import com.android.build.api.dsl.TestBuildType
+import com.android.build.api.dsl.TestExtension
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.api.variant.HasDeviceTests
@@ -53,22 +56,16 @@ import com.android.build.api.variant.HasUnitTestBuilder
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.api.variant.Variant
-import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
-import com.android.build.gradle.BaseExtension
-import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
-import com.android.build.gradle.TestExtension
 import com.android.build.gradle.TestPlugin
-import com.android.build.gradle.TestedExtension
 import com.android.build.gradle.api.KotlinMultiplatformAndroidPlugin
 import com.android.build.gradle.api.PrivacySandboxSdkPlugin
 import com.android.build.gradle.tasks.factory.AndroidUnitTest
+import com.android.utils.appendCapitalized
 import java.io.File
 import java.time.Duration
-import java.time.LocalDateTime
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -109,6 +106,8 @@ import org.gradle.kotlin.dsl.withModule
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugin.devel.plugins.JavaGradlePluginPlugin
 import org.gradle.plugin.devel.tasks.ValidatePlugins
+import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -128,7 +127,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 abstract class AndroidXImplPlugin
 @Inject
 constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Project> {
-    @get:javax.inject.Inject abstract val registry: BuildEventsListenerRegistry
+    @get:Inject abstract val registry: BuildEventsListenerRegistry
 
     override fun apply(project: Project) {
         if (project.isRoot)
@@ -145,7 +144,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         project.tasks.register(BUILD_ON_SERVER_TASK, DefaultTask::class.java)
         // Perform different actions based on which plugins have been applied to the project.
         // Many of the actions overlap, ex. API tracking.
-        project.plugins.all { plugin ->
+        project.plugins.configureEach { plugin ->
             @Suppress("UnstableApiUsage") // PrivacySandboxSdkPlugin, KMPAndroidPlugin
             when (plugin) {
                 is JavaGradlePluginPlugin -> configureGradlePluginPlugin(project)
@@ -159,18 +158,19 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                         androidXKmpExtension.agpKmpExtension,
                         androidXExtension
                     )
-                is KotlinBasePluginWrapper -> configureWithKotlinPlugin(
-                    project,
-                    androidXExtension,
-                    plugin,
-                    androidXKmpExtension
-                )
+                is KotlinBasePluginWrapper ->
+                    configureWithKotlinPlugin(
+                        project,
+                        androidXExtension,
+                        plugin,
+                        androidXKmpExtension
+                    )
                 is PrivacySandboxSdkPlugin -> configureWithPrivacySandboxSdkPlugin(project)
             }
         }
 
         project.configureLint()
-        project.configureKtlint()
+        project.configureKtfmt()
         project.configureKotlinVersion()
 
         // Avoid conflicts between full Guava and LF-only Guava.
@@ -185,11 +185,17 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         project.tasks.withType(AbstractTestTask::class.java) { task ->
             configureTestTask(project, task, allHostTests)
         }
-        project.tasks.withType(Test::class.java) { task -> configureJvmTestTask(project, task) }
+
+        project.tasks.withType(Test::class.java).configureEach { task ->
+            configureJvmTestTask(project, task)
+        }
 
         project.configureTaskTimeouts()
         project.configureMavenArtifactUpload(
-            androidXExtension, androidXKmpExtension, componentFactory) {
+            androidXExtension,
+            androidXKmpExtension,
+            componentFactory
+        ) {
             project.addCreateLibraryBuildInfoFileTasks(androidXExtension, androidXKmpExtension)
         }
         project.publishInspectionArtifacts()
@@ -211,13 +217,17 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
             if (androidXExtension.shouldPublish()) {
                 project.validatePublishedMultiplatformHasDefault()
+                project.addLicensesToPublishedArtifacts(androidXExtension.license)
             }
             project.registerValidateMultiplatformSourceSetNamingTask()
+            project.validateLintVersionTestExists(androidXExtension)
         }
         project.disallowAccidentalAndroidDependenciesInKmpProject(androidXKmpExtension)
         TaskUpToDateValidator.setup(project, registry)
 
         project.workaroundPrebuiltTakingPrecedenceOverProject()
+        project.configureSamplesProject()
+        project.configureMaxDepVersions(androidXExtension)
     }
 
     private fun Project.registerProjectOrArtifact() {
@@ -285,7 +295,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         task: AbstractTestTask,
         anchorTask: Task,
     ) {
-        anchorTask.dependsOn(task)
+        if (task.name !in listOf("jvmStubsTest")) anchorTask.dependsOn(task)
         val ignoreFailuresProperty =
             project.providers.gradleProperty(TEST_FAILURES_DO_NOT_FAIL_TEST_TASK)
         val ignoreFailures = ignoreFailuresProperty.isPresent
@@ -296,27 +306,13 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
         val xmlReportDestDir = project.getHostTestResultDirectory()
         val testName = "${project.path}:${task.name}"
-        project.rootProject.tasks.named("createModuleInfo").configure {
-            it as ModuleInfoGenerator
-            it.testModules.add(
-                TestModule(
-                    name = testName,
-                    path =
-                        listOf(project.projectDir.toRelativeString(project.getSupportRootFolder()))
-                )
-            )
-        }
+        project.addToModuleInfo(testName)
         val archiveName = "$testName.zip"
         if (project.isDisplayTestOutput()) {
             // Enable tracing to see results in command line
             task.testLogging.apply {
                 events =
-                    hashSetOf(
-                        TestLogEvent.FAILED,
-                        TestLogEvent.PASSED,
-                        TestLogEvent.SKIPPED,
-                        TestLogEvent.STANDARD_OUT
-                    )
+                    hashSetOf(TestLogEvent.FAILED, TestLogEvent.SKIPPED, TestLogEvent.STANDARD_OUT)
                 showExceptions = true
                 showCauses = true
                 showStackTraces = true
@@ -358,16 +354,19 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         val kotlinTestVersionStringProvider = androidXConfiguration.kotlinTestBomVersion
 
         // Resolve unspecified Kotlin versions to the target version.
-        configurations.all { configuration ->
-            val useVersionStringProvider = if (configuration.isTest()) {
-                kotlinTestVersionStringProvider
-            } else {
-                kotlinVersionStringProvider
-            }
+        configurations.configureEach { configuration ->
+            val useVersionStringProvider =
+                if (configuration.isTest()) {
+                    kotlinTestVersionStringProvider
+                } else {
+                    kotlinVersionStringProvider
+                }
             configuration.resolutionStrategy { strategy ->
                 strategy.eachDependency { details ->
-                    if (details.requested.group == "org.jetbrains.kotlin" &&
-                        details.requested.version == null) {
+                    if (
+                        details.requested.group == "org.jetbrains.kotlin" &&
+                            details.requested.version == null
+                    ) {
                         details.useVersion(useVersionStringProvider.get())
                     }
                 }
@@ -390,11 +389,12 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             if (task is KotlinCompilationTask<*>) {
                 // We can't directly determine if a Task is compiling test code, but we can scrape
                 // the names of all the compilation units and compare them to Task names.
-                val useVersionProvider = if (task.isTestCompilation()) {
-                    kotlinTestVersionProvider
-                } else {
-                    kotlinVersionProvider
-                }
+                val useVersionProvider =
+                    if (task.isTestCompilation()) {
+                        kotlinTestVersionProvider
+                    } else {
+                        kotlinVersionProvider
+                    }
                 task.compilerOptions.apiVersion.set(useVersionProvider)
                 task.compilerOptions.languageVersion.set(useVersionProvider)
             }
@@ -407,6 +407,16 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         afterEvaluate { evaluatedProject ->
             evaluatedProject.kotlinExtensionOrNull?.let { kotlinExtension ->
                 kotlinExtension.coreLibrariesVersion = kotlinVersionStringProvider.get()
+            }
+            if (evaluatedProject.androidXExtension.shouldPublish()) {
+                tasks.register(
+                    CheckKotlinApiTargetTask.TASK_NAME,
+                    CheckKotlinApiTargetTask::class.java
+                ) {
+                    it.kotlinTarget.set(kotlinVersionProvider)
+                    it.outputFile.set(layout.buildDirectory.file("kotlinApiTargetCheckReport.txt"))
+                }
+                addToBuildOnServer(CheckKotlinApiTargetTask.TASK_NAME)
             }
         }
 
@@ -446,98 +456,102 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         plugin: KotlinBasePluginWrapper,
         androidXMultiplatformExtension: AndroidXMultiplatformExtension
     ) {
-        project.configureKtfmt()
-
-        project.afterEvaluate {
-            val targetsAndroid =
+        val targetsAndroid =
+            project.provider {
                 project.plugins.hasPlugin(LibraryPlugin::class.java) ||
                     project.plugins.hasPlugin(AppPlugin::class.java) ||
                     project.plugins.hasPlugin(TestPlugin::class.java) ||
                     @Suppress("UnstableApiUsage")
                     project.plugins.hasPlugin(KotlinMultiplatformAndroidPlugin::class.java)
-            val defaultJavaTargetVersion =
-                getDefaultTargetJavaVersion(androidXExtension.type).toString()
-            if (plugin is KotlinMultiplatformPluginWrapper) {
-                project.extensions.getByType<KotlinMultiplatformExtension>().apply {
-                    targets.withType<KotlinAndroidTarget> {
-                        compilations.configureEach {
-                            it.kotlinOptions.jvmTarget = defaultJavaTargetVersion
+            }
+        val defaultJavaTargetVersion =
+            project.provider {
+                getDefaultTargetJavaVersion(androidXExtension.type, project.name).toString()
+            }
+        val defaultJvmTarget = defaultJavaTargetVersion.map { JvmTarget.fromTarget(it) }
+        if (plugin is KotlinMultiplatformPluginWrapper) {
+            project.extensions.getByType<KotlinMultiplatformExtension>().apply {
+                targets.withType<KotlinAndroidTarget> {
+                    compilations.configureEach {
+                        it.compileTaskProvider.configure { task ->
+                            task.compilerOptions.jvmTarget.set(defaultJvmTarget)
                         }
                     }
-                    targets.withType<KotlinJvmTarget> {
-                        val defaultJavaTargetVersionForNonAndroidTargets =
+                }
+                targets.withType<KotlinJvmTarget> {
+                    val defaultTargetVersionForNonAndroidTargets =
+                        project.provider {
                             getDefaultTargetJavaVersion(
-                                libraryType = androidXExtension.type,
-                                projectName = project.name,
-                                targetName = name
-                            ).toString()
-                        compilations.configureEach {
-                            it.compileJavaTaskProvider?.configure { javaCompile ->
-                                javaCompile.targetCompatibility =
-                                    defaultJavaTargetVersionForNonAndroidTargets
-                                javaCompile.sourceCompatibility =
-                                    defaultJavaTargetVersionForNonAndroidTargets
-                            }
-                            it.kotlinOptions {
-                                jvmTarget = defaultJavaTargetVersionForNonAndroidTargets
+                                    libraryType = androidXExtension.type,
+                                    projectName = project.name,
+                                    targetName = name
+                                )
+                                .toString()
+                        }
+                    val defaultJvmTargetForNonAndroidTargets =
+                        defaultTargetVersionForNonAndroidTargets.map { JvmTarget.fromTarget(it) }
+                    compilations.configureEach { compilation ->
+                        compilation.compileJavaTaskProvider?.configure { javaCompile ->
+                            println(
+                                "target javac ${defaultTargetVersionForNonAndroidTargets.get()}"
+                            )
+                            javaCompile.targetCompatibility =
+                                defaultTargetVersionForNonAndroidTargets.get()
+                            javaCompile.sourceCompatibility =
+                                defaultTargetVersionForNonAndroidTargets.get()
+                        }
+                        compilation.compileTaskProvider.configure { kotlinCompile ->
+                            kotlinCompile.compilerOptions {
+                                jvmTarget.set(defaultJvmTargetForNonAndroidTargets)
                                 // Set jdk-release version for non-Android KMP targets
-                                freeCompilerArgs += listOf(
-                                    "-Xjdk-release=$defaultJavaTargetVersionForNonAndroidTargets",
+                                freeCompilerArgs.add(
+                                    defaultTargetVersionForNonAndroidTargets.map {
+                                        "-Xjdk-release=$it"
+                                    }
                                 )
                             }
                         }
                     }
                 }
-            } else {
-                project.tasks.withType(KotlinJvmCompile::class.java).configureEach { task ->
-                    task.kotlinOptions.jvmTarget = defaultJavaTargetVersion
-                    if (!targetsAndroid) {
-                        // Set jdk-release version for non-Android JVM projects
-                        task.kotlinOptions.freeCompilerArgs += listOf(
-                            "-Xjdk-release=$defaultJavaTargetVersion",
-                        )
+            }
+        } else {
+            project.tasks.withType(KotlinJvmCompile::class.java).configureEach { task ->
+                task.compilerOptions.jvmTarget.set(defaultJvmTarget)
+                task.compilerOptions.freeCompilerArgs.addAll(
+                    targetsAndroid.zip(defaultJavaTargetVersion) { targetsAndroid, version ->
+                        if (targetsAndroid) {
+                            emptyList<String>()
+                        } else {
+                            // Set jdk-release version for non-Android JVM projects
+                            listOf("-Xjdk-release=$version")
+                        }
                     }
-                }
+                )
             }
-            project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
-                val kotlinCompilerArgs =
-                    mutableListOf(
-                        "-Xskip-metadata-version-check",
-                    )
-                // TODO (b/259578592): enable -Xjvm-default=all for camera-camera2-pipe projects
-                if (!project.name.contains("camera-camera2-pipe")) {
-                    kotlinCompilerArgs += "-Xjvm-default=all"
-                }
-                if (androidXExtension.type == LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY ||
-                    androidXExtension.type == LibraryType.PUBLISHED_KOTLIN_ONLY_TEST_LIBRARY) {
-                    // The Kotlin Compiler adds intrinsic assertions which are only relevant
-                    // when the code is consumed by Java users. Therefore we can turn this off
-                    // when code is being consumed by Kotlin users.
+        }
+        project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
+            val kotlinCompilerArgs =
+                project.provider {
+                    val args = mutableListOf("-Xskip-metadata-version-check", "-Xjvm-default=all")
+                    if (androidXExtension.type.targetsKotlinConsumersOnly) {
+                        // The Kotlin Compiler adds intrinsic assertions which are only relevant
+                        // when the code is consumed by Java users. Therefore we can turn this off
+                        // when code is being consumed by Kotlin users.
 
-                    // Additional Context:
-                    // https://github.com/JetBrains/kotlin/blob/master/compiler/cli/cli-common/src/org/jetbrains/kotlin/cli/common/arguments/K2JVMCompilerArguments.kt#L239
-                    // b/280633711
-                    kotlinCompilerArgs +=
-                        listOf(
-                            "-Xno-param-assertions",
-                            "-Xno-call-assertions",
-                            "-Xno-receiver-assertions"
-                        )
-                }
-                task.kotlinOptions.freeCompilerArgs += kotlinCompilerArgs
-                logScriptSources(task, project)
-            }
+                        // Additional Context:
+                        // https://github.com/JetBrains/kotlin/blob/master/compiler/cli/cli-common/src/org/jetbrains/kotlin/cli/common/arguments/K2JVMCompilerArguments.kt#L239
+                        // b/280633711
+                        args +=
+                            listOf(
+                                "-Xno-param-assertions",
+                                "-Xno-call-assertions",
+                                "-Xno-receiver-assertions"
+                            )
+                    }
 
-            // Explicit API mode is broken for Android projects
-            // https://youtrack.jetbrains.com/issue/KT-37652
-            if (androidXExtension.shouldEnforceKotlinStrictApiMode() && !targetsAndroid) {
-                project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
-                    // Workaround for https://youtrack.jetbrains.com/issue/KT-37652
-                    if (task.name.endsWith("TestKotlin")) return@configureEach
-                    if (task.name.endsWith("TestKotlinJvm")) return@configureEach
-                    task.kotlinOptions.freeCompilerArgs += listOf("-Xexplicit-api=strict")
+                    args
                 }
-            }
+            task.compilerOptions.freeCompilerArgs.addAll(kotlinCompilerArgs)
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
             KonanPrebuiltsSetup.configureKonanDirectory(project)
@@ -548,7 +562,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 } else if (!androidXMultiplatformExtension.hasAndroidMultiplatform()) {
                     // Kotlin MPP does not apply java plugin anymore, but we still want to configure
                     // all java-related tasks.
-                    // We only need to do this when project does not have Android plugin, which already
+                    // We only need to do this when project does not have Android plugin, which
+                    // already
                     // configures Java tasks.
                     configureWithJavaPlugin(project, androidXExtension)
                 }
@@ -569,16 +584,31 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 }
             }
         }
+
+        project.afterEvaluate {
+            val kotlinExtension = project.kotlinExtensionOrNull
+            kotlinExtension?.explicitApi =
+                if (androidXExtension.shouldEnforceKotlinStrictApiMode()) {
+                    ExplicitApiMode.Strict
+                } else {
+                    ExplicitApiMode.Disabled
+                }
+        }
     }
 
     private fun configureWithAppPlugin(project: Project, androidXExtension: AndroidXExtension) {
-        project.extensions.getByType<AppExtension>().apply {
-            configureAndroidBaseOptions(project, androidXExtension)
-            excludeVersionFiles(packagingOptions.resources)
-        }
-
         project.extensions.getByType<ApplicationExtension>().apply {
+            configureAndroidBaseOptions(project, androidXExtension)
+            defaultConfig.targetSdk = project.defaultAndroidConfig.targetSdk
+            val debugSigningConfig = signingConfigs.getByName("debug")
+            // Use a local debug keystore to avoid build server issues.
+            debugSigningConfig.storeFile = project.getKeystore()
+            buildTypes.configureEach { buildType ->
+                // Sign all the builds (including release) with debug key
+                buildType.signingConfig = debugSigningConfig
+            }
             configureAndroidApplicationOptions(project, androidXExtension)
+            excludeVersionFiles(packaging.resources)
         }
 
         project.extensions.getByType<ApplicationAndroidComponentsExtension>().apply {
@@ -602,17 +632,20 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     private fun configureWithTestPlugin(project: Project, androidXExtension: AndroidXExtension) {
         project.extensions.getByType<TestExtension>().apply {
             configureAndroidBaseOptions(project, androidXExtension)
-            excludeVersionFiles(packagingOptions.resources)
-        }
-
-        project.extensions.getByType<com.android.build.api.dsl.TestExtension>().apply {
+            defaultConfig.targetSdk = project.defaultAndroidConfig.targetSdk
+            val debugSigningConfig = signingConfigs.getByName("debug")
+            // Use a local debug keystore to avoid build server issues.
+            debugSigningConfig.storeFile = project.getKeystore()
+            buildTypes.configureEach { buildType ->
+                // Sign all the builds (including release) with debug key
+                buildType.signingConfig = debugSigningConfig
+            }
             project.configureTestConfigGeneration(this)
             project.addAppApkToTestConfigGeneration(androidXExtension)
+            excludeVersionFiles(packaging.resources)
         }
 
         project.configureJavaCompilationWarnings(androidXExtension)
-
-        project.addToProjectMap(androidXExtension)
     }
 
     private fun configureWithKotlinMultiplatformAndroidPlugin(
@@ -620,58 +653,74 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         kotlinMultiplatformAndroidTarget: KotlinMultiplatformAndroidTarget,
         androidXExtension: AndroidXExtension
     ) {
-        val kotlinMultiplatformAndroidComponentsExtension = project
-            .extensions
-            .getByType<KotlinMultiplatformAndroidComponentsExtension>()
+        val kotlinMultiplatformAndroidComponentsExtension =
+            project.extensions.getByType<KotlinMultiplatformAndroidComponentsExtension>()
         kotlinMultiplatformAndroidTarget.configureAndroidBaseOptions(
             project,
             kotlinMultiplatformAndroidComponentsExtension
         )
-        kotlinMultiplatformAndroidTarget.configureAndroidLibraryOptions(
-            project,
-            androidXExtension
-        )
+        // Propagate the compileSdk value into minCompileSdk.
+        kotlinMultiplatformAndroidTarget.aarMetadata.minCompileSdk =
+            kotlinMultiplatformAndroidTarget.compileSdk
+        project.disableStrictVersionConstraints()
 
-        project.configureProjectForApiTasks(
-            AndroidMultiplatformApiTaskConfig,
-            androidXExtension
-        )
+        project.configureProjectForApiTasks(AndroidMultiplatformApiTaskConfig, androidXExtension)
 
-        kotlinMultiplatformAndroidComponentsExtension.onVariant { variant ->
-            project.createVariantAarManifestTransformerTask(variant.name, variant.artifacts)
-        }
-
-        kotlinMultiplatformAndroidComponentsExtension.onVariant {
-            it.configureTests()
-        }
+        kotlinMultiplatformAndroidComponentsExtension.onVariant { it.configureTests() }
 
         project.configurePublicResourcesStub(project.multiplatformExtension!!)
-        kotlinMultiplatformAndroidComponentsExtension.onVariant {
-            project.configureMultiplatformSourcesForAndroid(it.name)
+        kotlinMultiplatformAndroidComponentsExtension.onVariant { variant ->
+            project.configureMultiplatformSourcesForAndroid(
+                variant.name,
+                kotlinMultiplatformAndroidTarget,
+                androidXExtension.samplesProjects
+            )
         }
-        project.configureVersionFileWriter(
-            project.multiplatformExtension!!,
-            androidXExtension
-        )
+        project.configureVersionFileWriter(project.multiplatformExtension!!, androidXExtension)
         project.configureJavaCompilationWarnings(androidXExtension)
 
         project.configureDependencyVerification(androidXExtension) { taskProvider ->
             kotlinMultiplatformAndroidTarget.compilations.configureEach {
-                taskProvider.configure { task ->
-                    task.dependsOn(it.compileTaskProvider)
-                }
+                taskProvider.configure { task -> task.dependsOn(it.compileTaskProvider) }
             }
         }
 
-        val reportLibraryMetrics = project.configureReportLibraryMetricsTask()
-        project.addToBuildOnServer(reportLibraryMetrics)
-
-        project.addToProjectMap(androidXExtension)
         project.afterEvaluate {
             project.addToBuildOnServer("assembleAndroidMain")
             project.addToBuildOnServer("lint")
         }
         project.setUpCheckDocsTask(androidXExtension)
+        project.writeBlankPublicTxtToAar(kotlinMultiplatformAndroidComponentsExtension)
+        kotlinMultiplatformAndroidComponentsExtension.onVariant {
+            project.validateKotlinModuleFiles(it.name, it.artifacts.get(SingleArtifact.AAR))
+        }
+    }
+
+    private fun Project.writeBlankPublicTxtToAar(
+        componentsExtension: KotlinMultiplatformAndroidComponentsExtension
+    ) {
+        val blankPublicResourceDir =
+            project.getSupportRootFolder().resolve("buildSrc/blank-res-api")
+        componentsExtension.onVariant { variant ->
+            val taskProvider =
+                tasks.register(
+                    "repackageAarWithResourceApi".appendCapitalized(variant.name),
+                    RepackagingTask::class.java
+                ) { task ->
+                    task.from(blankPublicResourceDir)
+                    task.from(zipTree(task.aarFile))
+                    task.destinationDirectory.fileProvider(
+                        task.output.locationOnly.map { location -> location.asFile.parentFile }
+                    )
+                    task.archiveFileName.set(
+                        task.output.locationOnly.map { location -> location.asFile.name }
+                    )
+                }
+            variant.artifacts
+                .use(taskProvider)
+                .wiredWithFiles(RepackagingTask::aarFile, RepackagingTask::output)
+                .toTransform(SingleArtifact.AAR)
+        }
     }
 
     @Suppress("UnstableApiUsage") // usage of PrivacySandboxSdkExtension
@@ -690,30 +739,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
     private val ASB_SIGNING_CONFIG_PROPERTY_NAME =
         "android.privacy_sandbox.local_deployment_signing_store_file"
-
-    /**
-     * Temporary diagnostics for b/321949384
-     */
-    private fun logScriptSources(task: KotlinCompile, project: Project) {
-        if (getBuildId() == "0")
-            return // don't need to log when not running on the build server
-        val logFile = File(project.getDistributionDirectory(), "KotlinCompile-scriptSources.log")
-        fun writeScriptSources(label: String) {
-            val now = LocalDateTime.now()
-            @Suppress("INVISIBLE_MEMBER")
-            val scriptSources = task.scriptSources.files
-            logFile.appendText(
-                "${task.path} $label at $now with ${scriptSources.size} scriptSources: " +
-                "${scriptSources.joinToString()}\n"
-            )
-        }
-        task.doFirst {
-            writeScriptSources("starting")
-        }
-        task.doLast {
-            writeScriptSources("completed")
-        }
-    }
 
     /**
      * Excludes files telling which versions of androidx libraries were used in test apks, to avoid
@@ -737,26 +762,13 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
     private fun Project.buildOnServerDependsOnLint() {
         if (!project.usingMaxDepVersions()) {
-            val androidComponents = extensions.findByType(AndroidComponentsExtension::class.java)
-            androidComponents?.onVariants { variant ->
-                if (!variant.name.lowercase(Locale.getDefault()).contains("release")) {
-                    val taskName =
-                        "lint${variant.name.replaceFirstChar {
-                            if (it.isLowerCase()) {
-                                it.titlecase(Locale.getDefault())
-                            } else {
-                                it.toString()
-                            }
-                        }}"
-                    project.addToBuildOnServer(taskName)
-                }
-            }
+            project.addToBuildOnServer("lint")
         }
     }
 
     @Suppress("UnstableApiUsage") // usage of HasDeviceTests
     private fun HasDeviceTests.configureTests() {
-        deviceTests.forEach { deviceTest ->
+        deviceTestsForEachCompat { deviceTest ->
             deviceTest.packaging.resources.apply {
                 excludeVersionFiles(this)
 
@@ -764,8 +776,10 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 pickFirsts.add("/META-INF/AL2.0")
                 // In addition to working around the above issue, we exclude the LGPL2.1 license as
                 // we're
-                // approved to distribute code via AL2.0 and the only dependencies which pull in LGPL2.1
-                // are currently dual-licensed with AL2.0 and LGPL2.1. The affected dependencies are:
+                // approved to distribute code via AL2.0 and the only dependencies which pull in
+                // LGPL2.1
+                // are currently dual-licensed with AL2.0 and LGPL2.1. The affected dependencies
+                // are:
                 //   - net.java.dev.jna:jna:5.5.0
                 excludes.add("/META-INF/LGPL2.1")
             }
@@ -782,18 +796,12 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     @Suppress("UnstableApiUsage") // usage of HasDeviceTests
     private fun HasDeviceTests.enableLongMethodTracingInMicrobenchmark(project: Project) {
         if (project.hasBenchmarkPlugin()) {
-            deviceTests.forEach { deviceTest ->
+            deviceTestsForEachCompat { deviceTest ->
                 deviceTest.instrumentationRunnerArguments.put(
-                    "androidx.benchmark.profiling.skipWhenDurationRisksAnr", "false"
+                    "androidx.benchmark.profiling.skipWhenDurationRisksAnr",
+                    "false"
                 )
             }
-        }
-    }
-
-    private fun Variant.aotCompileMicrobenchmarks(project: Project) {
-        if (project.hasBenchmarkPlugin()) {
-            @Suppress("UnstableApiUsage") // usage of experimentalProperties
-            experimentalProperties.put("android.experimental.force-aot-compilation", true)
         }
     }
 
@@ -802,59 +810,62 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         experimentalProperties.put(ASB_SIGNING_CONFIG_PROPERTY_NAME, keyStore.absolutePath)
     }
 
-    @Suppress("DEPRECATION") // AGP DSL APIs
     private fun configureWithLibraryPlugin(project: Project, androidXExtension: AndroidXExtension) {
+        val buildTypeForTests = "release"
         project.extensions.getByType<LibraryExtension>().apply {
-            configureAndroidBaseOptions(project, androidXExtension)
-            configureAndroidLibraryOptions(project, androidXExtension)
+            publishing { singleVariant(DEFAULT_PUBLISH_CONFIG) }
 
-            // Make sure the main Kotlin source set doesn't contain anything under
-            // src/main/kotlin.
-            val mainKotlinSrcDir =
-                (sourceSets.findByName("main")?.kotlin
-                        as com.android.build.gradle.api.AndroidSourceDirectorySet)
-                    .srcDirs
-                    .filter { it.name == "kotlin" }
-                    .getOrNull(0)
-            if (mainKotlinSrcDir?.isDirectory == true) {
-                throw GradleException(
-                    "Invalid project structure! AndroidX does not support \"kotlin\" as a " +
-                        "top-level source directory for libraries, use \"java\" instead: " +
-                        mainKotlinSrcDir.path
-                )
+            configureAndroidBaseOptions(project, androidXExtension)
+            val debugSigningConfig = signingConfigs.getByName("debug")
+            // Use a local debug keystore to avoid build server issues.
+            debugSigningConfig.storeFile = project.getKeystore()
+            buildTypes.configureEach { buildType ->
+                // Sign all the builds (including release) with debug key
+                buildType.signingConfig = debugSigningConfig
             }
+            testBuildType = buildTypeForTests
+            project.configureTestConfigGeneration(this)
+            project.addAppApkToTestConfigGeneration(androidXExtension)
         }
 
         val libraryAndroidComponentsExtension =
             project.extensions.getByType<LibraryAndroidComponentsExtension>()
 
-        // Remove the android:targetSdkVersion element from the manifest used for AARs.
-        libraryAndroidComponentsExtension.onVariants { variant ->
-            project.createVariantAarManifestTransformerTask(variant.name, variant.artifacts)
-        }
-
-        project.extensions.getByType<com.android.build.api.dsl.LibraryExtension>().apply {
-            publishing { singleVariant(DEFAULT_PUBLISH_CONFIG) }
-            project.configureTestConfigGeneration(this)
-            project.addAppApkToTestConfigGeneration(androidXExtension)
-        }
-
         libraryAndroidComponentsExtension.apply {
-            beforeVariants(selector().withBuildType("release")) { variant ->
-                variant.enableUnitTest = false
+            finalizeDsl {
+                // Propagate the compileSdk value into minCompileSdk. Don't propagate
+                // compileSdkExtension, since only one library actually depends on the extension
+                // APIs and they can explicitly declare that in their build.gradle. Note that when
+                // we're using a preview SDK, the value for compileSdk will be null and the
+                // resulting AAR metadata won't have a minCompileSdk --
+                // this is okay because AGP automatically embeds forceCompileSdkPreview in the AAR
+                // metadata and uses it instead of minCompileSdk.
+                it.defaultConfig.aarMetadata.minCompileSdk = it.compileSdk
+                it.lint.targetSdk = project.defaultAndroidConfig.targetSdk
+                it.testOptions.targetSdk = project.defaultAndroidConfig.targetSdk
+                // Replace with a public API once available, see b/360392255
+                it.buildTypes.configureEach { buildType ->
+                    if (buildType.name == buildTypeForTests && !project.hasBenchmarkPlugin())
+                        (buildType as TestBuildType).isDebuggable = true
+                }
             }
-            onVariants {
-                it.configureTests()
-                it.aotCompileMicrobenchmarks(project)
-                it.enableLongMethodTracingInMicrobenchmark(project)
+            beforeVariants(selector().withBuildType("debug")) { variant -> variant.enable = false }
+            beforeVariants(selector().all()) { variant ->
+                variant.androidTest.targetSdk = project.defaultAndroidConfig.targetSdk
+            }
+            onVariants { variant ->
+                variant.configureTests()
+                variant.enableLongMethodTracingInMicrobenchmark(project)
+                project.validateKotlinModuleFiles(
+                    variant.name,
+                    variant.artifacts.get(SingleArtifact.AAR)
+                )
             }
         }
 
+        project.disableStrictVersionConstraints()
         project.configureVersionFileWriter(libraryAndroidComponentsExtension, androidXExtension)
         project.configureJavaCompilationWarnings(androidXExtension)
-
-        val reportLibraryMetrics = project.configureReportLibraryMetricsTask()
-        project.addToBuildOnServer(reportLibraryMetrics)
 
         val prebuiltLibraries = listOf("libtracing_perfetto.so", "libc++_shared.so")
         val copyPublicResourcesDirTask =
@@ -873,43 +884,31 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 )
             }
             if (variant.name == DEFAULT_PUBLISH_CONFIG) {
-                project.configureSourceJarForAndroid(variant)
+                project.configureSourceJarForAndroid(variant, androidXExtension.samplesProjects)
                 project.configureDependencyVerification(androidXExtension) { taskProvider ->
-                    taskProvider.configure { task ->
-                        task.dependsOn("compileReleaseJavaWithJavac")
-                    }
-                }
-
-                reportLibraryMetrics.configure {
-                    it.jarFiles.from(
-                        project.tasks.named("bundleReleaseAar").map {
-                                zip -> zip.inputs.files
-                        }
-                    )
+                    taskProvider.configure { task -> task.dependsOn("compileReleaseJavaWithJavac") }
                 }
             }
             configurePublicResourcesStub(variant, copyPublicResourcesDirTask)
-            val verifyELFRegionAlignmentTaskProvider = project.tasks.register(
-                variant.name + "VerifyELFRegionAlignment",
-                VerifyELFRegionAlignmentTask::class.java
-            ) { task ->
-                task.files.from(
-                    variant.artifacts.get(SingleArtifact.MERGED_NATIVE_LIBS)
-                        .map { dir ->
+            val verifyELFRegionAlignmentTaskProvider =
+                project.tasks.register(
+                    variant.name + "VerifyELFRegionAlignment",
+                    VerifyELFRegionAlignmentTask::class.java
+                ) { task ->
+                    task.files.from(
+                        variant.artifacts.get(SingleArtifact.MERGED_NATIVE_LIBS).map { dir ->
                             dir.asFileTree.files
                                 .filter { it.extension == "so" }
                                 .filter { it.path.contains("arm64-v8a") }
                                 .filterNot { prebuiltLibraries.contains(it.name) }
                         }
-                )
-                task.cacheEvenIfNoOutputs()
-            }
+                    )
+                    task.cacheEvenIfNoOutputs()
+                }
             project.addToBuildOnServer(verifyELFRegionAlignmentTaskProvider)
         }
 
         project.setUpCheckDocsTask(androidXExtension)
-
-        project.addToProjectMap(androidXExtension)
 
         project.buildOnServerDependsOnAssembleRelease()
         project.buildOnServerDependsOnLint()
@@ -929,9 +928,11 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         targetName: String? = null
     ): JavaVersion {
         return when {
-            projectName != null && projectName.contains("desktop") -> VERSION_17
-            targetName != null && targetName == "desktop" -> VERSION_17
-            libraryType == LibraryType.COMPILER_PLUGIN -> VERSION_11
+            // TODO(b/353328300): Move room-compiler-processing to Java 17 once Dagger is ready.
+            projectName != null && projectName.contains("room-compiler-processing") -> VERSION_11
+            projectName != null && projectName.contains("desktop") -> VERSION_11
+            targetName != null && (targetName == "desktop" || targetName == "jvmStubs") ->
+                VERSION_11
             libraryType.compilationTarget == CompilationTarget.HOST -> VERSION_17
             else -> VERSION_1_8
         }
@@ -944,13 +945,14 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         val javaExtension = project.extensions.getByType<JavaPluginExtension>()
         project.afterEvaluate {
             javaExtension.apply {
-                val defaultTargetJavaVersion = getDefaultTargetJavaVersion(androidXExtension.type)
+                val defaultTargetJavaVersion =
+                    getDefaultTargetJavaVersion(androidXExtension.type, project.name)
                 sourceCompatibility = defaultTargetJavaVersion
                 targetCompatibility = defaultTargetJavaVersion
                 project.disableJava8TargetObsoleteWarnings()
             }
             if (!project.plugins.hasPlugin(KotlinBasePluginWrapper::class.java)) {
-                project.configureSourceJarForJava()
+                project.configureSourceJarForJava(androidXExtension.samplesProjects)
             }
         }
 
@@ -982,7 +984,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
         // Workaround for b/120487939 wherein Gradle's default resolution strategy prefers external
         // modules with lower versions over local projects with higher versions.
-        project.configurations.all { configuration ->
+        project.configurations.configureEach { configuration ->
             configuration.resolutionStrategy.preferProjectModules()
         }
 
@@ -997,8 +999,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 }
             }
         }
-
-        project.addToProjectMap(androidXExtension)
     }
 
     private fun Project.configureProjectStructureValidation(androidXExtension: AndroidXExtension) {
@@ -1007,7 +1007,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             val mavenGroup = androidXExtension.mavenGroup
             val isProbablyPublished =
                 androidXExtension.type == LibraryType.PUBLISHED_LIBRARY ||
-                    androidXExtension.type == LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY ||
+                    androidXExtension.type ==
+                        LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS ||
                     androidXExtension.type == LibraryType.UNSET
             if (mavenGroup != null && isProbablyPublished && androidXExtension.shouldPublish()) {
                 validateProjectMavenGroup(mavenGroup.group)
@@ -1022,7 +1023,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         afterEvaluate { androidXExtension.validateMavenVersion() }
     }
 
-    private fun BaseExtension.configureAndroidBaseOptions(
+    private fun CommonExtension<*, *, *, *, *, *>.configureAndroidBaseOptions(
         project: Project,
         androidXExtension: AndroidXExtension
     ) {
@@ -1032,42 +1033,39 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
         project.disableJava8TargetObsoleteWarnings()
 
-        val defaultMinSdkVersion = project.defaultAndroidConfig.minSdk
-        val defaultCompileSdkVersion = project.defaultAndroidConfig.compileSdk
+        val defaultMinSdk = project.defaultAndroidConfig.minSdk
+        val defaultCompileSdk = project.defaultAndroidConfig.compileSdk
 
         // Suppress output of android:compileSdkVersion and related attributes (b/277836549).
-        aaptOptions.additionalParameters += "--no-compile-sdk-metadata"
+        androidResources.additionalParameters += "--no-compile-sdk-metadata"
 
-        // Specify default values. The client may attempt to override these in their build.gradle,
-        // so we'll need to perform validation in afterEvaluate().
-        compileSdkVersion(defaultCompileSdkVersion)
+        compileSdk = project.defaultAndroidConfig.compileSdk
+
         buildToolsVersion = project.defaultAndroidConfig.buildToolsVersion
-        ndkVersion = project.defaultAndroidConfig.ndkVersion
 
-        defaultConfig.minSdk = defaultMinSdkVersion
-        defaultConfig.targetSdk = project.defaultAndroidConfig.targetSdk
+        defaultConfig.ndk.abiFilters.addAll(
+            listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64", "riscv64")
+        )
+        defaultConfig.minSdk = defaultMinSdk
         defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         testOptions.animationsDisabled = !project.isMacrobenchmark()
         testOptions.unitTests.isReturnDefaultValues = true
-        testOptions.unitTests.all { task ->
-            task.configureForRobolectric()
-        }
+        testOptions.unitTests.all { task -> task.configureForRobolectric() }
 
         // Include resources in Robolectric tests as a workaround for b/184641296
         testOptions.unitTests.isIncludeAndroidResources = true
 
         project.afterEvaluate {
             val minSdkVersion = defaultConfig.minSdk!!
-            check(minSdkVersion >= defaultMinSdkVersion) {
-                "minSdkVersion $minSdkVersion lower than the default of $defaultMinSdkVersion"
+            check(minSdkVersion >= defaultMinSdk) {
+                "minSdkVersion $minSdkVersion lower than the default of $defaultMinSdk"
             }
-            check(
-                compileSdkVersion == defaultCompileSdkVersion || project.isCustomCompileSdkAllowed()
-            ) {
-                "compileSdkVersion must not be explicitly specified, was \"$compileSdkVersion\""
+            check(compileSdk == defaultCompileSdk || project.isCustomCompileSdkAllowed()) {
+                "compileSdk must not be explicitly specified, was \"$compileSdk\""
             }
-           project.enforceBanOnVersionRanges()
+
+            project.enforceBanOnVersionRanges()
 
             if (androidXExtension.type.compilationTarget != CompilationTarget.DEVICE) {
                 throw IllegalStateException(
@@ -1077,18 +1075,10 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
 
-        val debugSigningConfig = signingConfigs.getByName("debug")
-        // Use a local debug keystore to avoid build server issues.
-        debugSigningConfig.storeFile = project.getKeystore()
-        buildTypes.all { buildType ->
-            // Sign all the builds (including release) with debug key
-            buildType.signingConfig = debugSigningConfig
-        }
-
         project.configureErrorProneForAndroid()
 
         // workaround for b/120487939
-        project.configurations.all { configuration ->
+        project.configurations.configureEach { configuration ->
             // Gradle seems to crash on androidtest configurations
             // preferring project modules...
             if (!configuration.name.lowercase(Locale.US).contains("androidtest")) {
@@ -1096,9 +1086,12 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
 
-        project.configureFtlRunner(
+        val componentsExtension =
             project.extensions.getByType(AndroidComponentsExtension::class.java)
-        )
+        project.configureFtlRunner(componentsExtension)
+
+        // If a dependency is missing a debug variant, use release instead.
+        buildTypes.getByName("debug").matchingFallbacks.add("release")
 
         // AGP warns if we use project.buildDir (or subdirs) for CMake's generated
         // build files (ninja build files, CMakeCache.txt, etc.). Use a staging directory that
@@ -1118,27 +1111,27 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         componentsExtension: KotlinMultiplatformAndroidComponentsExtension
     ) {
         val defaultMinSdkVersion = project.defaultAndroidConfig.minSdk
-        val defaultCompileSdkVersion = project.defaultAndroidConfig.compileSdkInt()
+        val defaultCompileSdk = project.defaultAndroidConfig.compileSdk
 
-        compileSdk = defaultCompileSdkVersion
+        compileSdk = defaultCompileSdk
         buildToolsVersion = project.defaultAndroidConfig.buildToolsVersion
 
         minSdk = defaultMinSdkVersion
 
         lint.targetSdk = project.defaultAndroidConfig.targetSdk
-        compilations.withType(
-            KotlinMultiplatformAndroidTestOnDeviceCompilation::class.java
-        ).configureEach {
-            it.instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-            it.animationsDisabled = true
-        }
-        compilations.withType(
-            KotlinMultiplatformAndroidTestOnJvmCompilation::class.java
-        ).configureEach {
-            it.isReturnDefaultValues = true
-            // Include resources in Robolectric tests as a workaround for b/184641296
-            it.isIncludeAndroidResources = true
-        }
+        compilations
+            .withType(KotlinMultiplatformAndroidTestOnDeviceCompilation::class.java)
+            .configureEach {
+                it.instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+                it.animationsDisabled = true
+            }
+        compilations
+            .withType(KotlinMultiplatformAndroidTestOnJvmCompilation::class.java)
+            .configureEach {
+                it.isReturnDefaultValues = true
+                // Include resources in Robolectric tests as a workaround for b/184641296
+                it.isIncludeAndroidResources = true
+            }
 
         project.tasks.withType(AndroidUnitTest::class.java).configureEach { task ->
             task.configureForRobolectric()
@@ -1150,47 +1143,14 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             check(minSdkVersion >= defaultMinSdkVersion) {
                 "minSdkVersion $minSdkVersion lower than the default of $defaultMinSdkVersion"
             }
-            check(
-                compileSdk == defaultCompileSdkVersion || project.isCustomCompileSdkAllowed()
-            ) {
-                "compileSdkVersion must not be explicitly specified, was \"$compileSdk\""
+            check(compileSdk == defaultCompileSdk || project.isCustomCompileSdkAllowed()) {
+                "compileSdk must not be explicitly specified, was \"$compileSdk\""
             }
             project.enforceBanOnVersionRanges()
         }
 
-        project.configureTestConfigGeneration(
-            this,
-            componentsExtension
-        )
+        project.configureTestConfigGeneration(this, componentsExtension)
         project.configureFtlRunner(componentsExtension)
-    }
-
-    @Suppress("UnstableApiUsage") // finalizeDsl, minCompileSdkExtension
-    private fun LibraryExtension.configureAndroidLibraryOptions(
-        project: Project,
-        androidXExtension: AndroidXExtension
-    ) {
-        // Propagate the compileSdk value into minCompileSdk. Don't propagate compileSdkExtension,
-        // since only one library actually depends on the extension APIs and they can explicitly
-        // declare that in their build.gradle. Note that when we're using a preview SDK, the value
-        // for compileSdk will be null and the resulting AAR metadata won't have a minCompileSdk --
-        // this is okay because AGP automatically embeds forceCompileSdkPreview in the AAR metadata
-        // and uses it instead of minCompileSdk.
-        project.extensions.findByType<LibraryAndroidComponentsExtension>()!!.finalizeDsl {
-            it.defaultConfig.aarMetadata.minCompileSdk = it.compileSdk
-        }
-        project.disableStrictVersionConstraints()
-        project.setPublishProperty(androidXExtension)
-    }
-
-    private fun KotlinMultiplatformAndroidTarget.configureAndroidLibraryOptions(
-        project: Project,
-        androidXExtension: AndroidXExtension
-    ) {
-        // Propagate the compileSdk value into minCompileSdk.
-        aarMetadata.minCompileSdk = compileSdk
-        project.disableStrictVersionConstraints()
-        project.setPublishProperty(androidXExtension)
     }
 
     /**
@@ -1225,8 +1185,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         // that test bytecode is binary- and behavior-compatible with the main source set's
         // bytecode. For AndroidX, though, we require backward compatibility and therefore
         // don't need to enforce such constraints.
-        project.configurations.all { configuration ->
-            if (!configuration.isTest()) return@all
+        project.configurations.configureEach { configuration ->
+            if (!configuration.isTest()) return@configureEach
 
             configuration.dependencyConstraints.configureEach { dependencyConstraint ->
                 val strictVersion = dependencyConstraint.versionConstraint.strictVersion
@@ -1241,15 +1201,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
     }
 
-    private fun Project.setPublishProperty(androidXExtension: AndroidXExtension) {
-        afterEvaluate {
-            if (androidXExtension.shouldRelease()) {
-                project.extra.set("publish", true)
-            }
-        }
-    }
-
-    private fun TestedExtension.configureAndroidLibraryWithMultiplatformPluginOptions() {
+    private fun LibraryExtension.configureAndroidLibraryWithMultiplatformPluginOptions() {
         sourceSets.findByName("main")!!.manifest.srcFile("src/androidMain/AndroidManifest.xml")
         sourceSets
             .findByName("androidTest")!!
@@ -1267,11 +1219,17 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                     .trimIndent()
             }
 
-        // Configure all KMP targets to allow expect/actual classes that are not stable.
-        // (see https://youtrack.jetbrains.com/issue/KT-61573)
-        kmpExtension.targets.all { kotlinTarget ->
-            kotlinTarget.compilations.all {
-                it.compilerOptions.options.freeCompilerArgs.add("-Xexpect-actual-classes")
+        kmpExtension.targets.configureEach { kotlinTarget ->
+            kotlinTarget.compilations.configureEach { compilation ->
+                // Configure all KMP targets to allow expect/actual classes that are not stable.
+                // (see https://youtrack.jetbrains.com/issue/KT-61573)
+                compilation.compileTaskProvider.configure { task ->
+                    task.compilerOptions.freeCompilerArgs.add("-Xexpect-actual-classes")
+                    androidXConfiguration.kotlinApiVersion.let {
+                        task.compilerOptions.apiVersion.set(it)
+                        task.compilerOptions.languageVersion.set(it)
+                    }
+                }
             }
         }
     }
@@ -1381,11 +1339,11 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
 
             // disallow duplicate constraints
-            project.configurations.all { config ->
+            project.configurations.configureEach { config ->
                 // Allow duplicate constraints in test configurations. This is partially a
                 // workaround for duplication due to downgrading strict-type dependencies to
                 // required-type, but also we don't care if tests have duplicate constraints.
-                if (config.isTest()) return@all
+                if (config.isTest()) return@configureEach
 
                 // find all constraints contributed by this Configuration and its ancestors
                 val configurationConstraints: MutableSet<String> = mutableSetOf()
@@ -1427,30 +1385,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         return true
     }
 
-    private fun Project.createVariantAarManifestTransformerTask(
-        variantName: String,
-        artifacts: Artifacts
-    ) {
-        // Remove the android:targetSdkVersion element from the manifest used for AARs.
-        tasks
-            .register(
-                variantName + "AarManifestTransformer",
-                AarManifestTransformerTask::class.java
-            )
-            .let { taskProvider ->
-                artifacts
-                    .use(taskProvider)
-                    .wiredWithFiles(
-                        AarManifestTransformerTask::aarFile,
-                        AarManifestTransformerTask::updatedAarFile
-                    )
-                    .toTransform(SingleArtifact.AAR)
-            }
-    }
-
     companion object {
-        const val CREATE_LIBRARY_BUILD_INFO_FILES_TASK = "createLibraryBuildInfoFiles"
-        const val GENERATE_TEST_CONFIGURATION_TASK = "GenerateTestConfiguration"
         const val FINALIZE_TEST_CONFIGS_WITH_APKS_TASK = "finalizeTestConfigsWithApks"
         const val ZIP_TEST_CONFIGS_WITH_APKS_TASK = "zipTestConfigsWithApks"
 
@@ -1463,8 +1398,20 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     }
 }
 
-private const val PROJECTS_MAP_KEY = "projects"
-private const val ACCESSED_PROJECTS_MAP_KEY = "accessedProjectsMap"
+private fun Project.validateLintVersionTestExists(androidXExtension: AndroidXExtension) {
+    if (androidXExtension.type != LibraryType.LINT) {
+        return
+    }
+    kotlinExtensionOrNull?.let { extension ->
+        val projectFiles = extension.sourceSets.flatMap { it.kotlin.files }
+        // if the project doesn't define a registry it doesn't make sense to test versions
+        if (projectFiles.none { it.name.contains("Registry") }) {
+            return
+        }
+        projectFiles.find { it.name == "ApiLintVersionsTest.kt" }
+            ?: throw GradleException("Lint projects should include ApiLintVersionsTest.kt")
+    }
+}
 
 /** Returns whether the configuration is used for testing. */
 private fun Configuration.isTest(): Boolean = name.lowercase().contains("test")
@@ -1484,30 +1431,6 @@ private fun Project.hideJavadocTask() {
     }
 }
 
-private fun Project.addToProjectMap(androidXExtension: AndroidXExtension) {
-    // TODO(alanv): Move this out of afterEvaluate
-    afterEvaluate {
-        if (androidXExtension.shouldRelease()) {
-            val group = androidXExtension.mavenGroup?.group
-            if (group != null) {
-                val module = "$group:$name"
-
-                if (project.rootProject.extra.has(ACCESSED_PROJECTS_MAP_KEY)) {
-                    throw GradleException(
-                        "Attempted to add $project to project map after " +
-                            "the contents of the map were accessed"
-                    )
-                }
-                @Suppress("UNCHECKED_CAST")
-                val projectModules =
-                    project.rootProject.extra.get(PROJECTS_MAP_KEY)
-                        as ConcurrentHashMap<String, String>
-                projectModules[module] = path
-            }
-        }
-    }
-}
-
 val Project.androidExtension: AndroidComponentsExtension<*, *, *>
     get() =
         extensions.findByType<LibraryAndroidComponentsExtension>()
@@ -1522,12 +1445,6 @@ val Project.kotlinExtensionOrNull: KotlinProjectExtension?
 
 val Project.androidXExtension: AndroidXExtension
     get() = extensions.getByType()
-
-@Suppress("UNCHECKED_CAST")
-fun Project.getProjectsMap(): ConcurrentHashMap<String, String> {
-    project.rootProject.extra.set(ACCESSED_PROJECTS_MAP_KEY, true)
-    return rootProject.extra.get(PROJECTS_MAP_KEY) as ConcurrentHashMap<String, String>
-}
 
 /**
  * Configures all non-Studio tasks in a project (see b/153193718 for background) to time out after
@@ -1683,8 +1600,6 @@ fun Project.workaroundPrebuiltTakingPrecedenceOverProject() {
     }
 }
 
-private fun AndroidConfig.compileSdkInt() = compileSdk.removePrefix("android-").toInt()
-
 private fun Test.configureForRobolectric() {
     // https://github.com/robolectric/robolectric/issues/7456
     jvmArgs =
@@ -1698,7 +1613,7 @@ private fun Test.configureForRobolectric() {
 }
 
 private fun Project.enforceBanOnVersionRanges() {
-    configurations.all { configuration ->
+    configurations.configureEach { configuration ->
         configuration.resolutionStrategy.eachDependency { dep ->
             val target = dep.target
             val version = target.version
@@ -1708,8 +1623,8 @@ private fun Project.enforceBanOnVersionRanges() {
             // substitution.
             if (
                 version != null &&
-                Version.isDependencyRange(version) &&
-                project.rootProject.rootDir == project.getSupportRootFolder()
+                    Version.isDependencyRange(version) &&
+                    project.rootProject.rootDir == project.getSupportRootFolder()
             ) {
                 throw IllegalArgumentException(
                     "Dependency ${dep.target} declares its version as " +

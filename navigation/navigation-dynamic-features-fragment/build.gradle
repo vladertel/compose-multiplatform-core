@@ -21,7 +21,9 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+
+import androidx.build.KotlinTarget
+import androidx.build.LibraryType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -29,12 +31,6 @@ plugins {
     id("com.android.library")
     id("kotlin-android")
     alias(libs.plugins.kotlinSerialization)
-}
-
-android {
-    defaultConfig {
-        multiDexEnabled true
-    }
 }
 
 dependencies {
@@ -55,27 +51,24 @@ dependencies {
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testRules)
     androidTestImplementation(libs.testRunner)
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation(libs.espressoCore)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy)
+    androidTestImplementation(libs.mockitoCore)
     androidTestImplementation(libs.truth)
-    androidTestImplementation(libs.multidex)
     androidTestImplementation(project(":internal-testutils-runtime"), {
         exclude group: "androidx.fragment", module: "fragment"
     })
 }
 
 android {
-    defaultConfig {
-        multiDexEnabled = true
-    }
     namespace "androidx.navigation.dynamicfeatures.fragment"
 }
 
 androidx {
     name = "Dynamic Feature Navigation Fragment"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2019"
     description = "Android Dynamic Feature Navigation Fragment"
-    metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

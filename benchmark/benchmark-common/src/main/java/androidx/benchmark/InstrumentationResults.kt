@@ -20,39 +20,30 @@ import android.os.Bundle
 import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.test.platform.app.InstrumentationRegistry
+import java.lang.StringBuilder
 import java.util.Locale
 import org.jetbrains.annotations.TestOnly
 
 /**
  * Wrapper for multi studio version link format
  *
- * TODO: drop support for very old versions of Studio in Benchmark 1.3,
- *  and remove v1 protocol support for simplicity (just post v2 twice)
+ * TODO: drop support for very old versions of Studio in Benchmark 1.3, and remove v1 protocol
+ *   support for simplicity (just post v2 twice)
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-data class IdeSummaryPair(
-    val summaryV1: String,
-    val summaryV2: String
-) {
+data class IdeSummaryPair(val summaryV1: String, val summaryV2: String) {
     constructor(
         v1lines: List<String>,
         v2lines: List<String>
-    ) : this(
-        summaryV1 = v1lines.joinToString("\n"),
-        summaryV2 = v2lines.joinToString("\n")
-    )
+    ) : this(summaryV1 = v1lines.joinToString("\n"), summaryV2 = v2lines.joinToString("\n"))
 }
 
-/**
- * Provides a way to capture all the instrumentation results which needs to be reported.
- */
+/** Provides a way to capture all the instrumentation results which needs to be reported. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
 
     private fun reportIdeSummary(
-        /**
-         * Simple text-only result summary string to output to IDE.
-         */
+        /** Simple text-only result summary string to output to IDE. */
         summaryV1: String,
         /**
          * V2 output string, supports linking to files in the output dir via links of the format
@@ -73,22 +64,24 @@ class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
         message: String? = null,
         measurements: Measurements? = null,
         iterationTracePaths: List<String>? = null,
-        profilerResults: List<Profiler.ResultFile> = emptyList()
+        profilerResults: List<Profiler.ResultFile> = emptyList(),
+        insights: List<Insight> = emptyList(),
+        useTreeDisplayFormat: Boolean = false
     ) {
         if (warningMessage != null) {
             InstrumentationResults.scheduleIdeWarningOnNextReport(warningMessage)
         }
-        val summaryPair = InstrumentationResults.ideSummary(
-            testName = testName,
-            message = message,
-            measurements = measurements,
-            iterationTracePaths = iterationTracePaths,
-            profilerResults = profilerResults
-        )
-        reportIdeSummary(
-            summaryV1 = summaryPair.summaryV1,
-            summaryV2 = summaryPair.summaryV2
-        )
+        val summaryPair =
+            InstrumentationResults.ideSummary(
+                testName = testName,
+                message = message,
+                measurements = measurements,
+                iterationTracePaths = iterationTracePaths,
+                profilerResults = profilerResults,
+                insights = insights,
+                useTreeDisplayFormat = useTreeDisplayFormat
+            )
+        reportIdeSummary(summaryV1 = summaryPair.summaryV1, summaryV2 = summaryPair.summaryV2)
     }
 
     public fun fileRecord(key: String, path: String) {
@@ -104,9 +97,7 @@ class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
     }
 }
 
-/**
- * Provides way to report additional results via `Instrumentation.sendStatus()` / `addResult()`.
- */
+/** Provides way to report additional results via `Instrumentation.sendStatus()` / `addResult()`. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 object InstrumentationResults {
 
@@ -117,20 +108,14 @@ object InstrumentationResults {
      */
     val runEndResultBundle: Bundle = Bundle()
 
-    /**
-     * Creates an Instrumentation Result.
-     */
-    fun instrumentationReport(
-        block: InstrumentationResultScope.() -> Unit
-    ) {
+    /** Creates an Instrumentation Result. */
+    fun instrumentationReport(block: InstrumentationResultScope.() -> Unit) {
         val scope = InstrumentationResultScope()
         block.invoke(scope)
         reportBundle(scope.bundle)
     }
 
-    /**
-     * Simple single line benchmark output
-     */
+    /** Simple single line benchmark output */
     internal fun ideSummaryBasicMicro(
         benchmarkName: String,
         nanos: Double,
@@ -138,13 +123,14 @@ object InstrumentationResults {
         profilerResults: List<Profiler.ResultFile>,
     ): String {
         // for readability, report nanos with 10ths only if less than 100
-        var output = if (nanos >= 100.0) {
-            // 13 alignment is enough for ~10 seconds
-            "%,13d   ns".format(Locale.US, nanos.toLong())
-        } else {
-            // 13 + 2(.X) to match alignment above
-            "%,15.1f ns".format(Locale.US, nanos)
-        }
+        var output =
+            if (nanos >= 100.0) {
+                // 13 alignment is enough for ~10 seconds
+                "%,13d   ns".format(Locale.US, nanos.toLong())
+            } else {
+                // 13 + 2(.X) to match alignment above
+                "%,15.1f ns".format(Locale.US, nanos)
+            }
         if (allocations != null) {
             // 9 alignment is enough for ~10 million allocations
             output += "    %8d allocs".format(Locale.US, allocations.toInt())
@@ -173,11 +159,12 @@ object InstrumentationResults {
      * Note that this also prints to logcat.
      */
     fun scheduleIdeWarningOnNextReport(string: String) {
-        ideWarningPrefix = if (ideWarningPrefix.isEmpty()) {
-            string
-        } else {
-            ideWarningPrefix + "\n" + string
-        }
+        ideWarningPrefix =
+            if (ideWarningPrefix.isEmpty()) {
+                string
+            } else {
+                ideWarningPrefix + "\n" + string
+            }
         string.split("\n").map { Log.w(BenchmarkState.TAG, it) }
     }
 
@@ -186,31 +173,31 @@ object InstrumentationResults {
         message: String? = null,
         measurements: Measurements? = null,
         iterationTracePaths: List<String>? = null,
-        profilerResults: List<Profiler.ResultFile> = emptyList()
+        profilerResults: List<Profiler.ResultFile> = emptyList(),
+        insights: List<Insight> = emptyList(),
+        useTreeDisplayFormat: Boolean = false,
     ): IdeSummaryPair {
         val warningMessage = ideWarningPrefix.ifEmpty { null }
         ideWarningPrefix = ""
 
         val v1metricLines: List<String>
         val v2metricLines: List<String>
-        val linkableIterTraces = iterationTracePaths?.map { absolutePath ->
-            Outputs.relativePathFor(absolutePath)
-                .replace("(", "\\(")
-                .replace(")", "\\)")
-        }
+        val linkableIterTraces =
+            iterationTracePaths?.map { absolutePath ->
+                Outputs.relativePathFor(absolutePath).replace("(", "\\(").replace(")", "\\)")
+            } ?: emptyList()
 
         if (measurements != null) {
             require(measurements.isNotEmpty()) { "Require non-empty list of metric results." }
             val setOfMetrics = measurements.singleMetrics.map { it.name }.toSet()
             // specialized single line codepath for microbenchmarks with only 2 default metrics
-            if (iterationTracePaths == null &&
-                testName != null &&
-                message == null &&
-                measurements.sampledMetrics.isEmpty() &&
-                (setOfMetrics == setOf(
-                    "timeNs",
-                    "allocationCount"
-                ) || setOfMetrics == setOf("timeNs"))
+            if (
+                iterationTracePaths == null &&
+                    testName != null &&
+                    message == null &&
+                    measurements.sampledMetrics.isEmpty() &&
+                    (setOfMetrics == setOf("timeNs", "allocationCount") ||
+                        setOfMetrics == setOf("timeNs"))
             ) {
                 val nanos = measurements.singleMetrics.single { it.name == "timeNs" }.min
                 val allocs =
@@ -218,18 +205,11 @@ object InstrumentationResults {
                 // add newline (note that multi-line codepath below handles newline separately)
                 val warningPrefix = if (warningMessage == null) "" else warningMessage + "\n"
                 return IdeSummaryPair(
-                    summaryV1 = warningPrefix + ideSummaryBasicMicro(
-                        testName,
-                        nanos,
-                        allocs,
-                        emptyList()
-                    ),
-                    summaryV2 = warningPrefix + ideSummaryBasicMicro(
-                        testName,
-                        nanos,
-                        allocs,
-                        profilerResults
-                    )
+                    summaryV1 =
+                        warningPrefix + ideSummaryBasicMicro(testName, nanos, allocs, emptyList()),
+                    summaryV2 =
+                        warningPrefix +
+                            ideSummaryBasicMicro(testName, nanos, allocs, profilerResults)
                 )
             }
 
@@ -237,81 +217,129 @@ object InstrumentationResults {
             val maxLabelLength = allMetrics.maxOf { it.name.length }
             fun Double.toDisplayString() = "%,.1f".format(Locale.US, this)
 
-            // max string length of any printed min/med/max is the largest max value seen. used to pad.
-            val maxValueLength = allMetrics
-                .maxOf { it.max }
-                .toDisplayString().length
+            // max string length of any printed min/med/max is the largest max value seen. used to
+            // pad.
+            val maxValueLength = allMetrics.maxOf { it.max }.toDisplayString().length
 
             fun metricLines(
-                singleTransform: (
-                    name: String,
-                    min: String,
-                    median: String,
-                    max: String,
-                    metricResult: MetricResult
-                ) -> String
-            ) = measurements.singleMetrics.map {
-                singleTransform(
-                    it.name.padEnd(maxLabelLength),
-                    it.min.toDisplayString().padStart(maxValueLength),
-                    it.median.toDisplayString().padStart(maxValueLength),
-                    it.max.toDisplayString().padStart(maxValueLength),
-                    it
-                )
-            } + measurements.sampledMetrics.map {
-                val name = it.name.padEnd(maxLabelLength)
-                val p50 = it.p50.toDisplayString().padStart(maxValueLength)
-                val p90 = it.p90.toDisplayString().padStart(maxValueLength)
-                val p95 = it.p95.toDisplayString().padStart(maxValueLength)
-                val p99 = it.p99.toDisplayString().padStart(maxValueLength)
-                // we don't try and link percentiles, since they're grouped across multiple iters
-                "  $name   P50  $p50,   P90  $p90,   P95  $p95,   P99  $p99"
-            }
+                singleTransform:
+                    (
+                        name: String,
+                        min: String,
+                        median: String,
+                        max: String,
+                        metricResult: MetricResult
+                    ) -> String
+            ) =
+                measurements.singleMetrics.map {
+                    singleTransform(
+                        it.name.padEnd(maxLabelLength),
+                        it.min.toDisplayString().padStart(maxValueLength),
+                        it.median.toDisplayString().padStart(maxValueLength),
+                        it.max.toDisplayString().padStart(maxValueLength),
+                        it
+                    )
+                } +
+                    measurements.sampledMetrics.map {
+                        val name = it.name.padEnd(maxLabelLength)
+                        val p50 = it.p50.toDisplayString().padStart(maxValueLength)
+                        val p90 = it.p90.toDisplayString().padStart(maxValueLength)
+                        val p95 = it.p95.toDisplayString().padStart(maxValueLength)
+                        val p99 = it.p99.toDisplayString().padStart(maxValueLength)
+                        // we don't try and link percentiles, since they're grouped across multiple
+                        // iters
+                        "  $name   P50  $p50,   P90  $p90,   P95  $p95,   P99  $p99"
+                    }
 
             v1metricLines = metricLines { name, min, median, max, _ ->
                 "  $name   min $min,   median $median,   max $max"
             }
-            v2metricLines = if (linkableIterTraces != null) {
-                // Per iteration trace paths present, so link min/med/max to respective iteration traces
-                metricLines { name, min, median, max, result ->
-                    "  $name" +
-                        "   [min $min](file://${linkableIterTraces[result.minIndex]})," +
-                        "   [median $median](file://${linkableIterTraces[result.medianIndex]})," +
-                        "   [max $max](file://${linkableIterTraces[result.maxIndex]})"
+            v2metricLines =
+                if (linkableIterTraces.isNotEmpty()) {
+                    // Per iteration trace paths present, so link min/med/max to respective
+                    // iteration traces
+                    metricLines { name, min, median, max, result ->
+                        "  $name" +
+                            "   [min $min](file://${linkableIterTraces[result.minIndex]})," +
+                            "   [median $median](file://${linkableIterTraces[result.medianIndex]})," +
+                            "   [max $max](file://${linkableIterTraces[result.maxIndex]})"
+                    }
+                } else {
+                    // No iteration traces, so just basic list
+                    v1metricLines
                 }
-            } else {
-                // No iteration traces, so just basic list
-                v1metricLines
-            }
         } else {
             // no metrics to report
             v1metricLines = emptyList()
             v2metricLines = emptyList()
         }
 
-        val v2traceLinks = if (linkableIterTraces != null) {
-            listOf(
-                "    Traces: Iteration " + linkableIterTraces.mapIndexed { index, path ->
-                    "[$index](file://$path)"
-                }.joinToString(" ")
-            )
-        } else {
-            emptyList()
-        } + profilerResults.map {
-            "    [${it.label}](file://${it.sanitizedOutputRelativePath})"
-        }
-        return IdeSummaryPair(
-            v1lines = listOfNotNull(
-                warningMessage,
-                testName,
-                message,
-            ) + v1metricLines + /* adds \n */ "",
-            v2lines = listOfNotNull(
-                warningMessage,
-                testName,
-                message,
-            ) + v2metricLines + v2traceLinks + /* adds \n */ ""
-        )
+        fun markdownFileLink(label: String, outputRelativePath: String): String =
+            "[$label](file://$outputRelativePath)"
+
+        // TODO(353692849): split into methods and remove the v1 format (replace with a v2 getter)
+        val v2lines =
+            if (!useTreeDisplayFormat) { // use the regular output format
+                val v2traceLinks =
+                    if (linkableIterTraces.isNotEmpty()) {
+                        listOf(
+                            "    Traces: Iteration " +
+                                linkableIterTraces
+                                    .mapIndexed { index, path -> markdownFileLink("$index", path) }
+                                    .joinToString(" ")
+                        )
+                    } else {
+                        emptyList()
+                    } +
+                        profilerResults.map {
+                            "    ${markdownFileLink(it.label, it.sanitizedOutputRelativePath)}"
+                        }
+                listOfNotNull(warningMessage, testName, message) +
+                    v2metricLines +
+                    v2traceLinks +
+                    "" /* adds \n */
+            } else { // use the experimental tree-like output format
+                buildList {
+                    if (warningMessage != null) add(warningMessage)
+                    if (testName != null) add(testName)
+                    if (message != null) add(message)
+                    val tree = TreeBuilder()
+                    if (v2metricLines.isNotEmpty()) {
+                        tree.append("Metrics", 0)
+                        for (metric in v2metricLines) tree.append(metric, 1)
+                    }
+                    if (insights.isNotEmpty()) {
+                        tree.append("App Startup Insights", 0)
+                        for ((criterion, observed) in insights) {
+                            tree.append(criterion, 1)
+                            tree.append(observed, 2)
+                        }
+                    }
+                    if (linkableIterTraces.isNotEmpty() || profilerResults.isNotEmpty()) {
+                        tree.append("Traces", 0)
+                        if (linkableIterTraces.isNotEmpty())
+                            tree.append(
+                                linkableIterTraces
+                                    .mapIndexed { ix, trace -> markdownFileLink("$ix", trace) }
+                                    .joinToString(prefix = "Iteration ", separator = " "),
+                                1
+                            )
+                        for (line in profilerResults) tree.append(
+                            markdownFileLink(line.label, line.sanitizedOutputRelativePath),
+                            1
+                        )
+                    }
+                    addAll(tree.build())
+                    add("")
+                }
+            }
+
+        // TODO(353692849): replace the v1 format with a v2 format regardless insights
+        val v1lines =
+            if (insights.isNotEmpty()) v2lines
+            else listOfNotNull(warningMessage, testName, message) + v1metricLines + /* adds \n */ ""
+
+        return IdeSummaryPair(v1lines = v1lines, v2lines = v2lines)
     }
 
     /**
@@ -320,9 +348,9 @@ object InstrumentationResults {
      * [reportOnRunEndOnly] `=true` should only be used for files that aggregate data across many
      * tests, such as the final report json. All other files should be unique, per test.
      *
-     * In internal terms, per-test results are called "test metrics", and per-run results are
-     * called "run metrics". A profiling trace of a particular method would be a test metric, the
-     * full output json would be a run metric.
+     * In internal terms, per-test results are called "test metrics", and per-run results are called
+     * "run metrics". A profiling trace of a particular method would be a test metric, the full
+     * output json would be a run metric.
      *
      * In am instrument terms, per-test results are printed with `INSTRUMENTATION_STATUS:`, and
      * per-run results are reported with `INSTRUMENTATION_RESULT:`.
@@ -339,25 +367,52 @@ object InstrumentationResults {
         if (reportOnRunEndOnly) {
             InstrumentationResultScope(runEndResultBundle).fileRecord(key, absoluteFilePath)
         } else {
-            instrumentationReport {
-                fileRecord(key, absoluteFilePath)
-            }
+            instrumentationReport { fileRecord(key, absoluteFilePath) }
         }
     }
 
     /**
      * Report results bundle to instrumentation
      *
-     * Before addResults() was added in the platform, we use sendStatus(). The constant '2'
-     * comes from IInstrumentationResultParser.StatusCodes.IN_PROGRESS, and signals the
-     * test infra that this is an "additional result" bundle, equivalent to addResults()
-     * NOTE: we should a version check to call addResults(), but don't yet due to b/155103514
+     * Before addResults() was added in the platform, we use sendStatus(). The constant '2' comes
+     * from IInstrumentationResultParser.StatusCodes.IN_PROGRESS, and signals the test infra that
+     * this is an "additional result" bundle, equivalent to addResults() NOTE: we should a version
+     * check to call addResults(), but don't yet due to b/155103514
      *
      * @param bundle The [Bundle] to be reported to [android.app.Instrumentation]
      */
     internal fun reportBundle(bundle: Bundle) {
-        InstrumentationRegistry
-            .getInstrumentation()
-            .sendStatus(2, bundle)
+        InstrumentationRegistry.getInstrumentation().sendStatus(2, bundle)
     }
+}
+
+/**
+ * Constructs a hierarchical, tree-like representation of data, similar to the output of the 'tree'
+ * command.
+ */
+private class TreeBuilder {
+    private val lines = mutableListOf<StringBuilder>()
+    private val nbsp = '\u00A0'
+
+    fun append(message: String, depth: Int): TreeBuilder {
+        require(depth >= 0)
+
+        // Create a new line for the tree node, with appropriate indentation using spaces.
+        val line = StringBuilder()
+        repeat(depth * 4) { line.append(nbsp) }
+        line.append("└── ")
+        line.append(message)
+        lines.add(line)
+
+        // Update vertical lines (pipes) to visually connect the new node to its parent/sibling.
+        // TODO: Optimize this for deep trees to avoid potential quadratic time complexity.
+        val anchorColumn = depth * 4
+        var i = lines.lastIndex - 1 // start climbing with the first line above the newly added one
+        while (i >= 0 && lines[i].getOrNull(anchorColumn) == nbsp) lines[i--][anchorColumn] = '│'
+        if (i >= 0 && lines[i].getOrNull(anchorColumn) == '└') lines[i][anchorColumn] = '├'
+
+        return this
+    }
+
+    fun build(): List<String> = lines.map { it.toString() }
 }

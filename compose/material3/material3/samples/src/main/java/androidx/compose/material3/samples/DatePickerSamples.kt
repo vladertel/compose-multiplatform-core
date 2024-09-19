@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -63,7 +65,10 @@ import kotlinx.coroutines.launch
 @Sampled
 @Composable
 fun DatePickerSample() {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         // Pre-select a date for January 4, 2020
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = 1578096000000)
         DatePicker(state = datePickerState, modifier = Modifier.padding(16.dp))
@@ -114,16 +119,17 @@ fun DatePickerDialogSample() {
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        openDialog.value = false
-                    }
-                ) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { openDialog.value = false }) { Text("Cancel") }
             }
         ) {
-            DatePicker(state = datePickerState)
+            // The verticalScroll will allow scrolling to show the entire month in case there is not
+            // enough horizontal space (for example, when in landscape mode).
+            // Note that it's still currently recommended to use a DisplayMode.Input at the state in
+            // those cases.
+            DatePicker(
+                state = datePickerState,
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            )
         }
     }
 }
@@ -134,30 +140,38 @@ fun DatePickerDialogSample() {
 @Sampled
 @Composable
 fun DatePickerWithDateSelectableDatesSample() {
-    val datePickerState = rememberDatePickerState(
-        selectableDates = object : SelectableDates {
-            // Blocks Sunday and Saturday from being selected.
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val dayOfWeek = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.of("UTC"))
-                        .toLocalDate().dayOfWeek
-                    dayOfWeek != DayOfWeek.SUNDAY && dayOfWeek != DayOfWeek.SATURDAY
-                } else {
-                    val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                    calendar.timeInMillis = utcTimeMillis
-                    calendar[Calendar.DAY_OF_WEEK] != Calendar.SUNDAY &&
-                        calendar[Calendar.DAY_OF_WEEK] != Calendar.SATURDAY
+    val datePickerState =
+        rememberDatePickerState(
+            selectableDates =
+                object : SelectableDates {
+                    // Blocks Sunday and Saturday from being selected.
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            val dayOfWeek =
+                                Instant.ofEpochMilli(utcTimeMillis)
+                                    .atZone(ZoneId.of("UTC"))
+                                    .toLocalDate()
+                                    .dayOfWeek
+                            dayOfWeek != DayOfWeek.SUNDAY && dayOfWeek != DayOfWeek.SATURDAY
+                        } else {
+                            val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                            calendar.timeInMillis = utcTimeMillis
+                            calendar[Calendar.DAY_OF_WEEK] != Calendar.SUNDAY &&
+                                calendar[Calendar.DAY_OF_WEEK] != Calendar.SATURDAY
+                        }
+                    }
+
+                    // Allow selecting dates from year 2023 forward.
+                    override fun isSelectableYear(year: Int): Boolean {
+                        return year > 2022
+                    }
                 }
-            }
+        )
 
-            // Allow selecting dates from year 2023 forward.
-            override fun isSelectableYear(year: Int): Boolean {
-                return year > 2022
-            }
-        }
-    )
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         DatePicker(state = datePickerState)
         Text(
             "Selected date timestamp: ${datePickerState.selectedDateMillis ?: "no selection"}",
@@ -196,10 +210,10 @@ fun DateRangePickerSample() {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top) {
         // Add a row with "Save" and dismiss actions.
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(DatePickerDefaults.colors().containerColor)
-                .padding(start = 12.dp, end = 12.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(DatePickerDefaults.colors().containerColor)
+                    .padding(start = 12.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -209,8 +223,7 @@ fun DateRangePickerSample() {
             TextButton(
                 onClick = {
                     snackScope.launch {
-                        val range =
-                            state.selectedStartDateMillis!!..state.selectedEndDateMillis!!
+                        val range = state.selectedStartDateMillis!!..state.selectedEndDateMillis!!
                         snackState.showSnackbar("Saved range (timestamps): $range")
                     }
                 },

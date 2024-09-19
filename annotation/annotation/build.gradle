@@ -21,10 +21,11 @@ androidXMultiplatform {
     mac()
     mingwX64()
     linux()
-    linuxArm64()
     ios()
+    watchosDeviceArm64()
     watchos()
     tvos()
+    wasmJs()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -36,17 +37,23 @@ androidXMultiplatform {
         }
 
         nonJvmMain {
-            dependsOn commonMain
+            dependsOn(commonMain)
         }
 
-        targets.all { target ->
+        wasmJsMain {
+            dependsOn(nonJvmMain)
+            dependencies {
+                implementation(libs.kotlinStdlibJs)
+            }
+        }
+
+        targets.configureEach { target ->
             if (target.platformType !in [KotlinPlatformType.jvm, KotlinPlatformType.common]) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nonJvmMain)
                 }
             }
         }
-
 
         // Workaround for https://youtrack.jetbrains.com/issue/KT-51763
         // Make sure commonization runs before any compilation task.

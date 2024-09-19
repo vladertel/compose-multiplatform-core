@@ -21,8 +21,9 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+import androidx.build.KotlinTarget
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -36,12 +37,12 @@ dependencies {
     api("androidx.activity:activity-ktx:1.7.1")
     api("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
-    api("androidx.annotation:annotation-experimental:1.4.0")
-    implementation('androidx.collection:collection:1.1.0')
+    api("androidx.annotation:annotation-experimental:1.4.1")
+    implementation("androidx.collection:collection:1.4.2")
     implementation(libs.kotlinSerializationCore)
 
     api(libs.kotlinStdlib)
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-runtime-testing"))
+    androidTestImplementation(project(":lifecycle:lifecycle-runtime-testing"))
     androidTestImplementation(project(":internal-testutils-navigation"))
     androidTestImplementation(project(":internal-testutils-runtime"))
     androidTestImplementation(libs.testExtJunit)
@@ -52,26 +53,23 @@ dependencies {
     androidTestImplementation(libs.espressoCore)
     androidTestImplementation(libs.espressoIntents)
     androidTestImplementation(libs.truth)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy)
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy)
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation(libs.kotlinStdlib)
     androidTestImplementation(libs.kotlinTest)
-    androidTestImplementation(libs.multidex)
 
     lintPublish(project(':navigation:navigation-runtime-lint'))
 }
 
 android {
-    defaultConfig {
-        multiDexEnabled = true
-    }
     namespace "androidx.navigation"
 }
 
 androidx {
     name = "Navigation Runtime"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "Android Navigation-Runtime"
-    metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

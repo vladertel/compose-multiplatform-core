@@ -16,10 +16,10 @@
 
 package androidx.camera.camera2.pipe.config
 
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraBackend
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraStatusMonitor
 import androidx.camera.camera2.pipe.StreamGraph
 import androidx.camera.camera2.pipe.compat.AudioRestrictionController
@@ -51,15 +51,13 @@ import javax.inject.Scope
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Module(subcomponents = [Camera2ControllerComponent::class])
 internal abstract class Camera2Module {
     @Binds
     @DefaultCameraBackend
     abstract fun bindCameraPipeCameraBackend(camera2Backend: Camera2Backend): CameraBackend
 
-    @Binds
-    abstract fun bindCameraOpener(camera2CameraOpener: Camera2CameraOpener): CameraOpener
+    @Binds abstract fun bindCameraOpener(camera2CameraOpener: Camera2CameraOpener): CameraOpener
 
     @Binds
     abstract fun bindCameraMetadataProvider(
@@ -92,17 +90,16 @@ internal abstract class Camera2Module {
     ): AudioRestrictionController
 }
 
-@Scope
-internal annotation class Camera2ControllerScope
+@Scope internal annotation class Camera2ControllerScope
 
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @Camera2ControllerScope
 @Subcomponent(
     modules =
-    [
-        Camera2ControllerConfig::class,
-        Camera2ControllerModule::class,
-        Camera2CaptureSessionsModule::class]
+        [
+            Camera2ControllerConfig::class,
+            Camera2ControllerModule::class,
+            Camera2CaptureSessionsModule::class
+        ]
 )
 internal interface Camera2ControllerComponent {
     fun cameraController(): CameraController
@@ -110,6 +107,7 @@ internal interface Camera2ControllerComponent {
     @Subcomponent.Builder
     interface Builder {
         fun camera2ControllerConfig(config: Camera2ControllerConfig): Builder
+
         fun build(): Camera2ControllerComponent
     }
 }
@@ -117,21 +115,20 @@ internal interface Camera2ControllerComponent {
 @Module
 internal class Camera2ControllerConfig(
     private val cameraBackend: CameraBackend,
+    private val graphId: CameraGraphId,
     private val graphConfig: CameraGraph.Config,
     private val graphListener: GraphListener,
     private val streamGraph: StreamGraph,
 ) {
-    @Provides
-    fun provideCameraGraphConfig() = graphConfig
+    @Provides fun provideCameraGraphConfig() = graphConfig
 
-    @Provides
-    fun provideCameraBackend() = cameraBackend
+    @Provides fun provideCameraGraphId() = graphId
 
-    @Provides
-    fun provideStreamGraph() = streamGraph as StreamGraphImpl
+    @Provides fun provideCameraBackend() = cameraBackend
 
-    @Provides
-    fun provideGraphListener() = graphListener
+    @Provides fun provideStreamGraph() = streamGraph as StreamGraphImpl
+
+    @Provides fun provideGraphListener() = graphListener
 }
 
 @Module

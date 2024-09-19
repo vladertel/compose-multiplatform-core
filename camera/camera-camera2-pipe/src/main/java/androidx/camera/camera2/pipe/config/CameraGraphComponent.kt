@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.config
 
 import android.content.Context
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraBackend
 import androidx.camera.camera2.pipe.CameraBackends
 import androidx.camera.camera2.pipe.CameraContext
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.CameraSurfaceManager
 import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.StreamGraph
 import androidx.camera.camera2.pipe.core.Threads
-import androidx.camera.camera2.pipe.graph.CameraGraphId
 import androidx.camera.camera2.pipe.graph.CameraGraphImpl
 import androidx.camera.camera2.pipe.graph.GraphListener
 import androidx.camera.camera2.pipe.graph.GraphProcessor
@@ -50,23 +47,20 @@ import javax.inject.Scope
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 
-@Scope
-internal annotation class CameraGraphScope
+@Scope internal annotation class CameraGraphScope
 
-@Qualifier
-internal annotation class ForCameraGraph
+@Qualifier internal annotation class ForCameraGraph
 
-@Qualifier
-internal annotation class CameraGraphContext
+@Qualifier internal annotation class CameraGraphContext
 
 @CameraGraphScope
 @Subcomponent(
     modules =
-    [
-        SharedCameraGraphModules::class,
-        InternalCameraGraphModules::class,
-        CameraGraphConfigModule::class,
-    ]
+        [
+            SharedCameraGraphModules::class,
+            InternalCameraGraphModules::class,
+            CameraGraphConfigModule::class,
+        ]
 )
 internal interface CameraGraphComponent {
     fun cameraGraph(): CameraGraph
@@ -74,33 +68,29 @@ internal interface CameraGraphComponent {
     @Subcomponent.Builder
     interface Builder {
         fun cameraGraphConfigModule(config: CameraGraphConfigModule): Builder
+
         fun build(): CameraGraphComponent
     }
 }
 
 @Module
 internal class CameraGraphConfigModule(private val config: CameraGraph.Config) {
-    @Provides
-    fun provideCameraGraphConfig(): CameraGraph.Config = config
+    @Provides fun provideCameraGraphConfig(): CameraGraph.Config = config
 }
 
 @Module
 internal abstract class SharedCameraGraphModules {
-    @Binds
-    abstract fun bindCameraGraph(cameraGraph: CameraGraphImpl): CameraGraph
+    @Binds abstract fun bindCameraGraph(cameraGraph: CameraGraphImpl): CameraGraph
 
-    @Binds
-    abstract fun bindGraphProcessor(graphProcessor: GraphProcessorImpl): GraphProcessor
+    @Binds abstract fun bindGraphProcessor(graphProcessor: GraphProcessorImpl): GraphProcessor
 
-    @Binds
-    abstract fun bindGraphListener(graphProcessor: GraphProcessorImpl): GraphListener
+    @Binds abstract fun bindGraphListener(graphProcessor: GraphProcessorImpl): GraphListener
 
     @Binds
     @CameraGraphContext
     abstract fun bindCameraGraphContext(@CameraPipeContext cameraPipeContext: Context): Context
 
-    @Binds
-    abstract fun bindStreamGraph(streamGraph: StreamGraphImpl): StreamGraph
+    @Binds abstract fun bindStreamGraph(streamGraph: StreamGraphImpl): StreamGraph
 
     companion object {
         @CameraGraphScope
@@ -161,10 +151,7 @@ internal abstract class SharedCameraGraphModules {
             imageSourceMap: ImageSourceMap,
             frameCaptureQueue: FrameCaptureQueue
         ): FrameDistributor {
-            return FrameDistributor(
-                imageSourceMap.imageSources,
-                frameCaptureQueue
-            ) { }
+            return FrameDistributor(imageSourceMap.imageSources, frameCaptureQueue) {}
         }
     }
 }
@@ -209,6 +196,7 @@ internal abstract class InternalCameraGraphModules {
         @CameraGraphScope
         @Provides
         fun provideCameraController(
+            graphId: CameraGraphId,
             graphConfig: CameraGraph.Config,
             cameraBackend: CameraBackend,
             cameraContext: CameraContext,
@@ -216,7 +204,11 @@ internal abstract class InternalCameraGraphModules {
             streamGraph: StreamGraph,
         ): CameraController {
             return cameraBackend.createCameraController(
-                cameraContext, graphConfig, graphProcessor, streamGraph
+                cameraContext,
+                graphId,
+                graphConfig,
+                graphProcessor,
+                streamGraph
             )
         }
     }

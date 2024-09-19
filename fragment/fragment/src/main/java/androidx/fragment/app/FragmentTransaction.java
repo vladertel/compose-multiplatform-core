@@ -308,6 +308,7 @@ public abstract class FragmentTransaction {
     public final FragmentTransaction add(@NonNull ViewGroup container, @NonNull Fragment fragment,
             @Nullable String tag) {
         fragment.mContainer = container;
+        fragment.mInDynamicContainer = true;
         return add(container.getId(), fragment, tag);
     }
 
@@ -904,7 +905,17 @@ public abstract class FragmentTransaction {
      */
     @NonNull
     public FragmentTransaction runOnCommit(@NonNull Runnable runnable) {
-        disallowAddToBackStack();
+        return runOnCommitInternal(false, runnable);
+    }
+
+    @NonNull
+    FragmentTransaction runOnCommitInternal(
+            boolean allowAddToBackStack,
+            @NonNull Runnable runnable
+    ) {
+        if (!allowAddToBackStack) {
+            disallowAddToBackStack();
+        }
         if (mCommitRunnables == null) {
             mCommitRunnables = new ArrayList<>();
         }

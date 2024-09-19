@@ -18,6 +18,7 @@ package androidx.build
 
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTarget
 import com.android.build.api.dsl.Lint
+import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.api.KotlinMultiplatformAndroidPlugin
@@ -40,13 +41,15 @@ import org.jetbrains.kotlin.tooling.core.withClosure
 
 /** Single entry point to Android Lint configuration. */
 fun Project.configureLint() {
-    project.plugins.all { plugin ->
+    project.plugins.configureEach { plugin ->
         when (plugin) {
             is AppPlugin -> configureAndroidProjectForLint(isLibrary = false)
             is LibraryPlugin -> configureAndroidProjectForLint(isLibrary = true)
-            is KotlinMultiplatformAndroidPlugin -> configureAndroidMultiplatformProjectForLint(
-                extensions.getByType<AndroidXMultiplatformExtension>().agpKmpExtension
-            )
+            is KotlinMultiplatformAndroidPlugin ->
+                configureAndroidMultiplatformProjectForLint(
+                    extensions.getByType<AndroidXMultiplatformExtension>().agpKmpExtension,
+                    extensions.getByType<KotlinMultiplatformAndroidComponentsExtension>()
+                )
             // Only configure non-multiplatform Java projects via JavaPlugin. Multiplatform
             // projects targeting Java (e.g. `jvm { withJava() }`) are configured via
             // KotlinBasePlugin.
@@ -78,23 +81,20 @@ private fun Project.configureAndroidProjectForLint(isLibrary: Boolean) =
 
         configureLint(extension.lint, isLibrary)
     }
+
 private fun Project.configureAndroidMultiplatformProjectForLint(
-    extension: KotlinMultiplatformAndroidTarget
+    extension: KotlinMultiplatformAndroidTarget,
+    componentsExtension: KotlinMultiplatformAndroidComponentsExtension
 ) {
-    // The lintAnalyze task is used by `androidx-studio-integration-lint.sh`.
-    tasks.register("lintAnalyze") { task -> task.enabled = false }
-    configureLint(extension.lint, true)
+    componentsExtension.finalizeDsl {
+        // The lintAnalyze task is used by `androidx-studio-integration-lint.sh`.
+        tasks.register("lintAnalyze") { task -> task.enabled = false }
+        configureLint(extension.lint, isLibrary = true)
+    }
 }
 
 /** Android Lint configuration entry point for non-Android projects. */
 private fun Project.configureNonAndroidProjectForLint() = afterEvaluate {
-    // TODO(aurimas): remove this workaround for b/293900782 after upgrading to AGP 8.2.0-beta01
-    if (
-        path == ":collection:collection-benchmark-kmp" ||
-            path == ":benchmark:benchmark-darwin-samples"
-    ) {
-        return@afterEvaluate
-    }
     // The lint plugin expects certain configurations and source sets which are only added by
     // the Java and Android plugins. If this is a multiplatform project targeting JVM, we'll
     // need to manually create these configurations and source sets based on their multiplatform
@@ -341,6 +341,12 @@ private fun Project.configureLint(lint: Lint, isLibrary: Boolean) {
             disable.add("IllegalExperimentalApiUsage")
         }
 
+        // Only allow the JSpecifyNullness check to be run when opted-in, while migrating projects
+        // to use JSpecify annotations.
+        if (!project.useJSpecifyAnnotations()) {
+            disable.add("JSpecifyNullness")
+        }
+
         fatal.add("UastImplementation") // go/hide-uast-impl
         fatal.add("KotlincFE10") // b/239982263
 
@@ -370,19 +376,16 @@ private fun Project.configureLint(lint: Lint, isLibrary: Boolean) {
 private fun ConfigurableFileCollection.withChangesAllowed(
     block: ConfigurableFileCollection.() -> Unit
 ) {
-    // The `disallowChanges` field is defined on `ConfigurableFileCollection` prior to Gradle 8.6
-    // and on the inner ValueState in later versions.
+    // The `disallowChanges` field is defined on `ConfigurableFileCollection` inner `ValueState`.
     val (target, field) =
-        findDeclaredFieldOnClass("disallowChanges")?.let { field -> Pair(this, field) }
-            ?: findDeclaredFieldOnClass("valueState")?.let { valueState ->
-                valueState.isAccessible = true
-                val target = valueState.get(this)
-                target.findDeclaredFieldOnClass("disallowChanges")?.let { field ->
-                    // For Gradle 8.6 and later,
-                    Pair(target, field)
-                }
+        findDeclaredFieldOnClass("valueState")?.let { valueState ->
+            valueState.isAccessible = true
+            val target = valueState.get(this)
+            target.findDeclaredFieldOnClass("disallowChanges")?.let { field ->
+                // For Gradle 8.6 and later,
+                Pair(target, field)
             }
-            ?: throw NoSuchFieldException()
+        } ?: throw NoSuchFieldException()
 
     // Make the field temporarily accessible while we run the `block`.
     field.isAccessible = true

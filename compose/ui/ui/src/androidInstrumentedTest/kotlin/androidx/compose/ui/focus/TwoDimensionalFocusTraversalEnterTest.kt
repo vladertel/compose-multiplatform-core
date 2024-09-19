@@ -34,8 +34,7 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class TwoDimensionalFocusTraversalEnterTest {
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private lateinit var focusManager: FocusManager
     private val initialFocus: FocusRequester = FocusRequester()
@@ -143,9 +142,7 @@ class TwoDimensionalFocusTraversalEnterTest {
         val (child, grandchild) = List(2) { mutableStateOf(false) }
         rule.setContentForTest {
             FocusableBox(focusedItem, 0, 0, 30, 30, initialFocus) {
-                FocusableBox(child, 10, 10, 10, 10) {
-                    FocusableBox(grandchild, 10, 10, 10, 10)
-                }
+                FocusableBox(child, 10, 10, 10, 10) { FocusableBox(grandchild, 10, 10, 10, 10) }
             }
         }
 
@@ -306,10 +303,7 @@ class TwoDimensionalFocusTraversalEnterTest {
         rule.runOnIdle {
             assertThat(movedFocusSuccessfully).isTrue()
             assertThat(focusedItem.value).isFalse()
-            assertThat(children.values).isExactly(
-                true, false, false,
-                false, false, false
-            )
+            assertThat(children.values).isExactly(true, false, false, false, false, false)
         }
     }
 
@@ -346,10 +340,7 @@ class TwoDimensionalFocusTraversalEnterTest {
         rule.runOnIdle {
             assertThat(movedFocusSuccessfully).isTrue()
             assertThat(focusedItem.value).isFalse()
-            assertThat(children.values).isExactly(
-                false, false, false,
-                true, false, false
-            )
+            assertThat(children.values).isExactly(false, false, false, true, false, false)
         }
     }
 
@@ -388,10 +379,7 @@ class TwoDimensionalFocusTraversalEnterTest {
         rule.runOnIdle {
             assertThat(movedFocusSuccessfully).isTrue()
             assertThat(focusedItem.value).isFalse()
-            assertThat(children.values).isExactly(
-                false, false, false,
-                true, false, false
-            )
+            assertThat(children.values).isExactly(false, false, false, true, false, false)
         }
     }
 
@@ -404,4 +392,5 @@ class TwoDimensionalFocusTraversalEnterTest {
     }
 }
 
-private val List<MutableState<Boolean>>.values get() = this.map { it.value }
+private val List<MutableState<Boolean>>.values
+    get() = this.map { it.value }

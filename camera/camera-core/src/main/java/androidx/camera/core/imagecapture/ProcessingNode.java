@@ -17,11 +17,13 @@
 package androidx.camera.core.imagecapture;
 
 import static android.graphics.ImageFormat.JPEG;
+import static android.graphics.ImageFormat.RAW_SENSOR;
 import static android.graphics.ImageFormat.YUV_420_888;
 
 import static androidx.camera.core.ImageCapture.ERROR_UNKNOWN;
 import static androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor;
 import static androidx.camera.core.internal.utils.ImageUtil.isJpegFormats;
+import static androidx.camera.core.internal.utils.ImageUtil.isRawFormats;
 import static androidx.core.util.Preconditions.checkArgument;
 import static androidx.core.util.Preconditions.checkState;
 
@@ -29,11 +31,10 @@ import static java.util.Objects.requireNonNull;
 
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
-import android.os.Build;
+import android.hardware.camera2.CameraCharacteristics;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 import androidx.camera.core.ImageCapture;
@@ -61,13 +62,15 @@ import java.util.concurrent.Executor;
  * <p>This node performs operations that runs on a single image, such as cropping, format
  * conversion, effects and/or saving to disk.
  */
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class ProcessingNode implements Node<ProcessingNode.In, Void> {
     private static final String TAG = "ProcessingNode";
     @NonNull
     final Executor mBlockingExecutor;
     @Nullable
     final InternalImageProcessor mImageProcessor;
+
+    @Nullable
+    private final CameraCharacteristics mCameraCharacteristics;
 
     private ProcessingNode.In mInputEdge;
     private Operation<InputPacket, Packet<ImageProxy>> mInput2Packet;
@@ -87,18 +90,23 @@ public class ProcessingNode implements Node<ProcessingNode.In, Void> {
      *                         {@link CameraXExecutors#ioExecutor()}
      */
     @VisibleForTesting
-    ProcessingNode(@NonNull Executor blockingExecutor) {
-        this(blockingExecutor, /*imageProcessor=*/null, DeviceQuirks.getAll());
+    ProcessingNode(@NonNull Executor blockingExecutor,
+            @Nullable CameraCharacteristics cameraCharacteristics) {
+        this(blockingExecutor, cameraCharacteristics,
+                /*imageProcessor=*/null, DeviceQuirks.getAll());
     }
 
     @VisibleForTesting
-    ProcessingNode(@NonNull Executor blockingExecutor, @NonNull Quirks quirks) {
-        this(blockingExecutor, /*imageProcessor=*/null, quirks);
+    ProcessingNode(@NonNull Executor blockingExecutor,
+            @NonNull Quirks quirks,
+            @Nullable CameraCharacteristics cameraCharacteristics) {
+        this(blockingExecutor, cameraCharacteristics, /*imageProcessor=*/null, quirks);
     }
 
     ProcessingNode(@NonNull Executor blockingExecutor,
+            @Nullable CameraCharacteristics cameraCharacteristics,
             @Nullable InternalImageProcessor imageProcessor) {
-        this(blockingExecutor, imageProcessor, DeviceQuirks.getAll());
+        this(blockingExecutor, cameraCharacteristics, imageProcessor, DeviceQuirks.getAll());
     }
 
     /**
@@ -107,6 +115,7 @@ public class ProcessingNode implements Node<ProcessingNode.In, Void> {
      * @param imageProcessor   external effect for post-processing.
      */
     ProcessingNode(@NonNull Executor blockingExecutor,
+            @Nullable CameraCharacteristics cameraCharacteristics,
             @Nullable InternalImageProcessor imageProcessor,
             @NonNull Quirks quirks) {
         boolean isLowMemoryDevice = DeviceQuirks.get(LowMemoryQuirk.class) != null;
@@ -116,6 +125,7 @@ public class ProcessingNode implements Node<ProcessingNode.In, Void> {
             mBlockingExecutor = blockingExecutor;
         }
         mImageProcessor = imageProcessor;
+        mCameraCharacteristics = cameraCharacteristics;
         mQuirks = quirks;
         mHasIncorrectJpegMetadataQuirk = quirks.contains(IncorrectJpegMetadataQuirk.class);
     }
@@ -137,6 +147,8 @@ public class ProcessingNode implements Node<ProcessingNode.In, Void> {
         inputEdge.getPostviewEdge().setListener(
                 inputPacket ->  {
                     if (inputPacket.getProcessingRequest().isAborted()) {
+                        Logger.w(TAG,
+                                "The postview image is closed due to request aborted");
                         // No-ops if the request is aborted.
                         inputPacket.getImageProxy().close();
                         return;
@@ -217,17 +229,33 @@ public class ProcessingNode implements Node<ProcessingNode.In, Void> {
     ImageCapture.OutputFileResults processOnDiskCapture(@NonNull InputPacket inputPacket)
             throws ImageCaptureException {
         int format = mInputEdge.getOutputFormat();
-        checkArgument(isJpegFormats(format), String.format("On-disk capture only support JPEG and"
-                + " JPEG/R output formats. Output format: %s", format));
+        checkArgument(isJpegFormats(format)
+                || isRawFormats(format),
+                String.format("On-disk capture only support JPEG and"
+                + " JPEG/R and RAW output formats. Output format: %s", format));
         ProcessingRequest request = inputPacket.getProcessingRequest();
         Packet<ImageProxy> originalImage = mInput2Packet.apply(inputPacket);
-        Packet<byte[]> jpegBytes = mImage2JpegBytes.apply(
-                Image2JpegBytes.In.of(originalImage, request.getJpegQuality()));
-        if (jpegBytes.hasCropping() || mBitmapEffect != null) {
-            jpegBytes = cropAndMaybeApplyEffect(jpegBytes, request.getJpegQuality());
+
+        switch (format) {
+            case RAW_SENSOR:
+                DngImage2Disk dngImage2Disk = new DngImage2Disk(
+                        requireNonNull(mCameraCharacteristics),
+                        originalImage.getCameraCaptureResult().getCaptureResult());
+                return dngImage2Disk.apply(DngImage2Disk.In.of(
+                        originalImage.getData(),
+                        originalImage.getRotationDegrees(),
+                        requireNonNull(request.getOutputFileOptions())));
+            case JPEG:
+            default:
+                Packet<byte[]> jpegBytes = mImage2JpegBytes.apply(
+                        Image2JpegBytes.In.of(originalImage, request.getJpegQuality()));
+                if (jpegBytes.hasCropping() || mBitmapEffect != null) {
+                    jpegBytes = cropAndMaybeApplyEffect(jpegBytes, request.getJpegQuality());
+                }
+                return mJpegBytes2Disk.apply(
+                        JpegBytes2Disk.In.of(jpegBytes,
+                                requireNonNull(request.getOutputFileOptions())));
         }
-        return mJpegBytes2Disk.apply(
-                JpegBytes2Disk.In.of(jpegBytes, requireNonNull(request.getOutputFileOptions())));
     }
 
     @NonNull

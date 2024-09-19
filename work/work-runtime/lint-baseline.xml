@@ -1,5 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.4.0-alpha09" type="baseline" client="gradle" dependencies="false" name="AGP (8.4.0-alpha09)" variant="all" version="8.4.0-alpha09">
+<issues format="6" by="lint 8.7.0-alpha02" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.0-alpha02)" variant="all" version="8.7.0-alpha02">
+
+    <issue
+        id="NewApi"
+        message="This Kotlin extension function will be hidden by `java.util.SequencedCollection` starting in API 35"
+        errorLine1="        val id = idsToProcess.removeLastKt()"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/utils/CancelWorkRunnable.kt"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="This Kotlin extension function will be hidden by `java.util.SequencedCollection` starting in API 35"
+        errorLine1="        val current = continuations.removeLastKt()"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/utils/EnqueueUtils.kt"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="This Kotlin extension function will be hidden by `java.util.SequencedCollection` starting in API 35"
+        errorLine1="            val id = idsToProcess.removeLastKt()"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/WorkerWrapper.kt"/>
+    </issue>
 
     <issue
         id="BanSynchronizedMethods"
@@ -121,8 +148,8 @@
     <issue
         id="ForegroundServiceType"
         message="To call `Service.startForeground()`, the `&lt;service>` element of manifest file must have the `foregroundServiceType` attribute specified"
-        errorLine1="                    startForeground(notificationId, notification);"
-        errorLine2="                    ~~~~~~~~~~~~~~~">
+        errorLine1="            startForeground(notificationId, notification);"
+        errorLine2="            ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/work/impl/foreground/SystemForegroundService.java"/>
     </issue>
@@ -143,6 +170,78 @@
         errorLine2="                        ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/work/impl/foreground/SystemForegroundService.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="    @get:RequiresApi(21) // NetworkRequest class is available since 21"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/Constraints.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="        @RequiresApi(21)"
+        errorLine2="        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/Constraints.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="@get:RequiresApi(21)"
+        errorLine2="~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/background/systemjob/JobSchedulerExt.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="@RequiresApi(21)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/background/systemjob/JobSchedulerExt.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="@get:RequiresApi(21)"
+        errorLine2="~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/background/systemjob/JobSchedulerExt.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="@file:RequiresApi(21)"
+        errorLine2="~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/utils/NetworkApi21.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="    @get:RequiresApi(21)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/utils/NetworkRequestCompat.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 21"
+        errorLine1="@RequiresApi(21)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/work/impl/WorkDatabasePathHelper.kt"/>
     </issue>
 
     <issue

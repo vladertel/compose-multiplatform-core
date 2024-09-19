@@ -18,7 +18,6 @@ package androidx.navigation.dynamicfeatures.fragment
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.navigation.ExperimentalSafeArgsApi
 import androidx.navigation.dynamicfeatures.createGraph
 import androidx.navigation.get
 import androidx.test.annotation.UiThreadTest
@@ -38,22 +37,21 @@ import org.junit.runner.RunWith
 public class DynamicFragmentNavigatorDestinationBuilderTest {
 
     @get:Rule
-    public val rule: ActivityScenarioRule<TestActivity> = ActivityScenarioRule(
-        TestActivity::class.java
-    )
-    private val fragmentManager get() = rule.withActivity { supportFragmentManager }
+    public val rule: ActivityScenarioRule<TestActivity> =
+        ActivityScenarioRule(TestActivity::class.java)
+    private val fragmentManager
+        get() = rule.withActivity { supportFragmentManager }
 
     @Suppress("DEPRECATION")
     @UiThreadTest
     @Test
     public fun reified() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = DESTINATION_ID) {
-            fragment<TestFragment>(DESTINATION_ID)
-        }
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = DESTINATION_ID) {
+                fragment<TestFragment>(DESTINATION_ID)
+            }
         val fragmentDestination = graph[DESTINATION_ID] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -65,14 +63,11 @@ public class DynamicFragmentNavigatorDestinationBuilderTest {
     @Test
     public fun moduleName() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = DESTINATION_ID) {
-            fragment(DESTINATION_ID, FRAGMENT_CLASS_NAME) {
-                moduleName = MODULE_NAME
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = DESTINATION_ID) {
+                fragment(DESTINATION_ID, FRAGMENT_CLASS_NAME) { moduleName = MODULE_NAME }
             }
-        }
         val fragmentDestination = graph[DESTINATION_ID] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -87,12 +82,11 @@ public class DynamicFragmentNavigatorDestinationBuilderTest {
     @Test
     public fun no_moduleName() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = DESTINATION_ID) {
-            fragment(DESTINATION_ID, FRAGMENT_CLASS_NAME) {}
-        }
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = DESTINATION_ID) {
+                fragment(DESTINATION_ID, FRAGMENT_CLASS_NAME) {}
+            }
         val fragmentDestination = graph[DESTINATION_ID] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -102,36 +96,30 @@ public class DynamicFragmentNavigatorDestinationBuilderTest {
             .isNull()
     }
 
-    @OptIn(ExperimentalSafeArgsApi::class)
     @UiThreadTest
     @Test
     public fun reifiedKClass() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = TestClass::class) {
-            fragment<TestFragment, TestClass>()
-        }
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = TestClass::class) {
+                fragment<TestFragment, TestClass>()
+            }
         val fragmentDestination = graph[TestClass::class] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
             .isEqualTo(TestFragment::class.java.name)
     }
 
-    @OptIn(ExperimentalSafeArgsApi::class)
     @UiThreadTest
     @Test
     public fun moduleNameKClass() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = TestClass::class) {
-            fragment<TestClass>(FRAGMENT_CLASS_NAME) {
-                moduleName = MODULE_NAME
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = TestClass::class) {
+                fragment<TestClass>(FRAGMENT_CLASS_NAME) { moduleName = MODULE_NAME }
             }
-        }
         val fragmentDestination = graph[TestClass::class] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -141,17 +129,15 @@ public class DynamicFragmentNavigatorDestinationBuilderTest {
             .isEqualTo(MODULE_NAME)
     }
 
-    @OptIn(ExperimentalSafeArgsApi::class)
     @UiThreadTest
     @Test
     public fun no_moduleNameKClass() {
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = TestClass::class) {
-            fragment<TestClass>(FRAGMENT_CLASS_NAME) {}
-        }
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = TestClass::class) {
+                fragment<TestClass>(FRAGMENT_CLASS_NAME) {}
+            }
         val fragmentDestination = graph[TestClass::class] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -161,20 +147,17 @@ public class DynamicFragmentNavigatorDestinationBuilderTest {
             .isNull()
     }
 
-    @OptIn(ExperimentalSafeArgsApi::class)
     @UiThreadTest
     @Test
     public fun reifiedKClass_startDestinationObject() {
-        @Serializable
-        class TestClass(val arg: Int)
+        @Serializable class TestClass(val arg: Int)
 
         val navHostFragment = DynamicNavHostFragment()
-        fragmentManager.beginTransaction()
-            .add(android.R.id.content, navHostFragment)
-            .commitNow()
-        val graph = navHostFragment.createGraph(startDestination = TestClass(0)) {
-            fragment<TestFragment, TestClass>()
-        }
+        fragmentManager.beginTransaction().add(android.R.id.content, navHostFragment).commitNow()
+        val graph =
+            navHostFragment.createGraph(startDestination = TestClass(0)) {
+                fragment<TestFragment, TestClass>()
+            }
         val fragmentDestination = graph[TestClass::class] as DynamicFragmentNavigator.Destination
         assertWithMessage("Fragment class should be set")
             .that(fragmentDestination.className)
@@ -188,7 +171,7 @@ private const val MODULE_NAME = "module"
 private const val FRAGMENT_CLASS_NAME = "androidx.navigation.dynamicfeatures.fragment.TestFragment"
 
 public class TestActivity : FragmentActivity()
+
 private class TestFragment : Fragment()
 
-@Serializable
-private class TestClass
+@Serializable private class TestClass

@@ -22,11 +22,11 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.IBinder;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
-import androidx.pdf.aidl.PdfDocumentRemote;
-import androidx.pdf.util.ErrorLog;
+import androidx.pdf.models.PdfDocumentRemote;
+import androidx.pdf.service.PdfDocumentService;
 import androidx.pdf.util.Preconditions;
 
 import java.util.concurrent.locks.Condition;
@@ -65,12 +65,12 @@ public class PdfConnection implements ServiceConnection {
     }
 
     /** Sets a {@link Runnable} to be run as soon as the service is (re-)connected. */
-    public void setOnConnectInitializer(Runnable onConnect) {
+    public void setOnConnectInitializer(@NonNull Runnable onConnect) {
         this.mOnConnect = onConnect;
     }
 
     /** Sets a {@link Runnable} to be run if the service never successfully connects. */
-    public void setConnectionFailureHandler(Runnable onConnectFailure) {
+    public void setConnectionFailureHandler(@NonNull Runnable onConnectFailure) {
         this.mOnConnectFailure = onConnectFailure;
     }
 
@@ -78,7 +78,8 @@ public class PdfConnection implements ServiceConnection {
      * Returns a {@link PdfDocumentRemote} if the service is bound. It could be still initializing
      * (see {@link #setDocumentLoaded}).
      */
-    public PdfDocumentRemote getPdfDocument(String forTask) {
+    @NonNull
+    public PdfDocumentRemote getPdfDocument(@NonNull String forTask) {
         Preconditions.checkState(mCurrentTask == null, "already locked: " + mCurrentTask);
         mCurrentTask = forTask;
         return mPdfRemote;
@@ -105,9 +106,7 @@ public class PdfConnection implements ServiceConnection {
      * </ul>
      */
     public void setDocumentLoaded() {
-        if (mPdfRemote == null) {
-            ErrorLog.log(TAG, "setDocumentLoaded", "Document loaded but Remote == null");
-        } else {
+        if (mPdfRemote != null) {
             mHasSuccessfullyConnectedEver = true;
             mIsLoaded = true;
         }
@@ -115,7 +114,6 @@ public class PdfConnection implements ServiceConnection {
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.i(TAG, String.format("Service connected %s", name));
         mConnected = true;
         mIsLoaded = false;
         mLock.lock();
@@ -136,25 +134,17 @@ public class PdfConnection implements ServiceConnection {
         if (mCurrentTask != null) {
             // A task was in progress, we want to report the crash and restart the service.
             mNumCrashes++;
-            ErrorLog.log(mCurrentTask, "Service crash ~ " + ErrorLog.bracketValue(mNumCrashes));
             TaskDenyList.maybeDenyListTask(mCurrentTask);
 
             // We have never connected to this document, and we have crashed repeatedly.
             if (!mHasSuccessfullyConnectedEver && mNumCrashes >= MAX_CONNECT_RETRIES) {
-                Log.w(TAG,
-                        "Failed to ever connect successfully - stuck in a crash loop, "
-                                + "disconnecting.");
                 disconnect();
                 if (mOnConnectFailure != null) {
                     mOnConnectFailure.run();
-                } else {
-                    ErrorLog.logAndAlwaysThrow(TAG, "onServiceDisconnected",
-                            new RepeatedCrashException());
                 }
             }
         } else {
             // No task was in progress, probably just system cleaning up idle resources.
-            Log.d(TAG, "Service was killed by system, let it go. " + name);
             disconnect();
         }
 
@@ -164,7 +154,6 @@ public class PdfConnection implements ServiceConnection {
         mLock.lock();
         try {
             mPdfRemote = null;
-            Log.i(TAG, "Service disconnected for task " + mCurrentTask);
         } finally {
             mLock.unlock();
         }
@@ -174,26 +163,17 @@ public class PdfConnection implements ServiceConnection {
         if (mConnected) {
             return;
         }
-        Intent intent = new Intent();
+        Intent intent = new Intent(mContext, PdfDocumentService.class);
         // Data is only required here to make sure we start a new service per document.
-        // TODO: Update after porting service
-        intent.setComponent(new ComponentName(
-                /* pkg = */ "com.androidx.pdf",
-                /* cls = */ "com.androidx.pdf.PdfDocumentService"));
         intent.setData(uri);
-        Log.d(TAG, "Connecting to service " + uri);
         mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
     }
 
     void disconnect() {
         if (mConnected) {
-            Log.d(TAG, "Disconnecting service.");
             mContext.unbindService(this);
             mConnected = false;
         }
-    }
-
-    private static class RepeatedCrashException extends RuntimeException {
     }
 
 }

@@ -20,14 +20,18 @@ import androidx.build.AndroidXExtension
 import androidx.build.Release
 import androidx.build.RunApiTasks
 import androidx.build.Version
+import androidx.build.binarycompatibilityvalidator.BinaryCompatibilityValidation
+import androidx.build.getSupportRootFolder
 import androidx.build.isWriteVersionedApiFilesEnabled
 import androidx.build.java.JavaCompileInputs
 import androidx.build.metalava.MetalavaTasks
+import androidx.build.multiplatformExtension
 import androidx.build.resources.ResourceTasks
 import androidx.build.stableaidl.setupWithStableAidlPlugin
 import androidx.build.version
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.variant.LibraryVariant
+import java.io.File
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.file.RegularFile
@@ -37,9 +41,7 @@ import org.gradle.kotlin.dsl.getByType
 
 sealed class ApiTaskConfig
 
-data class LibraryApiTaskConfig(
-    val variant: LibraryVariant
-) : ApiTaskConfig()
+data class LibraryApiTaskConfig(val variant: LibraryVariant) : ApiTaskConfig()
 
 object JavaApiTaskConfig : ApiTaskConfig()
 
@@ -122,7 +124,7 @@ fun AndroidXExtension.shouldConfigureApiTasks(): Boolean {
  * and `<version>.txt`. When set to `false`, only `current.txt` will be written. The default value
  * is `true`.
  */
-private fun Project.shouldWriteVersionedApiFile(): Boolean {
+internal fun Project.shouldWriteVersionedApiFile(): Boolean {
     // Is versioned file writing disabled globally, ex. we're on a downstream branch?
     if (!project.isWriteVersionedApiFilesEnabled()) {
         return false
@@ -203,6 +205,25 @@ fun Project.configureProjectForApiTasks(config: ApiTaskConfig, extension: Androi
                 builtApiLocation,
                 outputApiLocations
             )
+        } else if (config is AndroidMultiplatformApiTaskConfig) {
+            // Android Multiplatform does not currently support resources, so we generate a blank
+            // "api" file to make sure the check task breaks if there were tracked resources before
+            ResourceTasks.setupProject(
+                project,
+                project.provider { BlankApiRegularFile(project) },
+                builtApiLocation,
+                outputApiLocations
+            )
+        }
+        multiplatformExtension?.let { multiplatformExtension ->
+            BinaryCompatibilityValidation(project, multiplatformExtension)
+                .setupBinaryCompatibilityValidatorTasks()
         }
     }
+}
+
+internal class BlankApiRegularFile(project: Project) : RegularFile {
+    val file = File(project.getSupportRootFolder(), "buildSrc/blank-res-api/public.txt")
+
+    override fun getAsFile(): File = file
 }

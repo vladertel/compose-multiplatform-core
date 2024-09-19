@@ -44,13 +44,14 @@ import androidx.compose.ui.node.requireOwner
 import androidx.compose.ui.node.visitLocalDescendants
 import androidx.compose.ui.platform.InspectorInfo
 
-internal fun Modifier.focusInteropModifier(): Modifier = this
-    // Focus Group to intercept focus enter/exit.
-    .then(FocusGroupPropertiesElement)
-    .focusTarget()
-    // Focus Target to make the embedded view focusable.
-    .then(FocusTargetPropertiesElement)
-    .focusTarget()
+internal fun Modifier.focusInteropModifier(): Modifier =
+    this
+        // Focus Group to intercept focus enter/exit.
+        .then(FocusGroupPropertiesElement)
+        .focusTarget()
+        // Focus Target to make the embedded view focusable.
+        .then(FocusTargetPropertiesElement)
+        .focusTarget()
 
 private class FocusTargetPropertiesNode : Modifier.Node(), FocusPropertiesModifierNode {
     override fun applyFocusProperties(focusProperties: FocusProperties) {
@@ -58,8 +59,11 @@ private class FocusTargetPropertiesNode : Modifier.Node(), FocusPropertiesModifi
     }
 }
 
-private class FocusGroupPropertiesNode : Modifier.Node(), FocusPropertiesModifierNode,
-    ViewTreeObserver.OnGlobalFocusChangeListener, View.OnAttachStateChangeListener {
+private class FocusGroupPropertiesNode :
+    Modifier.Node(),
+    FocusPropertiesModifierNode,
+    ViewTreeObserver.OnGlobalFocusChangeListener,
+    View.OnAttachStateChangeListener {
     var focusedChild: View? = null
 
     override fun applyFocusProperties(focusProperties: FocusProperties) {
@@ -77,10 +81,11 @@ private class FocusGroupPropertiesNode : Modifier.Node(), FocusPropertiesModifie
         val focusOwner = requireOwner().focusOwner
         val hostView = requireOwner() as View
 
-        val targetViewFocused = embeddedView.requestInteropFocus(
-            direction = focusDirection.toAndroidFocusDirection(),
-            rect = getCurrentlyFocusedRect(focusOwner, hostView, embeddedView)
-        )
+        val targetViewFocused =
+            embeddedView.requestInteropFocus(
+                direction = focusDirection.toAndroidFocusDirection(),
+                rect = getCurrentlyFocusedRect(focusOwner, hostView, embeddedView)
+            )
         return if (targetViewFocused) Default else Cancel
     }
 
@@ -100,13 +105,14 @@ private class FocusGroupPropertiesNode : Modifier.Node(), FocusPropertiesModifie
         val focusedRect = getCurrentlyFocusedRect(focusOwner, hostView, embeddedView)
         val androidFocusDirection = focusDirection.toAndroidFocusDirection() ?: FOCUS_DOWN
 
-        val nextView = with(FocusFinder.getInstance()) {
-            if (focusedChild != null) {
-                findNextFocus(hostView as ViewGroup, focusedChild, androidFocusDirection)
-            } else {
-                findNextFocusFromRect(hostView as ViewGroup, focusedRect, androidFocusDirection)
+        val nextView =
+            with(FocusFinder.getInstance()) {
+                if (focusedChild != null) {
+                    findNextFocus(hostView as ViewGroup, focusedChild, androidFocusDirection)
+                } else {
+                    findNextFocusFromRect(hostView as ViewGroup, focusedRect, androidFocusDirection)
+                }
             }
-        }
         if (nextView != null && embeddedView.containsDescendant(nextView)) {
             nextView.requestFocus(androidFocusDirection, focusedRect)
             return Cancel
@@ -186,19 +192,32 @@ private class FocusGroupPropertiesNode : Modifier.Node(), FocusPropertiesModifie
         v.viewTreeObserver.removeOnGlobalFocusChangeListener(this)
     }
 }
+
 private object FocusGroupPropertiesElement : ModifierNodeElement<FocusGroupPropertiesNode>() {
     override fun create(): FocusGroupPropertiesNode = FocusGroupPropertiesNode()
+
     override fun update(node: FocusGroupPropertiesNode) {}
-    override fun InspectorInfo.inspectableProperties() { name = "FocusGroupProperties" }
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "FocusGroupProperties"
+    }
+
     override fun hashCode() = "FocusGroupProperties".hashCode()
+
     override fun equals(other: Any?) = other === this
 }
 
 private object FocusTargetPropertiesElement : ModifierNodeElement<FocusTargetPropertiesNode>() {
     override fun create(): FocusTargetPropertiesNode = FocusTargetPropertiesNode()
+
     override fun update(node: FocusTargetPropertiesNode) {}
-    override fun InspectorInfo.inspectableProperties() { name = "FocusTargetProperties" }
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "FocusTargetProperties"
+    }
+
     override fun hashCode() = "FocusTargetProperties".hashCode()
+
     override fun equals(other: Any?) = other === this
 }
 
