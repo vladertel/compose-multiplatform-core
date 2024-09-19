@@ -16,9 +16,11 @@
 
 package androidx.compose.ui.input
 
+import androidx.compose.ui.events.createMouseEvent
 import androidx.compose.ui.sendFromScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -27,13 +29,27 @@ import kotlinx.coroutines.test.runTest
 class MinimalChannelTest {
 
     @Test
-    fun ping() = runTest {
+    fun pureChannelTest() = runTest {
         val minimalChannel = Channel<Int>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
         window.setTimeout({
             minimalChannel.sendFromScope(42)
             null
         }, 3000)
+
+        assertEquals(42, minimalChannel.receive())
+    }
+
+    @Test
+    fun domEventChannelTest() = runTest {
+        val minimalChannel = Channel<Int>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+        val el = document.createElement("div")
+        el.addEventListener("mousedown", {
+            minimalChannel.sendFromScope(42)
+        })
+
+        el.dispatchEvent(createMouseEvent("mousedown"))
 
         assertEquals(42, minimalChannel.receive())
     }
