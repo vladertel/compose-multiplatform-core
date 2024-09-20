@@ -33,6 +33,7 @@ class MinimalChannelTest {
         val minimalChannel = Channel<Int>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
         window.setTimeout({
+            println("[pureChannelTest] sending from scope")
             minimalChannel.sendFromScope(42)
             null
         }, 3000)
@@ -46,6 +47,7 @@ class MinimalChannelTest {
 
         val el = document.createElement("div")
         el.addEventListener("mousedown", {
+            println("[domEventChannelTest] sending on mouseDown")
             minimalChannel.sendFromScope(42)
         })
 
