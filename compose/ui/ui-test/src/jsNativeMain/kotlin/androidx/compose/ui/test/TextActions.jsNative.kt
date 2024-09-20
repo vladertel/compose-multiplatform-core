@@ -18,26 +18,8 @@ package androidx.compose.ui.test
 
 import androidx.compose.ui.semantics.SemanticsNode
 
-internal actual inline fun <R> wrapAssertionErrorsWithNodeInfo(
+actual inline fun <R> wrapAssertionErrorsWithNodeInfo(
     selector: SemanticsSelector,
     node: SemanticsNode,
     block: () -> R
-): R {
-    try {
-        return block()
-    } catch (e: AssertionError) {
-        throw ProxyAssertionError(e.message.orEmpty(), selector, node, e)
-    }
-}
-
-internal class ProxyAssertionError(
-    message: String,
-    selector: SemanticsSelector,
-    node: SemanticsNode,
-    cause: Throwable
-) : AssertionError(buildGeneralErrorMessage(message, selector, node), cause) {
-    init {
-        // Duplicate the stack trace to make troubleshooting easier.
-        stackTrace = cause.stackTrace
-    }
-}
+): R = block()

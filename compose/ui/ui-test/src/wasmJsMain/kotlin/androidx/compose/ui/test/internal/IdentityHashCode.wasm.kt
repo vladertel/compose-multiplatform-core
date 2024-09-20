@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.compose.material3.common
+package androidx.compose.ui.test.internal
 
-@Suppress("NOTHING_TO_INLINE")
-internal actual inline fun identifyHashCode(value: Any): Int = System.identityHashCode(value)
+internal actual fun identityHashCode(instance: Any?): Int {
+    if (instance == null) {
+        return 0
+    }
+    return instance.hashCode()
+}
