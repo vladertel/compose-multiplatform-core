@@ -123,6 +123,34 @@ class NavArgumentGeneratorTest {
     }
 
     @Test
+    fun convertToDouble() {
+        @Serializable class TestClass(val arg: Double)
+
+        val converted = serializer<TestClass>().generateNavArguments()
+        val expected =
+            navArgument("arg") {
+                type = InternalNavType.DoubleType
+                nullable = false
+            }
+        assertThat(converted).containsExactlyInOrder(expected)
+        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
+    }
+
+    @Test
+    fun convertToDoubleNullable() {
+        @Serializable class TestClass(val arg: Double?)
+
+        val converted = serializer<TestClass>().generateNavArguments()
+        val expected =
+            navArgument("arg") {
+                type = InternalNavType.DoubleNullableType
+                nullable = true
+            }
+        assertThat(converted).containsExactlyInOrder(expected)
+        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
+    }
+
+    @Test
     fun convertToFloat() {
         @Serializable class TestClass(val arg: Float)
 
@@ -910,8 +938,10 @@ class NavArgumentGeneratorTest {
 
         assertThat(exception.message)
             .isEqualTo(
-                "Cannot cast arg of type kotlin.collections.LinkedHashSet to a NavType. " +
-                    "Make sure to provide custom NavType for this argument."
+                "Route androidx.navigation.serialization.NavArgumentGeneratorTest" +
+                    ".convertIllegalCustomType.TestClass could not find any NavType for " +
+                    "argument arg of type kotlin.collections.LinkedHashSet - typeMap " +
+                    "received was {}"
             )
     }
 

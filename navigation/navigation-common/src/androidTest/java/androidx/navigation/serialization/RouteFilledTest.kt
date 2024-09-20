@@ -746,6 +746,40 @@ class RouteFilledTest {
 
         assertThatRouteFilledFrom(clazz, listOf(listArg)).isEqualTo("$PATH_SERIAL_NAME")
     }
+
+    @Test
+    fun encodeDouble() {
+        @Serializable @SerialName(PATH_SERIAL_NAME) class TestClass(val arg: Double)
+
+        val clazz = TestClass(11E123)
+        val arg =
+            navArgument("arg") {
+                type = InternalNavType.DoubleType
+                nullable = false
+            }
+        assertThatRouteFilledFrom(clazz, listOf(arg)).isEqualTo("$PATH_SERIAL_NAME/1.1E124")
+    }
+
+    @Test
+    fun encodeDoubleNullable() {
+        @Serializable @SerialName(PATH_SERIAL_NAME) class TestClass(val arg: Double?)
+
+        val clazz = TestClass(11E123)
+        val arg =
+            navArgument("arg") {
+                type = InternalNavType.DoubleNullableType
+                nullable = false
+            }
+        assertThatRouteFilledFrom(clazz, listOf(arg)).isEqualTo("$PATH_SERIAL_NAME/1.1E124")
+
+        val clazz2 = TestClass(null)
+        val arg2 =
+            navArgument("arg") {
+                type = InternalNavType.DoubleNullableType
+                nullable = false
+            }
+        assertThatRouteFilledFrom(clazz2, listOf(arg2)).isEqualTo("$PATH_SERIAL_NAME/null")
+    }
 }
 
 private fun <T : Any> assertThatRouteFilledFrom(

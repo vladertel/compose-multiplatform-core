@@ -34,6 +34,8 @@ private enum class InternalType {
     INT_NULLABLE,
     BOOL,
     BOOL_NULLABLE,
+    DOUBLE,
+    DOUBLE_NULLABLE,
     FLOAT,
     FLOAT_NULLABLE,
     LONG,
@@ -66,6 +68,8 @@ internal fun SerialDescriptor.getNavType(): NavType<*> {
             InternalType.INT_NULLABLE -> InternalNavType.IntNullableType
             InternalType.BOOL -> NavType.BoolType
             InternalType.BOOL_NULLABLE -> InternalNavType.BoolNullableType
+            InternalType.DOUBLE -> InternalNavType.DoubleType
+            InternalType.DOUBLE_NULLABLE -> InternalNavType.DoubleNullableType
             InternalType.FLOAT -> NavType.FloatType
             InternalType.FLOAT_NULLABLE -> InternalNavType.FloatNullableType
             InternalType.LONG -> NavType.LongType
@@ -119,6 +123,8 @@ private fun SerialDescriptor.toInternalType(): InternalType {
             if (isNullable) InternalType.INT_NULLABLE else InternalType.INT
         serialName == "kotlin.Boolean" ->
             if (isNullable) InternalType.BOOL_NULLABLE else InternalType.BOOL
+        serialName == "kotlin.Double" ->
+            if (isNullable) InternalType.DOUBLE_NULLABLE else InternalType.DOUBLE
         serialName == "kotlin.Float" ->
             if (isNullable) InternalType.FLOAT_NULLABLE else InternalType.FLOAT
         serialName == "kotlin.Long" ->
@@ -225,6 +231,43 @@ internal object InternalNavType {
 
             override fun parseValue(value: String): Boolean? {
                 return if (value == "null") null else BoolType.parseValue(value)
+            }
+        }
+
+    val DoubleType: NavType<Double> =
+        object : NavType<Double>(false) {
+            override val name: String
+                get() = "double"
+
+            override fun put(bundle: Bundle, key: String, value: Double) {
+                bundle.putDouble(key, value)
+            }
+
+            @Suppress("DEPRECATION")
+            override fun get(bundle: Bundle, key: String): Double {
+                return bundle[key] as Double
+            }
+
+            override fun parseValue(value: String): Double = value.toDouble()
+        }
+
+    val DoubleNullableType: NavType<Double?> =
+        object : NavType<Double?>(true) {
+            override val name: String
+                get() = "double_nullable"
+
+            override fun put(bundle: Bundle, key: String, value: Double?) {
+                if (value == null) bundle.putSerializable(key, null)
+                else DoubleType.put(bundle, key, value)
+            }
+
+            @Suppress("DEPRECATION")
+            override fun get(bundle: Bundle, key: String): Double? {
+                return bundle[key] as? Double
+            }
+
+            override fun parseValue(value: String): Double? {
+                return if (value == "null") null else DoubleType.parseValue(value)
             }
         }
 
