@@ -23,10 +23,8 @@ import kotlin.jvm.JvmInline
 // TODO: use constants instead of literals
 
 // TODO replace it by common PointerButton, when we upstream it
-@ExperimentalTestApi
 @JvmInline
 actual value class MouseButton(val buttonId: Int) {
-    @ExperimentalTestApi
     actual companion object {
         /**
          * The left mouse button

@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.InfiniteAnimationPolicy
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.scene.ComposeScene
-import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.text.input.EditCommand
@@ -178,7 +177,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
         set
 
     private val testOwner = SkikoTestOwner()
-    private val testContext = createTestContext(testOwner)
+    private val testContext = TestContext(testOwner)
 
     private val idlingResources = mutableSetOf<IdlingResource>()
 
@@ -334,6 +333,14 @@ class SkikoComposeUiTest @InternalTestApi constructor(
         }
     }
 
+    override fun enableAccessibilityChecks() {
+        // TODO(CMP-6719): Implement accessibility checks
+    }
+
+    override fun disableAccessibilityChecks() {
+        // TODO(CMP-6719): Implement accessibility checks
+    }
+
     override fun onNode(
         matcher: SemanticsMatcher,
         useUnmergedTree: Boolean
@@ -445,4 +452,7 @@ actual sealed interface ComposeUiTest : SemanticsNodeInteractionsProvider {
     actual fun registerIdlingResource(idlingResource: IdlingResource)
     actual fun unregisterIdlingResource(idlingResource: IdlingResource)
     actual fun setContent(composable: @Composable () -> Unit)
+
+    actual fun enableAccessibilityChecks()
+    actual fun disableAccessibilityChecks()
 }
