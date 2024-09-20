@@ -511,6 +511,8 @@ internal class LayoutNodeLayoutDelegate(
             isPlaced = true
             with(layoutNode) {
                 if (!wasPlaced) {
+                    innerCoordinator.onPlaced()
+
                     // if the node was not placed previous remeasure request could have been ignored
                     if (measurePending) {
                         requestRemeasure(forceRequest = true)
@@ -599,6 +601,10 @@ internal class LayoutNodeLayoutDelegate(
                     // visible, so we need to relayout the parent to get the `placeOrder`.
                     parent?.requestRelayout()
                 }
+            } else {
+                // Call onPlaced callback on each placement, even if it was already placed,
+                // but without subtree invalidation.
+                layoutNode.innerCoordinator.onPlaced()
             }
 
             if (parent != null) {
@@ -843,6 +849,7 @@ internal class LayoutNodeLayoutDelegate(
             }
             layoutState = LayoutState.LayingOut
 
+            val firstPlacement = !placedOnce
             lastPosition = position
             lastZIndex = zIndex
             lastLayerBlock = layerBlock
@@ -851,6 +858,7 @@ internal class LayoutNodeLayoutDelegate(
             onNodePlacedCalled = false
 
             val owner = layoutNode.requireOwner()
+            owner.rectManager.onLayoutPositionChanged(layoutNode, position, firstPlacement)
             if (!layoutPending && isPlaced) {
                 outerCoordinator.placeSelfApparentToRealOffset(position, zIndex, layerBlock, layer)
                 onNodePlaced()
@@ -952,7 +960,7 @@ internal class LayoutNodeLayoutDelegate(
             return true
         }
 
-        override fun calculateAlignmentLines(): Map<AlignmentLine, Int> {
+        override fun calculateAlignmentLines(): Map<out AlignmentLine, Int> {
             if (!duringAlignmentLinesQuery) {
                 // Mark alignments used by modifier
                 if (layoutState == LayoutState.Measuring) {
@@ -1280,7 +1288,7 @@ internal class LayoutNodeLayoutDelegate(
             }
         }
 
-        override fun calculateAlignmentLines(): Map<AlignmentLine, Int> {
+        override fun calculateAlignmentLines(): Map<out AlignmentLine, Int> {
             if (!duringAlignmentLinesQuery) {
                 if (layoutState == LayoutState.LookaheadMeasuring) {
                     // Mark alignments used by modifier
@@ -1896,7 +1904,7 @@ internal interface AlignmentLinesOwner : Measurable {
     fun layoutChildren()
 
     /** Recalculate the alignment lines if dirty, and layout children as needed. */
-    fun calculateAlignmentLines(): Map<AlignmentLine, Int>
+    fun calculateAlignmentLines(): Map<out AlignmentLine, Int>
 
     /**
      * Parent [AlignmentLinesOwner]. This will be the AlignmentLinesOwner for the same pass but for

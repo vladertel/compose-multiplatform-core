@@ -18,6 +18,7 @@ package androidx.compose.runtime
 
 import androidx.collection.MutableIntObjectMap
 import androidx.collection.MutableIntSet
+import androidx.collection.MutableObjectList
 import androidx.compose.runtime.snapshots.fastAny
 import androidx.compose.runtime.snapshots.fastFilterIndexed
 import androidx.compose.runtime.snapshots.fastForEach
@@ -1290,6 +1291,12 @@ internal class SlotWriter(
     /** This a count of the [nodeCount] of the explicitly started groups. */
     private val nodeCountStack = IntStack()
 
+    /**
+     * Deferred slot writes for open groups to avoid thrashing the slot table when slots are added
+     * to parent group which already has children.
+     */
+    private var deferredSlotWrites: MutableIntObjectMap<MutableObjectList<Any?>>? = null
+
     /** The current group that will be started by [startGroup] or skipped by [skipGroup] */
     var currentGroup = 0
         private set
@@ -1439,6 +1446,19 @@ internal class SlotWriter(
      * being inserted.
      */
     fun update(value: Any?): Any? {
+        if (insertCount > 0 && currentSlot != slotsGapStart) {
+            // Defer write as doing it now would thrash the slot table.
+            val deferred =
+                (deferredSlotWrites ?: MutableIntObjectMap())
+                    .also { deferredSlotWrites = it }
+                    .getOrPut(parent) { MutableObjectList() }
+            deferred.add(value)
+            return Composer.Empty
+        }
+        return rawUpdate(value)
+    }
+
+    private fun rawUpdate(value: Any?): Any? {
         val result = skip()
         set(value)
         return result
@@ -1604,6 +1624,14 @@ internal class SlotWriter(
         return result
     }
 
+    /** Set the slot by index to Composer.Empty, returning previous value */
+    fun clear(slotIndex: Int): Any? {
+        val address = dataIndexToDataAddress(slotIndex)
+        val result = slots[address]
+        slots[address] = Composer.Empty
+        return result
+    }
+
     /**
      * Skip the current slot without updating. If the slot table is inserting then and
      * [Composer.Empty] slot is added and [skip] return [Composer.Empty].
@@ -1664,7 +1692,7 @@ internal class SlotWriter(
         groups.dataIndex(groupIndexToAddress(groupIndex + groupSize(groupIndex)))
 
     private val currentGroupSlotIndex: Int
-        get() = currentSlot - slotsStartIndex(parent)
+        get() = currentSlot - slotsStartIndex(parent) + (deferredSlotWrites?.get(parent)?.size ?: 0)
 
     /**
      * Advance [currentGroup] by [amount]. The [currentGroup] group cannot be advanced outside the
@@ -1850,6 +1878,14 @@ internal class SlotWriter(
         val newGroupSize = currentGroup - groupIndex
         val isNode = groups.isNode(groupAddress)
         if (inserting) {
+            // Check for deferred slot writes
+            val deferredSlotWrites = deferredSlotWrites
+            deferredSlotWrites?.get(groupIndex)?.let {
+                it.forEach { value -> rawUpdate(value) }
+                deferredSlotWrites.remove(groupIndex)
+            }
+
+            // Close the group
             groups.updateGroupSize(groupAddress, newGroupSize)
             groups.updateNodeCount(groupAddress, newNodes)
             nodeCount = nodeCountStack.pop() + if (isNode) 1 else newNodes
@@ -1992,16 +2028,6 @@ internal class SlotWriter(
 
             override fun next(): Any? =
                 if (hasNext()) slots[dataIndexToDataAddress(current++)] else null
-        }
-    }
-
-    inline fun forEachData(group: Int, block: (index: Int, data: Any?) -> Unit) {
-        val address = groupIndexToAddress(group)
-        val slotsStart = groups.slotIndex(address)
-        val slotsEnd = groups.dataIndex(groupIndexToAddress(group + 1))
-
-        for (slot in slotsStart until slotsEnd) {
-            block(slot - slotsStart, slots[dataIndexToDataAddress(slot)])
         }
     }
 

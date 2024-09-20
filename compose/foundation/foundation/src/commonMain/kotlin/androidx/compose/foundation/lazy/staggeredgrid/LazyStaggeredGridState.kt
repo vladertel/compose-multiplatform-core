@@ -214,8 +214,6 @@ internal constructor(
     /** backing field mutable field for [interactionSource] */
     internal val mutableInteractionSource = MutableInteractionSource()
 
-    private val animateScrollScope = LazyLayoutAnimateScrollScope(this)
-
     /** Stores currently pinned items which are always composed. */
     internal val pinnedItems = LazyLayoutPinnedItemList()
 
@@ -326,13 +324,14 @@ internal constructor(
         val layoutInfo = layoutInfoState.value
         val numOfItemsToTeleport = 100 * layoutInfo.slots.sizes.size
         scroll {
-            animateScrollScope.animateScrollToItem(
-                index,
-                scrollOffset,
-                numOfItemsToTeleport,
-                layoutInfo.density,
-                this
-            )
+            LazyLayoutScrollScope(this@LazyStaggeredGridState, this)
+                .animateScrollToItem(
+                    index,
+                    scrollOffset,
+                    numOfItemsToTeleport,
+                    layoutInfo.density,
+                    this
+                )
         }
     }
 

@@ -1267,6 +1267,8 @@ public abstract class WatchFaceService : WallpaperService() {
         @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public val deferredWatchFaceImpl = CompletableDeferred<WatchFaceImpl>()
 
+        public val deferredFirstFrame = CompletableDeferred<Unit>()
+
         @VisibleForTesting public var deferredValidation = CompletableDeferred<Unit>()
 
         /**
@@ -1728,6 +1730,9 @@ public abstract class WatchFaceService : WallpaperService() {
             synchronized(lock) { editedComplicationPreviewData.clear() }
         }
 
+        internal fun hasOverriddenComplications(): Boolean =
+            synchronized(lock) { overriddenComplications?.isNotEmpty() ?: false }
+
         /**
          * Undoes any complication overrides by [overrideComplicationsForEditing], restoring the
          * original data. In addition any complications marked as being cleared after editing by
@@ -1791,7 +1796,12 @@ public abstract class WatchFaceService : WallpaperService() {
                             pair.key,
                             pair.value,
                             now,
-                            forceLoad = mutableWatchState.isAmbient.value ?: false,
+                            // Force synchronous complication image update if there's overridden
+                            // complications or if we're rendering ambient frames where the next
+                            // frame might be up to a minute away.
+                            forceLoad =
+                                hasOverriddenComplications() ||
+                                    (mutableWatchState.isAmbient.value ?: false),
                         )
                     }
                     complicationSlotsManager.onComplicationsUpdated()
@@ -1927,6 +1937,7 @@ public abstract class WatchFaceService : WallpaperService() {
                 if (this::choreographer.isInitialized) {
                     frameCallback?.let { choreographer.removeFrameCallback(it) }
                 }
+                frameCallback = null
                 if (this::interactiveInstanceId.isInitialized) {
                     InteractiveInstanceManager.deleteInstance(interactiveInstanceId)
                 }
@@ -2438,9 +2449,14 @@ public abstract class WatchFaceService : WallpaperService() {
                     // Now init has completed, it's OK to complete deferredWatchFaceImpl.
                     initComplicationsDone.complete(Unit)
 
-                    // validateSchemaWireSize is fairly expensive so only perform it for
-                    // interactive watch faces.
+                    // validateSchemaWireSize is fairly expensive so only perform it for interactive
+                    // watch faces.
                     if (!watchState.isHeadless) {
+                        // Wait until the first frame has been rendered since
+                        // validateSchemaWireSize is computationally expensive and it may trigger
+                        // lazy Icon construction and we want to avoid CPU contention with user
+                        // visible tasks.
+                        deferredFirstFrame.await()
                         validateSchemaWireSize(currentUserStyleRepository.schema)
                     }
                 } catch (e: CancellationException) {
@@ -2521,6 +2537,7 @@ public abstract class WatchFaceService : WallpaperService() {
                         }
                     }
                 }
+                deferredFirstFrame.complete(Unit)
 
                 Log.d(TAG, "init complete ${watchState.watchFaceInstanceId.value}")
             }

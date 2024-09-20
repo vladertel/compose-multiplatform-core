@@ -245,6 +245,9 @@ internal class RenderNodeLayer(
         matrix.timesAssign(this.matrix)
     }
 
+    override val underlyingMatrix: Matrix
+        get() = matrix
+
     override fun inverseTransform(matrix: Matrix) {
         matrix.timesAssign(inverseMatrix)
     }

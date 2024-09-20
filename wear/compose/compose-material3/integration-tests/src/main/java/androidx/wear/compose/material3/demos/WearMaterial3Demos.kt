@@ -43,6 +43,22 @@ val WearMaterial3Demos =
     Material3DemoCategory(
         "Material 3",
         listOf(
+            Material3DemoCategory(title = "Typography", TypographyDemos),
+            Material3DemoCategory(
+                "Button",
+                listOf(
+                    ComposableDemo("Base Button") { BaseButtonDemo() },
+                    ComposableDemo("Filled Button") { ButtonDemo() },
+                    ComposableDemo("Filled Tonal Button") { FilledTonalButtonDemo() },
+                    ComposableDemo("Filled Variant Button") { FilledVariantButtonDemo() },
+                    ComposableDemo("Outlined Button") { OutlinedButtonDemo() },
+                    ComposableDemo("Child Button") { ChildButtonDemo() },
+                    ComposableDemo("Multiline Button") { MultilineButtonDemo() },
+                    ComposableDemo("App Button") { AppButtonDemo() },
+                    ComposableDemo("Avatar Button") { AvatarButtonDemo() },
+                    ComposableDemo("Button (Image Background)") { ButtonBackgroundImageDemo() },
+                )
+            ),
             ComposableDemo("Color Scheme") { ColorSchemeDemos() },
             Material3DemoCategory("Curved Text", CurvedTextDemos),
             Material3DemoCategory("Alert Dialog", AlertDialogs),
@@ -51,19 +67,6 @@ val WearMaterial3Demos =
             ComposableDemo("Scaffold") { ScaffoldSample() },
             Material3DemoCategory("ScrollAway", ScrollAwayDemos),
             ComposableDemo("Haptics") { Centralize { HapticsDemos() } },
-            Material3DemoCategory(
-                "Button",
-                listOf(
-                    ComposableDemo("Filled Button") { ButtonDemo() },
-                    ComposableDemo("Filled Tonal Button") { FilledTonalButtonDemo() },
-                    ComposableDemo("Filled Variant Button") { FilledVariantButtonDemo() },
-                    ComposableDemo("Outlined Button") { OutlinedButtonDemo() },
-                    ComposableDemo("Child Button") { ChildButtonDemo() },
-                    ComposableDemo("Multiline Button") { MultilineButtonDemo() },
-                    ComposableDemo("Avatar Button") { AvatarButtonDemo() },
-                    ComposableDemo("Button (Image Background)") { ButtonBackgroundImageDemo() },
-                )
-            ),
             ComposableDemo("Compact Button") { CompactButtonDemo() },
             ComposableDemo("Icon Button") { IconButtonDemo() },
             ComposableDemo("Image Button") { ImageButtonDemo() },
@@ -75,7 +78,6 @@ val WearMaterial3Demos =
                     ComposableDemo("Sizes and Colors") { EdgeButtonMultiDemo() },
                     ComposableDemo("Configurable") { EdgeButtonConfigurableDemo() },
                     ComposableDemo("Simple Edge Button below SLC") { EdgeButtonListSample() },
-                    ComposableDemo("Edge Button Below C") { EdgeButtonBelowColumnDemo() },
                     ComposableDemo("Edge Button Below LC") { EdgeButtonBelowLazyColumnDemo() },
                     ComposableDemo("Edge Button Below SLC") {
                         EdgeButtonBelowScalingLazyColumnDemo()
@@ -93,6 +95,7 @@ val WearMaterial3Demos =
             Material3DemoCategory("Time Text", TimeTextDemos),
             ComposableDemo("Card") { CardDemo() },
             ComposableDemo("Animated Shape Buttons") { AnimatedShapeButtonDemo() },
+            ComposableDemo("Animated Shape Toggle Buttons") { AnimatedShapeToggleButtonDemo() },
             ComposableDemo("Text Toggle Button") { TextToggleButtonDemo() },
             ComposableDemo("Icon Toggle Button") { IconToggleButtonDemo() },
             ComposableDemo("Checkbox Button") { CheckboxButtonDemo() },
@@ -150,7 +153,6 @@ val WearMaterial3Demos =
                     },
                 )
             ),
-            Material3DemoCategory(title = "Typography", TypographyDemos),
             Material3DemoCategory(
                 "Animated Text",
                 if (Build.VERSION.SDK_INT > 31) {

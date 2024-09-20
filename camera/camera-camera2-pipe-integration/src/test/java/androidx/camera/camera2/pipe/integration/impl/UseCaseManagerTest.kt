@@ -28,13 +28,13 @@ import android.hardware.camera2.params.SessionConfiguration.SESSION_HIGH_SPEED
 import android.os.Build
 import android.util.Range
 import android.util.Size
-import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraGraph.OperatingMode.Companion.HIGH_SPEED
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.CameraStream
 import androidx.camera.camera2.pipe.RequestTemplate
 import androidx.camera.camera2.pipe.integration.adapter.BlockingTestDeferrableSurface
+import androidx.camera.camera2.pipe.integration.adapter.CameraCoordinatorAdapter
 import androidx.camera.camera2.pipe.integration.adapter.CameraStateAdapter
 import androidx.camera.camera2.pipe.integration.adapter.CameraUseCaseAdapter
 import androidx.camera.camera2.pipe.integration.adapter.FakeTestUseCase
@@ -676,21 +676,17 @@ class UseCaseManagerTest {
         val fakeCameraMetadata =
             FakeCameraMetadata(cameraId = cameraId, characteristics = characteristicsMap)
         val fakeCamera = FakeCamera()
+        val cameraPipe = CameraPipe(CameraPipe.Config(ApplicationProvider.getApplicationContext()))
         return UseCaseManager(
-                cameraPipe =
-                    CameraPipe(CameraPipe.Config(ApplicationProvider.getApplicationContext())),
-                cameraConfig = CameraConfig(cameraId),
+                cameraPipe = cameraPipe,
+                cameraCoordinator = CameraCoordinatorAdapter(cameraPipe, cameraPipe.cameras()),
                 callbackMap = CameraCallbackMap(),
                 requestListener = ComboRequestListener(),
+                cameraConfig = CameraConfig(cameraId),
                 builder = useCaseCameraComponentBuilder,
                 cameraControl = fakeCamera.cameraControlInternal,
                 zslControl = ZslControlNoOpImpl(),
                 controls = controls as java.util.Set<UseCaseCameraControl>,
-                cameraProperties =
-                    FakeCameraProperties(
-                        metadata = fakeCameraMetadata,
-                        cameraId = cameraId,
-                    ),
                 camera2CameraControl =
                     Camera2CameraControl.create(
                         FakeCamera2CameraControlCompat(),
@@ -698,8 +694,6 @@ class UseCaseManagerTest {
                         ComboRequestListener()
                     ),
                 cameraStateAdapter = CameraStateAdapter(),
-                cameraGraphFlags = CameraGraph.Flags(),
-                cameraInternal = { fakeCamera },
                 cameraQuirks =
                     CameraQuirks(
                         fakeCameraMetadata,
@@ -708,12 +702,18 @@ class UseCaseManagerTest {
                             OutputSizesCorrector(fakeCameraMetadata, null)
                         )
                     ),
-                displayInfoManager =
-                    DisplayInfoManager(ApplicationProvider.getApplicationContext()),
-                context = ApplicationProvider.getApplicationContext(),
+                cameraInternal = { fakeCamera },
+                useCaseThreads = { useCaseThreads },
                 cameraInfoInternal = { fakeCamera.cameraInfoInternal },
                 templateParamsOverride = templateParamsOverride,
-                useCaseThreads = { useCaseThreads },
+                context = ApplicationProvider.getApplicationContext(),
+                cameraProperties =
+                    FakeCameraProperties(
+                        metadata = fakeCameraMetadata,
+                        cameraId = cameraId,
+                    ),
+                displayInfoManager =
+                    DisplayInfoManager(ApplicationProvider.getApplicationContext()),
             )
             .also { useCaseManagerList.add(it) }
     }

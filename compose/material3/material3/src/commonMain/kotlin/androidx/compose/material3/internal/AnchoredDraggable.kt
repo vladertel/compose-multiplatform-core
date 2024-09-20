@@ -566,7 +566,7 @@ internal class AnchoredDraggableState<T>(
         if (anchors.hasAnchorFor(targetValue)) {
             try {
                 dragMutex.mutate(dragPriority) {
-                    dragTarget = if (confirmValueChange(targetValue)) targetValue else currentValue
+                    dragTarget = targetValue
                     restartable(inputs = { anchors to this@AnchoredDraggableState.targetValue }) {
                         (latestAnchors, latestTarget) ->
                         anchoredDragScope.block(latestAnchors, latestTarget)
@@ -857,7 +857,14 @@ private class DraggableAnchorsNode<T>(
                 } else state.requireOffset()
             val xOffset = if (orientation == Orientation.Horizontal) offset else 0f
             val yOffset = if (orientation == Orientation.Vertical) offset else 0f
-            placeable.place(xOffset.roundToInt(), yOffset.roundToInt())
+            // Tagging as motion frame of reference placement, meaning the placement
+            // contains scrolling. This allows the consumer of this placement offset to
+            // differentiate this offset vs. offsets from structural changes. Generally
+            // speaking, this signals a preference to directly apply changes rather than
+            // animating, to avoid a chasing effect to scrolling.
+            withMotionFrameOfReferencePlacement {
+                placeable.place(xOffset.roundToInt(), yOffset.roundToInt())
+            }
         }
     }
 }

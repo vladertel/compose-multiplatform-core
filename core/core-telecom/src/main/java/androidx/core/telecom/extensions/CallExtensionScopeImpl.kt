@@ -16,9 +16,7 @@
 
 package androidx.core.telecom.extensions
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -28,24 +26,26 @@ import android.telecom.Call
 import android.telecom.Call.Callback
 import android.telecom.InCallService
 import android.telecom.PhoneAccount
+import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
-import androidx.core.content.ContextCompat
 import androidx.core.telecom.CallsManager
 import androidx.core.telecom.internal.CapabilityExchangeListenerRemote
 import androidx.core.telecom.internal.utils.Utils
 import androidx.core.telecom.util.ExperimentalAppActions
 import java.util.Collections
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlin.math.min
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
@@ -152,6 +152,24 @@ internal class CallExtensionScopeImpl(
         return extension
     }
 
+    override fun addLocalCallSilenceExtension(
+        onIsLocallySilencedUpdated: suspend (Boolean) -> Unit
+    ): LocalCallSilenceExtensionRemoteImpl {
+        val extension = LocalCallSilenceExtensionRemoteImpl(callScope, onIsLocallySilencedUpdated)
+        registerExtension {
+            CallExtensionCreator(
+                extensionCapability =
+                    Capability().apply {
+                        featureId = Extensions.LOCAL_CALL_SILENCE
+                        featureVersion = LocalCallSilenceExtensionImpl.VERSION
+                        supportedActions = extension.actions
+                    },
+                onExchangeComplete = extension::onExchangeComplete
+            )
+        }
+        return extension
+    }
+
     /**
      * Register an extension with this call, whose capability will be negotiated with the VOIP
      * application.
@@ -210,30 +228,19 @@ internal class CallExtensionScopeImpl(
         if (Utils.hasPlatformV2Apis()) {
             // Android CallsManager V+ check
             if (details.hasProperty(CallsManager.PROPERTY_IS_TRANSACTIONAL)) {
+                Log.d(TAG, "resolveCallExtensionsType: PROPERTY_IS_TRANSACTIONAL present")
                 return CAPABILITY_EXCHANGE
             }
             // Android CallsManager U check
-            // Verify read phone numbers permission to see if phone account supports transactional
-            // ops.
-            if (
-                ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.READ_PHONE_NUMBERS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val telecomManager =
-                    applicationContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-                val phoneAccount = telecomManager.getPhoneAccount(details.accountHandle)
-                if (
-                    phoneAccount?.hasCapabilities(
-                        PhoneAccount.CAPABILITY_SUPPORTS_TRANSACTIONAL_OPERATIONS
-                    ) == true
-                ) {
-                    return CAPABILITY_EXCHANGE
-                }
-            } else {
-                Log.i(TAG, "Unable to resolve call extension type due to lack of permission.")
+            val acct = getPhoneAccountIfAllowed(details.accountHandle)
+            if (acct == null) {
+                Log.d(TAG, "resolveCallExtensionsType: Unable to resolve PA")
                 type = UNKNOWN
+            } else if (
+                acct.hasCapabilities(PhoneAccount.CAPABILITY_SUPPORTS_TRANSACTIONAL_OPERATIONS)
+            ) {
+                Log.d(TAG, "resolveCallExtensionsType: PA supports transactional API")
+                return CAPABILITY_EXCHANGE
             }
         }
         // The extras may come in after the call is first signalled to InCallService - wait for the
@@ -256,21 +263,55 @@ internal class CallExtensionScopeImpl(
         if (callExtras.containsKey(CallsManager.EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED)) {
             return CAPABILITY_EXCHANGE
         }
-        Log.i(TAG, "Unable to resolve call extension type. Returning $type.")
+        Log.i(
+            TAG,
+            "resolveCallExtensionsType: Unable to resolve call extension type. " +
+                "Returning $type."
+        )
         return type
     }
+
+    private suspend fun getPhoneAccountIfAllowed(handle: PhoneAccountHandle): PhoneAccount? =
+        coroutineScope {
+            val telecomManager =
+                applicationContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            async(Dispatchers.IO) {
+                    try {
+                        telecomManager.getPhoneAccount(handle)
+                    } catch (e: SecurityException) {
+                        Log.i(
+                            TAG,
+                            "getPhoneAccountIfAllowed: Unable to resolve call extension " +
+                                "type due to lack of permission."
+                        )
+                        null
+                    }
+                }
+                .await()
+        }
 
     /** Perform the operation to connect the extensions to the call. */
     internal suspend fun connectExtensionSession() {
         val type = resolveCallExtensionsType()
         Log.d(TAG, "connectExtensionsSession: type=$type")
-        // When we support EXTRAs, extensions should wrap this detail into a generic interface
-        val extensions = performExchangeWithRemote()
+        var extensions: CapabilityExchangeResult? = null
         try {
             when (type) {
-                CAPABILITY_EXCHANGE -> initializeExtensions(extensions)
-                else -> Log.w(TAG, "connectExtensions: unexpected type: $type")
+                CAPABILITY_EXCHANGE,
+                UNKNOWN -> {
+                    // When we support EXTRAs, extensions should wrap this detail into a generic
+                    // interface
+                    extensions = performExchangeWithRemote()
+                }
+                else -> {
+                    Log.w(
+                        TAG,
+                        "connectExtensions: unexpected type: $type. Proceeding with " +
+                            "no extension support"
+                    )
+                }
             }
+            initializeExtensions(extensions)
             invokeDelegate()
             waitForDestroy()
         } finally {
@@ -287,11 +328,11 @@ internal class CallExtensionScopeImpl(
      * does not support extensions at all.
      */
     private suspend fun performExchangeWithRemote(): CapabilityExchangeResult? {
-        Log.d(TAG, "requestExtensions: requesting extensions from remote")
+        Log.d(TAG, "performExchangeWithRemote: requesting extensions from remote")
         val extensions =
             withTimeoutOrNull(CAPABILITY_EXCHANGE_TIMEOUT_MS) { registerWithRemoteService() }
         if (extensions == null) {
-            Log.w(TAG, "startCapabilityExchange: never received response")
+            Log.w(TAG, "performExchangeWithRemote: never received response")
         }
         return extensions
     }
@@ -338,7 +379,7 @@ internal class CallExtensionScopeImpl(
      * @return the remote capabilities and Binder interface used to communicate with the remote
      */
     private suspend fun registerWithRemoteService(): CapabilityExchangeResult? =
-        suspendCoroutine { continuation ->
+        suspendCancellableCoroutine { continuation ->
             val binder =
                 object : ICapabilityExchange.Stub() {
                     override fun beginExchange(

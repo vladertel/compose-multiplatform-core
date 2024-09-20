@@ -210,10 +210,7 @@ public class PdfLoaderCallbacksImpl(
             searchModel?.setNumPages(numPages)
         }
 
-        if (isTextSearchActive) {
-            findInFileView.setFindInFileView(true)
-            findInFileView.setVisibility(VISIBLE)
-        }
+        findInFileView.setFindInFileView(isTextSearchActive)
     }
 
     override fun documentNotLoaded(status: PdfStatus) {
@@ -256,9 +253,7 @@ public class PdfLoaderCallbacksImpl(
 
     override fun setPageDimensions(pageNum: Int, dimensions: Dimensions) {
         if (viewState.get() != ViewState.NO_VIEW) {
-
             paginatedView.model.addPage(pageNum, dimensions)
-
             layoutHandler!!.pageLayoutReach = paginatedView.model.size
 
             if (

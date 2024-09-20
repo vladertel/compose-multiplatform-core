@@ -390,8 +390,15 @@ internal fun measureLazyGrid(
             consumedScroll = consumedScroll,
             measureResult =
                 layout(layoutWidth, layoutHeight) {
-                    positionedItems.fastForEach { it.place(this) }
-                    stickingItems.fastForEach { it.place(this) }
+                    // Tagging as motion frame of reference placement, meaning the placement
+                    // contains scrolling. This allows the consumer of this placement offset to
+                    // differentiate this offset vs. offsets from structural changes. Generally
+                    // speaking, this signals a preference to directly apply changes rather than
+                    // animating, to avoid a chasing effect to scrolling.
+                    withMotionFrameOfReferencePlacement {
+                        positionedItems.fastForEach { it.place(this) }
+                        stickingItems.fastForEach { it.place(this) }
+                    }
                     // we attach it during the placement so LazyGridState can trigger re-placement
                     placementScopeInvalidator.attachToScope()
                 },
@@ -472,7 +479,7 @@ private fun calculateItemsOffsets(
         fun Int.reverseAware() = if (!reverseLayout) this else linesCount - this - 1
 
         val sizes = IntArray(linesCount) { index -> lines[index.reverseAware()].mainAxisSize }
-        val offsets = IntArray(linesCount) { 0 }
+        val offsets = IntArray(linesCount)
         if (isVertical) {
             with(requirePreconditionNotNull(verticalArrangement) { "null verticalArrangement" }) {
                 density.arrange(mainAxisLayoutSize, sizes, offsets)

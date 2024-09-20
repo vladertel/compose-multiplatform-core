@@ -26,6 +26,7 @@ import androidx.core.telecom.InCallServiceCompat
 import androidx.core.telecom.extensions.CallExtensionScope
 import androidx.core.telecom.extensions.Capability
 import androidx.core.telecom.extensions.Extensions
+import androidx.core.telecom.extensions.LocalCallSilenceExtensionImpl
 import androidx.core.telecom.extensions.Participant
 import androidx.core.telecom.extensions.ParticipantExtensionImpl
 import androidx.core.telecom.extensions.ParticipantExtensionRemote
@@ -128,6 +129,22 @@ class E2EExtensionTests(private val parameters: TestParameters) : BaseTelecomTes
                     activeParticipantState.first { it == expected }
                 }
             assertEquals("Never received expected active participant", expected, result)
+        }
+    }
+
+    // TODO:: b/364316364 should assert on a per call basis
+    internal class CachedLocalSilence(scope: CallExtensionScope) {
+        private val isLocallySilenced = MutableStateFlow(false)
+
+        val extension =
+            scope.addLocalCallSilenceExtension(onIsLocallySilencedUpdated = isLocallySilenced::emit)
+
+        suspend fun waitForLocalCallSilenceState(expected: Boolean) {
+            val result =
+                withTimeoutOrNull(ICS_EXTENSION_UPDATE_TIMEOUT_MS) {
+                    isLocallySilenced.first { it == expected }
+                }
+            assertEquals("Never received local call silence state", expected, result)
         }
     }
 
@@ -235,6 +252,10 @@ class E2EExtensionTests(private val parameters: TestParameters) : BaseTelecomTes
                     val participants = CachedParticipants(this)
                     onConnected {
                         hasConnected = true
+                        assertTrue(
+                            "Participants are not supported",
+                            participants.extension.isSupported
+                        )
                         // Wait for initial state
                         participants.waitForParticipants(emptySet())
                         participants.waitForActiveParticipant(null)
@@ -309,6 +330,50 @@ class E2EExtensionTests(private val parameters: TestParameters) : BaseTelecomTes
                         // Test ICS -> VOIP connection by sending events
                         raiseHandAction.action.requestRaisedHandStateChange(true)
                         callback.waitForRaiseHandState(voipCallId, true)
+
+                        call.disconnect()
+                    }
+                }
+            }
+            assertTrue("onConnected never received", hasConnected)
+        }
+    }
+
+    /**
+     * This is an end to end test that verifies a VoIP application and InCallService can add the
+     * LocalCallSilenceExtension and toggle the value.
+     */
+    @LargeTest
+    @Test(timeout = 10000)
+    fun testVoipAndIcsTogglingTheLocalCallSilenceExtension(): Unit = runBlocking {
+        usingIcs { ics ->
+            val voipAppControl = bindToVoipAppWithExtensions()
+            val callback = TestCallCallbackListener(this)
+            voipAppControl.setCallback(callback)
+            val voipCallId =
+                createAndVerifyVoipCall(
+                    voipAppControl,
+                    listOf(getLocalSilenceCapability(setOf())),
+                    parameters.direction
+                )
+
+            val call = TestUtils.waitOnInCallServiceToReachXCalls(ics, 1)!!
+            var hasConnected = false
+            with(ics) {
+                connectExtensions(call) {
+                    val localSilenceExtension = CachedLocalSilence(this)
+                    onConnected {
+                        hasConnected = true
+                        // VoIP --> ICS
+                        voipAppControl.updateIsLocallySilenced(false)
+                        localSilenceExtension.waitForLocalCallSilenceState(false)
+
+                        voipAppControl.updateIsLocallySilenced(true)
+                        localSilenceExtension.waitForLocalCallSilenceState(true)
+
+                        // ICS -> VOIP
+                        localSilenceExtension.extension.requestLocalCallSilenceUpdate(false)
+                        callback.waitForIsLocalSilenced(voipCallId, false)
 
                         call.disconnect()
                     }
@@ -429,6 +494,14 @@ class E2EExtensionTests(private val parameters: TestParameters) : BaseTelecomTes
         return createCapability(
             id = Extensions.PARTICIPANT,
             version = ParticipantExtensionImpl.VERSION,
+            actions = actions
+        )
+    }
+
+    private fun getLocalSilenceCapability(actions: Set<Int>): Capability {
+        return createCapability(
+            id = Extensions.LOCAL_CALL_SILENCE,
+            version = LocalCallSilenceExtensionImpl.VERSION,
             actions = actions
         )
     }

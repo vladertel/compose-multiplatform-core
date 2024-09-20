@@ -25,7 +25,7 @@ import androidx.compose.ui.window.DialogProperties
 
 @Immutable
 @ExperimentalMaterial3ExpressiveApi
-actual class ModalExpandedNavigationRailProperties
+actual class ModalWideNavigationRailProperties
 actual constructor(
     actual val shouldDismissOnBackPress: Boolean,
 ) {
@@ -44,8 +44,8 @@ actual constructor(
 
 @Immutable
 @ExperimentalMaterial3ExpressiveApi
-actual object ModalExpandedNavigationRailDefaults {
-    actual val Properties = ModalExpandedNavigationRailProperties()
+actual object DismissibleModalWideNavigationRailDefaults {
+    actual val Properties = ModalWideNavigationRailProperties()
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -53,7 +53,7 @@ actual object ModalExpandedNavigationRailDefaults {
 @Composable
 internal actual fun ModalWideNavigationRailDialog(
     onDismissRequest: () -> Unit,
-    properties: ModalExpandedNavigationRailProperties,
+    properties: ModalWideNavigationRailProperties,
     onPredictiveBack: (Float) -> Unit,
     onPredictiveBackCancelled: () -> Unit,
     predictiveBackState: RailPredictiveBackState,

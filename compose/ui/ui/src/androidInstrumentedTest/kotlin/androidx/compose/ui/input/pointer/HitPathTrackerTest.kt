@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextInputService
@@ -93,6 +94,58 @@ class HitPathTrackerTest {
     @Before
     fun setup() {
         hitPathTracker = HitPathTracker(layoutNode.outerCoordinator)
+    }
+
+    // Adds unattached nodes and verifies they aren't added to hit path tracker.
+    @Test
+    fun addPointerInputFilters_allInDetachedState_notAdded() {
+        val log = mutableListOf<LogEntry>()
+
+        val root = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+
+        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+
+        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+
+        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+
+        // Detached pointer input nodes will NOT be added
+        hitPathTracker.addHitPath(PointerId(3), listOf(root, middle1, leaf1))
+        hitPathTracker.addHitPath(PointerId(5), listOf(root, middle2, leaf2))
+        hitPathTracker.addHitPath(PointerId(7), listOf(root, middle3, leaf3))
+
+        val expectedRoot = NodeParent()
+
+        assertThat(areEqual(hitPathTracker.root, expectedRoot)).isTrue()
+
+        val log1 =
+            log.getOnCancelLog().filter {
+                it.pointerInputNode == leaf1 ||
+                    it.pointerInputNode == middle1 ||
+                    it.pointerInputNode == root
+            }
+
+        val log2 =
+            log.getOnCancelLog().filter {
+                it.pointerInputNode == leaf2 ||
+                    it.pointerInputNode == middle2 ||
+                    it.pointerInputNode == root
+            }
+
+        val log3 =
+            log.getOnCancelLog().filter {
+                it.pointerInputNode == leaf3 ||
+                    it.pointerInputNode == middle3 ||
+                    it.pointerInputNode == root
+            }
+
+        assertThat(log).hasSize(0)
+        assertThat(log1).hasSize(0)
+        assertThat(log2).hasSize(0)
+        assertThat(log3).hasSize(0)
     }
 
     @Test
@@ -247,14 +300,9 @@ class HitPathTrackerTest {
         val pointerId1 = PointerId(1)
         // Modifier.Node(s) hit by the first pointer input event
         hitPathTracker.addHitPath(pointerId1, listOf(pif1, pif2, pif3, pif4))
-        // Clear any old hits from previous calls (does not really apply here since it's the first
-        // call)
-        hitPathTracker.removeDetachedPointerInputNodes()
 
         // Modifier.Node(s) hit by the second pointer input event
         hitPathTracker.addHitPath(pointerId1, listOf(pif1, pif2, pif3, pif4, pifNew1))
-        // Clear any old hits from previous calls
-        hitPathTracker.removeDetachedPointerInputNodes()
 
         val expectedRoot =
             NodeParent().apply {
@@ -306,15 +354,10 @@ class HitPathTrackerTest {
         // Modifier.Node(s) hit by the first pointer input event
         hitPathTracker.addHitPath(pointerId1, listOf(pif1, pif2, pif3, pif4))
         hitPathTracker.addHitPath(pointerId2, listOf(pif5, pif6, pif7, pif8))
-        // Clear any old hits from previous calls (does not really apply here since it's the first
-        // call)
-        hitPathTracker.removeDetachedPointerInputNodes()
 
         // Modifier.Node(s) hit by the second pointer input event
         hitPathTracker.addHitPath(pointerId1, listOf(pif1, pif2, pif3, pif4))
         hitPathTracker.addHitPath(pointerId2, listOf(pif5, pif6, pif7, pif8, pifNew1))
-        // Clear any old hits from previous calls
-        hitPathTracker.removeDetachedPointerInputNodes()
 
         val expectedRoot =
             NodeParent().apply {
@@ -972,14 +1015,6 @@ class HitPathTrackerTest {
     }
 
     @Test
-    fun removeDetachedPointerInputFilters_noNodes_hitResultJustHasRootAndDoesNotCrash() {
-        val throwable = catchThrowable { hitPathTracker.removeDetachedPointerInputNodes() }
-
-        assertThat(throwable).isNull()
-        assertThat(areEqual(hitPathTracker.root, NodeParent()))
-    }
-
-    @Test
     fun removeDetachedPointerInputFilters_complexNothingDetached_nothingRemovedNoCancelsCalled() {
 
         // Arrange.
@@ -1009,8 +1044,6 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId5, listOf(pif9, pif8))
 
         // Act.
-
-        hitPathTracker.removeDetachedPointerInputNodes()
 
         // Assert.
 
@@ -1054,13 +1087,16 @@ class HitPathTrackerTest {
     @Test
     fun removeDetachedPointerInputFilters_1PathRootDetached_allRemovedAndCorrectCancels() {
         val log = mutableListOf<LogEntry>()
-        val root = PointerInputNodeMock(log = log, coordinator = LayoutCoordinatesStub(false))
-        val middle = PointerInputNodeMock(log = log, coordinator = LayoutCoordinatesStub(false))
-        val leaf = PointerInputNodeMock(log = log, coordinator = LayoutCoordinatesStub(false))
+        val root = PointerInputNodeMock(log = log)
+        val middle = PointerInputNodeMock(log = log)
+        val leaf = PointerInputNodeMock(log = log)
 
         hitPathTracker.addHitPath(PointerId(0), listOf(root, middle, leaf))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detaches nodes
+        leaf.remove()
+        middle.remove()
+        root.remove()
 
         assertThat(areEqual(hitPathTracker.root, NodeParent())).isTrue()
 
@@ -1075,13 +1111,14 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_1PathMiddleDetached_removesAndCancelsCorrect() {
         val log = mutableListOf<LogEntry>()
         val root = PointerInputNodeMock(log)
-        val middle = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val child = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle = PointerInputNodeMock(log)
+        val child = PointerInputNodeMock(log)
 
         val pointerId = PointerId(0)
         hitPathTracker.addHitPath(pointerId, listOf(root, middle, child))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        middle.remove()
+        child.remove()
 
         val expectedRoot =
             NodeParent().apply { children.add(Node(root).apply { pointerIds.add(pointerId) }) }
@@ -1101,12 +1138,13 @@ class HitPathTrackerTest {
         val log = mutableListOf<LogEntry>()
         val root = PointerInputNodeMock(log)
         val middle = PointerInputNodeMock(log)
-        val leaf = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf = PointerInputNodeMock(log)
 
         val pointerId = PointerId(0)
         hitPathTracker.addHitPath(pointerId, listOf(root, middle, leaf))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach node
+        leaf.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1141,9 +1179,9 @@ class HitPathTrackerTest {
         val middle2 = PointerInputNodeMock(log)
         val leaf2 = PointerInputNodeMock(log)
 
-        val root3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root3 = PointerInputNodeMock(log)
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1153,7 +1191,10 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf3.remove()
+        middle3.remove()
+        root3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1199,8 +1240,8 @@ class HitPathTrackerTest {
         val log = mutableListOf<LogEntry>()
 
         val root1 = PointerInputNodeMock(log)
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
         val root2 = PointerInputNodeMock()
         val middle2 = PointerInputNodeMock()
@@ -1218,7 +1259,9 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detaches Nodes
+        leaf1.remove()
+        middle1.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1269,7 +1312,7 @@ class HitPathTrackerTest {
 
         val root2 = PointerInputNodeMock(log)
         val middle2 = PointerInputNodeMock(log)
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock(log)
         val middle3 = PointerInputNodeMock(log)
@@ -1283,7 +1326,7 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        leaf2.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1332,17 +1375,17 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_3Roots2Detached_removesAndCancelsCorrect() {
         val log = mutableListOf<LogEntry>()
 
-        val root1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root1 = PointerInputNodeMock(log)
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
-        val root2 = PointerInputNodeMock()
-        val middle2 = PointerInputNodeMock()
-        val leaf2 = PointerInputNodeMock()
+        val root2 = PointerInputNodeMock(log)
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
-        val root3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root3 = PointerInputNodeMock(log)
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1352,7 +1395,14 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach all PointerInputNodeMocks associated with pointerId1 and pointerId3.
+        leaf1.remove()
+        middle1.remove()
+        root1.remove()
+
+        leaf3.remove()
+        middle3.remove()
+        root3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1390,12 +1440,12 @@ class HitPathTrackerTest {
         val log = mutableListOf<LogEntry>()
 
         val root1 = PointerInputNodeMock(log)
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
         val root2 = PointerInputNodeMock()
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock()
         val middle3 = PointerInputNodeMock()
@@ -1409,7 +1459,11 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detaches nodes
+        leaf1.remove()
+        middle1.remove()
+        leaf2.remove()
+        middle2.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1452,11 +1506,11 @@ class HitPathTrackerTest {
 
         val root2 = PointerInputNodeMock(log)
         val middle2 = PointerInputNodeMock(log)
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock()
         val middle3 = PointerInputNodeMock()
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1466,7 +1520,9 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf2.remove()
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1511,23 +1567,34 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_3Roots3Detached_allRemovedAndCancelsCorrect() {
         val log = mutableListOf<LogEntry>()
 
-        val root1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root1 = PointerInputNodeMock(log)
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
-        val root2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root2 = PointerInputNodeMock(log)
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
-        val root3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root3 = PointerInputNodeMock(log)
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         hitPathTracker.addHitPath(PointerId(3), listOf(root1, middle1, leaf1))
         hitPathTracker.addHitPath(PointerId(5), listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(PointerId(7), listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detaches nodes
+        leaf1.remove()
+        middle1.remove()
+        root1.remove()
+
+        leaf2.remove()
+        middle2.remove()
+        root2.remove()
+
+        leaf3.remove()
+        middle3.remove()
+        root3.remove()
 
         val expectedRoot = NodeParent()
 
@@ -1555,16 +1622,16 @@ class HitPathTrackerTest {
         val log = mutableListOf<LogEntry>()
 
         val root1 = PointerInputNodeMock(log)
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
         val root2 = PointerInputNodeMock(log)
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock(log)
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1574,7 +1641,13 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf1.remove()
+        middle1.remove()
+        leaf2.remove()
+        middle2.remove()
+        leaf3.remove()
+        middle3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1605,15 +1678,15 @@ class HitPathTrackerTest {
 
         val root1 = PointerInputNodeMock(log)
         val middle1 = PointerInputNodeMock(log)
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf1 = PointerInputNodeMock(log)
 
         val root2 = PointerInputNodeMock(log)
         val middle2 = PointerInputNodeMock(log)
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock(log)
         val middle3 = PointerInputNodeMock(log)
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1623,7 +1696,10 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach all PointerInputNodeMocks associated with pointerId1 and pointerId3.
+        leaf1.remove()
+        leaf2.remove()
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1664,17 +1740,17 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_3RootsStaggeredDetached_removesAndCancelsCorrect() {
         val log = mutableListOf<LogEntry>()
 
-        val root1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root1 = PointerInputNodeMock(log)
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
         val root2 = PointerInputNodeMock(log)
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
         val root3 = PointerInputNodeMock(log)
         val middle3 = PointerInputNodeMock(log)
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1684,7 +1760,15 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root2, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root3, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf1.remove()
+        middle1.remove()
+        root1.remove()
+
+        leaf2.remove()
+        middle2.remove()
+
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1718,22 +1802,33 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_rootWith3MiddlesDetached_allRemovedAndCorrectCancels() {
         val log = mutableListOf<LogEntry>()
 
-        val root = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val root = PointerInputNodeMock(log)
 
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         hitPathTracker.addHitPath(PointerId(3), listOf(root, middle1, leaf1))
         hitPathTracker.addHitPath(PointerId(5), listOf(root, middle2, leaf2))
         hitPathTracker.addHitPath(PointerId(7), listOf(root, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach all PointerInputNodeMocks associated with pointerId1 and pointerId3.
+        leaf1.remove()
+        middle1.remove()
+
+        leaf2.remove()
+        middle2.remove()
+
+        leaf3.remove()
+        middle3.remove()
+
+        // Remove root last
+        root.remove()
 
         val expectedRoot = NodeParent()
 
@@ -1784,16 +1879,20 @@ class HitPathTrackerTest {
     fun removeDetachedPointerInputFilters_rootWith3Middles1Detached_removesAndCancelsCorrect() {
         val log = mutableListOf<LogEntry>()
 
-        val root = PointerInputNodeMock(log)
+        val parentLayoutCoordinates = LayoutCoordinatesStub(true)
 
-        val middle1 = PointerInputNodeMock(log)
-        val leaf1 = PointerInputNodeMock(log)
+        val root = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
 
-        val middle2 = PointerInputNodeMock(log)
-        val leaf2 = PointerInputNodeMock(log)
+        val middle1 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
+        val leaf1 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
 
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
+        val leaf2 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
+
+        // Detached later
+        val middle3 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
+        // Detached later
+        val leaf3 = PointerInputNodeMock(log = log, coordinator = parentLayoutCoordinates)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1803,7 +1902,9 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach both PointerInputNodeMocks
+        middle3.remove()
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1847,11 +1948,11 @@ class HitPathTrackerTest {
 
         val root = PointerInputNodeMock(log)
 
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
         val middle3 = PointerInputNodeMock(log)
         val leaf3 = PointerInputNodeMock(log)
@@ -1864,7 +1965,11 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf1.remove()
+        middle1.remove()
+        leaf2.remove()
+        middle2.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1904,14 +2009,14 @@ class HitPathTrackerTest {
 
         val root = PointerInputNodeMock(log)
 
-        val middle1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle1 = PointerInputNodeMock(log)
+        val leaf1 = PointerInputNodeMock(log)
 
-        val middle2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle2 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
 
-        val middle3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val middle3 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -1921,7 +2026,15 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root, middle2, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root, middle3, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detaches nodes
+        leaf1.remove()
+        middle1.remove()
+
+        leaf2.remove()
+        middle2.remove()
+
+        leaf3.remove()
+        middle3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -1960,7 +2073,7 @@ class HitPathTrackerTest {
         val middle = PointerInputNodeMock(log)
 
         val leaf1 = PointerInputNodeMock(log)
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf2 = PointerInputNodeMock(log)
         val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
@@ -1971,7 +2084,8 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(pointerId2, listOf(root, middle, leaf2))
         hitPathTracker.addHitPath(pointerId3, listOf(root, middle, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Remove nodes
+        leaf2.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -2013,9 +2127,9 @@ class HitPathTrackerTest {
 
         val middle = PointerInputNodeMock(log)
 
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf1 = PointerInputNodeMock(log)
         val leaf2 = PointerInputNodeMock(log)
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -2025,7 +2139,9 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(PointerId(5), listOf(root, middle, leaf2))
         hitPathTracker.addHitPath(PointerId(7), listOf(root, middle, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf1.remove()
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -2067,9 +2183,9 @@ class HitPathTrackerTest {
 
         val middle = PointerInputNodeMock(log)
 
-        val leaf1 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf2 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
-        val leaf3 = PointerInputNodeMock(log, coordinator = LayoutCoordinatesStub(false))
+        val leaf1 = PointerInputNodeMock(log)
+        val leaf2 = PointerInputNodeMock(log)
+        val leaf3 = PointerInputNodeMock(log)
 
         val pointerId1 = PointerId(3)
         val pointerId2 = PointerId(5)
@@ -2079,7 +2195,10 @@ class HitPathTrackerTest {
         hitPathTracker.addHitPath(PointerId(5), listOf(root, middle, leaf2))
         hitPathTracker.addHitPath(PointerId(7), listOf(root, middle, leaf3))
 
-        hitPathTracker.removeDetachedPointerInputNodes()
+        // Detach nodes
+        leaf1.remove()
+        leaf2.remove()
+        leaf3.remove()
 
         val expectedRoot =
             NodeParent().apply {
@@ -3299,6 +3418,8 @@ private class MockOwner(
     override val windowInfo: WindowInfo
         get() = TODO("Not yet implemented")
 
+    override val rectManager: RectManager = RectManager()
+
     @Deprecated(
         "fontLoader is deprecated, use fontFamilyResolver",
         replaceWith = ReplaceWith("fontFamilyResolver")
@@ -3415,6 +3536,9 @@ private class MockOwner(
 
             override fun transform(matrix: Matrix) {}
 
+            override val underlyingMatrix: Matrix
+                get() = Matrix()
+
             override fun inverseTransform(matrix: Matrix) {}
 
             override fun mapOffset(point: Offset, inverse: Boolean) = point
@@ -3426,6 +3550,8 @@ private class MockOwner(
     override fun onLayoutChange(layoutNode: LayoutNode) {
         layoutChangeCount++
     }
+
+    override fun onLayoutNodeDeactivated(layoutNode: LayoutNode) {}
 
     override fun onInteropViewLayoutChange(view: InteropView) {}
 

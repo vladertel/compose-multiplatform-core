@@ -75,6 +75,7 @@ import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
@@ -338,6 +339,8 @@ internal class RootNodeOwner(
         override val pointerIconService = PointerIconServiceImpl()
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
+        // TODO: 1.8.0-alpha02 Implement ComposeUiFlags.isRectTrackingEnabled
+        override val rectManager = RectManager()
 
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override val fontLoader = androidx.compose.ui.text.platform.FontLoader()
@@ -487,6 +490,9 @@ internal class RootNodeOwner(
                 semanticsOwner = semanticsOwner,
                 semanticsNodeId = layoutNode.semanticsId
             )
+        }
+
+        override fun onLayoutNodeDeactivated(layoutNode: LayoutNode) {
         }
 
         @InternalComposeUiApi

@@ -112,8 +112,6 @@ internal class PointerInputEventProcessor(val root: LayoutNode) {
                 }
             }
 
-            hitPathTracker.removeDetachedPointerInputNodes()
-
             // Dispatch to PointerInputFilters
             val dispatchedToSomething =
                 hitPathTracker.dispatchChanges(internalPointerEvent, isInBounds)

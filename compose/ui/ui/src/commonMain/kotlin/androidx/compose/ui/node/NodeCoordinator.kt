@@ -527,7 +527,13 @@ internal abstract class NodeCoordinator(
                 layoutNode.innerLayerCoordinatorIsDirty = true
                 invalidateParentLayer()
             } else if (updateParameters) {
-                updateLayerParameters()
+                val positionalPropertiesChanged = updateLayerParameters()
+                if (positionalPropertiesChanged) {
+                    layoutNode
+                        .requireOwner()
+                        .rectManager
+                        .onLayoutLayerPositionalPropertiesChanged(layoutNode)
+                }
             }
         } else {
             this.layerBlock = null
@@ -1347,7 +1353,9 @@ internal abstract class NodeCoordinator(
                         layoutDelegate.measurePassDelegate
                             .notifyChildrenUsingCoordinatesWhilePlacing()
                     }
-                    layoutNode.owner?.requestOnPositionedCallback(layoutNode)
+                    val owner = layoutNode.requireOwner()
+                    owner.rectManager.onLayoutLayerPositionalPropertiesChanged(layoutNode)
+                    owner.requestOnPositionedCallback(layoutNode)
                 }
             }
         }
@@ -1414,7 +1422,7 @@ internal abstract class NodeCoordinator(
 @Suppress("PrimitiveInCollection")
 private fun compareEquals(
     a: MutableObjectIntMap<AlignmentLine>?,
-    b: Map<AlignmentLine, Int>
+    b: Map<out AlignmentLine, Int>
 ): Boolean {
     if (a == null) return false
     if (a.size != b.size) return false

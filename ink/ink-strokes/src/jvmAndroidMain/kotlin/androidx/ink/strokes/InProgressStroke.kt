@@ -47,7 +47,6 @@ import java.nio.ShortBuffer
  * 6. For best performance, reuse this object and go back to step 1 rather than allocating a new
  *    instance.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
 @Suppress("NotCloseable") // Finalize is only used to free the native peer.
 public class InProgressStroke {
 
@@ -208,6 +207,8 @@ public class InProgressStroke {
 
     /**
      * Add the specified range of inputs from this stroke to the output [MutableStrokeInputBatch].
+     *
+     * @return [out]
      */
     @JvmOverloads
     public fun populateInputs(
@@ -225,6 +226,8 @@ public class InProgressStroke {
     /**
      * Gets the value of the i-th input and overwrites [out]. Requires that [index] is positive and
      * less than [getInputCount].
+     *
+     * @return [out]
      */
     public fun populateInput(out: StrokeInput, @IntRange(from = 0) index: Int): StrokeInput {
         val size = getInputCount()
@@ -251,11 +254,13 @@ public class InProgressStroke {
      * Writes to [outBoxAccumulator] the bounding box of the vertex positions of the mesh for brush
      * coat [coatIndex].
      *
+     * @param coatIndex The index of the coat to obtain the bounding box from.
      * @param outBoxAccumulator The pre-allocated [BoxAccumulator] to be filled with the result.
+     * @return [outBoxAccumulator]
      */
     public fun populateMeshBounds(
         @IntRange(from = 0) coatIndex: Int,
-        outBoxAccumulator: BoxAccumulator
+        outBoxAccumulator: BoxAccumulator,
     ): BoxAccumulator {
         require(coatIndex >= 0 && coatIndex < getBrushCoatCount()) {
             "coatIndex=$coatIndex must be between 0 and brushCoatCount=${getBrushCoatCount()}"
@@ -269,6 +274,7 @@ public class InProgressStroke {
      * [updateShape] since the most recent call to [start] or [resetUpdatedRegion].
      *
      * @param outBoxAccumulator The pre-allocated [BoxAccumulator] to be filled with the result.
+     * @return [outBoxAccumulator]
      */
     public fun populateUpdatedRegion(outBoxAccumulator: BoxAccumulator): BoxAccumulator {
         nativeFillUpdatedRegion(nativePointer, outBoxAccumulator)

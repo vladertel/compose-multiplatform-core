@@ -29,7 +29,6 @@ import androidx.ink.nativeloader.NativeLoader
  * change, and a [MutableStrokeInputBatch] for data that is meant to be modified or incrementally
  * built.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
 @Suppress("NotCloseable") // Finalize is only used to free the native peer.
 public abstract class StrokeInputBatch internal constructor(nativePointer: Long) {
 
@@ -100,8 +99,8 @@ public abstract class StrokeInputBatch internal constructor(nativePointer: Long)
     public operator fun get(index: Int): StrokeInput = populate(index, StrokeInput())
 
     /**
-     * Gets the value of the i-th input and overwrites [outStrokeInput]. Requires that [index] is
-     * positive and less than [size]. Returns [outStrokeInput].
+     * Gets the value of the i-th input and overwrites [outStrokeInput], which it then returns.
+     * Requires that [index] is positive and less than [size].
      */
     public fun populate(index: Int, outStrokeInput: StrokeInput): StrokeInput {
         require(index < size && index >= 0) { "index ($index) must be in [0, size=$size)" }
@@ -132,7 +131,6 @@ public abstract class StrokeInputBatch internal constructor(nativePointer: Long)
  * An immutable implementation of [StrokeInputBatch]. For a mutable alternative, see
  * [MutableStrokeInputBatch].
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
 public class ImmutableStrokeInputBatch
 /**
  * Constructor for Kotlin [ImmutableStrokeInputBatch] objects that are originally created in native
@@ -177,7 +175,6 @@ constructor(nativePointer: Long) : StrokeInputBatch(nativePointer) {
  *    [0, 2π) or be [StrokeInput.NO_ORIENTATION].
  * 7) The [toolType] and [strokeUnitLengthCm] values must be the same across all inputs.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
 public class MutableStrokeInputBatch : StrokeInputBatch(StrokeInputBatchNative.createNativePeer()) {
 
     public fun clear(): Unit = MutableStrokeInputBatchNative.clear(nativePointer)

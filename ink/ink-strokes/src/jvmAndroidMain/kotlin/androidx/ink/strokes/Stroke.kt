@@ -33,7 +33,6 @@ import androidx.ink.nativeloader.NativeLoader
  * [InProgressStrokesView] or [InProgressStroke], which will ultimately return a [Stroke] when input
  * is completed.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
 @OptIn(ExperimentalInkCustomBrushApi::class)
 @Suppress("NotCloseable") // Finalize is only used to free the native peer.
 public class Stroke {
@@ -125,8 +124,8 @@ public class Stroke {
      */
     internal constructor(nativeAddress: Long, brush: Brush) {
         val shape = PartitionedMesh(StrokeJni.allocShallowCopyOfShape(nativeAddress))
-        require(shape.renderGroupCount == brush.family.coats.size) {
-            "The shape must have one render group per brush coat, but found ${shape.renderGroupCount} render groups in shape and ${brush.family.coats.size} brush coats in brush."
+        require(shape.getRenderGroupCount() == brush.family.coats.size) {
+            "The shape must have one render group per brush coat, but found ${shape.getRenderGroupCount()} render groups in shape and ${brush.family.coats.size} brush coats in brush."
         }
         this.nativeAddress = nativeAddress
         this.brush = brush
@@ -142,8 +141,8 @@ public class Stroke {
      * [PartitionedMesh] is being stored in addition to the [Brush] and [StrokeInputBatch].
      */
     public constructor(brush: Brush, inputs: StrokeInputBatch, shape: PartitionedMesh) {
-        require(shape.renderGroupCount == brush.family.coats.size) {
-            "The shape must have one render group per brush coat, but found ${shape.renderGroupCount} render groups in shape and ${brush.family.coats.size} brush coats in brush."
+        require(shape.getRenderGroupCount() == brush.family.coats.size) {
+            "The shape must have one render group per brush coat, but found ${shape.getRenderGroupCount()} render groups in shape and ${brush.family.coats.size} brush coats in brush."
         }
         this.brush = brush
         this.shape = shape
