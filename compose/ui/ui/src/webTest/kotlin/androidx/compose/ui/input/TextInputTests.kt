@@ -28,6 +28,7 @@ import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.sendFromScope
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -135,4 +136,102 @@ class TextInputTests : OnCanvasTests  {
 
         assertEquals("step1step5", textInputChannel.receive())
     }
+
+    @Test
+    fun keyboardEventPassedToTextFieldMinimal() = runTest {
+
+        val textInputChannel = Channel<String>(
+            1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        val (firstFocusRequester, secondFocusRequester) = FocusRequester.createRefs()
+
+        createComposeWindow {
+            TextField(
+                value = "",
+                onValueChange = { value ->
+                    textInputChannel.sendFromScope(value)
+                },
+                modifier = Modifier.focusRequester(firstFocusRequester)
+            )
+
+            TextField(
+                value = "",
+                onValueChange = { value ->
+                    textInputChannel.sendFromScope(value)
+                },
+                modifier = Modifier.focusRequester(secondFocusRequester)
+            )
+
+            SideEffect {
+                secondFocusRequester.requestFocus()
+                firstFocusRequester.requestFocus()
+            }
+        }
+
+        assertNull(document.querySelector("textarea"))
+
+        dispatchEvents(
+            keyDownEvent("s"),
+            keyDownEvent("t"),
+            keyDownEvent("e"),
+            keyDownEvent("p"),
+            keyDownEvent("1")
+        )
+
+
+        assertEquals("step1", textInputChannel.receive())
+        assertNull(document.querySelector("textarea"))
+
+        // trigger virtual keyboard
+        dispatchEvents(createTouchEvent("touchstart"))
+        secondFocusRequester.requestFocus()
+
+        assertNotNull(document.querySelector("textarea"))
+
+        dispatchEvents(
+            keyDownEvent("s"),
+            keyDownEvent("t"),
+            keyDownEvent("e"),
+            keyDownEvent("p"),
+            keyDownEvent("2")
+        )
+
+        assertEquals("step2", textInputChannel.receive())
+
+        val backingField = document.querySelector("textarea")!!
+
+        dispatchEvents(
+            keyDownEvent("s"),
+            keyDownEvent("t"),
+            keyDownEvent("e"),
+            keyDownEvent("p"),
+            keyDownEvent("3")
+        )
+
+        assertEquals("step2step3", textInputChannel.receive())
+
+        backingField.dispatchEvent(InputEvent("input", InputEventInit("insertText", "step4XX")))
+
+        assertEquals("step2step3step4XX", textInputChannel.receive())
+
+        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
+        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
+        assertEquals("step2step3step4", textInputChannel.receive())
+
+        // trigger hardware keyboard
+        dispatchEvents(createMouseEvent("mousedown"))
+        firstFocusRequester.requestFocus()
+
+        dispatchEvents(
+            keyDownEvent("s"),
+            keyDownEvent("t"),
+            keyDownEvent("e"),
+            keyDownEvent("p"),
+            keyDownEvent("5")
+        )
+
+        assertEquals("step1step5", textInputChannel.receive())
+    }
+
 }
