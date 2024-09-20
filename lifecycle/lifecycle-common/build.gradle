@@ -86,7 +86,7 @@ kotlin {
             }
         }
 
-        nonJvmMain {
+        nonJvmCommonMain {
             dependsOn(commonMain)
             dependencies {
                 implementation(libs.atomicFu)
