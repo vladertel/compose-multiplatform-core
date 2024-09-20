@@ -51,7 +51,7 @@ val libraryToComponents = mapOf(
         ComposeComponent(":compose:material:material"),
         ComposeComponent(":compose:material3:material3"),
         ComposeComponent(":compose:material3:material3-common"),
-        ComposeComponent(":compose:material:material-icons-core"),
+        //ComposeComponent(":compose:material:material-icons-core"),
         ComposeComponent(":compose:material:material-ripple"),
         //disable 'material-navigation' publication until Google releases its version
         //ComposeComponent(":compose:material:material-navigation"),
