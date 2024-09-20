@@ -868,11 +868,6 @@ internal class AndroidComposeView(
             return super.requestFocus(direction, previouslyFocusedRect)
         }
 
-        // When we clear focus on Pre P devices, request focus is called even when we are
-        // in touch mode. We fix this by assigning initial focus only in non-touch mode.
-        // https://developer.android.com/about/versions/pie/android-9.0-changes-28#focus
-        if (isInTouchMode) return false
-
         val focusDirection = toFocusDirection(direction) ?: Enter
         return focusOwner.focusSearch(
             focusDirection = focusDirection,

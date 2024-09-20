@@ -574,9 +574,8 @@ internal constructor(
             } else {
                 val tmpPath = outlinePath
                 if (tmpPath != null) {
-                    val androidOutline = updatePathOutline(tmpPath).apply {
-                        alpha = this@GraphicsLayer.alpha
-                    }
+                    val androidOutline =
+                        updatePathOutline(tmpPath).apply { alpha = this@GraphicsLayer.alpha }
                     impl.setOutline(androidOutline)
                 } else {
                     val roundRectOutline = obtainAndroidOutline().apply {
@@ -615,10 +614,11 @@ internal constructor(
     // Suppress deprecation for usage of setConvexPath in favor of setPath on API levels that
     // previously only supported convex path outlines
     @Suppress("deprecation")
-    private fun updatePathOutline(path: Path): AndroidOutline {
-        val resultOutline = obtainAndroidOutline()
+    private fun updatePathOutline(path: Path): AndroidOutline? {
+        val resultOutline: AndroidOutline?
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P || path.isConvex) {
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) {
+            resultOutline = obtainAndroidOutline()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 OutlineVerificationHelper.setPath(resultOutline, path)
             } else {
                 resultOutline.setConvexPath(path.asAndroidPath())
@@ -626,6 +626,7 @@ internal constructor(
             usePathForClip = !resultOutline.canClip()
         } else { // Concave outlines are not supported on older API levels
             androidOutline?.setEmpty()
+            resultOutline = null
             usePathForClip = true
             impl.isInvalidated = true
         }
