@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -194,8 +195,7 @@ class DepthSortedSetTest {
         override val inputModeManager: InputModeManager get() = throw IllegalStateException()
         override val clipboardManager: ClipboardManager get() = throw IllegalStateException()
         override val accessibilityManager: AccessibilityManager get() = throw IllegalStateException()
-        override val graphicsContext: GraphicsContext
-            get() = TODO("Not yet implemented")
+        override val graphicsContext: GraphicsContext get() = throw IllegalStateException()
         override val textToolbar: TextToolbar get() = throw IllegalStateException()
         @ExperimentalComposeUiApi
         override val autofillTree: AutofillTree get() = throw IllegalStateException()
@@ -210,11 +210,11 @@ class DepthSortedSetTest {
         ) = throw IllegalStateException()
         override fun screenToLocal(positionOnScreen: Offset): Offset = throw IllegalStateException()
         override fun localToScreen(localPosition: Offset): Offset = throw IllegalStateException()
-        override fun localToScreen(localTransform: Matrix) = throw IllegalStateException()
         override val dragAndDropManager: DragAndDropManager get() = throw IllegalStateException()
         override val pointerIconService: PointerIconService get() = throw IllegalStateException()
         override val focusOwner: FocusOwner get() = throw IllegalStateException()
         override val windowInfo: WindowInfo get() = throw IllegalStateException()
+        override val rectManager: RectManager get() = throw IllegalStateException()
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
         override val fontLoader: Font.ResourceLoader get() = throw IllegalStateException()
         override val fontFamilyResolver: FontFamily.Resolver get() = throw IllegalStateException()
@@ -232,12 +232,14 @@ class DepthSortedSetTest {
         override fun measureAndLayout(layoutNode: LayoutNode, constraints: Constraints) = throw IllegalStateException()
         override fun forceMeasureTheSubtree(layoutNode: LayoutNode, affectsLookahead: Boolean) = throw IllegalStateException()
         override fun createLayer(
-            drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
+            drawBlock: (Canvas, GraphicsLayer?) -> Unit,
             invalidateParentLayer: () -> Unit,
-            explicitLayer: GraphicsLayer?
+            explicitLayer: GraphicsLayer?,
+            forceUseOldLayers: Boolean
         ): OwnedLayer = throw IllegalStateException()
         override fun onSemanticsChange() = throw IllegalStateException()
         override fun onLayoutChange(layoutNode: LayoutNode) = throw IllegalStateException()
+        override fun onLayoutNodeDeactivated(layoutNode: LayoutNode) = throw IllegalStateException()
 
         @InternalComposeUiApi
         override fun onInteropViewLayoutChange(view: InteropView) = throw IllegalStateException()
