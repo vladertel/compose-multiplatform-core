@@ -95,7 +95,8 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
             browser {
                 testTask {
                     it.useKarma {
-                        useChrome()
+//                        useChrome()
+                        useFirefox()
                         useConfigDirectory(
                             project.rootProject.projectDir.resolve("mpp/karma.config.d/wasm")
                         )
