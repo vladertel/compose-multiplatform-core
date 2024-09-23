@@ -44,6 +44,7 @@ private enum class InternalType {
     STRING_NULLABLE,
     INT_ARRAY,
     BOOL_ARRAY,
+    DOUBLE_ARRAY,
     FLOAT_ARRAY,
     LONG_ARRAY,
     ARRAY,
@@ -78,6 +79,7 @@ internal fun SerialDescriptor.getNavType(): NavType<*> {
             InternalType.STRING_NULLABLE -> NavType.StringType
             InternalType.INT_ARRAY -> NavType.IntArrayType
             InternalType.BOOL_ARRAY -> NavType.BoolArrayType
+            InternalType.DOUBLE_ARRAY -> InternalNavType.DoubleArrayType
             InternalType.FLOAT_ARRAY -> NavType.FloatArrayType
             InternalType.LONG_ARRAY -> NavType.LongArrayType
             InternalType.ARRAY -> {
@@ -134,6 +136,7 @@ private fun SerialDescriptor.toInternalType(): InternalType {
         serialName == "kotlin.String" ->
             if (isNullable) InternalType.STRING_NULLABLE else InternalType.STRING
         serialName == "kotlin.IntArray" -> InternalType.INT_ARRAY
+        serialName == "kotlin.DoubleArray" -> InternalType.DOUBLE_ARRAY
         serialName == "kotlin.BooleanArray" -> InternalType.BOOL_ARRAY
         serialName == "kotlin.FloatArray" -> InternalType.FLOAT_ARRAY
         serialName == "kotlin.LongArray" -> InternalType.LONG_ARRAY
