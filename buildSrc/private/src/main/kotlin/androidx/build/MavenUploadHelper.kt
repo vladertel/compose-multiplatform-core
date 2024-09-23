@@ -260,8 +260,8 @@ internal fun modifyPomDependencies(
             // will not move adjacent elements, so any comments would remain in their
             // original order.
             element.content().replaceAll {
-                val index = deps.indexOf(it)
-                if (index >= 0) {
+                val index = modifiedDeps.indexOf(it)
+                if (index in modifiedDeps.indices) {
                     modifiedDeps[index]
                 } else {
                     it
