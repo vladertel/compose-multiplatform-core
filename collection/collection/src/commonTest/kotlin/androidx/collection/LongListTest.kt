@@ -622,14 +622,6 @@ internal class LongListTest {
         assertEquals(mutableLongListOf(5L, 4L, 3L, 2L, 1L), l)
     }
 
-    @Test // https://youtrack.jetbrains.com/issue/CMP-5698
-    fun sortEmpty() {
-        val l = MutableLongList()
-        l.sort()
-        l.sortDescending()
-        assertEquals(MutableLongList(), l)
-    }
-
     @Test
     fun sortEmpty() {
         val l = MutableLongList(0)
