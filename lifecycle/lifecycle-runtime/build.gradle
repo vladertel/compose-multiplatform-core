@@ -119,9 +119,8 @@ kotlin {
             }
         }
 
-        nonJvmCommonMain {
-            dependsOn(commonMain)
-        }
+        nonJvmCommonMain.dependsOn(commonMain)
+        nonJvmCommonTest.dependsOn(commonTest)
 
         nativeMain {
             dependsOn(nonJvmCommonMain)
@@ -130,12 +129,11 @@ kotlin {
             languageSettings.optIn("kotlin.experimental.ExperimentalNativeApi")
         }
 
-        nativeTest {
-            dependsOn(commonTest)
-        }
+        nativeTest.dependsOn(nonJvmCommonTest)
 
         if (jsEnabled || wasmEnabled) {
             webMain.dependsOn(nonJvmCommonMain)
+            webTest.dependsOn(nonJvmCommonTest)
         }
 
         targets.configureEach { target ->
@@ -153,9 +151,8 @@ kotlin {
                     KotlinPlatformType.js,
                     KotlinPlatformType.wasm
             ]) {
-                target.compilations["main"].defaultSourceSet {
-                    dependsOn(webMain)
-                }
+                target.compilations["main"].defaultSourceSet.dependsOn(webMain)
+                target.compilations["test"].defaultSourceSet.dependsOn(webTest)
             }
         }
     }

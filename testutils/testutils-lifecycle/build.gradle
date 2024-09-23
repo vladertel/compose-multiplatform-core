@@ -41,14 +41,28 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-    js { browser() }
+    js()
     wasm()
 
-    kotlin {
-        explicitApi = ExplicitApiMode.Strict
-    }
-
     defaultPlatform(PlatformIdentifier.ANDROID)
+}
+
+kotlin {
+    js {
+        browser()
+    }
+    wasmJs()
+
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
+    mingwX64()
+
+    explicitApi = ExplicitApiMode.Strict
 
     sourceSets {
         commonMain {
@@ -62,12 +76,26 @@ androidXMultiplatform {
             }
         }
 
+        jvmMain.dependsOn(commonMain)
+
         androidMain {
             dependsOn(commonMain)
             dependencies {
                 api(libs.testRules)
                 implementation(libs.testExtJunit)
                 implementation(libs.testCore)
+            }
+        }
+
+        desktopMain.dependsOn(jvmMain)
+        nativeMain.dependsOn(commonMain)
+        webMain.dependsOn(commonMain)
+        jsMain.dependsOn(webMain)
+        wasmJsMain.dependsOn(webMain)
+
+        targets.all { target ->
+            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet.dependsOn(nativeMain)
             }
         }
     }
