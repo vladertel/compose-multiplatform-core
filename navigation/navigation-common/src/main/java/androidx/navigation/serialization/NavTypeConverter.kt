@@ -126,6 +126,7 @@ private fun SerialDescriptor.toInternalType(): InternalType {
             if (isNullable) InternalType.BOOL_NULLABLE else InternalType.BOOL
         serialName == "kotlin.Double" ->
             if (isNullable) InternalType.DOUBLE_NULLABLE else InternalType.DOUBLE
+        serialName == "kotlin.Double" -> InternalType.DOUBLE
         serialName == "kotlin.Float" ->
             if (isNullable) InternalType.FLOAT_NULLABLE else InternalType.FLOAT
         serialName == "kotlin.Long" ->
