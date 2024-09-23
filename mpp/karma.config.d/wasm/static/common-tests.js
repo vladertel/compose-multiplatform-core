@@ -15,16 +15,42 @@
  */
 
 window.ComposeTestsContext = new class {
+    constructor() {
+        this.errors = [];
+    }
+
     createTouchEvent(name) {
-        return new TouchEvent(name, { changedTouches: [new Touch({identifier: 0, target: document})] });
+        return new TouchEvent(name, {changedTouches: [new Touch({identifier: 0, target: document})]});
     }
 
     createMouseEvent(name) {
-        return new MouseEvent(name);
+        try {
+            return new MouseEvent(name);
+        } catch (e) {
+            console.log(e);
+        }
     }
 
     createInputEvent(inputType, data) {
-        return new InputEvent("input", {inputType, data})
+        try {
+            return new InputEvent("input", {inputType, data})
+        } catch (e) {
+            console.log(e);
+        }
     }
 }
 
+window.addEventListener("error", (message, source, lineno, colno, error) => {
+    console.log(`message: ${message}`);
+    console.log(`source: ${source}`);
+    console.log(`lineno: ${lineno}`);
+    console.log(`colno: ${colno}`);
+    console.log(`error: ${error}`);
+
+    return true;
+});
+
+
+window.addEventListener("unhandledrejection", (event) => {
+    console.log(`UNHANDLED PROMISE REJECTION: ${event.reason}`);
+});
