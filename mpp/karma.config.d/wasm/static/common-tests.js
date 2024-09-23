@@ -22,5 +22,9 @@ window.ComposeTestsContext = new class {
     createMouseEvent(name) {
         return new MouseEvent(name);
     }
+
+    createInputEvent(inputType, data) {
+        return new InputEvent("input", {inputType, data})
+    }
 }
 

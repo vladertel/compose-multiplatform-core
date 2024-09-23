@@ -20,8 +20,6 @@ import androidx.compose.material.TextField
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.OnCanvasTests
-import androidx.compose.ui.events.InputEvent
-import androidx.compose.ui.events.InputEventInit
 import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -112,12 +110,12 @@ class TextInputTests : OnCanvasTests  {
 
         assertEquals("step2step3", textInputChannel.receive())
 
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("insertText", "step4XX")))
+        backingField.dispatchEvent(ComposeTestsContext.createInputEvent("insertText", "step4XX"))
 
         assertEquals("step2step3step4XX", textInputChannel.receive())
 
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
+        backingField.dispatchEvent(ComposeTestsContext.createInputEvent("deleteContentBackward", ""))
+        backingField.dispatchEvent(ComposeTestsContext.createInputEvent("deleteContentBackward", ""))
         assertEquals("step2step3step4", textInputChannel.receive())
 
         // trigger hardware keyboard
