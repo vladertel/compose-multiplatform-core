@@ -75,7 +75,7 @@ class LazyLayoutTest {
         setContent {
             counter.value // just to trigger recomposition
             LazyLayout(
-                itemProvider = itemProvider,
+                itemProvider = { itemProvider },
                 measurePolicy = policy,
                 // this will return a new object everytime causing LazyLayout recomposition
                 // without causing remeasure
@@ -99,7 +99,7 @@ class LazyLayoutTest {
             Box(Modifier.fillMaxSize().testTag("$index"))
         }
         setContent {
-            LazyLayout(itemProvider) {
+            LazyLayout({ itemProvider }) {
                 val item1 = measure(0, Constraints.fixed(50, 50))[0]
                 val item2 = measure(1, Constraints.fixed(20, 20))[0]
                 layout(100, 100) {
@@ -125,7 +125,7 @@ class LazyLayoutTest {
         }
 
         setContent {
-            LazyLayout(itemProvider) {
+            LazyLayout({ itemProvider }) {
                 val items = measure(0, Constraints.fixed(50, 50))
                 layout(100, 100) {
                     items[0].place(0, 0)
@@ -149,7 +149,7 @@ class LazyLayoutTest {
         })
 
         setContent {
-            LazyLayout(itemProvider) {
+            LazyLayout({ itemProvider }) {
                 val constraints = Constraints.fixed(100, 100)
                 val items = mutableListOf<Placeable>()
                 repeat(itemProvider.itemCount) { index ->
@@ -184,7 +184,7 @@ class LazyLayoutTest {
         }
 
         setContent {
-            LazyLayout(itemProvider) {
+            LazyLayout({ itemProvider }) {
                 val constraints = Constraints.fixed(100, 100)
                 val items = mutableListOf<Placeable>()
                 repeat(itemProvider.itemCount) { index ->
@@ -236,7 +236,7 @@ class LazyLayoutTest {
         var needToCompose by mutableStateOf(false)
         val prefetchState = LazyLayoutPrefetchState()
         setContent {
-            LazyLayout(itemProvider, prefetchState = prefetchState) {
+            LazyLayout({ itemProvider }, prefetchState = prefetchState) {
                 val item = if (needToCompose) {
                     measure(0, constraints)[0]
                 } else null
@@ -283,7 +283,7 @@ class LazyLayoutTest {
         }
         val prefetchState = LazyLayoutPrefetchState()
         setContent {
-            LazyLayout(itemProvider, prefetchState = prefetchState) {
+            LazyLayout({ itemProvider }, prefetchState = prefetchState) {
                 layout(100, 100) {}
             }
         }
@@ -317,7 +317,7 @@ class LazyLayoutTest {
         }
 
         setContent {
-            LazyLayout(itemProvider) { constraints ->
+            LazyLayout({ itemProvider }) { constraints ->
                 if (needChild.value) {
                     measure(0, constraints)
                 }
@@ -351,7 +351,7 @@ class LazyLayoutTest {
         }
 
         setContent {
-            LazyLayout(itemProvider) { constraints ->
+            LazyLayout({ itemProvider }) { constraints ->
                 val node = if (indexToCompose != null) {
                     measure(indexToCompose!!, constraints).first()
                 } else {
