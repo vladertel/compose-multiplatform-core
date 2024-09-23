@@ -59,8 +59,6 @@ function KarmaWebpackOutputFramework(config) {
         served: true,
         watched: false
     });
-
-    fs.writeFileSync('/Users/shagen/tmp/run.log', JSON.stringify(config.files, null, 4));
 }
 
 const KarmaWebpackOutputPlugin = {

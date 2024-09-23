@@ -56,14 +56,3 @@ internal fun keyDownEventUnprevented(): KeyboardEvent =
     KeyboardEventInit(ctrlKey = true, cancelable = true, key = "Control")
         .withKeyCode(Key.CtrlLeft.keyCode.toInt())
         .keyDownEvent()
-
-private fun DummyTouchEventInit(): TouchEventInit = js("({ changedTouches: [new Touch({identifier: 0, target: document})] })")
-
-internal fun createTouchEvent(type: String): TouchEvent {
-    return TouchEvent(type, DummyTouchEventInit())
-}
-
-internal fun createMouseEvent(type: String): MouseEvent {
-    return MouseEvent(type)
-}
-

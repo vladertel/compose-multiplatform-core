@@ -22,11 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.OnCanvasTests
 import androidx.compose.ui.events.InputEvent
 import androidx.compose.ui.events.InputEventInit
-import androidx.compose.ui.events.createMouseEvent
-import androidx.compose.ui.events.createTouchEvent
 import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.interop.ComposeTestsContext
 import androidx.compose.ui.sendFromScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -86,7 +85,7 @@ class TextInputTests : OnCanvasTests  {
         assertNull(document.querySelector("textarea"))
 
         // trigger virtual keyboard
-        dispatchEvents(createTouchEvent("touchstart"))
+        dispatchEvents(ComposeTestsContext.createTouchEvent("touchstart"))
         secondFocusRequester.requestFocus()
 
         assertNotNull(document.querySelector("textarea"))
@@ -122,7 +121,7 @@ class TextInputTests : OnCanvasTests  {
         assertEquals("step2step3step4", textInputChannel.receive())
 
         // trigger hardware keyboard
-        dispatchEvents(createMouseEvent("mousedown"))
+        dispatchEvents(ComposeTestsContext.createMouseEvent("mousedown"))
         firstFocusRequester.requestFocus()
 
         dispatchEvents(

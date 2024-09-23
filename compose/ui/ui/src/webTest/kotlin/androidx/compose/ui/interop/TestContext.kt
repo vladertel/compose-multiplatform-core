@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-window.ComposeTestsContext = new class {
-    createTouchEvent(name) {
-        return new TouchEvent(name, { changedTouches: [new Touch({identifier: 0, target: document})] });
-    }
+package androidx.compose.ui.interop
 
-    createMouseEvent(name) {
-        return new MouseEvent(name);
-    }
+import org.w3c.dom.events.Event
+
+internal external interface TestContext : JsAny {
+    fun createMouseEvent(name: String): Event
+    fun createTouchEvent(name: String): Event
 }
 
+internal external val ComposeTestsContext : TestContext
