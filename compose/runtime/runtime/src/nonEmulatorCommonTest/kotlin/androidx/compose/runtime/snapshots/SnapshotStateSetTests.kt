@@ -22,12 +22,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.test.IgnoreJsTarget
 
@@ -168,9 +170,11 @@ class SnapshotStateSetTests {
         }
     }
 
-    @Test(timeout = 30_000)
+    @Test
     @IgnoreJsTarget // Not relevant in a single threaded environment
-    fun concurrentMixingWriteApply_add(): Unit = runTest {
+    fun concurrentMixingWriteApply_add() = runTest(
+        UnconfinedTestDispatcher(), timeout = 10_000.milliseconds
+    ) {
         repeat(10) {
             val sets = Array(100) { mutableStateSetOf<Int>() }.toList()
             val channel = Channel<Unit>(Channel.CONFLATED)
