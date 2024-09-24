@@ -20,6 +20,7 @@ package androidx.navigation.serialization
 
 import android.net.Uri
 import android.os.Bundle
+import androidx.navigation.CollectionNavType
 import androidx.navigation.NavType
 import java.io.Serializable
 import kotlin.reflect.KType
