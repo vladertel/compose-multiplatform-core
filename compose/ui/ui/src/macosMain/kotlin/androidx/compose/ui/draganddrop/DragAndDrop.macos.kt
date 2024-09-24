@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-#import "CMPInteropWrappingView.h"
+package androidx.compose.ui.draganddrop
 
-@implementation CMPInteropWrappingView
+import androidx.compose.ui.geometry.Offset
 
-- (__nullable id)accessibilityContainer {
-    CMP_ABSTRACT_FUNCTION_CALLED
-}
+/**
+ * A representation of an event sent by the platform during a drag and drop operation.
+ */
+actual class DragAndDropEvent
 
-@end
+/**
+ * Returns the position of this [DragAndDropEvent] relative to the root Compose View in the
+ * layout hierarchy.
+ */
+internal actual val DragAndDropEvent.positionInRoot: Offset
+    get() = TODO("Not yet implemented")
+
+/**
+ * Definition for a type representing transferable data. It could be a remote URI,
+ * rich text data on the clip board, a local file, or more.
+ */
+actual class DragAndDropTransferData
