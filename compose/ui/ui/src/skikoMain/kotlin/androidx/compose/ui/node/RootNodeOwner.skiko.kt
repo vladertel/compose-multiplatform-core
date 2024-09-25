@@ -224,10 +224,31 @@ internal class RootNodeOwner(
     }
 
     fun draw(canvas: Canvas) = trace("RootNodeOwner:draw") {
+        isDrawingContent = true
         owner.root.draw(
             canvas = canvas,
             graphicsLayer = null // the root node will provide the root graphics layer
         )
+        if (dirtyLayers.isNotEmpty()) {
+            for (i in 0 until dirtyLayers.size) {
+                val layer = dirtyLayers[i]
+                layer.updateDisplayList()
+            }
+        }
+
+        dirtyLayers.clear()
+        isDrawingContent = false
+
+        // updateDisplayList operations performed above (during root.draw and during the explicit
+        // layer.updateDisplayList() calls) can result in the same layers being invalidated. These
+        // layers have been added to postponedDirtyLayers and will be redrawn during the next
+        // dispatchDraw.
+        if (postponedDirtyLayers != null) {
+            val postponed = postponedDirtyLayers!!
+            dirtyLayers.addAll(postponed)
+            postponed.clear()
+        }
+
         clearInvalidObservations()
     }
 
@@ -300,6 +321,32 @@ internal class RootNodeOwner(
         val right = max(max(p0.x, p1.x), max(p3.x, p4.x))
         val bottom = max(max(p0.y, p1.y), max(p3.y, p4.y))
         return Rect(left, top, right, bottom)
+    }
+
+    // OwnedLayers that are dirty and should be redrawn.
+    private val dirtyLayers = mutableListOf<OwnedLayer>()
+
+    // OwnerLayers that invalidated themselves during their last draw. They will be redrawn
+    // during the next AndroidComposeView dispatchDraw pass.
+    private var postponedDirtyLayers: MutableList<OwnedLayer>? = null
+
+    private var isDrawingContent = false
+
+    internal fun notifyLayerIsDirty(layer: OwnedLayer, isDirty: Boolean) {
+        if (!isDirty) {
+            // It is correct to remove the layer here regardless of this if, but for performance
+            // we are hackily not doing the removal here in order to just do clear() a bit later.
+            if (!isDrawingContent) {
+                dirtyLayers.remove(layer)
+                postponedDirtyLayers?.remove(layer)
+            }
+        } else if (!isDrawingContent) {
+            dirtyLayers += layer
+        } else {
+            val postponed = postponedDirtyLayers
+                ?: mutableListOf<OwnedLayer>().also { postponedDirtyLayers = it }
+            postponed += layer
+        }
     }
 
     private inner class OwnerImpl(
@@ -472,6 +519,7 @@ internal class RootNodeOwner(
                         snapshotInvalidationTracker.requestDraw()
                     },
                     drawBlock = drawBlock,
+                    notifyLayerIsDirty = ::notifyLayerIsDirty,
                     onDestroy = { needClearObservations = true }
                 )
             }

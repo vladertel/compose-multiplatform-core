@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toSkiaRRect
 import androidx.compose.ui.graphics.toSkiaRect
 import androidx.compose.ui.node.OwnedLayer
+import androidx.compose.ui.node.RootNodeOwner
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -66,6 +67,7 @@ internal class RenderNodeLayer(
     private var density: Density,
     measureDrawBounds: Boolean,
     private val invalidateParentLayer: () -> Unit,
+    private val notifyLayerIsDirty: (layer: OwnedLayer, value: Boolean) -> Unit,
     private val drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
     private val onDestroy: () -> Unit = {}
 ) : OwnedLayer {
@@ -84,6 +86,17 @@ internal class RenderNodeLayer(
     private val bbhFactory = if (measureDrawBounds) RTreeFactory() else null
     private var picture: Picture? = null
     private var isDestroyed = false
+
+    /**
+     * True when the RenderNodeLayer has been invalidated and not yet drawn.
+     */
+    private var isDirty = false
+        set(value) {
+            if (value != field) {
+                field = value
+                notifyLayerIsDirty(this, value)
+            }
+        }
 
     // Composable state marker for tracking drawing invalidations.
     private val drawState = mutableStateOf(Unit, neverEqualPolicy())
@@ -214,14 +227,16 @@ internal class RenderNodeLayer(
             picture?.close()
             picture = null
         }
-        drawState.value = Unit
+        isDirty = true
         invalidateParentLayer()
     }
 
     override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {
-
-        // Read the state because any changes to the state should trigger re-drawing.
-        drawState.value
+        if (parentLayer != null) {
+            // Read the state because any changes to the state should trigger re-drawing.
+            drawState.value
+        }
+        isDirty = false
 
         if (picture == null) {
             val measureDrawBounds = !clip || shadowElevation > 0
@@ -309,7 +324,13 @@ internal class RenderNodeLayer(
         else -> ClipMode.INTERSECT
     }
 
-    override fun updateDisplayList() = Unit
+    override fun updateDisplayList() {
+        // Now picture creation is lazy during drawing, so we're using this call just
+        // to invalidate the state.
+        // TODO: Move picture recording to here.
+        drawState.value = Unit
+        isDirty = false
+    }
 
     fun drawShadow(canvas: Canvas) = with(density) {
         val path = when (val outline = outline) {
