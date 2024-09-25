@@ -68,6 +68,8 @@ class GraphicsLayerTest {
 
         // shouldn't hang
         awaitIdle()
+
+        assertEquals(1, drawCount)
     }
 
     // Bug: https://youtrack.jetbrains.com/issue/CMP-6695
