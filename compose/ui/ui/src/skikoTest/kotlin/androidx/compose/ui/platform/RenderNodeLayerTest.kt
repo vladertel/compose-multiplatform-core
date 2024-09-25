@@ -597,6 +597,7 @@ class RenderNodeLayerTest {
         Density(1f, 1f),
         measureDrawBounds = false,
         invalidateParentLayer = invalidateParentLayer,
+        notifyLayerIsDirty = { _, _ -> },
         drawBlock = drawBlock,
     )
 
