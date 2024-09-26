@@ -74,7 +74,6 @@ private val NoOpOnKeyboardPresses: (Set<*>) -> Unit = {}
  * Hidden UIView to interact with iOS Keyboard and TextInput system.
  * TODO maybe need to call reloadInputViews() to update UIKit text features?
  */
-@Suppress("CONFLICTING_OVERLOADS")
 internal class IntermediateTextInputUIView(
     private val viewConfiguration: ViewConfiguration
 ) : CMPEditMenuView(frame = CGRectZero.readValue()),
@@ -335,11 +334,13 @@ internal class IntermediateTextInputUIView(
         return toPosition.position - from.position
     }
 
+    @kotlinx.cinterop.ObjCSignatureOverride
     override fun positionWithinRange(
         range: UITextRange,
         atCharacterOffset: NSInteger
     ): UITextPosition? = null // TODO positionWithinRange
 
+    @kotlinx.cinterop.ObjCSignatureOverride
     override fun positionWithinRange(
         range: UITextRange,
         farthestInDirection: UITextLayoutDirection
