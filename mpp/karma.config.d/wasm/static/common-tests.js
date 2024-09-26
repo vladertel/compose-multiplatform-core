@@ -15,11 +15,15 @@
  */
 
 window.addEventListener("error", (message, source, lineno, colno, error) => {
-    console.log(`[web] error message: ${message} \n`);
-    console.log(`[web] error source: ${source} \n`);
-    console.log(`[web] error lineno: ${lineno} \n`);
-    console.log(`[web] error colno: ${colno} \n`);
-    console.log(`[web] error error: ${error} \n`);
+    try {
+        console.log(`[web] error message: ${message} \n`);
+        console.log(`[web] error source: ${source} \n`);
+        console.log(`[web] error lineno: ${lineno} \n`);
+        console.log(`[web] error colno: ${colno} \n`);
+        console.log(`[web] error error: ${error} \n`);
+    } catch (e) {
+        console.log(e);
+    }
 
     return true;
 });
