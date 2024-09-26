@@ -31,17 +31,18 @@ window.addEventListener("error", (message, source, lineno, colno, error) => {
 
 window.addEventListener("unhandledrejection", (event) => {
     try {
-        console.log('[web] unhandled Promise rejection', event.reason, '\n');
+        console.log('[web] X unhandled Promise rejection \n');
+        console.log(event);
     } catch (e) {
-        console.log('[web] failed to print rejection:', e.message, '\n');
+        console.log('[web] X failed to print rejection:', e.message, '\n');
     }
 });
 
-window.addEventListener("rejectionhandled", (event) => {
-        try {
-            console.log('[web] unhandled Promise rejection', event.reason, '\n');
-        } catch (e) {
-            console.log('[web] failed to print rejection:', e.message, '\n');
-        }
-    }, false
-);
+// window.addEventListener("rejectionhandled", (event) => {
+//         try {
+//             console.log('[web] X unhandled Promise rejection', event.reason, '\n');
+//         } catch (e) {
+//             console.log('[web] X failed to print rejection:', e.message, '\n');
+//         }
+//     }, false
+// );
