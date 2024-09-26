@@ -32,7 +32,8 @@ window.addEventListener("error", (message, source, lineno, colno, error) => {
 window.addEventListener("unhandledrejection", (event) => {
     try {
         console.log('[web] X unhandled Promise rejection \n');
-        console.log(event);
+        console.log(Object.keys(event));
+        console.log('\n');
     } catch (e) {
         console.log('[web] X failed to print rejection:', e.message, '\n');
     }
