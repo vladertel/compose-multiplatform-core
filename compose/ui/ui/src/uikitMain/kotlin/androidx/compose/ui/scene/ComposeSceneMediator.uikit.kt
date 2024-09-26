@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.SessionMutex
+import androidx.compose.ui.draganddrop.UIKitDragAndDropManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
@@ -50,6 +51,7 @@ import androidx.compose.ui.platform.EmptyViewConfiguration
 import androidx.compose.ui.platform.LocalLayoutMargins
 import androidx.compose.ui.platform.LocalSafeArea
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformDragAndDropManager
 import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
@@ -68,7 +70,6 @@ import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.uikit.layoutConstraintsToCenterInParent
 import androidx.compose.ui.uikit.layoutConstraintsToMatch
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -276,8 +277,15 @@ internal class ComposeSceneMediator(
 
     var interactionBounds = IntRect.Zero
 
+    private val dragAndDropManager = UIKitDragAndDropManager(
+        view = userInputView,
+        getDragAndDropTarget = {
+            scene.dragAndDropTarget
+        }
+    )
+
     /**
-     * A callback to define whether precondition for interaction view hit test is met.
+     * A callback to define whether the precondition for the user input view hit test is met.
      *
      * @param point Point in the interaction view coordinate space.
      */
@@ -436,8 +444,7 @@ internal class ComposeSceneMediator(
         val yOffset = density.adjustedToFocusedRectOffset(
             insets = PlatformInsets(bottom = keyboardOverlapHeight),
             focusedRect = getFocusedRect(),
-            size = scene.size,
-            currentOffset = IntOffset.Zero,
+            size = scene.size
         ).y / density.density
 
         viewForKeyboardOffsetTransform.layer.setAffineTransform(
@@ -680,6 +687,7 @@ internal class ComposeSceneMediator(
         override val textInputService get() = this@ComposeSceneMediator.textInputService
         override val textToolbar get() = this@ComposeSceneMediator.textInputService
         override val semanticsOwnerListener get() = this@ComposeSceneMediator.semanticsOwnerListener
+        override val dragAndDropManager get() = this@ComposeSceneMediator.dragAndDropManager
 
         private val textInputSessionMutex = SessionMutex<IOSTextInputSession>()
 

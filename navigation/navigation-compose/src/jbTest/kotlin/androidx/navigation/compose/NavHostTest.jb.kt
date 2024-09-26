@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.draganddrop
+package androidx.navigation.compose
 
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
+import androidx.navigation.testing.TestNavHostController
 
-actual class DragAndDropTransferData
+@Composable
+internal actual fun TestNavHostController() = TestNavHostController()
 
-actual class DragAndDropEvent
-
-internal actual val DragAndDropEvent.positionInRoot: Offset
-    get() = TODO("Drag&drop isn't implemented")
+@Composable
+internal actual fun NavHostController() = NavHostController()

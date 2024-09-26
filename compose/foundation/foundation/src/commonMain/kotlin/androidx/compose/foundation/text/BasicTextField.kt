@@ -44,6 +44,7 @@ import androidx.compose.foundation.text.input.internal.TextFieldDecoratorModifie
 import androidx.compose.foundation.text.input.internal.TextFieldTextLayoutModifier
 import androidx.compose.foundation.text.input.internal.TextLayoutState
 import androidx.compose.foundation.text.input.internal.TransformedTextFieldState
+import androidx.compose.foundation.text.input.internal.selection.TextFieldHandleState
 import androidx.compose.foundation.text.input.internal.selection.TextFieldSelectionState
 import androidx.compose.foundation.text.input.internal.selection.TextFieldSelectionState.InputType
 import androidx.compose.foundation.text.selection.SelectionHandle
@@ -453,6 +454,7 @@ internal fun TextFieldSelectionHandles(selectionState: TextFieldSelectionState) 
                 Modifier.pointerInput(selectionState) {
                     with(selectionState) { selectionHandleGestures(true) }
                 },
+            lineHeight = startHandleState.lineHeight,
             minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
@@ -477,6 +479,7 @@ internal fun TextFieldSelectionHandles(selectionState: TextFieldSelectionState) 
                 Modifier.pointerInput(selectionState) {
                     with(selectionState) { selectionHandleGestures(false) }
                 },
+            lineHeight = endHandleState.lineHeight,
             minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
