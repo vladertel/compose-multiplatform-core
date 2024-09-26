@@ -116,6 +116,10 @@ kotlin {
             }
         }
 
+        nonJvmMain {
+            dependsOn(commonMain)
+        }
+
         targets.all { target ->
             if (target.platformType !in [
                     KotlinPlatformType.androidJvm,

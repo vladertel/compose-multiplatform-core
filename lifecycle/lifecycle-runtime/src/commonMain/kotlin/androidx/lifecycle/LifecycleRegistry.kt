@@ -15,6 +15,7 @@
  */
 package androidx.lifecycle
 
+import androidx.annotation.MainThread
 import androidx.annotation.VisibleForTesting
 import kotlin.jvm.JvmStatic
 
@@ -46,6 +47,12 @@ constructor(provider: LifecycleOwner) : Lifecycle {
      * @param event The event that was received
      */
     public open fun handleLifecycleEvent(event: Event)
+
+    @MainThread
+    override fun addObserver(observer: LifecycleObserver)
+
+    @MainThread
+    override fun removeObserver(observer: LifecycleObserver)
 
     /**
      * The number of observers.

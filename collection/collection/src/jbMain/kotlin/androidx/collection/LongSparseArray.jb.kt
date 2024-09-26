@@ -19,6 +19,9 @@ package androidx.collection
 import androidx.collection.internal.EMPTY_LONGS
 import androidx.collection.internal.EMPTY_OBJECTS
 import androidx.collection.internal.idealLongArraySize
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmSynthetic
 
 /**
  * SparseArray mapping longs to Objects. Unlike a normal array of Objects, there can be gaps in the
@@ -48,10 +51,23 @@ import androidx.collection.internal.idealLongArraySize
  *   initial capacity of 0, the sparse array will be initialized with a light-weight representation
  *   not requiring any additional array allocations.
  */
-public actual open class LongSparseArray<E> public actual constructor(initialCapacity: Int) {
+public actual open class LongSparseArray<E>
+// JvmOverloads is required on constructor to match expect declaration
+@JvmOverloads public actual constructor(initialCapacity: Int) {
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var garbage = false
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var keys: LongArray
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var values: Array<Any?>
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var size = 0
 
     init {
