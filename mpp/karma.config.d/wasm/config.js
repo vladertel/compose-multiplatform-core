@@ -69,11 +69,11 @@ config.plugins.push(KarmaWebpackOutputPlugin);
 config.frameworks.push("webpack-output");
 
 
-config.customLaunchers = {
-    ChromeForComposeTests: {
-        base: "Chrome",
-        flags: ["--no-sandbox", "--disable-search-engine-choice-screen"]
-    }
-}
-
-config.browsers = ["ChromeForComposeTests"]
+// config.customLaunchers = {
+//     ChromeForComposeTests: {
+//         base: "Chrome",
+//         flags: ["--no-sandbox", "--disable-search-engine-choice-screen"]
+//     }
+// }
+//
+// config.browsers = ["ChromeForComposeTests"]
