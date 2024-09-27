@@ -1492,7 +1492,9 @@ private fun DatePickerContent(
 ) {
     val displayedMonth = calendarModel.getMonth(displayedMonthMillis)
     val monthsListState =
-        rememberLazyListState(initialFirstVisibleItemIndex = displayedMonth.indexIn(yearRange))
+        rememberLazyListState(
+            initialFirstVisibleItemIndex = displayedMonth.indexIn(yearRange).coerceAtLeast(0)
+        )
     val coroutineScope = rememberCoroutineScope()
     var yearPickerVisible by rememberSaveable { mutableStateOf(false) }
     val defaultLocale = defaultLocale()
