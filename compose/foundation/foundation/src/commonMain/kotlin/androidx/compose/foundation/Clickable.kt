@@ -27,7 +27,9 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusRequesterModifierNode
 import androidx.compose.ui.focus.Focusability
+import androidx.compose.ui.focus.requestFocus
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -671,7 +673,7 @@ internal open class ClickableNode(
         detectTapAndPress(
             onPress = { offset ->
                 if (enabled) {
-                    focusableNode.requestFocusWhenInMouseInputMode()
+                    requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -821,14 +823,14 @@ private class CombinedClickableNodeImpl(
             onDoubleTap =
                 if (enabled && onDoubleClick != null) {
                     {
-                        focusableNode.requestFocusWhenInMouseInputMode()
+                        requestFocusWhenInMouseInputMode()
                         onDoubleClick?.invoke()
                     }
                 } else null,
             onLongPress =
                 if (enabled && onLongClick != null) {
                     {
-                        focusableNode.requestFocusWhenInMouseInputMode()
+                        requestFocusWhenInMouseInputMode()
                         onLongClick?.invoke()
                         if (hapticFeedbackEnabled) {
                             currentValueOf(LocalHapticFeedback)
@@ -838,7 +840,7 @@ private class CombinedClickableNodeImpl(
                 } else null,
             onPress = { offset ->
                 if (enabled) {
-                    focusableNode.requestFocusWhenInMouseInputMode()
+                    requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -1038,6 +1040,7 @@ internal abstract class AbstractClickableNode(
     DelegatingNode(),
     PointerInputModifierNode,
     KeyInputModifierNode,
+    FocusRequesterModifierNode,
     SemanticsModifierNode,
     TraversableNode {
     protected var enabled = enabled
@@ -1048,7 +1051,7 @@ internal abstract class AbstractClickableNode(
 
     final override val shouldAutoInvalidate: Boolean = false
 
-    protected val focusableNode: FocusableNode =
+    private val focusableNode: FocusableNode =
         FocusableNode(
             interactionSource,
             focusability = Focusability.SystemDefined,
@@ -1398,9 +1401,8 @@ internal fun TraversableNode.hasScrollableContainer(): Boolean {
     return hasScrollable
 }
 
-private fun FocusableNode.requestFocusWhenInMouseInputMode() {
+private fun FocusRequesterModifierNode.requestFocusWhenInMouseInputMode() {
     if (isRequestFocusOnClickEnabled()) {
-        // TODO Restore focus workaround after merging
-        //  requestFocus()
+        requestFocus()
     }
 }
