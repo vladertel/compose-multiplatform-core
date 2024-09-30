@@ -360,10 +360,19 @@ private fun configureComposeCompilerPlugin(
         val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION)
         // Add Compose compiler plugin to kotlinPlugin configuration, making sure it works
         // for Playground builds as well
+
+        // TODO: Uncomment when implementing https://youtrack.jetbrains.com/issue/CMP-6792
+//        project.dependencies.add(
+//            COMPILER_PLUGIN_CONFIGURATION,
+//            "org.jetbrains.kotlin:kotlin-compose-compiler-plugin-embeddable:$kotlinVersion"
+//        )
+
+        val compilerPluginVersion = project.properties["jetbrains.compose.compiler.version"] as String
         project.dependencies.add(
             COMPILER_PLUGIN_CONFIGURATION,
-            "org.jetbrains.kotlin:kotlin-compose-compiler-plugin-embeddable:$kotlinVersion"
+            "org.jetbrains.compose.compiler:compiler:$compilerPluginVersion"
         )
+
         val kotlinPlugin = configuration.incoming.artifactView { view ->
             view.attributes { attributes ->
                 attributes.attribute(
