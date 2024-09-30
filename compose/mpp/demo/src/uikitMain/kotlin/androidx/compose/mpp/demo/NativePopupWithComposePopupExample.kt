@@ -35,7 +35,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
-import androidx.compose.ui.platform.AccessibilityDebugLogger
 import androidx.compose.ui.platform.AccessibilitySyncOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
@@ -56,16 +55,7 @@ import platform.UIKit.sheetPresentationController
 val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compose popup") {
     val viewController = LocalUIViewController.current
 
-    val syncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(object:
-        AccessibilityDebugLogger {
-        override fun log(message: Any?) {
-            if (message == null) {
-                println()
-            } else {
-                println("[modal a11y]: $message")
-            }
-        }
-    })
+    val syncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices
 
     Column {
         Button(onClick = {
@@ -130,8 +120,7 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .background(Color.Green)
-                                        .clickable { showComposeDialog = false }
-                                    ,
+                                        .clickable { showComposeDialog = false },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -152,10 +141,20 @@ val NativePopupWithComposePopupExample = Screen.Example("Native popup with Compo
             composeViewController.view.layer.borderWidth = 2.0
             NSLayoutConstraint.activateConstraints(
                 listOf(
-                    composeViewController.view.centerXAnchor.constraintEqualToAnchor(presentedViewController.view.centerXAnchor),
-                    composeViewController.view.centerYAnchor.constraintEqualToAnchor(presentedViewController.view.centerYAnchor),
-                    composeViewController.view.widthAnchor.constraintEqualToAnchor(presentedViewController.view.widthAnchor, 0.75),
-                    composeViewController.view.heightAnchor.constraintEqualToAnchor(presentedViewController.view.heightAnchor, 0.5)
+                    composeViewController.view.centerXAnchor.constraintEqualToAnchor(
+                        presentedViewController.view.centerXAnchor
+                    ),
+                    composeViewController.view.centerYAnchor.constraintEqualToAnchor(
+                        presentedViewController.view.centerYAnchor
+                    ),
+                    composeViewController.view.widthAnchor.constraintEqualToAnchor(
+                        presentedViewController.view.widthAnchor,
+                        0.75
+                    ),
+                    composeViewController.view.heightAnchor.constraintEqualToAnchor(
+                        presentedViewController.view.heightAnchor,
+                        0.5
+                    )
                 )
             )
             composeViewController.didMoveToParentViewController(presentedViewController)

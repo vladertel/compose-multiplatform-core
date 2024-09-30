@@ -20,6 +20,7 @@ import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.ui.platform.AccessibilitySyncOptions
 import platform.UIKit.UIStatusBarAnimation
 import platform.UIKit.UIStatusBarStyle
+import platform.UIKit.UIViewController
 
 /**
  * Configuration of ComposeUIViewController behavior.
@@ -45,9 +46,8 @@ class ComposeUIViewControllerConfiguration {
      * By default, accessibility sync is enabled when required by accessibility services and debug
      * logging is disabled.
      */
-    @ExperimentalComposeApi
     var accessibilitySyncOptions: AccessibilitySyncOptions =
-        AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(debugLogger = null)
+        AccessibilitySyncOptions.WhenRequiredByAccessibilityServices
         
     /**
      * Determines whether the Compose view should have an opaque background.
@@ -67,7 +67,7 @@ class ComposeUIViewControllerConfiguration {
 /**
  * Interface for UIViewController to allow injecting logic which otherwise is impossible due to ComposeUIViewController
  * implementation being internal.
- * All of those callbacks are invoked at the very end of overriden function and properties implementation.
+ * All of those callbacks are invoked at the very end of overridden function and properties implementation.
  * Default implementations do nothing and return Unit/null (indicating that UIKit default will be used).
  */
 interface ComposeUIViewControllerDelegate {
