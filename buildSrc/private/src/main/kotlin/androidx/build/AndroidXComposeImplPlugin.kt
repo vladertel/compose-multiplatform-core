@@ -137,6 +137,14 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
                 }
             }
 
+            // TODO: remove when fixing https://youtrack.jetbrains.com/issue/CMP-6792
+            project.tasks.withType(KotlinJsCompile::class.java).configureEach {
+                @Suppress("DEPRECATION")
+                it.kotlinOptions.freeCompilerArgs += listOf(
+                    "-Xklib-enable-signature-clash-checks=false"
+                )
+            }
+
             project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile>().configureEach {
                 it.compilerOptions {
                     freeCompilerArgs.add("-opt-in=kotlinx.cinterop.ExperimentalForeignApi")
