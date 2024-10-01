@@ -80,7 +80,7 @@ import platform.darwin.dispatch_get_main_queue
 
 @OptIn(BetaInteropApi::class, ExperimentalComposeApi::class)
 @ExportObjCClass
-internal class ComposeHostingViewController(
+class ComposeHostingViewController(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
     private val coroutineContext: CoroutineContext = Dispatchers.Main
@@ -99,7 +99,7 @@ internal class ComposeHostingViewController(
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
 
-    fun hasInvalidations(): Boolean {
+    internal fun hasInvalidations(): Boolean {
         return mediator?.hasInvalidations == true || layers.hasInvalidations
     }
 
@@ -112,7 +112,7 @@ internal class ComposeHostingViewController(
     )
     private val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
 
-    var focusStack: FocusStack? = FocusStack()
+    internal var focusStack: FocusStack? = FocusStack()
     private val windowContext = PlatformWindowContext().apply {
         isWindowFocused = true
     }
