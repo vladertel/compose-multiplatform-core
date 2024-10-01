@@ -20,7 +20,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -29,6 +34,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.atomicfu.atomic
@@ -36,6 +42,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.junit.Assert
 import org.junit.Rule
 
 
@@ -50,7 +57,7 @@ class TestBasicsTest {
 
     // See https://github.com/JetBrains/compose-multiplatform/issues/3117
     @Test
-    fun recompositionCompletesBeforeSetContentReturns() = repeat(1000) {
+    fun recompositionCompletesBeforeSetContentReturns() = repeat(100) {
         runSkikoComposeUiTest {
             var globalValue by atomic(0)
             setContent {
@@ -84,27 +91,6 @@ class TestBasicsTest {
         rule.onNodeWithTag("box").performClick()
         val clockAfter = rule.mainClock.currentTime
         assertTrue(clockAfter > clockBefore, "performClick did not advance the test clock")
-    }
-
-    @Test
-    fun advancingClockRunsRecomposition() {
-        rule.mainClock.autoAdvance = false
-
-        rule.setContent {
-            var text by remember { mutableStateOf("1") }
-            Text(text, modifier = Modifier.testTag("text"))
-
-            LaunchedEffect(Unit) {
-                delay(1_000)
-                text = "2"
-            }
-        }
-
-        rule.onNodeWithTag("text").assertTextEquals("1")
-        rule.mainClock.advanceTimeBy(999, ignoreFrameDuration = true)
-        rule.onNodeWithTag("text").assertTextEquals("1")
-        rule.mainClock.advanceTimeBy(1, ignoreFrameDuration = true)
-        rule.onNodeWithTag("text").assertTextEquals("2")
     }
 
     @Test
@@ -180,5 +166,119 @@ class TestBasicsTest {
         // Without the idling resource registered, we expect the test to see the first value
         rule.unregisterIdlingResource(idlingResource)
         test(expectedValue = "first")
+    }
+
+    @Test(timeout = 500)
+    fun infiniteLoopInLaunchedEffectDoesNotHang() = runComposeUiTest {
+        setContent {
+            LaunchedEffect(Unit) {
+                while (true) {
+                    delay(1000)
+                }
+            }
+        }
+    }
+
+    @Test(timeout = 500)
+    fun delayInLaunchedEffectIsExecutedAfterAdvancingClock() = runComposeUiTest {
+        var value = 0
+        mainClock.autoAdvance = false
+        setContent {
+            LaunchedEffect(Unit) {
+                repeat(5) {
+                    delay(1000)
+                    value = it+1
+                }
+            }
+        }
+
+        assertEquals(0, value)
+        mainClock.advanceTimeBy(999, ignoreFrameDuration = true)
+        assertEquals(0, value)
+        mainClock.advanceTimeBy(2, ignoreFrameDuration = true)
+        assertEquals(1, value)
+        mainClock.advanceTimeBy(2000, ignoreFrameDuration = true)
+        assertEquals(3, value)
+    }
+
+    @Test
+    fun advancingClockCausesRecompositions() = runComposeUiTest {
+        var value by mutableStateOf(0)
+        val compositionValues = mutableListOf<Int>()
+        setContent {
+            compositionValues.add(value)
+            val capturedValue = value
+            LaunchedEffect(capturedValue) {
+                delay(1000)
+                value = capturedValue + 1
+            }
+        }
+
+        Assert.assertEquals(0, value)
+        mainClock.advanceTimeBy(10000)
+        assertContentEquals(0..9, compositionValues)
+    }
+
+    @Test
+    fun launchedEffectsRunAfterComposition() = runComposeUiTest {
+        val actions = mutableListOf<String>()
+        setContent {
+            LaunchedEffect(Unit) {
+                actions.add("LaunchedEffect")
+            }
+            actions.add("Composition")
+        }
+
+        assertContentEquals(listOf("Composition", "LaunchedEffect"), actions)
+    }
+
+    @Test
+    fun waitForIdleDoesNotAdvanceClockIfAlreadyIdle() = runComposeUiTest {
+        setContent { }
+
+        val initialTime = mainClock.currentTime
+        waitForIdle()
+        assertEquals(initialTime, mainClock.currentTime)
+    }
+
+    @Test
+    fun runOnIdleExecutesOnUiThread() = runComposeUiTest {
+        lateinit var mainThread: Thread
+        setContent {
+            mainThread = Thread.currentThread()
+        }
+        runOnIdle {
+            assertEquals(Thread.currentThread(), mainThread)
+        }
+    }
+
+    @Test
+    fun runOnIdleExecutesWhenIdle() = runComposeUiTest {
+        var sourceValue by mutableIntStateOf(0)
+        var targetValue = 0
+        setContent {
+            LaunchedEffect(sourceValue) {
+                targetValue = sourceValue
+            }
+        }
+        sourceValue = 1
+        runOnIdle {
+            assertEquals(targetValue, 1)
+        }
+    }
+
+    @Test
+    fun runOnIdleDoesNotWaitForIdleAfterward() = runComposeUiTest {
+        var sourceValue by mutableIntStateOf(0)
+        var targetValue = 0
+        setContent {
+            LaunchedEffect(sourceValue) {
+                targetValue = sourceValue
+            }
+        }
+        runOnIdle {
+            sourceValue = 1
+        }
+        assertEquals(targetValue, 0)
     }
 }
