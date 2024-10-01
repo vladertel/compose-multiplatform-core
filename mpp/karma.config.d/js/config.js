@@ -17,7 +17,7 @@
 config.customLaunchers = {
     ChromeForComposeTests: {
         base: "Chrome",
-        flags: ["--no-sandbox", "--disable-search-engine-choice-screen"]
+        flags: ["--disable-search-engine-choice-screen"]
     }
 }
 
