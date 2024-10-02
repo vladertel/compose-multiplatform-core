@@ -17,6 +17,7 @@
 package androidx.compose.material3
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,7 +34,6 @@ import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.createCalendarModel
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.DatePickerModalTokens
-import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -77,6 +77,7 @@ import kotlinx.coroutines.launch
  * A simple DateRangePicker looks like:
  *
  * @sample androidx.compose.material3.samples.DateRangePickerSample
+ *
  * @param state state of the date range picker. See [rememberDateRangePickerState].
  * @param modifier the [Modifier] to be applied to this date range picker
  * @param dateFormatter a [DatePickerFormatter] that provides formatting skeletons for dates display
@@ -644,7 +645,7 @@ private class DateRangePickerStateImpl(
  * Date entry content that displays a [DateRangePickerContent] or a [DateRangeInputContent]
  * according to the state's display mode.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwitchableDateEntryContent(
     selectedStartDateMillis: Long?,
@@ -661,10 +662,9 @@ private fun SwitchableDateEntryContent(
 ) {
     // TODO(b/266480386): Apply the motion spec for this once we have it. Consider replacing this
     //  with AnimatedContent when it's out of experimental.
-    // TODO Load the motionScheme tokens from the component tokens file
     Crossfade(
         targetState = displayMode,
-        animationSpec = MotionSchemeKeyTokens.FastEffects.value(),
+        animationSpec = spring(),
         modifier =
             Modifier.semantics {
                 @Suppress("DEPRECATION")

@@ -16,7 +16,6 @@
 
 package androidx.compose.material3.benchmark
 
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -71,7 +70,8 @@ internal class SearchBarTestCase(private val type: SearchBarType) :
         state = remember { mutableStateOf(true) }
         val inputField: @Composable () -> Unit = {
             SearchBarDefaults.InputField(
-                state = rememberTextFieldState(),
+                query = "",
+                onQueryChange = {},
                 onSearch = {},
                 expanded = state.value,
                 onExpandedChange = { state.value = it },

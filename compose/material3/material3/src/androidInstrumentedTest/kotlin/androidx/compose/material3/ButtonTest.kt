@@ -415,13 +415,11 @@ class ButtonTest {
                 .isEqualTo(
                     ButtonColors(
                         containerColor = Color.Transparent,
-                        // TODO change this back to the TextButtonTokens.LabelColor once the tokens
-                        // are updated
-                        contentColor = MaterialTheme.colorScheme.primary,
+                        contentColor = TextButtonTokens.LabelTextColor.value,
                         disabledContainerColor = Color.Transparent,
                         disabledContentColor =
-                            TextButtonTokens.DisabledLabelColor.value.copy(
-                                alpha = TextButtonTokens.DisabledLabelOpacity
+                            TextButtonTokens.DisabledLabelTextColor.value.copy(
+                                alpha = TextButtonTokens.DisabledLabelTextOpacity
                             ),
                     )
                 )

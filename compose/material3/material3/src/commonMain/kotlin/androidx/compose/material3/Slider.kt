@@ -134,6 +134,7 @@ import kotlinx.coroutines.launch
  * of steps between min and max values:
  *
  * @sample androidx.compose.material3.samples.StepsSliderSample
+ *
  * @param value current value of the slider. If outside of [valueRange] provided, value will be
  *   coerced to this range.
  * @param onValueChange callback in which value should be updated
@@ -220,6 +221,7 @@ fun Slider(
  * Slider using custom track and thumb:
  *
  * @sample androidx.compose.material3.samples.SliderWithCustomTrackAndThumb
+ *
  * @param value current value of the slider. If outside of [valueRange] provided, value will be
  *   coerced to this range.
  * @param onValueChange callback in which value should be updated
@@ -314,6 +316,7 @@ fun Slider(
  * Slider using custom track and thumb:
  *
  * @sample androidx.compose.material3.samples.SliderWithCustomTrackAndThumb
+ *
  * @param state [SliderState] which contains the slider's current value.
  * @param modifier the [Modifier] to be applied to this slider
  * @param enabled controls the enabled state of this slider. When `false`, this component will not
@@ -377,6 +380,7 @@ fun Slider(
  * of steps between min and max values:
  *
  * @sample androidx.compose.material3.samples.StepRangeSliderSample
+ *
  * @param value current values of the RangeSlider. If either value is outside of [valueRange]
  *   provided, it will be coerced to this range.
  * @param onValueChange lambda in which values should be updated
@@ -468,6 +472,7 @@ fun RangeSlider(
  * A custom start/end thumb and track can be provided:
  *
  * @sample androidx.compose.material3.samples.RangeSliderWithCustomComponents
+ *
  * @param value current values of the RangeSlider. If either value is outside of [valueRange]
  *   provided, it will be coerced to this range.
  * @param onValueChange lambda in which values should be updated
@@ -585,6 +590,7 @@ fun RangeSlider(
  * A custom start/end thumb and track can be provided:
  *
  * @sample androidx.compose.material3.samples.RangeSliderWithCustomComponents
+ *
  * @param state [RangeSliderState] which contains the current values of the RangeSlider.
  * @param modifier modifiers for the Range Slider layout
  * @param enabled whether or not component is enabled and can we interacted with or not

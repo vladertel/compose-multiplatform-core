@@ -18,9 +18,6 @@ package androidx.compose.material3
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
@@ -172,7 +169,7 @@ class SheetState(
             "Attempted to animate to partial expanded when skipPartiallyExpanded was enabled. Set" +
                 " skipPartiallyExpanded to false to use this function."
         }
-        animateTo(PartiallyExpanded, showMotionSpec)
+        animateTo(PartiallyExpanded)
     }
 
     /**
@@ -187,7 +184,7 @@ class SheetState(
                 hasPartiallyExpandedState -> PartiallyExpanded
                 else -> Expanded
             }
-        animateTo(targetValue, showMotionSpec)
+        animateTo(targetValue)
     }
 
     /**
@@ -201,7 +198,7 @@ class SheetState(
             "Attempted to animate to hidden when skipHiddenState was enabled. Set skipHiddenState" +
                 " to false to use this function."
         }
-        animateTo(Hidden, hideMotionSpec)
+        animateTo(Hidden)
     }
 
     /**
@@ -209,31 +206,15 @@ class SheetState(
      * [currentValue] will be updated to the [targetValue] without updating the offset.
      *
      * @param targetValue The target value of the animation
-     * @param animationSpec an [AnimationSpec]
-     * @param velocity an initial velocity for the animation
      * @throws CancellationException if the interaction interrupted by another interaction like a
      *   gesture interaction or another programmatic interaction like a [animateTo] or [snapTo]
      *   call.
      */
     internal suspend fun animateTo(
         targetValue: SheetValue,
-        animationSpec: FiniteAnimationSpec<Float>,
         velocity: Float = anchoredDraggableState.lastVelocity
     ) {
-        anchoredDraggableState.anchoredDrag(targetValue = targetValue) { anchors, latestTarget ->
-            val targetOffset = anchors.positionOf(latestTarget)
-            if (!targetOffset.isNaN()) {
-                var prev = if (offset.isNaN()) 0f else offset
-                animate(prev, targetOffset, velocity, animationSpec) { value, velocity ->
-                    // Our onDrag coerces the value within the bounds, but an animation may
-                    // overshoot, for example a spring animation or an overshooting interpolator
-                    // We respect the user's intention and allow the overshoot, but still use
-                    // DraggableState's drag for its mutex.
-                    dragTo(value, velocity)
-                    prev = value
-                }
-            }
-        }
+        anchoredDraggableState.animateTo(targetValue, velocity)
     }
 
     /**
@@ -255,23 +236,17 @@ class SheetState(
         anchoredDraggableState.settle(velocity)
     }
 
-    internal var anchoredDraggableMotionSpec: AnimationSpec<Float> = BottomSheetAnimationSpec
-
     internal var anchoredDraggableState =
         AnchoredDraggableState(
             initialValue = initialValue,
-            animationSpec = { anchoredDraggableMotionSpec },
+            animationSpec = BottomSheetAnimationSpec,
             confirmValueChange = confirmValueChange,
             positionalThreshold = { with(density) { 56.dp.toPx() } },
             velocityThreshold = { with(density) { 125.dp.toPx() } },
         )
 
-    internal val offset: Float
+    internal val offset: Float?
         get() = anchoredDraggableState.offset
-
-    internal var showMotionSpec: FiniteAnimationSpec<Float> = snap()
-
-    internal var hideMotionSpec: FiniteAnimationSpec<Float> = snap()
 
     companion object {
         /** The default [Saver] implementation for [SheetState]. */
@@ -456,7 +431,6 @@ internal fun rememberSheetState(
 }
 
 private val DragHandleVerticalPadding = 22.dp
-
-/** A function that provides the default animation spec used by [SheetState]. */
+/** The default animation spec used by [SheetState]. */
 private val BottomSheetAnimationSpec: AnimationSpec<Float> =
     tween(durationMillis = 300, easing = FastOutSlowInEasing)

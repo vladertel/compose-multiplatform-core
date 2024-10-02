@@ -17,10 +17,7 @@
 package androidx.compose.material3.benchmark
 
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableFloatState
@@ -31,7 +28,6 @@ import androidx.compose.testutils.ToggleableTestCase
 import androidx.compose.testutils.benchmark.ComposeBenchmarkRule
 import androidx.compose.testutils.benchmark.benchmarkToFirstPixel
 import androidx.compose.testutils.benchmark.toggleStateBenchmarkComposeMeasureLayout
-import androidx.compose.ui.unit.dp
 import androidx.test.filters.MediumTest
 import org.junit.Rule
 import org.junit.Test
@@ -53,15 +49,7 @@ class ProgressIndicatorBenchmark(private val type: ProgressIndicatorType) {
 
     @Test
     fun firstPixel() {
-        if (type != ProgressIndicatorType.CircularWavy) {
-            benchmarkRule.benchmarkToFirstPixel(testCaseFactory)
-        } else {
-            // The CircularWavyProgressIndicator will have a second recomposition when the number
-            // over vertices is determined by its size and the speed of the wave is determined to
-            // start the animation.
-            // TODO We may be able to fix this by using a Modifier.Node
-            benchmarkRule.benchmarkFirstRenderUntilStable(testCaseFactory)
-        }
+        benchmarkRule.benchmarkToFirstPixel(testCaseFactory)
     }
 
     @Test
@@ -77,30 +65,13 @@ internal class ProgressIndicatorTestCase(private val type: ProgressIndicatorType
     LayeredComposeTestCase(), ToggleableTestCase {
     private lateinit var state: MutableFloatState
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     override fun MeasuredContent() {
         state = remember { mutableFloatStateOf(0f) }
 
         when (type) {
             ProgressIndicatorType.Linear -> LinearProgressIndicator(progress = { state.value })
-            // We set the waveSpeed to zero and a constant amplitude of 1.0 to eliminate the
-            // animations that can affect the benchmark.
-            ProgressIndicatorType.LinearWavy ->
-                LinearWavyProgressIndicator(
-                    progress = { state.value },
-                    amplitude = { 1f },
-                    waveSpeed = 0.dp
-                )
             ProgressIndicatorType.Circular -> CircularProgressIndicator(progress = { state.value })
-            // We set the waveSpeed to zero and a constant amplitude of 1.0 to eliminate the
-            // animations that can affect the benchmark.
-            ProgressIndicatorType.CircularWavy ->
-                CircularWavyProgressIndicator(
-                    progress = { state.value },
-                    amplitude = { 1f },
-                    waveSpeed = 0.dp
-                )
         }
     }
 
@@ -116,7 +87,5 @@ internal class ProgressIndicatorTestCase(private val type: ProgressIndicatorType
 
 enum class ProgressIndicatorType {
     Linear,
-    LinearWavy,
-    Circular,
-    CircularWavy
+    Circular
 }
