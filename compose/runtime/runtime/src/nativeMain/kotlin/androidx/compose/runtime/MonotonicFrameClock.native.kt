@@ -16,11 +16,25 @@
 
 package androidx.compose.runtime
 
+import kotlin.system.getTimeNanos
+import kotlinx.coroutines.yield
+
+/**
+ * The [MonotonicFrameClock] used by [withFrameNanos] and [withFrameMillis] if one is not present in
+ * the calling [kotlin.coroutines.CoroutineContext].
+ *
+ * This value is no longer used by compose runtime.
+ */
+@Suppress("DEPRECATION")
 @Deprecated(
     "MonotonicFrameClocks are not globally applicable across platforms. " +
         "Use an appropriate local clock."
 )
-actual val DefaultMonotonicFrameClock: MonotonicFrameClock get() =
-    throw UnsupportedOperationException(
-        "DefaultMonotonicFrameClock was deprecated and isn't unsupported"
-    )
+actual val DefaultMonotonicFrameClock: MonotonicFrameClock = object : MonotonicFrameClock {
+    override suspend fun <R> withFrameNanos(
+        onFrame: (Long) -> R
+    ): R {
+        yield()
+        return onFrame(getTimeNanos())
+    }
+}
