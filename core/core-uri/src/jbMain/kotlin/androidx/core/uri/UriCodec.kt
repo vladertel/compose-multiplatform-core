@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.navigation.internal
+package androidx.core.uri
 
 private class URISyntaxException(
     input: String, reason: String, index: Int
-) : Exception(
-    "$reason at index $index: $input"
-)
+) : Exception("$reason at index $index: $input")
 
 /**
  * Decodes “application/x-www-form-urlencoded” content.
