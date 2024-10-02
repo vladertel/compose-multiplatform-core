@@ -231,7 +231,7 @@ private fun Modifier.anchorSemantics(
     scope: CoroutineScope
 ): Modifier =
     if (enabled) {
-        this.parentSemantics {
+        this.semantics(mergeDescendants = true) {
             onLongClick(
                 label = label,
                 action = {

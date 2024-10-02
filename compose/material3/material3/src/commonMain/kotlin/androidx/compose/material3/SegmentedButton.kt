@@ -20,9 +20,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
@@ -43,8 +43,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.material3.internal.Icons
-import androidx.compose.material3.tokens.MotionSchemeKeyTokens
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens.DisabledLabelTextColor
 import androidx.compose.material3.tokens.OutlinedSegmentedButtonTokens.DisabledLabelTextOpacity
@@ -103,6 +104,7 @@ import kotlinx.coroutines.launch
  * For a sample showing Segmented button with only checked icons see:
  *
  * @sample androidx.compose.material3.samples.SegmentedButtonMultiSelectSample
+ *
  * @param checked whether this button is checked or not
  * @param onCheckedChange callback to be invoked when the button is clicked. therefore the change of
  *   checked state in requested.
@@ -180,6 +182,7 @@ fun MultiChoiceSegmentedButtonRowScope.SegmentedButton(
  * For a sample showing Segmented button with only checked icons see:
  *
  * @sample androidx.compose.material3.samples.SegmentedButtonSingleSelectSample
+ *
  * @param selected whether this button is selected or not
  * @param onClick callback to be invoked when the button is clicked. therefore the change of checked
  *   state in requested.
@@ -251,6 +254,7 @@ fun SingleChoiceSegmentedButtonRowScope.SegmentedButton(
  * is used when the selection only allows one value, for correct semantics.
  *
  * @sample androidx.compose.material3.samples.SegmentedButtonSingleSelectSample
+ *
  * @param modifier the [Modifier] to be applied to this row
  * @param space the dimension of the overlap between buttons. Should be equal to the stroke width
  *   used on the items.
@@ -288,6 +292,7 @@ fun SingleChoiceSegmentedButtonRow(
  * semantics.
  *
  * @sample androidx.compose.material3.samples.SegmentedButtonMultiSelectSample
+ *
  * @param modifier the [Modifier] to be applied to this row
  * @param space the dimension of the overlap between buttons. Should be equal to the stroke width
  *   used on the items.
@@ -323,13 +328,9 @@ private fun SegmentedButtonContent(
         modifier = Modifier.padding(ButtonDefaults.TextButtonContentPadding)
     ) {
         val typography = OutlinedSegmentedButtonTokens.LabelTextFont.value
-        // TODO Load the motionScheme tokens from the component tokens file
-        val animationSpec = MotionSchemeKeyTokens.FastSpatial.value<Int>()
         ProvideTextStyle(typography) {
             val scope = rememberCoroutineScope()
-            val measurePolicy = remember {
-                SegmentedButtonContentMeasurePolicy(scope, animationSpec)
-            }
+            val measurePolicy = remember { SegmentedButtonContentMeasurePolicy(scope) }
 
             Layout(
                 modifier = Modifier.height(IntrinsicSize.Min),
@@ -340,10 +341,8 @@ private fun SegmentedButtonContent(
     }
 }
 
-internal class SegmentedButtonContentMeasurePolicy(
-    val scope: CoroutineScope,
-    val animationSpec: AnimationSpec<Int>
-) : MultiContentMeasurePolicy {
+internal class SegmentedButtonContentMeasurePolicy(val scope: CoroutineScope) :
+    MultiContentMeasurePolicy {
     var animatable: Animatable<Int, AnimationVector1D>? = null
     private var initialOffset: Int? = null
 
@@ -375,7 +374,9 @@ internal class SegmentedButtonContentMeasurePolicy(
                 animatable
                     ?: Animatable(initialOffset!!, Int.VectorConverter).also { animatable = it }
             if (anim.targetValue != offsetX) {
-                scope.launch { anim.animateTo(offsetX, animationSpec) }
+                scope.launch {
+                    anim.animateTo(offsetX, tween(MotionTokens.DurationMedium3.toInt()))
+                }
             }
         }
 
@@ -486,7 +487,7 @@ object SegmentedButtonDefaults {
                         activeContainerColor = fromToken(SelectedContainerColor),
                         activeContentColor = fromToken(SelectedLabelTextColor),
                         activeBorderColor = fromToken(OutlineColor),
-                        inactiveContainerColor = Color.Transparent,
+                        inactiveContainerColor = surface,
                         inactiveContentColor = fromToken(UnselectedLabelTextColor),
                         inactiveBorderColor = fromToken(OutlineColor),
                         disabledActiveContainerColor = fromToken(SelectedContainerColor),
@@ -495,7 +496,7 @@ object SegmentedButtonDefaults {
                                 .copy(alpha = DisabledLabelTextOpacity),
                         disabledActiveBorderColor =
                             fromToken(OutlineColor).copy(alpha = DisabledOutlineOpacity),
-                        disabledInactiveContainerColor = Color.Transparent,
+                        disabledInactiveContainerColor = surface,
                         disabledInactiveContentColor = fromToken(DisabledLabelTextColor),
                         disabledInactiveBorderColor = fromToken(OutlineColor),
                     )
@@ -565,28 +566,21 @@ object SegmentedButtonDefaults {
         inactiveContent: (@Composable () -> Unit)? = null
     ) {
         if (inactiveContent == null) {
-            // TODO Load the motionScheme tokens from the component tokens file
             AnimatedVisibility(
                 visible = active,
                 exit = ExitTransition.None,
                 enter =
-                    fadeIn(MotionSchemeKeyTokens.DefaultEffects.value()) +
+                    fadeIn(tween(MotionTokens.DurationMedium3.toInt())) +
                         scaleIn(
                             initialScale = 0f,
                             transformOrigin = TransformOrigin(0f, 1f),
-                            animationSpec = MotionSchemeKeyTokens.FastSpatial.value()
+                            animationSpec = tween(MotionTokens.DurationMedium3.toInt()),
                         ),
             ) {
                 activeContent()
             }
         } else {
-            Crossfade(
-                targetState = active,
-                // TODO Load the motionScheme tokens from the component tokens file
-                animationSpec = MotionSchemeKeyTokens.DefaultEffects.value()
-            ) {
-                if (it) activeContent() else inactiveContent()
-            }
+            Crossfade(targetState = active) { if (it) activeContent() else inactiveContent() }
         }
     }
 

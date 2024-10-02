@@ -20,8 +20,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.DecayAnimationSpec
-import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,25 +53,32 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.OutlinedTextFieldDefaults.defaultOutlinedTextFieldColors
 import androidx.compose.material3.internal.CalendarModel
 import androidx.compose.material3.internal.CalendarMonth
 import androidx.compose.material3.internal.DaysInWeek
-import androidx.compose.material3.internal.Icons
 import androidx.compose.material3.internal.MillisecondsIn24Hours
 import androidx.compose.material3.internal.ProvideContentColorTextStyle
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.createCalendarModel
+import androidx.compose.material3.internal.format
 import androidx.compose.material3.internal.formatWithSkeleton
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.DatePickerModalTokens
 import androidx.compose.material3.tokens.DividerTokens
 import androidx.compose.material3.tokens.ElevationTokens
-import androidx.compose.material3.tokens.MotionSchemeKeyTokens
+import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -95,11 +104,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.isContainer
 import androidx.compose.ui.semantics.liveRegion
@@ -107,16 +118,16 @@ import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
+import androidx.compose.ui.semantics.verticalScrollAxisRange
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import kotlin.jvm.JvmInline
 import kotlin.math.max
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -144,6 +155,7 @@ import kotlinx.coroutines.launch
  * like:
  *
  * @sample androidx.compose.material3.samples.DatePickerWithDateSelectableDatesSample
+ *
  * @param state state of the date picker. See [rememberDatePickerState].
  * @param modifier the [Modifier] to be applied to this date picker
  * @param dateFormatter a [DatePickerFormatter] that provides formatting skeletons for dates display
@@ -663,14 +675,11 @@ object DatePickerDefaults {
                 }
 
         val headlineDescription =
-            formatHeadlineDescription(
-                when (displayMode) {
-                    DisplayMode.Picker -> getString(Strings.DatePickerHeadlineDescription)
-                    DisplayMode.Input -> getString(Strings.DateInputHeadlineDescription)
-                    else -> ""
-                },
-                verboseDateDescription
-            )
+            when (displayMode) {
+                DisplayMode.Picker -> getString(Strings.DatePickerHeadlineDescription)
+                DisplayMode.Input -> getString(Strings.DateInputHeadlineDescription)
+                else -> ""
+            }.format(verboseDateDescription)
 
         Text(
             text = headlineText,
@@ -695,8 +704,6 @@ object DatePickerDefaults {
         lazyListState: LazyListState,
         decayAnimationSpec: DecayAnimationSpec<Float> = exponentialDecay()
     ): FlingBehavior {
-        // TODO Load the motionScheme tokens from the component tokens file
-        val animationSpec: FiniteAnimationSpec<Float> = MotionSchemeKeyTokens.DefaultEffects.value()
         return remember(decayAnimationSpec, lazyListState) {
             val original = SnapLayoutInfoProvider(lazyListState)
             val snapLayoutInfoProvider =
@@ -710,7 +717,7 @@ object DatePickerDefaults {
             snapFlingBehavior(
                 snapLayoutInfoProvider = snapLayoutInfoProvider,
                 decayAnimationSpec = decayAnimationSpec,
-                snapAnimationSpec = animationSpec,
+                snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow)
             )
         }
     }
@@ -743,11 +750,6 @@ object DatePickerDefaults {
      */
     const val YearMonthWeekdayDaySkeleton: String = "yMMMMEEEEd"
 }
-
-internal expect inline fun formatHeadlineDescription(
-    template: String,
-    verboseDateDescription: String
-): String
 
 /**
  * Represents the colors used by the date picker.
@@ -911,11 +913,7 @@ constructor(
             rememberUpdatedState(target)
         } else {
             // Animate the content color only when the day is not in a range.
-            animateColorAsState(
-                target,
-                // TODO Load the motionScheme tokens from the component tokens file
-                MotionSchemeKeyTokens.DefaultEffects.value()
-            )
+            animateColorAsState(target, tween(durationMillis = MotionTokens.DurationShort2.toInt()))
         }
     }
 
@@ -939,11 +937,7 @@ constructor(
                 Color.Transparent
             }
         return if (animate) {
-            animateColorAsState(
-                target,
-                // TODO Load the motionScheme tokens from the component tokens file
-                MotionSchemeKeyTokens.DefaultEffects.value()
-            )
+            animateColorAsState(target, tween(durationMillis = MotionTokens.DurationShort2.toInt()))
         } else {
             rememberUpdatedState(target)
         }
@@ -973,8 +967,7 @@ constructor(
 
         return animateColorAsState(
             target,
-            // TODO Load the motionScheme tokens from the component tokens file
-            MotionSchemeKeyTokens.DefaultEffects.value()
+            tween(durationMillis = MotionTokens.DurationShort2.toInt())
         )
     }
 
@@ -994,8 +987,7 @@ constructor(
             }
         return animateColorAsState(
             target,
-            // TODO Load the motionScheme tokens from the component tokens file
-            MotionSchemeKeyTokens.DefaultEffects.value()
+            tween(durationMillis = MotionTokens.DurationShort2.toInt())
         )
     }
 
@@ -1316,8 +1308,6 @@ internal fun DateEntryContainer(
             modifier
                 .sizeIn(minWidth = DatePickerModalTokens.ContainerWidth)
                 .semantics {
-                    // TODO(b/347038246): replace `isContainer` with `isTraversalGroup` with new
-                    // pruning API.
                     @Suppress("DEPRECATION")
                     isContainer = true
                 }
@@ -1387,7 +1377,7 @@ internal fun DisplayModeToggleButton(
  * Date entry content that displays a [DatePickerContent] or a [DateInputContent] according to the
  * state's display mode.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwitchableDateEntryContent(
     selectedDateMillis: Long?,
@@ -1404,21 +1394,10 @@ private fun SwitchableDateEntryContent(
     // Parallax effect offset that will slightly scroll in and out the navigation part of the picker
     // when the display mode changes.
     val parallaxTarget = with(LocalDensity.current) { -48.dp.roundToPx() }
-    // TODO Load the motionScheme tokens from the component tokens file
-    val effectsInAnimationSpec: FiniteAnimationSpec<Float> =
-        MotionSchemeKeyTokens.DefaultEffects.value()
-    val effectsOutAnimationSpec: FiniteAnimationSpec<Float> =
-        MotionSchemeKeyTokens.FastEffects.value()
-    val spatialInOutAnimationSpec: FiniteAnimationSpec<IntOffset> =
-        MotionSchemeKeyTokens.DefaultSpatial.value()
-    val spatialSizeAnimationSpec: FiniteAnimationSpec<IntSize> =
-        MotionSchemeKeyTokens.DefaultSpatial.value()
     AnimatedContent(
         targetState = displayMode,
         modifier =
             Modifier.semantics {
-                // TODO(b/347038246): replace `isContainer` with `isTraversalGroup` with new
-                // pruning API.
                 @Suppress("DEPRECATION")
                 isContainer = true
             },
@@ -1426,30 +1405,42 @@ private fun SwitchableDateEntryContent(
             // When animating the input mode, fade out the calendar picker and slide in the text
             // field from the bottom with a delay to show up after the picker is hidden.
             if (targetState == DisplayMode.Input) {
-                    slideInVertically(animationSpec = spatialInOutAnimationSpec) { height ->
-                        height
-                    } + fadeIn(animationSpec = effectsInAnimationSpec) togetherWith
-                        fadeOut(effectsOutAnimationSpec) +
-                            slideOutVertically(
-                                animationSpec = spatialInOutAnimationSpec,
-                                targetOffsetY = { _ -> parallaxTarget }
-                            )
+                    slideInVertically { height -> height } +
+                        fadeIn(
+                            animationSpec =
+                                tween(
+                                    durationMillis = MotionTokens.DurationShort2.toInt(),
+                                    delayMillis = MotionTokens.DurationShort2.toInt()
+                                )
+                        ) togetherWith
+                        fadeOut(tween(durationMillis = MotionTokens.DurationShort2.toInt())) +
+                            slideOutVertically(targetOffsetY = { _ -> parallaxTarget })
                 } else {
                     // When animating the picker mode, slide out text field and fade in calendar
                     // picker with a delay to show up after the text field is hidden.
                     slideInVertically(
-                        animationSpec = spatialInOutAnimationSpec,
+                        animationSpec = tween(delayMillis = MotionTokens.DurationShort1.toInt()),
                         initialOffsetY = { _ -> parallaxTarget }
-                    ) + fadeIn(animationSpec = effectsInAnimationSpec) togetherWith
-                        slideOutVertically(
-                            animationSpec = spatialInOutAnimationSpec,
-                            targetOffsetY = { fullHeight -> fullHeight }
-                        ) + fadeOut(animationSpec = effectsOutAnimationSpec)
+                    ) +
+                        fadeIn(
+                            animationSpec =
+                                tween(
+                                    durationMillis = MotionTokens.DurationShort2.toInt(),
+                                    delayMillis = MotionTokens.DurationShort2.toInt()
+                                )
+                        ) togetherWith
+                        slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }) +
+                            fadeOut(animationSpec = tween(MotionTokens.DurationShort2.toInt()))
                 }
                 .using(
                     SizeTransform(
                         clip = true,
-                        sizeAnimationSpec = { _, _ -> spatialSizeAnimationSpec }
+                        sizeAnimationSpec = { _, _ ->
+                            tween(
+                                MotionTokens.DurationLong2.toInt(),
+                                easing = MotionTokens.EasingEmphasizedDecelerateCubicBezier
+                            )
+                        }
                     )
                 )
         },
@@ -1482,7 +1473,7 @@ private fun SwitchableDateEntryContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerContent(
     selectedDateMillis: Long?,
@@ -1555,22 +1546,11 @@ private fun DatePickerContent(
                     colors = colors
                 )
             }
-            // TODO Load the motionScheme tokens from the component tokens file
-            val fadeInAnimationSpec: FiniteAnimationSpec<Float> =
-                MotionSchemeKeyTokens.DefaultEffects.value()
-            val fadeOutAnimationSpec: FiniteAnimationSpec<Float> =
-                MotionSchemeKeyTokens.FastEffects.value()
-            val shrinkExpandAnimationSpec: FiniteAnimationSpec<IntSize> =
-                MotionSchemeKeyTokens.DefaultEffects.value()
             androidx.compose.animation.AnimatedVisibility(
                 visible = yearPickerVisible,
                 modifier = Modifier.clipToBounds(),
-                enter =
-                    expandVertically(animationSpec = shrinkExpandAnimationSpec) +
-                        fadeIn(animationSpec = fadeInAnimationSpec, initialAlpha = 0.6f),
-                exit =
-                    shrinkVertically(animationSpec = shrinkExpandAnimationSpec) +
-                        fadeOut(animationSpec = fadeOutAnimationSpec)
+                enter = expandVertically() + fadeIn(initialAlpha = 0.6f),
+                exit = shrinkVertically() + fadeOut()
             ) {
                 // Apply a paneTitle to make the screen reader focus on a relevant node after this
                 // column is hidden and disposed.
@@ -2013,11 +1993,22 @@ private fun YearPicker(
                 // selection of previous years.
                 initialFirstVisibleItemIndex = max(0, displayedYear - yearRange.first - YearsInRow)
             )
+        // Match the years container color to any elevated surface color that is composed under it.
+        val containerColor = colors.containerColor
+        val coroutineScope = rememberCoroutineScope()
+        val scrollToEarlierYearsLabel = getString(Strings.DatePickerScrollToShowEarlierYears)
+        val scrollToLaterYearsLabel = getString(Strings.DatePickerScrollToShowLaterYears)
         LazyVerticalGrid(
             columns = GridCells.Fixed(YearsInRow),
-            // Match the years container color to any elevated surface color that is composed under
-            // it.
-            modifier = modifier.background(colors.containerColor),
+            modifier =
+                modifier
+                    .background(containerColor)
+                    // Apply this to have the screen reader traverse outside the visible list of
+                    // years
+                    // and not scroll them by default.
+                    .semantics {
+                        verticalScrollAxisRange = ScrollAxisRange(value = { 0f }, maxValue = { 0f })
+                    },
             state = lazyGridState,
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalArrangement = Arrangement.spacedBy(YearsVerticalPadding)
@@ -2028,18 +2019,39 @@ private fun YearPicker(
                 Year(
                     modifier =
                         Modifier.requiredSize(
-                            width = DatePickerModalTokens.SelectionYearContainerWidth,
-                            height = DatePickerModalTokens.SelectionYearContainerHeight
-                        ),
+                                width = DatePickerModalTokens.SelectionYearContainerWidth,
+                                height = DatePickerModalTokens.SelectionYearContainerHeight
+                            )
+                            .semantics {
+                                // Apply a11y custom actions to the first and last items in the
+                                // years
+                                // grid. The actions will suggest to scroll to earlier or later
+                                // years in
+                                // the grid.
+                                customActions =
+                                    if (
+                                        lazyGridState.firstVisibleItemIndex == it ||
+                                            lazyGridState.layoutInfo.visibleItemsInfo
+                                                .lastOrNull()
+                                                ?.index == it
+                                    ) {
+                                        customScrollActions(
+                                            state = lazyGridState,
+                                            coroutineScope = coroutineScope,
+                                            scrollUpLabel = scrollToEarlierYearsLabel,
+                                            scrollDownLabel = scrollToLaterYearsLabel
+                                        )
+                                    } else {
+                                        emptyList()
+                                    }
+                            },
                     selected = selectedYear == displayedYear,
                     currentYear = selectedYear == currentYear,
                     onClick = { onYearSelected(selectedYear) },
                     enabled = selectableDates.isSelectableYear(selectedYear),
                     description =
-                        formatDatePickerNavigateToYearString(
-                            getString(Strings.DatePickerNavigateToYearDescription),
-                            localizedYear
-                        ),
+                        getString(Strings.DatePickerNavigateToYearDescription)
+                            .format(localizedYear),
                     colors = colors
                 ) {
                     Text(
@@ -2053,11 +2065,6 @@ private fun YearPicker(
         }
     }
 }
-
-internal expect inline fun formatDatePickerNavigateToYearString(
-    template: String,
-    localizedYear: String
-): String
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2145,8 +2152,8 @@ private fun MonthsNavigation(
                     modifier =
                         Modifier.semantics {
                             // Make the screen reader read out updates to the menu button text as
-                            // the user navigates the arrows or scrolls to change the displayed
-                            // month.
+                            // the
+                            // user navigates the arrows or scrolls to change the displayed month.
                             liveRegion = LiveRegionMode.Polite
                             contentDescription = yearPickerText
                         }
@@ -2202,6 +2209,34 @@ private fun YearPickerMenuButton(
             Modifier.rotate(if (expanded) 180f else 0f)
         )
     }
+}
+
+private fun customScrollActions(
+    state: LazyGridState,
+    coroutineScope: CoroutineScope,
+    scrollUpLabel: String,
+    scrollDownLabel: String
+): List<CustomAccessibilityAction> {
+    val scrollUpAction = {
+        if (!state.canScrollBackward) {
+            false
+        } else {
+            coroutineScope.launch { state.scrollToItem(state.firstVisibleItemIndex - YearsInRow) }
+            true
+        }
+    }
+    val scrollDownAction = {
+        if (!state.canScrollForward) {
+            false
+        } else {
+            coroutineScope.launch { state.scrollToItem(state.firstVisibleItemIndex + YearsInRow) }
+            true
+        }
+    }
+    return listOf(
+        CustomAccessibilityAction(label = scrollUpLabel, action = scrollUpAction),
+        CustomAccessibilityAction(label = scrollDownLabel, action = scrollDownAction)
+    )
 }
 
 internal val RecommendedSizeForAccessibility = 48.dp

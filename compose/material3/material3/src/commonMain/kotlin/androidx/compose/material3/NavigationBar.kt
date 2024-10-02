@@ -18,6 +18,7 @@ package androidx.compose.material3
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.Interaction
@@ -39,9 +40,7 @@ import androidx.compose.material3.internal.MappedInteractionSource
 import androidx.compose.material3.internal.ProvideContentColorTextStyle
 import androidx.compose.material3.internal.systemBarsForVisualComponents
 import androidx.compose.material3.tokens.ElevationTokens
-import androidx.compose.material3.tokens.MotionSchemeKeyTokens
 import androidx.compose.material3.tokens.NavigationBarTokens
-import androidx.compose.material3.tokens.NavigationBarVerticalItemTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -183,14 +182,12 @@ fun RowScope.NavigationBarItem(
 ) {
     @Suppress("NAME_SHADOWING")
     val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
-    // TODO Load the motionScheme tokens from the component tokens file
-    val colorAnimationSpec = MotionSchemeKeyTokens.DefaultEffects.value<Color>()
     val styledIcon =
         @Composable {
             val iconColor by
                 animateColorAsState(
                     targetValue = colors.iconColor(selected = selected, enabled = enabled),
-                    animationSpec = colorAnimationSpec
+                    animationSpec = tween(ItemAnimationDurationMillis)
                 )
             // If there's a label, don't have a11y services repeat the icon description.
             val clearSemantics = label != null && (alwaysShowLabel || selected)
@@ -206,7 +203,7 @@ fun RowScope.NavigationBarItem(
                 val textColor by
                     animateColorAsState(
                         targetValue = colors.textColor(selected = selected, enabled = enabled),
-                        animationSpec = colorAnimationSpec
+                        animationSpec = tween(ItemAnimationDurationMillis)
                     )
                 ProvideContentColorTextStyle(
                     contentColor = textColor,
@@ -234,24 +231,18 @@ fun RowScope.NavigationBarItem(
         contentAlignment = Alignment.Center,
         propagateMinConstraints = true,
     ) {
-        val alphaAnimationProgress: State<Float> =
+        val animationProgress: State<Float> =
             animateFloatAsState(
                 targetValue = if (selected) 1f else 0f,
-                // TODO Load the motionScheme tokens from the component tokens file
-                animationSpec = MotionSchemeKeyTokens.DefaultEffects.value()
+                animationSpec = tween(ItemAnimationDurationMillis)
             )
-        val sizeAnimationProgress: State<Float> =
-            animateFloatAsState(
-                targetValue = if (selected) 1f else 0f,
-                // TODO Load the motionScheme tokens from the component tokens file
-                animationSpec = MotionSchemeKeyTokens.FastSpatial.value()
-            )
+
         // The entire item is selectable, but only the indicator pill shows the ripple. To achieve
         // this, we re-map the coordinates of the item's InteractionSource into the coordinates of
         // the indicator.
         val deltaOffset: Offset
         with(LocalDensity.current) {
-            val indicatorWidth = NavigationBarVerticalItemTokens.ActiveIndicatorWidth.roundToPx()
+            val indicatorWidth = NavigationBarTokens.ActiveIndicatorWidth.roundToPx()
             deltaOffset =
                 Offset((itemWidth - indicatorWidth).toFloat() / 2, IndicatorVerticalOffset.toPx())
         }
@@ -266,18 +257,18 @@ fun RowScope.NavigationBarItem(
             @Composable {
                 Box(
                     Modifier.layoutId(IndicatorRippleLayoutIdTag)
-                        .clip(NavigationBarTokens.ItemActiveIndicatorShape.value)
-                        .indication(offsetInteractionSource, ripple())
+                        .clip(NavigationBarTokens.ActiveIndicatorShape.value)
+                        .indication(offsetInteractionSource, rippleOrFallbackImplementation())
                 )
             }
         val indicator =
             @Composable {
                 Box(
                     Modifier.layoutId(IndicatorLayoutIdTag)
-                        .graphicsLayer { alpha = alphaAnimationProgress.value }
+                        .graphicsLayer { alpha = animationProgress.value }
                         .background(
                             color = colors.indicatorColor,
-                            shape = NavigationBarTokens.ItemActiveIndicatorShape.value,
+                            shape = NavigationBarTokens.ActiveIndicatorShape.value,
                         )
                 )
             }
@@ -288,8 +279,7 @@ fun RowScope.NavigationBarItem(
             icon = styledIcon,
             label = styledLabel,
             alwaysShowLabel = alwaysShowLabel,
-            alphaAnimationProgress = { alphaAnimationProgress.value },
-            sizeAnimationProgress = { sizeAnimationProgress.value }
+            animationProgress = { animationProgress.value },
         )
     }
 }
@@ -358,18 +348,17 @@ object NavigationBarItemDefaults {
         get() {
             return defaultNavigationBarItemColorsCached
                 ?: NavigationBarItemColors(
-                        selectedIconColor = fromToken(NavigationBarTokens.ItemActiveIconColor),
-                        selectedTextColor = fromToken(NavigationBarTokens.ItemActiveLabelTextColor),
+                        selectedIconColor = fromToken(NavigationBarTokens.ActiveIconColor),
+                        selectedTextColor = fromToken(NavigationBarTokens.ActiveLabelTextColor),
                         selectedIndicatorColor =
-                            fromToken(NavigationBarTokens.ItemActiveIndicatorColor),
-                        unselectedIconColor = fromToken(NavigationBarTokens.ItemInactiveIconColor),
-                        unselectedTextColor =
-                            fromToken(NavigationBarTokens.ItemInactiveLabelTextColor),
+                            fromToken(NavigationBarTokens.ActiveIndicatorColor),
+                        unselectedIconColor = fromToken(NavigationBarTokens.InactiveIconColor),
+                        unselectedTextColor = fromToken(NavigationBarTokens.InactiveLabelTextColor),
                         disabledIconColor =
-                            fromToken(NavigationBarTokens.ItemInactiveIconColor)
+                            fromToken(NavigationBarTokens.InactiveIconColor)
                                 .copy(alpha = DisabledAlpha),
                         disabledTextColor =
-                            fromToken(NavigationBarTokens.ItemInactiveLabelTextColor)
+                            fromToken(NavigationBarTokens.InactiveLabelTextColor)
                                 .copy(alpha = DisabledAlpha),
                     )
                     .also { defaultNavigationBarItemColorsCached = it }
@@ -381,11 +370,11 @@ object NavigationBarItemDefaults {
     )
     @Composable
     fun colors(
-        selectedIconColor: Color = NavigationBarTokens.ItemActiveIconColor.value,
-        selectedTextColor: Color = NavigationBarTokens.ItemActiveLabelTextColor.value,
-        indicatorColor: Color = NavigationBarTokens.ItemActiveIndicatorColor.value,
-        unselectedIconColor: Color = NavigationBarTokens.ItemInactiveIconColor.value,
-        unselectedTextColor: Color = NavigationBarTokens.ItemInactiveLabelTextColor.value,
+        selectedIconColor: Color = NavigationBarTokens.ActiveIconColor.value,
+        selectedTextColor: Color = NavigationBarTokens.ActiveLabelTextColor.value,
+        indicatorColor: Color = NavigationBarTokens.ActiveIndicatorColor.value,
+        unselectedIconColor: Color = NavigationBarTokens.InactiveIconColor.value,
+        unselectedTextColor: Color = NavigationBarTokens.InactiveLabelTextColor.value,
     ): NavigationBarItemColors =
         NavigationBarItemColors(
             selectedIconColor = selectedIconColor,
@@ -513,10 +502,8 @@ constructor(
  * @param label text label for this item
  * @param alwaysShowLabel whether to always show the label for this item. If false, the label will
  *   only be shown when this item is selected.
- * @param alphaAnimationProgress progress of the animation, where 0 represents the unselected state
- *   of this item and 1 represents the selected state. This value controls the indicator's opacity.
- * @param sizeAnimationProgress progress of the animation, where 0 represents the unselected state
- *   of this item and 1 represents the selected state. This value controls other values such as
+ * @param animationProgress progress of the animation, where 0 represents the unselected state of
+ *   this item and 1 represents the selected state. This value controls other values such as
  *   indicator size, icon and label positions, etc.
  */
 @Composable
@@ -526,33 +513,25 @@ private fun NavigationBarItemLayout(
     icon: @Composable () -> Unit,
     label: @Composable (() -> Unit)?,
     alwaysShowLabel: Boolean,
-    alphaAnimationProgress: () -> Float,
-    sizeAnimationProgress: () -> Float,
+    animationProgress: () -> Float,
 ) {
-    Layout(
-        modifier = Modifier.badgeBounds(),
-        content = {
-            indicatorRipple()
-            indicator()
+    Layout({
+        indicatorRipple()
+        indicator()
 
-            Box(Modifier.layoutId(IconLayoutIdTag)) { icon() }
+        Box(Modifier.layoutId(IconLayoutIdTag)) { icon() }
 
-            if (label != null) {
-                Box(
-                    Modifier.layoutId(LabelLayoutIdTag)
-                        .graphicsLayer {
-                            alpha = if (alwaysShowLabel) 1f else alphaAnimationProgress()
-                        }
-                        .padding(horizontal = NavigationBarItemHorizontalPadding / 2)
-                ) {
-                    label()
-                }
+        if (label != null) {
+            Box(
+                Modifier.layoutId(LabelLayoutIdTag)
+                    .graphicsLayer { alpha = if (alwaysShowLabel) 1f else animationProgress() }
+                    .padding(horizontal = NavigationBarItemHorizontalPadding / 2)
+            ) {
+                label()
             }
         }
-    ) { measurables, constraints ->
-        @Suppress("NAME_SHADOWING")
-        // Ensure that the progress is >= 0. It may be negative on bouncy springs, for example.
-        val animationProgress = sizeAnimationProgress().coerceAtLeast(0f)
+    }) { measurables, constraints ->
+        @Suppress("NAME_SHADOWING") val animationProgress = animationProgress()
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         val iconPlaceable =
             measurables.fastFirst { it.layoutId == IconLayoutIdTag }.measure(looseConstraints)
@@ -718,7 +697,9 @@ private const val IconLayoutIdTag: String = "icon"
 
 private const val LabelLayoutIdTag: String = "label"
 
-private val NavigationBarHeight: Dp = NavigationBarTokens.TallContainerHeight
+private val NavigationBarHeight: Dp = NavigationBarTokens.ContainerHeight
+
+private const val ItemAnimationDurationMillis: Int = 100
 
 /*@VisibleForTesting*/
 internal val NavigationBarItemHorizontalPadding: Dp = 8.dp
@@ -727,12 +708,10 @@ internal val NavigationBarItemHorizontalPadding: Dp = 8.dp
 internal val NavigationBarIndicatorToLabelPadding: Dp = 4.dp
 
 private val IndicatorHorizontalPadding: Dp =
-    (NavigationBarVerticalItemTokens.ActiveIndicatorWidth -
-        NavigationBarVerticalItemTokens.IconSize) / 2
+    (NavigationBarTokens.ActiveIndicatorWidth - NavigationBarTokens.IconSize) / 2
 
 /*@VisibleForTesting*/
 internal val IndicatorVerticalPadding: Dp =
-    (NavigationBarVerticalItemTokens.ActiveIndicatorHeight -
-        NavigationBarVerticalItemTokens.IconSize) / 2
+    (NavigationBarTokens.ActiveIndicatorHeight - NavigationBarTokens.IconSize) / 2
 
 private val IndicatorVerticalOffset: Dp = 12.dp

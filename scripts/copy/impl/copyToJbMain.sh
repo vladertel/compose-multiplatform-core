@@ -24,8 +24,8 @@ TO_JB_MAIN_BRANCH=integration-copy/$FIRST_FOLDER/$CURRENT_COMMIT/to-jb-main
 git checkout --quiet $(git merge-base $CURRENT_COMMIT $JB_MAIN_BRANCH) -B $TO_JB_MAIN_BRANCH
 (
     cd $ROOT_DIR;
-	git checkout --quiet --no-overlay $CURRENT_COMMIT -- $ALL_FOLDERS;
-	git commit --quiet -m "Copy $FIRST_FOLDER from $CURRENT_COMMIT"
+    git checkout --quiet --no-overlay $CURRENT_COMMIT -- $ALL_FOLDERS;
+    git commit --quiet -m "Copy $FIRST_FOLDER from $CURRENT_COMMIT"
 )
 echo "Created $TO_JB_MAIN_BRANCH"
 

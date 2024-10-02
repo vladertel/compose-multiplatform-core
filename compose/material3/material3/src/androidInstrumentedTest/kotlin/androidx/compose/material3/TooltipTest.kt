@@ -16,14 +16,6 @@
 
 package androidx.compose.material3
 
-import android.os.Build
-import android.view.InputDevice
-import android.view.MotionEvent
-import android.view.MotionEvent.ACTION_DOWN
-import android.view.MotionEvent.ACTION_MOVE
-import android.view.MotionEvent.CLASSIFICATION_DEEP_PRESS
-import android.view.MotionEvent.CLASSIFICATION_NONE
-import android.view.View
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -37,12 +29,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import androidx.compose.ui.test.assertTopPositionInRootIsEqualTo
@@ -61,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
-import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
@@ -94,7 +80,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         rule
@@ -120,7 +106,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         rule
@@ -151,7 +137,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         rule
@@ -182,7 +168,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         rule
@@ -211,7 +197,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         rule
@@ -242,7 +228,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         rule.waitForIdle()
         val subhead = rule.onNodeWithTag(SubheadTestTag)
@@ -293,7 +279,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         // Check that the tooltip is now showing
         rule.waitForIdle()
@@ -329,7 +315,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         // Check that the tooltip is now showing
         rule.waitForIdle()
@@ -373,7 +359,7 @@ class TooltipTest {
         scope.launch { state.show() }
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         // Check that the tooltip is now showing
         rule.waitForIdle()
@@ -390,7 +376,7 @@ class TooltipTest {
 
         // Advance by the fade out duration
         // plus some additional time to make sure that the tooltip is full faded out.
-        rule.mainClock.advanceTimeBy(TooltipFadeOutDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeOutDuration.toLong() + 100L)
         rule.waitForIdle()
         assertThat(state.isVisible).isFalse()
     }
@@ -428,107 +414,6 @@ class TooltipTest {
 
         assertThat(changedToVisible).isTrue()
         assertThat(state.isVisible).isFalse()
-    }
-
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    @Test
-    fun plainTooltip_longPress_deepPress_showsTooltip() {
-        lateinit var view: View
-        lateinit var state: TooltipState
-        var changedToVisible = false
-        rule.mainClock.autoAdvance = false
-        rule.setMaterialContent(lightColorScheme()) {
-            view = LocalView.current
-            state = rememberTooltipState()
-            LaunchedEffect(true) {
-                snapshotFlow { state.isVisible }
-                    .collectLatest {
-                        if (it) {
-                            changedToVisible = true
-                        }
-                    }
-            }
-            Box(Modifier.testTag("tooltip")) {
-                PlainTooltipTest(tooltipContent = { Text(text = "Test") }, tooltipState = state)
-            }
-        }
-
-        assertThat(changedToVisible).isFalse()
-
-        val pointerProperties =
-            arrayOf(
-                MotionEvent.PointerProperties().also {
-                    it.id = 0
-                    it.toolType = MotionEvent.TOOL_TYPE_FINGER
-                }
-            )
-
-        val downEvent =
-            MotionEvent.obtain(
-                /* downTime = */ 0,
-                /* eventTime = */ 0,
-                /* action = */ ACTION_DOWN,
-                /* pointerCount = */ 1,
-                /* pointerProperties = */ pointerProperties,
-                /* pointerCoords = */ arrayOf(
-                    MotionEvent.PointerCoords().apply {
-                        x = 5f
-                        y = 5f
-                    }
-                ),
-                /* metaState = */ 0,
-                /* buttonState = */ 0,
-                /* xPrecision = */ 0f,
-                /* yPrecision = */ 0f,
-                /* deviceId = */ 0,
-                /* edgeFlags = */ 0,
-                /* source = */ InputDevice.SOURCE_TOUCHSCREEN,
-                /* displayId = */ 0,
-                /* flags = */ 0,
-                /* classification = */ CLASSIFICATION_NONE
-            )
-
-        view.dispatchTouchEvent(downEvent)
-        rule.mainClock.advanceTimeBy(50)
-
-        rule.runOnIdle {
-            assertThat(changedToVisible).isFalse()
-            assertThat(state.isVisible).isFalse()
-        }
-
-        val deepPressMoveEvent =
-            MotionEvent.obtain(
-                /* downTime = */ 0,
-                /* eventTime = */ 50,
-                /* action = */ ACTION_MOVE,
-                /* pointerCount = */ 1,
-                /* pointerProperties = */ pointerProperties,
-                /* pointerCoords = */ arrayOf(
-                    MotionEvent.PointerCoords().apply {
-                        x = 10f
-                        y = 10f
-                    }
-                ),
-                /* metaState = */ 0,
-                /* buttonState = */ 0,
-                /* xPrecision = */ 0f,
-                /* yPrecision = */ 0f,
-                /* deviceId = */ 0,
-                /* edgeFlags = */ 0,
-                /* source = */ InputDevice.SOURCE_TOUCHSCREEN,
-                /* displayId = */ 0,
-                /* flags = */ 0,
-                /* classification = */ CLASSIFICATION_DEEP_PRESS
-            )
-
-        view.dispatchTouchEvent(deepPressMoveEvent)
-        rule.mainClock.advanceTimeBy(50)
-
-        // Even though the timeout didn't pass, the deep press should immediately show the tooltip
-        rule.runOnIdle {
-            assertThat(changedToVisible).isTrue()
-            assertThat(state.isVisible).isTrue()
-        }
     }
 
     @Test
@@ -772,7 +657,7 @@ class TooltipTest {
         rule.mainClock.autoAdvance = false
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         // Check that only the tooltip associated with bottomState is visible
         rule.waitForIdle()
@@ -837,7 +722,7 @@ class TooltipTest {
         rule.mainClock.autoAdvance = false
 
         // Advance by the fade in time
-        rule.mainClock.advanceTimeBy(TooltipFadeInDuration)
+        rule.mainClock.advanceTimeBy(TooltipFadeInDuration.toLong())
 
         // Check that both tooltips are now showing
         rule.waitForIdle()
@@ -888,31 +773,6 @@ class TooltipTest {
             Icon(Icons.Filled.Favorite, contentDescription = null)
         }
     }
-
-    @Test
-    fun plainTooltip_withClickable_hasCorrectSemantics() {
-        rule.setMaterialContent(lightColorScheme()) {
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                tooltip = {
-                    PlainTooltip(
-                        modifier = Modifier.testTag(ContainerTestTag),
-                        content = { Text("Tooltip") }
-                    )
-                },
-                state = rememberTooltipState()
-            ) {
-                IconButton(modifier = Modifier.testTag(AnchorTestTag), onClick = {}) {
-                    Icon(Icons.Filled.Favorite, contentDescription = null)
-                }
-            }
-        }
-
-        rule
-            .onNodeWithTag(AnchorTestTag)
-            .assertHasClickAction()
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
-    }
 }
 
 private const val ActionTestTag = "Action"
@@ -920,6 +780,3 @@ private const val AnchorTestTag = "Anchor"
 private const val ContainerTestTag = "Container"
 private const val SubheadTestTag = "Subhead"
 private const val TextTestTag = "Text"
-// We use springs to animate, so picking an arbitrary durations that work.
-private const val TooltipFadeInDuration = 300L
-private const val TooltipFadeOutDuration = 300L
