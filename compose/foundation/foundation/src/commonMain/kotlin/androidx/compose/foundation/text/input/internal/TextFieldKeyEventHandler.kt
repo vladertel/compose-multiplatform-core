@@ -99,7 +99,7 @@ internal abstract class TextFieldKeyEventHandler {
             }
         }
 
-        if (event.type == KeyEventType.Unknown) {
+        if (event.type == KeyEventType.Unknown && !event.isTypedEvent) {
             return false
         }
 
