@@ -217,6 +217,7 @@ class ModalBottomSheetTest {
                     latch.countDown()
                 }
 
+                @Deprecated("deprecated")
                 override fun onLowMemory() {
                     // NO-OP
                 }
@@ -273,6 +274,7 @@ class ModalBottomSheetTest {
                     latch.countDown()
                 }
 
+                @Deprecated("deprecated")
                 override fun onLowMemory() {
                     // NO-OP
                 }
