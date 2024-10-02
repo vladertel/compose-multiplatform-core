@@ -58,7 +58,7 @@ val libraryToComponents = mapOf(
         ComposeComponent(":compose:material:material"),
         ComposeComponent(":compose:material3:material3"),
         ComposeComponent(":compose:material3:material3-common"),
-        ComposeComponent(":compose:material:material-icons-core"),
+        //ComposeComponent(":compose:material:material-icons-core"),
         ComposeComponent(":compose:material:material-ripple"),
         //disable 'material-navigation' publication until Google releases its version
         //ComposeComponent(":compose:material:material-navigation"),
@@ -163,10 +163,9 @@ tasks.register("publishComposeJbToMavenLocal", ComposePublishingTask::class) {
 
 // isn't included in libraryToComponents for easy conflict resolution
 // (it is changed in integration and should be removed in 1.8)
+// TODO remove this and CI tasks after merging Jetpack Compose 1.8 to jb-main
 val iconsComponents =
-    listOf(
-        ComposeComponent(":compose:material:material-icons-extended"),
-    )
+    emptyList<ComposeComponent>()
 
 fun ComposePublishingTask.iconsPublications() {
     iconsComponents.forEach { publishMultiplatform(it) }
