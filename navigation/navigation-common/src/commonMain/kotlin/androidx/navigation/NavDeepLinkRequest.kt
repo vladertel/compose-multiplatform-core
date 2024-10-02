@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.navigation
 
-import android.content.Intent
-import android.net.Uri
 import androidx.annotation.RestrictTo
-import java.lang.StringBuilder
+import androidx.core.uri.Uri
+import kotlin.jvm.JvmStatic
 
 /**
  * A request for a deep link in a [NavDestination].
@@ -26,56 +26,34 @@ import java.lang.StringBuilder
  * NavDeepLinkRequest are used to check if a [NavDeepLink] exists for a [NavDestination] and to
  * navigate to a [NavDestination] with a matching [NavDeepLink].
  */
-public actual open class NavDeepLinkRequest
+public expect open class NavDeepLinkRequest
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-actual constructor(
+constructor(
+    uri: Uri?, action: String?, mimeType: String?,
+) {
     /**
      * The uri from the NavDeepLinkRequest.
      *
      * @see NavDeepLink.uriPattern
      */
-    public actual open val uri: Uri?,
+    public open val uri: Uri?
+
     /**
      * The action from the NavDeepLinkRequest.
      *
      * @see NavDeepLink.action
      */
-    public actual open val action: String?,
+    public open val action: String?
+
     /**
      * The mimeType from the NavDeepLinkRequest.
      *
      * @see NavDeepLink.mimeType
      */
-    public actual open val mimeType: String?,
-) {
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public constructor(intent: Intent) : this(intent.data, intent.action, intent.type)
-
-    public override fun toString(): String {
-        val sb = StringBuilder()
-        sb.append("NavDeepLinkRequest")
-        sb.append("{")
-        if (uri != null) {
-            sb.append(" uri=")
-            sb.append(uri.toString())
-        }
-        if (action != null) {
-            sb.append(" action=")
-            sb.append(action)
-        }
-        if (mimeType != null) {
-            sb.append(" mimetype=")
-            sb.append(mimeType)
-        }
-        sb.append(" }")
-        return sb.toString()
-    }
+    public open val mimeType: String?
 
     /** A builder for constructing [NavDeepLinkRequest] instances. */
-    public actual class Builder private constructor() {
-        private var uri: Uri? = null
-        private var action: String? = null
-        private var mimeType: String? = null
+    public class Builder {
 
         /**
          * Set the uri for the [NavDeepLinkRequest].
@@ -83,10 +61,7 @@ actual constructor(
          * @param uri The uri to add to the NavDeepLinkRequest
          * @return This builder.
          */
-        public actual fun setUri(uri: Uri): Builder {
-            this.uri = uri
-            return this
-        }
+        public fun setUri(uri: Uri): Builder
 
         /**
          * Set the action for the [NavDeepLinkRequest].
@@ -95,11 +70,7 @@ actual constructor(
          * @return This builder.
          * @throws IllegalArgumentException if the action is empty.
          */
-        public actual fun setAction(action: String): Builder {
-            require(action.isNotEmpty()) { "The NavDeepLinkRequest cannot have an empty action." }
-            this.action = action
-            return this
-        }
+        public fun setAction(action: String): Builder
 
         /**
          * Set the mimeType for the [NavDeepLinkRequest].
@@ -109,25 +80,16 @@ actual constructor(
          * @throws IllegalArgumentException if the given mimeType does not match th3e required
          *   "type/subtype" format.
          */
-        public actual fun setMimeType(mimeType: String): Builder {
-            val mimeTypeMatcher = mimeType.matches("^[-\\w*.]+/[-\\w+*.]+$".toRegex())
-            require(mimeTypeMatcher) {
-                "The given mimeType $mimeType does not match to required \"type/subtype\" format"
-            }
-            this.mimeType = mimeType
-            return this
-        }
+        public fun setMimeType(mimeType: String): Builder
 
         /**
          * Build the [NavDeepLinkRequest] specified by this builder.
          *
          * @return the newly constructed NavDeepLinkRequest
          */
-        public actual fun build(): NavDeepLinkRequest {
-            return NavDeepLinkRequest(uri, action, mimeType)
-        }
+        public fun build(): NavDeepLinkRequest
 
-        public actual companion object {
+        public companion object {
             /**
              * Creates a [NavDeepLinkRequest.Builder] with a set uri.
              *
@@ -135,11 +97,7 @@ actual constructor(
              * @return a [Builder] instance
              */
             @JvmStatic
-            public actual fun fromUri(uri: Uri): Builder {
-                val builder = Builder()
-                builder.setUri(uri)
-                return builder
-            }
+            public fun fromUri(uri: Uri): Builder
 
             /**
              * Creates a [NavDeepLinkRequest.Builder] with a set action.
@@ -149,14 +107,7 @@ actual constructor(
              * @throws IllegalArgumentException if the action is empty.
              */
             @JvmStatic
-            public actual fun fromAction(action: String): Builder {
-                require(action.isNotEmpty()) {
-                    "The NavDeepLinkRequest cannot have an empty action."
-                }
-                val builder = Builder()
-                builder.setAction(action)
-                return builder
-            }
+            public fun fromAction(action: String): Builder
 
             /**
              * Creates a [NavDeepLinkRequest.Builder] with a set mimeType.
@@ -165,11 +116,7 @@ actual constructor(
              * @return a [Builder] instance
              */
             @JvmStatic
-            public actual fun fromMimeType(mimeType: String): Builder {
-                val builder = Builder()
-                builder.setMimeType(mimeType)
-                return builder
-            }
+            public fun fromMimeType(mimeType: String): Builder
         }
     }
 }

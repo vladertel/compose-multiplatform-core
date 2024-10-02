@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.navigation
 
-import android.content.Intent
-import android.net.Uri
 import androidx.annotation.RestrictTo
-import java.lang.StringBuilder
+import androidx.core.uri.Uri
+import kotlin.jvm.JvmStatic
 
 /**
  * A request for a deep link in a [NavDestination].
@@ -48,8 +48,6 @@ actual constructor(
      */
     public actual open val mimeType: String?,
 ) {
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public constructor(intent: Intent) : this(intent.data, intent.action, intent.type)
 
     public override fun toString(): String {
         val sb = StringBuilder()
