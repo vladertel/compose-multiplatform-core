@@ -365,15 +365,19 @@ fun rememberDatePickerState(
 ): DatePickerState {
     val locale = defaultLocale()
     return rememberSaveable(saver = DatePickerStateImpl.Saver(selectableDates, locale)) {
-        DatePickerStateImpl(
-            initialSelectedDateMillis = initialSelectedDateMillis,
-            initialDisplayedMonthMillis = initialDisplayedMonthMillis,
-            yearRange = yearRange,
-            initialDisplayMode = initialDisplayMode,
-            selectableDates = selectableDates,
-            locale = locale
-        )
-    }
+            DatePickerStateImpl(
+                initialSelectedDateMillis = initialSelectedDateMillis,
+                initialDisplayedMonthMillis = initialDisplayedMonthMillis,
+                yearRange = yearRange,
+                initialDisplayMode = initialDisplayMode,
+                selectableDates = selectableDates,
+                locale = locale
+            )
+        }
+        .apply {
+            // Update the state's selectable dates if they were changed.
+            this.selectableDates = selectableDates
+        }
 }
 
 /**
@@ -1070,11 +1074,13 @@ constructor(
 internal abstract class BaseDatePickerStateImpl(
     @Suppress("AutoBoxing") initialDisplayedMonthMillis: Long?,
     val yearRange: IntRange,
-    val selectableDates: SelectableDates,
+    selectableDates: SelectableDates,
     locale: CalendarLocale
 ) {
 
     val calendarModel = createCalendarModel(locale)
+
+    var selectableDates by mutableStateOf(selectableDates)
 
     private var _displayedMonth =
         mutableStateOf(
@@ -1842,7 +1848,7 @@ internal fun Month(
                             // end-date selection.
                             animateChecked = startDateSelected,
                             enabled =
-                                remember(dateInMillis) {
+                                remember(dateInMillis, selectableDates) {
                                     // Disabled a day in case its year is not selectable, or the
                                     // date itself is specifically not allowed by the state's
                                     // SelectableDates.
