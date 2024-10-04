@@ -1491,10 +1491,22 @@ private fun DatePickerContent(
     colors: DatePickerColors
 ) {
     val displayedMonth = calendarModel.getMonth(displayedMonthMillis)
-    val monthsListState =
-        rememberLazyListState(
-            initialFirstVisibleItemIndex = displayedMonth.indexIn(yearRange).coerceAtLeast(0)
-        )
+    val monthIndex = displayedMonth.indexIn(yearRange).coerceAtLeast(0)
+    val monthsListState = rememberLazyListState(initialFirstVisibleItemIndex = monthIndex)
+
+    // Scroll to the resolved displayedMonth, if needed.
+    LaunchedEffect(monthIndex) {
+        // The DatePicker has other actions that can trigger a scroll and update the
+        // displayedMonthMillis as they do so, hence we check here for isScrollInProgress and only
+        // scroll to the monthIndex when there is none in progress.
+        if (
+            !monthsListState.isScrollInProgress &&
+                monthsListState.firstVisibleItemIndex != monthIndex
+        ) {
+            monthsListState.scrollToItem(monthIndex)
+        }
+    }
+
     val coroutineScope = rememberCoroutineScope()
     var yearPickerVisible by rememberSaveable { mutableStateOf(false) }
     val defaultLocale = defaultLocale()
