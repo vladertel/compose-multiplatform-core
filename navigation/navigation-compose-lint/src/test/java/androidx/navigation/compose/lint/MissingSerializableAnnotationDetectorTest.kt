@@ -14,23 +14,17 @@
  * limitations under the License.
  */
 
-package androidx.navigation.common.lint
+package androidx.navigation.compose.lint
 
-import androidx.navigation.lint.common.K_SERIALIZER
 import androidx.navigation.lint.common.NAVIGATION_STUBS
-import androidx.navigation.lint.common.NAV_DEEP_LINK
 import androidx.navigation.lint.common.SERIALIZABLE_ANNOTATION
 import androidx.navigation.lint.common.SERIALIZABLE_TEST_CLASS
 import androidx.navigation.lint.common.TEST_CLASS
-import androidx.navigation.lint.common.bytecodeStub
 import com.android.tools.lint.checks.infrastructure.LintDetectorTest
 import com.android.tools.lint.detector.api.Detector
 import com.android.tools.lint.detector.api.Issue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
 
-@RunWith(JUnit4::class)
 class MissingSerializableAnnotationDetectorTest : LintDetectorTest() {
     override fun getDetector(): Detector = TypeSafeDestinationMissingAnnotationDetector()
 
@@ -38,7 +32,7 @@ class MissingSerializableAnnotationDetectorTest : LintDetectorTest() {
         listOf(TypeSafeDestinationMissingAnnotationDetector.MissingSerializableAnnotationIssue)
 
     @Test
-    fun testNavDestinationBuilderConstructor_noError() {
+    fun testComposeNavigatorDestinationBuilderConstructor_noError() {
         lint()
             .files(
                 kotlin(
@@ -46,23 +40,24 @@ class MissingSerializableAnnotationDetectorTest : LintDetectorTest() {
                 package com.example
 
                 import androidx.navigation.*
+                import androidx.navigation.compose.*
                 import androidx.testSerializable.*
 
                 fun navigation() {
-                    NavDestinationBuilder<NavGraph>(route = TestClass::class)
-                    NavDestinationBuilder<NavGraph>(route = TestObject::class)
-                    NavDestinationBuilder<NavGraph>(route = TestDataObject::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer.InnerObject::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer.InnerClass::class)
-                    NavDestinationBuilder<NavGraph>(route = TestInterface::class)
-                    NavDestinationBuilder<NavGraph>(route = InterfaceChildClass::class)
-                    NavDestinationBuilder<NavGraph>(route = InterfaceChildObject::class)
-                    NavDestinationBuilder<NavGraph>(route = TestAbstract::class)
-                    NavDestinationBuilder<NavGraph>(route = AbstractChildClass::class)
-                    NavDestinationBuilder<NavGraph>(route = AbstractChildObject::class)
-                    NavDestinationBuilder<NavGraph>(route = SealedClass::class)
-                    NavDestinationBuilder<NavGraph>(route = SealedClass.SealedSubClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestObject::class)
+                    ComposeNavigatorDestinationBuilder(route = TestDataObject::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer.InnerObject::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer.InnerClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestInterface::class)
+                    ComposeNavigatorDestinationBuilder(route = InterfaceChildClass::class)
+                    ComposeNavigatorDestinationBuilder(route = InterfaceChildObject::class)
+                    ComposeNavigatorDestinationBuilder(route = TestAbstract::class)
+                    ComposeNavigatorDestinationBuilder(route = AbstractChildClass::class)
+                    ComposeNavigatorDestinationBuilder(route = AbstractChildObject::class)
+                    ComposeNavigatorDestinationBuilder(route = SealedClass::class)
+                    ComposeNavigatorDestinationBuilder(route = SealedClass.SealedSubClass::class)
                 }
                 """
                     )
@@ -75,7 +70,7 @@ class MissingSerializableAnnotationDetectorTest : LintDetectorTest() {
     }
 
     @Test
-    fun testNavDestinationBuilderConstructor_hasError() {
+    fun testComposeNavigatorDestinationBuilderConstructor_hasError() {
         lint()
             .files(
                 kotlin(
@@ -83,23 +78,24 @@ class MissingSerializableAnnotationDetectorTest : LintDetectorTest() {
                 package com.example
 
                 import androidx.navigation.*
+                import androidx.navigation.compose.*
                 import androidx.test.*
 
                 fun navigation() {
-                    NavDestinationBuilder<NavGraph>(route = TestClass::class)
-                    NavDestinationBuilder<NavGraph>(route = TestObject::class)
-                    NavDestinationBuilder<NavGraph>(route = TestDataObject::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer.InnerObject::class)
-                    NavDestinationBuilder<NavGraph>(route = Outer.InnerClass::class)
-                    NavDestinationBuilder<NavGraph>(route = TestInterface::class)
-                    NavDestinationBuilder<NavGraph>(route = InterfaceChildClass::class)
-                    NavDestinationBuilder<NavGraph>(route = InterfaceChildObject::class)
-                    NavDestinationBuilder<NavGraph>(route = TestAbstract::class)
-                    NavDestinationBuilder<NavGraph>(route = AbstractChildClass::class)
-                    NavDestinationBuilder<NavGraph>(route = AbstractChildObject::class)
-                    NavDestinationBuilder<NavGraph>(route = SealedClass::class)
-                    NavDestinationBuilder<NavGraph>(route = SealedClass.SealedSubClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestObject::class)
+                    ComposeNavigatorDestinationBuilder(route = TestDataObject::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer.InnerObject::class)
+                    ComposeNavigatorDestinationBuilder(route = Outer.InnerClass::class)
+                    ComposeNavigatorDestinationBuilder(route = TestInterface::class)
+                    ComposeNavigatorDestinationBuilder(route = InterfaceChildClass::class)
+                    ComposeNavigatorDestinationBuilder(route = InterfaceChildObject::class)
+                    ComposeNavigatorDestinationBuilder(route = TestAbstract::class)
+                    ComposeNavigatorDestinationBuilder(route = AbstractChildClass::class)
+                    ComposeNavigatorDestinationBuilder(route = AbstractChildObject::class)
+                    ComposeNavigatorDestinationBuilder(route = SealedClass::class)
+                    ComposeNavigatorDestinationBuilder(route = SealedClass.SealedSubClass::class)
                 }
                 """
                     )
@@ -150,13 +146,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     class SealedSubClass : SealedClass()
           ~~~~~~~~~~~~~~
 13 errors, 0 warnings
-                """
+            """
                     .trimIndent()
             )
     }
 
     @Test
-    fun testNavGraphBuilderConstructor_noError() {
+    fun testComposable_noError() {
         lint()
             .files(
                 kotlin(
@@ -164,23 +160,28 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
+                import androidx.navigation.compose.*
                 import androidx.testSerializable.*
 
+                @Serializable class RouteClass
+
                 fun navigation() {
-                    NavGraphBuilder(route = TestClass::class)
-                    NavGraphBuilder(route = TestObject::class)
-                    NavGraphBuilder(route = TestDataObject::class)
-                    NavGraphBuilder(route = Outer::class)
-                    NavGraphBuilder(route = Outer.InnerObject::class)
-                    NavGraphBuilder(route = Outer.InnerClass::class)
-                    NavGraphBuilder(route = TestInterface::class)
-                    NavGraphBuilder(route = InterfaceChildClass::class)
-                    NavGraphBuilder(route = InterfaceChildObject::class)
-                    NavGraphBuilder(route = TestAbstract::class)
-                    NavGraphBuilder(route = AbstractChildClass::class)
-                    NavGraphBuilder(route = AbstractChildObject::class)
-                    NavGraphBuilder(route = SealedClass::class)
-                    NavGraphBuilder(route = SealedClass.SealedSubClass::class)
+                    val builder = NavGraphBuilder(route = RouteClass::class)
+
+                    builder.composable<TestClass>()
+                    builder.composable<TestObject>()
+                    builder.composable<TestDataObject>()
+                    builder.composable<Outer>()
+                    builder.composable<Outer.InnerObject>()
+                    builder.composable<Outer.InnerClass>()
+                    builder.composable<TestInterface>()
+                    builder.composable<InterfaceChildClass>()
+                    builder.composable<InterfaceChildObject>()
+                    builder.composable<TestAbstract>()
+                    builder.composable<AbstractChildClass>()
+                    builder.composable<AbstractChildObject>()
+                    builder.composable<SealedClass>()
+                    builder.composable<SealedClass.SealedSubClass>()
                 }
                 """
                     )
@@ -193,7 +194,7 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     }
 
     @Test
-    fun testNavGraphBuilderConstructor_hasError() {
+    fun testComposable_hasError() {
         lint()
             .files(
                 kotlin(
@@ -201,23 +202,28 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
+                import androidx.navigation.compose.*
                 import androidx.test.*
 
+                @Serializable class RouteClass
+
                 fun navigation() {
-                    NavGraphBuilder(route = TestClass::class)
-                    NavGraphBuilder(route = TestObject::class)
-                    NavGraphBuilder(route = TestDataObject::class)
-                    NavGraphBuilder(route = Outer::class)
-                    NavGraphBuilder(route = Outer.InnerObject::class)
-                    NavGraphBuilder(route = Outer.InnerClass::class)
-                    NavGraphBuilder(route = TestInterface::class)
-                    NavGraphBuilder(route = InterfaceChildClass::class)
-                    NavGraphBuilder(route = InterfaceChildObject::class)
-                    NavGraphBuilder(route = TestAbstract::class)
-                    NavGraphBuilder(route = AbstractChildClass::class)
-                    NavGraphBuilder(route = AbstractChildObject::class)
-                    NavGraphBuilder(route = SealedClass::class)
-                    NavGraphBuilder(route = SealedClass.SealedSubClass::class)
+                    val builder = NavGraphBuilder(route = RouteClass::class)
+
+                    builder.composable<TestClass>()
+                    builder.composable<TestObject>()
+                    builder.composable<TestDataObject>()
+                    builder.composable<Outer>()
+                    builder.composable<Outer.InnerObject>()
+                    builder.composable<Outer.InnerClass>()
+                    builder.composable<TestInterface>()
+                    builder.composable<InterfaceChildClass>()
+                    builder.composable<InterfaceChildObject>()
+                    builder.composable<TestAbstract>()
+                    builder.composable<AbstractChildClass>()
+                    builder.composable<AbstractChildObject>()
+                    builder.composable<SealedClass>()
+                    builder.composable<SealedClass.SealedSubClass>()
                 }
                 """
                     )
@@ -268,13 +274,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     class SealedSubClass : SealedClass()
           ~~~~~~~~~~~~~~
 13 errors, 0 warnings
-                """
+"""
                     .trimIndent()
             )
     }
 
     @Test
-    fun testNavGraphBuilderNavigation_noError() {
+    fun testNavigation_noError() {
         lint()
             .files(
                 kotlin(
@@ -282,11 +288,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
                 import androidx.testSerializable.*
 
+                @Serializable class RouteClass
+
                 fun navigation() {
-                    val builder = NavGraphBuilder(provider, TestGraph, null)
+                    val builder = NavGraphBuilder(route = RouteClass::class)
 
                     builder.navigation<TestClass>()
                     builder.navigation<TestObject>()
@@ -302,7 +310,6 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                     builder.navigation<AbstractChildObject>()
                     builder.navigation<SealedClass>()
                     builder.navigation<SealedClass.SealedSubClass>()
-
                 }
                 """
                     )
@@ -315,7 +322,7 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     }
 
     @Test
-    fun testNavGraphBuilderNavigation_hasError() {
+    fun testNavigation_hasError() {
         lint()
             .files(
                 kotlin(
@@ -323,11 +330,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
                 import androidx.test.*
 
+                @Serializable class RouteClass
+
                 fun navigation() {
-                    val builder = NavGraphBuilder(provider, TestGraph, null)
+                    val builder = NavGraphBuilder(route = RouteClass::class)
 
                     builder.navigation<TestClass>()
                     builder.navigation<TestObject>()
@@ -343,7 +352,6 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                     builder.navigation<AbstractChildObject>()
                     builder.navigation<SealedClass>()
                     builder.navigation<SealedClass.SealedSubClass>()
-
                 }
                 """
                     )
@@ -394,13 +402,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     class SealedSubClass : SealedClass()
           ~~~~~~~~~~~~~~
 13 errors, 0 warnings
-                """
+"""
                     .trimIndent()
             )
     }
 
     @Test
-    fun testNavProviderNavigation_noError() {
+    fun testDialogNavigatorDestinationBuilderConstructor_noError() {
         lint()
             .files(
                 kotlin(
@@ -408,26 +416,24 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
                 import androidx.testSerializable.*
 
                 fun navigation() {
-                    val provider = NavigatorProvider()
-
-                    provider.navigation(route = TestClass::class)
-                    provider.navigation(route = TestObject::class)
-                    provider.navigation(route = TestDataObject::class)
-                    provider.navigation(route = Outer::class)
-                    provider.navigation(route = Outer.InnerObject::class)
-                    provider.navigation(route = Outer.InnerClass::class)
-                    provider.navigation(route = TestInterface::class)
-                    provider.navigation(route = InterfaceChildClass::class)
-                    provider.navigation(route = InterfaceChildObject::class)
-                    provider.navigation(route = TestAbstract::class)
-                    provider.navigation(route = AbstractChildClass::class)
-                    provider.navigation(route = AbstractChildObject::class)
-                    provider.navigation(route = SealedClass::class)
-                    provider.navigation(route = SealedClass.SealedSubClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestObject::class)
+                    DialogNavigatorDestinationBuilder(route = TestDataObject::class)
+                    DialogNavigatorDestinationBuilder(route = Outer::class)
+                    DialogNavigatorDestinationBuilder(route = Outer.InnerObject::class)
+                    DialogNavigatorDestinationBuilder(route = Outer.InnerClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestInterface::class)
+                    DialogNavigatorDestinationBuilder(route = InterfaceChildClass::class)
+                    DialogNavigatorDestinationBuilder(route = InterfaceChildObject::class)
+                    DialogNavigatorDestinationBuilder(route = TestAbstract::class)
+                    DialogNavigatorDestinationBuilder(route = AbstractChildClass::class)
+                    DialogNavigatorDestinationBuilder(route = AbstractChildObject::class)
+                    DialogNavigatorDestinationBuilder(route = SealedClass::class)
+                    DialogNavigatorDestinationBuilder(route = SealedClass.SealedSubClass::class)
                 }
                 """
                     )
@@ -440,7 +446,7 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     }
 
     @Test
-    fun testNavProviderNavigation_hasError() {
+    fun testDialogNavigatorDestinationBuilderConstructor_hasError() {
         lint()
             .files(
                 kotlin(
@@ -448,26 +454,24 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
                 import androidx.test.*
 
                 fun navigation() {
-                    val provider = NavigatorProvider()
-
-                    provider.navigation(route = TestClass::class)
-                    provider.navigation(route = TestObject::class)
-                    provider.navigation(route = TestDataObject::class)
-                    provider.navigation(route = Outer::class)
-                    provider.navigation(route = Outer.InnerObject::class)
-                    provider.navigation(route = Outer.InnerClass::class)
-                    provider.navigation(route = TestInterface::class)
-                    provider.navigation(route = InterfaceChildClass::class)
-                    provider.navigation(route = InterfaceChildObject::class)
-                    provider.navigation(route = TestAbstract::class)
-                    provider.navigation(route = AbstractChildClass::class)
-                    provider.navigation(route = AbstractChildObject::class)
-                    provider.navigation(route = SealedClass::class)
-                    provider.navigation(route = SealedClass.SealedSubClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestObject::class)
+                    DialogNavigatorDestinationBuilder(route = TestDataObject::class)
+                    DialogNavigatorDestinationBuilder(route = Outer::class)
+                    DialogNavigatorDestinationBuilder(route = Outer.InnerObject::class)
+                    DialogNavigatorDestinationBuilder(route = Outer.InnerClass::class)
+                    DialogNavigatorDestinationBuilder(route = TestInterface::class)
+                    DialogNavigatorDestinationBuilder(route = InterfaceChildClass::class)
+                    DialogNavigatorDestinationBuilder(route = InterfaceChildObject::class)
+                    DialogNavigatorDestinationBuilder(route = TestAbstract::class)
+                    DialogNavigatorDestinationBuilder(route = AbstractChildClass::class)
+                    DialogNavigatorDestinationBuilder(route = AbstractChildObject::class)
+                    DialogNavigatorDestinationBuilder(route = SealedClass::class)
+                    DialogNavigatorDestinationBuilder(route = SealedClass.SealedSubClass::class)
                 }
                 """
                     )
@@ -518,13 +522,13 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
     class SealedSubClass : SealedClass()
           ~~~~~~~~~~~~~~
 13 errors, 0 warnings
-                """
+            """
                     .trimIndent()
             )
     }
 
     @Test
-    fun testDeeplink_noError() {
+    fun testDialog_noError() {
         lint()
             .files(
                 kotlin(
@@ -532,26 +536,41 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
+                import androidx.testSerializable.*
 
-                @Serializable class TestClass
-                @Serializable class DeepLink
+                @Serializable class RouteClass
 
                 fun navigation() {
-                    val builder = NavDestinationBuilder<NavGraph>(route = TestClass::class)
-                    builder.deepLink<DeepLink>()
+                    val builder = NavGraphBuilder(route = RouteClass::class)
+
+                    builder.dialog<TestClass>()
+                    builder.dialog<TestObject>()
+                    builder.dialog<TestDataObject>()
+                    builder.dialog<Outer>()
+                    builder.dialog<Outer.InnerObject>()
+                    builder.dialog<Outer.InnerClass>()
+                    builder.dialog<TestInterface>()
+                    builder.dialog<InterfaceChildClass>()
+                    builder.dialog<InterfaceChildObject>()
+                    builder.dialog<TestAbstract>()
+                    builder.dialog<AbstractChildClass>()
+                    builder.dialog<AbstractChildObject>()
+                    builder.dialog<SealedClass>()
+                    builder.dialog<SealedClass.SealedSubClass>()
                 }
                 """
                     )
                     .indented(),
                 *STUBS,
+                SERIALIZABLE_TEST_CLASS.kotlin
             )
             .run()
             .expectClean()
     }
 
     @Test
-    fun testDeeplink_hasError() {
+    fun testDialog_hasError() {
         lint()
             .files(
                 kotlin(
@@ -559,219 +578,88 @@ src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe 
                 package com.example
 
                 import androidx.navigation.*
-                import kotlinx.serialization.*
+                import androidx.navigation.compose.*
+                import androidx.test.*
 
-                @Serializable class TestClass
-                class DeepLink
+                @Serializable class RouteClass
 
                 fun navigation() {
-                    val builder = NavDestinationBuilder<NavGraph>(route = TestClass::class)
-                    builder.deepLink<DeepLink>()
+                    val builder = NavGraphBuilder(route = RouteClass::class)
+
+                    builder.dialog<TestClass>()
+                    builder.dialog<TestObject>()
+                    builder.dialog<TestDataObject>()
+                    builder.dialog<Outer>()
+                    builder.dialog<Outer.InnerObject>()
+                    builder.dialog<Outer.InnerClass>()
+                    builder.dialog<TestInterface>()
+                    builder.dialog<InterfaceChildClass>()
+                    builder.dialog<InterfaceChildObject>()
+                    builder.dialog<TestAbstract>()
+                    builder.dialog<AbstractChildClass>()
+                    builder.dialog<AbstractChildObject>()
+                    builder.dialog<SealedClass>()
+                    builder.dialog<SealedClass.SealedSubClass>()
                 }
                 """
                     )
                     .indented(),
                 *STUBS,
+                TEST_CLASS.kotlin
             )
             .run()
             .expect(
                 """
-src/com/example/TestClass.kt:7: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
-class DeepLink
-      ~~~~~~~~
-1 errors, 0 warnings
-            """
+src/androidx/test/Test.kt:11: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+object TestObject
+       ~~~~~~~~~~
+src/androidx/test/Test.kt:13: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+data object TestDataObject
+            ~~~~~~~~~~~~~~
+src/androidx/test/Test.kt:15: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+class TestClass
+      ~~~~~~~~~
+src/androidx/test/Test.kt:19: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+object Outer {
+       ~~~~~
+src/androidx/test/Test.kt:20: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+    data object InnerObject
+                ~~~~~~~~~~~
+src/androidx/test/Test.kt:22: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+    data class InnerClass (
+               ~~~~~~~~~~
+src/androidx/test/Test.kt:29: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+class InterfaceChildClass(val arg: Boolean): TestInterface
+      ~~~~~~~~~~~~~~~~~~~
+src/androidx/test/Test.kt:30: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+object InterfaceChildObject: TestInterface
+       ~~~~~~~~~~~~~~~~~~~~
+src/androidx/test/Test.kt:32: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+abstract class TestAbstract
+               ~~~~~~~~~~~~
+src/androidx/test/Test.kt:33: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+class AbstractChildClass(val arg: Boolean): TestAbstract()
+      ~~~~~~~~~~~~~~~~~~
+src/androidx/test/Test.kt:34: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+object AbstractChildObject: TestAbstract()
+       ~~~~~~~~~~~~~~~~~~~
+src/androidx/test/Test.kt:36: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+sealed class SealedClass {
+             ~~~~~~~~~~~
+src/androidx/test/Test.kt:37: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
+    class SealedSubClass : SealedClass()
+          ~~~~~~~~~~~~~~
+13 errors, 0 warnings
+"""
                     .trimIndent()
             )
     }
 
-    @Test
-    fun testDeeplinkBuilderSetUriPattern_noError() {
-        lint()
-            .files(
-                kotlin(
-                        """
-                package com.example
-
-                import androidx.navigation.*
-                import kotlinx.serialization.Serializable
-
-                @Serializable class DeepLink
-
-                fun navigation() {
-                    val builder = NavDeepLink.Builder()
-                    builder.setUriPattern<DeepLink>()
-                }
-                """
-                    )
-                    .indented(),
-                *STUBS,
-                NAV_DEEP_LINK
-            )
-            .run()
-            .expectClean()
-    }
-
-    @Test
-    fun testDeeplinkBuilderSetUriPattern_hasError() {
-        lint()
-            .files(
-                kotlin(
-                        """
-                package com.example
-
-                import androidx.navigation.*
-
-                class DeepLink
-
-                fun navigation() {
-                    val builder = NavDeepLink.Builder()
-                    builder.setUriPattern<DeepLink>()
-                }
-                """
-                    )
-                    .indented(),
-                *STUBS,
-                NAV_DEEP_LINK
-            )
-            .run()
-            .expect(
-                """
-src/com/example/DeepLink.kt:5: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
-class DeepLink
-      ~~~~~~~~
-1 errors, 0 warnings
-            """
-                    .trimIndent()
-            )
-    }
-
-    @Test
-    fun testNavDeepLink_noError() {
-        lint()
-            .files(
-                kotlin(
-                        """
-                package com.example
-
-                import androidx.navigation.*
-                import kotlinx.serialization.Serializable
-
-                @Serializable class DeepLink
-
-                fun navigation() {
-                    navDeepLink<DeepLink>()
-                }
-                """
-                    )
-                    .indented(),
-                *STUBS,
-                NAV_DEEP_LINK
-            )
-            .run()
-            .expectClean()
-    }
-
-    @Test
-    fun testNavDeepLink_hasError() {
-        lint()
-            .files(
-                kotlin(
-                        """
-                package com.example
-
-                import androidx.navigation.*
-
-                class DeepLink
-
-                fun navigation() {
-                    navDeepLink<DeepLink>()
-
-                }
-                """
-                    )
-                    .indented(),
-                *STUBS,
-                NAV_DEEP_LINK
-            )
-            .run()
-            .expect(
-                """
-src/com/example/DeepLink.kt:5: Error: To use this class or object as a type-safe destination, annotate it with @Serializable [MissingSerializableAnnotation]
-class DeepLink
-      ~~~~~~~~
-1 errors, 0 warnings
-            """
-                    .trimIndent()
-            )
-    }
-
-    @Test
-    fun testWrongPackage_noError() {
-        lint()
-            .files(
-                kotlin(
-                        """
-                package com.example
-
-                import androidx.navigation.NavGraphBuilder
-                import com.test.navigation
-                import kotlinx.serialization.*
-
-                @Serializable object TestGraph
-                object TestClass
-
-                fun navigation() {
-                   val builder = NavGraphBuilder(route = TestGraph::class)
-
-                    builder.navigation<TestClass>()
-                }
-                """
-                    )
-                    .indented(),
-                *STUBS,
-                CUSTOM_NAV_GRAPH_BUILDER_EXTENSIONS
-            )
-            .run()
-            .expectClean()
-    }
-
-    private val CUSTOM_NAV_GRAPH_BUILDER_EXTENSIONS =
-        bytecodeStub(
-            "NavGraphBuilderNavigation.kt",
-            "com/test",
-            0x8c23ef1e,
-            """
-package com.test
-
-import androidx.navigation.NavGraphBuilder
-
-// NavGraphBuilder
-inline fun <reified T : Any> NavGraphBuilder.navigation() { }
-        """,
-            """
-                META-INF/main.kotlin_module:
-                H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgsuUSTsxLKcrPTKnQy0ssy0xPLMnM
-                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIKcAIFPPKLS7xLuKS4uJPz
-                c/VSKxJzC3JShbhDUotL3IsSCzKAcupcHCC5EqCQkDRQC1jcqTQzJyW1yA9u
-                lXeJEoMWAwA5gn4YnAAAAA==
-                """,
-            """
-                com/test/NavGraphBuilderNavigationKt.class:
-                H4sIAAAAAAAA/41RTW/TQBB966SJYwpNU1qSUgoUl6Y94BT11IZIgARYpAGR
-                KJecNrZJNrHXyN5EPfbE/+GGOKCKIz8KMWsqKEVIlbwzb94+z9d+//HlK4AD
-                7DLYXhw5KkiV0+Hzlwn/MH42E6EfJBSKEVcilq9VEYyhPOFz7oRcjpw3w0ng
-                EZtjsORvHUO93ubST2Lhnzh/+MuZj3b7DK1m77B9OeNR6+oJCk01FmnLhMmw
-                OY1VKKQzmUeOkCpIJA8dV6pEyFR4aREWw6o3DrxpJ1adWRi+5QmPAhIy7NT/
-                beMC09VJRlRxEYu4buEabjAs2cJ+b1+cnLm0IFt39Be9faVxGJbb5xMcB4r7
-                XHHijGieo1di2pS0AZWZamDQ5YnQqEHI32c4ODstW2enllE2fjltqsZ6jcC6
-                0WBblkkKo8r2jEaOTv7Vt4+m/vcxy9L2GDb++/6Ppooh/zz2A5q8LWTQmUXD
-                IOnxYUhMpR17POzzROj4nCx1xUhyNUsIW914lnjBC6Evau9mUoko6ItUkPKp
-                lLHKiqTYh4E8sjnLNSygQPEDip6QN/QO9iqlz1jKNT/pFcAmW6DeTRSxTXiN
-                OJPiMpbJkhwVrJB/mKmLdHYytIU6+UPS3KQiqwPkXKy5uOWiipqLddx2sYE7
-                A7AUm7g7wEKqv3sp7md25Se3iEt3PgMAAA==
-                """
+    val STUBS =
+        arrayOf(
+            *NAVIGATION_STUBS,
+            COMPOSE_NAVIGATOR_DESTINATION_BUILDER,
+            DIALOG_NAVIGATOR_DESTINATION_BUILDER,
+            SERIALIZABLE_ANNOTATION
         )
-
-    val STUBS = arrayOf(*NAVIGATION_STUBS, SERIALIZABLE_ANNOTATION, K_SERIALIZER)
 }

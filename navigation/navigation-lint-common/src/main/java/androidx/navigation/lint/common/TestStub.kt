@@ -180,7 +180,7 @@ val NAV_DESTINATION_BUILDER =
     bytecodeStub(
         "NavDestinationBuilder.kt",
         "androidx/navigation",
-        0xa93da28c,
+        0x3353d8ff,
         """
 package androidx.navigation
 
@@ -191,30 +191,34 @@ public open class NavDestinationBuilder<out D : NavDestination> {
     public constructor(
         route: KClass<*>?,
     ): this()
+
+    public inline fun <reified T : Any> deepLink() {}
 }
 """,
         """
                 META-INF/main.kotlin_module:
                 H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgsuUSTsxLKcrPTKnQy0ssy0xPLMnM
-                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIKcAIFPPKLS7xLuGS4eOHa
-                S1KLS4S4Q4Cke1FiQQZQVpSLOzk/Vy+1IjG3ICdViA0k512ixKDFAABW1JNV
-                jAAAAA==
+                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIKcAIFPPKLS7xLuES5uJPz
+                c/VSKxJzC3JShdhCUkHCSgxaDABdSlZNbgAAAA==
                 """,
         """
                 androidx/navigation/NavDestinationBuilder.class:
-                H4sIAAAAAAAA/41SXU8TQRQ9s0u7y1JlqVIKioKiQk3cSnyREhKBmDRWNGL6
-                wtOUjnVgO5vszDY89rf4D3wy8cE0PvqjjHeWNRoikZf7ce49c+7euz9+fv0G
-                4BnWGTa46qeJ7J9Fio/kgBuZqOiAj/aFNlLl6W4m475IPTCGre39rc7/Ka2d
-                zgkf8SjmahC96Z2IY9NiCC9iHqYYyttSSbPD4K5vdCsowwtQgs8wZT5KzfD4
-                CnrFiKSxtN45TUwsVZSKDzFpRK/2Yq51a6PLsHxJcbuxk9fXOkk6iE6E6aVc
-                Kh1xpRKTC+joIItj3otFK4BjpyulSWYEw8IlegxzvyuvheF9bjhhznDk0uqZ
-                NdPWgIGdEn4mbdakqP+UoTsZ1wOn7gSTce6c0Aa+U2B+rT4ZNwJ/Mg7ZCms4
-                TWfTabq7nl/7/qnshFO7836tWglLS37V8d06a5Zz3LOvb5Lgvv3UK1yR2fHq
-                /1z1k1NDF9pL+rSC2Y5U4iAb9kT63q6IodpJjnnc5am0eQFOH8oBvZGlFK+9
-                y5SRQ9FWI6klld/ylA+FEemLPztnCA6TLD0WL6XlLxac7jnjr0as0k1Kdpvk
-                mf2FyK5SFtn1ki81vmD6c16+R7acgx7uk62cNyDATH6NMiFuTn5OmVOQZy+S
-                g5xcO28oyDYKMUf1tbz7Gh5YGTvCdQrcAnbxMPcreER+j6pVIt44gtvGzTbm
-                2/TsAoWot7GIpSMwjVu4fQRfY0ZjWeOOxl0NTyPUmNOo/AKnk/kd0QMAAA==
+                H4sIAAAAAAAA/41SXU8TQRQ9M0vb7VJkW6WUKgpYtS3qVmJihKaJQIzVikZI
+                X3ia0gEHtrtmd9vwyJM/xH/gk4kPpuHRH2W8sy1BUaLJ5n6fe+7eO99/fP0G
+                4DEeMFSE1w181T12PDFQByJSvudsicGmDCPlxe56X7ldGaTAGFbrm6utf0PW
+                Gq1DMRCOK7wD503nUO5Fawz2xVgKEwzJuvJU1GAwypV2BkmkLCRgMkxE71XI
+                sPwffOMRiaNYbh35kas8J5D7LnE4rzZcEYZrlTbD/CXJerUR50stPzhwDmXU
+                CYTyQkd4nh/FBKGz1Xdd0XHlmgWup0sEfj+SDLOX8DGYXSk/tJR3xDBX31n9
+                cyONsiadKqnSfum8ljUZsmdNX8tIdEUkqB3vDQy6GtMirQWolur5sdJejazu
+                I4bB8GTB4gVuDU9ixW1tmHzkaG3rnJkvDE+qljk8sdkCq/IaX+E1Yz1l5k8/
+                Jbk9sT5j5nMZO1E0c9w0CqyWjOOplzO2WeS19JJlMtsqaKTx4vSjqdlXaKBN
+                vcX/eCAsHn+HofDXSz48iugBbPhd2vA07UVu9XsdGezoCzDkWv6ecNsiUNof
+                B9Pb6oB69AOyS+/6XqR6sukNVKgo/VYEoicjGTw7PymDte33gz35XGn83BjT
+                HiF+KcQinTyhNw6DpqYXSvIueY7+B9KJ6hekP5PBcY9kMg6mUCaZGRXAwmR8
+                sSRFjBj8lDw+Bk9fBFsxOD8qGIO1ZSNL+UpcPYWqptEjXAHsLHLEyePeT8a9
+                DaP+e2dO9GedOfnXMBPzGWOOUeer5I8sA8uxvoP7pFtUm6cpZndhNFFoYq6J
+                Iq6TiRtNzOPmLliIW1jYxWSov8UQSyFuh0iFsENkQ2RC5OJI6Se1hWe7hgQA
+                AA==
                 """
     )
 
@@ -406,6 +410,72 @@ FM7DXUZGIaVQUSgq5OnWFY4oHP0JmQ7w4mgGAAA=
 """
     )
 
+val NAV_DEEP_LINK =
+    bytecodeStub(
+        "NavDeeplink.kt",
+        "androidx/navigation",
+        0x73e1868d,
+        """
+package androidx.navigation
+
+class NavDeepLink {
+    class Builder {
+        inline fun <reified T : Any> setUriPattern() {}
+    }
+}
+
+inline fun <reified T : Any> navDeepLink(): NavDeepLink = NavDeepLink()
+""",
+        """
+                META-INF/main.kotlin_module:
+                H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijg8uESTsxLKcrPTKnQy0ssy0xPLMnM
+                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIK8AIFXFJTC3Iy87KBXE4g
+                1yO/uMS7hEuSizs5P1cvtSIxtyAnVYgLpMoHrEqJQYsBAHVeaUuBAAAA
+                """,
+        """
+                androidx/navigation/NavDeepLink＄Builder.class:
+                H4sIAAAAAAAA/41RTW/TQBB9u86nm7ZOoJCUj0IJlPaA0woJiZYiWoRwFQqi
+                IZecNvEStknWyN5EPebED+EfcELigKIe+VGIWTcXegEfZt58vDc7nl+/f/wE
+                8BgbDBtCh3GkwjNfi4nqC6Mi7R+LyUspPzeVHtQPxmoYyjgPxuCdionwh0L3
+                /bfdU9kzeTgMuT2lldlncB5utkvIIucigzxDxnxSCcNm8z9n7DIsJtJ8iNU7
+                YYyMNUNtr/W0eXnq7j4NYqjUVf1j/RKBBQzl5iAyQ6X9N9KIUBhBwnw0cWhn
+                Zk3RGlDvgPJnykYNQuE2w/PZtOLyKne5N5u6vGABd2fT6my6wxvsIHv+NUeZ
+                oxXPWeWNzLpbmE29bJVtUfH1+ZeCldlhqXiLYe0fi+dxkyE/355haV6ipw8e
+                DQz9wMMolAzL1CuPx6OujFuiO6RMpRn1xLAtYmXjebJ4ovpamHFMuBRoLePD
+                oUgSSSdwT6Jx3JOvlO2rvR9ro0ayrRJFxBdaRyZ9WoJtcDqd/TitQJcke4ci
+                3y5EPrv1HYVvafku2dxFEutkS3NchAt4ZSxQlafkJ1Th5B1n728qJ2up1wjZ
+                eYtYSkWcCxHcS7tLFNcJuSnjFm6jhvtpZQ0PyD+j/DIN9jpwApQDVAJcwVWC
+                WAlI+3oHLEEVtQ5yCdwEq4kFCym48QehdXScDAMAAA==
+                """,
+        """
+                androidx/navigation/NavDeepLink.class:
+                H4sIAAAAAAAA/4VQTU/bQBB9s05sYlwItIXQLz5UCdpDHVAlJIqQgKqSpZRK
+                Lcolp028oouddeXdRBzzW/oPeqrUQxX1yI9CHYfcubyZ9/bN6s3c3v35C+A9
+                tgmb0qRlodOb2MixvpJOFya+kOOPSv3oaJMFIELzWo5lnEtzFX/pX6uBC+AR
+                /GNttDsheHtvuhHq8EPUEBBq7ru2hO3OA39/IKx0ssLl2sSflZOpdJI1MRx7
+                HI8qaFQAAmWs3+iKtblL9wk700kUipYIRXM6CcWCaE0nB6JNR+Sd1f/99EVT
+                VM4DquaDs5HOU1USdh8I9XruDNAiLM0fOGH2LnO82nmRKsIyO9XFaNhX5aXs
+                56ysdoqBzLuy1BWfi1FijCrPc2mt4oOE34pROVCfdPW28XVknB6qrraazafG
+                FG4WxmIfgg85X7y6K+NzZvGMA/W3v7HwixuBF4z+TKzhJWN0b0ADIVcPrxhD
+                1jbYu864OZt6hi2uh6wvsjfqwUvwKMFSgmU0ucVKglU87oEsnuBpDzWL0GLN
+                wrdY/w9v8crnPwIAAA==
+                """,
+        """
+                androidx/navigation/NavDeeplinkKt.class:
+                H4sIAAAAAAAA/41SW2sTQRT+zmyayza222o1qZfaNpVWxE1FEE0piCIubivY
+                EJA8TbLbME0yK7uT0Mc8+Xt8ExQk+OiPEs+sPqgP2oc5851zvnOd+fb90xcA
+                D3GHsCl1lCYqOve1nKqBNCrR/rGcPo/jdyOlh69MCUTwzuRU+iOpB/7r3lnc
+                Z6tDWNQ/iSETCdu7e+E/sllSi/D4oP0k/Dtb6/BCsRv/oZRQJhQPlFbmkODs
+                7nWqcLHoooIqz9BQjdPGHy1TQFgJh4nhUf2j2MhIGsmFxHjq8IbIiooVYO7Q
+                AsHOc2VRk1G0T7g3n1Xd+cwVNZFf3ny2vmaFaNKWW57PPFGju6LpvPz6vmxj
+                HvDWLzAstcmWXfrtMe4PDaHwLIliwjLT4uPJuBenbdkbsWU1TPpy1JGpsvov
+                Y+VEDbQ0k5Sxe5JM0n78QllH/c1EGzWOOypTzHyqdWLyNjLsQ6CAfGqvjgUU
+                Wb+dfxjBDQGu0/qMytuPuPTBbgSbLIvsEbzsLcbVHJexhGXWtnNOiU8jRxvY
+                4fsRczzOvdKFE2A1wOUAV7AW4CquBaih3gVlWMf1LgoZFjLcyHAzw60fGWE6
+                NbwCAAA=
+                """
+    )
+
 val TEST_NAV_HOST =
     bytecodeStub(
         "TestNavHost.kt",
@@ -436,6 +506,118 @@ XNdIa+Q1kp+Mv2/DIQIAAA==
 """
     )
 
+val SERIALIZABLE_ANNOTATION =
+    bytecodeStub(
+        "Serializable.kt",
+        "kotlinx/serialization",
+        0x699c84c1,
+        """
+package kotlinx.serialization
+
+import kotlin.reflect.KClass
+
+@MustBeDocumented
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS, AnnotationTarget.TYPE)
+public annotation class Serializable
+        """,
+        """
+                META-INF/main.kotlin_module:
+                H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgMuQSTsxLKcrPTKnQy0ssy0xPLMnM
+                zxPi90ssc87PKynKz8lJLfIuEeIECnjkF5d4l3BJcXEn5+fqpVYk5hbkpApx
+                h6QWlzjnJBYXe5coMWgxAADHc03gZwAAAA==
+                """,
+        """
+                kotlinx/serialization/Serializable.class:
+                H4sIAAAAAAAA/4VSW08TQRT+ZntbVoW2VC5F5GrlorYS3yAk3EwaWmjaYoJ9
+                MEM74MKwazqzBfSlb/4Pf4YPpuHRH2U8K7bFsJGHOXMu35n5zuXnr+8/ALzB
+                S4bZM1dL27nMKtG0ubQ/c227TrbStY6kiIExxE95i2cld06y+0enoq5jCDFM
+                9b3ccVx9k7zRU2OIMIQvbP2RYXhhsdCHb0mu1CrD2l3v2nIhmNRul5Vori2t
+                r65T+tz9UELN/0XdJln0lN4U227dOxeOFg2CpQNgVd48EZqCg1xK90I0bhwq
+                +NF+5b08s1TeL+2Uq4cMka3CRqVCDakelnYYZgqB3fuH0nQwpiw0IUgjSKTF
+                pScYMvdAS66061eUECsf7FXzRWIwGZzS4z4bHN+RwidYvfok/AL9aj4cVOi9
+                RLclRaF5g2tOYeO8FaJlY74Y8AUY2Bn5L23fypHWeM3wvtNOWcaYYRnxCavT
+                vlHpdNrm9VdjrNNeMXJscySZMo24kR5MWiZLRpOGGcqFc6HyxF3f9bdoNB0m
+                dMT/YaU/r/+tOvEleqPdMpriWNKqZ3e72zp0G/zqTDMMVOwTh2uvSRNI9Me/
+                LY65JyluVVyvWRdvbUmA8bJHozgX72xl0wN9uMoQSYTp76jfoDANCSZ5Fsky
+                MIAlukN1WGQs/3Et4AXdXwj+gO6HlPiohpDAIIZ8EfdFAkmKDVMsJfAYIxj1
+                1RoMgTEkfDGONCKYoMw8nuQxmcdTTJGK6TxmMFsDU5jDfA1RhWcKGYWYwnMF
+                S8H8Da/SzgtFBAAA
+                """
+    )
+
+val KEEP_ANNOTATION =
+    bytecodeStub(
+        "Keep.kt",
+        "androidx/annotation",
+        0x2645a498,
+        """
+package androidx.annotation
+
+@Retention(AnnotationRetention.BINARY)
+@Target(
+    AnnotationTarget.FILE,
+    AnnotationTarget.ANNOTATION_CLASS,
+    AnnotationTarget.CLASS,
+    AnnotationTarget.ANNOTATION_CLASS,
+    AnnotationTarget.CONSTRUCTOR,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY_GETTER,
+    AnnotationTarget.PROPERTY_SETTER,
+    AnnotationTarget.FIELD
+)
+public annotation class Keep
+        """,
+        """
+                META-INF/main.kotlin_module:
+                H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgsuUSTsxLKcrPTKnQy0ssy0xPLMnM
+                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIKcAIFPPKLS7xLuCS5uJPz
+                c/VSKxJzC3JShbhCUotLXPNKc71LlBi0GACE4q01cgAAAA==
+                """,
+        """
+                androidx/annotation/Keep.class:
+                H4sIAAAAAAAA/4VSy3ISQRQ9PYRnNIAahcSYGCPxTUy5y4rgoFOSGWroWEWx
+                SHWgKzVhmEkxAyY7dn6G/+HColz6UZZ9JcIsUDenT98+99n3x8+v3wC8wUuG
+                gvC6A9/pXpaF5/mhCB3fK3+Q8iIJxpA7FyNRdoV3VrZOz2UnTCLGsDm3Rpwq
+                M5pEnGGj3vND1/GiEluG0iN2wBAfCXcoGXYX6Oahoh6JQ8Os2C2GtQUuXAzO
+                ZKhUK8J1/U+yOzUEDDv/TDDzW6oZdV11XDFNi1e4YZkn1Xql2VSVXp/LVcts
+                cvu4yi2bIVU7NqskY8g2bKuh27x18k7nXLejlua1JV4z9Ppbhq36wuFF+yz9
+                R9LwXadzdUAjXiictbS9+F13ZV9F4lcXkvrmrYbqO3Gk8/eWKjAbGcD0Kf9n
+                gEcyFF0RCuWl9UcxtUKMIE0ABtZT9kuHbnuKdV8zFCfjVEYraBktt576/lkr
+                TMb72h47nIxJsE9f+bf9U0lUzCTRV72QIdP0h4OOrDmuWpqiPVSj6MuPTuCc
+                unL+nUFJBcaS8kxQUYo//43P8EKdXxCH2mukJNLIYFnRG22kJW5ihSBLkJux
+                PMEtgtsEdwhWcXca4B5yKBBtIy5RxBrBKsE6QZ7gPjZUxgdtxAxsGtgy8BDb
+                iuKRgR08boMFKGG3DS3AkwBPfwGJU24VmQMAAA==
+                """
+    )
+
+val K_SERIALIZER =
+    bytecodeStub(
+        "KSerializer.kt",
+        "kotlinx/serialization",
+        0xdfbaa177,
+        """
+package kotlinx.serialization
+
+public interface KSerializer<T>
+        """,
+        """
+                META-INF/main.kotlin_module:
+                H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgsuUSTsxLKcrPTKnQy0ssy0xPLMnM
+                zxPicsyrLMnIzEv3LhHi90ssc87PKynKz8lJLQIKcAIFPPKLS7xLuES5uJPz
+                c/VSKxJzC3JShdhCUkHCSgxaDABdSlZNbgAAAA==
+                """,
+        """
+                kotlinx/serialization/KSerializer.class:
+                H4sIAAAAAAAA/4VQO0/DMBi8zy19hFfKs0wIsSAGUiomQEgsSBFFSLRi6eS2
+                pnKbOlLsVhVTfhcDysyPQnxpGRAMeLj77nzy2f74fHsHcIE64Wgcu0ibeWBV
+                omWkX6XTsQnu299SJWUQ4eS6c9kayZkMImmGwWNvpPru6uavRfB/e2UUCbXW
+                sih4UE4OpJOcFJNZge9BOVRzAIHG7M91rho8Dc4Jh1nqeaIuPGbhZ2nlpZ6l
+                p8VKlvrUFA2Rx5qE49a/T+FO6lBes/HDPRs7QrWth0a6aaIIXjueJn11pyMW
+                B09T4/REPWure5G6NSZ2i4NtiYuxguUqYJdRMO8teAf7iy8mlDhT7qIQohKi
+                GsLDKo9YC7GOjS7IYhM+71vULLYstr8A6rZa9Z8BAAA=
+                """
+    )
+
 val NAVIGATION_STUBS =
     arrayOf(
         NAV_CONTROLLER,
@@ -449,8 +631,48 @@ val NAVIGATION_STUBS =
         NAV_PROVIDER
     )
 
-val TEST_CODE_SOURCE =
-    """
+val SERIALIZABLE_TEST_CLASS =
+    kotlinAndBytecodeStub(
+        "TestSerializable.kt",
+        "androidx/testSerializable",
+        0xdfbaa178,
+        """
+package androidx.testSerializable
+
+import kotlinx.serialization.Serializable
+
+@Serializable class TestClass
+@Serializable object TestObject
+@Serializable data object TestDataObject
+@Serializable object Outer {
+    @Serializable data object InnerObject
+    @Serializable class InnerClass
+    class InnerClassNotUsed
+}
+
+// interface should not require @Serializable
+interface TestInterface
+
+@Serializable class InterfaceChildClass: TestInterface
+@Serializable object InterfaceChildObject: TestInterface
+
+@Serializable abstract class TestAbstract
+@Serializable class AbstractChildClass(): TestAbstract()
+@Serializable object AbstractChildObject: TestAbstract()
+
+@Serializable sealed class SealedClass {
+    @Serializable class SealedSubClass : SealedClass()
+}
+        """
+            .trimIndent()
+    )
+
+val TEST_CLASS =
+    kotlinAndBytecodeStub(
+        "Test.kt",
+        "androidx/test",
+        0x1ed6fc53,
+        """
 package androidx.test
 
 val classInstanceRef = TestClass()
@@ -510,21 +732,14 @@ abstract class TestAbstractComp { companion object }
 class AbstractChildClassComp(val arg: Boolean): TestAbstractComp() { companion object }
 object AbstractChildObjectComp: TestAbstractComp()
     """
-        .trimIndent()
-
-val TEST_CODE =
-    kotlinAndBytecodeStub(
-            "Test.kt",
-            "androidx/test",
-            0x1ed6fc53,
-            TEST_CODE_SOURCE,
-            """
+            .trimIndent(),
+        """
 META-INF/main.kotlin_module:
 H4sIAAAAAAAA/2NgYGBmYGBgBGJOBijgMuQSTsxLKcrPTKnQy0ssy0xPLMnM
 zxPi90ssc87PKynKz8lJLfIuEeIECnjkF5d4l3CJc/HCtZSkFpcIsYWkgiSU
 GLQYABRWGrdkAAAA
 """,
-            """
+        """
 androidx/test/AbstractChildClass.class:
 H4sIAAAAAAAA/4VQTWsTURQ9781XMk3MJH6labW1KrRZmLS4U4ppQAhMu6gl
 i2T1khnaRyYzMO9Fusxvce1GUAQXElz6o8T7JlUQFBfv3HvuO5z78f3Hl68A
@@ -538,7 +753,7 @@ i3wav5aGbJ4vUi3n8VAqSb+9NM200DJLFQ7pkHaxaMPclTJOuQOXcJfYMXFO
 f7WprAU3NhyPC9zBE4qviiEd3B7DGuDOAHcH1PY+pWgOsInWGExhC9tjeAo1
 hQcKvsJDBVchUKj/BOsI9uW0AgAA
 """,
-            """
+        """
 androidx/test/AbstractChildClassComp＄Companion.class:
 H4sIAAAAAAAA/5VSTW/TQBB9u07jxARIWz4SvgolSC0SdRJxK0IqQUiRUpCg
 yqUHtLG3dBN7jbybqMec+CH8g56QOKCoR34UYtYJcKWX2Zn35s143/rnr+8/
@@ -553,7 +768,7 @@ AuziEcXasgFVBECdUXZlJX5GJ1+Ja+eFnU5wawkuBUV2FdeI87BNVVCI7uE+
 mnhcLHyAVvFLkwfUWz+G18d6Hxt9bOIGpbjZp5m3j8EMGmgSbxAY3DEo/wZN
 V6SgDwMAAA==
 """,
-            """
+        """
 androidx/test/AbstractChildClassComp.class:
 H4sIAAAAAAAA/41SW08TQRT+ZrfXZZFSEQt4QUEsVdlCfBJCgjWaJoUHJE2E
 p2k7wtDtrNmZEh75LT77QtSQaGKIj/4o45lthRiN4WHPmXP2O9+5/vj55RuA
@@ -571,7 +786,7 @@ LoZ0uvIJox/+SeMPAEOaHBWVHQaXkKwW/ldMvGFnuPkRM6eJxyVim5DRRTpJ
 Y9WEu0INAzXy3ybGO3tw67hbx2wd93CfnpirYx4P9sA0FvBwDzmNMY2yhqex
 qJHRKGiMa5R+ATUXZWovBAAA
 """,
-            """
+        """
 androidx/test/AbstractChildObject.class:
 H4sIAAAAAAAA/4VSXWvUQBQ9M7ubZNPV1vrR3bZ+1PqgPpi2+GYR1kUhECPY
 ZaH0aZIMdrrZDCSzpY/75A/xHxQfCgqy6Js/SrwTV0VETMi995w5c27mJl+/
@@ -585,7 +800,7 @@ twg5lFcoc7pbNbpNKLCjoNx6eAHvvF6+sxCDqi2KnR8CtMkK8LD0a/Maqe21
 9BH88AKd91g+rwmOu3W8ie36f6PPQgarR2iEuBriWojruEEl1kJ00TsCq7CO
 DVqv4FfYrOB8Bw71GM6sAgAA
 """,
-            """
+        """
 androidx/test/AbstractChildObjectComp.class:
 H4sIAAAAAAAA/41SXWvUQBQ9M7ubzaarrfWju1Zrv6TVB9NW3yzCuigEYgS7
 LEifJpuhnW42I8ls6eM++UP8B8WHgoIs+uaPEu/EpSKCmJB77zlzciY5yfcf
@@ -599,7 +814,7 @@ tG0jpL5CyKG+QJ3TWSvRPUK+jYN67eEF3PNyeXUmBh5jjWrzlwANsgJczF3e
 vERqe8x9Bn97geZHzJ+XBMd6We9io/z/6NOQweIhKgGuB7gR4CZu0YilAC20
 D8EK3MYyrRfwCtwp4PwEJ9evBbwCAAA=
 """,
-            """
+        """
 androidx/test/InterfaceChildClass.class:
 H4sIAAAAAAAA/4VQz28SQRT+ZhZY2FJZqFYKVq21teXg0sabprElMSFBTWrD
 AU4DO9Ipy26yMzQ98rd49mKiMfFgiEf/KOMbSpqYGD3M9973fnxv3vv569t3
@@ -613,7 +828,7 @@ HNApMzQnR69ib0uLcjsXecJHxI6Ic7Je4ytWGvUvKH1a1GwT2i6gjseE69dV
 8FG2pyPPqtGlSXdtqRXYi5LNNj6j9PGvMsXrgqUMx84Ct7BL9iXlblPuTh9O
 G+tt3G2jig1yUWtT/70+mMYm7vfhapQ1HmgUNR5q5DUqGmu/ARpxRv/QAgAA
 """,
-            """
+        """
 androidx/test/InterfaceChildClassComp＄Companion.class:
 H4sIAAAAAAAA/5VSTW/TQBB9u07jxARIWz4SvqGp1CJRNxW3IiQIQrKUggRV
 Lj2gjb1tN7HXyLuJesyJH8I/6AmJA4p65EchZp0AV3qZnXlv3sz6rX/++v4D
@@ -628,7 +843,7 @@ GOIxxcaiAXUEQJNRdmUpfkYnX4ob56WfTnBrAS4EZXYV14jz8ISqoBTdw320
 sVEufIBO+VeTB9TbPIIXYTXCWoR13KAUNyOaefsIzKCFNvEGgcEdg+pvYvaF
 YBIDAAA=
 """,
-            """
+        """
 androidx/test/InterfaceChildClassComp.class:
 H4sIAAAAAAAA/41S308TQRD+9lp67XFIWxRLEUUBKVW5gjwJIcEaTZOCCZIm
 wtO2Xcq11z1zu2145G/x2ReihkQTQ3z0jzLOlgoxGsPDzTczN/PNr/3x88s3
@@ -646,7 +861,7 @@ ycmLKKSRMQcgzbDRvYh3YsjlmbsQjhQ/YfzDP2nci4AhTRI3kRom5zC4LNyv
 mHzLzjD1ETOnA0+MRjMF2aCJPA23OuB+jKeEZfLfI8bZA8QquF/BgwrmME8q
 Fip4iMUDMIUClg6QVMgoFBVchUfKmFmFCYX8L78zjKNFBAAA
 """,
-            """
+        """
 androidx/test/InterfaceChildObject.class:
 H4sIAAAAAAAA/4VSy27TQBQ9M0ljxzU0La+EUh59IGCB24odFVKJQLJkgkSj
 SKiriT1tJ3HGkj2JusyKD+EPKhaVQEIR7PgoxB0TihAS2Jr7OHPvuZ4z/vb9
@@ -660,7 +875,7 @@ U7n/+7NJpnaWSIalSGnZGY/6Mu8KqmFYibJYpD2RK5vPQe8gG+exfKls0poT
 G2T9nwVYpAjUeOmi+QZV22fxE/jbc1z+gOWzEuDYLO0dbJX/IsMVIrh6iEqI
 ayGuh9TapBCtEDexeghW0LA12i/gF7hdwP0BVe1yPcgCAAA=
 """,
-            """
+        """
 androidx/test/Outer＄InnerClass.class:
 H4sIAAAAAAAA/4VU308cVRT+7sz+mB0WmOVXKay0yorL0nYAW62FVgFFBpel
 QkOs+HLZvcLAMoMzs6S+GJ76JzTRFxNjfOKhTRSMTQy2b/5NxnjuznS3LgSS
@@ -688,7 +903,7 @@ SU9KUu/Xa3C/Hkr3CZ9igcr3eR3QwgrJL8h+hzo1tQ7VwrSFuxbu4UNS8ZGF
 Gcyug/mYw8fr6PTl84kPvb4mfBg+Mj66fHT7uFU33vZh+siS/h/DktczzQcA
 AA==
 """,
-            """
+        """
 androidx/test/Outer＄InnerObject.class:
 H4sIAAAAAAAA/4VUS08TURT+7p0+ptMChSIUUBCpykNpQV1BTJRoHCzFCMEo
 q9t2hKHtjM7cEpas/AkuXLpwxULigkQTg7Dzf/g3jOdOR4vgI2nP+c655zXf
@@ -708,7 +923,7 @@ BDyuB8X6WglhMYX66M+IHagrTC8MAR3ZX1T0BwlA8hP40wMMfMD5/cChYZak
 4pFjEp3E6o2g3xR9b9RoDBeInuF1aCZGTFw06ekuEcSYiRwur4P5uIKr6zB8
 9Rv3EfORCUCfj3QAkiR/AL5kiZ3FBAAA
 """,
-            """
+        """
 androidx/test/Outer.class:
 H4sIAAAAAAAA/3VRwW7TQBB9u05ixzE0TSlNKE2BFmiKhNuKU6mQSgSSpZBK
 bRQJ5bRJVmUTx5bsTdRjTnwIf1BxqAQSiuDGRyHGbiAHileetzPz5s3u7M9f
@@ -723,7 +938,7 @@ WCTktLKp95g8N5kzYXb3CtZlmn4yJwMlPCXrXBOQJynAQuFv8Rqxk6/wFfz9
 FZzPWLpMAwZ20nKOB/Rv0DkeEVYJa2mLLewSHpLMMgmXOjA8rHi442EVd2mL
 NQ9lVDpgMe5hvYNsDDvG/Ri5GBsxqr8BxLf8XAEDAAA=
 """,
-            """
+        """
 androidx/test/OuterComp＄InnerClassComp＄Companion.class:
 H4sIAAAAAAAA/5VTTW8SURQ9d4YyMGKlVC34/YGVGu0AcVdjohgTEmqT2rDp
 wjzgqQ+GN2bmTdMlK3+I/6ArExeGdOmPMt43oI0LE7u599x77rk3cx78+Pnt
@@ -738,7 +953,7 @@ UTjJ6Psc81nzMeocS4sBFOEDZWJ0YSl+wtlZiksnmf1WcHXRXAgydBGrzLl4
 wFWF2Ru4hduoZegO583s8F08zP4O7AVryodwu1jrotLFOi4zxJUu7944BCWo
 osZ8Aj/BtQT5X3gloppLAwAA
 """,
-            """
+        """
 androidx/test/OuterComp＄InnerClassComp.class:
 H4sIAAAAAAAA/41UXVMURxQ9Pfs1Oywwi18IJJq4McuuukA0MYqJijEMATRi
 iGjy0OyOMLDMkJlZyrykfPInWJW8pCoPeeJBKwmkYlWK6Ft+UyqV0zPjomAs
@@ -768,7 +983,7 @@ wll8yDpztHOK1AdR+XPIJVR7o6Ik9gSjc2ITH/+CscdRJIXb0dSp+focNyjy
 KK2L3O9E5WdIGbQFrrCvn9xBysJVC59aGIdFExMWPsMkEwJMYfoOzADdAa4F
 MKI1G6hIMUBPgH0BzkTBswFqAQYi++J/Kz3doBgJAAA=
 """,
-            """
+        """
 androidx/test/OuterComp＄InnerObject.class:
 H4sIAAAAAAAA/41US08TURT+7p0+ptMC5SEUUHxQtFClBXVhICZIfAwpxQjB
 KKvbdoSh7QzO3BKWrPQfuHDpwhULiQsSTQzKzp/kwnjuMApCMCbtOd8597zm
@@ -788,7 +1003,7 @@ Jxi8SDICHteDYr2HCWExhXrpz4gdqGtMLw0BHZk/VPQFCUDyM/izPfR/xPnd
 wKFhkqTikWMM7cTqzaBfnr49ajSGC0TP0Ao0ExdNXDLp6a4QxLCJLEZWwHxc
 xbUVGL765XzEfHQHoNdHOgBJkr8Ar2VkytEEAAA=
 """,
-            """
+        """
 androidx/test/OuterComp.class:
 H4sIAAAAAAAA/31RW2sTQRT+ZjbJbjaxTeMlibX10lqbCm5bfKpFqEVhIaZg
 Q0DyNEmGOslmV3YnoY958of4D4oPBQUJ+uaPEs9so0Wk7rDnO9fvzDnz4+fn
@@ -803,7 +1018,7 @@ uE5WjrBEyOlkU+shWZ7ZO2F26xzOWRremCcDj+gAxYsE5IkKcFD4U1yhbPMV
 voC/PUfxExbPUoeFTZJlCt+jf4Xu8YBwlbCetljDFuEe0SwRcbkDy8d1Hzd8
 3MQtUlHxUUWtA5bgNpY7yCZwE9xJkEuwkmD1F4DlAzIZAwAA
 """,
-            """
+        """
 androidx/test/TestAbstract.class:
 H4sIAAAAAAAA/3VRy04CMRQ9t8AgIwriC/AR3Rh14ahxpzFBExMS1EQNG1eF
 mWgFOsm0EJd8i3/gysSFIS79KOPt6NbNyXnctqft1/f7B4AjrBHqUodJrMLn
@@ -814,7 +1029,7 @@ pXR0NRx0ouROdvrsVFpxV/bbMlFO/5n+bTxMutGFcqJ2M9RWDaK2MorThtax
 lVbF2mQ3IfjSf03dGzBWWQWpBnK7b5h6ZSJQY/RScx11xuLvAArw03wlxWWs
 pt9CmOaseI9MEzNNzDZRQpkp5pqoYP4eZLCARc4NfIMlA+8H7YuiztMBAAA=
 """,
-            """
+        """
 androidx/test/TestAbstractComp＄Companion.class:
 H4sIAAAAAAAA/5VSTW/TQBB9u07jxARIWz4SPspXkNJK1E3FrQipBCFZSkGC
 Kpce0MZZYBN7jbzrqMec+CH8g56QOKCoR34UYtYJcENwmZ15b96M962///j6
@@ -829,7 +1044,7 @@ sbFsQB0B0GSUXViJH9HJV+LGWWmkE1xbgktBmV3EJeI83KcqKEW3cBttPCgX
 bqFT/sDkAfU2T+BFWI+wEWETVyjF1YhmXj8BM2ihTbxBYHDDoPoTIO6Wpv0C
 AAA=
 """,
-            """
+        """
 androidx/test/TestAbstractComp.class:
 H4sIAAAAAAAA/4VRXWsTQRQ9s5vPdWOT+pVYramtMc2D2xRBsEWoEWEhTUFL
 QPI0ScY6yWZWdiahj/kt/oPiQ0FBgo/+KPHuNrYPQn25Z+6dc889c+fX728/
@@ -845,7 +1060,7 @@ NBBvZXxXWc7p/jMltUFbSiVPq8RLI9ykLEN4h9AiTCfZFmVevADCdOMcubPk
 J9qPsU34gup3SfFeD7aPso+Kj/tYoyMe+HiI9R6YxiNUe0hpOBobGhmN0h/c
 zA/4OwMAAA==
 """,
-            """
+        """
 androidx/test/TestClass.class:
 H4sIAAAAAAAA/3VRu04CQRQ9d5BFVpQFX+CrVgsXjZ3GRE1MSFATNTRWA7vR
 gWU2YQZCybf4B1YmFoZY+lHGO6utzcl53Jk5N/P1/f4B4BjbhHWpo2Gqoklo
@@ -856,7 +1071,7 @@ nXj4IDsJO9VW2pVJWw6V03+mf5+Oht34SjlRvxtpqwZxWxnF6bnWqZVWpdrg
 EIL3/evp1messQozDeT33zD/ykSgzuhl5hI2GEu/AyjCz/LNDNexlX0HYYGz
 0iNyTSw2sdREGQFTVJqoYvkRZLCCVc4NfIM1A+8HjoCWJ8sBAAA=
 """,
-            """
+        """
 androidx/test/TestClassComp＄Companion.class:
 H4sIAAAAAAAA/5VSTW/TQBB9s07jxARIWz4SyjepaJGom4pbERIEIUVKQYIq
 lx7QJllgE3uNvJuox5z4IfyDnpA4oKhHfhRi1ilwQ3CZnXlv3oz3rb//+PoN
@@ -870,7 +1085,7 @@ A5UfykHCyFovG8qkL3Pt6zOw1jVG5cVcxe8Qvcmm+VC90J5rvp4ap1PV11Zz
 FRFQJ87OnYkf8inOxLWTwkUvuLIEl4IiO48LzAW4y1VUiK7jBpq8wC+8iVbx
 37IH3Fs/QtDFahdrXazjEqe43OWZV49AFg00mbeILK5ZlH8CxwhM7PQCAAA=
 """,
-            """
+        """
 androidx/test/TestClassComp.class:
 H4sIAAAAAAAA/31RXWsTQRQ9s5vPdWOT+pVYq9WmNu2D2xRBMEXQiLCQtqAl
 IHmaJGOdZDMrO7Ohj/kt/oPiQ0FBgo/+KPHuNrYPQl7umXvn3HPP3Pn95/tP
@@ -886,7 +1101,7 @@ StG9JKAIh7CAG1fNVaQLhPsDpY/sAuVvuH2eVmxsU3SIVyLFChlppNpPsEP4
 gup3SfFeD7aPqo+aj/tYoyMe+FjHwx6YxiNs9JDRcDQea+Q0Kn8BDq7wpy0D
 AAA=
 """,
-            """
+        """
 androidx/test/TestClassWithArg.class:
 H4sIAAAAAAAA/31QTWsTURQ9781nxsRM4leaaq3aRZtFJy3ulGIMCANRoZZ0
 kdVLZkhfM5mBeS+ly/wW124ERXAhwaU/SrwvDa5EeJx7z32Hcz9+/f7+A8Bz
@@ -900,7 +1115,7 @@ rI6ZaeCZWQ9nmnbpF0nKUB/IPH23mI/T8kyMM6o0B8VEZENRSsM3xeBDsSgn
 qjeCjQ3H0zXu4BnFV+shHdwZwYpxN8a9mNo+oBStGFtoj8AUtvFwBE+hrvBI
 IVijqxAqNP4AZEwrjogCAAA=
 """,
-            """
+        """
 androidx/test/TestClassWithArgComp＄Companion.class:
 H4sIAAAAAAAA/5VSTW8TMRB99qbZZAmQtnwkfLdNpRZBt6m4FSGVIKRIKUhQ
 hUMPyElM62TXi2wn6jEnfgj/oCckDijqkR+FGG8CHFEv45n35s14n/fnr+8/
@@ -915,7 +1130,7 @@ JtYoVuYNKCMCqoyyKwvxUzr5Qlw5z830gltzcC7Is6u4RlyAdaqiXHQP91HH
 Rr7wARr5z0weUG/1GEEby22stLGKG5TiZptm3j4Gs6ihTrxFZHHHovgbuLwQ
 4QkDAAA=
 """,
-            """
+        """
 androidx/test/TestClassWithArgComp.class:
 H4sIAAAAAAAA/41SW08TQRT+ZnvZ7VpkqYgFvCAXLRXZQnwSQoI1xk1KTZDU
 GJ6m7Vi23c6a3WnDI7/FZ1+IGhJNDPHRH2U8s63woAkmu+fMOXPO953L/Pz1
@@ -933,7 +1148,7 @@ uXrspDPlz5j4+E+Y/ChgDGNRUeY4uYhkcch/w/RbdoZbnzB/mnhSWE8IGb02
 I2nMTbBXUSFdJf8dQrx7iJSHex4WPNzHIh2x5GEZK4dgMR7g4SGsGJMxSjHs
 RGZjODGmYhR/A+R3KVn3AwAA
 """,
-            """
+        """
 androidx/test/TestGraph.class:
 H4sIAAAAAAAA/3VSTW/TQBB9s/mw4waalo8klO/2UDjgtuJGhVQqQJaMkWgU
 qeppE6/aTRwb2Zuox5z4IfyDikMlkFAEN34UYtZEcEB4pTfzZt887Yz84+fn
@@ -947,7 +1162,7 @@ joJPrWT3mPl2Xo61x5dwL8rr+0sxuPUBY/O3AA3mgIuVP81tVttv5QvE8SWa
 n7B6URYEHpZ4B5vlb8O7Z4P1E1QCXAtwPcAN3OQU7QAddE9ABW5hg+8LeAVu
 F6j/Ai/P7yRzAgAA
 """,
-            """
+        """
 androidx/test/TestInterface.class:
 H4sIAAAAAAAA/32Oz0rDQBDGv9lo08Z/qVqoiK9g2tKbJy9CoCKoeMlpm2xl
 m3QD2Wnpsc/lQXr2ocSJ3p2Bb76Zgd/M1/fHJ4ApBoRr7YqmtsU2YeM5eRVJ
@@ -956,7 +1171,7 @@ BQQqZb61bTcSV4wJg/2uG6mhilQsbjHc7yZqRO1yQriZ/fOP3BBk2M5uSyZE
 L/W6yc2DrQzh6nnt2K7Mm/V2Xpl752rWbGvnO8LGAf5C4eJXz3EpdSy8Q8lO
 hiBFmKKboodILI5SHOMkA3mc4iyD8og9+j/Vk+x/PAEAAA==
 """,
-            """
+        """
 androidx/test/TestKt.class:
 H4sIAAAAAAAA/4VUbU/TUBR+bjvWrgzW8b6BiLzo5gsFfBc0ISQmjRMSJBhC
 YtJt11kYbdJ7R/jIb/EXqHwgkcQQP/qjjOc2xGkLug/3nvvc53l6zunpfvz8
@@ -975,7 +1190,7 @@ U8ycoHiGuTi+eYLRz79N+2NRBhZZjpCdjmd0tuh2jv7/HpL5shozPMIK7RuE
 36KmVHahu6i6uO3iDu66uId5Fw4WdsFU+5d2kRcwBXICPQJZgX6BglBgn8CQ
 wLDAgMDgL1Y9gwBpBQAA
 """,
-            """
+        """
 androidx/test/TestObject.class:
 H4sIAAAAAAAA/3VSTWvbQBB9s7ZlWXEbN/2InfQrH4ekhyoJvTUUktCCQFWh
 MYaQ09pa0rVlCaS1ydGn/pD+g9BDoIVi2lt/VOmscNpDqRbezHs789gZ9PPX
@@ -989,5 +1204,4 @@ rWRPmPl2Xo61Z9dwr8rrp4tioImNEssCNNgKcLH0p3mVq+239BXi7BrNz1i+
 KgWBzRIfYav8cXj3bLByjkqAuwHuBbiPB5xiNUAbnXNQgTWs830Br8DDAs5v
 jU1b0HUCAAA=
 """
-        )
-        .bytecode
+    )
