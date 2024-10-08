@@ -115,25 +115,27 @@ class HealthConnectClientUpsideDownImplTest {
     }
 
     @Test
-    fun backgroundReads_ext13_isSupported() {
+    fun getFeatureStatus_featuresAddedInExt13_areAvailableInExt13() {
         assumeTrue(SdkExtensions.getExtensionVersion(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) >= 13)
 
-        assertThat(
-                healthConnectClient.features.getFeatureStatus(
-                    HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
-                )
-            )
-            .isEqualTo(HealthConnectFeatures.FEATURE_STATUS_AVAILABLE)
+        for (feature in
+            setOf(
+                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
+                HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE
+            )) {
+            assertThat(healthConnectClient.features.getFeatureStatus(feature))
+                .isEqualTo(HealthConnectFeatures.FEATURE_STATUS_AVAILABLE)
+        }
     }
 
     @Test
-    fun allFeatures_belowUExt13_noneSupported() {
+    fun getFeatureStatus_belowUExt13_noneIsAvailable() {
         assumeTrue(SdkExtensions.getExtensionVersion(Build.VERSION_CODES.UPSIDE_DOWN_CAKE) < 13)
 
         val features =
             listOf(
                 HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND,
-                HealthConnectFeatures.FEATURE_HEALTH_DATA_HISTORIC_READ,
+                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY,
                 HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE,
                 HealthConnectFeatures.FEATURE_PLANNED_EXERCISE
             )

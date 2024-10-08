@@ -32,6 +32,39 @@ import androidx.ink.strokes.Stroke
 /**
  * Renders strokes to a [Canvas].
  *
+ * Instead of calling the [draw] methods here directly, it may be simpler to pass an instance of
+ * [CanvasStrokeRenderer] to [androidx.ink.rendering.android.view.ViewStrokeRenderer] and use it to
+ * calculate transform matrix values.
+ *
+ * An example of how to use [CanvasStrokeRenderer.draw] directly:
+ * ```
+ * class MyView {
+ *   // Update these according to app business logic, and call `MyView.invalidate()`
+ *   val worldToViewTransform = Matrix() // Call e.g. `setScale(2F)` to zoom in 2x
+ *   val strokesWithTransforms = mutableMapOf<Stroke, Matrix>()
+ *
+ *   private val strokeToViewTransform = Matrix() // reusable scratch object
+ *   private val renderer = CanvasStrokeRenderer.create()
+ *
+ *   fun onDraw(canvas: Canvas) {
+ *     for ((stroke, strokeToWorldTransform) in strokesWithTransforms) {
+ *       // Combine worldToViewTransform (drawing surface being panned/zoomed/rotated) with
+ *       // strokeToWorldTransform (stroke itself being moved/scaled/rotated within the drawing
+ *       // surface) to get the overall transform of this stroke.
+ *       strokeToViewTransform.set(strokeToWorldTransform)
+ *       strokeToViewTransform.postConcat(worldToViewTransform)
+ *
+ *       canvas.withMatrix(strokeToViewTransform) {
+ *         // If coordinates of MyView are scaled/rotated from screen coordinates, then those
+ *         // scale/rotation values should be multiplied into the strokeToScreenTransform
+ *         // argument to renderer.draw.
+ *         renderer.draw(canvas, stroke, strokeToViewTransform)
+ *       }
+ *     }
+ *   }
+ * }
+ * ```
+ *
  * In almost all cases, a developer should use an implementation of this interface obtained from
  * [CanvasStrokeRenderer.create].
  *
@@ -52,63 +85,63 @@ import androidx.ink.strokes.Stroke
 public interface CanvasStrokeRenderer {
 
     /**
-     * Render a single [stroke] on the provided [canvas], with its positions transformed by
-     * [strokeToCanvasTransform].
+     * Render a single [stroke] on the provided [canvas].
      *
-     * To avoid needing to calculate and maintain [strokeToCanvasTransform], consider using
+     * To avoid needing to calculate and maintain [strokeToScreenTransform], consider using
      * [androidx.ink.rendering.android.view.ViewStrokeRenderer] instead.
      *
-     * The [strokeToCanvasTransform] should represent the complete transformation from stroke
-     * coordinates to the canvas, modulo translation. Any existing transforms applied to [canvas]
-     * should be undone prior to calling [draw].
+     * The [strokeToScreenTransform] should represent the complete transformation from stroke
+     * coordinates to the screen, modulo translation. This transform will not be applied to the
+     * [canvas] in any way, as it may be made up of several individual transforms applied to the
+     * [canvas] during an app’s drawing logic. If this transform is inaccurate, strokes may appear
+     * blurry or aliased.
      */
     // TODO: b/353561141 - Reference ComposeStrokeRenderer above once implemented.
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
-    public fun draw(canvas: Canvas, stroke: Stroke, strokeToCanvasTransform: AffineTransform)
+    public fun draw(canvas: Canvas, stroke: Stroke, strokeToScreenTransform: AffineTransform)
 
     /**
-     * Render a single [stroke] on the provided [canvas], with its positions transformed by
-     * [strokeToCanvasTransform].
+     * Render a single [stroke] on the provided [canvas].
      *
-     * To avoid needing to calculate and maintain [strokeToCanvasTransform], consider using
+     * To avoid needing to calculate and maintain [strokeToScreenTransform], consider using
      * [androidx.ink.rendering.android.view.ViewStrokeRenderer] instead.
      *
-     * The [strokeToCanvasTransform] must be affine. It should represent the complete transformation
-     * from stroke coordinates to the canvas, modulo translation. Any existing transforms applied to
-     * [canvas] should be undone prior to calling [draw].
+     * The [strokeToScreenTransform] must be affine. It should represent the complete transformation
+     * from stroke coordinates to the canvas, modulo translation. This transform will not be applied
+     * to the [canvas] in any way, as it may be made up of several individual transforms applied to
+     * the [canvas] during an app’s drawing logic. If this transform is inaccurate, strokes may
+     * appear blurry or aliased.
      */
     // TODO: b/353561141 - Reference ComposeStrokeRenderer above once implemented.
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
-    public fun draw(canvas: Canvas, stroke: Stroke, strokeToCanvasTransform: Matrix)
+    public fun draw(canvas: Canvas, stroke: Stroke, strokeToScreenTransform: Matrix)
 
     /**
-     * Render a single [inProgressStroke] on the provided [canvas], with its positions transformed
-     * by [strokeToCanvasTransform].
+     * Render a single [inProgressStroke] on the provided [canvas].
      *
-     * The [strokeToCanvasTransform] should represent the complete transformation from stroke
-     * coordinates to the canvas, modulo translation. Any existing transforms applied to [canvas]
-     * should be undone prior to calling [draw].
+     * The [strokeToScreenTransform] should represent the complete transformation from stroke
+     * coordinates to the canvas, modulo translation. This transform will not be applied to the
+     * [canvas] in any way, as it may be made up of several individual transforms applied to the
+     * [canvas] during an app’s drawing logic. If this transform is inaccurate, strokes may appear
+     * blurry or aliased.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
     public fun draw(
         canvas: Canvas,
         inProgressStroke: InProgressStroke,
-        strokeToCanvasTransform: AffineTransform,
+        strokeToScreenTransform: AffineTransform,
     )
 
     /**
-     * Render a single [inProgressStroke] on the provided [canvas], with its positions transformed
-     * by [strokeToCanvasTransform].
+     * Render a single [inProgressStroke] on the provided [canvas].
      *
-     * The [strokeToCanvasTransform] must be affine. It should represent the complete transformation
-     * from stroke coordinates to the canvas, modulo translation. Any existing transforms applied to
-     * [canvas] should be undone prior to calling [draw].
+     * The [strokeToScreenTransform] must be affine. It should represent the complete transformation
+     * from stroke coordinates to the canvas, modulo translation. This transform will not be applied
+     * to the [canvas] in any way, as it may be made up of several individual transforms applied to
+     * the [canvas] during an app’s drawing logic. If this transform is inaccurate, strokes may
+     * appear blurry or aliased.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
     public fun draw(
         canvas: Canvas,
         inProgressStroke: InProgressStroke,
-        strokeToCanvasTransform: Matrix,
+        strokeToScreenTransform: Matrix,
     )
 
     /**
@@ -121,9 +154,7 @@ public interface CanvasStrokeRenderer {
      * lowest value that avoids the artifacts, as larger values will be less performant, and effects
      * that rely on larger values will be less compatible with stroke geometry operations.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // PublicApiNotReadyForJetpackReview
-    @Px
-    public fun strokeModifiedRegionOutsetPx(): Int = 3
+    @Px public fun strokeModifiedRegionOutsetPx(): Int = 3
 
     public companion object {
 
@@ -135,7 +166,34 @@ public interface CanvasStrokeRenderer {
         @JvmStatic
         public fun create(): CanvasStrokeRenderer {
             @OptIn(ExperimentalInkCustomBrushApi::class)
-            return create(textureStore = TextureBitmapStore { null })
+            return create(TextureBitmapStore { null }, forcePathRendering = false)
+        }
+
+        /**
+         * Create a [CanvasStrokeRenderer] that is appropriate to the device's API version.
+         *
+         * @param textureStore The [TextureBitmapStore] that will be called to retrieve image data
+         *   for drawing textured strokes.
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // NonPublicApi
+        @ExperimentalInkCustomBrushApi
+        @JvmStatic
+        public fun create(textureStore: TextureBitmapStore): CanvasStrokeRenderer {
+            @OptIn(ExperimentalInkCustomBrushApi::class)
+            return create(textureStore, forcePathRendering = false)
+        }
+
+        /**
+         * Create a [CanvasStrokeRenderer] that is appropriate to the device's API version.
+         *
+         * @param forcePathRendering Overrides the drawing strategy selected based on API version to
+         *   always draw strokes using [Canvas.drawPath] instead of [Canvas.drawMesh].
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // NonPublicApi
+        @JvmStatic
+        public fun create(forcePathRendering: Boolean): CanvasStrokeRenderer {
+            @OptIn(ExperimentalInkCustomBrushApi::class)
+            return create(TextureBitmapStore { null }, forcePathRendering)
         }
 
         /**
@@ -148,11 +206,10 @@ public interface CanvasStrokeRenderer {
          */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) // NonPublicApi
         @ExperimentalInkCustomBrushApi
-        @JvmOverloads
         @JvmStatic
         public fun create(
             textureStore: TextureBitmapStore,
-            forcePathRendering: Boolean = false,
+            forcePathRendering: Boolean,
         ): CanvasStrokeRenderer {
             if (!forcePathRendering) return CanvasStrokeUnifiedRenderer(textureStore)
             return CanvasPathRenderer(textureStore)

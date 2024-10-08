@@ -79,11 +79,15 @@ private fun measureLazyColumn(
             visibleItems = emptyList(),
             totalItemsCount = 0,
             lastMeasuredItemHeight = Int.MIN_VALUE,
+            canScrollForward = false,
+            canScrollBackward = false,
             measureResult = layout(containerConstraints.maxWidth, containerConstraints.maxHeight) {}
         )
     }
 
     val visibleItems = ArrayDeque<LazyColumnMeasuredItem>()
+    var canScrollForward = true
+    var canScrollBackward = true
 
     // Place center item
     val centerItem =
@@ -99,6 +103,22 @@ private fun measureLazyColumn(
             )
         }
     centerItem.offset += scrollToBeConsumed.roundToInt()
+
+    if (
+        centerItem.index == 0 &&
+            centerItem.offset + centerItem.height / 2 >= containerConstraints.maxHeight / 2
+    ) {
+        canScrollBackward = false
+        centerItem.offset = containerConstraints.maxHeight / 2 - centerItem.height / 2
+    }
+    if (
+        centerItem.index == itemsCount - 1 &&
+            centerItem.offset + centerItem.height / 2 <= containerConstraints.maxHeight / 2
+    ) {
+        canScrollForward = false
+        centerItem.offset = containerConstraints.maxHeight / 2 - centerItem.height / 2
+    }
+
     visibleItems.add(centerItem)
 
     var bottomOffset = centerItem.offset + centerItem.height + itemSpacing
@@ -128,6 +148,8 @@ private fun measureLazyColumn(
             visibleItems = emptyList(),
             totalItemsCount = 0,
             lastMeasuredItemHeight = Int.MIN_VALUE,
+            canScrollForward = false,
+            canScrollBackward = false,
             measureResult = layout(containerConstraints.maxWidth, containerConstraints.maxHeight) {}
         )
     }
@@ -144,6 +166,8 @@ private fun measureLazyColumn(
         visibleItems = visibleItems,
         totalItemsCount = itemsCount,
         lastMeasuredItemHeight = anchorItem.height,
+        canScrollForward = canScrollForward,
+        canScrollBackward = canScrollBackward,
         measureResult =
             layout(containerConstraints.maxWidth, containerConstraints.maxHeight) {
                 visibleItems.fastForEach { it.place(this) }
@@ -192,6 +216,7 @@ internal fun rememberLazyColumnMeasurePolicy(
                         index: Int,
                         offset: Int
                     ): LazyColumnMeasuredItem {
+                        val itemProvider = itemProviderLambda()
                         val childConstraints =
                             Constraints(
                                 maxHeight = Constraints.Infinity,
@@ -214,6 +239,8 @@ internal fun rememberLazyColumnMeasurePolicy(
                             scrollProgress = scrollProgress,
                             horizontalAlignment = horizontalAlignment,
                             layoutDirection = layoutDirection,
+                            key = itemProvider.getKey(index),
+                            contentType = itemProvider.getContentType(index),
                         )
                     }
 
@@ -221,6 +248,7 @@ internal fun rememberLazyColumnMeasurePolicy(
                         index: Int,
                         offset: Int
                     ): LazyColumnMeasuredItem {
+                        val itemProvider = itemProviderLambda()
                         val childConstraints =
                             Constraints(
                                 maxHeight = Constraints.Infinity,
@@ -244,6 +272,8 @@ internal fun rememberLazyColumnMeasurePolicy(
                                 scrollProgress = scrollProgress,
                                 horizontalAlignment = horizontalAlignment,
                                 layoutDirection = layoutDirection,
+                                key = itemProvider.getKey(index),
+                                contentType = itemProvider.getContentType(index),
                             )
                         item.offset -= item.height
                         return item

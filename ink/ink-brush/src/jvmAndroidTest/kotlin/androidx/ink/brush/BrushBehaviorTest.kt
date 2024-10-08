@@ -16,6 +16,7 @@
 
 package androidx.ink.brush
 
+import androidx.ink.nativeloader.UsedByNative
 import com.google.common.truth.Truth.assertThat
 import kotlin.IllegalArgumentException
 import kotlin.test.assertFailsWith
@@ -31,7 +32,6 @@ class BrushBehaviorTest {
     fun sourceConstants_areDistinct() {
         val list =
             listOf<BrushBehavior.Source>(
-                BrushBehavior.Source.CONSTANT_ZERO,
                 BrushBehavior.Source.NORMALIZED_PRESSURE,
                 BrushBehavior.Source.TILT_IN_RADIANS,
                 BrushBehavior.Source.TILT_X_IN_RADIANS,
@@ -96,8 +96,6 @@ class BrushBehaviorTest {
 
     @Test
     fun sourceToString_returnsCorrectString() {
-        assertThat(BrushBehavior.Source.CONSTANT_ZERO.toString())
-            .isEqualTo("BrushBehavior.Source.CONSTANT_ZERO")
         assertThat(BrushBehavior.Source.NORMALIZED_PRESSURE.toString())
             .isEqualTo("BrushBehavior.Source.NORMALIZED_PRESSURE")
         assertThat(BrushBehavior.Source.TILT_IN_RADIANS.toString())
@@ -1252,61 +1250,6 @@ class BrushBehaviorTest {
     }
 
     @Test
-    fun brushBehaviorCopy_withArguments_createsCopyWithChanges() {
-        val behavior1 =
-            BrushBehavior(
-                source = BrushBehavior.Source.NORMALIZED_PRESSURE,
-                target = BrushBehavior.Target.WIDTH_MULTIPLIER,
-                sourceValueRangeLowerBound = 0.2f,
-                sourceValueRangeUpperBound = .8f,
-                targetModifierRangeLowerBound = 1.1f,
-                targetModifierRangeUpperBound = 1.7f,
-                sourceOutOfRangeBehavior = BrushBehavior.OutOfRange.CLAMP,
-                responseCurve = EasingFunction.Predefined.EASE_IN_OUT,
-                responseTimeMillis = 1L,
-                enabledToolTypes = setOf(InputToolType.STYLUS),
-                isFallbackFor = BrushBehavior.OptionalInputProperty.TILT_X_AND_Y,
-            )
-        assertThat(behavior1.copy(responseTimeMillis = 3L))
-            .isEqualTo(
-                BrushBehavior(
-                    source = BrushBehavior.Source.NORMALIZED_PRESSURE,
-                    target = BrushBehavior.Target.WIDTH_MULTIPLIER,
-                    sourceValueRangeLowerBound = 0.2f,
-                    sourceValueRangeUpperBound = .8f,
-                    targetModifierRangeLowerBound = 1.1f,
-                    targetModifierRangeUpperBound = 1.7f,
-                    sourceOutOfRangeBehavior = BrushBehavior.OutOfRange.CLAMP,
-                    responseCurve = EasingFunction.Predefined.EASE_IN_OUT,
-                    responseTimeMillis = 3L,
-                    enabledToolTypes = setOf(InputToolType.STYLUS),
-                    isFallbackFor = BrushBehavior.OptionalInputProperty.TILT_X_AND_Y,
-                )
-            )
-    }
-
-    @Test
-    fun brushBehaviorCopy_createsCopy() {
-        val behavior1 =
-            BrushBehavior(
-                source = BrushBehavior.Source.NORMALIZED_PRESSURE,
-                target = BrushBehavior.Target.WIDTH_MULTIPLIER,
-                sourceValueRangeLowerBound = 0.2f,
-                sourceValueRangeUpperBound = .8f,
-                targetModifierRangeLowerBound = 1.1f,
-                targetModifierRangeUpperBound = 1.7f,
-                sourceOutOfRangeBehavior = BrushBehavior.OutOfRange.CLAMP,
-                responseCurve = EasingFunction.Predefined.EASE_IN_OUT,
-                responseTimeMillis = 1L,
-                enabledToolTypes = setOf(InputToolType.STYLUS),
-                isFallbackFor = BrushBehavior.OptionalInputProperty.TILT_X_AND_Y,
-            )
-        val behavior2 = behavior1.copy()
-        assertThat(behavior2).isEqualTo(behavior1)
-        assertThat(behavior2).isNotSameInstanceAs(behavior1)
-    }
-
-    @Test
     fun brushBehaviorToString_returnsReasonableString() {
         assertThat(
                 BrushBehavior(
@@ -1559,7 +1502,7 @@ class BrushBehaviorTest {
      * Kotlin BrushBehavior's JNI-created C++ counterpart is equivalent to the expected C++
      * BrushBehavior.
      */
-    // TODO: b/355248266 - @Keep must go in Proguard config file instead.
+    @UsedByNative
     private external fun matchesNativeStepBehavior(
         nativePointerToActualBrushBehavior: Long
     ): Boolean
@@ -1569,7 +1512,7 @@ class BrushBehaviorTest {
      * of the Kotlin BrushBehavior's JNI-created C++ counterpart is equivalent to the expected C++
      * BrushBehavior.
      */
-    // TODO: b/355248266 - @Keep must go in Proguard config file instead.
+    @UsedByNative
     private external fun matchesNativePredefinedBehavior(
         nativePointerToActualBrushBehavior: Long
     ): Boolean
@@ -1579,7 +1522,7 @@ class BrushBehaviorTest {
      * Kotlin BrushBehavior's JNI-created C++ counterpart is equivalent to the expected C++
      * BrushBehavior.
      */
-    // TODO: b/355248266 - @Keep must go in Proguard config file instead.
+    @UsedByNative
     private external fun matchesNativeCubicBezierBehavior(
         nativePointerToActualBrushBehavior: Long
     ): Boolean
@@ -1588,7 +1531,7 @@ class BrushBehaviorTest {
      * Creates an expected C++ Linear BrushBehavior and returns true if every property of the Kotlin
      * BrushBehavior's JNI-created C++ counterpart is equivalent to the expected C++ BrushBehavior.
      */
-    // TODO: b/355248266 - @Keep must go in Proguard config file instead.
+    @UsedByNative
     private external fun matchesNativeLinearBehavior(
         nativePointerToActualBrushBehavior: Long
     ): Boolean

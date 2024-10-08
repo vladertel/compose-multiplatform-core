@@ -25,6 +25,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.withMatrix
 import androidx.ink.brush.Brush
 import androidx.ink.brush.ExperimentalInkCustomBrushApi
 import androidx.ink.brush.InputToolType
@@ -47,12 +48,13 @@ class CanvasMeshRendererScreenshotTestActivity : Activity() {
 
     private inner class StrokeView(context: Context) : View(context) {
 
+        // TODO: b/369408056 - Change back to twist-style input points
         private val inputs =
             MutableStrokeInputBatch()
                 .addOrThrow(InputToolType.UNKNOWN, x = 0F, y = 0F, elapsedTimeMillis = 100)
-                .addOrThrow(InputToolType.UNKNOWN, x = 80F, y = 100F, elapsedTimeMillis = 150)
-                .addOrThrow(InputToolType.UNKNOWN, x = 0F, y = 100F, elapsedTimeMillis = 200)
-                .addOrThrow(InputToolType.UNKNOWN, x = 80F, y = 0F, elapsedTimeMillis = 250)
+                .addOrThrow(InputToolType.UNKNOWN, x = 40F, y = 40F, elapsedTimeMillis = 150)
+                .addOrThrow(InputToolType.UNKNOWN, x = 0F, y = 70F, elapsedTimeMillis = 200)
+                .addOrThrow(InputToolType.UNKNOWN, x = 30F, y = 100F, elapsedTimeMillis = 250)
                 .asImmutable()
 
         // Pink twist stroke.
@@ -78,7 +80,7 @@ class CanvasMeshRendererScreenshotTestActivity : Activity() {
         // Stroke with no inputs, and therefore an empty [ModeledShape].
         private val emptyStroke = Stroke(brush, ImmutableStrokeInputBatch.EMPTY)
 
-        @OptIn(ExperimentalInkCustomBrushApi::class) private val renderer = CanvasMeshRenderer()
+        private val renderer = @OptIn(ExperimentalInkCustomBrushApi::class) CanvasMeshRenderer()
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
@@ -89,10 +91,12 @@ class CanvasMeshRendererScreenshotTestActivity : Activity() {
 
             // The empty stroke should of course not be visible, but the [draw] call should succeed.
             renderer.draw(canvas, emptyStroke, Matrix.IDENTITY_MATRIX)
+
             // Expected result: pink stroke on left, large green rotated stroke on right.
-            renderer.draw(canvas, stroke, transform)
+            canvas.withMatrix(transform) { renderer.draw(canvas, stroke, transform) }
+
             canvas.translate(xBetweenStrokes, 0F)
-            renderer.draw(canvas, stroke2, transform2)
+            canvas.withMatrix(transform2) { renderer.draw(canvas, stroke2, transform2) }
         }
     }
 }

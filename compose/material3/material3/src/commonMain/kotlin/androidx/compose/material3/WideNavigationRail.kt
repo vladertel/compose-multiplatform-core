@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.WideNavigationRailItemDefaults.defaultWideNavigationRailItemColors
 import androidx.compose.material3.internal.DraggableAnchors
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.draggableAnchors
@@ -305,10 +306,10 @@ private fun WideNavigationRailLayout(
                                                 )
                                             )
                                     )
-                                val maxIntrinsicWidth = it.maxIntrinsicWidth(constraintsOffset)
-                                if (expanded && expandedItemMaxWidth < maxIntrinsicWidth) {
+                                val maxItemWidth = measuredItem.measuredWidth
+                                if (expanded && expandedItemMaxWidth < maxItemWidth) {
                                     expandedItemMaxWidth =
-                                        maxIntrinsicWidth +
+                                        maxItemWidth +
                                             (ExpandedRailHorizontalItemPadding * 2).roundToPx()
                                 }
                                 constraintsOffset = measuredItem.height
@@ -344,7 +345,8 @@ private fun WideNavigationRailLayout(
                                         .roundToPx()
                                         .coerceIn(
                                             minimumValue = actualMinWidth,
-                                            maximumValue = currentWidth
+                                            maximumValue =
+                                                currentWidth.coerceAtLeast(actualMinWidth)
                                         )
                             }
                         }
@@ -672,7 +674,6 @@ fun DismissibleModalWideNavigationRail(
  * @param enabled controls the enabled state of this item. When `false`, this component will not
  *   respond to user input, and it will appear visually disabled and disabled to accessibility
  *   services.
- * @param badge optional badge to show on this item, typically a [Badge]
  * @param railExpanded whether the associated [WideNavigationRail] is expanded or collapsed
  * @param iconPosition the [NavigationItemIconPosition] for the icon
  * @param colors [NavigationItemColors] that will be used to resolve the colors used for this item
@@ -691,7 +692,6 @@ fun WideNavigationRailItem(
     label: @Composable (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    badge: (@Composable () -> Unit)? = null,
     railExpanded: Boolean = false,
     iconPosition: NavigationItemIconPosition =
         WideNavigationRailItemDefaults.iconPositionFor(railExpanded),
@@ -723,7 +723,6 @@ fun WideNavigationRailItem(
             modifier = modifier,
             enabled = enabled,
             label = label,
-            badge = badge,
             iconPosition = iconPosition,
             interactionSource = interactionSource,
         )
@@ -745,7 +744,6 @@ fun WideNavigationRailItem(
             modifier = modifier,
             enabled = enabled,
             label = label,
-            badge = badge,
             iconPosition = iconPosition,
             interactionSource = interactionSource,
         )
@@ -864,6 +862,32 @@ object WideNavigationRailDefaults {
      */
     @Composable fun colors() = MaterialTheme.colorScheme.defaultWideWideNavigationRailColors
 
+    /**
+     * Creates a [WideNavigationRailColors] with the provided colors according to the Material
+     * specification.
+     *
+     * @param containerColor the color used for the background of a non-modal wide navigation rail.
+     * @param contentColor the preferred color for content inside a wide navigation rail. Defaults
+     *   to either the matching content color for [containerColor], or to the current
+     *   [LocalContentColor] if [containerColor] is not a color from the theme
+     * @param modalContainerColor the color used for the background of a modal wide navigation rail.
+     * @param modalScrimColor the color used for the scrim overlay for background content of a modal
+     *   wide navigation rail
+     */
+    @Composable
+    fun colors(
+        containerColor: Color = WideNavigationRailDefaults.containerColor,
+        contentColor: Color = contentColorFor(containerColor),
+        modalContainerColor: Color = NavigationRailExpandedTokens.ModalContainerColor.value,
+        modalScrimColor: Color = ScrimTokens.ContainerColor.value.copy(ScrimTokens.ContainerOpacity)
+    ): WideNavigationRailColors =
+        MaterialTheme.colorScheme.defaultWideWideNavigationRailColors.copy(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            modalContainerColor = modalContainerColor,
+            modalScrimColor = modalScrimColor
+        )
+
     private val containerColor: Color
         @Composable get() = NavigationRailCollapsedTokens.ContainerColor.value
 
@@ -898,6 +922,39 @@ object WideNavigationRailItemDefaults {
      * specification.
      */
     @Composable fun colors() = MaterialTheme.colorScheme.defaultWideNavigationRailItemColors
+
+    /**
+     * Creates a [NavigationItemColors] with the provided colors according to the Material
+     * specification.
+     *
+     * @param selectedIconColor the color to use for the icon when the item is selected.
+     * @param selectedTextColor the color to use for the text label when the item is selected.
+     * @param selectedIndicatorColor the color to use for the indicator when the item is selected.
+     * @param unselectedIconColor the color to use for the icon when the item is unselected.
+     * @param unselectedTextColor the color to use for the text label when the item is unselected.
+     * @param disabledIconColor the color to use for the icon when the item is disabled.
+     * @param disabledTextColor the color to use for the text label when the item is disabled.
+     * @return the resulting [NavigationItemColors] used for [WideNavigationRailItem]
+     */
+    @Composable
+    fun colors(
+        selectedIconColor: Color = NavigationRailColorTokens.ItemActiveIcon.value,
+        selectedTextColor: Color = NavigationRailColorTokens.ItemActiveLabelText.value,
+        selectedIndicatorColor: Color = NavigationRailColorTokens.ItemActiveIndicator.value,
+        unselectedIconColor: Color = NavigationRailColorTokens.ItemInactiveIcon.value,
+        unselectedTextColor: Color = NavigationRailColorTokens.ItemInactiveLabelText.value,
+        disabledIconColor: Color = unselectedIconColor.copy(alpha = DisabledAlpha),
+        disabledTextColor: Color = unselectedTextColor.copy(alpha = DisabledAlpha),
+    ): NavigationItemColors =
+        MaterialTheme.colorScheme.defaultWideNavigationRailItemColors.copy(
+            selectedIconColor = selectedIconColor,
+            selectedTextColor = selectedTextColor,
+            selectedIndicatorColor = selectedIndicatorColor,
+            unselectedIconColor = unselectedIconColor,
+            unselectedTextColor = unselectedTextColor,
+            disabledIconColor = disabledIconColor,
+            disabledTextColor = disabledTextColor,
+        )
 
     private val ColorScheme.defaultWideNavigationRailItemColors: NavigationItemColors
         get() {

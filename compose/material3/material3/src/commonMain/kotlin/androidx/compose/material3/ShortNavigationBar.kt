@@ -173,7 +173,6 @@ value class ShortNavigationBarArrangement private constructor(private val value:
  * @param enabled controls the enabled state of this item. When `false`, this component will not
  *   respond to user input, and it will appear visually disabled and disabled to accessibility
  *   services.
- * @param badge optional badge to show on this item, typically a [Badge]
  * @param iconPosition the [NavigationItemIconPosition] for the icon
  * @param colors [NavigationItemColors] that will be used to resolve the colors used for this item
  *   in different states. See [ShortNavigationBarItemDefaults.colors]
@@ -191,7 +190,6 @@ fun ShortNavigationBarItem(
     label: @Composable (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    badge: (@Composable () -> Unit)? = null,
     iconPosition: NavigationItemIconPosition = NavigationItemIconPosition.Top,
     colors: NavigationItemColors = ShortNavigationBarItemDefaults.colors(),
     interactionSource: MutableInteractionSource? = null,
@@ -229,7 +227,6 @@ fun ShortNavigationBarItem(
         modifier = modifier,
         enabled = enabled,
         label = label,
-        badge = badge,
         iconPosition = iconPosition,
         interactionSource = interactionSource,
     )
@@ -267,6 +264,39 @@ object ShortNavigationBarItemDefaults {
      * specification.
      */
     @Composable fun colors() = MaterialTheme.colorScheme.defaultShortNavigationBarItemColors
+
+    /**
+     * Creates a [NavigationItemColors] with the provided colors according to the Material
+     * specification.
+     *
+     * @param selectedIconColor the color to use for the icon when the item is selected.
+     * @param selectedTextColor the color to use for the text label when the item is selected.
+     * @param selectedIndicatorColor the color to use for the indicator when the item is selected.
+     * @param unselectedIconColor the color to use for the icon when the item is unselected.
+     * @param unselectedTextColor the color to use for the text label when the item is unselected.
+     * @param disabledIconColor the color to use for the icon when the item is disabled.
+     * @param disabledTextColor the color to use for the text label when the item is disabled.
+     * @return the resulting [NavigationItemColors] used for [ShortNavigationBarItem]
+     */
+    @Composable
+    fun colors(
+        selectedIconColor: Color = NavigationBarTokens.ItemActiveIconColor.value,
+        selectedTextColor: Color = NavigationBarTokens.ItemActiveLabelTextColor.value,
+        selectedIndicatorColor: Color = NavigationBarTokens.ItemActiveIndicatorColor.value,
+        unselectedIconColor: Color = NavigationBarTokens.ItemInactiveIconColor.value,
+        unselectedTextColor: Color = NavigationBarTokens.ItemInactiveLabelTextColor.value,
+        disabledIconColor: Color = unselectedIconColor.copy(alpha = DisabledAlpha),
+        disabledTextColor: Color = unselectedTextColor.copy(alpha = DisabledAlpha),
+    ): NavigationItemColors =
+        MaterialTheme.colorScheme.defaultShortNavigationBarItemColors.copy(
+            selectedIconColor = selectedIconColor,
+            selectedTextColor = selectedTextColor,
+            selectedIndicatorColor = selectedIndicatorColor,
+            unselectedIconColor = unselectedIconColor,
+            unselectedTextColor = unselectedTextColor,
+            disabledIconColor = disabledIconColor,
+            disabledTextColor = disabledTextColor,
+        )
 
     internal val ColorScheme.defaultShortNavigationBarItemColors: NavigationItemColors
         get() {

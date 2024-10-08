@@ -39,7 +39,6 @@ import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat;
-import androidx.camera.camera2.internal.compat.workaround.AeFpsRange;
 import androidx.camera.camera2.internal.compat.workaround.AutoFlashAEModeDisabler;
 import androidx.camera.camera2.interop.Camera2CameraControl;
 import androidx.camera.camera2.interop.CaptureRequestOptions;
@@ -49,6 +48,7 @@ import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.ScreenFlash;
 import androidx.camera.core.Logger;
+import androidx.camera.core.imagecapture.CameraCapturePipeline;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureFailure;
 import androidx.camera.core.impl.CameraCaptureResult;
@@ -140,7 +140,6 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
     private volatile int mFlashMode = FLASH_MODE_OFF;
 
     // Workarounds
-    private final AeFpsRange mAeFpsRange;
     private final AutoFlashAEModeDisabler mAutoFlashAEModeDisabler;
 
     static final String TAG_SESSION_UPDATE_ID = "CameraControlSessionUpdateId";
@@ -209,7 +208,6 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         }
 
         // Workarounds
-        mAeFpsRange = new AeFpsRange(cameraQuirks);
         mAutoFlashAEModeDisabler = new AutoFlashAEModeDisabler(cameraQuirks);
         mCamera2CameraControl = new Camera2CameraControl(this, mExecutor);
         mCamera2CapturePipeline = new Camera2CapturePipeline(this, mCameraCharacteristics,
@@ -390,6 +388,7 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
         }
         // update mFlashMode immediately so that following getFlashMode() returns correct value.
         mFlashMode = flashMode;
+        Logger.d(TAG, "setFlashMode: mFlashMode = " + mFlashMode);
 
         // Disable ZSL when flash mode is ON or AUTO.
         mZslControl.setZslDisabledByFlashMode(mFlashMode == FLASH_MODE_ON
@@ -509,6 +508,27 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
                 mFlashModeChangeSessionUpdateFuture)).transformAsync(
                     v -> mCamera2CapturePipeline.submitStillCaptures(captureConfigs, captureMode,
                         flashMode, flashType), mExecutor);
+    }
+
+    @NonNull
+    @Override
+    public ListenableFuture<CameraCapturePipeline> getCameraCapturePipelineAsync(
+            @ImageCapture.CaptureMode int captureMode, @ImageCapture.FlashType int flashType) {
+        if (!isControlInUse()) {
+            Logger.w(TAG, "Camera is not active.");
+            return Futures.immediateFailedFuture(
+                    new OperationCanceledException("Camera is not active."));
+        }
+
+        int flashMode = getFlashMode();
+        return FutureChain.from(
+                Futures.nonCancellationPropagating(mFlashModeChangeSessionUpdateFuture)
+        ).transformAsync(
+                v -> Futures.immediateFuture(mCamera2CapturePipeline.getCameraCapturePipeline(
+                        captureMode, flashMode, flashType
+                )),
+                mExecutor
+        );
     }
 
     /** {@inheritDoc} */
@@ -663,8 +683,6 @@ public class Camera2CameraControlImpl implements CameraControlInternal {
 
         // AF Mode is assigned in mFocusMeteringControl.
         mFocusMeteringControl.addFocusMeteringOptions(builder);
-
-        mAeFpsRange.addAeFpsRangeOptions(builder);
 
         mZoomControl.addZoomOption(builder);
 

@@ -19,6 +19,8 @@ package androidx.wear.compose.material3
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,17 +31,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
 import junit.framework.TestCase.assertEquals
+import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 
@@ -228,20 +234,68 @@ class AlertDialogTest {
     }
 
     @Test
-    fun supports_swipeToDismiss() {
+    fun supports_swipeToDismiss_confirmDismissButtons() {
+        var dismissCounter = 0
         rule.setContentWithTheme {
             var showDialog by remember { mutableStateOf(true) }
             AlertDialog(
                 modifier = Modifier.testTag(TEST_TAG),
                 title = {},
-                bottomButton = {},
-                onDismissRequest = { showDialog = false },
+                dismissButton = {},
+                confirmButton = {},
+                onDismissRequest = {
+                    showDialog = false
+                    dismissCounter++
+                },
                 show = showDialog
             )
         }
 
         rule.onNodeWithTag(TEST_TAG).performTouchInput({ swipeRight() })
         rule.onNodeWithTag(TEST_TAG).assertDoesNotExist()
+        Assert.assertEquals(1, dismissCounter)
+    }
+
+    @Test
+    fun supports_swipeToDismiss_bottomButton() {
+        var dismissCounter = 0
+        rule.setContentWithTheme {
+            var showDialog by remember { mutableStateOf(true) }
+            AlertDialog(
+                modifier = Modifier.testTag(TEST_TAG),
+                title = {},
+                bottomButton = {},
+                onDismissRequest = {
+                    showDialog = false
+                    dismissCounter++
+                },
+                show = showDialog
+            )
+        }
+
+        rule.onNodeWithTag(TEST_TAG).performTouchInput({ swipeRight() })
+        rule.onNodeWithTag(TEST_TAG).assertDoesNotExist()
+        Assert.assertEquals(1, dismissCounter)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun onDismissRequest_not_called_when_hidden() {
+        val show = mutableStateOf(true)
+        var dismissCounter = 0
+        rule.setContentWithTheme {
+            AlertDialog(
+                modifier = Modifier.testTag(TEST_TAG),
+                title = {},
+                bottomButton = {},
+                onDismissRequest = { dismissCounter++ },
+                show = show.value
+            )
+        }
+        rule.waitForIdle()
+        show.value = false
+        rule.waitUntilDoesNotExist(hasTestTag(TEST_TAG))
+        Assert.assertEquals(0, dismissCounter)
     }
 
     @Test
@@ -274,7 +328,7 @@ class AlertDialogTest {
             expectedContentColor = MaterialTheme.colorScheme.onBackground
             expectedTextStyle = MaterialTheme.typography.titleMedium
             expectedTextAlign = TextAlign.Center
-            expectedTextMaxLines = AlertDialogDefaults.titleMaxLines
+            expectedTextMaxLines = AlertTitleMaxLines
             AlertDialog(
                 modifier = Modifier.testTag(TEST_TAG),
                 title = {
@@ -388,46 +442,87 @@ class AlertDialogTest {
     @Test
     fun with_title_confirmDismissButtons_positioning() {
         rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
-            AlertDialog(
-                show = true,
-                title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
-                onDismissRequest = {},
-                confirmButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
-                },
-                dismissButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
-                },
-                verticalArrangement =
-                    Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
-                modifier = Modifier.testTag(TEST_TAG),
-            )
+            ScreenConfiguration(AlertScreenSize) {
+                AlertDialog(
+                    show = true,
+                    title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
+                    onDismissRequest = {},
+                    confirmButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
+                    },
+                    dismissButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
+                    },
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(AlertScreenSize.dp).testTag(TEST_TAG),
+                )
+            }
         }
 
         val titleBottom = rule.onNodeWithTag(TitleTestTag).getUnclippedBoundsInRoot().bottom
         val confirmButtonTop =
             rule.onNodeWithTag(ConfirmButtonTestTag).getUnclippedBoundsInRoot().top
-        confirmButtonTop.assertIsEqualTo(titleBottom + AlertDialogDefaults.bottomSpacing)
+        confirmButtonTop.assertIsEqualTo(titleBottom + AlertBottomSpacing)
+    }
+
+    @Test
+    fun with_title_noBottomButton_positioning() {
+        rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
+            ScreenConfiguration(SmallScreenSize) {
+                AlertDialog(
+                    show = true,
+                    title = { Text("Title") },
+                    onDismissRequest = {},
+                    bottomButton = null,
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(SmallScreenSize.dp).testTag(TEST_TAG),
+                ) {
+                    item {
+                        Text(
+                            "ContentText",
+                            // We set height larger than the screen size to be sure that the list
+                            // will be scrollable
+                            modifier =
+                                Modifier.size(width = 100.dp, height = (SmallScreenSize + 50).dp)
+                                    .testTag(ContentTestTag)
+                        )
+                    }
+                }
+            }
+        }
+        rule.onNodeWithTag(TEST_TAG).performTouchInput { swipeUp() }
+
+        val contentBottom = rule.onNodeWithTag(ContentTestTag).getUnclippedBoundsInRoot().bottom
+        val alertDialogBottom = rule.onNodeWithTag(TEST_TAG).getUnclippedBoundsInRoot().bottom
+        // Assert that there is a proper padding between the bottom of the content and the bottom of
+        // the dialog.
+        contentBottom.assertIsEqualTo(
+            alertDialogBottom * (1 - AlertDialogDefaults.noEdgeButtonBottomPaddingFraction)
+        )
     }
 
     @Test
     fun with_icon_title_confirmDismissButtons_positioning() {
         rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
-            AlertDialog(
-                show = true,
-                icon = { TestImage(IconTestTag) },
-                title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
-                onDismissRequest = {},
-                confirmButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
-                },
-                dismissButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
-                },
-                verticalArrangement =
-                    Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
-                modifier = Modifier.testTag(TEST_TAG),
-            )
+            ScreenConfiguration(AlertScreenSize) {
+                AlertDialog(
+                    show = true,
+                    icon = { TestImage(IconTestTag) },
+                    title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
+                    onDismissRequest = {},
+                    confirmButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
+                    },
+                    dismissButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
+                    },
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(AlertScreenSize.dp).testTag(TEST_TAG),
+                )
+            }
         }
 
         val iconBottom = rule.onNodeWithTag(IconTestTag).getUnclippedBoundsInRoot().bottom
@@ -436,29 +531,31 @@ class AlertDialogTest {
         val confirmButtonTop =
             rule.onNodeWithTag(ConfirmButtonTestTag).getUnclippedBoundsInRoot().top
 
-        titleTop.assertIsEqualTo(iconBottom + AlertDialogDefaults.iconBottomSpacing)
-        confirmButtonTop.assertIsEqualTo(titleBottom + AlertDialogDefaults.bottomSpacing)
+        titleTop.assertIsEqualTo(iconBottom + AlertIconBottomSpacing)
+        confirmButtonTop.assertIsEqualTo(titleBottom + AlertBottomSpacing)
     }
 
     @Test
     fun with_icon_title_textMessage_confirmDismissButtons_positioning() {
         rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
-            AlertDialog(
-                show = true,
-                icon = { TestImage(IconTestTag) },
-                title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
-                text = { Text("Text", modifier = Modifier.testTag(TextTestTag)) },
-                onDismissRequest = {},
-                confirmButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
-                },
-                dismissButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
-                },
-                verticalArrangement =
-                    Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
-                modifier = Modifier.testTag(TEST_TAG),
-            )
+            ScreenConfiguration(AlertScreenSize) {
+                AlertDialog(
+                    show = true,
+                    icon = { TestImage(IconTestTag) },
+                    title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
+                    text = { Text("Text", modifier = Modifier.testTag(TextTestTag)) },
+                    onDismissRequest = {},
+                    confirmButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
+                    },
+                    dismissButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
+                    },
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(AlertScreenSize.dp).testTag(TEST_TAG),
+                )
+            }
         }
 
         val iconBottom = rule.onNodeWithTag(IconTestTag).getUnclippedBoundsInRoot().bottom
@@ -469,31 +566,33 @@ class AlertDialogTest {
         val confirmButtonTop =
             rule.onNodeWithTag(ConfirmButtonTestTag).getUnclippedBoundsInRoot().top
 
-        titleTop.assertIsEqualTo(iconBottom + AlertDialogDefaults.iconBottomSpacing)
-        textTop.assertIsEqualTo(titleBottom + AlertDialogDefaults.textMessageTopSpacing)
-        confirmButtonTop.assertIsEqualTo(textBottom + AlertDialogDefaults.bottomSpacing)
+        titleTop.assertIsEqualTo(iconBottom + AlertIconBottomSpacing)
+        textTop.assertIsEqualTo(titleBottom + AlertTextMessageTopSpacing)
+        confirmButtonTop.assertIsEqualTo(textBottom + AlertBottomSpacing)
     }
 
     @Test
     fun with_icon_title_textMessage_content_confirmDismissButtons_positioning() {
         rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
-            AlertDialog(
-                show = true,
-                icon = { TestImage(IconTestTag) },
-                title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
-                text = { Text("Text", modifier = Modifier.testTag(TextTestTag)) },
-                onDismissRequest = {},
-                confirmButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
-                },
-                dismissButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
-                },
-                verticalArrangement =
-                    Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
-                modifier = Modifier.testTag(TEST_TAG),
-            ) {
-                item { Text("ContentText", modifier = Modifier.testTag(ContentTestTag)) }
+            ScreenConfiguration(AlertScreenSize) {
+                AlertDialog(
+                    show = true,
+                    icon = { TestImage(IconTestTag) },
+                    title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
+                    text = { Text("Text", modifier = Modifier.testTag(TextTestTag)) },
+                    onDismissRequest = {},
+                    confirmButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
+                    },
+                    dismissButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
+                    },
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(AlertScreenSize.dp).testTag(TEST_TAG),
+                ) {
+                    item { Text("ContentText", modifier = Modifier.testTag(ContentTestTag)) }
+                }
             }
         }
 
@@ -507,31 +606,33 @@ class AlertDialogTest {
         val confirmButtonTop =
             rule.onNodeWithTag(ConfirmButtonTestTag).getUnclippedBoundsInRoot().top
 
-        titleTop.assertIsEqualTo(iconBottom + AlertDialogDefaults.iconBottomSpacing)
-        textTop.assertIsEqualTo(titleBottom + AlertDialogDefaults.textMessageTopSpacing)
-        contentTop.assertIsEqualTo(textBottom + AlertDialogDefaults.textMessageTopSpacing)
-        confirmButtonTop.assertIsEqualTo(contentBottom + AlertDialogDefaults.bottomSpacing)
+        titleTop.assertIsEqualTo(iconBottom + AlertIconBottomSpacing)
+        textTop.assertIsEqualTo(titleBottom + AlertTextMessageTopSpacing)
+        contentTop.assertIsEqualTo(textBottom + AlertTextMessageTopSpacing)
+        confirmButtonTop.assertIsEqualTo(contentBottom + AlertBottomSpacing)
     }
 
     @Test
     fun with_icon_title_content_confirmDismissButtons_positioning() {
         rule.setContentWithThemeForSizeAssertions(useUnmergedTree = true) {
-            AlertDialog(
-                show = true,
-                icon = { TestImage(IconTestTag) },
-                title = { Text("Title", modifier = Modifier.testTag(TitleTestTag)) },
-                onDismissRequest = {},
-                confirmButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
-                },
-                dismissButton = {
-                    Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
-                },
-                verticalArrangement =
-                    Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
-                modifier = Modifier.testTag(TEST_TAG),
-            ) {
-                item { Text("ContentText", modifier = Modifier.testTag(ContentTestTag)) }
+            ScreenConfiguration(AlertScreenSize) {
+                AlertDialog(
+                    show = true,
+                    icon = { TestImage(IconTestTag) },
+                    title = { Box(modifier = Modifier.size(3.dp).testTag(TitleTestTag)) },
+                    onDismissRequest = {},
+                    confirmButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(ConfirmButtonTestTag)) {}
+                    },
+                    dismissButton = {
+                        Button(onClick = {}, modifier = Modifier.testTag(DismissButtonTestTag)) {}
+                    },
+                    verticalArrangement =
+                        Arrangement.spacedBy(space = 0.dp, alignment = Alignment.CenterVertically),
+                    modifier = Modifier.size(AlertScreenSize.dp).testTag(TEST_TAG),
+                ) {
+                    item { Text("ContentText", modifier = Modifier.testTag(ContentTestTag)) }
+                }
             }
         }
 
@@ -543,9 +644,9 @@ class AlertDialogTest {
         val confirmButtonTop =
             rule.onNodeWithTag(ConfirmButtonTestTag).getUnclippedBoundsInRoot().top
 
-        titleTop.assertIsEqualTo(iconBottom + AlertDialogDefaults.iconBottomSpacing)
-        contentTop.assertIsEqualTo(titleBottom + AlertDialogDefaults.textMessageTopSpacing)
-        confirmButtonTop.assertIsEqualTo(contentBottom + AlertDialogDefaults.bottomSpacing)
+        titleTop.assertIsEqualTo(iconBottom + AlertIconBottomSpacing)
+        contentTop.assertIsEqualTo(titleBottom + AlertTextMessageTopSpacing)
+        confirmButtonTop.assertIsEqualTo(contentBottom + AlertBottomSpacing)
     }
 
     // TODO: add more positioning tests for EdgeButton.
@@ -557,3 +658,5 @@ private const val TextTestTag = "text"
 private const val ContentTestTag = "content"
 private const val ConfirmButtonTestTag = "confirmButton"
 private const val DismissButtonTestTag = "dismissButton"
+private const val AlertScreenSize = 400
+private const val SmallScreenSize = 100

@@ -1523,6 +1523,15 @@ actual abstract class RoomDatabase {
          * For example, an instance of [androidx.sqlite.driver.AndroidSQLiteDriver] or
          * [androidx.sqlite.driver.bundled.BundledSQLiteDriver].
          *
+         * Once a driver is configured using this function, various callbacks that receive a
+         * [SupportSQLiteDatabase] will not be invoked, such as [RoomDatabase.Callback.onCreate].
+         * Moreover, APIs that use SupportSQLite will also throw an exception, such as
+         * [RoomDatabase.openHelper].
+         *
+         * See the documentation on
+         * [Migrating to SQLite Driver](https://d.android.com/training/data-storage/room/room-kmp-migration#migrate_from_support_sqlite_to_sqlite_driver)
+         * for more information.
+         *
          * @param driver The driver
          * @return This builder instance.
          */
@@ -1795,6 +1804,10 @@ actual abstract class RoomDatabase {
          * Called when the database is created for the first time. This is called after all the
          * tables are created.
          *
+         * This function is only called when Room is configured without a driver. If a driver is set
+         * using [androidx.room.RoomDatabase.Builder.setDriver], then only the version that receives
+         * a [SQLiteConnection] is called.
+         *
          * @param db The database.
          */
         open fun onCreate(db: SupportSQLiteDatabase) {}
@@ -1815,6 +1828,10 @@ actual abstract class RoomDatabase {
         /**
          * Called after the database was destructively migrated
          *
+         * This function is only called when Room is configured without a driver. If a driver is set
+         * using [androidx.room.RoomDatabase.Builder.setDriver], then only the version that receives
+         * a [SQLiteConnection] is called.
+         *
          * @param db The database.
          */
         open fun onDestructiveMigration(db: SupportSQLiteDatabase) {}
@@ -1832,6 +1849,10 @@ actual abstract class RoomDatabase {
 
         /**
          * Called when the database has been opened.
+         *
+         * This function is only called when Room is configured without a driver. If a driver is set
+         * using [androidx.room.RoomDatabase.Builder.setDriver], then only the version that receives
+         * a [SQLiteConnection] is called.
          *
          * @param db The database.
          */

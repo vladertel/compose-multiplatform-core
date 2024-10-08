@@ -74,7 +74,7 @@ constructor(
         get() = synchronized(lock) { _isForeground }
         set(value) = synchronized(lock) { _isForeground = value }
 
-    @GuardedBy("lock") private var _isForeground: Boolean = false
+    @GuardedBy("lock") private var _isForeground: Boolean = true
 
     @GuardedBy("lock") private var controllerState: ControllerState = ControllerState.STOPPED
 
@@ -230,8 +230,11 @@ constructor(
 
     override fun getOutputLatency(streamId: StreamId?): StreamGraph.OutputLatency? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            return currentSession?.getRealtimeCaptureLatency().let {
-                StreamGraph.OutputLatency(it?.captureLatency ?: 0, it?.processingLatency ?: 0)
+            return currentSession?.getRealtimeCaptureLatency()?.let {
+                // Convert output latency to ns for consistency with stall duration.
+                val captureLatencyNs = it.captureLatency * MS_TO_NS
+                val processingLatencyNs = it.processingLatency * MS_TO_NS
+                StreamGraph.OutputLatency(captureLatencyNs, processingLatencyNs)
             }
         }
         return null
@@ -303,19 +306,23 @@ constructor(
                 session?.disconnect()
                 camera?.disconnect()
             }
-        if (graphConfig.flags.closeCaptureSessionOnDisconnect) {
+        if (
+            graphConfig.flags.abortCapturesOnStop ||
+                graphConfig.flags.closeCaptureSessionOnDisconnect
+        ) {
             // It seems that on certain devices, CameraCaptureSession.close() can block for an
             // extended period of time [1]. Wrap the await call with a timeout to prevent us from
             // getting blocked for too long.
             //
             // [1] b/307594946 - [ANR] at Camera2CameraController.disconnectSessionAndCamera
-            runBlockingWithTimeout(threads.backgroundDispatcher, CLOSE_CAPTURE_SESSION_TIMEOUT_MS) {
+            runBlockingWithTimeout(threads.backgroundDispatcher, DISCONNECT_TIMEOUT_MS) {
                 deferred.await()
             }
         }
     }
 
     companion object {
-        private const val CLOSE_CAPTURE_SESSION_TIMEOUT_MS = 2_000L // 2s
+        private const val DISCONNECT_TIMEOUT_MS = 2_000L // 2s
+        private const val MS_TO_NS = 1_000_000
     }
 }

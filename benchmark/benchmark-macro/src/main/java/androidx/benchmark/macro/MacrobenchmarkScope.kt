@@ -74,6 +74,19 @@ public class MacrobenchmarkScope(
      * compilation by `CompilationMode.Partial` with warmupIterations.
      */
     internal var flushArtProfiles: Boolean = false
+        set(value) {
+            hasFlushedArtProfiles = false
+            field = value
+        }
+
+    /**
+     * When `true`, the app has successfully flushed art profiles for at least one process.
+     *
+     * This will only be set by [killProcessAndFlushArtProfiles] when called directly, or
+     * [killProcess] when [flushArtProfiles] is `true`
+     */
+    internal var hasFlushedArtProfiles: Boolean = false
+        private set
 
     /** `true` if the app is a system app. */
     internal var isSystemApp: Boolean = false
@@ -108,9 +121,10 @@ public class MacrobenchmarkScope(
      * Start an activity, by default the launcher activity of the package, and wait until its launch
      * completes.
      *
-     * This call will ignore any parcelable extras on the intent, as the start is performed by
-     * converting the Intent to a URI, and starting via `am start` shell command. Note that from api
-     * 33 the launch intent needs to have category {@link android.intent.category.LAUNCHER}.
+     * This call supports primitive extras on the intent, but will ignore any
+     * [android.os.Parcelable] extras, as the start is performed by converting the Intent to a URI,
+     * and starting via the `am start` shell command. Note that from api 33 the launch intent needs
+     * to have category `android.intent.category.LAUNCHER`.
      *
      * @param block Allows customization of the intent used to launch the activity.
      * @throws IllegalStateException if unable to acquire intent for package.
@@ -129,8 +143,10 @@ public class MacrobenchmarkScope(
     /**
      * Start an activity with the provided intent, and wait until its launch completes.
      *
-     * This call will ignore any parcelable extras on the intent, as the start is performed by
-     * converting the Intent to a URI, and starting via `am start` shell command.
+     * This call supports primitive extras on the intent, but will ignore any
+     * [android.os.Parcelable] extras, as the start is performed by converting the Intent to a URI,
+     * and starting via the `am start` shell command. Note that from api 33 the launch intent needs
+     * to have category `android.intent.category.LAUNCHER`.
      *
      * @param intent Specifies which app/Activity should be launched.
      */
@@ -377,24 +393,31 @@ public class MacrobenchmarkScope(
     internal fun killProcessAndFlushArtProfiles() {
         Log.d(TAG, "Flushing ART profiles for $packageName")
         // For speed profile compilation, ART team recommended to wait for 5 secs when app
-        // is in the foreground, dump the profile, wait for an additional second before
-        // speed-profile compilation.
+        // is in the foreground, dump the profile in each process waiting an additional second each
+        // before speed-profile compilation.
         @Suppress("BanThreadSleep") Thread.sleep(5000)
-        val saveResult = ProfileInstallBroadcast.saveProfile(packageName)
-        if (saveResult == null) {
+        val saveResult = ProfileInstallBroadcast.saveProfilesForAllProcesses(packageName)
+        if (saveResult.processCount > 0) {
+            println("Flushed profiles in ${saveResult.processCount} processes")
+            hasFlushedArtProfiles = true
+        }
+        if (saveResult.error == null) {
             killProcessImpl()
         } else {
             if (Shell.isSessionRooted()) {
                 // fallback on `killall -s SIGUSR1`, if available with root
-                Log.d(TAG, "Unable to saveProfile with profileinstaller ($saveResult), trying kill")
+                Log.d(
+                    TAG,
+                    "Unable to saveProfile with profileinstaller ($saveResult.error), trying kill"
+                )
                 val response =
                     Shell.executeScriptCaptureStdoutStderr("killall -s SIGUSR1 $packageName")
                 check(response.isBlank()) {
                     "Failed to dump profile for $packageName ($response),\n" +
-                        " and failed to save profile with broadcast: $saveResult"
+                        " and failed to save profile with broadcast: ${saveResult.error}"
                 }
             } else {
-                throw RuntimeException(saveResult)
+                throw RuntimeException(saveResult.error)
             }
         }
     }
