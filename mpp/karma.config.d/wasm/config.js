@@ -29,6 +29,7 @@ config.client.mocha.timeout = 10000;
 
 // This enables running tests on a custom html page without iframe
 const staticFilesDir =  path.resolve(configPath, "static");
+config.customContextFile = path.resolve(staticFilesDir, "compose_context.html");
 
 function KarmaWebpackOutputFramework(config) {
     // This controller is instantiated and set during the preprocessor phase by the karma-webpack plugin
