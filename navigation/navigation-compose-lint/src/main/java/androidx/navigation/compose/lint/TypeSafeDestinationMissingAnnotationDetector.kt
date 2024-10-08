@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.navigation.common.lint
+package androidx.navigation.compose.lint
 
 import androidx.navigation.lint.common.BaseTypeSafeDestinationMissingAnnotationDetector
 import androidx.navigation.lint.common.createMissingKeepAnnotationIssue
@@ -29,11 +29,11 @@ import com.android.tools.lint.detector.api.Issue
  */
 class TypeSafeDestinationMissingAnnotationDetector :
     BaseTypeSafeDestinationMissingAnnotationDetector(
-        methodNames = listOf("navigation", "deepLink", "setUriPattern", "navDeepLink"),
+        methodNames = listOf("composable", "dialog", "navigation"),
         constructorNames =
             listOf(
-                "androidx.navigation.NavDestinationBuilder",
-                "androidx.navigation.NavGraphBuilder"
+                "androidx.navigation.compose.ComposeNavigatorDestinationBuilder",
+                "androidx.navigation.compose.DialogNavigatorDestinationBuilder"
             )
     ) {
 
