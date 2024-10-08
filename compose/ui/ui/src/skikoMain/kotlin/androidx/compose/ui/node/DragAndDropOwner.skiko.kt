@@ -16,10 +16,12 @@
 
 package androidx.compose.ui.node
 
+import androidx.collection.ArraySet
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropStartTransferScope
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -36,13 +38,28 @@ internal class DragAndDropOwner(
     private val platformDragAndDropManager: PlatformDragAndDropManager
 ) : DragAndDropManager {
     val rootDragAndDropNode = DragAndDropNode()
-    val modifier: Modifier = RootDragAndDropElement(rootDragAndDropNode)
 
-    override val isRequestDragAndDropTransferSupported: Boolean
-        get() = platformDragAndDropManager.isRequestDragAndDropTransferSupported
+    /**
+     * A collection [DragAndDropTarget] instances that registered interested in a drag and drop
+     * session by returning true in [DragAndDropTarget.onStarted].
+     */
+    private val interestedTargets = ArraySet<DragAndDropTarget>()
+
+    override val modifier: Modifier = RootDragAndDropElement(rootDragAndDropNode)
+
+    override val isRequestDragAndDropTransferRequired: Boolean
+        get() = platformDragAndDropManager.isRequestDragAndDropTransferRequired
 
     override fun requestDragAndDropTransfer(node: DragAndDropNode, offset: Offset) {
         platformDragAndDropManager.requestDragAndDropTransfer(node.asPlatformDragAndDropSource(), offset)
+    }
+
+    override fun registerTargetInterest(target: DragAndDropTarget) {
+        interestedTargets.add(target)
+    }
+
+    override fun isInterestedTarget(target: DragAndDropTarget): Boolean {
+        return interestedTargets.contains(target)
     }
 }
 
