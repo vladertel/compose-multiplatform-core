@@ -30,8 +30,7 @@ config.client.mocha.timeout = 10000;
 // This enables running tests on a custom html page without iframe
 config.client.useIframe = false
 config.client.runInParent = true
-config.staticFilesDir =  path.resolve(configPath, "static");
-config.customClientContextFile = path.resolve(config.staticFilesDir, "client_with_context.html")
+const staticFilesDir =  path.resolve(configPath, "static");
 
 function KarmaWebpackOutputFramework(config) {
     // This controller is instantiated and set during the preprocessor phase by the karma-webpack plugin
@@ -47,7 +46,7 @@ function KarmaWebpackOutputFramework(config) {
     }
 
     config.files.push({
-        pattern: `${config.staticFilesDir}/**/*.js`,
+        pattern: `${staticFilesDir}/**/*.js`,
         included: true,
         served: true,
         watched: false
