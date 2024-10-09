@@ -539,7 +539,7 @@ private class ScrollableNode(
     }
 
     override fun onDensityChange() {
-        super.onDensityChange()
+        onCancelPointerInput()
         mouseWheelScrollNode.pointerInputNode.onDensityChange()
     }
 
