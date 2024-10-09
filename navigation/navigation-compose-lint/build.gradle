@@ -39,7 +39,10 @@ dependencies {
     bundleInside(project(":compose:lint:common"))
     bundleInside(project(":navigation:lint:common"))
 
-    testImplementation(projectOrArtifact(":compose:lint:common-test"))
+    testRuntimeOnly(libs.kotlinReflect)
+
+    testImplementation(project(":compose:lint:common-test"))
+    testImplementation(project(":navigation:lint:common-test"))
     testImplementation(libs.kotlinStdlib)
     testImplementation(libs.kotlinReflect)
     testImplementation(libs.kotlinStdlibJdk8)

@@ -14,77 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.navigation.lint
+package androidx.navigation.lint.test
 
-import com.intellij.psi.PsiClass
-import com.intellij.psi.impl.source.PsiClassReferenceType
 import org.intellij.lang.annotations.Language
-import org.jetbrains.kotlin.analysis.api.analyze
-import org.jetbrains.kotlin.analysis.api.symbols.KtClassKind
-import org.jetbrains.kotlin.analysis.api.symbols.KtClassOrObjectSymbol
-import org.jetbrains.kotlin.idea.references.mainReference
-import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtReferenceExpression
-import org.jetbrains.uast.UClassLiteralExpression
-import org.jetbrains.uast.UExpression
-import org.jetbrains.uast.UQualifiedReferenceExpression
-import org.jetbrains.uast.USimpleNameReferenceExpression
-
-/** Catches simple class/interface name reference */
-fun UExpression.isClassReference(
-    checkClass: Boolean = true,
-    checkInterface: Boolean = true,
-    checkCompanion: Boolean = true
-): Pair<Boolean, String?> {
-    /**
-     * True if:
-     * 1. reference to object (i.e. val myStart = TestStart(), startDest = myStart)
-     * 2. object declaration (i.e. object MyStart, startDest = MyStart)
-     * 3. class reference (i.e. class MyStart, startDest = MyStart)
-     *
-     *    We only want to catch case 3., so we need more filters to eliminate case 1 & 2.
-     */
-    val isSimpleRefExpression = this is USimpleNameReferenceExpression
-
-    /** True if nested class i.e. OuterClass.InnerClass */
-    val isQualifiedRefExpression = this is UQualifiedReferenceExpression
-
-    if (!(isSimpleRefExpression || isQualifiedRefExpression)) return false to null
-
-    val sourcePsi = sourcePsi as? KtExpression ?: return false to null
-    return analyze(sourcePsi) {
-        val symbol =
-            when (sourcePsi) {
-                is KtDotQualifiedExpression -> {
-                    val lastChild = sourcePsi.lastChild
-                    if (lastChild is KtReferenceExpression) {
-                        lastChild.mainReference.resolveToSymbol()
-                    } else {
-                        null
-                    }
-                }
-                is KtReferenceExpression -> sourcePsi.mainReference.resolveToSymbol()
-                else -> null
-            }
-                as? KtClassOrObjectSymbol ?: return false to null
-
-        ((checkClass && symbol.classKind.isClass) ||
-            (checkInterface && symbol.classKind == KtClassKind.INTERFACE) ||
-            (checkCompanion && symbol.classKind == KtClassKind.COMPANION_OBJECT)) to
-            symbol.name?.asString()
-    }
-}
-
-fun UExpression.getKClassType(): PsiClass? {
-    // filter for KClass<*>
-    if (this !is UClassLiteralExpression) return null
-
-    val expressionType = getExpressionType() ?: return null
-    if (expressionType !is PsiClassReferenceType) return null
-    val typeArg = expressionType.typeArguments().firstOrNull() ?: return null
-    return (typeArg as? PsiClassReferenceType)?.reference?.resolve() as? PsiClass
-}
 
 /**
  * Workaround for b/371463741
