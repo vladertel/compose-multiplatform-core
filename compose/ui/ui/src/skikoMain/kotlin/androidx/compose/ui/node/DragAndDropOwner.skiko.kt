@@ -18,6 +18,7 @@ package androidx.compose.ui.node
 
 import androidx.collection.ArraySet
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropNode
 import androidx.compose.ui.draganddrop.DragAndDropStartTransferScope
@@ -37,7 +38,7 @@ import androidx.compose.ui.platform.PlatformDragAndDropSource
 internal class DragAndDropOwner(
     private val platformDragAndDropManager: PlatformDragAndDropManager
 ) : DragAndDropManager {
-    val rootDragAndDropNode = DragAndDropNode()
+    val rootNode = DragAndDropNode()
 
     /**
      * A collection [DragAndDropTarget] instances that registered interested in a drag and drop
@@ -45,7 +46,7 @@ internal class DragAndDropOwner(
      */
     private val interestedTargets = ArraySet<DragAndDropTarget>()
 
-    override val modifier: Modifier = RootDragAndDropElement(rootDragAndDropNode)
+    override val modifier: Modifier = RootDragAndDropElement(rootNode)
 
     override val isRequestDragAndDropTransferRequired: Boolean
         get() = platformDragAndDropManager.isRequestDragAndDropTransferRequired
@@ -60,6 +61,25 @@ internal class DragAndDropOwner(
 
     override fun isInterestedTarget(target: DragAndDropTarget): Boolean {
         return interestedTargets.contains(target)
+    }
+
+    fun onDrop(event: DragAndDropEvent): Boolean = rootNode.onDrop(event)
+
+    fun onStarted(event: DragAndDropEvent) {
+        interestedTargets.forEach { it.onStarted(event) }
+    }
+
+    fun onEntered(event: DragAndDropEvent) = rootNode.onEntered(event)
+
+    fun onMoved(event: DragAndDropEvent) = rootNode.onMoved(event)
+
+    fun onExited(event: DragAndDropEvent) = rootNode.onExited(event)
+
+    fun onChanged(event: DragAndDropEvent) = rootNode.onChanged(event)
+
+    fun onEnded(event: DragAndDropEvent) {
+        rootNode.onEnded(event)
+        interestedTargets.clear()
     }
 }
 
