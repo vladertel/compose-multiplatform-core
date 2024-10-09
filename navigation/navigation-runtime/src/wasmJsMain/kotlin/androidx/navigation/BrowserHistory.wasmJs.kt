@@ -24,7 +24,7 @@ import org.w3c.dom.Window
  * @param navController The [NavController] instance to bind to browser window navigation.
  * @param getBackStackEntryPath An optional function that returns the path to show for a given [NavBackStackEntry].
  */
-internal suspend fun Window.bindToNavigation(
+suspend fun Window.bindToNavigation(
     navController: NavController,
     getBackStackEntryPath: (entry: NavBackStackEntry) -> String = {
         "/${it.getRouteWithArgs().orEmpty()}"
