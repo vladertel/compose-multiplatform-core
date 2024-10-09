@@ -57,6 +57,11 @@ internal interface OnCanvasTests {
     }
 
     fun createComposeWindow(content: @Composable () -> Unit) {
+        val canvas = getCanvas()
+        val controlAttribute = "__init__"
+        if (canvas.hasAttribute(controlAttribute)) {
+            error("Compose canvas already initialised")
+        }
         CanvasBasedWindow(canvasElementId = canvasId, content = content)
     }
 
