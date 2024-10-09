@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 package androidx.compose.foundation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 
-// TODO(https://github.com/JetBrains/compose-multiplatform/issues/3360) Support localization
-//  the current values are copied from compose\foundation\foundation\src\androidMain\res\values-en-rGB\strings.xml
 internal actual object BasicTooltipStrings {
     @Composable
-    actual fun label() = "show tooltip"
+    actual fun label() = stringResource(R.string.tooltip_label)
     @Composable
-    actual fun description() = "tooltip"
+    actual fun description() = stringResource(R.string.tooltip_description)
 }
