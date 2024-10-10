@@ -43,7 +43,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
-                api(project(":annotation:annotation"))
+                api("androidx.annotation:annotation:1.8.1")
             }
         }
 
@@ -86,4 +86,5 @@ androidx {
     inceptionYear = "2017"
     description = "Android Room-Common"
     legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = false
 }

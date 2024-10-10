@@ -21,6 +21,8 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 import androidx.build.AndroidXConfig
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -74,7 +76,7 @@ wire {
 
 dependencies {
     implementation(libs.kotlinStdlib)
-    api("androidx.annotation:annotation:1.7.0")
+    api("androidx.annotation:annotation:1.8.1")
     api("androidx.annotation:annotation-experimental:1.4.1")
     implementation("androidx.tracing:tracing-ktx:1.0.0")
     implementation("androidx.tracing:tracing-perfetto-handshake:1.0.0")
@@ -93,8 +95,11 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2018"
     description = "Android Benchmark - Common"
-    metalavaK2UastEnabled = true
     legacyDisableKotlinStrictApiMode = true
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
+    deviceTests {
+        enableAlsoRunningOnPhysicalDevices = true
+    }
 }
 
 tasks.withType(KotlinCompile).configureEach {

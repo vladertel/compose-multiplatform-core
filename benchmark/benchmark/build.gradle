@@ -32,14 +32,15 @@ plugins {
 
 dependencies {
     androidTestImplementation(project(":benchmark:benchmark-junit4"))
-    androidTestImplementation(androidxArtifact(":tracing:tracing-ktx"))
-    androidTestImplementation(androidxArtifact(":tracing:tracing-perfetto"))
-    androidTestImplementation(androidxArtifact(":tracing:tracing-perfetto-binary"))
+    androidTestImplementation(project(":tracing:tracing-ktx"))
+    androidTestImplementation(project(":tracing:tracing-perfetto"))
+    androidTestImplementation(project(":tracing:tracing-perfetto-binary"))
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.testRules)
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.kotlinStdlib)
+    androidTestImplementation(libs.kotlinTest)
 }
 
 android {
@@ -50,6 +51,8 @@ android {
             testProguardFiles "proguard-rules.pro"
         }
     }
+    // TODO(b/345531033)
+    experimentalProperties["android.lint.useK2Uast"] = false 
 }
 
 androidx {

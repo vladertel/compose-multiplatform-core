@@ -27,9 +27,6 @@ plugins {
     id("androidx.room")
 }
 
-// Disabled due to https://youtrack.jetbrains.com/issue/KT-65761
-ext["kotlin.native.disableCompilerDaemon"] = 'true'
-
 androidXMultiplatform {
     android()
     ios()
@@ -42,8 +39,10 @@ androidXMultiplatform {
                 implementation(libs.kotlinStdlib)
                 implementation(project(":room:room-runtime"))
                 implementation(project(":room:room-testing"))
+                implementation(project(":room:room-paging"))
                 implementation(project(":sqlite:sqlite-bundled"))
                 implementation(project(":kruth:kruth"))
+                implementation(project(":paging:paging-common"))
                 implementation(libs.kotlinTest)
                 implementation(libs.kotlinCoroutinesTest)
             }
@@ -107,10 +106,6 @@ dependencies {
 
 android {
     namespace "androidx.room.integration.multiplatformtestapp"
-    // TODO(b/317909626): Should be configured by Room Gradle Plugin
-    sourceSets {
-        androidTest.assets.srcDirs += files("$projectDir/schemas-ksp".toString())
-    }
 }
 
 // Copy schema files to the iOS binary output test directory that will be part of the bundle's

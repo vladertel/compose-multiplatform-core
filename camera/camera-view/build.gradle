@@ -31,7 +31,7 @@ plugins {
 
 dependencies {
     api("androidx.lifecycle:lifecycle-common:2.0.0")
-    api("androidx.annotation:annotation:1.2.0")
+    api("androidx.annotation:annotation:1.8.1")
     api(project(":camera:camera-core"))
     api(project(":camera:camera-video"))
 
@@ -70,8 +70,8 @@ dependencies {
     }
     androidTestImplementation(project(":camera:camera-camera2-pipe-integration"))
     androidTestImplementation(project(":internal-testutils-truth"))
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy) // DexMaker has it's own MockMaker
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy) // DexMaker has it's own MockMaker
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
 }
 android {
@@ -89,6 +89,4 @@ androidx {
     description = "UI tools for the Jetpack Camera Library, a library providing a consistent and " +
             "reliable camera foundation that enables great camera driven experiences across all " +
             "of Android."
-    metalavaK2UastEnabled = true
-    legacyDisableKotlinStrictApiMode = true
 }

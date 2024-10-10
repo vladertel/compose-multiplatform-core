@@ -34,7 +34,7 @@ plugins {
 dependencies {
     api(libs.kotlinStdlib)
     implementation(libs.kotlinCoroutinesCore)
-    api("androidx.annotation:annotation:1.1.0")
+    api("androidx.annotation:annotation:1.8.1")
     implementation(libs.guavaListenableFuture)
     implementation(libs.guavaAndroid)
     implementation("androidx.core:core-ktx:1.7.0")
@@ -87,6 +87,5 @@ androidx {
     mavenVersion = LibraryVersions.HEALTH_SERVICES_CLIENT
     inceptionYear = "2021"
     description = "This library helps developers create performant health applications in a platform agnostic way"
-    metalavaK2UastEnabled = true
     legacyDisableKotlinStrictApiMode = true
 }

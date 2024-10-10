@@ -30,7 +30,7 @@ plugins {
 }
 
 dependencies {
-    api("androidx.annotation:annotation:1.2.0")
+    api("androidx.annotation:annotation:1.8.1")
     api("androidx.lifecycle:lifecycle-livedata:2.1.0")
     api(libs.guavaListenableFuture)
     api("androidx.annotation:annotation-experimental:1.4.1")
@@ -71,8 +71,8 @@ dependencies {
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.testRules)
     androidTestImplementation(libs.truth)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy) // DexMaker has it's own MockMaker
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy) // DexMaker has it's own MockMaker
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation(project(":camera:camera-testing")) {
         // Ensure camera-testing does not pull in androidx.test dependencies
         exclude(group:"androidx.test")
@@ -92,7 +92,8 @@ android {
                         "-fomit-frame-pointer", "-fdata-sections", "-ffunction-sections"
                 arguments "-DCMAKE_VERBOSE_MAKEFILE=ON",
                         "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections " +
-                                "-Wl,--version-script=${versionScript}"
+                                "-Wl,--version-script=${versionScript} " +
+                                "-Wl,--undefined-version"
             }
         }
     }
@@ -134,8 +135,6 @@ androidx {
     description = "Core components for the Jetpack Camera Library, a library providing a " +
             "consistent and reliable camera foundation that enables great camera driven " +
             "experiences across all of Android."
-    metalavaK2UastEnabled = true
-    legacyDisableKotlinStrictApiMode = true
     extraLicense {
         name = "BSD License"
         url = "https://chromium.googlesource.com/libyuv/libyuv/+/refs/heads/main/README.chromium"

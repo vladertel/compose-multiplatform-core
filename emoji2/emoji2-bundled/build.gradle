@@ -43,9 +43,9 @@ dependencies {
     androidTestImplementation(libs.testCore)
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.testRules)
-    androidTestImplementation(libs.espressoCore, excludes.espresso)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(libs.espressoCore)
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation project(':internal-testutils-runtime')
 
     // view tests that use font are in this module as well; for licensing reasons
@@ -58,7 +58,6 @@ androidx {
     inceptionYear = "2017"
     description = "Library bundled with assets to enable emoji compatibility in Kitkat and newer " +
             "devices to avoid the empty emoji characters."
-    metalavaK2UastEnabled = true
 
     extraLicense {
         name = "SIL Open Font License, Version 1.1"
