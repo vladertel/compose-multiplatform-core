@@ -362,7 +362,9 @@ class ComposeHostingViewController(
             render = { canvas, nanoTime ->
                 mediator?.render(canvas.asComposeCanvas(), nanoTime)
             }
-        )
+        ).apply {
+            canBeOpaque = configuration.opaque
+        }
     }
 
     /**
