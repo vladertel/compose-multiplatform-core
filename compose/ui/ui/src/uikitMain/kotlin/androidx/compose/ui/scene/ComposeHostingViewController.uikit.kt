@@ -80,7 +80,7 @@ import platform.darwin.dispatch_get_main_queue
 
 @OptIn(BetaInteropApi::class, ExperimentalComposeApi::class)
 @ExportObjCClass
-internal class ComposeHostingViewController(
+class ComposeHostingViewController(
     private val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
     private val coroutineContext: CoroutineContext = Dispatchers.Main
