@@ -137,7 +137,7 @@ internal constructor(
                 setPosition(topLeft, value)
                 if (roundRectOutlineSize.isUnspecified) {
                     outlineDirty = true
-                    configureOutline()
+                    configureOutlineAndClip()
                 }
             }
         }
@@ -271,9 +271,8 @@ internal constructor(
         set(value) {
             if (impl.shadowElevation != value) {
                 impl.shadowElevation = value
-                impl.clip = clip || value > 0f
                 outlineDirty = true
-                configureOutline()
+                configureOutlineAndClip()
             }
         }
 
@@ -355,13 +354,12 @@ internal constructor(
      */
     @Suppress("GetterSetterNames")
     @get:Suppress("GetterSetterNames")
-    actual var clip: Boolean
-        get() = impl.clip
+    actual var clip: Boolean = false
         set(value) {
-            if (impl.clip != value) {
-                impl.clip = value
+            if (field != value) {
+                field = value
                 outlineDirty = true
-                configureOutline()
+                configureOutlineAndClip()
             }
         }
 
@@ -512,7 +510,7 @@ internal constructor(
 
         recreateDisplayListIfNeeded()
 
-        configureOutline()
+        configureOutlineAndClip()
         val useZ = shadowElevation > 0f
         if (useZ) {
             canvas.enableZ()
@@ -566,10 +564,11 @@ internal constructor(
         discardContentIfReleasedAndHaveNoParentLayerUsages()
     }
 
-    private fun configureOutline() {
+    private fun configureOutlineAndClip() {
         if (outlineDirty) {
             val outlineIsNeeded = clip || shadowElevation > 0f
             if (!outlineIsNeeded) {
+                impl.clip = false
                 impl.setOutline(null)
             } else {
                 val tmpPath = outlinePath
@@ -577,20 +576,27 @@ internal constructor(
                     val androidOutline =
                         updatePathOutline(tmpPath).apply { alpha = this@GraphicsLayer.alpha }
                     impl.setOutline(androidOutline)
-                } else {
-                    val roundRectOutline = obtainAndroidOutline().apply {
-                        resolveOutlinePosition { outlineTopLeft, outlineSize ->
-                            setRoundRect(
-                                outlineTopLeft.x.fastRoundToInt(),
-                                outlineTopLeft.y.fastRoundToInt(),
-                                (outlineTopLeft.x + outlineSize.width).fastRoundToInt(),
-                                (outlineTopLeft.y + outlineSize.height).fastRoundToInt(),
-                                roundRectCornerRadius
-                            )
-                        }
-                    }.apply {
-                        alpha = this@GraphicsLayer.alpha
+                    if (usePathForClip && clip) {
+                        impl.clip = false
+                    } else {
+                        impl.clip = clip
                     }
+                } else {
+                    impl.clip = clip
+                    val roundRectOutline =
+                        obtainAndroidOutline()
+                            .apply {
+                                resolveOutlinePosition { outlineTopLeft, outlineSize ->
+                                    setRoundRect(
+                                        outlineTopLeft.x.fastRoundToInt(),
+                                        outlineTopLeft.y.fastRoundToInt(),
+                                        (outlineTopLeft.x + outlineSize.width).fastRoundToInt(),
+                                        (outlineTopLeft.y + outlineSize.height).fastRoundToInt(),
+                                        roundRectCornerRadius
+                                    )
+                                }
+                            }
+                            .apply { alpha = this@GraphicsLayer.alpha }
                     impl.setOutline(roundRectOutline)
                 }
             }
@@ -745,7 +751,7 @@ internal constructor(
     actual fun setPathOutline(path: Path) {
         resetOutlineParams()
         this.outlinePath = path
-        configureOutline()
+        configureOutlineAndClip()
     }
 
     /**
@@ -772,7 +778,7 @@ internal constructor(
             this.roundRectOutlineTopLeft = topLeft
             this.roundRectOutlineSize = size
             this.roundRectCornerRadius = cornerRadius
-            configureOutline()
+            configureOutlineAndClip()
         }
     }
 
