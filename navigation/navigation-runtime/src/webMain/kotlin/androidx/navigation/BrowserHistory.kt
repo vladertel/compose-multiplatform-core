@@ -37,12 +37,15 @@ internal suspend fun BrowserWindow.bindToNavigation(
     coroutineScope {
         val localWindow = this@bindToNavigation
         val appAddress = with(localWindow.location) { origin + pathname }
-        var initState = true
-        var updateState = true
 
         launch {
             localWindow.popStateEvents().collect { event ->
-                val state = event.state.toString()
+                val state = event.state
+
+                if (state == null) {
+                    //if user manually put a new address or open a new page, then there is no state
+                    return@collect
+                }
 
                 val restoredRoutes = state.lines()
                 val currentBackStack = navController.currentBackStack.value
@@ -58,9 +61,6 @@ internal suspend fun BrowserWindow.bindToNavigation(
                         commonTail = index
                     }
                 }
-
-                //don't handle next navigation calls
-                updateState = false
 
                 if (commonTail == -1) {
                     //clear full stack
@@ -92,16 +92,27 @@ internal suspend fun BrowserWindow.bindToNavigation(
                 val newUri = appAddress + getBackStackEntryRoute(entries.last())
                 val state = routes.joinToString("\n")
 
-
-                if (updateState) {
-                    if (initState) {
+                val currentState = localWindow.history.state
+                when (currentState) {
+                    null -> {
+                        //user manually put a new address or open a new page,
+                        // we need to save the current state in the browser history
                         localWindow.history.replaceState(state, "", newUri)
-                        initState = false
-                    } else {
+                    }
+
+                    state -> {
+                        //this was a restoration of the state (back/forward browser navigation)
+                        //the callback came from the popStateEvents
+                        //the browser state is equal the app state, but we need to update shown uri
+                        localWindow.history.replaceState(state, "", newUri)
+                    }
+
+                    else -> {
+                        //the navigation happened in the compose app,
+                        // we need to push the new state to the browser history
                         localWindow.history.pushState(state, "", newUri)
                     }
                 }
-                updateState = true
             }
         }
     }
@@ -123,22 +134,26 @@ private fun BrowserWindow.popStateEvents(): Flow<BrowserPopStateEvent> = callbac
     }
 }
 
-private val argPlaceholder = Regex("""\{*.\}""")
+private val argPlaceholder = Regex("""\{.*?\}""")
 internal fun NavBackStackEntry.getRouteWithArgs(): String? {
     val entry = this
     val route = entry.destination.route ?: return null
     if (!route.contains(argPlaceholder)) return route
     val args = entry.arguments ?: Bundle()
-    val nameToValue = entry.destination.arguments.map { (name, arg) ->
-        val serializedTypeValue = arg.type.serializeAsValue(arg.type[args, name])
-        name to serializedTypeValue
+    val nameToTypedValue = entry.destination.arguments.mapValues { (name, arg) ->
+        arg.type.serializeAsValue(arg.type[args, name])
     }
 
-    val routeWithFilledArgs =
-        nameToValue.fold(initial = route) { acc, (argumentName: String, value: String) ->
-            acc.replace("{$argumentName}", value)
-        }
-    return routeWithFilledArgs.takeIf { !it.contains(argPlaceholder) }
+    val routeWithFilledArgs = route.replace(argPlaceholder) { match ->
+        val key = match.value.trim('{', '}')
+        nameToTypedValue[key] ?: if (args.containsKey(key)) {
+            //untyped args stored as strings
+            //see: androidx.navigation.NavDeepLink.parseArgument
+            args.getString(key)!!
+        } else ""
+    }
+
+    return routeWithFilledArgs
 }
 
 internal external interface BrowserLocation {
@@ -147,6 +162,7 @@ internal external interface BrowserLocation {
 }
 
 internal external interface BrowserHistory {
+    val state: String?
     fun pushState(data: String?, title: String, url: String?)
     fun replaceState(data: String?, title: String, url: String?)
 }
