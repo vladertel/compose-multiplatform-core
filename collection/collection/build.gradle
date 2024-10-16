@@ -37,6 +37,7 @@ androidXMultiplatform {
     linux()
     linuxArm64()
     ios()
+    watchosDeviceArm64()
     watchos()
     tvos()
 
@@ -51,7 +52,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
-                api("androidx.annotation:annotation:1.8.1")
+                api("androidx.annotation:annotation:1.9.0")
             }
         }
 
