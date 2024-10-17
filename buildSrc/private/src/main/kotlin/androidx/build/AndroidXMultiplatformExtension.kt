@@ -341,6 +341,22 @@ open class AndroidXMultiplatformExtension(val project: Project) {
         }
     }
 
+    @JvmOverloads
+    fun jvmStubs(block: Action<KotlinJvmTarget>? = null): KotlinJvmTarget? {
+        supportedPlatforms.add(PlatformIdentifier.JVM_STUBS)
+        return if (project.enableJvm()) {
+            kotlinExtension.jvm("jvmStubs") {
+                block?.execute(this)
+                project.tasks.named("jvmStubsTest").configure {
+                    // don't try running common tests for stubs target
+                    it.enabled = false
+                }
+            }
+        } else {
+            null
+        }
+    }
+
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     @JvmOverloads
     fun android(block: Action<KotlinAndroidTarget>? = null): KotlinAndroidTarget? {
@@ -495,15 +511,42 @@ open class AndroidXMultiplatformExtension(val project: Project) {
     @JvmOverloads
     fun linux(block: Action<KotlinNativeTarget>? = null): List<KotlinNativeTarget> {
         return listOfNotNull(
+            // linuxArm64(block), TODO
             linuxX64(block),
         )
     }
 
     @JvmOverloads
+    fun linuxArm64(block: Action<KotlinNativeTarget>? = null): KotlinNativeTarget? {
+        supportedPlatforms.add(PlatformIdentifier.LINUX_ARM_64)
+        return if (project.enableLinux()) {
+            kotlinExtension.linuxArm64().also { block?.execute(it) }
+        } else {
+            null
+        }
+    }
+
+    @JvmOverloads
     fun linuxX64(block: Action<KotlinNativeTarget>? = null): KotlinNativeTargetWithHostTests? {
-        supportedPlatforms.add(PlatformIdentifier.LINUX_64)
+        supportedPlatforms.add(PlatformIdentifier.LINUX_X_64)
         return if (project.enableLinux()) {
             kotlinExtension.linuxX64().also { block?.execute(it) }
+        } else {
+            null
+        }
+    }
+
+    @JvmOverloads
+    fun linuxX64Stubs(block: Action<KotlinNativeTarget>? = null): KotlinNativeTarget? {
+        supportedPlatforms.add(PlatformIdentifier.LINUX_X_64_STUBS)
+        return if (project.enableLinux()) {
+            kotlinExtension.linuxX64("linuxx64Stubs") {
+                block?.execute(this)
+                project.tasks.named("linuxx64StubsTest").configure {
+                   // don't try running common tests for stubs target
+                   it.enabled = false
+                }
+            }
         } else {
             null
         }
@@ -645,11 +688,8 @@ abstract class ValidateMultiplatformSourceSetNaming : DefaultTask() {
      * List of Kotlin target names which may be used as source file suffixes. Any target whose name
      * does not appear in this list will use its [KotlinPlatformType] name.
      */
-    private val allowedTargetNameSuffixes = setOf(
-        "android",
-        "desktop",
-        "jvm"
-    )
+    private val allowedTargetNameSuffixes =
+        setOf("android", "desktop", "jvm", "jvmStubs", "linuxx64Stubs")
 
     /** The preferred source file suffix for the target's platform type. */
     private val KotlinTarget.preferredSourceFileSuffix: String
@@ -659,3 +699,9 @@ abstract class ValidateMultiplatformSourceSetNaming : DefaultTask() {
             platformType.name
         }
 }
+
+/**
+ * Set of targets are there to serve as stubs, but are not expected to be consumed by library
+ * consumers.
+ */
+internal val setOfStubTargets = setOf("jvmStubs", "linuxx64Stubs")

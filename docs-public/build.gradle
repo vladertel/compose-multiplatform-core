@@ -95,7 +95,7 @@ dependencies {
     docs("androidx.compose.material:material-navigation:1.7.0-alpha07")
     samples("androidx.compose.material:material-navigation-samples:1.7.0-alpha07")
     kmpDocs("androidx.compose.material:material-ripple:1.7.0-alpha07")
-    kmpDocs("androidx.compose.runtime:runtime:1.7.0-alpha07")
+    kmpDocs("androidx.compose.runtime:runtime:1.7.1")
     docs("androidx.compose.runtime:runtime-livedata:1.7.0-alpha07")
     docs("androidx.compose.runtime:runtime-rxjava2:1.7.0-alpha07")
     docs("androidx.compose.runtime:runtime-rxjava3:1.7.0-alpha07")

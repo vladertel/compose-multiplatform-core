@@ -59,11 +59,17 @@ dependencies {
     kspAndroidTest(libs.hiltCompiler)
     androidTestImplementation(projectOrArtifact(":compose:material:material"))
     androidTestImplementation(project(":compose:test-utils"))
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-common"))
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-common-java8"))
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-livedata-core"))
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel"))
-    androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel-savedstate"))
+
+    androidTestImplementation("androidx.lifecycle:lifecycle-common:2.6.1")
+    //androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-common"))
+    androidTestImplementation("androidx.lifecycle:lifecycle-common-java8:2.6.1")
+    //androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-common-java8"))
+    androidTestImplementation("androidx.lifecycle:lifecycle-livedata-core:2.6.1")
+    //androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-livedata-core"))
+    androidTestImplementation("androidx.lifecycle:lifecycle-viewmodel:2.6.1")
+    //androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel"))
+    androidTestImplementation("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.1")
+    //androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel-savedstate"))
 }
 
 hilt {
