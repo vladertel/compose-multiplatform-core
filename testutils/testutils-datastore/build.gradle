@@ -32,7 +32,7 @@ plugins {
 androidXMultiplatform {
     jvm {}
     mac()
-    linux()
+    linux() // TODO: linuxX64()
     ios()
 
     sourceSets {
