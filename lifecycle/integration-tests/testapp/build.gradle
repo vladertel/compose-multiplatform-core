@@ -31,6 +31,7 @@ dependencies {
     annotationProcessor(project(":lifecycle:lifecycle-compiler"))
 
     androidTestAnnotationProcessor(project(":lifecycle:lifecycle-compiler"))
+    // androidTestImplementation("androidx.lifecycle:lifecycle-common:2.6.1")
     androidTestImplementation(project(":lifecycle:lifecycle-common")) // Added for b/155802460
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testCore)
