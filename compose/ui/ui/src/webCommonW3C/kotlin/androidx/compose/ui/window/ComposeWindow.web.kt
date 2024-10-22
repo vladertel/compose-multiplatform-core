@@ -182,7 +182,6 @@ internal class ComposeWindow(
         override val inputModeManager: InputModeManager = DefaultInputModeManager()
 
         override val textInputService = object : WebTextInputService() {
-            override fun isVirtualKeyboard() = keyboardModeState == KeyboardModeState.Virtual
 
             override fun getOffset(rect: Rect): Offset {
                 val viewportRect = canvas.getBoundingClientRect()
