@@ -670,7 +670,12 @@ open class AndroidXMultiplatformExtension(val project: Project) {
     fun js(block: Action<KotlinJsTargetDsl>? = null): KotlinJsTargetDsl? {
         supportedPlatforms.add(PlatformIdentifier.JS)
         return if (project.enableJs()) {
-            kotlinExtension.js { block?.execute(this) }
+            kotlinExtension.js() {
+                block?.execute(this)
+                binaries.library()
+                browser {}
+                project.configureJs()
+            }
         } else {
             null
         }
@@ -694,6 +699,17 @@ open class AndroidXMultiplatformExtension(val project: Project) {
 
     companion object {
         const val EXTENSION_NAME = "androidXMultiplatform"
+    }
+}
+
+private fun Project.configureJs() {
+    configureNode()
+    // Use DSL API when https://youtrack.jetbrains.com/issue/KT-70029 is closed for all tasks below
+    tasks.named("jsDevelopmentLibraryCompileSync", DefaultIncrementalSyncTask::class.java) {
+        it.destinationDirectory.set(file(layout.buildDirectory.dir("js/packages/js/dev/kotlin")))
+    }
+    tasks.named("jsProductionLibraryCompileSync", DefaultIncrementalSyncTask::class.java) {
+        it.destinationDirectory.set(file(layout.buildDirectory.dir("js/packages/js/prod/kotlin")))
     }
 }
 
@@ -739,6 +755,8 @@ private fun Project.configureWasm() {
         }
     }
 
+    configureNode()
+
     // Use DSL API when https://youtrack.jetbrains.com/issue/KT-70029 is closed for all tasks below
     tasks.named("wasmJsDevelopmentExecutableCompileSync", DefaultIncrementalSyncTask::class.java) {
         it.destinationDirectory.set(
@@ -765,6 +783,21 @@ private fun Project.configureWasm() {
         it.destinationDirectory.set(
             file(layout.buildDirectory.dir("js/packages/wasm-js-test/prod/kotlin"))
         )
+    }
+}
+
+private fun Project.configureNode() {
+    rootProject.extensions.findByType<NodeJsRootExtension>()?.let {
+        it.version = getVersionByName("node")
+        it.downloadBaseUrl =
+            File(project.getPrebuiltsRoot(), "androidx/external/org/nodejs/node").toURI().toString()
+    }
+
+    rootProject.extensions.findByType(YarnRootExtension::class.java)?.let {
+        it.version = getVersionByName("yarn")
+        it.lockFileDirectory =
+            File(project.getPrebuiltsRoot(), "androidx/external/wasm/yarn-offline-mirror")
+        it.yarnLockMismatchReport = YarnLockMismatchReport.FAIL
     }
 }
 
