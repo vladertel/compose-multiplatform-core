@@ -776,12 +776,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 }
             }
         }
-        if (semanticsNode.unmergedConfig.contains(SemanticsActions.SetText)) {
-            info.className = TextFieldClassName
-        }
-        if (semanticsNode.unmergedConfig.contains(SemanticsProperties.Text)) {
-            info.className = TextClassName
-        }
 
         info.packageName = view.context.packageName
 
