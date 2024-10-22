@@ -33,10 +33,9 @@ internal interface InputAwareInputService {
 
 internal abstract class WebTextInputService : PlatformTextInputService, InputAwareInputService {
     private val webImeInputService = WebImeInputService(this)
-    private val webKeyboardInputService = WebKeyboardInputService()
 
     private fun delegatedService(): PlatformTextInputService {
-        return if (isVirtualKeyboard()) webImeInputService else webKeyboardInputService
+        return webImeInputService
     }
 
     override fun startInput(
