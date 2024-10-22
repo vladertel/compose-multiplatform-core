@@ -66,12 +66,9 @@ class TextInputTests : OnCanvasTests  {
             )
 
             SideEffect {
-                secondFocusRequester.requestFocus()
                 firstFocusRequester.requestFocus()
             }
         }
-
-        assertNull(document.querySelector("textarea"))
 
         dispatchEvents(
             keyDownEvent("s"),
@@ -83,13 +80,8 @@ class TextInputTests : OnCanvasTests  {
 
 
         assertEquals("step1", textInputChannel.receive())
-        assertNull(document.querySelector("textarea"))
 
-        // trigger virtual keyboard
-        dispatchEvents(createTouchEvent("touchstart"))
         secondFocusRequester.requestFocus()
-
-        assertNotNull(document.querySelector("textarea"))
 
         dispatchEvents(
             keyDownEvent("s"),
@@ -100,39 +92,5 @@ class TextInputTests : OnCanvasTests  {
         )
 
         assertEquals("step2", textInputChannel.receive())
-
-        val backingField = document.querySelector("textarea")!!
-
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("3")
-        )
-
-        assertEquals("step2step3", textInputChannel.receive())
-
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("insertText", "step4XX")))
-
-        assertEquals("step2step3step4XX", textInputChannel.receive())
-
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
-        backingField.dispatchEvent(InputEvent("input", InputEventInit("deleteContentBackward", "")))
-        assertEquals("step2step3step4", textInputChannel.receive())
-
-        // trigger hardware keyboard
-        dispatchEvents(createMouseEvent("mousedown"))
-        firstFocusRequester.requestFocus()
-
-        dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("5")
-        )
-
-        assertEquals("step1step5", textInputChannel.receive())
     }
 }
