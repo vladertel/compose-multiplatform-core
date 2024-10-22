@@ -154,57 +154,59 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
 
         val links = text.getLinkAnnotations(0, text.length)
         links.fastForEach { range ->
-            val shape = shapeForRange(range)
-            val clipModifier = shape?.let { Modifier.clip(it) } ?: Modifier
-            val interactionSource = remember { MutableInteractionSource() }
+            if (range.start != range.end) {
+                val shape = shapeForRange(range)
+                val clipModifier = shape?.let { Modifier.clip(it) } ?: Modifier
+                val interactionSource = remember { MutableInteractionSource() }
 
-            Box(
-                clipModifier
-                    .textRange(range.start, range.end)
-                    .hoverable(interactionSource)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .combinedClickable(
-                        indication = null,
-                        interactionSource = interactionSource,
-                        onClick = { handleLink(range.item, uriHandler) }
-                    )
-            )
+                Box(
+                    clipModifier
+                        .textRange(range.start, range.end)
+                        .hoverable(interactionSource)
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .combinedClickable(
+                            indication = null,
+                            interactionSource = interactionSource,
+                            onClick = { handleLink(range.item, uriHandler) }
+                        )
+                )
 
-            if (!range.item.styles.isNullOrEmpty()) {
-                val linkStateObserver = remember { LinkStateInteractionSourceObserver() }
-                LaunchedEffect(interactionSource) {
-                    linkStateObserver.collectInteractionsForLinks(interactionSource)
-                }
+                if (!range.item.styles.isNullOrEmpty()) {
+                    val linkStateObserver = remember { LinkStateInteractionSourceObserver() }
+                    LaunchedEffect(interactionSource) {
+                      linkStateObserver.collectInteractionsForLinks(interactionSource)
+                    }
 
-                StyleAnnotation(
-                    linkStateObserver.isHovered,
-                    linkStateObserver.isFocused,
-                    linkStateObserver.isPressed,
-                    range.item.styles?.style,
-                    range.item.styles?.focusedStyle,
-                    range.item.styles?.hoveredStyle,
-                    range.item.styles?.pressedStyle,
-                ) {
-                    // we calculate the latest style based on the link state and apply it to the
-                    // initialText's style. This allows us to merge the style with the original
-                    // instead of fully replacing it
-                    val mergedStyle =
-                        range.item.styles
-                            ?.style
-                            .mergeOrUse(
-                                if (linkStateObserver.isFocused) range.item.styles?.focusedStyle
-                                else null
-                            )
-                            .mergeOrUse(
-                                if (linkStateObserver.isHovered) range.item.styles?.hoveredStyle
-                                else null
-                            )
-                            .mergeOrUse(
-                                if (linkStateObserver.isPressed) range.item.styles?.pressedStyle
-                                else null
-                            )
-                    mergedStyle?.let {
-                        replaceStyle(it, range.start, range.end)
+                    StyleAnnotation(
+                        linkStateObserver.isHovered,
+                        linkStateObserver.isFocused,
+                        linkStateObserver.isPressed,
+                        range.item.styles?.style,
+                        range.item.styles?.focusedStyle,
+                        range.item.styles?.hoveredStyle,
+                        range.item.styles?.pressedStyle,
+                    ) {
+                        // we calculate the latest style based on the link state and apply it to the
+                        // initialText's style. This allows us to merge the style with the original
+                        // instead of fully replacing it
+                        val mergedStyle =
+                            range.item.styles
+                                ?.style
+                                .mergeOrUse(
+                                    if (linkStateObserver.isFocused) range.item.styles?.focusedStyle
+                                    else null
+                                )
+                                .mergeOrUse(
+                                    if (linkStateObserver.isHovered) range.item.styles?.hoveredStyle
+                                    else null
+                                )
+                                .mergeOrUse(
+                                    if (linkStateObserver.isPressed) range.item.styles?.pressedStyle
+                                    else null
+                                )
+                        mergedStyle?.let {
+                            replaceStyle(it, range.start, range.end)
+                        }
                     }
                 }
             }
