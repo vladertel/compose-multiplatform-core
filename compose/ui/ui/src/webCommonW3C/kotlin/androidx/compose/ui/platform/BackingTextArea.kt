@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
@@ -44,6 +45,7 @@ internal class BackingTextArea(
     private val processKeyboardEvent: (KeyboardEvent) -> Unit
 ) {
     private val textArea: HTMLTextAreaElement = createHtmlInput()
+    private val eventListener = createEventListener(textArea)
 
     private fun processIdentifiedEvent(evt: Event) {
         if (evt !is KeyboardEvent) return
@@ -52,6 +54,57 @@ internal class BackingTextArea(
         // Second, we need more tests on keyboard in general before doing this anyways
         if (evt.key == "Unidentified") return
         processKeyboardEvent(evt)
+    }
+
+    private fun createEventListener(control: EventTarget): EventTargetListener {
+        val eventListener = EventTargetListener(control)
+
+        eventListener.addDisposableEvent("keydown") { evt ->
+            processIdentifiedEvent(evt)
+        }
+
+        eventListener.addDisposableEvent("keyup") { evt ->
+            processIdentifiedEvent(evt)
+        }
+
+        eventListener.addDisposableEvent("input") { evt ->
+            evt.preventDefault()
+            evt as InputEventExtended
+
+            when (evt.inputType) {
+                "insertLineBreak" -> {
+                    if (imeOptions.singleLine) {
+                        onImeActionPerformed(imeOptions.imeAction)
+                    }
+                }
+
+                "insertCompositionText" -> {
+                    val data = evt.data ?: return@addDisposableEvent
+                    onEditCommand(listOf(SetComposingTextCommand(data, 1)))
+                }
+
+                "insertText" -> {
+                    val data = evt.data ?: return@addDisposableEvent
+                    onEditCommand(listOf(CommitTextCommand(data, 1)))
+                }
+
+                "deleteContentBackward" -> {
+                    processKeyboardEvent(
+                        KeyboardEvent(
+                            "keydown",
+                            KeyboardEventInit(key = "Backspace", code = "Backspace").withKeyCode(Key.Backspace)
+                        )
+                    )
+                }
+            }
+        }
+
+        eventListener.addDisposableEvent("contextmenu") { evt ->
+            evt.preventDefault()
+            evt.stopPropagation()
+        }
+
+        return eventListener
     }
 
     private fun createHtmlInput(): HTMLTextAreaElement {
@@ -109,52 +162,6 @@ internal class BackingTextArea(
             setProperty("text-shadow", "none")
         }
 
-        val eventListener = EventTargetListener(htmlInput)
-
-        eventListener.addDisposableEvent("keydown") { evt ->
-            processIdentifiedEvent(evt)
-        }
-
-        eventListener.addDisposableEvent("keyup") { evt ->
-            processIdentifiedEvent(evt)
-        }
-
-        eventListener.addDisposableEvent("input") { evt ->
-            evt.preventDefault()
-            evt as InputEventExtended
-
-            when (evt.inputType) {
-                "insertLineBreak" -> {
-                    if (imeOptions.singleLine) {
-                        onImeActionPerformed(imeOptions.imeAction)
-                    }
-                }
-
-                "insertCompositionText" -> {
-                    val data = evt.data ?: return@addDisposableEvent
-                    onEditCommand(listOf(SetComposingTextCommand(data, 1)))
-                }
-
-                "insertText" -> {
-                    val data = evt.data ?: return@addDisposableEvent
-                    onEditCommand(listOf(CommitTextCommand(data, 1)))
-                }
-
-                "deleteContentBackward" -> {
-                    processKeyboardEvent(
-                        KeyboardEvent(
-                            "keydown",
-                            KeyboardEventInit(key = "Backspace", code = "Backspace").withKeyCode(Key.Backspace)
-                        )
-                    )
-                }
-            }
-        }
-
-        eventListener.addDisposableEvent("contextmenu") { evt ->
-            evt.preventDefault()
-            evt.stopPropagation()
-        }
 
         return htmlInput
     }
@@ -185,6 +192,7 @@ internal class BackingTextArea(
 
     fun dispose() {
         textArea.remove()
+        eventListener.dispose()
     }
 }
 
