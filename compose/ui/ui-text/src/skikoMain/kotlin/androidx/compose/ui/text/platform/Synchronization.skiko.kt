@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package androidx.compose.ui.text.platform
 
-internal expect class SynchronizedObject
+internal actual class SynchronizedObject : kotlinx.atomicfu.locks.SynchronizedObject()
 
-internal expect fun createSynchronizedObject(): SynchronizedObject
+internal actual fun createSynchronizedObject() = SynchronizedObject()
 
 @PublishedApi
-internal expect inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =
+    kotlinx.atomicfu.locks.synchronized(lock, block)
