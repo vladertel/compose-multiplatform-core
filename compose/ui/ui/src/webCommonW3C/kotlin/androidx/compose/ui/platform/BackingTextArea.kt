@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.platform
 
+import androidx.compose.ui.events.EventTargetListener
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.text.input.CommitTextCommand
@@ -108,15 +109,17 @@ internal class BackingTextArea(
             setProperty("text-shadow", "none")
         }
 
-        htmlInput.addEventListener("keydown", { evt ->
-            processIdentifiedEvent(evt)
-        })
+        val eventListener = EventTargetListener(htmlInput)
 
-        htmlInput.addEventListener("keyup", { evt ->
+        eventListener.addDisposableEvent("keydown") { evt ->
             processIdentifiedEvent(evt)
-        })
+        }
 
-        htmlInput.addEventListener("input", { evt ->
+        eventListener.addDisposableEvent("keyup") { evt ->
+            processIdentifiedEvent(evt)
+        }
+
+        eventListener.addDisposableEvent("input") { evt ->
             evt.preventDefault()
             evt as InputEventExtended
 
@@ -128,12 +131,12 @@ internal class BackingTextArea(
                 }
 
                 "insertCompositionText" -> {
-                    val data = evt.data ?: return@addEventListener
+                    val data = evt.data ?: return@addDisposableEvent
                     onEditCommand(listOf(SetComposingTextCommand(data, 1)))
                 }
 
                 "insertText" -> {
-                    val data = evt.data ?: return@addEventListener
+                    val data = evt.data ?: return@addDisposableEvent
                     onEditCommand(listOf(CommitTextCommand(data, 1)))
                 }
 
@@ -146,12 +149,12 @@ internal class BackingTextArea(
                     )
                 }
             }
-        })
+        }
 
-        htmlInput.addEventListener("contextmenu", { evt ->
+        eventListener.addDisposableEvent("contextmenu") { evt ->
             evt.preventDefault()
             evt.stopPropagation()
-        })
+        }
 
         return htmlInput
     }
