@@ -80,7 +80,6 @@ class TextInputTests : OnCanvasTests  {
 
         assertEquals("step1", textInputChannel.receive())
 
-
         secondFocusRequester.requestFocus()
 
         dispatchEvents(
