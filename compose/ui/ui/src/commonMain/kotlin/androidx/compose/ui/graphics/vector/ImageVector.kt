@@ -378,10 +378,10 @@ internal constructor(
 
     companion object {
         private var imageVectorCount = 0
-        private val sync = createSynchronizedObject()
+        private val lock = createSynchronizedObject()
 
         internal fun generateImageVectorId(): Int {
-            synchronized(sync) {
+            synchronized(lock) {
                 return imageVectorCount++
             }
         }
