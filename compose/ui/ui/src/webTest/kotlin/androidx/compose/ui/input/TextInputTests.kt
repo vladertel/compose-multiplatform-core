@@ -20,7 +20,7 @@ import androidx.compose.material.TextField
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.OnCanvasTests
-import androidx.compose.ui.events.keyDownEvent
+import androidx.compose.ui.events.keyEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.sendFromScope
@@ -70,11 +70,11 @@ class TextInputTests : OnCanvasTests  {
         assertIs<HTMLTextAreaElement>(backingTextField)
 
         dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("1")
+            keyEvent("s"),
+            keyEvent("t"),
+            keyEvent("e"),
+            keyEvent("p"),
+            keyEvent("1")
         )
 
 
@@ -84,11 +84,11 @@ class TextInputTests : OnCanvasTests  {
         secondFocusRequester.requestFocus()
 
         dispatchEvents(
-            keyDownEvent("s"),
-            keyDownEvent("t"),
-            keyDownEvent("e"),
-            keyDownEvent("p"),
-            keyDownEvent("2")
+            keyEvent("s"),
+            keyEvent("t"),
+            keyEvent("e"),
+            keyEvent("p"),
+            keyEvent("2")
         )
 
         assertEquals("step2", textInputChannel.receive())
