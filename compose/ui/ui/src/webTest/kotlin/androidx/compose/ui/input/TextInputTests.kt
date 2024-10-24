@@ -20,22 +20,18 @@ import androidx.compose.material.TextField
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.OnCanvasTests
-import androidx.compose.ui.events.InputEvent
-import androidx.compose.ui.events.InputEventInit
-import androidx.compose.ui.events.createMouseEvent
-import androidx.compose.ui.events.createTouchEvent
 import androidx.compose.ui.events.keyDownEvent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.sendFromScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 import kotlinx.browser.document
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.runTest
+import org.w3c.dom.HTMLTextAreaElement
 
 class TextInputTests : OnCanvasTests  {
 
@@ -70,6 +66,9 @@ class TextInputTests : OnCanvasTests  {
             }
         }
 
+        val backingTextField = document.querySelector("textarea")
+        assertIs<HTMLTextAreaElement>(backingTextField)
+
         dispatchEvents(
             keyDownEvent("s"),
             keyDownEvent("t"),
@@ -80,6 +79,7 @@ class TextInputTests : OnCanvasTests  {
 
 
         assertEquals("step1", textInputChannel.receive())
+
 
         secondFocusRequester.requestFocus()
 
