@@ -22,6 +22,7 @@ import androidx.compose.ui.events.keyEvent
 import androidx.compose.ui.platform.BackingTextArea
 import androidx.compose.ui.text.input.CommitTextCommand
 import androidx.compose.ui.text.input.EditCommand
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import kotlin.test.Test
@@ -32,10 +33,10 @@ import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
 
 class BackingTextAreaTests {
-    lateinit var lastEditCommand: List<EditCommand>
 
     @Test
     fun backingTextAreaEvents() {
+        var lastEditCommand: List<EditCommand> = listOf()
         val processedKeys = mutableListOf<String>()
 
         val backingTextArea = BackingTextArea(
@@ -83,4 +84,29 @@ class BackingTextAreaTests {
         textArea = document.querySelector("textarea")
         assertNull(textArea)
     }
+
+    @Test
+    fun onImeActionPerformedTest() {
+        var lastPerformedImeAction: ImeAction? = null
+
+        val backingTextArea = BackingTextArea(
+            imeOptions = ImeOptions(
+                singleLine = true,
+                imeAction = ImeAction.Done,
+            ),
+            onImeActionPerformed = { action ->
+                lastPerformedImeAction = action
+            },
+            onEditCommand = { },
+            processKeyboardEvent = {}
+        )
+
+        backingTextArea.register()
+
+        val textArea = document.querySelector("textarea")!!
+        textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertLineBreak", data = "")))
+
+        assertEquals(lastPerformedImeAction, ImeAction.Done)
+    }
+
 }
