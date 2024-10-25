@@ -35,7 +35,7 @@ import org.w3c.dom.HTMLTextAreaElement
 class BackingTextAreaTests {
 
     @Test
-    fun backingTextAreaEvents() {
+    fun keyboardAndInputEventsTest() {
         var lastEditCommand: List<EditCommand> = listOf()
         val processedKeys = mutableListOf<String>()
 
