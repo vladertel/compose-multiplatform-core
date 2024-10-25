@@ -16,9 +16,17 @@
 
 package androidx.compose.ui.input
 
+import androidx.compose.ui.events.InputEvent
+import androidx.compose.ui.events.InputEventInit
+import androidx.compose.ui.events.keyEvent
 import androidx.compose.ui.platform.BackingTextArea
+import androidx.compose.ui.text.input.CommitTextCommand
+import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.SetComposingTextCommand
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -27,18 +35,22 @@ import kotlinx.coroutines.test.runTest
 import org.w3c.dom.HTMLTextAreaElement
 
 class BackingTextAreaTests {
+    lateinit var lastEditCommand: EditCommand
+
     @Test
     fun backingTextAreaEvents() {
+        val processedKeys = mutableListOf<String>()
+
         val backingTextArea = BackingTextArea(
             imeOptions = ImeOptions.Default,
-            onEditCommand = {
-
+            onEditCommand = { command ->
+                lastEditCommand = command.first()
             },
             onImeActionPerformed = {
 
             },
-            processKeyboardEvent = {
-
+            processKeyboardEvent = { evt ->
+                processedKeys.add(evt.key)
             }
         )
         var textArea = document.querySelector("textarea")
@@ -48,6 +60,28 @@ class BackingTextAreaTests {
 
         textArea = document.querySelector("textarea")
         assertIs<HTMLTextAreaElement>(textArea)
+
+        with (textArea) {
+            dispatchEvent(keyEvent("H"))
+            dispatchEvent(keyEvent("E"))
+            dispatchEvent(keyEvent("L"))
+            dispatchEvent(keyEvent("L"))
+            dispatchEvent(keyEvent("O"))
+        }
+
+        assertEquals("H:E:L:L:O", processedKeys.joinToString(":"))
+
+        textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertText", data = "Bonjour")))
+
+        assertEquals(CommitTextCommand("Bonjour", 1), lastEditCommand)
+
+        textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "deleteContentBackward", data = "")))
+
+        assertEquals("H:E:L:L:O:Backspace", processedKeys.joinToString(":"))
+
+        textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertCompositionText", data = "Servus")))
+
+        assertEquals(SetComposingTextCommand("Servus", 1), lastEditCommand)
 
         backingTextArea.dispose()
 
