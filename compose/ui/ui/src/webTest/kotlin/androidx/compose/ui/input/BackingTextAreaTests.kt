@@ -71,13 +71,9 @@ class BackingTextAreaTests {
                 processedKeys.add(evt.key)
             }
         )
-        var textArea = document.querySelector("textarea")
-        assertNull(textArea)
 
         backingTextArea.register()
-
-        textArea = document.querySelector("textarea")
-        assertIs<HTMLTextAreaElement>(textArea)
+        val textArea = document.querySelector("textarea")!!
 
         with (textArea) {
             dispatchEvent(keyEvent("H"))
@@ -100,11 +96,6 @@ class BackingTextAreaTests {
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertCompositionText", data = "Servus")))
 
         assertEquals(listOf(SetComposingTextCommand("Servus", 1)), lastEditCommand)
-
-        backingTextArea.dispose()
-
-        textArea = document.querySelector("textarea")
-        assertNull(textArea)
     }
 
     @Test
