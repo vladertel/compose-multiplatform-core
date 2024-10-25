@@ -49,11 +49,9 @@ class BackingTextAreaTests {
         textArea = document.querySelector("textarea")
         assertIs<HTMLTextAreaElement>(textArea)
 
-        //backingTextArea.dispose()
+        backingTextArea.dispose()
 
-//        println("DOCUMENT ${document.body?.innerHTML} \n")
-//
-//        textArea = document.querySelector("textarea")
-//        assertNull(textArea)
+        textArea = document.querySelector("textarea")
+        assertNull(textArea)
     }
 }
