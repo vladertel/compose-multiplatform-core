@@ -45,6 +45,6 @@ window.addEventListener("rejectionhandled", (event) => {
 beforeEach(function() {
     // This is the part of mocha configuration which guarantees that DOM elements are recreated for each test
     let canvasAppContainer = document.createElement("div");
-    canvasAppContainer.id = "canvasApp";
+    canvasAppContainer.setAttribute("id", "canvasApp");
     document.body.replaceChildren(canvasAppContainer);
 });
