@@ -26,16 +26,13 @@ import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.SetComposingTextCommand
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlinx.browser.document
-import kotlinx.coroutines.test.runTest
 import org.w3c.dom.HTMLTextAreaElement
 
 class BackingTextAreaTests {
-    lateinit var lastEditCommand: EditCommand
+    lateinit var lastEditCommand: List<EditCommand>
 
     @Test
     fun backingTextAreaEvents() {
@@ -44,11 +41,9 @@ class BackingTextAreaTests {
         val backingTextArea = BackingTextArea(
             imeOptions = ImeOptions.Default,
             onEditCommand = { command ->
-                lastEditCommand = command.first()
+                lastEditCommand = command
             },
-            onImeActionPerformed = {
-
-            },
+            onImeActionPerformed = {},
             processKeyboardEvent = { evt ->
                 processedKeys.add(evt.key)
             }
@@ -73,7 +68,7 @@ class BackingTextAreaTests {
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertText", data = "Bonjour")))
 
-        assertEquals(CommitTextCommand("Bonjour", 1), lastEditCommand)
+        assertEquals(listOf(CommitTextCommand("Bonjour", 1)), lastEditCommand)
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "deleteContentBackward", data = "")))
 
@@ -81,7 +76,7 @@ class BackingTextAreaTests {
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertCompositionText", data = "Servus")))
 
-        assertEquals(SetComposingTextCommand("Servus", 1), lastEditCommand)
+        assertEquals(listOf(SetComposingTextCommand("Servus", 1)), lastEditCommand)
 
         backingTextArea.dispose()
 
