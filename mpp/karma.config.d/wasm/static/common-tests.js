@@ -46,5 +46,6 @@ beforeEach(function() {
     // This is the part of mocha configuration which guarantees that DOM elements are recreated for each test
     let canvasAppContainer = document.createElement("div");
     canvasAppContainer.setAttribute("id", "canvasApp");
+    canvasAppContainer.style.cssText = "width: 100%; height: 100%;";
     document.body.replaceChildren(canvasAppContainer);
 });
