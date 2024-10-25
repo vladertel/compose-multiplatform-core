@@ -35,6 +35,28 @@ import org.w3c.dom.HTMLTextAreaElement
 class BackingTextAreaTests {
 
     @Test
+    fun disposeTest() {
+        val backingTextArea = BackingTextArea(
+            imeOptions = ImeOptions.Default,
+            onEditCommand = {},
+            onImeActionPerformed = {},
+            processKeyboardEvent = {}
+        )
+        var textArea = document.querySelector("textarea")
+        assertNull(textArea)
+
+        backingTextArea.register()
+
+        textArea = document.querySelector("textarea")
+        assertIs<HTMLTextAreaElement>(textArea)
+
+        backingTextArea.dispose()
+
+        textArea = document.querySelector("textarea")
+        assertNull(textArea)
+    }
+
+    @Test
     fun keyboardAndInputEventsTest() {
         var lastEditCommand: List<EditCommand> = listOf()
         val processedKeys = mutableListOf<String>()
