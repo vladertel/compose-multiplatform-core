@@ -1,19 +1,4 @@
-/*
- * Copyright 2024 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Use `xcodegen` first, then `open ./SkikoSample.xcodeproj` and then Run button in XCode.
 package androidx.compose.mpp.demo
 
 import androidx.compose.mpp.demo.bugs.IosBugs
@@ -21,7 +6,6 @@ import androidx.compose.mpp.demo.bugs.StartRecompositionCheck
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.uikit.ComposeUIViewControllerDelegate
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.autoreleasepool
@@ -36,8 +20,6 @@ import platform.UIKit.UIApplicationMain
 import platform.UIKit.UIResponder
 import platform.UIKit.UIResponderMeta
 import platform.UIKit.UIScreen
-import platform.UIKit.UIStatusBarAnimation
-import platform.UIKit.UIStatusBarStyle
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 
@@ -55,18 +37,7 @@ fun main(vararg args: String) {
 
     val arg = args.firstOrNull() ?: ""
     UIKitMain {
-        ComposeUIViewController(configure = {
-            delegate = object : ComposeUIViewControllerDelegate {
-                override val preferredStatusBarStyle: UIStatusBarStyle?
-                    get() = preferredStatusBarStyleValue
-
-                override val prefersStatusBarHidden: Boolean?
-                    get() = prefersStatusBarHiddenValue
-
-                override val preferredStatysBarAnimation: UIStatusBarAnimation?
-                    get() = preferredStatysBarAnimationValue
-            }
-        }) {
+        ComposeUIViewController {
             IosDemo(arg)
         }
     }
@@ -109,10 +80,10 @@ private fun UIKitMain(makeRootViewController: () -> UIViewController) {
 }
 
 @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
-@OptIn(BetaInteropApi::class)
 private class IOSAppDelegate : UIResponder, UIApplicationDelegateProtocol {
     companion object Companion : UIResponderMeta(), UIApplicationDelegateProtocolMeta
 
+    @OptIn(BetaInteropApi::class)
     @OverrideInit
     constructor() : super()
 
