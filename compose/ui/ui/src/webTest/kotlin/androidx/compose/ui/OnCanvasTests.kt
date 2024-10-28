@@ -67,10 +67,10 @@ internal interface OnCanvasTests {
         ComposeViewport(containerId, content = content)
     }
 
-    fun dispatchEvents(vararg events: Any) {
+    fun dispatchEvents(vararg events: Event) {
         val canvas = getCanvas()
         for (event in events) {
-            canvas.dispatchEvent(event as Event)
+            canvas.dispatchEvent(event)
         }
     }
 }
