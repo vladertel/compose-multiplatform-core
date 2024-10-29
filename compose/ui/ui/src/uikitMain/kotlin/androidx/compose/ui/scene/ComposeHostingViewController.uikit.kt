@@ -137,14 +137,17 @@ internal class ComposeHostingViewController(
             )
         }
 
+    @Suppress("DEPRECATION")
     override fun preferredStatusBarStyle(): UIStatusBarStyle =
         configuration.delegate.preferredStatusBarStyle
             ?: super.preferredStatusBarStyle()
 
+    @Suppress("DEPRECATION")
     override fun preferredStatusBarUpdateAnimation(): UIStatusBarAnimation =
         configuration.delegate.preferredStatysBarAnimation
             ?: super.preferredStatusBarUpdateAnimation()
 
+    @Suppress("DEPRECATION")
     override fun prefersStatusBarHidden(): Boolean =
         configuration.delegate.prefersStatusBarHidden
             ?: super.prefersStatusBarHidden()
@@ -153,6 +156,7 @@ internal class ComposeHostingViewController(
         view = rootView
     }
 
+    @Suppress("DEPRECATION")
     override fun viewDidLoad() {
         super.viewDidLoad()
 
@@ -227,6 +231,7 @@ internal class ComposeHostingViewController(
         )
     }
 
+    @Suppress("DEPRECATION")
     override fun viewWillAppear(animated: Boolean) {
         super.viewWillAppear(animated)
 
@@ -237,6 +242,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewWillAppear(animated)
     }
 
+    @Suppress("DEPRECATION")
     override fun viewDidAppear(animated: Boolean) {
         super.viewDidAppear(animated)
         hasViewAppeared = true
@@ -245,6 +251,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewDidAppear(animated)
     }
 
+    @Suppress("DEPRECATION")
     override fun viewWillDisappear(animated: Boolean) {
         super.viewWillDisappear(animated)
         hasViewAppeared = false
@@ -253,6 +260,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewWillDisappear(animated)
     }
 
+    @Suppress("DEPRECATION")
     @OptIn(NativeRuntimeApi::class)
     override fun viewDidDisappear(animated: Boolean) {
         super.viewDidDisappear(animated)
