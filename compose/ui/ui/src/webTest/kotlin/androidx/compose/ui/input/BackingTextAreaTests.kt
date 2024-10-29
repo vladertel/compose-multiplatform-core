@@ -77,8 +77,10 @@ class BackingTextAreaTests {
 
         with (textArea) {
             dispatchEvent(keyEvent("H"))
+            dispatchEvent(keyEvent("Unidentified"))
             dispatchEvent(keyEvent("E"))
             dispatchEvent(keyEvent("L"))
+            dispatchEvent(keyEvent("Unidentified"))
             dispatchEvent(keyEvent("L"))
             dispatchEvent(keyEvent("O"))
         }
