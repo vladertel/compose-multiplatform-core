@@ -69,10 +69,7 @@ internal interface OnCanvasTests {
     }
 
     fun dispatchEvents(vararg events: Event) {
-        val canvas = getCanvas()
-        for (event in events) {
-            canvas.dispatchEvent(event)
-        }
+        dispatchEvents(getCanvas(), *events)
     }
 
     fun dispatchEvents(element: EventTarget = getCanvas(), vararg events: Event) {
