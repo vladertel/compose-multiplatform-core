@@ -28,6 +28,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.EventTarget
 
 /**
  * An interface with helper functions to initialise the tests
@@ -71,6 +72,12 @@ internal interface OnCanvasTests {
         val canvas = getCanvas()
         for (event in events) {
             canvas.dispatchEvent(event)
+        }
+    }
+
+    fun dispatchEvents(element: EventTarget = getCanvas(), vararg events: Event) {
+        for (event in events) {
+            element.dispatchEvent(event)
         }
     }
 }
