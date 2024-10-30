@@ -33,7 +33,8 @@ import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Int8Array
 import org.w3c.fetch.Response
 
-private val notoColorEmoji = "./NotoColorEmoji.ttf"
+private const val notoColorEmoji = "./NotoColorEmoji.ttf"
+private const val notoSansSC = "./NotoSansSC-Regular.ttf"
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -48,8 +49,14 @@ fun main() {
 
         LaunchedEffect(Unit) {
             val notoEmojisBytes = loadRes(notoColorEmoji).toByteArray()
-            val fontFamily = FontFamily(listOf(Font("NotoColorEmoji", notoEmojisBytes)))
+            val notoSansSCBytes = loadRes(notoSansSC).toByteArray()
+
+            val fontFamily = FontFamily(listOf(
+                //Font("NotoColorEmoji", notoEmojisBytes),
+                Font("NotoSansSc", notoSansSCBytes)))
+
             fontFamilyResolver.preload(fontFamily)
+
             fontsLoaded.value = true
         }
 
