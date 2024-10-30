@@ -21,7 +21,7 @@ import kotlin.jvm.JvmName
 
 internal actual class SynchronizedObject : kotlinx.atomicfu.locks.SynchronizedObject()
 
-internal actual fun createSynchronizedObject() = SynchronizedObject()
+internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()
 
 @PublishedApi
 internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =

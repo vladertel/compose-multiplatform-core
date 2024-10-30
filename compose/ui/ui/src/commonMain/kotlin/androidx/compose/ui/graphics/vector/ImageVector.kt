@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.internal.checkPrecondition
-import androidx.compose.ui.platform.createSynchronizedObject
+import androidx.compose.ui.platform.makeSynchronizedObject
 import androidx.compose.ui.platform.synchronized
 import androidx.compose.ui.unit.Dp
 
@@ -378,7 +378,7 @@ internal constructor(
 
     companion object {
         private var imageVectorCount = 0
-        private val lock = createSynchronizedObject()
+        private val lock = makeSynchronizedObject(this)
 
         internal fun generateImageVectorId(): Int {
             synchronized(lock) {

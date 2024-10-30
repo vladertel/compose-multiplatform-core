@@ -16,7 +16,7 @@
 
 package androidx.compose.foundation.text.selection
 
-import androidx.compose.foundation.platform.SynchronizedObject
+import androidx.compose.foundation.platform.makeSynchronizedObject
 import androidx.compose.foundation.platform.synchronized
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -32,7 +32,7 @@ internal class MultiWidgetSelectionDelegate(
     private val coordinatesCallback: () -> LayoutCoordinates?,
     private val layoutResultCallback: () -> TextLayoutResult?
 ) : Selectable {
-    private val lock = SynchronizedObject()
+    private val lock = makeSynchronizedObject(this)
 
     private var _previousTextLayoutResult: TextLayoutResult? = null
 

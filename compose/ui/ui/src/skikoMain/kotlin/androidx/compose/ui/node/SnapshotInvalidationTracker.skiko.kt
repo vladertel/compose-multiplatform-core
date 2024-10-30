@@ -17,7 +17,7 @@
 package androidx.compose.ui.node
 
 import androidx.compose.runtime.snapshots.Snapshot
-import androidx.compose.ui.platform.createSynchronizedObject
+import androidx.compose.ui.platform.makeSynchronizedObject
 import androidx.compose.ui.getCurrentThreadId
 import androidx.compose.ui.platform.synchronized
 import kotlinx.atomicfu.atomic
@@ -105,7 +105,7 @@ internal class SnapshotInvalidationTracker(
 private class CommandList(
     private var onNewCommand: () -> Unit
 ) {
-    private val lock = createSynchronizedObject()
+    private val lock = makeSynchronizedObject()
     private val list = mutableListOf<() -> Unit>()
     private val listCopy = mutableListOf<() -> Unit>()
 
