@@ -57,12 +57,12 @@ internal class BackingTextArea(
     }
 
     private fun createEventListener(control: EventTarget): EventTargetListener {
-        val eventListener = EventTargetListener(control)
+        val eventTargetListener = EventTargetListener(control)
 
-        eventListener.addDisposableEvent("keydown", ::processEvent)
-        eventListener.addDisposableEvent("keyup", ::processEvent)
+        eventTargetListener.addDisposableEvent("keydown", ::processEvent)
+        eventTargetListener.addDisposableEvent("keyup", ::processEvent)
 
-        eventListener.addDisposableEvent("input") { evt ->
+        eventTargetListener.addDisposableEvent("input") { evt ->
             evt.preventDefault()
             evt as InputEventExtended
 
@@ -94,12 +94,12 @@ internal class BackingTextArea(
             }
         }
 
-        eventListener.addDisposableEvent("contextmenu") { evt ->
+        eventTargetListener.addDisposableEvent("contextmenu") { evt ->
             evt.preventDefault()
             evt.stopPropagation()
         }
 
-        return eventListener
+        return eventTargetListener
     }
 
     private fun createHtmlInput(): HTMLTextAreaElement {
