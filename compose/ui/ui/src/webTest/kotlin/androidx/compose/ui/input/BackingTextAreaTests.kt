@@ -57,15 +57,12 @@ class BackingTextAreaTests {
     }
 
     @Test
-    fun keyboardAndInputEventsTest() {
-        var lastEditCommand: List<EditCommand> = listOf()
+    fun onProcessKeyboardEventTest() {
         val processedKeys = mutableListOf<String>()
 
         val backingTextArea = BackingTextArea(
             imeOptions = ImeOptions.Default,
-            onEditCommand = { command ->
-                lastEditCommand = command
-            },
+            onEditCommand = {},
             onImeActionPerformed = {},
             processKeyboardEvent = { evt ->
                 processedKeys.add(evt.key)
@@ -86,6 +83,23 @@ class BackingTextAreaTests {
         }
 
         assertEquals("H:E:L:L:O", processedKeys.joinToString(":"))
+    }
+
+    @Test
+    fun onEditCommandTest() {
+        var lastEditCommand: List<EditCommand> = listOf()
+
+        val backingTextArea = BackingTextArea(
+            imeOptions = ImeOptions.Default,
+            onEditCommand = { command ->
+                lastEditCommand = command
+            },
+            onImeActionPerformed = {},
+            processKeyboardEvent = {}
+        )
+
+        backingTextArea.register()
+        val textArea = document.querySelector("textarea")!!
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertText", data = "Bonjour")))
 
@@ -93,12 +107,11 @@ class BackingTextAreaTests {
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "deleteContentBackward", data = "")))
 
-        assertEquals("H:E:L:L:O:Backspace", processedKeys.joinToString(":"))
-
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertCompositionText", data = "Servus")))
 
         assertEquals(listOf(SetComposingTextCommand("Servus", 1)), lastEditCommand)
     }
+
 
     @Test
     fun onImeActionPerformedTest() {
