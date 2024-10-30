@@ -43,6 +43,9 @@ import androidx.compose.runtime.snapshots.fastMapNotNull
 import androidx.compose.runtime.tooling.CompositionData
 import kotlin.collections.removeFirst as removeFirstKt
 import kotlin.collections.removeLast as removeLastKt
+import androidx.compose.runtime.platform.SynchronizedObject
+import androidx.compose.runtime.platform.makeSynchronizedObject
+import androidx.compose.runtime.platform.synchronized
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext

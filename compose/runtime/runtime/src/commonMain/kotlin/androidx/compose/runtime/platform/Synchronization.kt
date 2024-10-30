@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-@file:JvmName("ActualJvm_jvmKt")
-@file:JvmMultifileClass
+package androidx.compose.runtime.platform
 
-package androidx.compose.runtime
+internal expect class SynchronizedObject
 
-@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
-internal actual typealias SynchronizedObject = Any
-
-@Suppress("NOTHING_TO_INLINE")
-internal actual inline fun makeSynchronizedObject(ref: Any?) = ref ?: SynchronizedObject()
+/**
+ * Returns [ref] as a [SynchronizedObject] on platforms where [Any] is a valid [SynchronizedObject],
+ * or a new [SynchronizedObject] instance if [ref] is null or this is not supported on the current
+ * platform.
+ */
+internal expect inline fun makeSynchronizedObject(ref: Any? = null): SynchronizedObject
 
 @PublishedApi
-internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =
-    kotlin.synchronized(lock, block)
+internal expect inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R

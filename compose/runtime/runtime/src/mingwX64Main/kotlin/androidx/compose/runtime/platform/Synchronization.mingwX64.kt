@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.compose.runtime
+package androidx.compose.runtime.platform
 
 import androidx.compose.runtime.internal.currentThreadId
 import kotlinx.atomicfu.*

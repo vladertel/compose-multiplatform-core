@@ -19,6 +19,8 @@ package androidx.compose.runtime
 import androidx.collection.MutableIntObjectMap
 import androidx.collection.MutableIntSet
 import androidx.collection.MutableObjectList
+import androidx.compose.runtime.platform.makeSynchronizedObject
+import androidx.compose.runtime.platform.synchronized
 import androidx.compose.runtime.snapshots.fastAny
 import androidx.compose.runtime.snapshots.fastFilterIndexed
 import androidx.compose.runtime.snapshots.fastForEach
