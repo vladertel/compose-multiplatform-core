@@ -70,6 +70,7 @@ class TextInputTests : OnCanvasTests  {
         assertIs<HTMLTextAreaElement>(backingTextField)
 
         dispatchEvents(
+            backingTextField,
             keyEvent("s"),
             keyEvent("t"),
             keyEvent("e"),
@@ -80,16 +81,17 @@ class TextInputTests : OnCanvasTests  {
 
         assertEquals("step1", textInputChannel.receive())
 
-//        secondFocusRequester.requestFocus()
-//
-//        dispatchEvents(
-//            keyEvent("s"),
-//            keyEvent("t"),
-//            keyEvent("e"),
-//            keyEvent("p"),
-//            keyEvent("2")
-//        )
-//
-//        assertEquals("step2", textInputChannel.receive())
+        secondFocusRequester.requestFocus()
+
+        dispatchEvents(
+            backingTextField,
+            keyEvent("s"),
+            keyEvent("t"),
+            keyEvent("e"),
+            keyEvent("p"),
+            keyEvent("2")
+        )
+
+        assertEquals("step2", textInputChannel.receive())
     }
 }

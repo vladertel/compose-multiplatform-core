@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.events.EventTargetListener
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.text.input.CommitTextCommand
@@ -45,7 +44,6 @@ internal class BackingTextArea(
     private val processKeyboardEvent: (KeyboardEvent) -> Unit
 ) {
     private val textArea: HTMLTextAreaElement = createHtmlInput()
-    private val eventListener = createEventListener(textArea)
 
     private fun processEvent(evt: Event) {
         if (evt !is KeyboardEvent) return
@@ -56,13 +54,11 @@ internal class BackingTextArea(
         processKeyboardEvent(evt)
     }
 
-    private fun createEventListener(control: EventTarget): EventTargetListener {
-        val eventTargetListener = EventTargetListener(control)
+    private fun initEvents(htmlInput: EventTarget) {
+        htmlInput.addEventListener("keydown", ::processEvent)
+        htmlInput.addEventListener("keyup", ::processEvent)
 
-        eventTargetListener.addDisposableEvent("keydown", ::processEvent)
-        eventTargetListener.addDisposableEvent("keyup", ::processEvent)
-
-        eventTargetListener.addDisposableEvent("input") { evt ->
+        htmlInput.addEventListener("input", { evt ->
             evt.preventDefault()
             evt as InputEventExtended
 
@@ -74,12 +70,12 @@ internal class BackingTextArea(
                 }
 
                 "insertCompositionText" -> {
-                    val data = evt.data ?: return@addDisposableEvent
+                    val data = evt.data ?: return@addEventListener
                     onEditCommand(listOf(SetComposingTextCommand(data, 1)))
                 }
 
                 "insertText" -> {
-                    val data = evt.data ?: return@addDisposableEvent
+                    val data = evt.data ?: return@addEventListener
                     onEditCommand(listOf(CommitTextCommand(data, 1)))
                 }
 
@@ -92,14 +88,12 @@ internal class BackingTextArea(
                     )
                 }
             }
-        }
+        })
 
-        eventTargetListener.addDisposableEvent("contextmenu") { evt ->
+        htmlInput.addEventListener("contextmenu", { evt ->
             evt.preventDefault()
             evt.stopPropagation()
-        }
-
-        return eventTargetListener
+        })
     }
 
     private fun createHtmlInput(): HTMLTextAreaElement {
@@ -157,6 +151,7 @@ internal class BackingTextArea(
             setProperty("text-shadow", "none")
         }
 
+        initEvents(htmlInput)
 
         return htmlInput
     }
@@ -187,7 +182,6 @@ internal class BackingTextArea(
 
     fun dispose() {
         textArea.remove()
-        eventListener.dispose()
     }
 }
 
