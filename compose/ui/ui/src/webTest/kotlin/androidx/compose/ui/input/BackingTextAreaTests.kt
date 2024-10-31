@@ -31,6 +31,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
+import org.w3c.dom.events.CompositionEvent
+import org.w3c.dom.events.CompositionEventInit
 
 class BackingTextAreaTests {
 
@@ -109,7 +111,11 @@ class BackingTextAreaTests {
 
         textArea.dispatchEvent(InputEvent("input", InputEventInit(inputType = "insertCompositionText", data = "Servus")))
 
-        assertEquals(listOf(SetComposingTextCommand("Servus", 1)), lastEditCommand)
+        assertEquals(listOf(CommitTextCommand("Bonjour", 1)), lastEditCommand, "insertCompositionText should be ignored")
+
+        textArea.dispatchEvent(CompositionEvent("compositionupdate", CompositionEventInit(data = "再见")))
+
+        assertEquals(listOf(SetComposingTextCommand(text="再见", newCursorPosition=1)), lastEditCommand, "composition update should is not detected")
     }
 
 

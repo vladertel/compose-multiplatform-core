@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
+import org.w3c.dom.events.CompositionEvent
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
@@ -58,6 +59,20 @@ internal class BackingTextArea(
         htmlInput.addEventListener("keydown", ::processEvent)
         htmlInput.addEventListener("keyup", ::processEvent)
 
+        htmlInput.addEventListener("compositionstart", {
+            println("composition started \n")
+        })
+
+        htmlInput.addEventListener("compositionupdate", { evt ->
+            println("composition update \n")
+            evt as CompositionEvent
+            onEditCommand(listOf(SetComposingTextCommand(evt.data, 1)))
+        })
+
+        htmlInput.addEventListener("compositionend", {
+            println("composition end \n")
+        })
+
         htmlInput.addEventListener("input", { evt ->
             evt.preventDefault()
             evt as InputEventExtended
@@ -70,8 +85,8 @@ internal class BackingTextArea(
                 }
 
                 "insertCompositionText" -> {
-                    val data = evt.data ?: return@addEventListener
-                    onEditCommand(listOf(SetComposingTextCommand(data, 1)))
+//                    val data = evt.data ?: return@addEventListener
+//                    onEditCommand(listOf(SetComposingTextCommand(data, 1)))
                 }
 
                 "insertText" -> {
