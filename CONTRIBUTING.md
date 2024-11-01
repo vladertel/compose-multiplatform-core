@@ -4,7 +4,8 @@ This repo is an official mirror of Android Jetpack libraries that enables extern
 
 ### Why this repository exists
 
-The Android team has been exploring how we could make it easier to develop libraries that don’t rely on infrastructure from the Android Open Source Project (AOSP). This GitHub infrastructure has two benefits. First, it makes it easier to contribute to a small set of Jetpack libraries. Second, this parallel infrastructure makes it possible to build and test Jetpack libraries against non-Android target platforms.
+The Android team has been exploring how we could make it easier to develop libraries that don’t rely on infrastructure from the Android Open Source Project (AOSP). This GitHub infrastructure has two benefits. First, it makes it easier to contribute to a small set of Jetpack libraries. Second, this parallel infrastructure makes it p
+ossible to build and test Jetpack libraries against non-Android target platforms.
 
 ### What can you contribute to?
 
