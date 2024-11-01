@@ -9,7 +9,7 @@ The Android team has been exploring how we could make it easier to develop libra
 ### What can you contribute to?
 
 You can start contr
-ibuting t
+ibuting tj
 o any of the following 
 library groups from Git
 Hub:
