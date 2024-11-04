@@ -1912,8 +1912,8 @@ internal class SlotWriter(
     internal fun slotsEndAllIndex(groupIndex: Int): Int =
         groups.dataIndex(groupIndexToAddress(groupIndex + groupSize(groupIndex)))
 
-    private val currentGroupSlotIndex: Int
-        get() = currentSlot - slotsStartIndex(parent) + (deferredSlotWrites?.get(parent)?.size ?: 0)
+    private val currentGroupSlotIndex: Int get() =
+        currentSlot - slotsStartIndex(parent) + (deferredSlotWrites?.get(parent)?.size ?: 0)
 
     /**
      * Advance [currentGroup] by [amount]. The [currentGroup] group cannot be advanced outside the
