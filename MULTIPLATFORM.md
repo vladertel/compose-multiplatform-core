@@ -11,7 +11,8 @@
 
 ### Run tests
 
-Run tests for Desktop:
+Run tests for Des
+ktop:
 ```bash
 ./gradlew desktopTest
 ```
