@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package androidx.compose.ui.test.platform
 
-package androidx.compose.ui.test
+internal actual class SynchronizedObject : kotlinx.atomicfu.locks.SynchronizedObject()
 
-internal actual inline fun <T> synchronized(lock: Any, block: () -> T) = block()
+internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()
+
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R =
+    kotlinx.atomicfu.locks.synchronized(lock, block)
