@@ -1,0 +1,57 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, macosX64, mingwX64, tvosArm64, tvosSimulatorArm64, tvosX64, wasmJs, watchosArm32, watchosArm64, watchosSimulatorArm64, watchosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <org.jetbrains.androidx.window:window-core>
+open annotation class androidx.window.core/ExperimentalWindowCoreApi : kotlin/Annotation { // androidx.window.core/ExperimentalWindowCoreApi|null[0]
+    constructor <init>() // androidx.window.core/ExperimentalWindowCoreApi.<init>|<init>(){}[0]
+}
+
+final class androidx.window.core.layout/WindowHeightSizeClass { // androidx.window.core.layout/WindowHeightSizeClass|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // androidx.window.core.layout/WindowHeightSizeClass.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // androidx.window.core.layout/WindowHeightSizeClass.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // androidx.window.core.layout/WindowHeightSizeClass.toString|toString(){}[0]
+
+    final object Companion { // androidx.window.core.layout/WindowHeightSizeClass.Companion|null[0]
+        final val COMPACT // androidx.window.core.layout/WindowHeightSizeClass.Companion.COMPACT|<get-COMPACT>(){}[0]
+            final fun <get-COMPACT>(): androidx.window.core.layout/WindowHeightSizeClass // androidx.window.core.layout/WindowHeightSizeClass.Companion.COMPACT.<get-COMPACT>|<get-COMPACT>(){}[0]
+        final val EXPANDED // androidx.window.core.layout/WindowHeightSizeClass.Companion.EXPANDED|<get-EXPANDED>(){}[0]
+            final fun <get-EXPANDED>(): androidx.window.core.layout/WindowHeightSizeClass // androidx.window.core.layout/WindowHeightSizeClass.Companion.EXPANDED.<get-EXPANDED>|<get-EXPANDED>(){}[0]
+        final val MEDIUM // androidx.window.core.layout/WindowHeightSizeClass.Companion.MEDIUM|<get-MEDIUM>(){}[0]
+            final fun <get-MEDIUM>(): androidx.window.core.layout/WindowHeightSizeClass // androidx.window.core.layout/WindowHeightSizeClass.Companion.MEDIUM.<get-MEDIUM>|<get-MEDIUM>(){}[0]
+    }
+}
+
+final class androidx.window.core.layout/WindowSizeClass { // androidx.window.core.layout/WindowSizeClass|null[0]
+    final val windowHeightSizeClass // androidx.window.core.layout/WindowSizeClass.windowHeightSizeClass|{}windowHeightSizeClass[0]
+        final fun <get-windowHeightSizeClass>(): androidx.window.core.layout/WindowHeightSizeClass // androidx.window.core.layout/WindowSizeClass.windowHeightSizeClass.<get-windowHeightSizeClass>|<get-windowHeightSizeClass>(){}[0]
+    final val windowWidthSizeClass // androidx.window.core.layout/WindowSizeClass.windowWidthSizeClass|{}windowWidthSizeClass[0]
+        final fun <get-windowWidthSizeClass>(): androidx.window.core.layout/WindowWidthSizeClass // androidx.window.core.layout/WindowSizeClass.windowWidthSizeClass.<get-windowWidthSizeClass>|<get-windowWidthSizeClass>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // androidx.window.core.layout/WindowSizeClass.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // androidx.window.core.layout/WindowSizeClass.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // androidx.window.core.layout/WindowSizeClass.toString|toString(){}[0]
+
+    final object Companion { // androidx.window.core.layout/WindowSizeClass.Companion|null[0]
+        final fun compute(kotlin/Float, kotlin/Float): androidx.window.core.layout/WindowSizeClass // androidx.window.core.layout/WindowSizeClass.Companion.compute|compute(kotlin.Float;kotlin.Float){}[0]
+        final fun compute(kotlin/Int, kotlin/Int, kotlin/Float): androidx.window.core.layout/WindowSizeClass // androidx.window.core.layout/WindowSizeClass.Companion.compute|compute(kotlin.Int;kotlin.Int;kotlin.Float){}[0]
+    }
+}
+
+final class androidx.window.core.layout/WindowWidthSizeClass { // androidx.window.core.layout/WindowWidthSizeClass|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // androidx.window.core.layout/WindowWidthSizeClass.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // androidx.window.core.layout/WindowWidthSizeClass.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // androidx.window.core.layout/WindowWidthSizeClass.toString|toString(){}[0]
+
+    final object Companion { // androidx.window.core.layout/WindowWidthSizeClass.Companion|null[0]
+        final val COMPACT // androidx.window.core.layout/WindowWidthSizeClass.Companion.COMPACT|<get-COMPACT>(){}[0]
+            final fun <get-COMPACT>(): androidx.window.core.layout/WindowWidthSizeClass // androidx.window.core.layout/WindowWidthSizeClass.Companion.COMPACT.<get-COMPACT>|<get-COMPACT>(){}[0]
+        final val EXPANDED // androidx.window.core.layout/WindowWidthSizeClass.Companion.EXPANDED|<get-EXPANDED>(){}[0]
+            final fun <get-EXPANDED>(): androidx.window.core.layout/WindowWidthSizeClass // androidx.window.core.layout/WindowWidthSizeClass.Companion.EXPANDED.<get-EXPANDED>|<get-EXPANDED>(){}[0]
+        final val MEDIUM // androidx.window.core.layout/WindowWidthSizeClass.Companion.MEDIUM|<get-MEDIUM>(){}[0]
+            final fun <get-MEDIUM>(): androidx.window.core.layout/WindowWidthSizeClass // androidx.window.core.layout/WindowWidthSizeClass.Companion.MEDIUM.<get-MEDIUM>|<get-MEDIUM>(){}[0]
+    }
+}
