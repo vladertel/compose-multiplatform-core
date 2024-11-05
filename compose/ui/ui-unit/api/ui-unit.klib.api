@@ -163,6 +163,7 @@ final value class androidx.compose.ui.unit/Constraints { // androidx.compose.ui.
     final fun equals(kotlin/Any?): kotlin/Boolean // androidx.compose.ui.unit/Constraints.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // androidx.compose.ui.unit/Constraints.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // androidx.compose.ui.unit/Constraints.toString|toString(){}[0]
+    final inline fun copyMaxDimensions(): androidx.compose.ui.unit/Constraints // androidx.compose.ui.unit/Constraints.copyMaxDimensions|copyMaxDimensions(){}[0]
 
     final object Companion { // androidx.compose.ui.unit/Constraints.Companion|null[0]
         final const val Infinity // androidx.compose.ui.unit/Constraints.Companion.Infinity|<get-Infinity>(){}[0]
@@ -207,6 +208,8 @@ final value class androidx.compose.ui.unit/Dp : kotlin/Comparable<androidx.compo
 }
 
 final value class androidx.compose.ui.unit/DpOffset { // androidx.compose.ui.unit/DpOffset|null[0]
+    constructor <init>(kotlin/Long) // androidx.compose.ui.unit/DpOffset.<init>|<init>(kotlin.Long){}[0]
+
     final val packedValue // androidx.compose.ui.unit/DpOffset.packedValue|{}packedValue[0]
         final fun <get-packedValue>(): kotlin/Long // androidx.compose.ui.unit/DpOffset.packedValue.<get-packedValue>|<get-packedValue>(){}[0]
     final val x // androidx.compose.ui.unit/DpOffset.x|{}x[0]
@@ -259,6 +262,8 @@ final value class androidx.compose.ui.unit/DpSize { // androidx.compose.ui.unit/
 }
 
 final value class androidx.compose.ui.unit/IntOffset { // androidx.compose.ui.unit/IntOffset|null[0]
+    constructor <init>(kotlin/Long) // androidx.compose.ui.unit/IntOffset.<init>|<init>(kotlin.Long){}[0]
+
     final val packedValue // androidx.compose.ui.unit/IntOffset.packedValue|{}packedValue[0]
         final fun <get-packedValue>(): kotlin/Long // androidx.compose.ui.unit/IntOffset.packedValue.<get-packedValue>|<get-packedValue>(){}[0]
     final val x // androidx.compose.ui.unit/IntOffset.x|{}x[0]
@@ -280,18 +285,22 @@ final value class androidx.compose.ui.unit/IntOffset { // androidx.compose.ui.un
     final inline fun component2(): kotlin/Int // androidx.compose.ui.unit/IntOffset.component2|component2(){}[0]
 
     final object Companion { // androidx.compose.ui.unit/IntOffset.Companion|null[0]
+        final val Max // androidx.compose.ui.unit/IntOffset.Companion.Max|{}Max[0]
+            final fun <get-Max>(): androidx.compose.ui.unit/IntOffset // androidx.compose.ui.unit/IntOffset.Companion.Max.<get-Max>|<get-Max>(){}[0]
         final val Zero // androidx.compose.ui.unit/IntOffset.Companion.Zero|{}Zero[0]
             final fun <get-Zero>(): androidx.compose.ui.unit/IntOffset // androidx.compose.ui.unit/IntOffset.Companion.Zero.<get-Zero>|<get-Zero>(){}[0]
     }
 }
 
 final value class androidx.compose.ui.unit/IntSize { // androidx.compose.ui.unit/IntSize|null[0]
+    constructor <init>(kotlin/Long) // androidx.compose.ui.unit/IntSize.<init>|<init>(kotlin.Long){}[0]
+
     final val height // androidx.compose.ui.unit/IntSize.height|{}height[0]
-        final fun <get-height>(): kotlin/Int // androidx.compose.ui.unit/IntSize.height.<get-height>|<get-height>(){}[0]
+        final inline fun <get-height>(): kotlin/Int // androidx.compose.ui.unit/IntSize.height.<get-height>|<get-height>(){}[0]
     final val packedValue // androidx.compose.ui.unit/IntSize.packedValue|{}packedValue[0]
         final fun <get-packedValue>(): kotlin/Long // androidx.compose.ui.unit/IntSize.packedValue.<get-packedValue>|<get-packedValue>(){}[0]
     final val width // androidx.compose.ui.unit/IntSize.width|{}width[0]
-        final fun <get-width>(): kotlin/Int // androidx.compose.ui.unit/IntSize.width.<get-width>|<get-width>(){}[0]
+        final inline fun <get-width>(): kotlin/Int // androidx.compose.ui.unit/IntSize.width.<get-width>|<get-width>(){}[0]
 
     final fun div(kotlin/Int): androidx.compose.ui.unit/IntSize // androidx.compose.ui.unit/IntSize.div|div(kotlin.Int){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // androidx.compose.ui.unit/IntSize.equals|equals(kotlin.Any?){}[0]
@@ -379,6 +388,8 @@ final value class androidx.compose.ui.unit/Velocity { // androidx.compose.ui.uni
     }
 }
 
+final const val androidx.compose.ui.unit/MaxDimensionsAndFocusMask // androidx.compose.ui.unit/MaxDimensionsAndFocusMask|<get-MaxDimensionsAndFocusMask>(){}[0]
+    final fun <get-MaxDimensionsAndFocusMask>(): kotlin/Long // androidx.compose.ui.unit/MaxDimensionsAndFocusMask.<get-MaxDimensionsAndFocusMask>|<get-MaxDimensionsAndFocusMask>(){}[0]
 final const val androidx.compose.ui.unit/androidx_compose_ui_unit_DpRect$stableprop // androidx.compose.ui.unit/androidx_compose_ui_unit_DpRect$stableprop|#static{}androidx_compose_ui_unit_DpRect$stableprop[0]
 final const val androidx.compose.ui.unit/androidx_compose_ui_unit_IntRect$stableprop // androidx.compose.ui.unit/androidx_compose_ui_unit_IntRect$stableprop|#static{}androidx_compose_ui_unit_IntRect$stableprop[0]
 
@@ -413,7 +424,7 @@ final val androidx.compose.ui.unit/isSpecified // androidx.compose.ui.unit/isSpe
 final val androidx.compose.ui.unit/isUnspecified // androidx.compose.ui.unit/isUnspecified|<get-isUnspecified>@androidx.compose.ui.unit.Dp(){}[0]
     final inline fun (androidx.compose.ui.unit/Dp).<get-isUnspecified>(): kotlin/Boolean // androidx.compose.ui.unit/isUnspecified.<get-isUnspecified>|<get-isUnspecified>@androidx.compose.ui.unit.Dp(){}[0]
 final val androidx.compose.ui.unit/isUnspecified // androidx.compose.ui.unit/isUnspecified|<get-isUnspecified>@androidx.compose.ui.unit.TextUnit(){}[0]
-    final fun (androidx.compose.ui.unit/TextUnit).<get-isUnspecified>(): kotlin/Boolean // androidx.compose.ui.unit/isUnspecified.<get-isUnspecified>|<get-isUnspecified>@androidx.compose.ui.unit.TextUnit(){}[0]
+    final inline fun (androidx.compose.ui.unit/TextUnit).<get-isUnspecified>(): kotlin/Boolean // androidx.compose.ui.unit/isUnspecified.<get-isUnspecified>|<get-isUnspecified>@androidx.compose.ui.unit.TextUnit(){}[0]
 final val androidx.compose.ui.unit/isUnspecified // androidx.compose.ui.unit/isUnspecified|@androidx.compose.ui.unit.DpOffset{}isUnspecified[0]
     final inline fun (androidx.compose.ui.unit/DpOffset).<get-isUnspecified>(): kotlin/Boolean // androidx.compose.ui.unit/isUnspecified.<get-isUnspecified>|<get-isUnspecified>@androidx.compose.ui.unit.DpOffset(){}[0]
 final val androidx.compose.ui.unit/isUnspecified // androidx.compose.ui.unit/isUnspecified|@androidx.compose.ui.unit.DpSize{}isUnspecified[0]
@@ -448,13 +459,10 @@ final fun (androidx.compose.ui.unit/IntSize).androidx.compose.ui.unit/toIntRect(
 final fun (androidx.compose.ui.unit/IntSize).androidx.compose.ui.unit/toSize(): androidx.compose.ui.geometry/Size // androidx.compose.ui.unit/toSize|toSize@androidx.compose.ui.unit.IntSize(){}[0]
 final fun androidx.compose.ui.unit/Constraints(kotlin/Int =..., kotlin/Int =..., kotlin/Int =..., kotlin/Int =...): androidx.compose.ui.unit/Constraints // androidx.compose.ui.unit/Constraints|Constraints(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 final fun androidx.compose.ui.unit/Density(kotlin/Float, kotlin/Float =...): androidx.compose.ui.unit/Density // androidx.compose.ui.unit/Density|Density(kotlin.Float;kotlin.Float){}[0]
-final fun androidx.compose.ui.unit/DpOffset(androidx.compose.ui.unit/Dp, androidx.compose.ui.unit/Dp): androidx.compose.ui.unit/DpOffset // androidx.compose.ui.unit/DpOffset|DpOffset(androidx.compose.ui.unit.Dp;androidx.compose.ui.unit.Dp){}[0]
 final fun androidx.compose.ui.unit/DpSize(androidx.compose.ui.unit/Dp, androidx.compose.ui.unit/Dp): androidx.compose.ui.unit/DpSize // androidx.compose.ui.unit/DpSize|DpSize(androidx.compose.ui.unit.Dp;androidx.compose.ui.unit.Dp){}[0]
-final fun androidx.compose.ui.unit/IntOffset(kotlin/Int, kotlin/Int): androidx.compose.ui.unit/IntOffset // androidx.compose.ui.unit/IntOffset|IntOffset(kotlin.Int;kotlin.Int){}[0]
 final fun androidx.compose.ui.unit/IntRect(androidx.compose.ui.unit/IntOffset, androidx.compose.ui.unit/IntOffset): androidx.compose.ui.unit/IntRect // androidx.compose.ui.unit/IntRect|IntRect(androidx.compose.ui.unit.IntOffset;androidx.compose.ui.unit.IntOffset){}[0]
 final fun androidx.compose.ui.unit/IntRect(androidx.compose.ui.unit/IntOffset, androidx.compose.ui.unit/IntSize): androidx.compose.ui.unit/IntRect // androidx.compose.ui.unit/IntRect|IntRect(androidx.compose.ui.unit.IntOffset;androidx.compose.ui.unit.IntSize){}[0]
 final fun androidx.compose.ui.unit/IntRect(androidx.compose.ui.unit/IntOffset, kotlin/Int): androidx.compose.ui.unit/IntRect // androidx.compose.ui.unit/IntRect|IntRect(androidx.compose.ui.unit.IntOffset;kotlin.Int){}[0]
-final fun androidx.compose.ui.unit/IntSize(kotlin/Int, kotlin/Int): androidx.compose.ui.unit/IntSize // androidx.compose.ui.unit/IntSize|IntSize(kotlin.Int;kotlin.Int){}[0]
 final fun androidx.compose.ui.unit/TextUnit(kotlin/Float, androidx.compose.ui.unit/TextUnitType): androidx.compose.ui.unit/TextUnit // androidx.compose.ui.unit/TextUnit|TextUnit(kotlin.Float;androidx.compose.ui.unit.TextUnitType){}[0]
 final fun androidx.compose.ui.unit/Velocity(kotlin/Float, kotlin/Float): androidx.compose.ui.unit/Velocity // androidx.compose.ui.unit/Velocity|Velocity(kotlin.Float;kotlin.Float){}[0]
 final fun androidx.compose.ui.unit/checkArithmetic(androidx.compose.ui.unit/TextUnit) // androidx.compose.ui.unit/checkArithmetic|checkArithmetic(androidx.compose.ui.unit.TextUnit){}[0]
@@ -484,5 +492,8 @@ final inline fun (kotlin/Int).androidx.compose.ui.unit/times(androidx.compose.ui
 final inline fun (kotlin/Int).androidx.compose.ui.unit/times(androidx.compose.ui.unit/DpSize): androidx.compose.ui.unit/DpSize // androidx.compose.ui.unit/times|times@kotlin.Int(androidx.compose.ui.unit.DpSize){}[0]
 final inline fun (kotlin/Int).androidx.compose.ui.unit/times(androidx.compose.ui.unit/IntSize): androidx.compose.ui.unit/IntSize // androidx.compose.ui.unit/times|times@kotlin.Int(androidx.compose.ui.unit.IntSize){}[0]
 final inline fun (kotlin/Int).androidx.compose.ui.unit/times(androidx.compose.ui.unit/TextUnit): androidx.compose.ui.unit/TextUnit // androidx.compose.ui.unit/times|times@kotlin.Int(androidx.compose.ui.unit.TextUnit){}[0]
+final inline fun androidx.compose.ui.unit/DpOffset(androidx.compose.ui.unit/Dp, androidx.compose.ui.unit/Dp): androidx.compose.ui.unit/DpOffset // androidx.compose.ui.unit/DpOffset|DpOffset(androidx.compose.ui.unit.Dp;androidx.compose.ui.unit.Dp){}[0]
+final inline fun androidx.compose.ui.unit/IntOffset(kotlin/Int, kotlin/Int): androidx.compose.ui.unit/IntOffset // androidx.compose.ui.unit/IntOffset|IntOffset(kotlin.Int;kotlin.Int){}[0]
+final inline fun androidx.compose.ui.unit/IntSize(kotlin/Int, kotlin/Int): androidx.compose.ui.unit/IntSize // androidx.compose.ui.unit/IntSize|IntSize(kotlin.Int;kotlin.Int){}[0]
 final inline fun androidx.compose.ui.unit/max(androidx.compose.ui.unit/Dp, androidx.compose.ui.unit/Dp): androidx.compose.ui.unit/Dp // androidx.compose.ui.unit/max|max(androidx.compose.ui.unit.Dp;androidx.compose.ui.unit.Dp){}[0]
 final inline fun androidx.compose.ui.unit/min(androidx.compose.ui.unit/Dp, androidx.compose.ui.unit/Dp): androidx.compose.ui.unit/Dp // androidx.compose.ui.unit/min|min(androidx.compose.ui.unit.Dp;androidx.compose.ui.unit.Dp){}[0]
