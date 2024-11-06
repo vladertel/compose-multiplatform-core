@@ -1187,9 +1187,15 @@ internal class AccessibilityMediator(
     fun onLayoutChange(nodeId: Int) {
         debugLogger?.log("onLayoutChange (nodeId=$nodeId)")
 
-        invalidatedBoundsNodeIds.add(nodeId)
+        // TODO: Properly implement layout invalidation, taking into account that semantics
+        //  can also change after the `onLayoutChange` event.
+        if (accessibilityElementsMap[nodeId] == null) {
+            // Forcing tree recalculation when a node with unknown nodeId occurred.
+            invalidationKind = SemanticsTreeInvalidationKind.COMPLETE
+        } else {
+            invalidatedBoundsNodeIds.add(nodeId)
+        }
 
-        // unprocessedInvalidationKind will be set to BOUNDS in sync(), it's a strict subset of COMPLETE
         invalidationChannel.trySend(Unit)
     }
 
