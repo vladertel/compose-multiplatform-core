@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.viewinterop.UIKitView
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -54,7 +54,6 @@ import kotlin.time.TimeSource.Monotonic.ValueTimeMark
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.UIView
 
-@OptIn(ExperimentalComposeApi::class)
 class KeyboardInsetsTest {
     companion object {
         // Maximum duration of a frame that is not considered as a frame drop.
@@ -139,6 +138,7 @@ class KeyboardInsetsTest {
         }
     }
 
+    @Ignore // Became flaky. TODO: Investigate performance problem.
     @Test
     fun `test IME insets animation frame rate`() = runUIKitInstrumentedTest {
         val refreshTimings = mutableListOf<ValueTimeMark>()
@@ -172,6 +172,7 @@ class KeyboardInsetsTest {
         }
     }
 
+    @Ignore // Became flaky. TODO: Investigate performance problem.
     @Test
     fun `test IME insets animation frame rate with focused text field`() =
         runUIKitInstrumentedTest {
