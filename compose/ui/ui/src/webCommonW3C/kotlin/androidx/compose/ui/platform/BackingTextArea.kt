@@ -19,6 +19,7 @@ package androidx.compose.ui.platform
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.text.input.CommitTextCommand
+import androidx.compose.ui.text.input.DeleteSurroundingTextInCodePointsCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
@@ -27,7 +28,8 @@ import androidx.compose.ui.text.input.SetComposingTextCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
-import org.w3c.dom.events.Event
+import org.w3c.dom.events.CompositionEvent
+import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
 
@@ -44,13 +46,72 @@ internal class BackingTextArea(
 ) {
     private val textArea: HTMLTextAreaElement = createHtmlInput()
 
-    private fun processIdentifiedEvent(evt: Event) {
-        if (evt !is KeyboardEvent) return
+    private fun processEvent(evt: KeyboardEvent) {
+        if (evt.isComposing) return
+        // Unidentified keys is what we get when we press key on a virtual keyboard
         // TODO: In theory nothing stops us from passing Unidentified keys but this yet to be investigated:
         // First, this way we will pass (and attempt to process) "dummy" KeyboardEvents that were designed not to have physical representation at all
         // Second, we need more tests on keyboard in general before doing this anyways
         if (evt.key == "Unidentified") return
         processKeyboardEvent(evt)
+    }
+
+    private fun initEvents(htmlInput: EventTarget) {
+        DomInputService(htmlInput, object : DomInputListener {
+            override fun onKeyDown(evt: KeyboardEvent) {
+                processEvent(evt)
+            }
+
+            override fun onKeyUp(evt: KeyboardEvent) {
+                processEvent(evt)
+            }
+
+            override fun onCompositionStart(evt: CompositionEvent) {
+                onEditCommand(listOf(DeleteSurroundingTextInCodePointsCommand(1, 0)))
+            }
+
+            override fun onCompositionUpdate(evt: CompositionEvent) {
+                // whenever very first time compose happens, corresponding keydown event happens earlier
+                onEditCommand(listOf(SetComposingTextCommand(evt.data, 1)))
+            }
+
+            override fun onCompositionEnd(evt: CompositionEvent) {
+                onEditCommand(listOf(CommitTextCommand(evt.data, 1)))
+            }
+
+            override fun onInputInsertLineBreak(evt: InputEventExtended) {
+                if (imeOptions.singleLine) {
+                    onImeActionPerformed(imeOptions.imeAction)
+                }
+            }
+
+
+            /*
+            This event is used for processing events typed via virtual keyboard
+            on mobile devices
+             */
+            override fun onInputInsertText(evt: InputEventExtended) {
+                val data = evt.data ?: return
+                onEditCommand(listOf(CommitTextCommand(data, 1)))
+            }
+
+            override fun onInputDeleteContentBackward(evt: InputEventExtended) {
+                processKeyboardEvent(
+                    KeyboardEvent(
+                        "keydown",
+                        KeyboardEventInit(
+                            key = "Backspace",
+                            code = "Backspace"
+                        ).withKeyCode(Key.Backspace)
+                    )
+                )
+            }
+        })
+
+        htmlInput.addEventListener("contextmenu", { evt ->
+            evt.preventDefault()
+            evt.stopPropagation()
+        })
     }
 
     private fun createHtmlInput(): HTMLTextAreaElement {
@@ -98,60 +159,17 @@ internal class BackingTextArea(
             setProperty("top", "0")
             setProperty("left", "0")
             setProperty("padding", "0")
-            setProperty("opacity", "0")
-            setProperty("color", "transparent")
-            setProperty("background", "transparent")
-            setProperty("caret-color", "transparent")
-            setProperty("outline", "none")
-            setProperty("border", "none")
-            setProperty("resize", "none")
-            setProperty("text-shadow", "none")
+//            setProperty("opacity", "0")
+//            setProperty("color", "transparent")
+//            setProperty("background", "transparent")
+//            setProperty("caret-color", "transparent")
+//            setProperty("outline", "none")
+//            setProperty("border", "none")
+//            setProperty("resize", "none")
+//            setProperty("text-shadow", "none")
         }
 
-        htmlInput.addEventListener("keydown", { evt ->
-            processIdentifiedEvent(evt)
-        })
-
-        htmlInput.addEventListener("keyup", { evt ->
-            processIdentifiedEvent(evt)
-        })
-
-        htmlInput.addEventListener("input", { evt ->
-            evt.preventDefault()
-            evt as InputEventExtended
-
-            when (evt.inputType) {
-                "insertLineBreak" -> {
-                    if (imeOptions.singleLine) {
-                        onImeActionPerformed(imeOptions.imeAction)
-                    }
-                }
-
-                "insertCompositionText" -> {
-                    val data = evt.data ?: return@addEventListener
-                    onEditCommand(listOf(SetComposingTextCommand(data, 1)))
-                }
-
-                "insertText" -> {
-                    val data = evt.data ?: return@addEventListener
-                    onEditCommand(listOf(CommitTextCommand(data, 1)))
-                }
-
-                "deleteContentBackward" -> {
-                    processKeyboardEvent(
-                        KeyboardEvent(
-                            "keydown",
-                            KeyboardEventInit(key = "Backspace", code = "Backspace").withKeyCode(Key.Backspace)
-                        )
-                    )
-                }
-            }
-        })
-
-        htmlInput.addEventListener("contextmenu", { evt ->
-            evt.preventDefault()
-            evt.stopPropagation()
-        })
+        initEvents(htmlInput)
 
         return htmlInput
     }
@@ -169,25 +187,20 @@ internal class BackingTextArea(
     }
 
     fun updateHtmlInputPosition(offset: Offset) {
-        textArea.style.left = "${offset.x}px"
-        textArea.style.top = "${offset.y}px"
+        textArea.style.left = "${offset.x + 25}px"
+        textArea.style.top = "${offset.y + 25}px"
 
         focus()
     }
 
     fun updateState(textFieldValue: TextFieldValue) {
-        textArea.value = textFieldValue.text
-        textArea.setSelectionRange(textFieldValue.selection.start, textFieldValue.selection.end)
+//        textArea.value = textFieldValue.text
+//        textArea.setSelectionRange(textFieldValue.selection.start, textFieldValue.selection.end)
     }
 
     fun dispose() {
         textArea.remove()
     }
-}
-
-private external interface InputEventExtended {
-    val inputType: String
-    val data: String?
 }
 
 // TODO: reuse in tests
