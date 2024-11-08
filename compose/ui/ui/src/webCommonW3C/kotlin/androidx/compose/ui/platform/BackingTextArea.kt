@@ -159,14 +159,14 @@ internal class BackingTextArea(
             setProperty("top", "0")
             setProperty("left", "0")
             setProperty("padding", "0")
-//            setProperty("opacity", "0")
-//            setProperty("color", "transparent")
-//            setProperty("background", "transparent")
-//            setProperty("caret-color", "transparent")
-//            setProperty("outline", "none")
-//            setProperty("border", "none")
-//            setProperty("resize", "none")
-//            setProperty("text-shadow", "none")
+            setProperty("opacity", "0")
+            setProperty("color", "transparent")
+            setProperty("background", "transparent")
+            setProperty("caret-color", "transparent")
+            setProperty("outline", "none")
+            setProperty("border", "none")
+            setProperty("resize", "none")
+            setProperty("text-shadow", "none")
         }
 
         initEvents(htmlInput)
@@ -187,8 +187,8 @@ internal class BackingTextArea(
     }
 
     fun updateHtmlInputPosition(offset: Offset) {
-        textArea.style.left = "${offset.x + 25}px"
-        textArea.style.top = "${offset.y + 25}px"
+        textArea.style.left = "${offset.x}px"
+        textArea.style.top = "${offset.y}px"
 
         focus()
     }
