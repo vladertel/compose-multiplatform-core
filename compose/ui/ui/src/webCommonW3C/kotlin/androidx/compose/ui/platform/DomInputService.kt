@@ -17,6 +17,7 @@
 package androidx.compose.ui.platform
 
 import org.w3c.dom.events.CompositionEvent
+import org.w3c.dom.events.Event
 import org.w3c.dom.events.EventTarget
 import org.w3c.dom.events.KeyboardEvent
 
@@ -29,13 +30,13 @@ internal interface DomInputListener {
     fun onKeyDown(evt: KeyboardEvent) {}
     fun onKeyUp(evt: KeyboardEvent) {}
 
-    fun onInputInsertLineBreak(evt: InputEventExtended) {}
-    fun onInputInsertCompositionText(evt: InputEventExtended) {}
-    fun onInputInsertText(evt: InputEventExtended) {}
-    fun onInputDeleteContentBackward(evt: InputEventExtended) {}
+    fun onInputInsertLineBreak(evt: InputEvent) {}
+    fun onInputInsertCompositionText(evt: InputEvent) {}
+    fun onInputInsertText(evt: InputEvent) {}
+    fun onInputDeleteContentBackward(evt: InputEvent) {}
 
     // we end up here only if inputType was unprocessed by any of onInput events above
-    fun onInputUnprocessed(evt: InputEventExtended) {}
+    fun onInputUnprocessed(evt: InputEvent) {}
 }
 
 internal class DomInputService(private val backingElement: EventTarget, private val inputListener: DomInputListener)  {
@@ -52,7 +53,7 @@ internal class DomInputService(private val backingElement: EventTarget, private 
         backingElement.addEventListener("compositionend", { inputListener.onCompositionEnd(it as CompositionEvent) })
 
         backingElement.addEventListener("input", { evt ->
-            evt as InputEventExtended
+            evt as InputEvent
 
             when (evt.inputType) {
                 "insertLineBreak" -> inputListener.onInputInsertLineBreak(evt)
@@ -66,7 +67,7 @@ internal class DomInputService(private val backingElement: EventTarget, private 
     }
 }
 
-internal external interface InputEventExtended {
+internal external class InputEvent : Event {
     val inputType: String
     val data: String?
 }

@@ -79,7 +79,7 @@ internal class BackingTextArea(
                 onEditCommand(listOf(CommitTextCommand(evt.data, 1)))
             }
 
-            override fun onInputInsertLineBreak(evt: InputEventExtended) {
+            override fun onInputInsertLineBreak(evt: InputEvent) {
                 if (imeOptions.singleLine) {
                     onImeActionPerformed(imeOptions.imeAction)
                 }
@@ -90,12 +90,12 @@ internal class BackingTextArea(
             This event is used for processing events typed via virtual keyboard
             on mobile devices
              */
-            override fun onInputInsertText(evt: InputEventExtended) {
+            override fun onInputInsertText(evt: InputEvent) {
                 val data = evt.data ?: return
                 onEditCommand(listOf(CommitTextCommand(data, 1)))
             }
 
-            override fun onInputDeleteContentBackward(evt: InputEventExtended) {
+            override fun onInputDeleteContentBackward(evt: InputEvent) {
                 processKeyboardEvent(
                     KeyboardEvent(
                         "keydown",
