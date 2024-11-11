@@ -44,7 +44,7 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 
-val CustomLayersContainerExample = Screen.Example("Custom windowContainerView example") {
+val CustomWindowContainerExample = Screen.Example("Custom windowContainerView example") {
     Box(modifier = Modifier.displayCutoutPadding()) {
         UIKitViewController(
             factory = ::EmbeddedViewController,

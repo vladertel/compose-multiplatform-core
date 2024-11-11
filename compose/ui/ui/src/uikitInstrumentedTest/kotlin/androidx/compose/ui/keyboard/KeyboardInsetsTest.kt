@@ -33,9 +33,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.test.dpRectInWindow
 import androidx.compose.ui.test.runUIKitInstrumentedTest
 import androidx.compose.ui.uikit.OnFocusBehavior
-import androidx.compose.ui.uikit.toDpRect
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.DpSize
@@ -51,7 +51,6 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlin.time.TimeSource.Monotonic.ValueTimeMark
-import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.UIView
 
 class KeyboardInsetsTest {
@@ -332,8 +331,6 @@ class KeyboardInsetsTest {
         }
 }
 
-@OptIn(ExperimentalForeignApi::class)
-private fun UIView.dpRectInWindow() = convertRect(bounds, toView = null).toDpRect()
 private fun<T> List<T>.forEachWithPrevious(block: (T, T) -> Unit) {
     var previous: T? = null
     for (current in this) {
