@@ -18,8 +18,10 @@ package androidx.compose.ui.uikit
 
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.ui.platform.AccessibilitySyncOptions
+import androidx.compose.ui.window.ComposeUIViewController
 import platform.UIKit.UIStatusBarAnimation
 import platform.UIKit.UIStatusBarStyle
+import platform.UIKit.UIView
 import platform.UIKit.UIViewController
 
 /**
@@ -66,6 +68,15 @@ class ComposeUIViewControllerConfiguration {
      * explanation on how to fix the issue.
      */
     var enforceStrictPlistSanityCheck: Boolean = true
+
+    /**
+     * Container view for additional compose layers, used to display full screen overlay interface
+     * elements such as popups or text selection handlers The container view should bb placed on the
+     * same UIWindow as the [ComposeUIViewController].
+     * If not set, the containing UIWindow of the [ComposeUIViewController] is used.
+     */
+    @ExperimentalComposeApi
+    var windowContainerView: UIView? = null
 }
 
 /**

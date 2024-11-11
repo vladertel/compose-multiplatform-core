@@ -32,8 +32,6 @@ import kotlin.math.roundToInt
 import kotlinx.cinterop.useContents
 import platform.UIKit.UIView
 
-private const val LayerFrameKeyPath = "layer.frame"
-
 /**
  * Tracking a state of window.
  */
@@ -45,21 +43,19 @@ internal class PlatformWindowContext {
     /**
      * A container used for additional layers and as reference for window coordinate space.
      */
-    private var windowContainer: UIView? = null
+    var windowContainerView: UIView? = null
+        set(value) {
+            field = value
+            updateWindowContainerSize()
+        }
 
     var isWindowFocused by _windowInfo::isWindowFocused
 
-    fun setWindowContainer(windowContainer: UIView) {
-        this.windowContainer = windowContainer
-
-        updateWindowContainerSize()
-    }
-
     fun updateWindowContainerSize() {
-        val windowContainer = windowContainer ?: return
+        val container = windowContainerView ?: return
 
-        val scale = windowContainer.density.density
-        val size = windowContainer.frame.useContents {
+        val scale = container.density.density
+        val size = container.frame.useContents {
             IntSize(
                 width = (size.width * scale).roundToInt(),
                 height = (size.height * scale).roundToInt()
@@ -70,7 +66,7 @@ internal class PlatformWindowContext {
     }
 
     fun convertLocalToWindowPosition(container: UIView, localPosition: Offset): Offset {
-        val windowContainer = windowContainer ?: return localPosition
+        val windowContainer = this.windowContainerView ?: return localPosition
         return convertPoint(
             point = localPosition,
             fromView = container,
@@ -79,7 +75,7 @@ internal class PlatformWindowContext {
     }
 
     fun convertWindowToLocalPosition(container: UIView, positionInWindow: Offset): Offset {
-        val windowContainer = windowContainer ?: return positionInWindow
+        val windowContainer = this.windowContainerView ?: return positionInWindow
         return convertPoint(
             point = positionInWindow,
             fromView = windowContainer,
@@ -125,7 +121,7 @@ internal class PlatformWindowContext {
      * Converts the given [boundsInWindow] from the coordinate space of the container window to [toView] space.
      */
     fun convertWindowRect(boundsInWindow: Rect, toView: UIView): Rect {
-        val windowContainer = windowContainer ?: return boundsInWindow
+        val windowContainer = windowContainerView ?: return boundsInWindow
         return convertRect(
             rect = boundsInWindow,
             fromView = windowContainer,

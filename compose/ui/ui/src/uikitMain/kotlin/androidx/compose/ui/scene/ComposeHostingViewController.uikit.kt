@@ -183,11 +183,11 @@ internal class ComposeHostingViewController(
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {
-        val windowContainer = window ?: return
+        val windowContainer = configuration.windowContainerView ?: window
 
         updateInterfaceOrientationState()
 
-        windowContext.setWindowContainer(windowContainer)
+        windowContext.windowContainerView = windowContainer
     }
 
     private fun updateInterfaceOrientationState() {
@@ -392,11 +392,12 @@ internal class ComposeHostingViewController(
     }
 
     private fun attachLayer(layer: UIKitComposeSceneLayer) {
-        val window = checkNotNull(view.window) {
-            "Cannot attach layer if the view is not in the window hierarchy"
+        val windowContainer = checkNotNull(windowContext.windowContainerView) {
+            "Cannot attach layer. Either the view is not in the window hierarchy" +
+                " or the window container view is not provided."
         }
 
-        layers.attach(window, layer, hasViewAppeared)
+        layers.attach(windowContainer, layer, hasViewAppeared)
     }
 
     private fun detachLayer(layer: UIKitComposeSceneLayer) {

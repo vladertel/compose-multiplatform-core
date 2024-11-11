@@ -24,7 +24,7 @@ import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
 import org.jetbrains.skia.Canvas
 import platform.UIKit.UIEvent
-import platform.UIKit.UIWindow
+import platform.UIKit.UIView
 
 // TODO: add cross-fade orientation transition like in `ComposeHostingViewController`
 /**
@@ -104,7 +104,7 @@ internal class UIKitComposeSceneLayersHolder {
         view.removeFromSuperview()
     }
 
-    fun attach(window: UIWindow, layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
+    fun attach(containerView: UIView, layer: UIKitComposeSceneLayer, hasViewAppeared: Boolean) {
         val isFirstLayer = layers.isEmpty()
 
         layers.add(layer)
@@ -118,8 +118,8 @@ internal class UIKitComposeSceneLayersHolder {
 
             metalView.setNeedsSynchronousDrawOnNextLayout()
 
-            window.embedSubview(view)
-            window.layoutIfNeeded()
+            containerView.embedSubview(view)
+            containerView.layoutIfNeeded()
         }
 
         if (hasViewAppeared) {
