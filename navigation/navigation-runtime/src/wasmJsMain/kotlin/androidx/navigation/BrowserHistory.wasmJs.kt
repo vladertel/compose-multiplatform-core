@@ -21,15 +21,31 @@ import org.w3c.dom.Window
 /**
  * Binds the browser window state to the given navigation controller.
  *
+ * If `getBackStackEntryRoute` is null, then:
+ *  1) if a browser url contains a destination route on a start then navigates to destination
+ *  2) if a user puts a new destination route to the browser address field then navigates to the new destination
+ *
+ * If there is a custom `getBackStackEntryRoute` implementation,
+ * then we don't have a knowledge how to parse urls to support direct navigation via browser address input.
+ * In that case, it should be done on the app's side:
+ * ```
+ * window.addEventListener("popstate") { event ->
+ *     event as PopStateEvent
+ *     if (event.state == null) { // empty state means manually entered address
+ *         val url = window.location.toString()
+ *         navController.navigate(...)
+ *     }
+ * }
+ * ```
+ *
  * @param navController The [NavController] instance to bind to browser window navigation.
- * @param getBackStackEntryPath An optional function that returns the path to show for a given [NavBackStackEntry].
+ * @param getBackStackEntryRoute An optional function that returns the route to show for a given [NavBackStackEntry].
  */
+@ExperimentalBrowserHistoryApi
 suspend fun Window.bindToNavigation(
     navController: NavController,
-    getBackStackEntryPath: (entry: NavBackStackEntry) -> String = {
-        "/${it.getRouteWithArgs().orEmpty()}"
-    }
+    getBackStackEntryRoute: ((entry: NavBackStackEntry) -> String)? = null
 ) {
     @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-    (this as BrowserWindow).bindToNavigation(navController, getBackStackEntryPath)
+    (this as BrowserWindow).bindToNavigation(navController, getBackStackEntryRoute)
 }

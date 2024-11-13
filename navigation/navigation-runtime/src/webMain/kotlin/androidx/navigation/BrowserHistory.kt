@@ -24,25 +24,43 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 
+@RequiresOptIn(message = "This is an experimental browser API.")
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class ExperimentalBrowserHistoryApi
+
 /**
  * Binds the browser window state to the given navigation controller.
  *
  * @param navController The [NavController] instance to bind to browser window navigation.
- * @param getBackStackEntryPath A function that returns the path to show for a given [NavBackStackEntry].
+ * @param getBackStackEntryRoute A function that returns the route to show for a given [NavBackStackEntry].
  */
+@ExperimentalBrowserHistoryApi
 internal suspend fun BrowserWindow.bindToNavigation(
     navController: NavController,
-    getBackStackEntryPath: (entry: NavBackStackEntry) -> String
+    getBackStackEntryRoute: ((entry: NavBackStackEntry) -> String)?
 ) {
     coroutineScope {
         val localWindow = this@bindToNavigation
-        val appAddress = with(localWindow.location) { origin + pathname }.removeSuffix("/")
-        var initState = true
-        var updateState = true
+        val appAddress = with(localWindow.location) { origin + pathname }
+
+        //initial route
+        if (getBackStackEntryRoute == null) {
+            navController.tryToNavigateToUrlFragment(localWindow)
+        }
 
         launch {
             localWindow.popStateEvents().collect { event ->
-                val state = event.state.toString()
+                val state = event.state
+
+                if (state == null) {
+                    //if user manually put a new address or open a new page, then there is no state
+                    //if there is no route customization we can try to find the route
+                    if (getBackStackEntryRoute == null) {
+                        navController.tryToNavigateToUrlFragment(localWindow)
+                    }
+                    return@collect
+                }
 
                 val restoredRoutes = state.lines()
                 val currentBackStack = navController.currentBackStack.value
@@ -58,9 +76,6 @@ internal suspend fun BrowserWindow.bindToNavigation(
                         commonTail = index
                     }
                 }
-
-                //don't handle next navigation calls
-                updateState = false
 
                 if (commonTail == -1) {
                     //clear full stack
@@ -89,19 +104,36 @@ internal suspend fun BrowserWindow.bindToNavigation(
                 if (entries.isEmpty()) return@collect
                 val routes = entries.map { it.getRouteWithArgs() ?: return@collect }
 
-                val newUri = appAddress + getBackStackEntryPath(entries.last())
+                val currentDestination = entries.last()
+                val currentRoute = if (getBackStackEntryRoute != null) {
+                    getBackStackEntryRoute(currentDestination)
+                } else {
+                    currentDestination.getRouteAsUrlFragment()
+                }
+                val newUri = appAddress + currentRoute
                 val state = routes.joinToString("\n")
 
-
-                if (updateState) {
-                    if (initState) {
+                val currentState = localWindow.history.state
+                when (currentState) {
+                    null -> {
+                        //user manually put a new address or open a new page,
+                        // we need to save the current state in the browser history
                         localWindow.history.replaceState(state, "", newUri)
-                        initState = false
-                    } else {
+                    }
+
+                    state -> {
+                        //this was a restoration of the state (back/forward browser navigation)
+                        //the callback came from the popStateEvents
+                        //the browser state is equal the app state, but we need to update shown uri
+                        localWindow.history.replaceState(state, "", newUri)
+                    }
+
+                    else -> {
+                        //the navigation happened in the compose app,
+                        // we need to push the new state to the browser history
                         localWindow.history.pushState(state, "", newUri)
                     }
                 }
-                updateState = true
             }
         }
     }
@@ -123,30 +155,50 @@ private fun BrowserWindow.popStateEvents(): Flow<BrowserPopStateEvent> = callbac
     }
 }
 
-private val argPlaceholder = Regex("""\{*.\}""")
-internal fun NavBackStackEntry.getRouteWithArgs(): String? {
+private val argPlaceholder = Regex("""\{.*?\}""")
+private fun NavBackStackEntry.getRouteWithArgs(): String? {
     val entry = this
     val route = entry.destination.route ?: return null
     if (!route.contains(argPlaceholder)) return route
     val args = entry.arguments ?: Bundle()
-    val nameToValue = entry.destination.arguments.map { (name, arg) ->
-        val serializedTypeValue = arg.type.serializeAsValue(arg.type[args, name])
-        name to serializedTypeValue
+    val nameToTypedValue = entry.destination.arguments.mapValues { (name, arg) ->
+        arg.type.serializeAsValue(arg.type[args, name])
     }
 
-    val routeWithFilledArgs =
-        nameToValue.fold(initial = route) { acc, (argumentName: String, value: String) ->
-            acc.replace("{$argumentName}", value)
+    val routeWithFilledArgs = route.replace(argPlaceholder) { match ->
+        val key = match.value.trim('{', '}')
+        nameToTypedValue[key] ?: if (args.containsKey(key)) {
+            //untyped args stored as strings
+            //see: androidx.navigation.NavDeepLink.parseArgument
+            args.getString(key)!!
+        } else ""
+    }
+
+    return routeWithFilledArgs
+}
+
+private fun NavBackStackEntry.getRouteAsUrlFragment() =
+    getRouteWithArgs()?.let { r -> "#$r" }.orEmpty()
+
+private fun NavController.tryToNavigateToUrlFragment(localWindow: BrowserWindow) {
+    val route = localWindow.location.hash.substringAfter('#', "")
+    if (route.isNotEmpty()) {
+        try {
+            navigate(route)
+        } catch (e: IllegalArgumentException) {
+            localWindow.console.warn("Can't navigate to '$route'")
         }
-    return routeWithFilledArgs.takeIf { !it.contains(argPlaceholder) }
+    }
 }
 
 internal external interface BrowserLocation {
     val origin: String
     val pathname: String
+    val hash: String
 }
 
 internal external interface BrowserHistory {
+    val state: String?
     fun pushState(data: String?, title: String, url: String?)
     fun replaceState(data: String?, title: String, url: String?)
 }
@@ -164,4 +216,9 @@ internal external interface BrowserEventTarget {
 internal external interface BrowserWindow : BrowserEventTarget {
     val location: BrowserLocation
     val history: BrowserHistory
+    val console: BrowserConsole
+}
+
+internal external interface BrowserConsole {
+    fun warn(msg: String)
 }

@@ -26,7 +26,6 @@ import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.hapticfeedback.CupertinoHapticFeedback
-import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInternalViewModelStoreOwner
 import androidx.compose.ui.platform.PlatformContext
@@ -34,6 +33,7 @@ import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
+import androidx.compose.ui.uikit.LocalUIViewController
 import androidx.compose.ui.uikit.PlistSanityCheck
 import androidx.compose.ui.uikit.density
 import androidx.compose.ui.uikit.embedSubview
@@ -127,23 +127,27 @@ internal class ComposeHostingViewController(
         get() {
             // Modern: https://developer.apple.com/documentation/uikit/uiwindowscene/3198088-interfaceorientation?language=objc
             // Deprecated: https://developer.apple.com/documentation/uikit/uiapplication/1623026-statusbarorientation?language=objc
-            return if (available(OS.Ios to OSVersion(13))) {
-                view.window?.windowScene?.interfaceOrientation?.let {
-                    InterfaceOrientation.getByRawValue(it)
+            return InterfaceOrientation.getByRawValue(
+                if (available(OS.Ios to OSVersion(13))) {
+                    view.window?.windowScene?.interfaceOrientation
+                        ?: UIApplication.sharedApplication.statusBarOrientation
+                } else {
+                    UIApplication.sharedApplication.statusBarOrientation
                 }
-            } else {
-                InterfaceOrientation.getByRawValue(UIApplication.sharedApplication.statusBarOrientation)
-            }
+            )
         }
 
+    @Suppress("DEPRECATION")
     override fun preferredStatusBarStyle(): UIStatusBarStyle =
         configuration.delegate.preferredStatusBarStyle
             ?: super.preferredStatusBarStyle()
 
+    @Suppress("DEPRECATION")
     override fun preferredStatusBarUpdateAnimation(): UIStatusBarAnimation =
         configuration.delegate.preferredStatysBarAnimation
             ?: super.preferredStatusBarUpdateAnimation()
 
+    @Suppress("DEPRECATION")
     override fun prefersStatusBarHidden(): Boolean =
         configuration.delegate.prefersStatusBarHidden
             ?: super.prefersStatusBarHidden()
@@ -152,6 +156,7 @@ internal class ComposeHostingViewController(
         view = rootView
     }
 
+    @Suppress("DEPRECATION")
     override fun viewDidLoad() {
         super.viewDidLoad()
 
@@ -178,17 +183,17 @@ internal class ComposeHostingViewController(
     }
 
     private fun onDidMoveToWindow(window: UIWindow?) {
-        val windowContainer = if (configuration.platformLayers) {
-            window ?: return
-        } else {
-            view
-        }
+        val windowContainer = window ?: return
 
+        updateInterfaceOrientationState()
+
+        windowContext.setWindowContainer(windowContainer)
+    }
+
+    private fun updateInterfaceOrientationState() {
         currentInterfaceOrientation?.let {
             interfaceOrientationState.value = it
         }
-
-        windowContext.setWindowContainer(windowContainer)
     }
 
     override fun viewWillTransitionToSize(
@@ -196,6 +201,8 @@ internal class ComposeHostingViewController(
         withTransitionCoordinator: UIViewControllerTransitionCoordinatorProtocol
     ) {
         super.viewWillTransitionToSize(size, withTransitionCoordinator)
+
+        updateInterfaceOrientationState()
 
         if (isInsideSwiftUI || presentingViewController != null) {
             // SwiftUI will do full layout and scene constraints update on each frame of orientation change animation
@@ -220,6 +227,7 @@ internal class ComposeHostingViewController(
         )
     }
 
+    @Suppress("DEPRECATION")
     override fun viewWillAppear(animated: Boolean) {
         super.viewWillAppear(animated)
 
@@ -230,6 +238,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewWillAppear(animated)
     }
 
+    @Suppress("DEPRECATION")
     override fun viewDidAppear(animated: Boolean) {
         super.viewDidAppear(animated)
         hasViewAppeared = true
@@ -238,6 +247,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewDidAppear(animated)
     }
 
+    @Suppress("DEPRECATION")
     override fun viewWillDisappear(animated: Boolean) {
         super.viewWillDisappear(animated)
         hasViewAppeared = false
@@ -246,6 +256,7 @@ internal class ComposeHostingViewController(
         configuration.delegate.viewWillDisappear(animated)
     }
 
+    @Suppress("DEPRECATION")
     @OptIn(NativeRuntimeApi::class)
     override fun viewDidDisappear(animated: Boolean) {
         super.viewDidDisappear(animated)
@@ -302,30 +313,19 @@ internal class ComposeHostingViewController(
         }
     }
 
-    @OptIn(ExperimentalComposeApi::class)
     private fun createComposeScene(
         invalidate: () -> Unit,
         platformContext: PlatformContext,
         coroutineContext: CoroutineContext,
-    ): ComposeScene = if (configuration.platformLayers) {
-        PlatformLayersComposeScene(
-            density = view.density,
-            layoutDirection = layoutDirection,
-            coroutineContext = coroutineContext,
-            composeSceneContext = createComposeSceneContext(
-                platformContext = platformContext
-            ),
-            invalidate = invalidate,
-        )
-    } else {
-        CanvasLayersComposeScene(
-            density = view.density,
-            layoutDirection = layoutDirection,
-            coroutineContext = coroutineContext,
-            platformContext = platformContext,
-            invalidate = invalidate,
-        )
-    }
+    ): ComposeScene = PlatformLayersComposeScene(
+        density = view.density,
+        layoutDirection = layoutDirection,
+        coroutineContext = coroutineContext,
+        composeSceneContext = createComposeSceneContext(
+            platformContext = platformContext
+        ),
+        invalidate = invalidate,
+    )
 
     private fun createMediatorIfNeeded() {
         if (mediator == null) {
@@ -382,6 +382,7 @@ internal class ComposeHostingViewController(
     }
 
     private fun dispose() {
+        metalView.dispose()
         lifecycleOwner.dispose()
         mediator?.dispose()
         rootView.dispose()

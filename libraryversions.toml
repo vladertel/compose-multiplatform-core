@@ -72,7 +72,7 @@ GLANCE_WEAR_TILES = "1.0.0-alpha06"
 GRAPHICS_CORE = "1.0.0"
 GRAPHICS_FILTERS = "1.0.0-alpha01"
 GRAPHICS_PATH = "1.0.0-rc01"
-GRAPHICS_SHAPES = "1.0.0-rc01"
+GRAPHICS_SHAPES = "1.0.1"
 GRIDLAYOUT = "1.1.0-beta02"
 HEALTH_CONNECT = "1.1.0-alpha10"
 HEALTH_CONNECT_TESTING_QUARANTINE = "1.0.0-alpha01"
@@ -210,7 +210,7 @@ COMPOSE_MATERIAL = { group = "org.jetbrains.compose.material", atomicGroupVersio
 COMPOSE_MATERIAL3 = { group = "org.jetbrains.compose.material3", atomicGroupVersion = "versions.COMPOSE" }
 COMPOSE_MATERIAL3_COMMON = { group = "org.jetbrains.compose.material3.common", atomicGroupVersion = "versions.COMPOSE_MATERIAL3_COMMON", overrideInclude = [ ":compose:material3:material3-common" ] }
 COMPOSE_MATERIAL3_ADAPTIVE = { group = "org.jetbrains.compose.material3.adaptive", atomicGroupVersion = "versions.COMPOSE_MATERIAL3_ADAPTIVE" }
-COMPOSE_MATERIAL3_ADAPTIVE_NAVIGATION_SUITE= { group = "androidx.compose.material3", atomicGroupVersion = "versions.COMPOSE_MATERIAL3", overrideInclude = [ ":compose:material3:material3-adaptive-navigation-suite" ] }
+COMPOSE_MATERIAL3_ADAPTIVE_NAVIGATION_SUITE = { group = "org.jetbrains.androidx.compose.material3", atomicGroupVersion = "versions.COMPOSE_MATERIAL3", overrideInclude = [ ":compose:material3:material3-adaptive-navigation-suite" ] }
 COMPOSE_RUNTIME = { group = "org.jetbrains.compose.runtime", atomicGroupVersion = "versions.COMPOSE" }
 COMPOSE_UI = { group = "org.jetbrains.compose.ui", atomicGroupVersion = "versions.COMPOSE" }
 CONCURRENT = { group = "androidx.concurrent", atomicGroupVersion = "versions.FUTURES" }
@@ -320,6 +320,7 @@ COLLECTION_JETBRAINS = { group = "org.jetbrains.compose.collection-internal", at
 
 CORE_BUNDLE_JETBRAINS = { group = "org.jetbrains.androidx.core", atomicGroupVersion = "versions.CORE_BUNDLE", overrideInclude = [ ":core:core-bundle" ] }
 CORE_URI_JETBRAINS = { group = "org.jetbrains.androidx.core", atomicGroupVersion = "versions.CORE_URI", overrideInclude = [ ":core:core-uri" ] }
+GRAPHICS_SHAPES_JETBRAINS = { group = "org.jetbrains.androidx.graphics", atomicGroupVersion = "versions.GRAPHICS_SHAPES", overrideInclude = [ ":graphics:graphics-shapes" ] }
 SAVEDSTATE_JETBRAINS = { group = "org.jetbrains.androidx.savedstate", atomicGroupVersion = "versions.SAVEDSTATE", overrideInclude = [ ":savedstate:savedstate" ] }
 WINDOW_CORE_JETBRAINS = { group = "org.jetbrains.androidx.window", atomicGroupVersion = "versions.WINDOW", overrideInclude = [ ":window:window-core" ]  }
 
