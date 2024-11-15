@@ -224,11 +224,9 @@ class ContextMenuData(
     val next: ContextMenuData?
 ) {
 
-    internal val allItems: List<ContextMenuItem> by lazy {
-        allItemsSeq.toList()
-    }
+    internal val allItems: List<ContextMenuItem> get() = allItemsSeq.toList()
 
-    internal val allItemsSeq: Sequence<ContextMenuItem>
+    private val allItemsSeq: Sequence<ContextMenuItem>
         get() = sequence {
             yieldAll(items())
             next?.let { yieldAll(it.allItemsSeq) }
