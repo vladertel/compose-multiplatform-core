@@ -42,11 +42,14 @@ internal enum class DesktopPlatform {
          */
         val Current get() = overriddenCurrent ?: _current
 
+        /**
+         * Override [DesktopPlatform.Current] during [body] execution
+         */
         @VisibleForTesting
-        fun withOverriddenCurrent(newCurrent: DesktopPlatform, body: () -> Unit) {
+        inline fun <T> withOverriddenCurrent(newCurrent: DesktopPlatform, body: () -> T): T {
             try {
                 overriddenCurrent = newCurrent
-                body()
+                return body()
             } finally {
                 overriddenCurrent = null
             }
