@@ -43,7 +43,7 @@ internal object GlobalSnapshotManager {
             CoroutineScope(GlobalSnapshotManagerDispatcher).launch {
                 channel.consumeEach {
                     sent.compareAndSet(1, 0)
-                    Snapshot.sendApplyNotifications()
+                    //Snapshot.sendApplyNotifications()
                 }
             }
             Snapshot.registerGlobalWriteObserver {
