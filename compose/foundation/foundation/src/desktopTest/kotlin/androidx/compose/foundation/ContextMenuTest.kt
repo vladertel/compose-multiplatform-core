@@ -39,8 +39,9 @@ import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runComposeUiTest
-import androidx.compose.ui.text.TextRange
 import kotlin.test.assertEquals
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.skiko.MainUIDispatcher
 import org.junit.Test
 
 
@@ -90,6 +91,7 @@ class ContextMenuTest {
     // https://youtrack.jetbrains.com/issue/CMP-7083/Context-menu-on-desktop-shows-incorrect-items-after-the-second-showing
     @Test
     fun `different items for different selections in textfield`() = runContextMenuTest {
+        runBlocking(MainUIDispatcher) {
         val localization = object : PlatformLocalization {
             override val copy = "copy"
             override val cut = "cut"
@@ -115,6 +117,7 @@ class ContextMenuTest {
         onNodeWithText(localization.cut).assertIsNotPlaced()
         onNodeWithText(localization.paste).isDisplayed()
         onNodeWithText(localization.selectAll).isDisplayed()
+        }
     }
 
     private fun runContextMenuTest(block: ComposeUiTest.() -> Unit) = runComposeUiTest {
