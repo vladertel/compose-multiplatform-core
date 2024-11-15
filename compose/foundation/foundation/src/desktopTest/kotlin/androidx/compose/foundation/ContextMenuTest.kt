@@ -40,7 +40,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.text.TextRange
-import kotlin.coroutines.CoroutineContext
+import kotlin.test.assertEquals
 import org.junit.Test
 
 
@@ -83,6 +83,8 @@ class ContextMenuTest {
                 }
             )
         }
+
+        assertEquals(1, childrenCount)
     }
 
     // https://youtrack.jetbrains.com/issue/CMP-7083/Context-menu-on-desktop-shows-incorrect-items-after-the-second-showing
@@ -129,13 +131,6 @@ class ContextMenuTest {
         onNodeWithText(localization.cut).assertIsNotPlaced()
         onNodeWithText(localization.paste).assertIsNotPlaced()
         onNodeWithText(localization.selectAll).assertIsNotPlaced()
-
-        onNodeWithTag("textfield").performTextInputSelection(TextRange(0, "Tex".length))
-        onNodeWithTag("textfield").performMouseInput { rightClick() }
-        onNodeWithText(localization.copy).isDisplayed()
-        onNodeWithText(localization.cut).isDisplayed()
-        onNodeWithText(localization.paste).isDisplayed()
-        onNodeWithText(localization.selectAll).isDisplayed()
     }
 
     private fun runContextMenuTest(block: ComposeUiTest.() -> Unit) = runComposeUiTest {
