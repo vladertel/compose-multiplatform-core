@@ -111,10 +111,13 @@ class ContextMenuTest {
         onNodeWithText(localization.selectAll).assertIsNotPlaced()
 
         Thread.sleep(100)
+            println("Q1")
         onNodeWithTag("textfield").performMouseInput { rightClick() }
+            println("Q2")
         Thread.sleep(100)
         onNodeWithText(localization.copy).assertIsNotPlaced()
         onNodeWithText(localization.cut).assertIsNotPlaced()
+            println("Q3")
         onNodeWithText(localization.paste).isDisplayed()
         onNodeWithText(localization.selectAll).isDisplayed()
         }

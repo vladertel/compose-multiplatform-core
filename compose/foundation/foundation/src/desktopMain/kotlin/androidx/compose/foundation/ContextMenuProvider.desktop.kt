@@ -152,6 +152,7 @@ fun Modifier.contextMenuOpenDetector(
                 val event = awaitEventFirstDown()
                 if (event.buttons.isSecondaryPressed) {
                     event.changes.forEach { it.consume() }
+                    println("contextMenuOpenDetector")
                     onOpen(event.changes[0].position)
                 }
             }

@@ -103,6 +103,8 @@ class DefaultContextMenuRepresentation(
     @Composable
     override fun Representation(state: ContextMenuState, items: () -> List<ContextMenuItem>) {
         val status = state.status
+
+        println("DefaultContextMenuRepresentation $status")
         if (status is ContextMenuState.Status.Open) {
             var focusManager: FocusManager? by mutableStateOf(null)
             var inputModeManager: InputModeManager? by mutableStateOf(null)
@@ -133,6 +135,8 @@ class DefaultContextMenuRepresentation(
                     }
                 },
             ) {
+
+                println("DefaultContextMenuRepresentation Popup")
                 focusManager = LocalFocusManager.current
                 inputModeManager = LocalInputModeManager.current
                 Column(
@@ -145,6 +149,7 @@ class DefaultContextMenuRepresentation(
 
                 ) {
                     items().forEach { item ->
+                        println("DefaultContextMenuRepresentation Popup item ${item.label}")
                         MenuItemContent(
                             itemHoverColor = itemHoverColor,
                             onClick = {
