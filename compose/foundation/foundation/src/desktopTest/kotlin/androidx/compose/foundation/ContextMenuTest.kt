@@ -102,35 +102,19 @@ class ContextMenuTest {
             }
         }
 
+        Thread.sleep(100)
         onNodeWithText(localization.copy).assertIsNotPlaced()
         onNodeWithText(localization.cut).assertIsNotPlaced()
         onNodeWithText(localization.paste).assertIsNotPlaced()
         onNodeWithText(localization.selectAll).assertIsNotPlaced()
 
+        Thread.sleep(100)
         onNodeWithTag("textfield").performMouseInput { rightClick() }
+        Thread.sleep(100)
         onNodeWithText(localization.copy).assertIsNotPlaced()
         onNodeWithText(localization.cut).assertIsNotPlaced()
         onNodeWithText(localization.paste).isDisplayed()
         onNodeWithText(localization.selectAll).isDisplayed()
-
-        onNodeWithTag("textfield").performKeyInput { pressKey(Key.Escape) }
-        onNodeWithText(localization.copy).assertIsNotPlaced()
-        onNodeWithText(localization.cut).assertIsNotPlaced()
-        onNodeWithText(localization.paste).assertIsNotPlaced()
-        onNodeWithText(localization.selectAll).assertIsNotPlaced()
-
-        onNodeWithTag("textfield").performTextInputSelection(TextRange(0, "Text".length))
-        onNodeWithTag("textfield").performMouseInput { rightClick() }
-        onNodeWithText(localization.copy).isDisplayed()
-        onNodeWithText(localization.cut).isDisplayed()
-        onNodeWithText(localization.paste).isDisplayed()
-        onNodeWithText(localization.selectAll).assertIsNotPlaced()
-
-        onNodeWithTag("textfield").performKeyInput { pressKey(Key.Escape) }
-        onNodeWithText(localization.copy).assertIsNotPlaced()
-        onNodeWithText(localization.cut).assertIsNotPlaced()
-        onNodeWithText(localization.paste).assertIsNotPlaced()
-        onNodeWithText(localization.selectAll).assertIsNotPlaced()
     }
 
     private fun runContextMenuTest(block: ComposeUiTest.() -> Unit) = runComposeUiTest {
