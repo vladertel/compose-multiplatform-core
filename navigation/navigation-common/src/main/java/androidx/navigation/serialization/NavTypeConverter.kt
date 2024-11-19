@@ -95,6 +95,12 @@ internal fun SerialDescriptor.getNavType(): NavType<*> {
                     InternalType.FLOAT -> NavType.FloatListType
                     InternalType.LONG -> NavType.LongListType
                     InternalType.STRING -> NavType.StringListType
+                    InternalType.STRING_NULLABLE -> InternalNavType.StringNullableListType
+                    InternalType.ENUM ->
+                        @Suppress("UNCHECKED_CAST")
+                        InternalNavType.EnumListType(
+                            getElementDescriptor(0).getClass() as Class<Enum<*>>
+                        )
                     else -> UNKNOWN
                 }
             }
@@ -430,6 +436,77 @@ internal object InternalNavType {
 
             override fun emptyCollection(): DoubleArray = doubleArrayOf()
         }
+
+    public val DoubleListType: NavType<List<Double>?> =
+        object : CollectionNavType<List<Double>?>(true) {
+            override val name: String
+                get() = "List<Double>"
+
+            override fun put(bundle: Bundle, key: String, value: List<Double>?) {
+                bundle.putDoubleArray(key, value?.toDoubleArray())
+            }
+
+            @Suppress("DEPRECATION")
+            override fun get(bundle: Bundle, key: String): List<Double>? =
+                (bundle[key] as? DoubleArray?)?.toList()
+
+            override fun parseValue(value: String): List<Double> =
+                listOf(DoubleType.parseValue(value))
+
+            override fun parseValue(value: String, previousValue: List<Double>?): List<Double>? =
+                previousValue?.plus(parseValue(value)) ?: parseValue(value)
+
+            override fun valueEquals(value: List<Double>?, other: List<Double>?): Boolean {
+                val valueArray = value?.toTypedArray()
+                val otherArray = other?.toTypedArray()
+                return valueArray.contentDeepEquals(otherArray)
+            }
+
+            override fun serializeAsValues(value: List<Double>?): List<String> =
+                value?.map { it.toString() } ?: emptyList()
+
+            override fun emptyCollection(): List<Double> = emptyList()
+        }
+
+    class EnumListType<D : Enum<*>>(type: Class<D>) : CollectionNavType<List<D>?>(true) {
+        private val enumNavType = EnumType(type)
+
+        override val name: String
+            get() = "List<${enumNavType.name}}>"
+
+        override fun put(bundle: Bundle, key: String, value: List<D>?) {
+            bundle.putSerializable(key, value?.let { ArrayList(value) })
+        }
+
+        @Suppress("DEPRECATION", "UNCHECKED_CAST")
+        override fun get(bundle: Bundle, key: String): List<D>? = (bundle[key] as? List<D>?)
+
+        override fun parseValue(value: String): List<D> = listOf(enumNavType.parseValue(value))
+
+        override fun parseValue(value: String, previousValue: List<D>?): List<D>? =
+            previousValue?.plus(parseValue(value)) ?: parseValue(value)
+
+        override fun valueEquals(value: List<D>?, other: List<D>?): Boolean {
+            val valueArrayList = value?.let { ArrayList(value) }
+            val otherArrayList = other?.let { ArrayList(other) }
+            return valueArrayList == otherArrayList
+        }
+
+        override fun serializeAsValues(value: List<D>?): List<String> =
+            value?.map { it.toString() } ?: emptyList()
+
+        override fun emptyCollection(): List<D> = emptyList()
+
+        public override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is EnumListType<*>) return false
+            return enumNavType == other.enumNavType
+        }
+
+        public override fun hashCode(): Int {
+            return enumNavType.hashCode()
+        }
+    }
 
     class EnumNullableType<D : Enum<*>?>(type: Class<D?>) : SerializableNullableType<D?>(type) {
         private val type: Class<D?>
