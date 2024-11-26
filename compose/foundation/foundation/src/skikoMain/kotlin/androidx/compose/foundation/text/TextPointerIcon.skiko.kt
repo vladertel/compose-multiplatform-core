@@ -18,4 +18,6 @@ package androidx.compose.foundation.text
 
 import androidx.compose.ui.input.pointer.PointerIcon
 
+// TODO Why do we need expect/actual here?
 internal actual val textPointerIcon: PointerIcon = PointerIcon.Text
+internal actual val handwritingPointerIcon: PointerIcon = PointerIcon.Hand

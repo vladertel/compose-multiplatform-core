@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.hapticfeedback
+package androidx.compose.foundation
 
-/**
- * Desktop implementation for [HapticFeedbackType]
- */
-internal actual object PlatformHapticFeedbackType {
-    actual val LongPress: HapticFeedbackType = HapticFeedbackType(0)
-    actual val TextHandleMove: HapticFeedbackType = HapticFeedbackType(9)
-}
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalAccessorScope
+
+@Composable
+internal actual fun rememberPlatformOverscrollEffect(): OverscrollEffect? =
+    null
+
+internal actual fun CompositionLocalAccessorScope.defaultOverscrollFactory(): OverscrollFactory? =
+    null

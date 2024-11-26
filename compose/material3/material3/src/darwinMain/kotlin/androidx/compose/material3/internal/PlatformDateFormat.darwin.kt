@@ -60,11 +60,8 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
         }.stringFromDate(nsDate)
     }
 
-    actual fun parse(
-        date: String,
-        pattern: String
-    ): CalendarDate? {
-
+    actual fun parse(date: String, pattern: String, locale: CalendarLocale): CalendarDate? {
+        // TODO: Use [locale]
         val nsDate = NSDateFormatter().apply {
             setTimeZone(TimeZone.UTC.toNSTimeZone())
             setDateFormat(pattern)

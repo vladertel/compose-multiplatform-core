@@ -23,7 +23,6 @@ import kotlin.js.JsName
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlin.js.JsName
 
 /**
  * InteractionSource represents a stream of [Interaction]s corresponding to events emitted by a

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Android Open Source Project
+ * Copyright 2022 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-package androidx.compose.runtime
+package androidx.collection
 
-@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
-internal actual typealias SynchronizedObject = Any
+/** JVM actual of internal utils for handling target differences in collection code. */
+internal actual object CollectionPlatformUtils {
 
-@PublishedApi
-internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()
+    @Suppress("NOTHING_TO_INLINE")
+    internal actual inline fun createIndexOutOfBoundsException(): IndexOutOfBoundsException {
+        return ArrayIndexOutOfBoundsException()
+    }
+}

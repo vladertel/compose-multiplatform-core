@@ -16,10 +16,16 @@
 
 package androidx.compose.ui
 
+import kotlin.system.getTimeMillis
 import kotlinx.atomicfu.atomic
 
 internal actual fun areObjectsOfSameType(a: Any, b: Any): Boolean {
     return a::class == b::class
+}
+
+internal actual fun currentTimeMillis(): Long {
+    @Suppress("DEPRECATION") // TODO: Avoid using deprecated function
+    return getTimeMillis()
 }
 
 private val threadCounter = atomic(0L)
@@ -28,4 +34,3 @@ private val threadCounter = atomic(0L)
 private var threadId: Long = threadCounter.addAndGet(1)
 
 internal actual fun getCurrentThreadId(): Long = threadId
-

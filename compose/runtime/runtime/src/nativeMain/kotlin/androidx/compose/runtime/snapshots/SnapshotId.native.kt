@@ -29,15 +29,14 @@ actual const val SnapshotIdInvalidValue: SnapshotId = -1
 
 actual inline operator fun SnapshotId.compareTo(other: SnapshotId): Int = this.compareTo(other)
 
-// FIXME: "Conflicting overloads" in case of typealias SnapshotId = Int
-// actual inline operator fun SnapshotId.compareTo(other: Int): Int = this.compareTo(other.toLong())
+actual inline operator fun SnapshotId.compareTo(other: Int): Int = this.compareTo(other.toLong())
 
 actual inline operator fun SnapshotId.plus(other: Int): SnapshotId = this + other.toLong()
 
 actual inline operator fun SnapshotId.minus(other: SnapshotId): SnapshotId = this - other
 
-// FIXME: "Conflicting overloads" in case of typealias SnapshotId = Int
-// actual inline operator fun SnapshotId.minus(other: Int): SnapshotId = this - other.toLong()
+actual inline operator fun SnapshotId.minus(other: Int): SnapshotId = this - other.toLong()
+
 actual inline operator fun SnapshotId.div(other: Int): SnapshotId = this / other.toLong()
 
 actual inline operator fun SnapshotId.times(other: Int): SnapshotId = this * other.toLong()

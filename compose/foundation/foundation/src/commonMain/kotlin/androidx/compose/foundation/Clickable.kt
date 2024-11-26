@@ -504,14 +504,14 @@ internal expect fun DelegatableNode.isComposeRootInScrollableContainer(): Boolea
  * Whether the specified [KeyEvent] should trigger a press for a clickable component, i.e. whether
  * it is associated with a press of an enter key or dpad centre.
  */
-private val KeyEvent.isPress: Boolean
+internal val KeyEvent.isPress: Boolean
     get() = type == KeyDown && isEnter
 
 /**
  * Whether the specified [KeyEvent] should trigger a click for a clickable component, i.e. whether
  * it is associated with a release of an enter key or dpad centre.
  */
-private val KeyEvent.isClick: Boolean
+internal val KeyEvent.isClick: Boolean
     get() = type == KeyUp && isEnter
 
 private val KeyEvent.isEnter: Boolean

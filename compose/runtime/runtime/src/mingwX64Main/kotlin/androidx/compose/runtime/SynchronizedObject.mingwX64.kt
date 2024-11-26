@@ -42,7 +42,7 @@ internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () 
  * Using a posix mutex is [problematic for mingwX64](https://youtrack.jetbrains.com/issue/KT-70449/Posix-declarations-differ-much-for-mingwX64-and-LinuxDarwin-targets),
  * so we just use a simple spin lock for mingwX64 (maybe reconsidered in case of problems).
  */
-internal actual class SynchronizedObject actual constructor() {
+internal actual class SynchronizedObject {
 
     companion object {
         private const val NO_OWNER = -1L
@@ -69,3 +69,5 @@ internal actual class SynchronizedObject actual constructor() {
         }
     }
 }
+
+internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()

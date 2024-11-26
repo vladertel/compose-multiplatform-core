@@ -56,6 +56,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource.Companion.UserI
 import androidx.compose.ui.input.nestedscroll.nestedScrollModifierNode
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
@@ -392,10 +393,6 @@ internal class ScrollableNode(
         contentInViewNode.update(orientation, reverseDirection, bringIntoViewSpec)
         mouseWheelScrollNode?.update(enabled = enabled)
 
-        mouseWheelScrollNode.update(
-            enabled = enabled
-        )
-
         this.overscrollEffect = overscrollEffect
         this.flingBehavior = flingBehavior
 
@@ -562,7 +559,7 @@ object ScrollableDefaults {
         return rememberPlatformOverscrollEffect() ?: NoOpOverscrollEffect
     }
 
-    private object NoOpOverscrollEffect : OverscrollEffect {
+    internal object NoOpOverscrollEffect : OverscrollEffect {
         override fun applyToScroll(
             delta: Offset,
             source: NestedScrollSource,

@@ -140,10 +140,8 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
     }
 
     @OptIn(FormatStringsInDatetimeFormats::class)
-    actual fun parse(
-        date: String,
-        pattern: String
-    ): CalendarDate? {
+    actual fun parse(date: String, pattern: String, locale: CalendarLocale): CalendarDate? {
+        // TODO: Use [locale]
         return try {
             LocalDate.parse(
                 input = date,

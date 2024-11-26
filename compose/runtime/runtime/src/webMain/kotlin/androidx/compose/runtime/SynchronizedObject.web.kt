@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui
+package androidx.compose.runtime
 
-internal actual fun classKeyForObject(a: Any): Any {
-    return a::class
-}
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias SynchronizedObject = Any
+
+@Suppress("NOTHING_TO_INLINE")
+internal actual inline fun makeSynchronizedObject(ref: Any?) = ref ?: SynchronizedObject()
+
+@PublishedApi
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()

@@ -18,31 +18,35 @@
 
 package androidx.compose.runtime.snapshots
 
-import androidx.collection.mutableIntListOf
+import androidx.collection.mutableDoubleListOf
 
-actual typealias SnapshotId = Int
+actual typealias SnapshotId = Double
 
-actual const val SnapshotIdZero: SnapshotId = 0
-actual const val SnapshotIdMax: SnapshotId = Int.MAX_VALUE
-actual const val SnapshotIdSize: Int = Int.SIZE_BITS
-actual const val SnapshotIdInvalidValue: SnapshotId = -1
+actual const val SnapshotIdZero: SnapshotId = 0.0
+actual const val SnapshotIdMax: SnapshotId = Double.MAX_VALUE
+actual const val SnapshotIdSize: Int = Double.SIZE_BITS
+actual const val SnapshotIdInvalidValue: SnapshotId = -1.0
 
 actual inline operator fun SnapshotId.compareTo(other: SnapshotId): Int = this.compareTo(other)
 
-actual inline operator fun SnapshotId.plus(other: Int): SnapshotId = this + other
+actual inline operator fun SnapshotId.compareTo(other: Int): Int = this.compareTo(other.toLong())
+
+actual inline operator fun SnapshotId.plus(other: Int): SnapshotId = this + other.toLong()
 
 actual inline operator fun SnapshotId.minus(other: SnapshotId): SnapshotId = this - other
 
-actual inline operator fun SnapshotId.div(other: Int): SnapshotId = this / other
+actual inline operator fun SnapshotId.minus(other: Int): SnapshotId = this - other.toLong()
 
-actual inline operator fun SnapshotId.times(other: Int): SnapshotId = this * other
+actual inline operator fun SnapshotId.div(other: Int): SnapshotId = this / other.toLong()
 
-actual inline fun SnapshotId.toInt(): Int = this
+actual inline operator fun SnapshotId.times(other: Int): SnapshotId = this * other.toLong()
 
-actual typealias SnapshotIdArray = IntArray
+actual inline fun SnapshotId.toInt(): Int = this.toInt()
+
+actual typealias SnapshotIdArray = DoubleArray
 
 internal actual fun snapshotIdArrayWithCapacity(capacity: Int): SnapshotIdArray =
-    IntArray(capacity)
+    DoubleArray(capacity)
 
 internal actual inline operator fun SnapshotIdArray.get(index: Int): SnapshotId = this[index]
 
@@ -79,7 +83,7 @@ internal actual inline fun SnapshotIdArray.forEach(block: (SnapshotId) -> Unit) 
 
 internal actual fun SnapshotIdArray.withIdInsertedAt(index: Int, id: SnapshotId): SnapshotIdArray {
     val newSize = size + 1
-    val newArray = IntArray(newSize)
+    val newArray = DoubleArray(newSize)
     this.copyInto(destination = newArray, destinationOffset = 0, startIndex = 0, endIndex = index)
     this.copyInto(
         destination = newArray,
@@ -96,7 +100,7 @@ internal actual fun SnapshotIdArray.withIdRemovedAt(index: Int): SnapshotIdArray
     if (newSize == 0) {
         return null
     }
-    val newArray = IntArray(newSize)
+    val newArray = DoubleArray(newSize)
     if (index > 0) {
         this.copyInto(
             destination = newArray,
@@ -117,7 +121,7 @@ internal actual fun SnapshotIdArray.withIdRemovedAt(index: Int): SnapshotIdArray
 }
 
 internal actual class SnapshotIdArrayBuilder actual constructor(array: SnapshotIdArray?) {
-    private val list = array?.let { mutableIntListOf(*array) } ?: mutableIntListOf()
+    private val list = array?.let { mutableDoubleListOf(*array) } ?: mutableDoubleListOf()
 
     actual fun add(id: SnapshotId) {
         list.add(id)
@@ -126,12 +130,12 @@ internal actual class SnapshotIdArrayBuilder actual constructor(array: SnapshotI
     actual fun toArray(): SnapshotIdArray? {
         val size = list.size
         if (size == 0) return null
-        val result = IntArray(size)
+        val result = DoubleArray(size)
         list.forEachIndexed { index, element -> result[index] = element }
         return result
     }
 }
 
-internal actual inline fun snapshotIdArrayOf(id: SnapshotId): SnapshotIdArray = intArrayOf(id)
+internal actual inline fun snapshotIdArrayOf(id: SnapshotId): SnapshotIdArray = doubleArrayOf(id)
 
-internal actual fun Int.toSnapshotId(): SnapshotId = this
+internal actual fun Int.toSnapshotId(): SnapshotId = toDouble()

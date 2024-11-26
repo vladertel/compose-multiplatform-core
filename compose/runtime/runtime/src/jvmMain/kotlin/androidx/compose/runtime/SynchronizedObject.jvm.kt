@@ -19,7 +19,8 @@
 
 package androidx.compose.runtime
 
-internal actual class SynchronizedObject
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias SynchronizedObject = Any
 
 @Suppress("NOTHING_TO_INLINE")
 internal actual inline fun makeSynchronizedObject(ref: Any?) = ref ?: SynchronizedObject()

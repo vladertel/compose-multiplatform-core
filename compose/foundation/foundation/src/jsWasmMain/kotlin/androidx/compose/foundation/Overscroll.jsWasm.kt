@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,20 @@
 package androidx.compose.foundation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalAccessorScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.Velocity
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal actual fun rememberOverscrollEffect(): OverscrollEffect {
-    return remember {
-        JSOverscrollEffect()
-    }
-}
+internal actual fun rememberPlatformOverscrollEffect(): OverscrollEffect? =
+    JSOverscrollEffect()
 
-@OptIn(ExperimentalFoundationApi::class)
-private class JSOverscrollEffect() : OverscrollEffect {
+internal actual fun CompositionLocalAccessorScope.defaultOverscrollFactory(): OverscrollFactory? =
+    null
 
+private class JSOverscrollEffect : OverscrollEffect {
     override fun applyToScroll(
         delta: Offset,
         source: NestedScrollSource,

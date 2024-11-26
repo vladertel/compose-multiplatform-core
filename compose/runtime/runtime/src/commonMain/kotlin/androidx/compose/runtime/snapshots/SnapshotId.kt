@@ -28,15 +28,13 @@ expect val SnapshotIdSize: Int
 
 expect operator fun SnapshotId.compareTo(other: SnapshotId): Int
 
-// FIXME: "Conflicting overloads" in case of typealias SnapshotId = Int
-// expect operator fun SnapshotId.compareTo(other: Int): Int
+expect operator fun SnapshotId.compareTo(other: Int): Int
 
 expect operator fun SnapshotId.plus(other: Int): SnapshotId
 
 expect operator fun SnapshotId.minus(other: SnapshotId): SnapshotId
 
-// FIXME: "Conflicting overloads" in case of typealias SnapshotId = Int
-// expect operator fun SnapshotId.minus(other: Int): SnapshotId
+expect operator fun SnapshotId.minus(other: Int): SnapshotId
 
 expect operator fun SnapshotId.div(other: Int): SnapshotId
 

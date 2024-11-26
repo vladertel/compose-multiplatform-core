@@ -334,6 +334,7 @@ private class OverscrollModifierNode(private var overscrollNode: DelegatableNode
  * [LocalOverscrollFactory]. If [LocalOverscrollFactory] changes, a new [OverscrollEffect] will be
  * returned. Returns `null` if `null` is provided to [LocalOverscrollFactory].
  */
+// TODO: Backward compatibility on Desktop due to file name change
 @Composable
 fun rememberOverscrollEffect(): OverscrollEffect? {
     val overscrollFactory = LocalOverscrollFactory.current ?: return null
