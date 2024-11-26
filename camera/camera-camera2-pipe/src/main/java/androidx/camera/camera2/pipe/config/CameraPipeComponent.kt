@@ -54,8 +54,6 @@ import javax.inject.Singleton
 /** Qualifier for requesting the CameraPipe scoped Context object */
 @Qualifier internal annotation class CameraPipeContext
 
-@Qualifier internal annotation class ForGraphLifecycleManager
-
 @Singleton
 @Component(
     modules =
@@ -69,6 +67,8 @@ internal interface CameraPipeComponent {
     fun cameraGraphComponentBuilder(): CameraGraphComponent.Builder
 
     fun cameras(): CameraDevices
+
+    fun cameraBackends(): CameraBackends
 
     fun cameraSurfaceManager(): CameraSurfaceManager
 

@@ -17,8 +17,8 @@
 package androidx.wear.compose.material3
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Indication
 import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
@@ -78,8 +78,9 @@ import androidx.wear.compose.material3.tokens.ShapeTokens
  * @param onLongClickLabel Semantic / accessibility label for the [onLongClick] action.
  * @param enabled Controls the enabled state of the button. When `false`, this button will not be
  *   clickable.
- * @param shape Defines the icon button's shape. It is strongly recommended to use the default as
- *   this shape is a key characteristic of the Wear Material3 design.
+ * @param shapes Defines the shape for this button. Defaults to a static shape based on
+ *   [IconButtonDefaults.shape], but animated versions are available through
+ *   [IconButtonDefaults.animatedShapes].
  * @param colors [IconButtonColors] that will be used to resolve the background and icon color for
  *   this button in different states.
  * @param border Optional [BorderStroke] for the icon button border.
@@ -88,9 +89,8 @@ import androidx.wear.compose.material3.tokens.ShapeTokens
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content The content displayed on the icon button, expected to be icon or image.
- *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
  */
+// TODO(b/261838497) Add Material3 samples and UX guidance links
 @Composable
 fun IconButton(
     onClick: () -> Unit,
@@ -98,25 +98,27 @@ fun IconButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
     enabled: Boolean = true,
-    shape: Shape = IconButtonDefaults.shape,
+    shapes: IconButtonShapes = IconButtonDefaults.shapes(),
     colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
     border: BorderStroke? = null,
     interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
-) =
-    RoundButton(
+) {
+    IconButtonImpl(
         onClick = onClick,
-        modifier.minimumInteractiveComponentSize().size(IconButtonDefaults.DefaultButtonSize),
+        modifier =
+            modifier.minimumInteractiveComponentSize().size(IconButtonDefaults.DefaultButtonSize),
         onLongClick = onLongClick,
         onLongClickLabel = onLongClickLabel,
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
         interactionSource = interactionSource,
-        shape = shape,
+        shapes = shapes,
         border = { border },
         ripple = ripple(),
         content = provideScopeContent(colors.contentColor(enabled = enabled), content)
     )
+}
 
 /**
  * Wear Material [FilledIconButton] is a circular, icon-only button with a colored background and a
@@ -146,8 +148,9 @@ fun IconButton(
  * @param onLongClickLabel Semantic / accessibility label for the [onLongClick] action.
  * @param enabled Controls the enabled state of the button. When `false`, this button will not be
  *   clickable.
- * @param shape Defines the icon button's shape. It is strongly recommended to use the default as
- *   this shape is a key characteristic of the Wear Material3 design.
+ * @param shapes Defines the shape for this button. Defaults to a static shape based on
+ *   [IconButtonDefaults.shape], but animated versions are available through
+ *   [IconButtonDefaults.animatedShapes].
  * @param colors [IconButtonColors] that will be used to resolve the container and content color for
  *   this icon button in different states.
  * @param border Optional [BorderStroke] for the icon button border.
@@ -156,9 +159,8 @@ fun IconButton(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content The content displayed on the icon button, expected to be icon or image.
- *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
  */
+// TODO(b/261838497) Add Material3 samples and UX guidance links
 @Composable
 fun FilledIconButton(
     onClick: () -> Unit,
@@ -166,13 +168,13 @@ fun FilledIconButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
     enabled: Boolean = true,
-    shape: Shape = IconButtonDefaults.shape,
+    shapes: IconButtonShapes = IconButtonDefaults.shapes(),
     colors: IconButtonColors = IconButtonDefaults.filledIconButtonColors(),
     border: BorderStroke? = null,
     interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
-) =
-    RoundButton(
+) {
+    IconButtonImpl(
         onClick = onClick,
         modifier =
             modifier.minimumInteractiveComponentSize().size(IconButtonDefaults.DefaultButtonSize),
@@ -181,11 +183,12 @@ fun FilledIconButton(
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
         interactionSource = interactionSource,
-        shape = shape,
+        shapes = shapes,
         border = { border },
         ripple = ripple(),
         content = provideScopeContent(colors.contentColor(enabled = enabled), content)
     )
+}
 
 /**
  * Wear Material [FilledTonalIconButton] is a circular, icon-only button with a muted, colored
@@ -215,8 +218,9 @@ fun FilledIconButton(
  * @param onLongClickLabel Semantic / accessibility label for the [onLongClick] action.
  * @param enabled Controls the enabled state of the button. When `false`, this button will not be
  *   clickable.
- * @param shape Defines the icon button's shape. It is strongly recommended to use the default as
- *   this shape is a key characteristic of the Wear Material3 design.
+ * @param shapes Defines the shape for this button. Defaults to a static shape based on
+ *   [IconButtonDefaults.shape], but animated versions are available through
+ *   [IconButtonDefaults.animatedShapes].
  * @param colors [IconButtonColors] that will be used to resolve the background and icon color for
  *   this button in different states.
  * @param border Optional [BorderStroke] for the icon button border.
@@ -225,9 +229,8 @@ fun FilledIconButton(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content The content displayed on the icon button, expected to be icon or image.
- *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
  */
+// TODO(b/261838497) Add Material3 samples and UX guidance links
 @Composable
 fun FilledTonalIconButton(
     onClick: () -> Unit,
@@ -235,13 +238,13 @@ fun FilledTonalIconButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
     enabled: Boolean = true,
-    shape: Shape = IconButtonDefaults.shape,
+    shapes: IconButtonShapes = IconButtonDefaults.shapes(),
     colors: IconButtonColors = IconButtonDefaults.filledTonalIconButtonColors(),
     border: BorderStroke? = null,
     interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
-) =
-    RoundButton(
+) {
+    IconButtonImpl(
         onClick = onClick,
         modifier =
             modifier.minimumInteractiveComponentSize().size(IconButtonDefaults.DefaultButtonSize),
@@ -250,11 +253,12 @@ fun FilledTonalIconButton(
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
         interactionSource = interactionSource,
-        shape = shape,
+        shapes = shapes,
         border = { border },
         ripple = ripple(),
         content = provideScopeContent(colors.contentColor(enabled = enabled), content)
     )
+}
 
 /**
  * Wear Material [OutlinedIconButton] is a circular, icon-only button with a transparent background,
@@ -287,8 +291,9 @@ fun FilledTonalIconButton(
  * @param onLongClickLabel Semantic / accessibility label for the [onLongClick] action.
  * @param enabled Controls the enabled state of the button. When `false`, this button will not be
  *   clickable.
- * @param shape Defines the icon button's shape. It is strongly recommended to use the default as
- *   this shape is a key characteristic of the Wear Material3 design.
+ * @param shapes Defines the shape for this button. Defaults to a static shape based on
+ *   [IconButtonDefaults.shape], but animated versions are available through
+ *   [IconButtonDefaults.animatedShapes].
  * @param colors [IconButtonColors] that will be used to resolve the background and icon color for
  *   this button in different states. See [IconButtonDefaults.outlinedIconButtonColors].
  * @param border Optional [BorderStroke] for the icon button
@@ -298,9 +303,8 @@ fun FilledTonalIconButton(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content The content displayed on the icon button, expected to be icon or image.
- *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
  */
+// TODO(b/261838497) Add Material3 samples and UX guidance links
 @Composable
 fun OutlinedIconButton(
     onClick: () -> Unit,
@@ -308,13 +312,13 @@ fun OutlinedIconButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
     enabled: Boolean = true,
-    shape: Shape = IconButtonDefaults.shape,
+    shapes: IconButtonShapes = IconButtonDefaults.shapes(),
     colors: IconButtonColors = IconButtonDefaults.outlinedIconButtonColors(),
     border: BorderStroke? = ButtonDefaults.outlinedButtonBorder(enabled),
     interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
-) =
-    RoundButton(
+) {
+    IconButtonImpl(
         onClick = onClick,
         modifier =
             modifier.minimumInteractiveComponentSize().size(IconButtonDefaults.DefaultButtonSize),
@@ -323,11 +327,50 @@ fun OutlinedIconButton(
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
         interactionSource = interactionSource,
-        shape = shape,
+        shapes = shapes,
         border = { border },
         ripple = ripple(),
         content = provideScopeContent(colors.contentColor(enabled = enabled), content)
     )
+}
+
+@Composable
+internal fun IconButtonImpl(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    onLongClick: (() -> Unit)?,
+    onLongClickLabel: String?,
+    enabled: Boolean,
+    backgroundColor: @Composable (enabled: Boolean) -> Color,
+    interactionSource: MutableInteractionSource?,
+    shapes: IconButtonShapes,
+    border: @Composable (enabled: Boolean) -> BorderStroke?,
+    ripple: Indication,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val (finalShape, finalInteractionSource) =
+        animateButtonShape(
+            defaultShape = shapes.shape,
+            pressedShape = shapes.pressed,
+            onPressAnimationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+            onReleaseAnimationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+            interactionSource = interactionSource
+        )
+
+    RoundButton(
+        onClick,
+        modifier,
+        onLongClick,
+        onLongClickLabel,
+        enabled,
+        backgroundColor,
+        finalInteractionSource,
+        finalShape,
+        border,
+        ripple,
+        content
+    )
+}
 
 /** Contains the default values used by [IconButton]. */
 object IconButtonDefaults {
@@ -343,21 +386,37 @@ object IconButtonDefaults {
     val disabledImageOpacity = DisabledContentAlpha
 
     /**
+     * Creates a [IconButtonShapes] with a static [shape].
+     *
+     * @param shape The normal shape of the IconButton.
+     */
+    @Composable
+    fun shapes(
+        shape: Shape = IconButtonDefaults.shape,
+    ): IconButtonShapes = IconButtonShapes(shape = shape)
+
+    /**
      * Creates a [Shape] with a animation between two CornerBasedShapes.
      *
      * A simple icon button using the default colors, animated when pressed.
      *
      * @sample androidx.wear.compose.material3.samples.IconButtonWithCornerAnimationSample
-     * @param interactionSource the interaction source applied to the Button.
+     *
+     * A simple icon toggle button using the default colors, animated when pressed.
+     *
+     * @sample androidx.wear.compose.material3.samples.IconToggleButtonSample
      * @param shape The normal shape of the IconButton.
      * @param pressedShape The pressed shape of the IconButton.
      */
     @Composable
-    fun animatedShape(
-        interactionSource: InteractionSource,
+    fun animatedShapes(
         shape: CornerBasedShape = IconButtonDefaults.shape,
         pressedShape: CornerBasedShape = IconButtonDefaults.pressedShape,
-    ) = animatedPressedButtonShape(interactionSource, shape, pressedShape)
+    ): IconButtonShapes =
+        IconButtonShapes(
+            shape = shape,
+            pressed = pressedShape,
+        )
 
     /**
      * Recommended icon size for a given icon button size.
@@ -699,12 +758,19 @@ constructor(
     val disabledContainerColor: Color,
     val disabledContentColor: Color,
 ) {
-
-    internal fun copy(
-        containerColor: Color,
-        contentColor: Color,
-        disabledContainerColor: Color,
-        disabledContentColor: Color
+    /**
+     * Returns a copy of this [IconButtonColors], optionally overriding some of the values.
+     *
+     * @param containerColor the background color of this icon button when enabled.
+     * @param contentColor the color of this icon when enabled.
+     * @param disabledContainerColor the background color of this icon button when not enabled.
+     * @param disabledContentColor the color of this icon when not enabled.
+     */
+    fun copy(
+        containerColor: Color = this.containerColor,
+        contentColor: Color = this.contentColor,
+        disabledContainerColor: Color = this.disabledContainerColor,
+        disabledContentColor: Color = this.disabledContentColor
     ) =
         IconButtonColors(
             containerColor = containerColor.takeOrElse { this.containerColor },
@@ -751,6 +817,41 @@ constructor(
         result = 31 * result + contentColor.hashCode()
         result = 31 * result + disabledContainerColor.hashCode()
         result = 31 * result + disabledContentColor.hashCode()
+
+        return result
+    }
+}
+
+/**
+ * Represents the shapes used for [IconButton] in various states.
+ *
+ * If [pressed] is non null the shape will be animated on press.
+ *
+ * @param shape the shape of the icon button when enabled
+ * @param pressed the shape of the icon button when pressed
+ */
+class IconButtonShapes(
+    val shape: Shape,
+    val pressed: Shape? = null,
+) {
+    fun copy(
+        default: Shape = this.shape,
+        pressed: Shape? = this.pressed,
+    ) = IconButtonShapes(default, pressed)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || other !is IconButtonShapes) return false
+
+        if (shape != other.shape) return false
+        if (pressed != other.pressed) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = shape.hashCode()
+        result = 31 * result + pressed.hashCode()
 
         return result
     }

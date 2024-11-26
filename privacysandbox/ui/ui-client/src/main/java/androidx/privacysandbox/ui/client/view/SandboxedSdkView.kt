@@ -32,6 +32,7 @@ import android.view.ViewParent
 import android.view.ViewTreeObserver
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
+import androidx.core.util.Consumer
 import androidx.customview.poolingcontainer.PoolingContainerListener
 import androidx.customview.poolingcontainer.addPoolingContainerListener
 import androidx.customview.poolingcontainer.isPoolingContainer
@@ -41,6 +42,7 @@ import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState.Active
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState.Idle
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState.Loading
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.privacysandbox.ui.core.SandboxedUiAdapter.SessionClient
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.min
 
@@ -96,6 +98,16 @@ sealed class SandboxedSdkUiSessionState private constructor() {
     class Error(val throwable: Throwable) : SandboxedSdkUiSessionState()
 }
 
+/** A type of client that may get refresh requests (to re-establish a session) */
+internal interface RefreshableSessionClient : SessionClient {
+    /**
+     * Called when the provider of content wants to refresh the ui session it holds.
+     *
+     * @param callback delivers success/failure of the refresh
+     */
+    fun onSessionRefreshRequested(callback: Consumer<Boolean>)
+}
+
 class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
     ViewGroup(context, attrs) {
 
@@ -121,14 +133,16 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
 
     private var adapter: SandboxedUiAdapter? = null
     private var client: Client? = null
+    private var clientSecondary: Client? = null
     private var isZOrderOnTop = true
     private var contentView: View? = null
+    private var refreshCallback: Consumer<Boolean>? = null
     private var requestedWidth = -1
     private var requestedHeight = -1
     private var isTransitionGroupSet = false
     private var windowInputToken: IBinder? = null
-    private var previousWidth = -1
-    private var previousHeight = -1
+    private var previousChildWidth = -1
+    private var previousChildHeight = -1
     private var currentClippingBounds = Rect()
     internal val stateListenerManager: StateListenerManager = StateListenerManager()
     private var viewContainingPoolingContainerListener: View? = null
@@ -205,27 +219,43 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         return false
     }
 
-    private fun checkClientOpenSession() {
+    private fun checkClientOpenSession(
+        isSecondary: Boolean = false,
+        callback: Consumer<Boolean>? = null
+    ) {
         val adapter = adapter
         if (
-            client == null &&
-                adapter != null &&
+            adapter != null &&
                 windowInputToken != null &&
                 width > 0 &&
                 height > 0 &&
                 windowVisibility == View.VISIBLE
         ) {
-            stateListenerManager.currentUiSessionState = SandboxedSdkUiSessionState.Loading
-            client = Client(this)
-            adapter.openSession(
-                context,
-                windowInputToken!!,
-                width,
-                height,
-                isZOrderOnTop,
-                handler::post,
-                client!!
-            )
+            if (client == null && !isSecondary) {
+                stateListenerManager.currentUiSessionState = SandboxedSdkUiSessionState.Loading
+                client = Client(this)
+                adapter.openSession(
+                    context,
+                    windowInputToken!!,
+                    width,
+                    height,
+                    isZOrderOnTop,
+                    handler::post,
+                    client!!
+                )
+            } else if (client != null && isSecondary) {
+                clientSecondary = Client(this)
+                this.refreshCallback = callback
+                adapter.openSession(
+                    context,
+                    windowInputToken!!,
+                    width,
+                    height,
+                    isZOrderOnTop,
+                    handler::post,
+                    clientSecondary!!
+                )
+            }
         }
     }
 
@@ -269,11 +299,7 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         this.contentView = contentView
         removeContentView()
 
-        if (contentView.layoutParams == null) {
-            super.addView(contentView, 0, generateDefaultLayoutParams())
-        } else {
-            super.addView(contentView, 0, contentView.layoutParams)
-        }
+        super.addView(contentView, 0, generateDefaultLayoutParams())
 
         // Wait for the next frame commit before sending an ACTIVE state change to listeners.
         CompatImpl.registerFrameCommitCallback(viewTreeObserver, frameCommitCallback)
@@ -344,25 +370,30 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         if (this.isWithinPoolingContainer) {
             attachPoolingContainerListener()
         }
-        // We will not call client?.notifyResized for the first onLayout call
-        // and the case in which the width and the height remain unchanged.
-        if (
-            (previousWidth != (right - left) || previousHeight != (bottom - top)) &&
-                (previousWidth != -1 && previousHeight != -1)
-        ) {
-            client?.notifyResized(right - left, bottom - top)
-        } else {
-            // Child needs to receive coordinates that are relative to the parent.
-            getChildAt(0)
-                ?.layout(
-                    /* left = */ 0,
-                    /* top = */ 0,
-                    /* right = */ right - left,
-                    /* bottom = */ bottom - top
+        val childView = getChildAt(0)
+        if (childView != null) {
+            val childWidth = Math.max(0, width - paddingLeft - paddingRight)
+            val childHeight = Math.max(0, height - paddingTop - paddingBottom)
+            // We will not call client?.notifyResized for the first onLayout call
+            // and the case in which the width and the height remain unchanged.
+            if (
+                previousChildHeight != -1 &&
+                    previousChildWidth != -1 &&
+                    (childWidth != previousChildWidth || childHeight != previousChildHeight)
+            ) {
+                client?.notifyResized(childWidth, childHeight)
+            } else {
+                // Child needs to receive coordinates that are relative to the parent.
+                childView.layout(
+                    /* left = */ paddingLeft,
+                    /* top = */ paddingTop,
+                    /* right = */ paddingLeft + childWidth,
+                    /* bottom = */ paddingTop + childHeight
                 )
+            }
+            previousChildHeight = childHeight
+            previousChildWidth = childWidth
         }
-        previousHeight = height
-        previousWidth = width
         checkClientOpenSession()
         signalMeasurer?.maybeSendSignals()
     }
@@ -491,8 +522,13 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
         super.removeView(surfaceView)
     }
 
+    /**
+     * A SandboxedSdkView may have one active primary client and a secondary client with which a
+     * session is being formed. Once [Client.onSessionOpened] is received on the secondaryClient we
+     * close the session with the primary client and promote the secondary to the primary client.
+     */
     internal class Client(private var sandboxedSdkView: SandboxedSdkView?) :
-        SandboxedUiAdapter.SessionClient {
+        RefreshableSessionClient {
 
         private var session: SandboxedUiAdapter.Session? = null
         private var pendingWidth: Int? = null
@@ -543,6 +579,10 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
                 return
             }
             val view = checkNotNull(sandboxedSdkView) { "SandboxedSdkView should not be null" }
+            if (this === view.clientSecondary) {
+                view.switchClient()
+                view.refreshCallback?.accept(true)
+            }
             view.setContentView(session.view)
             this.session = session
             val width = pendingWidth
@@ -561,14 +601,33 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
 
         override fun onSessionError(throwable: Throwable) {
             if (sandboxedSdkView == null) return
-
-            sandboxedSdkView?.onClientClosedSession(throwable)
+            sandboxedSdkView?.let { view ->
+                if (this == view.clientSecondary) {
+                    view.clientSecondary = null
+                    view.refreshCallback?.accept(false)
+                } else {
+                    view.onClientClosedSession(throwable)
+                }
+            }
         }
 
         override fun onResizeRequested(width: Int, height: Int) {
             if (sandboxedSdkView == null) return
             sandboxedSdkView?.requestResize(width, height)
         }
+
+        override fun onSessionRefreshRequested(callback: Consumer<Boolean>) {
+            sandboxedSdkView?.checkClientOpenSession(true, callback)
+        }
+    }
+
+    private fun switchClient() {
+        if (this.clientSecondary == null) {
+            throw java.lang.IllegalStateException("secondary client must be non null for switch")
+        }
+        // close session with primary client
+        this.client?.close()
+        this.client = this.clientSecondary
     }
 
     internal class StateListenerManager {
@@ -656,7 +715,11 @@ class SandboxedSdkView @JvmOverloads constructor(context: Context, attrs: Attrib
                 checkNotNull(contentView)
                 check(isAttachedToWindow)
 
-                val surfaceView: SurfaceView = contentView as SurfaceView
+                val surfaceView: SurfaceView? = contentView as? SurfaceView
+                // TODO(b/339377737): Remove the need for this check with better listener handling.
+                if (surfaceView?.surfaceControl == null) {
+                    return
+                }
                 val attachedSurfaceControl =
                     checkNotNull(surfaceView.rootSurfaceControl) {
                         "attachedSurfaceControl should be non-null if the window is attached"

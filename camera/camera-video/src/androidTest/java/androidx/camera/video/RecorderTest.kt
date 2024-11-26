@@ -72,12 +72,14 @@ import androidx.camera.video.VideoOutput.SourceState.INACTIVE
 import androidx.camera.video.VideoRecordEvent.Finalize
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_DURATION_LIMIT_REACHED
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_FILE_SIZE_LIMIT_REACHED
+import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_INSUFFICIENT_STORAGE
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_INVALID_OUTPUT_OPTIONS
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_NO_VALID_DATA
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_RECORDER_ERROR
 import androidx.camera.video.VideoRecordEvent.Finalize.ERROR_SOURCE_INACTIVE
 import androidx.camera.video.VideoRecordEvent.Pause
 import androidx.camera.video.VideoRecordEvent.Resume
+import androidx.camera.video.internal.OutputStorage
 import androidx.camera.video.internal.compat.quirk.DeactivateEncoderSurfaceBeforeStopEncoderQuirk
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks
 import androidx.camera.video.internal.compat.quirk.ExtraSupportedResolutionQuirk
@@ -185,6 +187,12 @@ class RecorderTest(
 
     @Before
     fun setUp() {
+        // Skip for b/264902324
+        assumeFalse(
+            "Emulator API 30 crashes running this test.",
+            Build.VERSION.SDK_INT == 30 && isEmulator()
+        )
+
         assumeTrue(CameraUtil.hasCameraWithLensFacing(CameraSelector.LENS_FACING_BACK))
         // Skip for b/168175357, b/233661493
         assumeFalse(
@@ -314,6 +322,15 @@ class RecorderTest(
     fun canRecordToFile() {
         // Arrange.
         val outputOptions = createFileOutputOptions()
+
+        // Act & Assert.
+        recordingSession.createRecording(outputOptions = outputOptions).recordAndVerify()
+    }
+
+    @Test
+    fun canRecordToNonExistFile() {
+        // Arrange.
+        val outputOptions = createFileOutputOptions(createTempFile().apply { delete() })
 
         // Act & Assert.
         recordingSession.createRecording(outputOptions = outputOptions).recordAndVerify()
@@ -993,6 +1010,70 @@ class RecorderTest(
             .isEqualTo(MediaRecorder.AudioSource.VOICE_RECOGNITION)
     }
 
+    @Test
+    fun insufficientStorageWhenRecording_shouldFailWithInsufficientStorageError() {
+        // Arrange.
+        val storageAvailableBytes = 100L * 1024L * 1024L // 100MB
+        // Required size is larger than storage size.
+        val requiredFreeStorageBytes = storageAvailableBytes + 10L
+        val outputStorageFactory =
+            object : OutputStorage.Factory {
+                override fun create(outputOptions: OutputOptions): OutputStorage =
+                    object : OutputStorage {
+                        override fun getOutputOptions(): OutputOptions = outputOptions
+
+                        override fun getAvailableBytes(): Long = storageAvailableBytes
+                    }
+            }
+        val recorder =
+            createRecorder(
+                outputStorageFactory = outputStorageFactory,
+                requiredFreeStorageBytes = requiredFreeStorageBytes
+            )
+        val recording = recordingSession.createRecording(recorder = recorder)
+
+        // Act and verify.
+        val result = recording.start().verifyFinalize(error = ERROR_INSUFFICIENT_STORAGE)
+        // Video is not saved.
+        assertThat(result.uri).isEqualTo(Uri.EMPTY)
+    }
+
+    @Test
+    fun insufficientStorageDuringRecording_shouldFailWithInsufficientStorageError() {
+        // Arrange.
+        var storageAvailableBytes = 100L * 1024L * 1024L // 100MB
+        // Required size is less than storage size.
+        val requiredFreeStorageBytes = storageAvailableBytes - 10L
+        val outputStorageFactory =
+            object : OutputStorage.Factory {
+                override fun create(outputOptions: OutputOptions): OutputStorage =
+                    object : OutputStorage {
+                        override fun getOutputOptions(): OutputOptions = outputOptions
+
+                        override fun getAvailableBytes(): Long = storageAvailableBytes
+                    }
+            }
+        val recorder =
+            createRecorder(
+                outputStorageFactory = outputStorageFactory,
+                requiredFreeStorageBytes = requiredFreeStorageBytes
+            )
+        val recording = recordingSession.createRecording(recorder = recorder)
+
+        // Act.
+        recording.startAndVerify(statusCount = 3)
+        // Reduce the storage size to be less than requiredFreeStorageBytes.
+        storageAvailableBytes = requiredFreeStorageBytes - 10L
+        // Since the recorded bytes will over the difference between "storageAvailableBytes" and
+        // "requiredFreeStorageBytes" (i.e. 10 bytes), it will refresh and check the new
+        // storageAvailableBytes when receiving an encoded video data.
+
+        // Verify.
+        val result = recording.verifyFinalize(error = ERROR_INSUFFICIENT_STORAGE)
+        // Video is saved.
+        assertThat(result.uri).isNotEqualTo(Uri.EMPTY)
+    }
+
     private fun testRecorderIsConfiguredBasedOnTargetVideoEncodingBitrate(targetBitrate: Int) {
         // Arrange.
         val recorder = createRecorder(targetBitrate = targetBitrate)
@@ -1027,10 +1108,12 @@ class RecorderTest(
         executor: Executor? = null,
         videoEncoderFactory: EncoderFactory? = null,
         audioEncoderFactory: EncoderFactory? = null,
+        outputStorageFactory: OutputStorage.Factory? = null,
         targetBitrate: Int? = null,
         retrySetupVideoMaxCount: Int? = null,
         retrySetupVideoDelayMs: Long? = null,
         audioSource: Int? = null,
+        requiredFreeStorageBytes: Long? = null,
     ): Recorder {
         val recorder =
             Recorder.Builder()
@@ -1040,8 +1123,10 @@ class RecorderTest(
                     executor?.let { setExecutor(it) }
                     videoEncoderFactory?.let { setVideoEncoderFactory(it) }
                     audioEncoderFactory?.let { setAudioEncoderFactory(it) }
+                    outputStorageFactory?.let { setOutputStorageFactory(it) }
                     targetBitrate?.let { setTargetVideoEncodingBitRate(it) }
                     audioSource?.let { setAudioSource(it) }
+                    requiredFreeStorageBytes?.let { setRequiredFreeStorageBytes(it) }
                 }
                 .build()
                 .apply {

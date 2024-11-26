@@ -58,19 +58,22 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import androidx.wear.compose.foundation.lazy.LazyColumnLayoutInfo
-import androidx.wear.compose.foundation.lazy.LazyColumnState
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 import androidx.wear.compose.foundation.lazy.ScalingLazyListItemInfo
 import androidx.wear.compose.foundation.lazy.ScalingLazyListLayoutInfo
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnLayoutInfo
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import androidx.wear.compose.foundation.lazy.inverseLerp
 import androidx.wear.compose.material3.ScrollIndicatorDefaults.maxSizeFraction
 import androidx.wear.compose.material3.ScrollIndicatorDefaults.minSizeFraction
 import androidx.wear.compose.materialcore.isRoundDevice
+import androidx.wear.compose.materialcore.toRadians
 import kotlin.math.asin
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -170,13 +173,13 @@ fun ScrollIndicator(
 
 @Composable
 fun ScrollIndicator(
-    state: LazyColumnState,
+    state: TransformingLazyColumnState,
     modifier: Modifier = Modifier,
     reverseDirection: Boolean = false,
     positionAnimationSpec: AnimationSpec<Float> = ScrollIndicatorDefaults.PositionAnimationSpec
 ) =
     IndicatorImpl(
-        state = WearLazyColumnStateAdapter(state = state),
+        state = TransformingLazyColumnStateAdapter(state = state),
         indicatorHeight = ScrollIndicatorDefaults.indicatorHeight,
         indicatorWidth = ScrollIndicatorDefaults.indicatorWidth,
         paddingHorizontal = ScrollIndicatorDefaults.edgePadding,
@@ -415,7 +418,7 @@ internal fun IndicatorImpl(
                 val paddingHorizontalPx = paddingHorizontal.toPx()
                 onDrawWithContent {
                     if (isScreenRound) {
-                        val gapHeight = 2.dp
+                        val gapHeight = 1.dp
 
                         drawCurvedIndicator(
                             screenWidthDp.toPx(),
@@ -635,12 +638,13 @@ internal class ScalingLazyColumnStateAdapter(private val state: ScalingLazyListS
 
 /**
  * An implementation of [IndicatorState] to display the amount and position of a
- * [androidx.compose.foundation.lazy.LazyColumn] component via its [LazyColumnState].
+ * [TransformingLazyColumn] component via its [TransformingLazyColumnState].
  *
- * @param state the [LazyColumnState] to adapt.
+ * @param state the [TransformingLazyColumnState] to adapt.
  * @VisibleForTesting
  */
-internal class WearLazyColumnStateAdapter(private val state: LazyColumnState) : IndicatorState {
+internal class TransformingLazyColumnStateAdapter(private val state: TransformingLazyColumnState) :
+    IndicatorState {
     private var latestSizeFraction: Float = 0f
     private var previousItemsCount: Int = 0
 
@@ -690,26 +694,27 @@ internal class WearLazyColumnStateAdapter(private val state: LazyColumnState) : 
     }
 
     override fun equals(other: Any?): Boolean {
-        return (other as? WearLazyColumnStateAdapter)?.state == state
+        return (other as? TransformingLazyColumnStateAdapter)?.state == state
     }
 
-    private fun LazyColumnLayoutInfo.decimalLastItemIndex(): Float =
+    private fun TransformingLazyColumnLayoutInfo.decimalLastItemIndex(): Float =
         visibleItems.lastOrNull()?.let { lastItem ->
             // Coerce item sizes to at least 1 to avoid divide by zero for zero height items.
             val lastItemVisibleSize =
                 (viewportSize.height - lastItem.offset)
-                    .coerceAtMost(lastItem.height)
+                    .coerceAtMost(lastItem.transformedHeight)
                     .coerceAtLeast(0)
             return lastItem.index.toFloat() +
-                lastItemVisibleSize.toFloat() / lastItem.height.coerceAtLeast(1).toFloat()
+                lastItemVisibleSize.toFloat() /
+                    lastItem.transformedHeight.coerceAtLeast(1).toFloat()
         } ?: 0f
 
-    private fun LazyColumnLayoutInfo.decimalFirstItemIndex(): Float =
+    private fun TransformingLazyColumnLayoutInfo.decimalFirstItemIndex(): Float =
         visibleItems.firstOrNull()?.let { firstItem ->
             // Coerce item size to at least 1 to avoid divide by zero for zero height items.
             return firstItem.index.toFloat() -
                 firstItem.offset.coerceAtMost(0).toFloat() /
-                    firstItem.height.coerceAtLeast(1).toFloat()
+                    firstItem.transformedHeight.coerceAtLeast(1).toFloat()
         } ?: 0f
 }
 
@@ -798,6 +803,45 @@ internal class LazyColumnStateAdapter(private val state: LazyListState) : Indica
     }
 }
 
+private fun ContentDrawScope.drawCurvedIndicatorSegment(
+    startAngle: Float,
+    sweep: Float,
+    radius: Float,
+    color: Color,
+    arcSize: Size,
+    arcTopLeft: Offset,
+    indicatorWidthPx: Float,
+    gapSweep: Float,
+) {
+    if (sweep <= gapSweep) {
+        // Draw a small indicator.
+        val angle = (startAngle + sweep / 2f).toRadians()
+        val indicatorRadiusFraction = inverseLerp(0f, gapSweep, sweep)
+        val indicatorRadius = lerp(0f, indicatorWidthPx / 2, indicatorRadiusFraction)
+        val colorWithAlpha = color.copy(alpha = color.alpha * indicatorRadiusFraction)
+        drawCircle(
+            color = colorWithAlpha,
+            radius = indicatorRadius,
+            center =
+                Offset(
+                    arcTopLeft.x + radius + radius * cos(angle),
+                    arcTopLeft.y + radius + radius * sin(angle)
+                )
+        )
+    } else {
+        // Draw indicator arc.
+        drawArc(
+            color = color,
+            startAngle = startAngle + gapSweep / 2,
+            sweepAngle = max(sweep - gapSweep, 0f),
+            useCenter = false,
+            topLeft = arcTopLeft,
+            size = arcSize,
+            style = Stroke(width = indicatorWidthPx, cap = StrokeCap.Round)
+        )
+    }
+}
+
 private fun ContentDrawScope.drawCurvedIndicator(
     diameter: Float,
     color: Color,
@@ -812,11 +856,11 @@ private fun ContentDrawScope.drawCurvedIndicator(
 ) {
     // Calculate usable radius for drawing arcs (subtract padding from half diameter)
     val usableRadius = diameter / 2f - paddingHorizontalPx
+    val arcRadius = usableRadius - indicatorWidthPx / 2
 
     // Convert heights to angles (sweep for indicator, gap padding for spacing)
-    val sweepDegrees = pixelsHeightToDegrees(indicatorHeight.toPx(), usableRadius)
-    val gapHeightPadding = pixelsHeightToDegrees(gapHeight.toPx(), usableRadius)
     val gapPadding = pixelsHeightToDegrees(indicatorWidthPx + gapHeight.toPx(), usableRadius)
+    val sweepDegrees = pixelsHeightToDegrees(indicatorHeight.toPx(), usableRadius) + gapPadding
 
     // Define size for the arcs and calculate arc's top-left position.
     val arcSize =
@@ -834,71 +878,49 @@ private fun ContentDrawScope.drawCurvedIndicator(
                 },
             (size.height - diameter) / 2f + paddingHorizontalPx + indicatorWidthPx / 2f,
         )
+
     val startAngleOffset = if (indicatorOnTheRight) 0f else 180f
 
-    // Calculate sweep angles for top, medium and bottom arcs
-    val sweepTopArc = sweepDegrees * indicatorStart - gapPadding
-    val startMidArc = startAngleOffset + sweepDegrees * (indicatorStart - 0.5f)
-    val sweepMidArc = sweepDegrees * indicatorSize
-    val endMidArc = startMidArc + sweepMidArc
-    val sweepBottomArc = sweepDegrees * (1 - indicatorSize - indicatorStart) - gapPadding
-
-    // Calculate scale fraction for top arc
-    val topRadiusFraction =
-        inverseLerp(
-            -sweepDegrees / 2 + gapHeightPadding,
-            -sweepDegrees / 2 + gapPadding,
-            startMidArc - startAngleOffset
-        )
-    val topArcIndicatorWidth = lerp(0f, indicatorWidthPx, topRadiusFraction)
-    // Calculate start angle for top segment.
+    // Calculate start and sweep angles for top, medium and bottom arcs
     val startTopArc = startAngleOffset - sweepDegrees / 2
-    // Represents an offset for top arc which moves when topRadiusFraction changes.
-    val startTopArcOffset =
-        pixelsHeightToDegrees(indicatorWidthPx * (1 - topRadiusFraction) / 2, usableRadius)
-    // Calculate scale fraction for bottom arc
-    val bottomRadiusFraction =
-        inverseLerp(
-            sweepDegrees / 2 - gapHeightPadding,
-            sweepDegrees / 2 - gapPadding,
-            endMidArc - startAngleOffset
-        )
-    val bottomArcIndicatorWidth = lerp(0f, indicatorWidthPx, bottomRadiusFraction)
-    // Calculate start angle for bottom segment.
-    val startBottomArc =
-        startAngleOffset + sweepDegrees * (indicatorStart + indicatorSize - 0.5f) + gapPadding
-    // Represents an offset for bottom arc which moves when bottomRadiusFraction changes.
-    val startBottomArcOffset =
-        pixelsHeightToDegrees(indicatorWidthPx * (1 - bottomRadiusFraction) / 2, usableRadius)
+    val sweepTopArc = sweepDegrees * indicatorStart
+    val startMidArc = startTopArc + sweepTopArc
+    val sweepMidArc = sweepDegrees * indicatorSize
+    val startBottomArc = startMidArc + sweepMidArc
+    val sweepBottomArc = sweepDegrees * (1 - indicatorSize - indicatorStart)
+
     // Draw top arc (unselected/background)
-    drawArc(
+    drawCurvedIndicatorSegment(
+        startAngle = startTopArc,
+        sweep = max(sweepTopArc, 0f),
         color = background,
-        startAngle = startTopArc - startTopArcOffset,
-        sweepAngle = max(sweepTopArc, 0.01f),
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcSize,
-        style = Stroke(width = topArcIndicatorWidth, cap = StrokeCap.Round)
+        radius = arcRadius,
+        arcTopLeft = arcTopLeft,
+        arcSize = arcSize,
+        indicatorWidthPx = indicatorWidthPx,
+        gapSweep = gapPadding,
     )
     // Draw mid arc (selected/thumb)
-    drawArc(
-        color = color,
+    drawCurvedIndicatorSegment(
         startAngle = startMidArc,
-        sweepAngle = sweepMidArc,
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcSize,
-        style = Stroke(width = indicatorWidthPx, cap = StrokeCap.Round)
+        sweep = max(sweepMidArc, 0f),
+        color = color,
+        radius = arcRadius,
+        arcTopLeft = arcTopLeft,
+        arcSize = arcSize,
+        indicatorWidthPx = indicatorWidthPx,
+        gapSweep = gapPadding,
     )
     // Draw bottom arc (unselected/background)
-    drawArc(
+    drawCurvedIndicatorSegment(
+        startAngle = startBottomArc,
+        sweep = max(sweepBottomArc, 0f),
         color = background,
-        startAngle = startBottomArc - startBottomArcOffset,
-        sweepAngle = max(sweepBottomArc, 0.01f),
-        useCenter = false,
-        topLeft = arcTopLeft,
-        size = arcSize,
-        style = Stroke(width = bottomArcIndicatorWidth, cap = StrokeCap.Round)
+        radius = arcRadius,
+        arcTopLeft = arcTopLeft,
+        arcSize = arcSize,
+        indicatorWidthPx = indicatorWidthPx,
+        gapSweep = gapPadding,
     )
 }
 

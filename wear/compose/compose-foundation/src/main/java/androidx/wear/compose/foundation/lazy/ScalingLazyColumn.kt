@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.wear.compose.foundation.BasicSwipeToDismissBox
-import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
 import androidx.wear.compose.foundation.HierarchicalFocusCoordinator
 import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.rememberActiveFocusRequester
@@ -460,10 +459,9 @@ public fun ScalingLazyColumn(
  *   scrolling. For example, if [rotaryScrollableBehavior] is set for snap (using
  *   [RotaryScrollableDefaults.snapBehavior]), [flingBehavior] should be set for snap as well (using
  *   [ScalingLazyColumnDefaults.snapFlingBehavior]). Can be null if rotary support is not required
- *   or when it should be handled externally - with a separate .rotary modifier.
+ *   or when it should be handled externally - with a separate [Modifier.rotaryScrollable] modifier.
  * @param content The content of the [ScalingLazyColumn]
  */
-@OptIn(ExperimentalWearFoundationApi::class)
 @Composable
 fun ScalingLazyColumn(
     modifier: Modifier = Modifier,

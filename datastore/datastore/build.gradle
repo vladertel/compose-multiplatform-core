@@ -21,24 +21,31 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
 plugins {
     id("AndroidXPlugin")
-    id("com.android.library")
 }
 
-android {
-    namespace "androidx.datastore.datastore"
-}
 
 androidXMultiplatform {
     jvm()
     mac()
     ios()
     linux()
-    android()
+    androidLibrary {
+        namespace = "androidx.datastore.datastore"
+        withAndroidTestOnDeviceBuilder {
+            it.compilationName = "instrumentedTest"
+            it.defaultSourceSetName = "androidInstrumentedTest"
+            it.sourceSetTreeName = "test"
+        }
+        withAndroidTestOnJvmBuilder {
+            it.defaultSourceSetName = "androidUnitTest"
+        }
+    }
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -111,4 +118,5 @@ androidx {
     description = "Android DataStore - contains the underlying store used by each serialization " +
             "method along with components that require an Android dependency"
     legacyDisableKotlinStrictApiMode = true
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
 }

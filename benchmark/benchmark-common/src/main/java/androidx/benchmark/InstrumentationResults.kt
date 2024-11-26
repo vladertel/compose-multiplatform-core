@@ -19,23 +19,26 @@ package androidx.benchmark
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.RestrictTo
+import androidx.benchmark.Markdown.createFileLink
 import androidx.test.platform.app.InstrumentationRegistry
 import java.lang.StringBuilder
 import java.util.Locale
 import org.jetbrains.annotations.TestOnly
 
-/**
- * Wrapper for multi studio version link format
- *
- * TODO: drop support for very old versions of Studio in Benchmark 1.3, and remove v1 protocol
- *   support for simplicity (just post v2 twice)
- */
+/** Wrapper for multi studio version link format */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-data class IdeSummaryPair(val summaryV1: String, val summaryV2: String) {
+data class IdeSummaryPair(val summaryV2: String, val summaryV3: String = summaryV2) {
     constructor(
-        v1lines: List<String>,
-        v2lines: List<String>
-    ) : this(summaryV1 = v1lines.joinToString("\n"), summaryV2 = v2lines.joinToString("\n"))
+        v2lines: List<String>,
+        v3lines: List<String> = v2lines,
+    ) : this(
+        summaryV2 = v2lines.joinToString("\n"),
+        summaryV3 = v3lines.joinToString("\n"),
+    )
+
+    /** Fallback for very old versions of Studio */
+    val summaryV1: String
+        get() = summaryV2
 }
 
 /** Provides a way to capture all the instrumentation results which needs to be reported. */
@@ -43,19 +46,30 @@ data class IdeSummaryPair(val summaryV1: String, val summaryV2: String) {
 class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
 
     private fun reportIdeSummary(
-        /** Simple text-only result summary string to output to IDE. */
-        summaryV1: String,
         /**
          * V2 output string, supports linking to files in the output dir via links of the format
          * `[link](file://<relative-path-to-trace>`).
+         *
+         * @see LinkFormat.V2
          */
-        summaryV2: String = summaryV1
+        summaryV2: String,
+        /**
+         * V3 output string, supports linking to files with query parameters of the format
+         * `[link](uri://<relative-path-to-trace>?<queryParam>=<queryParamValue>`).
+         *
+         * @see TraceDeepLink
+         * @see LinkFormat.V3
+         */
+        summaryV3: String,
     ) {
-        bundle.putString(IDE_V1_SUMMARY_KEY, summaryV1)
+        bundle.putString(IDE_V1_SUMMARY_KEY, summaryV2) // deprecating v1 with a "graceful" fallback
+
         // Outputs.outputDirectory is safe to use in the context of Studio currently.
         // This is because AGP does not populate the `additionalTestOutputDir` argument.
         bundle.putString(IDE_V2_OUTPUT_DIR_PATH_KEY, Outputs.outputDirectory.absolutePath)
         bundle.putString(IDE_V2_SUMMARY_KEY, summaryV2)
+        bundle.putString(IDE_V3_OUTPUT_DIR_PATH_KEY, Outputs.outputDirectory.absolutePath)
+        bundle.putString(IDE_V3_SUMMARY_KEY, summaryV3)
     }
 
     fun reportSummaryToIde(
@@ -81,7 +95,7 @@ class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
                 insights = insights,
                 useTreeDisplayFormat = useTreeDisplayFormat
             )
-        reportIdeSummary(summaryV1 = summaryPair.summaryV1, summaryV2 = summaryPair.summaryV2)
+        reportIdeSummary(summaryV2 = summaryPair.summaryV2, summaryV3 = summaryPair.summaryV3)
     }
 
     public fun fileRecord(key: String, path: String) {
@@ -94,6 +108,10 @@ class InstrumentationResultScope(val bundle: Bundle = Bundle()) {
         private const val IDE_V2_OUTPUT_DIR_PATH_KEY =
             "android.studio.v2display.benchmark.outputDirPath"
         private const val IDE_V2_SUMMARY_KEY = "android.studio.v2display.benchmark"
+
+        private const val IDE_V3_OUTPUT_DIR_PATH_KEY =
+            "android.studio.v3display.benchmark.outputDirPath"
+        private const val IDE_V3_SUMMARY_KEY = "android.studio.v3display.benchmark"
     }
 }
 
@@ -136,7 +154,7 @@ object InstrumentationResults {
             output += "    %8d allocs".format(Locale.US, allocations.toInt())
         }
         profilerResults.forEach {
-            output += "    [${it.label}](file://${it.sanitizedOutputRelativePath})"
+            output += "    ${createFileLink(it.label, it.outputRelativePath)}"
         }
         output += "    $benchmarkName"
         return output
@@ -180,12 +198,10 @@ object InstrumentationResults {
         val warningMessage = ideWarningPrefix.ifEmpty { null }
         ideWarningPrefix = ""
 
-        val v1metricLines: List<String>
         val v2metricLines: List<String>
         val linkableIterTraces =
-            iterationTracePaths?.map { absolutePath ->
-                Outputs.relativePathFor(absolutePath).replace("(", "\\(").replace(")", "\\)")
-            } ?: emptyList()
+            iterationTracePaths?.map { absolutePath -> Outputs.relativePathFor(absolutePath) }
+                ?: emptyList()
 
         if (measurements != null) {
             require(measurements.isNotEmpty()) { "Require non-empty list of metric results." }
@@ -205,8 +221,6 @@ object InstrumentationResults {
                 // add newline (note that multi-line codepath below handles newline separately)
                 val warningPrefix = if (warningMessage == null) "" else warningMessage + "\n"
                 return IdeSummaryPair(
-                    summaryV1 =
-                        warningPrefix + ideSummaryBasicMicro(testName, nanos, allocs, emptyList()),
                     summaryV2 =
                         warningPrefix +
                             ideSummaryBasicMicro(testName, nanos, allocs, profilerResults)
@@ -251,95 +265,93 @@ object InstrumentationResults {
                         "  $name   P50  $p50,   P90  $p90,   P95  $p95,   P99  $p99"
                     }
 
-            v1metricLines = metricLines { name, min, median, max, _ ->
-                "  $name   min $min,   median $median,   max $max"
-            }
             v2metricLines =
                 if (linkableIterTraces.isNotEmpty()) {
                     // Per iteration trace paths present, so link min/med/max to respective
                     // iteration traces
                     metricLines { name, min, median, max, result ->
                         "  $name" +
-                            "   [min $min](file://${linkableIterTraces[result.minIndex]})," +
-                            "   [median $median](file://${linkableIterTraces[result.medianIndex]})," +
-                            "   [max $max](file://${linkableIterTraces[result.maxIndex]})"
+                            "   ${createFileLink("min $min", linkableIterTraces[result.minIndex])}," +
+                            "   ${createFileLink("median $median", linkableIterTraces[result.medianIndex])}," +
+                            "   ${createFileLink("max $max", linkableIterTraces[result.maxIndex])}"
                     }
                 } else {
                     // No iteration traces, so just basic list
-                    v1metricLines
+                    metricLines { name, min, median, max, _ ->
+                        "  $name   min $min,   median $median,   max $max"
+                    }
                 }
         } else {
             // no metrics to report
-            v1metricLines = emptyList()
             v2metricLines = emptyList()
         }
 
-        fun markdownFileLink(label: String, outputRelativePath: String): String =
-            "[$label](file://$outputRelativePath)"
-
-        // TODO(353692849): split into methods and remove the v1 format (replace with a v2 getter)
-        val v2lines =
-            if (!useTreeDisplayFormat) { // use the regular output format
-                val v2traceLinks =
-                    if (linkableIterTraces.isNotEmpty()) {
-                        listOf(
-                            "    Traces: Iteration " +
-                                linkableIterTraces
-                                    .mapIndexed { index, path -> markdownFileLink("$index", path) }
-                                    .joinToString(" ")
-                        )
-                    } else {
-                        emptyList()
-                    } +
-                        profilerResults.map {
-                            "    ${markdownFileLink(it.label, it.sanitizedOutputRelativePath)}"
+        if (!useTreeDisplayFormat) { // use the regular output format
+            val v2traceLinks =
+                if (linkableIterTraces.isNotEmpty()) {
+                    listOf(
+                        "    Traces: Iteration " +
+                            linkableIterTraces
+                                .mapIndexed { index, path -> createFileLink("$index", path) }
+                                .joinToString(" ")
+                    )
+                } else {
+                    emptyList()
+                } + profilerResults.map { "    ${createFileLink(it.label, it.outputRelativePath)}" }
+            return IdeSummaryPair(
+                v2lines =
+                    listOfNotNull(warningMessage, testName, message) +
+                        v2metricLines +
+                        v2traceLinks +
+                        "" /* adds \n */
+            )
+        } else { // use the experimental tree-like output format
+            val formatLines =
+                LinkFormat.entries.associateWith { linkFormat ->
+                    buildList {
+                        if (warningMessage != null) add(warningMessage)
+                        if (testName != null) add(testName)
+                        if (message != null) add(message)
+                        val tree = TreeBuilder()
+                        if (v2metricLines.isNotEmpty()) {
+                            tree.append("Metrics", 0)
+                            for (metric in v2metricLines) tree.append(metric, 1)
                         }
-                listOfNotNull(warningMessage, testName, message) +
-                    v2metricLines +
-                    v2traceLinks +
-                    "" /* adds \n */
-            } else { // use the experimental tree-like output format
-                buildList {
-                    if (warningMessage != null) add(warningMessage)
-                    if (testName != null) add(testName)
-                    if (message != null) add(message)
-                    val tree = TreeBuilder()
-                    if (v2metricLines.isNotEmpty()) {
-                        tree.append("Metrics", 0)
-                        for (metric in v2metricLines) tree.append(metric, 1)
-                    }
-                    if (insights.isNotEmpty()) {
-                        tree.append("App Startup Insights", 0)
-                        for ((criterion, observed) in insights) {
-                            tree.append(criterion, 1)
-                            tree.append(observed, 2)
+                        if (insights.isNotEmpty()) {
+                            tree.append("App Startup Insights", 0)
+                            for (insight in insights) {
+                                tree.append(insight.criterion, 1)
+                                val observed =
+                                    when (linkFormat) {
+                                        LinkFormat.V2 -> insight.observedV2
+                                        LinkFormat.V3 -> insight.observedV3
+                                    }
+                                tree.append(observed, 2)
+                            }
                         }
-                    }
-                    if (linkableIterTraces.isNotEmpty() || profilerResults.isNotEmpty()) {
-                        tree.append("Traces", 0)
-                        if (linkableIterTraces.isNotEmpty())
-                            tree.append(
-                                linkableIterTraces
-                                    .mapIndexed { ix, trace -> markdownFileLink("$ix", trace) }
-                                    .joinToString(prefix = "Iteration ", separator = " "),
+                        if (linkableIterTraces.isNotEmpty() || profilerResults.isNotEmpty()) {
+                            tree.append("Traces", 0)
+                            if (linkableIterTraces.isNotEmpty())
+                                tree.append(
+                                    linkableIterTraces
+                                        .mapIndexed { ix, trace -> createFileLink("$ix", trace) }
+                                        .joinToString(prefix = "Iteration ", separator = " "),
+                                    1
+                                )
+                            for (line in profilerResults) tree.append(
+                                createFileLink(line.label, line.outputRelativePath),
                                 1
                             )
-                        for (line in profilerResults) tree.append(
-                            markdownFileLink(line.label, line.sanitizedOutputRelativePath),
-                            1
-                        )
+                        }
+                        addAll(tree.build())
+                        add("")
                     }
-                    addAll(tree.build())
-                    add("")
                 }
-            }
-
-        // TODO(353692849): replace the v1 format with a v2 format regardless insights
-        val v1lines =
-            if (insights.isNotEmpty()) v2lines
-            else listOfNotNull(warningMessage, testName, message) + v1metricLines + /* adds \n */ ""
-
-        return IdeSummaryPair(v1lines = v1lines, v2lines = v2lines)
+            return IdeSummaryPair(
+                v2lines = formatLines[LinkFormat.V2]!!,
+                v3lines = formatLines[LinkFormat.V3]!!
+            )
+        }
     }
 
     /**

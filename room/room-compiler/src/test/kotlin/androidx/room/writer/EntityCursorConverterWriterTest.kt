@@ -19,7 +19,7 @@ package androidx.room.writer
 import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.XClassName
 import androidx.room.compiler.codegen.XTypeSpec
-import androidx.room.compiler.codegen.XTypeSpec.Builder.Companion.apply
+import androidx.room.compiler.codegen.compat.XConverters.applyToJavaPoet
 import androidx.room.compiler.processing.XProcessingEnv.Platform
 import androidx.room.compiler.processing.util.Source
 import androidx.room.compiler.processing.util.XTestInvocation
@@ -123,13 +123,13 @@ class EntityCursorConverterWriterTest : BaseEntityParserTest() {
             val className = XClassName.get("foo.bar", "MyContainerClass")
             val writer =
                 object : TypeWriter(WriterContext(CodeLanguage.JAVA, setOf(Platform.JVM), true)) {
+                    override val packageName = className.packageName
+
                     override fun createTypeSpecBuilder(): XTypeSpec.Builder {
                         getOrCreateFunction(EntityCursorConverterWriter(entity, false))
-                        return XTypeSpec.classBuilder(codeLanguage, className)
-                            .apply(
-                                javaTypeBuilder = { addModifiers(Modifier.PUBLIC) },
-                                kotlinTypeBuilder = {}
-                            )
+                        return XTypeSpec.classBuilder(codeLanguage, className).applyToJavaPoet {
+                            addModifiers(Modifier.PUBLIC)
+                        }
                     }
                 }
             writer.write(invocation.processingEnv)

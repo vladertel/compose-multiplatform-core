@@ -54,7 +54,11 @@ dependencies {
 }
 
 android {
+    compileSdk 35
     namespace "androidx.security.state"
+    defaultConfig {
+        consumerProguardFiles 'proguard-rules.pro'
+    }
 }
 
 androidx {

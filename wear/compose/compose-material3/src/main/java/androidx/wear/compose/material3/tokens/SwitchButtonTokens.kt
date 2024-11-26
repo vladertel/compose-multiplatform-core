@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// VERSION: v0_65
+// VERSION: v0_100
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 package androidx.wear.compose.material3.tokens
@@ -23,7 +23,7 @@ internal object SwitchButtonTokens {
     val CheckedContentColor = ColorSchemeKeyTokens.OnPrimaryContainer
     val CheckedIconColor = ColorSchemeKeyTokens.Primary
     val CheckedSecondaryLabelColor = ColorSchemeKeyTokens.OnPrimaryContainer
-    val CheckedSecondaryLabelOpacity = 0.8f
+    val CheckedSecondaryLabelOpacity = 0.9f
     val CheckedThumbColor = ColorSchemeKeyTokens.OnPrimary
     val CheckedThumbIconColor = ColorSchemeKeyTokens.Primary
     val CheckedTrackBorderColor = ColorSchemeKeyTokens.Primary

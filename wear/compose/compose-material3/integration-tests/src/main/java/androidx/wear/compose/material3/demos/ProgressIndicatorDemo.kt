@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.integration.demos.common.Centralize
 import androidx.wear.compose.integration.demos.common.ComposableDemo
+import androidx.wear.compose.integration.demos.common.Material3DemoCategory
+import androidx.wear.compose.material3.AngularDirection
+import androidx.wear.compose.material3.ArcProgressIndicator
+import androidx.wear.compose.material3.ArcProgressIndicatorDefaults
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.CircularProgressIndicatorDefaults
@@ -50,6 +54,7 @@ import androidx.wear.compose.material3.SliderDefaults
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.samples.FullScreenProgressIndicatorSample
+import androidx.wear.compose.material3.samples.IndeterminateProgressArcSample
 import androidx.wear.compose.material3.samples.IndeterminateProgressIndicatorSample
 import androidx.wear.compose.material3.samples.LinearProgressIndicatorSample
 import androidx.wear.compose.material3.samples.MediaButtonProgressIndicatorSample
@@ -61,53 +66,82 @@ import androidx.wear.compose.material3.samples.SmallValuesProgressIndicatorSampl
 
 val ProgressIndicatorDemos =
     listOf(
-        ComposableDemo("Full screen") { Centralize { FullScreenProgressIndicatorSample() } },
-        ComposableDemo("Media button wrapping") {
-            Centralize { MediaButtonProgressIndicatorSample() }
-        },
-        ComposableDemo("Overflow progress (>100%)") {
-            Centralize { OverflowProgressIndicatorSample() }
-        },
-        ComposableDemo("Small sized indicator") {
-            Box(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-            ) {
-                Button({ /* No op */ }, modifier = Modifier.align(Alignment.Center)) {
-                    Text("Loading...", modifier = Modifier.align(Alignment.CenterVertically))
-                    Spacer(modifier = Modifier.size(10.dp))
-                    CircularProgressIndicator(
-                        progress = { 0.75f },
-                        modifier = Modifier.size(IconButtonDefaults.DefaultButtonSize),
-                        startAngle = 120f,
-                        endAngle = 60f,
-                        strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
-                        colors = ProgressIndicatorDefaults.colors(indicatorColor = Color.Red)
-                    )
-                }
-            }
-        },
-        ComposableDemo("Small progress values") {
-            Centralize { SmallValuesProgressIndicatorSample() }
-        },
-        ComposableDemo("Indeterminate progress") {
-            Centralize { IndeterminateProgressIndicatorSample() }
-        },
-        ComposableDemo("Segmented progress") { Centralize { SegmentedProgressIndicatorSample() } },
-        ComposableDemo("Segmented binary") {
-            Centralize { SegmentedProgressIndicatorBinarySample() }
-        },
-        ComposableDemo("Small segmented progress") {
-            Centralize { SmallSegmentedProgressIndicatorSample() }
-        },
-        ComposableDemo("Custom circular progress") {
-            Centralize { CircularProgressCustomisableFullScreenDemo() }
-        },
-        ComposableDemo("Custom segmented progress") {
-            Centralize { SegmentedProgressCustomisableFullScreenDemo() }
-        },
-        ComposableDemo("Linear progress indicator") {
-            Centralize { LinearProgressIndicatorSamples() }
-        },
+        Material3DemoCategory(
+            title = "Circular progress",
+            listOf(
+                ComposableDemo("Full screen") {
+                    Centralize { FullScreenProgressIndicatorSample() }
+                },
+                ComposableDemo("Media button wrapping") {
+                    Centralize { MediaButtonProgressIndicatorSample() }
+                },
+                ComposableDemo("Overflow progress (>100%)") {
+                    Centralize { OverflowProgressIndicatorSample() }
+                },
+                ComposableDemo("Small sized indicator") {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+                    ) {
+                        Button({ /* No op */ }, modifier = Modifier.align(Alignment.Center)) {
+                            Text(
+                                "Loading...",
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
+                            Spacer(modifier = Modifier.size(10.dp))
+                            CircularProgressIndicator(
+                                progress = { 0.75f },
+                                modifier = Modifier.size(IconButtonDefaults.DefaultButtonSize),
+                                startAngle = 120f,
+                                endAngle = 60f,
+                                strokeWidth = CircularProgressIndicatorDefaults.smallStrokeWidth,
+                                colors =
+                                    ProgressIndicatorDefaults.colors(indicatorColor = Color.Red)
+                            )
+                        }
+                    }
+                },
+                ComposableDemo("Small progress values") {
+                    Centralize { SmallValuesProgressIndicatorSample() }
+                },
+                ComposableDemo("Indeterminate progress") {
+                    Centralize { IndeterminateProgressIndicatorSample() }
+                },
+                ComposableDemo("Customize") {
+                    Centralize { CircularProgressCustomisableFullScreenDemo() }
+                },
+            )
+        ),
+        Material3DemoCategory(
+            title = "Segmented progress",
+            listOf(
+                ComposableDemo("Full screen") { Centralize { SegmentedProgressIndicatorSample() } },
+                ComposableDemo("Binary") {
+                    Centralize { SegmentedProgressIndicatorBinarySample() }
+                },
+                ComposableDemo("Small size") {
+                    Centralize { SmallSegmentedProgressIndicatorSample() }
+                },
+                ComposableDemo("Customize") {
+                    Centralize { SegmentedProgressCustomisableFullScreenDemo() }
+                },
+                ComposableDemo("Binary with switch") {
+                    Centralize { SegmentedProgressIndicatorBinarySwitchDemo() }
+                },
+            )
+        ),
+        ComposableDemo("Linear progress") { Centralize { LinearProgressIndicatorSamples() } },
+        Material3DemoCategory(
+            title = "Arc Progress Indicator",
+            listOf(
+                ComposableDemo("Indeterminate arc") {
+                    Centralize { IndeterminateProgressArcSample() }
+                },
+                ComposableDemo("Custom indeterminate arc") {
+                    Centralize { ArcProgressCustomisableFullScreenDemo() }
+                },
+            )
+        )
     )
 
 @Composable
@@ -138,7 +172,7 @@ fun LinearProgressIndicatorSamples() {
 
 @Composable
 fun CircularProgressCustomisableFullScreenDemo() {
-    val progress = remember { mutableFloatStateOf(0.4f) }
+    val progress = remember { mutableFloatStateOf(0f) }
     val startAngle = remember { mutableFloatStateOf(360f) }
     val endAngle = remember { mutableFloatStateOf(360f) }
     val enabled = remember { mutableStateOf(true) }
@@ -149,8 +183,8 @@ fun CircularProgressCustomisableFullScreenDemo() {
         if (hasCustomColors.value) {
             ProgressIndicatorDefaults.colors(
                 indicatorColor = Color.Green,
-                trackColor = Color.Green.copy(alpha = 0.5f),
-                overflowTrackColor = Color.Green.copy(alpha = 0.7f),
+                trackColor = Color.Yellow,
+                overflowTrackColor = Color.Red,
             )
         } else {
             ProgressIndicatorDefaults.colors()
@@ -201,8 +235,8 @@ fun SegmentedProgressCustomisableFullScreenDemo() {
         if (hasCustomColors.value) {
             ProgressIndicatorDefaults.colors(
                 indicatorColor = Color.Green,
-                trackColor = Color.Green.copy(alpha = 0.5f),
-                overflowTrackColor = Color.Green.copy(alpha = 0.7f),
+                trackColor = Color.Yellow,
+                overflowTrackColor = Color.Red,
             )
         } else {
             ProgressIndicatorDefaults.colors()
@@ -238,6 +272,60 @@ fun SegmentedProgressCustomisableFullScreenDemo() {
             strokeWidth = strokeWidth,
             colors = colors,
         )
+    }
+}
+
+@Composable
+fun ArcProgressCustomisableFullScreenDemo() {
+    val startAngle = remember {
+        mutableFloatStateOf(ArcProgressIndicatorDefaults.IndeterminateStartAngle)
+    }
+    val endAngle = remember {
+        mutableFloatStateOf(ArcProgressIndicatorDefaults.IndeterminateEndAngle)
+    }
+    val defaultDiameter = ArcProgressIndicatorDefaults.recommendedIndeterminateDiameter
+    val diameter = remember { mutableFloatStateOf(defaultDiameter.value) }
+    val strokeWidth = remember {
+        mutableFloatStateOf(ArcProgressIndicatorDefaults.IndeterminateStrokeWidth.value)
+    }
+    val angularDirection = remember { mutableStateOf(AngularDirection.CounterClockwise) }
+    val hasCustomColors = remember { mutableStateOf(false) }
+    val colors =
+        if (hasCustomColors.value) {
+            ProgressIndicatorDefaults.colors(
+                indicatorColor = Color.Green,
+                trackColor = Color.Green.copy(alpha = 0.5f),
+                overflowTrackColor = Color.Green.copy(alpha = 0.7f),
+            )
+        } else {
+            ProgressIndicatorDefaults.colors()
+        }
+
+    Box(
+        modifier =
+            Modifier.background(MaterialTheme.colorScheme.background)
+                .padding(CircularProgressIndicatorDefaults.FullScreenPadding)
+                .fillMaxSize()
+    ) {
+        ArcIndicatorCustomizer(
+            startAngle = startAngle,
+            endAngle = endAngle,
+            diameter = diameter,
+            strokeWidth = strokeWidth,
+            angularDirection = angularDirection,
+            hasCustomColors = hasCustomColors,
+        )
+
+        Centralize {
+            ArcProgressIndicator(
+                startAngle = startAngle.floatValue,
+                endAngle = endAngle.floatValue,
+                strokeWidth = strokeWidth.floatValue.dp,
+                angularDirection = angularDirection.value,
+                colors = colors,
+                modifier = Modifier.size(diameter.floatValue.dp)
+            )
+        }
     }
 }
 
@@ -316,7 +404,7 @@ fun ProgressIndicatorCustomizer(
         }
         item {
             SwitchButton(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
                 checked = enabled.value,
                 onCheckedChange = { enabled.value = it },
                 label = { Text("Enabled") },
@@ -324,10 +412,132 @@ fun ProgressIndicatorCustomizer(
         }
         item {
             SwitchButton(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
                 checked = hasLargeStroke.value,
                 onCheckedChange = { hasLargeStroke.value = it },
                 label = { Text("Large stroke") },
+            )
+        }
+        item {
+            SwitchButton(
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
+                checked = hasCustomColors.value,
+                onCheckedChange = { hasCustomColors.value = it },
+                label = { Text("Custom colors") },
+            )
+        }
+        item {
+            SwitchButton(
+                modifier = Modifier.fillMaxWidth().padding(6.dp),
+                checked = overflowAllowed.value,
+                onCheckedChange = { overflowAllowed.value = it },
+                label = { Text("Overflow") },
+            )
+        }
+    }
+}
+
+@Composable
+fun SegmentedProgressIndicatorBinarySwitchDemo() {
+    val isEven = remember { mutableStateOf(true) }
+    Box(
+        modifier =
+            Modifier.background(MaterialTheme.colorScheme.background)
+                .padding(CircularProgressIndicatorDefaults.FullScreenPadding)
+                .fillMaxSize()
+    ) {
+        SwitchButton(
+            modifier = Modifier.align(Alignment.Center),
+            checked = isEven.value,
+            onCheckedChange = { isEven.value = it },
+            label = { Text("Toggle") },
+        )
+        SegmentedCircularProgressIndicator(
+            segmentCount = 6,
+            segmentValue = if (isEven.value) { it -> it % 2 != 0 } else { it -> it % 2 != 1 },
+        )
+    }
+}
+
+@Composable
+fun ArcIndicatorCustomizer(
+    startAngle: MutableState<Float>,
+    endAngle: MutableState<Float>,
+    diameter: MutableState<Float>,
+    strokeWidth: MutableState<Float>,
+    angularDirection: MutableState<AngularDirection>,
+    hasCustomColors: MutableState<Boolean>,
+) {
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize().padding(12.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item { Text("Start Angle: ${startAngle.value.toInt()}") }
+        item {
+            Slider(
+                value = startAngle.value,
+                onValueChange = { startAngle.value = it },
+                valueRange = 0f..360f,
+                steps = 35,
+                segmented = false,
+                colors =
+                    SliderDefaults.sliderColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+            )
+        }
+        item { Text("End angle: ${endAngle.value.toInt()}") }
+        item {
+            Slider(
+                value = endAngle.value,
+                onValueChange = { endAngle.value = it },
+                valueRange = 0f..360f,
+                steps = 35,
+                segmented = false,
+                colors =
+                    SliderDefaults.sliderColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+            )
+        }
+        item { Text("Diameter: ${diameter.value.toInt()}") }
+        item {
+            Slider(
+                value = diameter.value,
+                onValueChange = { diameter.value = it },
+                valueRange = 10f..400f,
+                steps = 38,
+                segmented = false,
+                colors =
+                    SliderDefaults.sliderColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+            )
+        }
+        item { Text("StrokeWidth: ${strokeWidth.value}") }
+        item {
+            Slider(
+                value = strokeWidth.value,
+                onValueChange = { strokeWidth.value = it },
+                valueRange = 1f..20f,
+                steps = 18,
+                segmented = false,
+                colors =
+                    SliderDefaults.sliderColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
+            )
+        }
+        item {
+            SwitchButton(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                checked = angularDirection.value == AngularDirection.Clockwise,
+                onCheckedChange = {
+                    angularDirection.value =
+                        if (it) AngularDirection.Clockwise else AngularDirection.CounterClockwise
+                },
+                label = { Text("Clockwise") },
             )
         }
         item {
@@ -336,14 +546,6 @@ fun ProgressIndicatorCustomizer(
                 checked = hasCustomColors.value,
                 onCheckedChange = { hasCustomColors.value = it },
                 label = { Text("Custom colors") },
-            )
-        }
-        item {
-            SwitchButton(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                checked = overflowAllowed.value,
-                onCheckedChange = { overflowAllowed.value = it },
-                label = { Text("Overflow") },
             )
         }
     }

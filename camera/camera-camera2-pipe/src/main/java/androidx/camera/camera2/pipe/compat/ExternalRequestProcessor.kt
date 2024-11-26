@@ -24,7 +24,6 @@ import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraGraphId
 import androidx.camera.camera2.pipe.CameraId
-import androidx.camera.camera2.pipe.CameraStatusMonitor
 import androidx.camera.camera2.pipe.CaptureSequence
 import androidx.camera.camera2.pipe.CaptureSequenceProcessor
 import androidx.camera.camera2.pipe.Metadata
@@ -73,11 +72,6 @@ public class ExternalCameraController(
         }
     }
 
-    override fun tryRestart(cameraStatus: CameraStatusMonitor.CameraStatus) {
-        // This is intentionally made a no-op for now as CameraPipe external doesn't support
-        // camera status monitoring and camera controller restart.
-    }
-
     override fun close() {
         // TODO: ExternalRequestProcessor will be deprecated. This is a temporary patch to allow
         //   graphProcessor to have a suspending shutdown function.
@@ -111,9 +105,10 @@ internal class ExternalCaptureSequenceProcessor(
         isRepeating: Boolean,
         requests: List<Request>,
         defaultParameters: Map<*, Any?>,
+        graphParameters: Map<*, Any?>,
         requiredParameters: Map<*, Any?>,
-        listeners: List<Request.Listener>,
-        sequenceListener: CaptureSequence.CaptureSequenceListener
+        sequenceListener: CaptureSequence.CaptureSequenceListener,
+        listeners: List<Request.Listener>
     ): ExternalCaptureSequence? {
         if (closed.value) {
             return null
@@ -125,7 +120,8 @@ internal class ExternalCaptureSequenceProcessor(
         }
         val metadata =
             requests.map { request ->
-                val parameters = defaultParameters + request.parameters + requiredParameters
+                val parameters =
+                    defaultParameters + graphParameters + request.parameters + requiredParameters
 
                 ExternalRequestMetadata(
                     graphConfig.defaultTemplate,

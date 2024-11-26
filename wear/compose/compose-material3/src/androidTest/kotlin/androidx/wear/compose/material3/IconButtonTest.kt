@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.testutils.assertShape
 import androidx.compose.ui.Modifier
@@ -308,6 +309,27 @@ class IconButtonTest {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @Test
+    fun animates_corners_to_75_percent_on_click() {
+        val baseShape = RoundedCornerShape(20.dp)
+        val pressedShape = RoundedCornerShape(0.dp)
+
+        rule.verifyRoundedButtonTapAnimationEnd(
+            baseShape,
+            pressedShape,
+            0.75f,
+            8,
+            color = { IconButtonDefaults.filledIconButtonColors().containerColor }
+        ) { modifier ->
+            FilledIconButton(
+                onClick = {},
+                shapes = IconButtonShapes(baseShape, pressedShape),
+                modifier = modifier
+            ) {}
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @Test
     fun default_shape_is_circular() {
         rule.isShape(
             expectedShape = CircleShape,
@@ -326,7 +348,11 @@ class IconButtonTest {
 
         rule.isShape(expectedShape = shape, colors = { IconButtonDefaults.iconButtonColors() }) {
             modifier ->
-            IconButton(onClick = {}, modifier = modifier, shape = shape) {
+            IconButton(
+                onClick = {},
+                modifier = modifier,
+                shapes = IconButtonDefaults.shapes(shape)
+            ) {
                 // omit content to allow us to validate the shape by pixel checking.
             }
         }

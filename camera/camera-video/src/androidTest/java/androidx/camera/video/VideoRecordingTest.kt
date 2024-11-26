@@ -22,6 +22,7 @@ import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.util.Rational
 import android.util.Size
@@ -54,6 +55,7 @@ import androidx.camera.core.impl.utils.TransformUtils.rotateSize
 import androidx.camera.core.impl.utils.TransformUtils.within360
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.testing.impl.AndroidUtil.isEmulator
 import androidx.camera.testing.impl.AndroidUtil.skipVideoRecordingTestIfNotSupportedByEmulator
 import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraTaskTrackingExecutor
@@ -211,6 +213,12 @@ class VideoRecordingTest(
         assumeTrue(CameraUtil.hasCameraWithLensFacing(cameraSelector.lensFacing!!))
         skipVideoRecordingTestIfNotSupportedByEmulator()
 
+        // Skip for b/264902324
+        assumeFalse(
+            "Emulator API 30 crashes running this test.",
+            Build.VERSION.SDK_INT == 30 && isEmulator()
+        )
+
         cameraExecutor = CameraTaskTrackingExecutor()
         val cameraXConfig =
             CameraXConfig.Builder.fromConfig(cameraConfig).setCameraExecutor(cameraExecutor).build()
@@ -359,6 +367,22 @@ class VideoRecordingTest(
             result.file,
             rotateSize(resolution, getRotationNeeded(videoCapture, cameraInfo))
         )
+    }
+
+    @Test
+    fun getResolutionInfo_shouldMatchRecordedVideoResolution() {
+        // Arrange.
+        checkAndBindUseCases(preview, videoCapture)
+
+        // Act.
+        val result = recordingSession.createRecording().recordAndVerify()
+
+        // Assert: the resolution of the video file should match the resolution calculated by
+        // rotating the cropRect specified in the ResolutionInfo.
+        val resolutionInfo = videoCapture.resolutionInfo!!
+        val expectedResolution =
+            rotateSize(rectToSize(resolutionInfo.cropRect), resolutionInfo.rotationDegrees)
+        verifyVideoResolution(context, result.file, expectedResolution)
     }
 
     @Test
@@ -791,10 +815,6 @@ class VideoRecordingTest(
 
     @Test
     fun updateVideoUsage_whenRecordingStartedPausedResumedStopped(): Unit = runBlocking {
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/339615736 - Enable when implemented at camera-pipe"
-        )
-
         checkAndBindUseCases(videoCapture, preview)
         // Act 1 - isRecording is true after start.
         val recording = recordingSession.createRecording().startAndVerify()
@@ -830,10 +850,6 @@ class VideoRecordingTest(
         runBlocking {
             assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
 
-            implName.ignoreTestForCameraPipe(
-                "TODO: b/339615736 - Enable when implemented at camera-pipe"
-            )
-
             checkAndBindUseCases(preview, videoCapture)
             val recording1 = recordingSession.createRecording().startAndVerify()
 
@@ -862,10 +878,6 @@ class VideoRecordingTest(
     fun updateVideoUsage_whenLifecycleStoppedBeforeCompletingRecording(): Unit = runBlocking {
         assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
 
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/339615736 - Enable when implemented at camera-pipe"
-        )
-
         checkAndBindUseCases(preview, videoCapture)
         recordingSession.createRecording().startAndVerify()
 
@@ -884,10 +896,6 @@ class VideoRecordingTest(
         assumeFalse(
             "TODO: b/340406044 - Temporarily ignored when stream sharing is enabled.",
             forceEnableStreamSharing
-        )
-
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/339615736 - Enable when implemented at camera-pipe"
         )
 
         checkAndBindUseCases(preview, videoCapture)
@@ -920,10 +928,6 @@ class VideoRecordingTest(
             forceEnableStreamSharing
         )
 
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/339615736 - Enable when implemented at camera-pipe"
-        )
-
         checkAndBindUseCases(preview, videoCapture)
         recordingSession.createRecording(asPersistentRecording = true).startAndVerify()
 
@@ -952,10 +956,6 @@ class VideoRecordingTest(
         assumeFalse(
             "TODO: b/340406044 - Temporarily ignored when stream sharing is enabled.",
             forceEnableStreamSharing
-        )
-
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/339615736 - Enable when implemented at camera-pipe"
         )
 
         checkAndBindUseCases(preview, videoCapture)
@@ -1176,7 +1176,4 @@ class VideoRecordingTest(
             }
         }
     }
-
-    private fun String.ignoreTestForCameraPipe(message: String) =
-        assumeTrue(message, !this.contains(CameraPipeConfig::class.simpleName!!))
 }

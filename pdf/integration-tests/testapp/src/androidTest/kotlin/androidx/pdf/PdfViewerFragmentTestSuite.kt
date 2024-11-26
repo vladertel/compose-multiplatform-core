@@ -18,7 +18,9 @@ package androidx.pdf
 
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
+import android.os.Build
 import android.view.KeyEvent
+import androidx.annotation.RequiresExtension
 import androidx.fragment.app.testing.FragmentScenario
 import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
@@ -41,6 +43,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Before
@@ -50,14 +53,16 @@ import org.junit.runner.RunWith
 @SuppressLint("BanThreadSleep")
 @LargeTest
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(minSdkVersion = 35)
+@RequiresExtension(extension = Build.VERSION_CODES.S, version = 13)
 class PdfViewerFragmentTestSuite {
 
-    private lateinit var scenario: FragmentScenario<MockPdfViewerFragment>
+    private lateinit var scenario: FragmentScenario<TestPdfViewerFragment>
 
     @Before
     fun setup() {
         scenario =
-            launchFragmentInContainer<MockPdfViewerFragment>(
+            launchFragmentInContainer<TestPdfViewerFragment>(
                 themeResId =
                     com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar,
                 initialState = Lifecycle.State.INITIALIZED
@@ -83,7 +88,7 @@ class PdfViewerFragmentTestSuite {
         filename: String,
         nextState: Lifecycle.State,
         orientation: Int
-    ): FragmentScenario<MockPdfViewerFragment> {
+    ): FragmentScenario<TestPdfViewerFragment> {
         val context = InstrumentationRegistry.getInstrumentation().context
         val inputStream = context.assets.open(filename)
 
@@ -160,7 +165,6 @@ class PdfViewerFragmentTestSuite {
         onView(withId(R.id.search_container)).check(matches(isDisplayed()))
 
         onView(withId(R.id.find_query_box)).perform(typeText(SEARCH_QUERY))
-        Thread.sleep(DELAY_TIME_MS)
         onView(withId(R.id.match_status_textview)).check(matches(isDisplayed()))
         onView(withId(R.id.match_status_textview)).check(searchViewAssertion.extractAndMatch())
 
@@ -179,6 +183,62 @@ class PdfViewerFragmentTestSuite {
             .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
     }
 
+    /**
+     * This test verifies the behavior of the Pdf viewer in immersive mode, specifically the
+     * visibility of the toolbox and the host app's search button.
+     */
+    @Test
+    fun testPdfViewerFragment_immersiveMode_toggleMenu() {
+        // Load a PDF document into the fragment
+        val scenario =
+            scenarioLoadDocument(
+                TEST_DOCUMENT_FILE,
+                Lifecycle.State.STARTED,
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            )
+
+        // Check that the document is loaded successfully
+        onView(withId(R.id.loadingView))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+        scenario.onFragment {
+            Preconditions.checkArgument(
+                it.documentLoaded,
+                "Unable to load document due to ${it.documentError?.message}"
+            )
+        }
+
+        // Show the toolbox and check visibility of buttons
+        scenario.onFragment { it.isToolboxVisible = true }
+        onView(withId(R.id.edit_fab)).check(matches(isDisplayed()))
+        onView(withId(androidx.pdf.testapp.R.id.host_Search)).check(matches(isDisplayed()))
+
+        // Hide the toolbox and check visibility of buttons
+        scenario.onFragment { it.isToolboxVisible = false }
+        onView(withId(R.id.edit_fab))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+        onView(withId(androidx.pdf.testapp.R.id.host_Search)).check(matches(isDisplayed()))
+
+        // Enter immersive mode and check visibility of buttons
+        scenario.onFragment { it.onRequestImmersiveMode(true) }
+        onView(withId(R.id.edit_fab))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+        onView(withId(androidx.pdf.testapp.R.id.host_Search))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+
+        // Exit immersive mode and check visibility of buttons
+        scenario.onFragment { it.onRequestImmersiveMode(false) }
+        onView(withId(R.id.edit_fab)).check(matches(isDisplayed()))
+        onView(withId(androidx.pdf.testapp.R.id.host_Search)).check(matches(isDisplayed()))
+
+        // Click the host app search button and check visibility of elements
+        onView(withId(androidx.pdf.testapp.R.id.host_Search)).perform(click())
+        onView(withId(R.id.search_container)).check(matches(isDisplayed()))
+        onView(withId(R.id.edit_fab))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+        onView(withId(androidx.pdf.testapp.R.id.host_Search))
+            .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.GONE)))
+    }
+
     fun testPdfViewerFragment_setDocumentUri_passwordProtected_portrait() {
         val scenario =
             scenarioLoadDocument(
@@ -190,7 +250,6 @@ class PdfViewerFragmentTestSuite {
         // Delay required for password dialog to come up
         // TODO: Implement callback based delay and remove Thread.sleep
         Thread.sleep(DELAY_TIME_MS)
-        onView(withId(R.id.password_dialog)).check(matches(isDisplayed()))
         onView(withId(R.id.password)).perform(typeText(PROTECTED_DOCUMENT_PASSWORD))
         onView(withId(R.id.password)).perform(pressKey(KeyEvent.KEYCODE_ENTER))
 

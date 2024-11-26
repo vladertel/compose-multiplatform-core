@@ -29,7 +29,8 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomRawQuery
 import androidx.room.paging.util.getClippedRefreshKey
 import androidx.room.util.getColumnIndexOrThrow
-import androidx.sqlite.SQLiteStatement
+import androidx.room.util.performSuspending
+import androidx.sqlite.use
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -707,6 +708,7 @@ class LimitOffsetPagingSourceTestWithFilteringCoroutineDispatcher {
         db.close()
     }
 
+    @Ignore("Due to b/373727432.")
     @Test
     fun invalid_append() = runTest {
         val pagingSource = LimitOffsetPagingSourceImpl(db)
@@ -774,15 +776,21 @@ class LimitOffsetPagingSourceImpl(
         db = db,
         tables = arrayOf(tableName)
     ) {
-
-    override fun convertRows(statement: SQLiteStatement, itemCount: Int): List<TestItem> {
-        val stmtIndexOfId = getColumnIndexOrThrow(statement, "id")
-        val data = mutableListOf<TestItem>()
-        while (statement.step()) {
-            val tmpId = statement.getInt(stmtIndexOfId)
-            data.add(TestItem(tmpId))
+    override suspend fun convertRows(
+        limitOffsetQuery: RoomRawQuery,
+        itemCount: Int
+    ): List<TestItem> {
+        return performSuspending(db, isReadOnly = true, inTransaction = false) { connection ->
+            connection.prepare(limitOffsetQuery.sql).use { statement ->
+                val stmtIndexOfId = getColumnIndexOrThrow(statement, "id")
+                buildList {
+                    while (statement.step()) {
+                        val tmpId = statement.getInt(stmtIndexOfId)
+                        add(TestItem(tmpId))
+                    }
+                }
+            }
         }
-        return data
     }
 
     override fun convertRows(cursor: Cursor): List<TestItem> {

@@ -193,6 +193,11 @@ internal class TooltipScopeImpl(val getAnchorBounds: () -> LayoutCoordinates?) :
  * @param shadowElevation the shadow elevation of the tooltip.
  * @param content the composable that will be used to populate the tooltip's content.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    level = DeprecationLevel.HIDDEN,
+    message = "Maintained for binary compatibility. " + "Use overload with maxWidth parameter."
+)
 @Composable
 @ExperimentalMaterial3Api
 fun TooltipScope.PlainTooltip(
@@ -248,6 +253,37 @@ fun TooltipScope.PlainTooltip(
 }
 
 /**
+ * Plain tooltip that provides a descriptive message.
+ *
+ * Usually used with [TooltipBox].
+ *
+ * @param modifier the [Modifier] to be applied to the tooltip.
+ * @param caretSize [DpSize] for the caret of the tooltip, if a default caret is desired with a
+ *   specific dimension. Please see [TooltipDefaults.caretSize] to see the default dimensions. Pass
+ *   in Dp.Unspecified for this parameter if no caret is desired.
+ * @param maxWidth the maximum width for the plain tooltip
+ * @param shape the [Shape] that should be applied to the tooltip container.
+ * @param contentColor [Color] that will be applied to the tooltip's content.
+ * @param containerColor [Color] that will be applied to the tooltip's container.
+ * @param tonalElevation the tonal elevation of the tooltip.
+ * @param shadowElevation the shadow elevation of the tooltip.
+ * @param content the composable that will be used to populate the tooltip's content.
+ */
+@Composable
+@ExperimentalMaterial3Api
+expect fun TooltipScope.PlainTooltip(
+    modifier: Modifier = Modifier,
+    caretSize: DpSize = DpSize.Unspecified,
+    maxWidth: Dp = TooltipDefaults.plainTooltipMaxWidth,
+    shape: Shape = TooltipDefaults.plainTooltipContainerShape,
+    contentColor: Color = TooltipDefaults.plainTooltipContentColor,
+    containerColor: Color = TooltipDefaults.plainTooltipContainerColor,
+    tonalElevation: Dp = 0.dp,
+    shadowElevation: Dp = 0.dp,
+    content: @Composable () -> Unit
+)
+
+/**
  * Rich text tooltip that allows the user to pass in a title, text, and action. Tooltips are used to
  * provide a descriptive message.
  *
@@ -265,6 +301,11 @@ fun TooltipScope.PlainTooltip(
  * @param shadowElevation the shadow elevation of the tooltip.
  * @param text the composable that will be used to populate the rich tooltip's text.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    level = DeprecationLevel.HIDDEN,
+    message = "Maintained for binary compatibility. " + "Use overload with maxWidth parameter."
+)
 @Composable
 @ExperimentalMaterial3Api
 fun TooltipScope.RichTooltip(
@@ -358,6 +399,40 @@ fun TooltipScope.RichTooltip(
     }
 }
 
+/**
+ * Rich text tooltip that allows the user to pass in a title, text, and action. Tooltips are used to
+ * provide a descriptive message.
+ *
+ * Usually used with [TooltipBox]
+ *
+ * @param modifier the [Modifier] to be applied to the tooltip.
+ * @param title An optional title for the tooltip.
+ * @param action An optional action for the tooltip.
+ * @param caretSize [DpSize] for the caret of the tooltip, if a default caret is desired with a
+ *   specific dimension. Please see [TooltipDefaults.caretSize] to see the default dimensions. Pass
+ *   in Dp.Unspecified for this parameter if no caret is desired.
+ * @param maxWidth the maximum width for the rich tooltip
+ * @param shape the [Shape] that should be applied to the tooltip container.
+ * @param colors [RichTooltipColors] that will be applied to the tooltip's container and content.
+ * @param tonalElevation the tonal elevation of the tooltip.
+ * @param shadowElevation the shadow elevation of the tooltip.
+ * @param text the composable that will be used to populate the rich tooltip's text.
+ */
+@Composable
+@ExperimentalMaterial3Api
+expect fun TooltipScope.RichTooltip(
+    modifier: Modifier = Modifier,
+    title: (@Composable () -> Unit)? = null,
+    action: (@Composable () -> Unit)? = null,
+    caretSize: DpSize = DpSize.Unspecified,
+    maxWidth: Dp = TooltipDefaults.richTooltipMaxWidth,
+    shape: Shape = TooltipDefaults.richTooltipContainerShape,
+    colors: RichTooltipColors = TooltipDefaults.richTooltipColors(),
+    tonalElevation: Dp = ElevationTokens.Level0,
+    shadowElevation: Dp = RichTooltipTokens.ContainerElevation,
+    text: @Composable () -> Unit
+)
+
 /** Tooltip defaults that contain default values for both [PlainTooltip] and [RichTooltip] */
 @ExperimentalMaterial3Api
 object TooltipDefaults {
@@ -379,6 +454,12 @@ object TooltipDefaults {
 
     /** The default [DpSize] for tooltip carets. */
     val caretSize: DpSize = DpSize(16.dp, 8.dp)
+
+    /** The default maximum width for plain tooltips. */
+    val plainTooltipMaxWidth: Dp = 200.dp
+
+    /** The default maximum width for rich tooltips. */
+    val richTooltipMaxWidth: Dp = 320.dp
 
     /**
      * Method to create a [RichTooltipColors] for [RichTooltip] using [RichTooltipTokens] to obtain
@@ -422,6 +503,12 @@ object TooltipDefaults {
      *
      * @param spacingBetweenTooltipAndAnchor the spacing between the tooltip and the anchor content.
      */
+    @Deprecated(
+        "Deprecated in favor of rememberTooltipPositionProvider API.",
+        replaceWith =
+            ReplaceWith("rememberTooltipPositionProvider(spacingBetweenTooltipAndAnchor)"),
+        level = DeprecationLevel.HIDDEN
+    )
     @Composable
     fun rememberPlainTooltipPositionProvider(
         spacingBetweenTooltipAndAnchor: Dp = SpacingBetweenTooltipAndAnchor
@@ -455,6 +542,12 @@ object TooltipDefaults {
      *
      * @param spacingBetweenTooltipAndAnchor the spacing between the tooltip and the anchor content.
      */
+    @Deprecated(
+        "Deprecated in favor of rememberTooltipPositionProvider API.",
+        replaceWith =
+            ReplaceWith("rememberTooltipPositionProvider(spacingBetweenTooltipAndAnchor)"),
+        level = DeprecationLevel.HIDDEN
+    )
     @Composable
     fun rememberRichTooltipPositionProvider(
         spacingBetweenTooltipAndAnchor: Dp = SpacingBetweenTooltipAndAnchor
@@ -479,6 +572,53 @@ object TooltipDefaults {
                             x =
                                 anchorBounds.left +
                                     (anchorBounds.width - popupContentSize.width) / 2
+                    }
+
+                    // Tooltip prefers to be above the anchor,
+                    // but if this causes the tooltip to overlap with the anchor
+                    // then we place it below the anchor
+                    var y = anchorBounds.top - popupContentSize.height - tooltipAnchorSpacing
+                    if (y < 0) y = anchorBounds.bottom + tooltipAnchorSpacing
+                    return IntOffset(x, y)
+                }
+            }
+        }
+    }
+
+    /**
+     * [PopupPositionProvider] that should be used with either [RichTooltip] or [PlainTooltip]. It
+     * correctly positions the tooltip in respect to the anchor content.
+     *
+     * @param spacingBetweenTooltipAndAnchor the spacing between the tooltip and the anchor content.
+     */
+    @Composable
+    fun rememberTooltipPositionProvider(
+        spacingBetweenTooltipAndAnchor: Dp = SpacingBetweenTooltipAndAnchor
+    ): PopupPositionProvider {
+        val tooltipAnchorSpacing =
+            with(LocalDensity.current) { spacingBetweenTooltipAndAnchor.roundToPx() }
+        return remember(tooltipAnchorSpacing) {
+            object : PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: IntRect,
+                    windowSize: IntSize,
+                    layoutDirection: LayoutDirection,
+                    popupContentSize: IntSize
+                ): IntOffset {
+                    // Horizontal alignment preference: middle -> start -> end
+                    // Vertical preference: above -> below
+
+                    // Tooltip prefers to be center aligned horizontally.
+                    var x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
+
+                    if (x < 0) {
+                        // Make tooltip start aligned if colliding with the
+                        // left side of the screen
+                        x = anchorBounds.left
+                    } else if (x + popupContentSize.width > windowSize.width) {
+                        // Make tooltip end aligned if colliding with the
+                        // right side of the screen
+                        x = anchorBounds.right - popupContentSize.width
                     }
 
                     // Tooltip prefers to be above the anchor,
@@ -844,12 +984,10 @@ internal expect fun windowContainerWidthInPx(): Int
 internal val SpacingBetweenTooltipAndAnchor = 4.dp
 internal val TooltipMinHeight = 24.dp
 internal val TooltipMinWidth = 40.dp
-internal val PlainTooltipMaxWidth = 200.dp
 private val PlainTooltipVerticalPadding = 4.dp
 private val PlainTooltipHorizontalPadding = 8.dp
 internal val PlainTooltipContentPadding =
     PaddingValues(PlainTooltipHorizontalPadding, PlainTooltipVerticalPadding)
-internal val RichTooltipMaxWidth = 320.dp
 internal val RichTooltipHorizontalPadding = 16.dp
 internal val HeightToSubheadFirstLine = 28.dp
 private val HeightFromSubheadToTextFirstLine = 24.dp

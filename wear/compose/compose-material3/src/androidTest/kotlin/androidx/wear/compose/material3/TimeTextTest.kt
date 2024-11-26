@@ -53,6 +53,25 @@ class TimeTextTest {
     }
 
     @Test
+    fun shows_time_by_default_on_non_round_device() {
+        val timeText = "time"
+
+        rule.setContentWithTheme {
+            DeviceConfigurationOverride(DeviceConfigurationOverride.RoundScreen(false)) {
+                TimeText(
+                    timeSource =
+                        object : TimeSource {
+                            @Composable override fun currentTime(): String = timeText
+                        },
+                )
+            }
+        }
+
+        // Note that onNodeWithText doesn't work for curved text, so only testing for non-round.
+        rule.onNodeWithText(timeText).assertIsDisplayed()
+    }
+
+    @Test
     fun updates_clock_when_source_changes_on_non_round_device() {
         val timeState = mutableStateOf("Unchanged")
 

@@ -23,6 +23,7 @@ import androidx.annotation.RequiresFeature;
 import androidx.appsearch.annotation.CanIgnoreReturnValue;
 import androidx.appsearch.annotation.Document;
 import androidx.appsearch.app.AppSearchSchema.StringPropertyConfig;
+import androidx.appsearch.app.ExperimentalAppSearchApi;
 import androidx.appsearch.app.Features;
 import androidx.core.util.Preconditions;
 
@@ -49,6 +50,7 @@ import androidx.core.util.Preconditions;
         enforcement = "androidx.appsearch.app.Features#isFeatureSupported",
         name = Features.JOIN_SPEC_AND_QUALIFIED_ID)
 @Document(name = "builtin:ClickAction")
+@ExperimentalAppSearchApi
 public class ClickAction extends TakenAction {
     @Nullable
     @Document.StringProperty(indexingType = StringPropertyConfig.INDEXING_TYPE_PREFIXES)
@@ -148,7 +150,7 @@ public class ClickAction extends TakenAction {
         return mTimeStayOnResultMillis;
     }
 
-    // TODO(b/314026345): redesign builder to enable inheritance for ClickAction.
+    // TODO(b/372929164): redesign builder for inheritance to fix the base setter return type issue.
     /** Builder for {@link ClickAction}. */
     @Document.BuilderProducer
     public static final class Builder extends BuilderImpl<Builder> {

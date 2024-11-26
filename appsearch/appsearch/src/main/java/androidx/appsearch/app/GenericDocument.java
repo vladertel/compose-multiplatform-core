@@ -24,7 +24,6 @@ import android.util.Log;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.appsearch.annotation.CanIgnoreReturnValue;
 import androidx.appsearch.annotation.CurrentTimeMillisLong;
@@ -105,6 +104,7 @@ public class GenericDocument {
 // @exportToFramework:startStrip()
     @Deprecated
 // @exportToFramework:endStrip()
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public static int getMaxIndexedProperties() {
         return MAX_INDEXED_PROPERTIES;
     }
@@ -186,36 +186,37 @@ public class GenericDocument {
     // and getting confused by the inheritability.
     @SuppressWarnings("deprecation")
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @FlaggedApi(Flags.FLAG_ENABLE_GENERIC_DOCUMENT_OVER_IPC)
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @NonNull
     public static GenericDocument createFromParcel(@NonNull Parcel parcel) {
         Objects.requireNonNull(parcel);
         GenericDocumentParcel documentParcel;
+        // @exportToFramework:startStrip()
         if (AppSearchEnvironmentFactory.getEnvironmentInstance().getEnvironment()
-                == AppSearchEnvironment.FRAMEWORK_ENVIRONMENT) {
-            // Code built in Framework cannot depend on Androidx libraries. Therefore, we must call
-            // Parcel#readParcelable directly.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                documentParcel =
-                        parcel.readParcelable(
-                                GenericDocumentParcel.class.getClassLoader(),
-                                GenericDocumentParcel.class);
-            } else {
-                // The Parcel#readParcelable(ClassLoader, Class) function has a known issue on
-                // Android T. This was fixed on Android U. When on Android T, call the older version
-                // of Parcel#readParcelable.
-                documentParcel =
-                        parcel.readParcelable(GenericDocumentParcel.class.getClassLoader());
-            }
-            // @exportToFramework:startStrip()
-        } else {
+                != AppSearchEnvironment.FRAMEWORK_ENVIRONMENT) {
+            // Non-Framework code should use ParcelCompat.
             documentParcel =
                     ParcelCompat.readParcelable(
                             parcel, GenericDocumentParcel.class.getClassLoader(),
                             GenericDocumentParcel.class);
-            // @exportToFramework:endStrip()
+            return new GenericDocument(documentParcel);
+        }
+        // @exportToFramework:endStrip()
+
+        // Code built in Framework cannot depend on Androidx libraries. Therefore, we must call
+        // Parcel#readParcelable directly.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            documentParcel =
+                    parcel.readParcelable(
+                            GenericDocumentParcel.class.getClassLoader(),
+                            GenericDocumentParcel.class);
+        } else {
+            // The Parcel#readParcelable(ClassLoader, Class) function has a known issue on Android
+            // T. This was fixed on Android U. When on Android T, call the older version of
+            // Parcel#readParcelable.
+            documentParcel =
+                    parcel.readParcelable(GenericDocumentParcel.class.getClassLoader());
         }
         return new GenericDocument(documentParcel);
     }
@@ -1123,23 +1124,6 @@ public class GenericDocument {
         return documentClass;
     }
 // @exportToFramework:endStrip()
-
-    /**
-     * Copies the contents of this {@link GenericDocument} into a new
-     * {@link GenericDocument.Builder}.
-     *
-     * <p>The returned builder is a deep copy whose data is separate from this document.
-     *
-     * @deprecated This API is not compliant with API guidelines.
-     * Use {@link Builder#Builder(GenericDocument)} instead.
-     * <!--@exportToFramework:hide-->
-     */
-    // TODO(b/171882200): Expose this API in Android T
-    @NonNull
-    @Deprecated
-    public GenericDocument.Builder<GenericDocument.Builder<?>> toBuilder() {
-        return new Builder<>(new GenericDocumentParcel.Builder(mDocumentParcel));
-    }
 
     @Override
     public boolean equals(@Nullable Object other) {

@@ -52,7 +52,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.tokens.CardTokens
@@ -131,8 +133,8 @@ fun Card(
         shape = shape
     ) {
         CompositionLocalProvider(
-            LocalContentColor provides colors.contentColor,
-            LocalTextStyle provides CardTokens.ContentTypography.value,
+            LocalContentColor provides colors.titleColor,
+            LocalTextStyle provides CardTokens.TitleTypography.value,
         ) {
             content()
         }
@@ -252,7 +254,7 @@ fun AppCard(
             ) {
                 appImage?.let {
                     appImage()
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(4.dp))
                 }
                 CompositionLocalProvider(
                     LocalContentColor provides colors.appNameColor,
@@ -770,14 +772,23 @@ class CardColors(
     val titleColor: Color,
     val subtitleColor: Color
 ) {
-
-    internal fun copy(
-        containerColor: Color,
-        contentColor: Color,
-        appNameColor: Color,
-        timeColor: Color,
-        titleColor: Color,
-        subtitleColor: Color
+    /**
+     * Returns a copy of this CardColors, optionally overriding some of the values.
+     *
+     * @param containerColor The container color of this [Card].
+     * @param contentColor The content color of this [Card].
+     * @param appNameColor The color used for appName, only applies to [AppCard].
+     * @param timeColor The color used for time, applies to [AppCard] and [TitleCard].
+     * @param titleColor The color used for title, applies to [AppCard] and [TitleCard].
+     * @param subtitleColor The color used for subtitle, applies to [TitleCard].
+     */
+    fun copy(
+        containerColor: Color = Color.Unspecified,
+        contentColor: Color = Color.Unspecified,
+        appNameColor: Color = Color.Unspecified,
+        timeColor: Color = Color.Unspecified,
+        titleColor: Color = Color.Unspecified,
+        subtitleColor: Color = Color.Unspecified
     ) =
         CardColors(
             containerPainter =
@@ -830,6 +841,7 @@ private fun CardImpl(
     interactionSource: MutableInteractionSource?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     Column(
         modifier =
             modifier
@@ -839,7 +851,14 @@ private fun CardImpl(
                 .combinedClickable(
                     enabled = enabled,
                     onClick = onClick,
-                    onLongClick = onLongClick,
+                    onLongClick =
+                        onLongClick?.let {
+                            {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                it()
+                            }
+                        },
                     onLongClickLabel = onLongClickLabel,
                     role = null,
                     indication = ripple(),

@@ -89,7 +89,7 @@ public class PerfettoHelper(
                 if (unbundled) {
                     val path = "$UNBUNDLED_PERFETTO_ROOT_DIR/config.pb"
                     // Move the config to a directory that unbundled perfetto has permissions for.
-                    Shell.executeScriptSilent("rm -f $path")
+                    Shell.rm(path)
                     if (Build.VERSION.SDK_INT == 23) {
                         // Observed stderr output (though command still completes successfully) on:
                         // google/shamu/shamu:6.0.1/MOB31T/3671974:userdebug/dev-keys
@@ -103,7 +103,7 @@ public class PerfettoHelper(
                             }
                         }
                     } else {
-                        Shell.executeScriptSilent("cp $configFilePath $path")
+                        Shell.cp(from = configFilePath, to = path)
                     }
                     path
                 } else {
@@ -117,7 +117,7 @@ public class PerfettoHelper(
                 val output = Shell.executeScriptCaptureStdoutStderr("rm -f $outputPath")
                 Log.d(LOG_TAG, "Attempted to remove $outputPath, result = $output")
             } else {
-                Shell.executeScriptSilent("rm -f $outputPath")
+                Shell.rm(outputPath)
             }
             // Remove already existing temporary output trace file if any.
 
@@ -263,10 +263,10 @@ public class PerfettoHelper(
         trace("Perfetto - preparing to stop") {}
 
         require(pid != null)
-        Shell.terminateProcessesAndWait(
+        Shell.killProcessesAndWait(
+            listOf(Shell.ProcessPid(pid = pid, processName = perfettoProcessName)),
             waitPollPeriodMs = PERFETTO_KILL_WAIT_TIME_MS,
-            waitPollMaxCount = PERFETTO_KILL_WAIT_COUNT,
-            Shell.ProcessPid(pid = pid, processName = perfettoProcessName)
+            waitPollMaxCount = PERFETTO_KILL_WAIT_COUNT
         )
         perfettoPid = null
     }
@@ -343,19 +343,7 @@ public class PerfettoHelper(
         // Copy the collected trace from /data/misc/perfetto-traces/trace_output.pb to
         // destinationFile
         try {
-            val copyResult =
-                Shell.executeScriptCaptureStdoutStderr("cp $sourceFile $destinationFile")
-            if (!copyResult.isBlank()) {
-                Log.e(
-                    LOG_TAG,
-                    """
-                        Unable to copy perfetto output file from $sourceFile
-                        to $destinationFile due to $copyResult.
-                    """
-                        .trimIndent()
-                )
-                return false
-            }
+            Shell.cp(sourceFile, destinationFile)
         } catch (ioe: IOException) {
             Log.e(LOG_TAG, "Unable to move the perfetto trace file to destination file.", ioe)
             return false
@@ -387,6 +375,15 @@ public class PerfettoHelper(
 
         // Check if perfetto is stopped every 100 millis.
         private const val PERFETTO_KILL_WAIT_TIME_MS: Long = 100
+
+        init {
+            check(
+                PERFETTO_KILL_WAIT_COUNT * PERFETTO_KILL_WAIT_TIME_MS >=
+                    PERFETTO_DATA_SOURCE_STOP_TIMEOUT_MS * 2
+            ) {
+                "Perfetto kill time must be significantly larger than data source stop timeout"
+            }
+        }
 
         // Path where unbundled tracebox is copied to
         private const val UNBUNDLED_PERFETTO_ROOT_DIR = "/data/local/tmp"
@@ -467,10 +464,10 @@ public class PerfettoHelper(
 
         public fun stopAllPerfettoProcesses() {
             listOf("perfetto", "tracebox").forEach { processName ->
-                Shell.terminateProcessesAndWait(
+                Shell.killProcessesAndWait(
+                    processName,
                     waitPollPeriodMs = PERFETTO_KILL_WAIT_TIME_MS,
                     waitPollMaxCount = PERFETTO_KILL_WAIT_COUNT,
-                    processName
                 )
             }
 

@@ -39,12 +39,47 @@ import java.lang.annotation.RetentionPolicy;
 public interface FunctionNode extends Node {
     /**
      * Enums representing functions available to use in the query language.
+     * @exportToFramework:hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @Retention(RetentionPolicy.SOURCE)
     @StringDef({
+            FUNCTION_NAME_GET_SEARCH_STRING_PARAMETER,
+            FUNCTION_NAME_HAS_PROPERTY,
+            FUNCTION_NAME_PROPERTY_DEFINED,
+            FUNCTION_NAME_SEARCH,
+            FUNCTION_NAME_SEMANTIC_SEARCH
     })
     @interface FunctionName {}
+
+    /**
+     * Name of the query function represented by
+     * {@link androidx.appsearch.ast.query.GetSearchStringParameterNode}.
+     */
+    String FUNCTION_NAME_GET_SEARCH_STRING_PARAMETER = "getSearchStringParameter";
+
+    /**
+     * Name of the query function represented by
+     * {@link androidx.appsearch.ast.query.HasPropertyNode}.
+     */
+    String FUNCTION_NAME_HAS_PROPERTY = "hasProperty";
+
+    /**
+     * Name of the query function represented by
+     * {@link androidx.appsearch.ast.query.PropertyDefinedNode}.
+     */
+    String FUNCTION_NAME_PROPERTY_DEFINED = "propertyDefined";
+
+    /**
+     * Name of the query function represented by {@link androidx.appsearch.ast.query.SearchNode}.
+     */
+    String FUNCTION_NAME_SEARCH = "search";
+
+    /**
+     * Name of the query function represented by
+     * {@link androidx.appsearch.ast.query.SemanticSearchNode}.
+     */
+    String FUNCTION_NAME_SEMANTIC_SEARCH = "semanticSearch";
 
     /**
      * Gets the name of the node that extends the {@link FunctionNode}.

@@ -18,16 +18,18 @@ package androidx.credentials.registry.provider
 
 import android.content.Context
 import android.os.CancellationSignal
-import androidx.annotation.RestrictTo
 import androidx.credentials.CredentialManagerCallback
 import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-/** APIs for managing credential registries that are registered with the Credential Manager. */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public interface RegistryManager {
+/**
+ * APIs for managing credential registries that are registered with the Credential Manager.
+ *
+ * Use the APIs by constructing a [RegistryManager] with the [create] factory method.
+ */
+public abstract class RegistryManager internal constructor() {
     public companion object {
         /**
          * Creates a [RegistryManager] based on the given [context].
@@ -36,6 +38,21 @@ public interface RegistryManager {
          */
         @JvmStatic
         public fun create(context: Context): RegistryManager = RegistryManagerImpl(context)
+
+        /**
+         * The intent action name that the Credential Manager used to find and invoke your activity
+         * when the user selects a credential that belongs to your application. Your activity will
+         * be launched and you should use the
+         * [androidx.credentials.provider.PendingIntentHandler.retrieveProviderGetCredentialRequest]
+         * API to retrieve information about the user selection and the verifier request contained
+         * in [androidx.credentials.provider.ProviderGetCredentialRequest]. Next, perform the
+         * necessary steps (e.g. consent collection, credential lookup) to generate a response for
+         * the given request. Pass the result back using one of the
+         * [androidx.credentials.provider.PendingIntentHandler.setGetCredentialResponse] and
+         * [androidx.credentials.provider.PendingIntentHandler.setGetCredentialException] APIs.
+         */
+        public const val ACTION_GET_CREDENTIAL: String =
+            "androidx.credentials.registry.provider.action.GET_CREDENTIAL"
     }
 
     /**
@@ -102,7 +119,7 @@ public interface RegistryManager {
      * @param executor the callback will take place on this executor
      * @param callback the callback invoked when the request succeeds or fails
      */
-    public fun registerCredentialsAsync(
+    public abstract fun registerCredentialsAsync(
         request: RegisterCredentialsRequest,
         cancellationSignal: CancellationSignal?,
         executor: Executor,

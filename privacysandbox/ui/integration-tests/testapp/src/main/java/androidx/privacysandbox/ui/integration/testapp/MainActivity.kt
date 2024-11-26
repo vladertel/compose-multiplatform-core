@@ -18,6 +18,7 @@ package androidx.privacysandbox.ui.integration.testapp
 
 import android.os.Build
 import android.os.Bundle
+import android.os.RemoteException
 import android.os.ext.SdkExtensions
 import android.util.Log
 import android.view.View
@@ -54,10 +55,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediationDropDownMenu: Spinner
     private lateinit var adTypeDropDownMenu: Spinner
 
-    @AdType private var adType = AdType.BASIC_NON_WEBVIEW
+    @AdType
+    private val adType
+        get() =
+            if (::adTypeDropDownMenu.isInitialized) adTypeDropDownMenu.selectedItemPosition
+            else AdType.BASIC_NON_WEBVIEW
 
-    @MediationOption private var mediationOption = MediationOption.NON_MEDIATED
-    private var drawViewabilityLayer = false
+    @MediationOption
+    private val mediationOption
+        get() =
+            if (::mediationDropDownMenu.isInitialized) mediationDropDownMenu.selectedItemPosition
+            else MediationOption.NON_MEDIATED
+
+    private val drawViewabilityLayer
+        get() = viewabilityToggleButton.isChecked
 
     // TODO(b/257429573): Remove this line once fixed.
     @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
@@ -135,7 +146,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Kill the sandbox process */
     private fun triggerSandboxDeath() {
-        currentFragment.getSdkApi().triggerProcessDeath()
+        try {
+            currentFragment.getSdkApi().triggerProcessDeath()
+        } catch (ignored: RemoteException) {
+            // avoids a crash when clicking the "trigger sandbox death" button twice
+        }
     }
 
     private fun initializeToggles() {
@@ -160,10 +175,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeViewabilityToggleButton() {
-        viewabilityToggleButton.setOnCheckedChangeListener { _, isChecked ->
-            drawViewabilityLayer = isChecked
-            loadAllAds()
-        }
+        viewabilityToggleButton.setOnCheckedChangeListener { _, _ -> loadAllAds() }
     }
 
     private fun initializeMediationDropDown() {
@@ -178,27 +190,7 @@ class MainActivity : AppCompatActivity() {
                 mediationDropDownMenu.adapter = adapter
             }
 
-        mediationDropDownMenu.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                var isCalledOnStartingApp = true
-
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    selectedMediationOptionId: Long
-                ) {
-                    if (isCalledOnStartingApp) {
-                        isCalledOnStartingApp = false
-                        return
-                    }
-
-                    mediationOption = selectedMediationOptionId.toInt()
-                    loadAllAds()
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
+        mediationDropDownMenu.onItemSelectedListener = OnItemSelectedListener()
     }
 
     private fun initializeAdTypeDropDown() {
@@ -212,33 +204,7 @@ class MainActivity : AppCompatActivity() {
                 adTypeDropDownMenu.adapter = adapter
             }
 
-        adTypeDropDownMenu.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                var isCalledOnStartingApp = true
-
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    selectedAdOptionId: Long
-                ) {
-                    if (isCalledOnStartingApp) {
-                        isCalledOnStartingApp = false
-                        return
-                    }
-                    adType =
-                        when (position) {
-                            0 -> AdType.BASIC_NON_WEBVIEW
-                            1 -> AdType.BASIC_WEBVIEW
-                            2 -> AdType.WEBVIEW_FROM_LOCAL_ASSETS
-                            3 -> AdType.NON_WEBVIEW_VIDEO
-                            else -> AdType.BASIC_NON_WEBVIEW
-                        }
-                    loadAllAds()
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
+        adTypeDropDownMenu.onItemSelectedListener = OnItemSelectedListener()
     }
 
     private fun initializeZOrderToggleButton() {
@@ -310,6 +276,20 @@ class MainActivity : AppCompatActivity() {
     /** Loads all ads in the current fragment. */
     private fun loadAllAds() {
         currentFragment.handleLoadAdFromDrawer(adType, mediationOption, drawViewabilityLayer)
+    }
+
+    private inner class OnItemSelectedListener : AdapterView.OnItemSelectedListener {
+        var isCalledOnStartingApp = true
+
+        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            if (isCalledOnStartingApp) {
+                isCalledOnStartingApp = false
+                return
+            }
+            loadAllAds()
+        }
+
+        override fun onNothingSelected(parent: AdapterView<*>?) {}
     }
 
     companion object {

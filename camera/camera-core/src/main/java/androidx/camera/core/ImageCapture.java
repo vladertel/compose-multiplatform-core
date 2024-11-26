@@ -316,14 +316,12 @@ public final class ImageCapture extends UseCase {
     /**
      * Captures raw images in the {@link ImageFormat#RAW_SENSOR} image format.
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public static final int OUTPUT_FORMAT_RAW = 2;
 
     /**
      * Captures raw images in the {@link ImageFormat#RAW_SENSOR} and {@link ImageFormat#JPEG}
      * image formats.
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public static final int OUTPUT_FORMAT_RAW_JPEG = 3;
 
     /**
@@ -905,8 +903,8 @@ public final class ImageCapture extends UseCase {
      *
      * <p>For simultaneous image capture with {@link #OUTPUT_FORMAT_RAW_JPEG}, the
      * {@link OnImageCapturedCallback#onCaptureSuccess(ImageProxy)} will be triggered twice, one for
-     * {@link ImageFormat#RAW_SENSOR} and the other for {@link ImageFormat#JPEG}. The order in which
-     * image format is triggered first is not guaranteed.
+     * {@link ImageFormat#RAW_SENSOR} and the other for {@link ImageFormat#JPEG}. The order of the
+     * callbacks for which image format is triggered first is not guaranteed.
      *
      * @param executor The executor in which the callback methods will be run.
      * @param callback Callback to be invoked for the newly captured image.
@@ -922,7 +920,7 @@ public final class ImageCapture extends UseCase {
         }
 
         takePictureInternal(executor, callback, /*onDiskCallback=*/null,
-                /*outputFileOptions=*/null);
+                /*outputFileOptions=*/null, /*secondaryOutputFileOptions=*/null);
     }
 
     /**
@@ -937,14 +935,22 @@ public final class ImageCapture extends UseCase {
      * @param imageSavedCallback Callback to be called for the newly captured image.
      *
      * @throws IllegalArgumentException If {@link ImageCapture#FLASH_MODE_SCREEN} is used without a
-     *                                  a non-null {@code ScreenFlash} instance set.
+     *                                  a non-null {@code ScreenFlash} instance set. Also if
+     *                                  {@link ImageCapture#OUTPUT_FORMAT_RAW_JPEG} is used.
      * @see ViewPort
      */
     public void takePicture(
             final @NonNull OutputFileOptions outputFileOptions,
             final @NonNull Executor executor,
             final @NonNull OnImageSavedCallback imageSavedCallback) {
-        takePicture(List.of(outputFileOptions), executor, imageSavedCallback);
+        if (Looper.getMainLooper() != Looper.myLooper()) {
+            CameraXExecutors.mainThreadExecutor().execute(() -> takePicture(
+                    outputFileOptions, executor, imageSavedCallback));
+            return;
+        }
+
+        takePictureInternal(executor, /*inMemoryCallback=*/null, imageSavedCallback,
+                outputFileOptions, /*secondaryOutputFileOptions=*/null);
     }
 
     /**
@@ -954,28 +960,33 @@ public final class ImageCapture extends UseCase {
      * <p>Currently only {@link #OUTPUT_FORMAT_RAW_JPEG} is supporting simultaneous image capture.
      * It needs two {@link OutputFileOptions}, the first one is used for
      * {@link ImageFormat#RAW_SENSOR} image and the second one is for {@link ImageFormat#JPEG}. The
-     * order in which image format is triggered first is not guaranteed.
+     * order of the callbacks for which image format is triggered first is not guaranteed. Check
+     * with {@link OutputFileResults#getImageFormat()} in
+     * {@link OnImageSavedCallback#onImageSaved(OutputFileResults)} for the image format.
      *
-     * @param outputFileOptions  List of options to store the newly captured images.
+     * @param rawOutputFileOptions  Options to store the newly captured raw image.
+     * @param jpegOutputFileOptions Options to store the newly captured jpeg image.
      * @param executor           The executor in which the callback methods will be run.
      * @param imageSavedCallback Callback to be called for the newly captured image.
      *
      * @throws IllegalArgumentException If {@link ImageCapture#FLASH_MODE_SCREEN} is used without a
-     *                                  a non-null {@code ScreenFlash} instance set.
+     *                                  a non-null {@code ScreenFlash} instance set. Also if
+     *                                  non-{@link ImageCapture#OUTPUT_FORMAT_RAW_JPEG} format is
+     *                                  used.
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public void takePicture(
-            final @NonNull List<OutputFileOptions> outputFileOptions,
+            final @NonNull OutputFileOptions rawOutputFileOptions,
+            final @NonNull OutputFileOptions jpegOutputFileOptions,
             final @NonNull Executor executor,
             final @NonNull OnImageSavedCallback imageSavedCallback) {
         if (Looper.getMainLooper() != Looper.myLooper()) {
             CameraXExecutors.mainThreadExecutor().execute(
-                    () -> takePicture(outputFileOptions,
+                    () -> takePicture(rawOutputFileOptions, jpegOutputFileOptions,
                             executor, imageSavedCallback));
             return;
         }
         takePictureInternal(executor, /*inMemoryCallback=*/null, imageSavedCallback,
-                outputFileOptions);
+                rawOutputFileOptions, jpegOutputFileOptions);
     }
 
     /**
@@ -1453,8 +1464,9 @@ public final class ImageCapture extends UseCase {
     @MainThread
     private void takePictureInternal(@NonNull Executor executor,
             @Nullable OnImageCapturedCallback inMemoryCallback,
-            @Nullable ImageCapture.OnImageSavedCallback onDiskCallback,
-            @Nullable List<OutputFileOptions> outputFileOptions) {
+            @Nullable OnImageSavedCallback onDiskCallback,
+            @Nullable OutputFileOptions outputFileOptions,
+            @Nullable OutputFileOptions secondaryOutputFileOptions) {
         checkMainThread();
         if (getFlashMode() == ImageCapture.FLASH_MODE_SCREEN
                 && mScreenFlashWrapper.getBaseScreenFlash() == null) {
@@ -1466,17 +1478,28 @@ public final class ImageCapture extends UseCase {
             sendInvalidCameraError(executor, inMemoryCallback, onDiskCallback);
             return;
         }
+        boolean isSimultaneousCapture = getCurrentConfig()
+                .getSecondaryInputFormat() != ImageFormat.UNKNOWN;
+        if (isSimultaneousCapture && secondaryOutputFileOptions == null) {
+            throw new IllegalArgumentException(
+                    "Simultaneous capture RAW and JPEG needs two output file options");
+        }
+        if (!isSimultaneousCapture && secondaryOutputFileOptions != null) {
+            throw new IllegalArgumentException(
+                    "Non simultaneous capture cannot have two output file options");
+        }
         requireNonNull(mTakePictureManager).offerRequest(TakePictureRequest.of(
                 executor,
                 inMemoryCallback,
                 onDiskCallback,
                 outputFileOptions,
+                secondaryOutputFileOptions,
                 getTakePictureCropRect(),
                 getSensorToBufferTransformMatrix(),
                 getRelativeRotation(camera),
                 getJpegQualityInternal(),
                 getCaptureMode(),
-                getCurrentConfig().getSecondaryInputFormat() != ImageFormat.UNKNOWN,
+                isSimultaneousCapture,
                 mSessionConfigBuilder.getSingleCameraCaptureCallbacks()));
     }
 
@@ -2193,12 +2216,17 @@ public final class ImageCapture extends UseCase {
         @Nullable
         private final Uri mSavedUri;
 
-        /**
-         *
-         */
+        private final int mImageFormat;
+
         @RestrictTo(Scope.LIBRARY_GROUP)
         public OutputFileResults(@Nullable Uri savedUri) {
+            this(savedUri, JPEG);
+        }
+
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public OutputFileResults(@Nullable Uri savedUri, int imageFormat) {
             mSavedUri = savedUri;
+            mImageFormat = imageFormat;
         }
 
         /**
@@ -2211,6 +2239,13 @@ public final class ImageCapture extends UseCase {
         @Nullable
         public Uri getSavedUri() {
             return mSavedUri;
+        }
+
+        /**
+         * Returns the {@link ImageFormat} of the saved file.
+         */
+        public int getImageFormat() {
+            return mImageFormat;
         }
     }
 

@@ -31,9 +31,9 @@ import androidx.camera.camera2.pipe.CameraSurfaceManager
 import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.StreamFormat
 import androidx.camera.camera2.pipe.internal.CameraBackendsImpl
+import androidx.camera.camera2.pipe.internal.CameraGraphParametersImpl
 import androidx.camera.camera2.pipe.internal.FrameCaptureQueue
 import androidx.camera.camera2.pipe.internal.FrameDistributor
-import androidx.camera.camera2.pipe.internal.GraphLifecycleManager
 import androidx.camera.camera2.pipe.internal.ImageSourceMap
 import androidx.camera.camera2.pipe.media.ImageReaderImageSources
 import androidx.camera.camera2.pipe.testing.CameraControllerSimulator
@@ -108,7 +108,6 @@ internal class CameraGraphImplTest {
             threads
         )
     private val cameraContext = CameraBackendsImpl.CameraBackendContext(context, threads, backends)
-    private val graphLifecycleManager = GraphLifecycleManager(threads)
     private val imageSources = ImageReaderImageSources(threads)
     private val frameCaptureQueue = FrameCaptureQueue()
     private val cameraController =
@@ -119,18 +118,17 @@ internal class CameraGraphImplTest {
     private val frameDistributor =
         FrameDistributor(imageSourceMap.imageSources, frameCaptureQueue) {}
     private val surfaceGraph =
-        SurfaceGraph(streamGraph, cameraController, cameraSurfaceManager, emptyMap())
+        SurfaceGraph(streamGraph, cameraControllerProvider, cameraSurfaceManager, emptyMap())
     private val audioRestriction = FakeAudioRestrictionController()
+    private val sessionLock = SessionLock()
     private val cameraGraph =
         CameraGraphImpl(
             graphConfig,
             metadata,
-            graphLifecycleManager,
             fakeGraphProcessor,
             fakeGraphProcessor,
             streamGraph,
             surfaceGraph,
-            backend,
             cameraController,
             GraphState3A(),
             Listener3A(),
@@ -138,6 +136,8 @@ internal class CameraGraphImplTest {
             frameCaptureQueue,
             audioRestriction,
             graphId,
+            CameraGraphParametersImpl(sessionLock, fakeGraphProcessor, testScope),
+            sessionLock
         )
     private val stream1: CameraStream =
         checkNotNull(cameraGraph.streams[stream1Config]) {

@@ -23,7 +23,7 @@
     <string name="label_password_first">Password</string>
 
     <!-- Label of the password field when incorrect (retrying) [CHAR LIMIT=40] -->
-    <string name="label_password_incorrect">Password incorrect</string>
+    <string name="label_password_incorrect">Wrong password. Try again.</string>
 
     <!-- Button for the password dialog: Exit (exits the app). [CHAR LIMIT=16] -->
     <string name="button_cancel">Cancel</string>
@@ -38,7 +38,7 @@
     <string name="desc_password_incorrect">password incorrect</string>
 
     <!-- Content description for message announced to accessibility services when the password entered was incorrect [CHAR LIMIT=50] -->
-    <string name="desc_password_incorrect_message">password incorrect</string>
+    <string name="desc_password_incorrect_message">Wrong password. Try again.</string>
 
     <!-- Label for displaying the current page, e.g. "1 / 500 [CHAR LIMIT=20] -->
     <string name="label_page_single"><xliff:g example="1" id="page">%1$d</xliff:g> / <xliff:g example="500" id="total">%2$d</xliff:g></string>
@@ -56,6 +56,9 @@
 
     <!-- Content description for a page of a paginated document, eg "page 3". [CHAR LIMIT=50] -->
     <string name="desc_page">page <xliff:g example="3" id="page">%1$d</xliff:g></string>
+
+    <!-- Content description for an empty page of a paginated document -->
+    <string name="desc_empty_page">Empty page</string>
 
     <!-- Error message when file format isn't valid PDF. [CHAR LIMIT=60] -->
     <string name="error_file_format_pdf">Cannot display PDF ("<xliff:g example="Treasure Island" id="title">%1$s</xliff:g>" is of invalid format)</string>
@@ -111,6 +114,13 @@
     <!-- Message to show which match is selected out of how many matches when searching for query text inside the file.
       e.g. "3 of 12" meaning "match 3 is selected, out of 12 matches" [CHAR LIMIT=10] -->
     <string name="message_match_status"><xliff:g id="position" example="3">%1$d</xliff:g> / <xliff:g id="total" example="12">%2$d</xliff:g></string>
+
+    <!-- Content description for the match status, indicating which match is selected out of the total number of matches
+    when searching for a query text within the file. -->
+    <string name="match_status_description"><xliff:g id="position" example="3">%1$d</xliff:g> of <xliff:g id="total" example="12">%2$d</xliff:g></string>
+
+    <!-- Message to show when no matches occur when searching for query text inside the file -->
+    <string name="message_no_match_status">No matching results</string>
 
     <!-- Content description for edit fab button -->
     <string name="action_edit">Edit file</string>

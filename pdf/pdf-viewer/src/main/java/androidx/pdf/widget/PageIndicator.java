@@ -99,7 +99,8 @@ public class PageIndicator extends ReusableToast {
 
         if (zoom != mCurrentZoom && stable) {
             // Override announcement with zoom info.
-            announceStr = getDescription(range) + "\n" + getZoomDescription(zoom);
+            announceStr = (announceStr != null) ? announceStr + getZoomDescription(zoom) :
+                    getZoomDescription(zoom);
             mCurrentZoom = zoom;
         }
         if (announceStr != null && mAccessibility.isAccessibilityEnabled(mContext)) {
@@ -123,7 +124,7 @@ public class PageIndicator extends ReusableToast {
         Resources res = mContext.getResources();
         switch (range.length()) {
             case 0:
-                return res.getString(R.string.label_page_single, range.getLast() + 1, mNumPages);
+                return res.getString(R.string.label_page_single, range.getLast(), mNumPages);
             case 1:
                 return res.getString(R.string.label_page_single, range.getFirst() + 1, mNumPages);
             default:

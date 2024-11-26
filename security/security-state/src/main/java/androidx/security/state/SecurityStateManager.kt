@@ -23,11 +23,12 @@ import android.os.Build
 import android.os.Bundle
 import android.system.Os
 import androidx.annotation.RequiresApi
+import androidx.security.state.SecurityPatchState.Companion.USE_VENDOR_SPL
 import androidx.webkit.WebViewCompat
 import java.util.regex.Pattern
 
 /**
- * This class is a wrapper around AOSP {@link android.os.SecurityStateManager} service API added in
+ * This class is a wrapper around AOSP [android.os.SecurityStateManager] service API added in
  * SDK 35. Support for features on older SDKs is provided on a best effort basis.
  *
  * Manages the retrieval and storage of security patch levels and module information for an Android
@@ -81,17 +82,14 @@ public open class SecurityStateManager(private val context: Context) {
      */
     @SuppressLint("NewApi") // Lint does not detect version check below.
     public open fun getGlobalSecurityState(moduleMetadataProvider: String? = null): Bundle {
+        if (getAndroidSdkInt() >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            return getGlobalSecurityStateFromService()
+        }
         return Bundle().apply {
-            // TODO(musashi): add call to SecurityStateManager API when it becomes available
             if (getAndroidSdkInt() >= Build.VERSION_CODES.M) {
                 putString(KEY_SYSTEM_SPL, Build.VERSION.SECURITY_PATCH)
-
-                val vendorSpl = getVendorSpl()
-                if (vendorSpl.isNotEmpty()) {
-                    putString(KEY_VENDOR_SPL, vendorSpl)
-                } else {
-                    // Assume vendor SPL == system SPL
-                    putString(KEY_VENDOR_SPL, Build.VERSION.SECURITY_PATCH)
+                if (USE_VENDOR_SPL) {
+                    putString(KEY_VENDOR_SPL, getVendorSpl())
                 }
             }
             if (getAndroidSdkInt() >= Build.VERSION_CODES.Q) {
@@ -111,6 +109,25 @@ public open class SecurityStateManager(private val context: Context) {
             }
             addWebViewPackages(this)
         }
+    }
+
+    /**
+     * Returns the current global security state from the system service on SDK 35+.
+     *
+     * @return A [Bundle] that contains the global security state information as string-to-string
+     *   key-value pairs.
+     */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    @SuppressLint("WrongConstant")
+    private fun getGlobalSecurityStateFromService(): Bundle {
+        val securityStateManagerService =
+            context.getSystemService(Context.SECURITY_STATE_SERVICE)
+                as android.os.SecurityStateManager
+        val globalSecurityState = securityStateManagerService.globalSecurityState
+        if (!USE_VENDOR_SPL) {
+            globalSecurityState.remove(KEY_VENDOR_SPL)
+        }
+        return globalSecurityState
     }
 
     /**

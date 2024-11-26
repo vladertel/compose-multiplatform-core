@@ -53,7 +53,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -112,9 +114,8 @@ import androidx.wear.compose.material3.tokens.OutlinedButtonTokens
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content Slot for composable body content displayed on the Button
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun Button(
     onClick: () -> Unit,
@@ -191,9 +192,8 @@ fun Button(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content Slot for composable body content displayed on the Button
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun FilledTonalButton(
     onClick: () -> Unit,
@@ -269,9 +269,8 @@ fun FilledTonalButton(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content Slot for composable body content displayed on the OutlinedButton
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun OutlinedButton(
     onClick: () -> Unit,
@@ -347,9 +346,8 @@ fun OutlinedButton(
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content Slot for composable body content displayed on the ChildButton
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun ChildButton(
     onClick: () -> Unit,
@@ -443,9 +441,8 @@ fun ChildButton(
  *   still happen internally.
  * @param label A slot for providing the button's main label. The contents are expected to be text
  *   which is "start" aligned if there is an icon preset and "start" or "center" aligned if not.
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun Button(
     onClick: () -> Unit,
@@ -564,9 +561,8 @@ fun Button(
  *   still happen internally.
  * @param label A slot for providing the button's main label. The contents are expected to be text
  *   which is "start" aligned if there is an icon preset and "start" or "center" aligned if not.
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun FilledTonalButton(
     onClick: () -> Unit,
@@ -680,9 +676,8 @@ fun FilledTonalButton(
  *   still happen internally.
  * @param label A slot for providing the button's main label. The contents are expected to be text
  *   which is "start" aligned if there is an icon preset and "start" or "center" aligned if not.
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun OutlinedButton(
     onClick: () -> Unit,
@@ -796,9 +791,8 @@ fun OutlinedButton(
  *   still happen internally.
  * @param label A slot for providing the button's main label. The contents are expected to be text
  *   which is "start" aligned if there is an icon preset and "start" or "center" aligned if not.
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun ChildButton(
     onClick: () -> Unit,
@@ -933,9 +927,8 @@ fun ChildButton(
  *   shape is a key characteristic of the Wear Material3 Theme
  * @param border Optional [BorderStroke] that will be used to resolve the border for this button in
  *   different states.
- *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
  */
+// TODO(b/261838497) Add Material3 samples and UX guidance links
 @Composable
 fun CompactButton(
     onClick: () -> Unit,
@@ -1462,18 +1455,6 @@ object ButtonDefaults {
      */
     val CompactButtonHeight = CompactButtonTokens.ContainerHeight
 
-    /** The height to be applied for an extra small [EdgeButton]. */
-    val EdgeButtonHeightExtraSmall = 46.dp
-
-    /** The height to be applied for a small [EdgeButton]. */
-    val EdgeButtonHeightSmall = 56.dp
-
-    /** The height to be applied for a medium [EdgeButton]. */
-    val EdgeButtonHeightMedium = 70.dp
-
-    /** The height to be applied for a large [EdgeButton]. */
-    val EdgeButtonHeightLarge = 96.dp
-
     /**
      * The default padding to be provided around a [CompactButton] in order to ensure that its
      * tappable area meets minimum UX guidance.
@@ -1707,15 +1688,27 @@ constructor(
         disabledIconColor,
     )
 
-    internal fun copy(
-        containerColor: Color,
-        contentColor: Color,
-        secondaryContentColor: Color,
-        iconColor: Color,
-        disabledContainerColor: Color,
-        disabledContentColor: Color,
-        disabledSecondaryContentColor: Color,
-        disabledIconColor: Color,
+    /**
+     * Returns a copy of this [ButtonColors], optionally overriding some of the values.
+     *
+     * @param containerColor The background color of this [Button] when enabled
+     * @param contentColor The content color of this [Button] when enabled
+     * @param secondaryContentColor The content color of this [Button] when enabled
+     * @param iconColor The content color of this [Button] when enabled
+     * @param disabledContainerColor The background color of this [Button] when not enabled
+     * @param disabledContentColor The content color of this [Button] when not enabled
+     * @param disabledSecondaryContentColor The content color of this [Button] when not enabled
+     * @param disabledIconColor The content color of this [Button] when not enabled
+     */
+    fun copy(
+        containerColor: Color = Color.Unspecified,
+        contentColor: Color = Color.Unspecified,
+        secondaryContentColor: Color = Color.Unspecified,
+        iconColor: Color = Color.Unspecified,
+        disabledContainerColor: Color = Color.Unspecified,
+        disabledContentColor: Color = Color.Unspecified,
+        disabledSecondaryContentColor: Color = Color.Unspecified,
+        disabledIconColor: Color = Color.Unspecified,
     ) =
         ButtonColors(
             if (containerColor != Color.Unspecified) ColorPainter(containerColor)
@@ -1829,6 +1822,7 @@ private fun ButtonImpl(
 ) {
     val borderModifier =
         if (border != null) modifier.border(border = border, shape = shape) else modifier
+    val hapticFeedback = LocalHapticFeedback.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         // Fill the container height but not its width as buttons have fixed size height but we
@@ -1845,7 +1839,14 @@ private fun ButtonImpl(
                 .combinedClickable(
                     enabled = enabled,
                     onClick = onClick,
-                    onLongClick = onLongClick,
+                    onLongClick =
+                        onLongClick?.let {
+                            {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                                it()
+                            }
+                        },
                     onLongClickLabel = onLongClickLabel,
                     role = Role.Button,
                     indication = ripple(),

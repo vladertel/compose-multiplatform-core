@@ -19,7 +19,6 @@ package androidx.camera.camera2.pipe.graph
 import android.os.Build
 import android.view.Surface
 import androidx.camera.camera2.pipe.AudioRestrictionMode
-import androidx.camera.camera2.pipe.CameraBackend
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraGraphId
@@ -37,7 +36,6 @@ import androidx.camera.camera2.pipe.core.acquireTokenAndSuspend
 import androidx.camera.camera2.pipe.core.tryAcquireToken
 import androidx.camera.camera2.pipe.internal.FrameCaptureQueue
 import androidx.camera.camera2.pipe.internal.FrameDistributor
-import androidx.camera.camera2.pipe.internal.GraphLifecycleManager
 import javax.inject.Inject
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CoroutineScope
@@ -56,23 +54,25 @@ internal class CameraGraphImpl
 constructor(
     graphConfig: CameraGraph.Config,
     metadata: CameraMetadata,
-    private val graphLifecycleManager: GraphLifecycleManager,
     private val graphProcessor: GraphProcessor,
     private val graphListener: GraphListener,
     private val streamGraph: StreamGraphImpl,
     private val surfaceGraph: SurfaceGraph,
-    private val cameraBackend: CameraBackend,
     private val cameraController: CameraController,
     private val graphState3A: GraphState3A,
     private val listener3A: Listener3A,
     private val frameDistributor: FrameDistributor,
     private val frameCaptureQueue: FrameCaptureQueue,
     private val audioRestrictionController: AudioRestrictionController,
-    override val id: CameraGraphId
+    override val id: CameraGraphId,
+    override val parameters: CameraGraph.Parameters,
+    private val sessionLock: SessionLock
 ) : CameraGraph {
-    private val sessionMutex = Mutex()
     private val controller3A = Controller3A(graphProcessor, metadata, graphState3A, listener3A)
     private val closed = atomic(false)
+
+    // TODO(amycao): b/354899829 CameraGraph.Session#close() should build and update repeating
+    // request
 
     init {
         // Log out the configuration of the camera graph when it is created.
@@ -131,7 +131,7 @@ constructor(
         Debug.traceStart { "$this#start" }
         Log.info { "Starting $this" }
         graphListener.onGraphStarting()
-        graphLifecycleManager.monitorAndStart(cameraBackend, cameraController)
+        cameraController.start()
         Debug.traceStop()
     }
 
@@ -141,14 +141,14 @@ constructor(
         Debug.traceStart { "$this#stop" }
         Log.info { "Stopping $this" }
         graphListener.onGraphStopping()
-        graphLifecycleManager.monitorAndStop(cameraBackend, cameraController)
+        cameraController.stop()
         Debug.traceStop()
     }
 
     override suspend fun acquireSession(): CameraGraph.Session {
         // Step 1: Acquire a lock on the session mutex, which returns a releasable token. This may
         //         or may not suspend.
-        val token = sessionMutex.acquireToken()
+        val token = sessionLock.acquireToken()
 
         // Step 2: Return a session that can be used to interact with the session. The session must
         //         be closed when it is no longer needed.
@@ -156,7 +156,7 @@ constructor(
     }
 
     override fun acquireSessionOrNull(): CameraGraph.Session? {
-        val token = sessionMutex.tryAcquireToken() ?: return null
+        val token = sessionLock.tryAcquireToken() ?: return null
         return createSessionFromToken(token)
     }
 
@@ -173,35 +173,15 @@ constructor(
         scope: CoroutineScope,
         action: suspend CoroutineScope.(CameraGraph.Session) -> T
     ): Deferred<T> {
-        // https://github.com/Kotlin/kotlinx.coroutines/issues/1578
-        // To handle `runBlocking` we need to use `job.complete()` in `result.invokeOnCompletion`.
-        // However, if we do this directly on the scope that is provided it will cause
-        // SupervisorScopes to block and never complete. To work around this, we create a childJob,
-        // propagate the existing context, and use that as the context for scope.async.
-        val childJob = Job(scope.coroutineContext[Job])
-        val context = scope.coroutineContext + childJob
-        val result =
-            scope.async(context = context, start = CoroutineStart.UNDISPATCHED) {
-                ensureActive() // Exit early if the parent scope has been canceled.
-
-                // It is very important to acquire *and* suspend here. Invoking a coroutine using
-                // UNDISPATCHED will execute on the current thread until the suspension point, and
-                // this will force the execution to switch to the provided scope after ensuring the
-                // lock is acquired or in the queue. This guarantees exclusion, ordering, and
-                // execution within the correct scope.
-                val token = sessionMutex.acquireTokenAndSuspend()
-
-                // Create and use the session
-                createSessionFromToken(token).use {
-                    // Wrap the block in a coroutineScope to ensure all operations are completed
-                    // before exiting and releasing the lock. The lock can be released early if the
-                    // calling action decides to call session.close() early.
-                    coroutineScope { action(it) }
-                }
+        return sessionLock.withTokenIn(scope) { token ->
+            // Create and use the session
+            createSessionFromToken(token).use { session ->
+                // Wrap the block in a coroutineScope to ensure all operations are completed
+                // before exiting and releasing the lock. The lock can be released early if the
+                // calling action decides to call session.close() early.
+                coroutineScope { action(session) }
             }
-
-        result.invokeOnCompletion { childJob.complete() }
-        return result
+        }
     }
 
     private fun createSessionFromToken(token: Token) =
@@ -227,7 +207,7 @@ constructor(
             Debug.traceStart { "$this#close" }
             Log.info { "Closing $this" }
             graphProcessor.close()
-            graphLifecycleManager.monitorAndClose(cameraBackend, cameraController)
+            cameraController.close()
             frameDistributor.close()
             frameCaptureQueue.close()
             surfaceGraph.close()
@@ -237,4 +217,40 @@ constructor(
     }
 
     override fun toString(): String = id.toString()
+}
+
+@CameraGraphScope
+internal class SessionLock @Inject constructor() {
+    private val mutex = Mutex()
+
+    internal suspend fun acquireToken(): Token = mutex.acquireToken()
+
+    internal fun tryAcquireToken(): Token? = mutex.tryAcquireToken()
+
+    internal fun <T> withTokenIn(
+        scope: CoroutineScope,
+        action: suspend (token: Token) -> T
+    ): Deferred<T> {
+        // https://github.com/Kotlin/kotlinx.coroutines/issues/1578
+        // To handle `runBlocking` we need to use `job.complete()` in `result.invokeOnCompletion`.
+        // However, if we do this directly on the scope that is provided it will cause
+        // SupervisorScopes to block and never complete. To work around this, we create a childJob,
+        // propagate the existing context, and use that as the context for scope.async.
+        val childJob = Job(scope.coroutineContext[Job])
+        val context = scope.coroutineContext + childJob
+        val result =
+            scope.async(context = context, start = CoroutineStart.UNDISPATCHED) {
+                ensureActive() // Exit early if the parent scope has been canceled.
+
+                // It is very important to acquire *and* suspend here. Invoking a coroutine using
+                // UNDISPATCHED will execute on the current thread until the suspension point, and
+                // this will force the execution to switch to the provided scope after ensuring the
+                // lock is acquired or in the queue. This guarantees exclusion, ordering, and
+                // execution within the correct scope.
+                val token = mutex.acquireTokenAndSuspend()
+                action(token)
+            }
+        result.invokeOnCompletion { childJob.complete() }
+        return result
+    }
 }

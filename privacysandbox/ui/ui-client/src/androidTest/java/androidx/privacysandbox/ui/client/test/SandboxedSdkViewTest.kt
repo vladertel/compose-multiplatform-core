@@ -32,6 +32,7 @@ import android.view.ViewGroup.LayoutParams
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionState
 import androidx.privacysandbox.ui.client.view.SandboxedSdkUiSessionStateChangedListener
@@ -132,7 +133,7 @@ class SandboxedSdkViewTest {
             client: SandboxedUiAdapter.SessionClient
         ) {
             internalClient = client
-            testSession = TestSession(context, initialWidth, initialHeight, signalOptions)
+            testSession = TestSession(context, signalOptions)
             clientExecutor.execute {
                 if (!delayOpenSessionCallback) {
                     client.onSessionOpened(testSession!!)
@@ -164,12 +165,8 @@ class SandboxedSdkViewTest {
             return configChangedLatch.await(UI_INTENSIVE_TIMEOUT, TimeUnit.MILLISECONDS)
         }
 
-        inner class TestSession(
-            context: Context,
-            initialWidth: Int,
-            initialHeight: Int,
-            override val signalOptions: Set<String>
-        ) : SandboxedUiAdapter.Session {
+        inner class TestSession(context: Context, override val signalOptions: Set<String>) :
+            SandboxedUiAdapter.Session {
 
             var zOrderChangedLatch: CountDownLatch = CountDownLatch(1)
             var shortestGapBetweenUiChangeEvents = MAX_VALUE
@@ -179,10 +176,6 @@ class SandboxedSdkViewTest {
             private var timeReceivedLastUiChange = SystemClock.elapsedRealtime()
 
             override val view: View = View(context)
-
-            init {
-                view.layoutParams = LinearLayout.LayoutParams(initialWidth, initialHeight)
-            }
 
             fun requestResize(width: Int, height: Int) {
                 internalClient?.onResizeRequested(width, height)
@@ -438,6 +431,86 @@ class SandboxedSdkViewTest {
     }
 
     @Test
+    fun overrideProviderViewLayoutParams() {
+        val providerViewWidth = (0..1000).random()
+        val providerViewHeight = (0..1000).random()
+
+        class CustomSession : AbstractSandboxedUiAdapter.AbstractSession() {
+            override val view = View(context)
+
+            init {
+                view.layoutParams = LinearLayout.LayoutParams(providerViewWidth, providerViewHeight)
+            }
+        }
+
+        class CustomUiAdapter : AbstractSandboxedUiAdapter() {
+            override fun openSession(
+                context: Context,
+                windowInputToken: IBinder,
+                initialWidth: Int,
+                initialHeight: Int,
+                isZOrderOnTop: Boolean,
+                clientExecutor: Executor,
+                client: SandboxedUiAdapter.SessionClient
+            ) {
+                clientExecutor.execute { client.onSessionOpened(CustomSession()) }
+            }
+        }
+
+        view.setAdapter(CustomUiAdapter())
+        addViewToLayout(waitToBeActive = true)
+        val contentView = view.getChildAt(0)
+
+        assertThat(contentView.layoutParams.width).isNotEqualTo(providerViewWidth)
+        assertThat(contentView.layoutParams.height).isNotEqualTo(providerViewHeight)
+        assertThat(contentView.layoutParams.width).isEqualTo(LinearLayout.LayoutParams.WRAP_CONTENT)
+        assertThat(contentView.layoutParams.height)
+            .isEqualTo(LinearLayout.LayoutParams.WRAP_CONTENT)
+    }
+
+    // Verifies that session view resizing does not affect SandboxedSdkView's size
+    @Test
+    fun sandboxedSdkViewSizeUnchangedWhenSessionViewSizeChanges() {
+        val initialWidth = 100
+        val initialHeight = 100
+        view.layoutParams = LinearLayout.LayoutParams(initialWidth, initialHeight)
+
+        class CustomSession : AbstractSandboxedUiAdapter.AbstractSession() {
+            override val view = TextView(context)
+
+            init {
+                view.text = "Test View"
+            }
+        }
+
+        val customSession = CustomSession()
+
+        class CustomUiAdapter : AbstractSandboxedUiAdapter() {
+            override fun openSession(
+                context: Context,
+                windowInputToken: IBinder,
+                initialWidth: Int,
+                initialHeight: Int,
+                isZOrderOnTop: Boolean,
+                clientExecutor: Executor,
+                client: SandboxedUiAdapter.SessionClient
+            ) {
+                clientExecutor.execute { client.onSessionOpened(customSession) }
+            }
+        }
+
+        view.setAdapter(CustomUiAdapter())
+        addViewToLayout(waitToBeActive = true)
+
+        customSession.view.layout(0, 0, initialWidth * 2, initialHeight * 2)
+
+        assertThat(customSession.view.width).isEqualTo(initialWidth * 2)
+        assertThat(customSession.view.height).isEqualTo(initialHeight * 2)
+        assertThat(view.width).isEqualTo(initialWidth)
+        assertThat(view.height).isEqualTo(initialHeight)
+    }
+
+    @Test
     fun onLayoutTestWithSizeChange() {
         addViewToLayout()
         testSandboxedUiAdapter.assertSessionOpened()
@@ -446,6 +519,31 @@ class SandboxedSdkViewTest {
         }
         assertThat(testSandboxedUiAdapter.wasNotifyResizedCalled()).isTrue()
         assertTrue(view.width == 100 && view.height == 200)
+    }
+
+    @Test
+    fun onPaddingSetTest() {
+        addViewToLayout()
+        testSandboxedUiAdapter.assertSessionOpened()
+        activityScenarioRule.withActivity { view.setPadding(10, 10, 10, 10) }
+        assertThat(testSandboxedUiAdapter.wasNotifyResizedCalled()).isTrue()
+    }
+
+    @Test
+    fun signalsSentWhenPaddingApplied() {
+        addViewToLayoutAndWaitToBeActive()
+        val session = testSandboxedUiAdapter.testSession!!
+        val paddingLeft = 10
+        val paddingTop = 10
+        val paddingRight = 20
+        val paddingBottom = 20
+        session.runAndRetrieveNextUiChange {
+            activityScenarioRule.withActivity {
+                view.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom)
+            }
+        }
+        assertThat(session.shortestGapBetweenUiChangeEvents)
+            .isAtLeast(SHORTEST_TIME_BETWEEN_SIGNALS_MS)
     }
 
     @Test
@@ -685,14 +783,11 @@ class SandboxedSdkViewTest {
         val session = testSandboxedUiAdapter.testSession!!
         val newWidth = 500
         val newHeight = 500
-        val sandboxedSdkViewUiInfo =
-            session.runAndRetrieveNextUiChange {
-                activityScenarioRule.withActivity {
-                    view.layoutParams = LinearLayout.LayoutParams(newWidth, newHeight)
-                }
+        session.runAndRetrieveNextUiChange {
+            activityScenarioRule.withActivity {
+                view.layoutParams = LinearLayout.LayoutParams(newWidth, newHeight)
             }
-        assertThat(sandboxedSdkViewUiInfo.uiContainerWidth).isEqualTo(newWidth)
-        assertThat(sandboxedSdkViewUiInfo.uiContainerHeight).isEqualTo(newHeight)
+        }
         assertThat(session.shortestGapBetweenUiChangeEvents)
             .isAtLeast(SHORTEST_TIME_BETWEEN_SIGNALS_MS)
     }
@@ -761,28 +856,27 @@ class SandboxedSdkViewTest {
     }
 
     /**
-     * Changes the size of the view several times in quick succession, and verifies that the signals
-     * sent match the width of the final change.
+     * Changes the alpha of the view several times in quick succession, and verifies that the
+     * signals sent match the alpha of the final change.
      */
     @Test
     fun signalsSentAreFresh() {
         addViewToLayoutAndWaitToBeActive()
         val session = testSandboxedUiAdapter.testSession!!
-        var currentWidth = view.width
-        var currentHeight = view.height
+        var currentAlpha = view.alpha
         val sandboxedSdkViewUiInfo =
             session.runAndRetrieveNextUiChange {
                 activityScenarioRule.withActivity {
                     for (i in 1..5) {
-                        view.layoutParams =
-                            LinearLayout.LayoutParams(currentWidth + 10, currentHeight + 10)
-                        currentWidth += 10
-                        currentHeight += 10
+                        currentAlpha += 0.2f
+                        if (currentAlpha > 1.0f) {
+                            currentAlpha = 0.1f
+                        }
+                        view.alpha = currentAlpha
                     }
                 }
             }
-        assertThat(sandboxedSdkViewUiInfo.uiContainerWidth).isEqualTo(currentWidth)
-        assertThat(sandboxedSdkViewUiInfo.uiContainerHeight).isEqualTo(currentHeight)
+        assertThat(sandboxedSdkViewUiInfo.uiContainerOpacityHint).isEqualTo(currentAlpha)
     }
 
     /**

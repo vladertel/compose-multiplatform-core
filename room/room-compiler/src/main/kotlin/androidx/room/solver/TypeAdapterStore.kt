@@ -28,7 +28,7 @@ import androidx.room.ext.CollectionTypeNames.INT_SPARSE_ARRAY
 import androidx.room.ext.CollectionTypeNames.LONG_SPARSE_ARRAY
 import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.GuavaTypeNames
-import androidx.room.ext.getValueClassUnderlyingElement
+import androidx.room.ext.getValueClassUnderlyingInfo
 import androidx.room.ext.isByteBuffer
 import androidx.room.ext.isEntityElement
 import androidx.room.ext.isNotByte
@@ -105,6 +105,7 @@ import androidx.room.solver.shortcut.result.InsertOrUpsertMethodAdapter
 import androidx.room.solver.types.BoxedBooleanToBoxedIntConverter
 import androidx.room.solver.types.BoxedPrimitiveColumnTypeAdapter
 import androidx.room.solver.types.ByteArrayColumnTypeAdapter
+import androidx.room.solver.types.ByteArrayWrapperColumnTypeAdapter
 import androidx.room.solver.types.ByteBufferColumnTypeAdapter
 import androidx.room.solver.types.ColumnTypeAdapter
 import androidx.room.solver.types.CompositeAdapter
@@ -183,6 +184,8 @@ private constructor(
                 .forEach(::addColumnAdapter)
             StringColumnTypeAdapter.create(context.processingEnv).forEach(::addColumnAdapter)
             ByteArrayColumnTypeAdapter.create(context.processingEnv).forEach(::addColumnAdapter)
+            ByteArrayWrapperColumnTypeAdapter.create(context.processingEnv)
+                .forEach(::addColumnAdapter)
             PrimitiveBooleanToIntConverter.create(context.processingEnv).forEach(::addTypeConverter)
             // null aware converter is able to automatically null wrap converters so we don't
             // need this as long as we are running in KSP
@@ -374,12 +377,15 @@ private constructor(
         val typeElement = type.typeElement
         if (typeElement?.isValueClass() == true) {
             // Extract the type value of the Value class element
-            val underlyingProperty = typeElement.getValueClassUnderlyingElement()
+            val underlyingInfo = typeElement.getValueClassUnderlyingInfo()
+            if (underlyingInfo.constructor.isPrivate() || underlyingInfo.getter == null) {
+                return null
+            }
             val underlyingTypeColumnAdapter =
                 findColumnTypeAdapter(
                     // Find an adapter for the non-null underlying type, nullability will be handled
                     // by the value class adapter.
-                    out = underlyingProperty.asMemberOf(type).makeNonNullable(),
+                    out = underlyingInfo.parameter.asMemberOf(type).makeNonNullable(),
                     affinity = affinity,
                     skipDefaultConverter = false
                 ) ?: return null
@@ -388,7 +394,7 @@ private constructor(
                 valueTypeColumnAdapter = underlyingTypeColumnAdapter,
                 affinity = underlyingTypeColumnAdapter.typeAffinity,
                 out = type,
-                valuePropertyName = underlyingProperty.name
+                valuePropertyName = underlyingInfo.parameter.name
             )
         }
         return when {

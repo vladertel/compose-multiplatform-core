@@ -162,7 +162,6 @@ public class PdfViewer extends LoadingViewer {
      * After the document content is saved over the original in InkActivity, we set this bit to true
      * so we know to call when the new document content is loaded.
      */
-    private boolean mShouldRedrawOnDocumentLoaded = false;
     private Snackbar mSnackbar;
 
     private LayoutHandler mLayoutHandler;
@@ -181,6 +180,13 @@ public class PdfViewer extends LoadingViewer {
     private SelectionActionMode mSelectionActionMode;
 
     private EventCallback mEventCallback;
+
+    private final ImmersiveModeRequester mImmersiveModeRequester = new ImmersiveModeRequester() {
+        @Override
+        public void requestImmersiveModeChange(boolean enterImmersive) {
+            //TODO: remove this class
+        }
+    };
 
     public PdfViewer() {
         super(SELF_MANAGED_CONTENTS);
@@ -284,7 +290,8 @@ public class PdfViewer extends LoadingViewer {
         mSearchModel.query().addObserver(mSearchQueryObserver);
 
         mSingleTapHandler = new SingleTapHandler(getContext(), mAnnotationButton, mPaginatedView,
-                mFindInFileView, mZoomView, mSelectionModel, mPaginationModel, mLayoutHandler);
+                mFindInFileView, mZoomView, mSelectionModel, mPaginationModel, mLayoutHandler,
+                mImmersiveModeRequester);
         mPageViewFactory = new PageViewFactory(requireContext(), mPdfLoader,
                 mPaginatedView, mZoomView, mSingleTapHandler, mFindInFileView,
                 mEventCallback);
@@ -636,10 +643,6 @@ public class PdfViewer extends LoadingViewer {
                             dismissPasswordDialog();
                             mLayoutHandler.maybeLayoutPages(1);
                             mSearchModel.setNumPages(numPages);
-                        }
-
-                        if (mShouldRedrawOnDocumentLoaded) {
-                            mShouldRedrawOnDocumentLoaded = false;
                         }
 
                         if (mIsAnnotationIntentResolvable) {

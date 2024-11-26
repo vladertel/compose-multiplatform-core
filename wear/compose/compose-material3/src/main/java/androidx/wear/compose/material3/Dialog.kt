@@ -16,30 +16,38 @@
 
 package androidx.wear.compose.material3
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
-import androidx.wear.compose.material3.tokens.MotionTokens
+import androidx.wear.compose.material3.MotionScheme.Companion.standard
+import kotlinx.coroutines.flow.collectLatest
 
 /**
- * This is a base dialog component used by [AlertDialog] and [Confirmation] variations. Dialogs
- * provide important prompts in a user flow. They can require an action, communicate information, or
- * help users accomplish a task.
+ * A base dialog component used by [AlertDialog] and [Confirmation] variations. This dialog provides
+ * a full-screen experience with custom entry/exit animations.
+ *
+ * Dialogs provide important prompts in a user flow. They can require an action, communicate
+ * information, or help users accomplish a task.
  *
  * @param show A boolean value that determines whether the dialog should be displayed.
  * @param onDismissRequest A lambda function to be called when the dialog is dismissed by swiping
@@ -49,35 +57,66 @@ import androidx.wear.compose.material3.tokens.MotionTokens
  * @param content A composable function that defines the content of the dialog.
  */
 @Composable
-internal fun Dialog(
+fun Dialog(
     show: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     properties: DialogProperties = DialogProperties(),
     content: @Composable () -> Unit,
 ) {
+    val showState by rememberUpdatedState(show)
     // Transitions for dialog animation.
     var transitionState by remember {
         mutableStateOf(MutableTransitionState(DialogVisibility.Hide))
     }
     val transition = rememberTransition(transitionState)
 
+    val scaffoldState = LocalScaffoldState.current
+    val backgroundAnimatable = remember { Animatable(1f) }
+
+    val backgroundAnimationSpec =
+        MaterialTheme.motionScheme.defaultEffectsSpec<Float>().faster(50f)
+            as FiniteAnimationSpec<Float>
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { showState }
+            .collectLatest {
+                if (it) {
+                    backgroundAnimatable.animateTo(0.85f, backgroundAnimationSpec) {
+                        scaffoldState.parentScale.floatValue = value
+                    }
+                } else {
+                    backgroundAnimatable.animateTo(1f, backgroundAnimationSpec) {
+                        scaffoldState.parentScale.floatValue = value
+                    }
+                }
+            }
+    }
+
     if (show || transition.currentState == DialogVisibility.Display) {
         androidx.compose.ui.window.Dialog(
             onDismissRequest = onDismissRequest,
             properties = properties,
         ) {
-            val backgroundScrimAlpha by animateBackgroundScrimAlpha(transition)
+            // Disable System dialog animations
+            val view = LocalView.current
+            val dialogWindowProvider = view.parent as DialogWindowProvider
+            dialogWindowProvider.window.setWindowAnimations(android.R.style.Animation)
+            dialogWindowProvider.window.setDimAmount(0f)
+
+            val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
+
             val contentAlpha by animateContentAlpha(transition)
             val scale by animateDialogScale(transition)
+
             ScreenScaffold(
                 modifier = modifier,
             ) {
                 SwipeToDismissBox(
-                    state = rememberSwipeToDismissBoxState(),
+                    state = swipeToDismissBoxState,
                     modifier =
                         Modifier.graphicsLayer(
-                            alpha = backgroundScrimAlpha,
+                            alpha = contentAlpha,
                             scaleX = scale,
                             scaleY = scale,
                         ),
@@ -91,7 +130,6 @@ internal fun Dialog(
                         Box(
                             modifier =
                                 Modifier.matchParentSize()
-                                    .graphicsLayer(alpha = contentAlpha)
                                     .background(MaterialTheme.colorScheme.background)
                         ) {
                             content()
@@ -113,25 +151,15 @@ internal fun Dialog(
 }
 
 @Composable
-private fun animateBackgroundScrimAlpha(transition: Transition<DialogVisibility>) =
-    transition.animateFloat(
+private fun animateContentAlpha(transition: Transition<DialogVisibility>): State<Float> {
+    val dialogAlphaAnimationSpec =
+        MaterialTheme.motionScheme.fastEffectsSpec<Float>().faster(50f)
+            as FiniteAnimationSpec<Float>
+    return transition.animateFloat(
         transitionSpec = {
             when (transition.targetState) {
-                DialogVisibility.Display ->
-                    tween(
-                        durationMillis = (MotionTokens.DurationShort3 / 0.9f).toInt(),
-                        easing = MotionTokens.EasingLegacyAccelerate
-                    )
-                DialogVisibility.Hide ->
-                    keyframes {
-                        // Outro
-                        durationMillis = MotionTokens.DurationMedium1 + MotionTokens.DurationShort3
-                        1f at 0
-                        0.9f at
-                            MotionTokens.DurationShort3 using
-                            MotionTokens.EasingLegacyDecelerate
-                        0.0f at MotionTokens.DurationShort3 + MotionTokens.DurationMedium1
-                    }
+                DialogVisibility.Display -> dialogAlphaAnimationSpec
+                DialogVisibility.Hide -> standard().fastEffectsSpec()
             }
         },
         label = "background-scrim-alpha"
@@ -141,52 +169,18 @@ private fun animateBackgroundScrimAlpha(transition: Transition<DialogVisibility>
             DialogVisibility.Display -> 1f
         }
     }
+}
 
 @Composable
-private fun animateContentAlpha(transition: Transition<DialogVisibility>) =
-    transition.animateFloat(
+private fun animateDialogScale(transition: Transition<DialogVisibility>): State<Float> {
+    val dialogAnimationSpec =
+        MaterialTheme.motionScheme.defaultEffectsSpec<Float>().faster(50f)
+            as FiniteAnimationSpec<Float>
+    return transition.animateFloat(
         transitionSpec = {
             when (transition.targetState) {
-                DialogVisibility.Display ->
-                    keyframes {
-                        // Intro
-                        durationMillis = MotionTokens.DurationMedium1 + MotionTokens.DurationShort3
-                        0.0f at 0
-                        0.1f at
-                            MotionTokens.DurationShort3 using
-                            MotionTokens.EasingLegacyDecelerate
-                        1f at MotionTokens.DurationMedium1 + MotionTokens.DurationShort3
-                    }
-                DialogVisibility.Hide ->
-                    tween(
-                        durationMillis = (MotionTokens.DurationShort3 / 0.9f).toInt(),
-                        easing = MotionTokens.EasingLegacyAccelerate
-                    )
-            }
-        },
-        label = "content-alpha"
-    ) { stage ->
-        when (stage) {
-            DialogVisibility.Hide -> 0f
-            DialogVisibility.Display -> 1f
-        }
-    }
-
-@Composable
-private fun animateDialogScale(transition: Transition<DialogVisibility>) =
-    transition.animateFloat(
-        transitionSpec = {
-            when (transition.targetState) {
-                DialogVisibility.Display ->
-                    tween(
-                        durationMillis = MotionTokens.DurationMedium4,
-                        easing = MotionTokens.EasingLegacyDecelerate
-                    )
-                DialogVisibility.Hide ->
-                    tween(
-                        durationMillis = MotionTokens.DurationMedium4,
-                        easing = MotionTokens.EasingLegacyAccelerate
-                    )
+                DialogVisibility.Display -> dialogAnimationSpec
+                DialogVisibility.Hide -> dialogAnimationSpec
             }
         },
         label = "scale"
@@ -196,6 +190,7 @@ private fun animateDialogScale(transition: Transition<DialogVisibility>) =
             DialogVisibility.Display -> 1.0f
         }
     }
+}
 
 private enum class DialogVisibility {
     Hide,

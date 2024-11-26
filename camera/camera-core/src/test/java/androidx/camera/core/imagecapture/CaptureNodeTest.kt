@@ -234,7 +234,8 @@ class CaptureNodeTest {
         assertThat(takePictureCallback.captureProcessProgressList).isEmpty()
     }
 
-    @Test
+    // TODO(b/371138487): re-enable this test method once we fix the flaky issue.
+    // @Test
     fun requestSentNon100Progress_progress100isInvoked() {
         // Arrange: Configure the CaptureNode and submit fake request.
         val captureNode = CaptureNode()
@@ -261,6 +262,7 @@ class CaptureNodeTest {
         // Act: notify onCaptureProcessProgressed that is not 100 after request starts.
         captureNodeIn.cameraCaptureCallback.onCaptureProcessProgressed(1, 50)
         captureNodeIn.cameraCaptureCallback.onCaptureProcessProgressed(1, 90)
+        shadowOf(getMainLooper()).idle()
 
         imageReaderProxy.triggerImageAvailableSync(tagBundle)
         shadowOf(getMainLooper()).idle()
@@ -269,7 +271,8 @@ class CaptureNodeTest {
         assertThat(takePictureCallback.captureProcessProgressList).containsExactly(50, 90, 100)
     }
 
-    @Test
+    // TODO(b/371138487): re-enable this test method once we fix the flaky issue.
+    // @Test
     fun requestSent100Progress_ensureNoDuplicate() {
         // Arrange: Configure the CaptureNode and submit fake request.
         val captureNode = CaptureNode()

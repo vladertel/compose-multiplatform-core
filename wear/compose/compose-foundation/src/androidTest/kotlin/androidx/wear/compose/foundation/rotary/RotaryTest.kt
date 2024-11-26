@@ -21,7 +21,7 @@
 package androidx.wear.compose.foundation.rotary
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -257,20 +257,7 @@ class RotaryScrollTest {
         rule.setContent {
             state = rememberLazyListState()
 
-            val context = LocalContext.current
-
-            // Mocking low-res flag
-            val mockContext = spy(context)
-            val mockPackageManager = spy(context.packageManager)
-            `when`(mockPackageManager.hasSystemFeature("android.hardware.rotaryencoder.lowres"))
-                .thenReturn(lowRes)
-
-            doReturn(mockPackageManager).`when`(mockContext).packageManager
-
-            CompositionLocalProvider(
-                LocalContext provides mockContext,
-                LocalOverscrollConfiguration provides null
-            ) {
+            MockRotaryResolution(lowRes = lowRes) {
                 DefaultLazyColumnItemsWithRotary(
                     itemSize = itemSizeDp,
                     scrollableState = state,
@@ -302,5 +289,26 @@ class RotaryScrollTest {
 
     companion object {
         const val TEST_TAG = "test-tag"
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun MockRotaryResolution(lowRes: Boolean = false, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+
+    // Mocking low-res flag
+    val mockContext = spy(context)
+    val mockPackageManager = spy(context.packageManager)
+    `when`(mockPackageManager.hasSystemFeature("android.hardware.rotaryencoder.lowres"))
+        .thenReturn(lowRes)
+
+    doReturn(mockPackageManager).`when`(mockContext).packageManager
+
+    CompositionLocalProvider(
+        LocalContext provides mockContext,
+        LocalOverscrollFactory provides null
+    ) {
+        content()
     }
 }

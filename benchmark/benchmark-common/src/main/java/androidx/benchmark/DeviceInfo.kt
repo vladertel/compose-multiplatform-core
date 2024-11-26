@@ -260,7 +260,46 @@ object DeviceInfo {
      *
      * See b/303660864
      */
-    private val ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING = 340000000L.until(341513000)
+    private val ART_MAINLINE_VERSIONS_AFFECTING_METHOD_TRACING = 340000000L.until(341513000)
+
+    /**
+     * Starting with an API 35 change cherry-picked to mainline, ART traces class init.
+     *
+     * Fix cherry picked into 341511000
+     *
+     * See b/292294133
+     */
+    const val ART_MAINLINE_MIN_VERSION_CLASS_INIT_TRACING = 341511000L
+
+    /**
+     * Starting with an API 34 change cherry-picked to mainline, when `verify`-compiled, ART will
+     * save loaded classes to disk to prevent subsequent cold starts from reinitializing after the
+     * first startup.
+     *
+     * This can only happen once, and may not occur if the app doesn't have enough time to save the
+     * classes. Additionally, the list of classes is not updated in subsequent starts - it is
+     * possible for an ineffective runtime image to be generated, e.g. from a trivial broadcast
+     * receiver wakeup (again, only if the app has enough time to save the image). Experiments on an
+     * API 35 emulator show that runtime images are generally saved roughly 4 seconds after an app
+     * starts up.
+     *
+     * To disable this behavior, we re-compile with verify after each `kill` to clear profiles when
+     * desired.
+     *
+     * See b/368404173
+     *
+     * @see androidx.benchmark.macro.MacrobenchmarkScope.KillFlushMode.ClearArtRuntimeImage
+     * @see ART_MAINLINE_MIN_VERSION_VERIFY_CLEARS_RUNTIME_IMAGE
+     */
+    private const val ART_MAINLINE_MIN_VERSION_RUNTIME_IMAGE = 340800000L
+
+    /**
+     * Starting with an API 35 backported with mainline, an additional `verify` will clear runtime
+     * images.
+     *
+     * Without this functionality, --reset (root & pre API 34) or reinstall is needed to reset.
+     */
+    private const val ART_MAINLINE_MIN_VERSION_VERIFY_CLEARS_RUNTIME_IMAGE = 350800000L
 
     /**
      * Used when mainline version failed to detect, but this is accepted due to low API level (<34)
@@ -283,5 +322,25 @@ object DeviceInfo {
 
     val methodTracingAffectsMeasurements =
         Build.VERSION.SDK_INT in 26..30 || // b/313868903
-            artMainlineVersion in ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING // b/303660864
+            artMainlineVersion in ART_MAINLINE_VERSIONS_AFFECTING_METHOD_TRACING // b/303660864
+
+    fun isClassInitTracingAvailable(targetApiLevel: Int, targetArtMainlineVersion: Long?): Boolean =
+        targetApiLevel >= 35 ||
+            (targetApiLevel >= 31 &&
+                (targetArtMainlineVersion == null ||
+                    targetArtMainlineVersion >= ART_MAINLINE_MIN_VERSION_CLASS_INIT_TRACING))
+
+    val supportsClassInitTracing =
+        isClassInitTracingAvailable(Build.VERSION.SDK_INT, artMainlineVersion)
+
+    val supportsRuntimeImages =
+        Build.VERSION.SDK_INT >= 34 || artMainlineVersion >= ART_MAINLINE_MIN_VERSION_RUNTIME_IMAGE
+
+    val verifyClearsRuntimeImage =
+        Build.VERSION.SDK_INT >= 35 ||
+            (Build.VERSION.SDK_INT == 34 &&
+                artMainlineVersion >= ART_MAINLINE_MIN_VERSION_VERIFY_CLEARS_RUNTIME_IMAGE)
+
+    val supportsCpuEventCounters =
+        Build.VERSION.SDK_INT < CpuEventCounter.MIN_API_ROOT_REQUIRED || isRooted
 }

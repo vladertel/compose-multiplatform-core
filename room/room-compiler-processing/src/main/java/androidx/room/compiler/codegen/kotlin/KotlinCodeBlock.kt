@@ -20,6 +20,7 @@ import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.KCodeBlock
 import androidx.room.compiler.codegen.KCodeBlockBuilder
 import androidx.room.compiler.codegen.TargetLanguage
+import androidx.room.compiler.codegen.XAnnotationSpec
 import androidx.room.compiler.codegen.XCodeBlock
 import androidx.room.compiler.codegen.XFunSpec
 import androidx.room.compiler.codegen.XMemberName
@@ -31,9 +32,8 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
 
     override fun toString() = actual.toString()
 
-    internal class Builder : KotlinLang(), XCodeBlock.Builder {
-
-        internal val actual = KCodeBlockBuilder()
+    internal class Builder(internal val actual: KCodeBlockBuilder) :
+        KotlinLang(), XCodeBlock.Builder {
 
         override fun add(code: XCodeBlock) = apply {
             require(code is KotlinCodeBlock)
@@ -41,15 +41,11 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
         }
 
         override fun add(format: String, vararg args: Any?) = apply {
-            val processedFormat = processFormatString(format)
-            val processedArgs = processArgs(args)
-            actual.add(processedFormat, *processedArgs)
+            actual.add(formatString(format), *formatArgs(args))
         }
 
         override fun addStatement(format: String, vararg args: Any?) = apply {
-            val processedFormat = processFormatString(format)
-            val processedArgs = processArgs(args)
-            actual.addStatement(processedFormat, *processedArgs)
+            actual.addStatement(formatString(format), *formatArgs(args))
         }
 
         override fun addLocalVariable(
@@ -60,32 +56,22 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
         ) = apply {
             val varOrVal = if (isMutable) "var" else "val"
             if (assignExpr != null) {
-                require(assignExpr is KotlinCodeBlock)
-                actual.addStatement(
-                    "$varOrVal %L: %T = %L",
-                    name,
-                    typeName.kotlin,
-                    assignExpr.actual
-                )
+                addStatement("$varOrVal %L: %T = %L", name, typeName, assignExpr)
             } else {
-                actual.addStatement(
+                addStatement(
                     "$varOrVal %L: %T",
                     name,
-                    typeName.kotlin,
+                    typeName,
                 )
             }
         }
 
         override fun beginControlFlow(controlFlow: String, vararg args: Any?) = apply {
-            val processedControlFlow = processFormatString(controlFlow)
-            val processedArgs = processArgs(args)
-            actual.beginControlFlow(processedControlFlow, *processedArgs)
+            actual.beginControlFlow(formatString(controlFlow), *formatArgs(args))
         }
 
         override fun nextControlFlow(controlFlow: String, vararg args: Any?) = apply {
-            val processedControlFlow = processFormatString(controlFlow)
-            val processedArgs = processArgs(args)
-            actual.nextControlFlow(processedControlFlow, *processedArgs)
+            actual.nextControlFlow(formatString(controlFlow), *formatArgs(args))
         }
 
         override fun endControlFlow() = apply { actual.endControlFlow() }
@@ -94,13 +80,11 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
 
         override fun unindent() = apply { actual.unindent() }
 
-        override fun build(): XCodeBlock {
-            return KotlinCodeBlock(actual.build())
-        }
+        override fun build() = KotlinCodeBlock(actual.build())
 
         // No need to really process 'format' since we use '%' as placeholders, but check for
         // JavaPoet placeholders to hunt down bad migrations to XPoet.
-        private fun processFormatString(format: String): String {
+        private fun formatString(format: String): String {
             JAVA_POET_PLACEHOLDER_REGEX.find(format)?.let {
                 error("Bad JavaPoet placeholder in XPoet at range ${it.range} of input: '$format'")
             }
@@ -109,7 +93,7 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
 
         // Unwraps room.compiler.codegen types to their KotlinPoet actual
         // TODO(b/247242375): Consider improving by wrapping args.
-        private fun processArgs(args: Array<out Any?>): Array<Any?> {
+        private fun formatArgs(args: Array<out Any?>): Array<Any?> {
             return Array(args.size) { index ->
                 val arg = args[index]
                 if (arg is TargetLanguage) {
@@ -122,6 +106,13 @@ internal class KotlinCodeBlock(internal val actual: KCodeBlock) : KotlinLang(), 
                     is XPropertySpec -> (arg as KotlinPropertySpec).actual
                     is XFunSpec -> (arg as KotlinFunSpec).actual
                     is XCodeBlock -> (arg as KotlinCodeBlock).actual
+                    is XAnnotationSpec -> (arg as KotlinAnnotationSpec).actual
+                    is XTypeSpec.Builder,
+                    is XPropertySpec.Builder,
+                    is XFunSpec.Builder,
+                    is XCodeBlock.Builder,
+                    is XAnnotationSpec.Builder ->
+                        error("Found builder, ${arg.javaClass}. Did you forget to call .build()?")
                     else -> arg
                 }
             }

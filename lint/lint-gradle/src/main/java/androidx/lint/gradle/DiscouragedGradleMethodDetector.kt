@@ -92,6 +92,7 @@ class DiscouragedGradleMethodDetector : Detector(), Detector.UastScanner {
         private const val TASK_COLLECTION = "org.gradle.api.tasks.TaskCollection"
         private const val NAMED_DOMAIN_OBJECT_COLLECTION =
             "org.gradle.api.NamedDomainObjectCollection"
+        private const val PROVIDER = "org.gradle.api.provider.Provider"
 
         val EAGER_CONFIGURATION_ISSUE =
             Issue.create(
@@ -125,6 +126,21 @@ class DiscouragedGradleMethodDetector : Detector(), Detector.UastScanner {
                 Implementation(DiscouragedGradleMethodDetector::class.java, Scope.JAVA_FILE_SCOPE)
             )
 
+        val TO_STRING_ON_PROVIDER_ISSUE =
+            Issue.create(
+                "GradleLikelyBug",
+                "Use of this API is likely a bug",
+                """
+                    Calling Provider.toString() will return you a generic hash of the instance of this provider.
+                    You most likely want to call Provider.get() method to get the actual value instead of the
+                    provider.
+                    """,
+                Category.CORRECTNESS,
+                5,
+                Severity.ERROR,
+                Implementation(DiscouragedGradleMethodDetector::class.java, Scope.JAVA_FILE_SCOPE)
+            )
+
         // A map from eager method name to the containing class of the method and the name of the
         // replacement method, if there is a direct equivalent.
         private val REPLACEMENTS =
@@ -135,6 +151,7 @@ class DiscouragedGradleMethodDetector : Detector(), Detector.UastScanner {
                         "configureEach",
                         EAGER_CONFIGURATION_ISSUE
                     ),
+                "any" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
                 "create" to Replacement(TASK_CONTAINER, "register", EAGER_CONFIGURATION_ISSUE),
                 "findAll" to
                     Replacement(NAMED_DOMAIN_OBJECT_COLLECTION, null, EAGER_CONFIGURATION_ISSUE),
@@ -143,6 +160,7 @@ class DiscouragedGradleMethodDetector : Detector(), Detector.UastScanner {
                 "findProject" to Replacement(PROJECT, null, PROJECT_ISOLATION_ISSUE),
                 "findProperty" to
                     Replacement(PROJECT, "providers.gradleProperty", PROJECT_ISOLATION_ISSUE),
+                "forEach" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
                 "hasProperty" to
                     Replacement(PROJECT, "providers.gradleProperty", PROJECT_ISOLATION_ISSUE),
                 "property" to
@@ -156,9 +174,13 @@ class DiscouragedGradleMethodDetector : Detector(), Detector.UastScanner {
                 "getProperties" to
                     Replacement(PROJECT, "providers.gradleProperty", PROJECT_ISOLATION_ISSUE),
                 "getRootProject" to Replacement(PROJECT, null, PROJECT_ISOLATION_ISSUE),
+                "groupBy" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
                 "matching" to Replacement(TASK_COLLECTION, null, EAGER_CONFIGURATION_ISSUE),
+                "map" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
+                "mapNotNull" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
                 "replace" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
                 "remove" to Replacement(TASK_CONTAINER, null, EAGER_CONFIGURATION_ISSUE),
+                "toString" to Replacement(PROVIDER, "get", TO_STRING_ON_PROVIDER_ISSUE),
                 "whenTaskAdded" to
                     Replacement(TASK_CONTAINER, "configureEach", EAGER_CONFIGURATION_ISSUE),
                 "whenObjectAdded" to

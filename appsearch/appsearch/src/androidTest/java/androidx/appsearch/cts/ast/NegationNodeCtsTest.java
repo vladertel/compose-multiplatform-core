@@ -23,12 +23,21 @@ import static org.junit.Assert.assertThrows;
 import androidx.appsearch.ast.NegationNode;
 import androidx.appsearch.ast.Node;
 import androidx.appsearch.ast.TextNode;
+import androidx.appsearch.flags.CheckFlagsRule;
+import androidx.appsearch.flags.DeviceFlagsValueProvider;
+import androidx.appsearch.flags.Flags;
+import androidx.appsearch.flags.RequiresFlagsEnabled;
 
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
 
+@RequiresFlagsEnabled(Flags.FLAG_ENABLE_ABSTRACT_SYNTAX_TREES)
 public class NegationNodeCtsTest {
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+
     @Test
     public void testSetChildren_throwsOnNullNode() {
         TextNode textNode = new TextNode("foo");
@@ -78,5 +87,13 @@ public class NegationNodeCtsTest {
         NegationNode negationText = new NegationNode(textNode);
 
         assertThat(negationText.getChild()).isEqualTo(textNode);
+    }
+
+    @Test
+    public void testToString_appendsChildNodeStringWithNegation() {
+        TextNode textNode = new TextNode("foo");
+        NegationNode negationNode = new NegationNode(textNode);
+
+        assertThat(negationNode.toString()).isEqualTo("NOT (foo)");
     }
 }

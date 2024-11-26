@@ -30,7 +30,13 @@ import kotlin.math.sqrt
  * ordered list of vertices.
  */
 class RoundedPolygon
-internal constructor(internal val features: List<Feature>, val centerX: Float, val centerY: Float) {
+internal constructor(internal val features: List<Feature>, internal val center: Point) {
+    val centerX
+        get() = center.x
+
+    val centerY
+        get() = center.y
+
     /** A flattened version of the [Feature]s, as a List<Cubic>. */
     val cubics = buildList {
         // The first/last mechanism here ensures that the final anchor point in the shape
@@ -134,15 +140,14 @@ internal constructor(internal val features: List<Feature>, val centerX: Float, v
      * @param f The [PointTransformer] used to transform this [RoundedPolygon]
      */
     fun transformed(f: PointTransformer): RoundedPolygon {
-        val center = Point(centerX, centerY).transformed(f)
+        val center = center.transformed(f)
         return RoundedPolygon(
             buildList {
                 for (i in features.indices) {
                     add(features[i].transformed(f))
                 }
             },
-            center.x,
-            center.y
+            center
         )
     }
 
@@ -296,8 +301,7 @@ fun RoundedPolygon(
     )
 
 /** Creates a copy of the given [RoundedPolygon] */
-fun RoundedPolygon(source: RoundedPolygon) =
-    RoundedPolygon(source.features, source.centerX, source.centerY)
+fun RoundedPolygon(source: RoundedPolygon) = RoundedPolygon(source.features, source.center)
 
 /**
  * This function takes the vertices (either supplied or calculated, depending on the constructor
@@ -412,8 +416,6 @@ fun RoundedPolygon(
     // from above, along with new cubics representing the edges between those corners.
     val tempFeatures = mutableListOf<Feature>()
     for (i in 0 until n) {
-        // Determine whether corner at this vertex is concave or convex, based on the
-        // relationship of the prev->curr/curr->next vectors
         // Note that these indices are for pairs of values (points), they need to be
         // doubled to access the xy values in the vertices float array
         val prevVtxIndex = (i + n - 1) % n
@@ -421,8 +423,8 @@ fun RoundedPolygon(
         val currVertex = Point(vertices[i * 2], vertices[i * 2 + 1])
         val prevVertex = Point(vertices[prevVtxIndex * 2], vertices[prevVtxIndex * 2 + 1])
         val nextVertex = Point(vertices[nextVtxIndex * 2], vertices[nextVtxIndex * 2 + 1])
-        val convex = (currVertex - prevVertex).clockwise(nextVertex - currVertex)
-        tempFeatures.add(Feature.Corner(corners[i], currVertex, roundedCorners[i].center, convex))
+        val convex = convex(prevVertex, currVertex, nextVertex)
+        tempFeatures.add(Feature.Corner(corners[i], convex))
         tempFeatures.add(
             Feature.Edge(
                 listOf(
@@ -447,6 +449,50 @@ fun RoundedPolygon(
 }
 
 /**
+ * This constructor takes a list of [Feature] objects that define the polygon's shape and curves. By
+ * specifying the features directly, the summarization of [Cubic] objects to curves can be precisely
+ * controlled. This affects [Morph]'s default mapping, as curves with the same type (convex or
+ * concave) are mapped with each other. For example, if you have a convex curve in your start
+ * polygon, [Morph] will map it to another convex curve in the end polygon.
+ *
+ * The [centerX] and [centerY] parameters are optional. If not supplied, they will be estimated by
+ * calculating the average of all cubic anchor points.
+ *
+ * @param features The [Feature]s that describe the characteristics of each outline segment of the
+ *   polygon.
+ * @param centerX The X coordinate of the center of the polygon, around which all vertices will be
+ *   placed. If none provided, the center will be averaged.
+ * @param centerY The Y coordinate of the center of the polygon, around which all vertices will be
+ *   placed. If none provided, the center will be averaged.
+ * @throws IllegalArgumentException [features] must be at least specify 2 features and describe a
+ *   closed shape.
+ */
+@JvmOverloads
+fun RoundedPolygon(
+    features: List<Feature>,
+    centerX: Float = Float.NaN,
+    centerY: Float = Float.NaN
+): RoundedPolygon {
+    require(features.size >= 2) { "Polygons must have at least 2 features" }
+
+    val vertices =
+        buildList {
+                for (feature in features) {
+                    for (cubic in feature.cubics) {
+                        add(cubic.anchor0X)
+                        add(cubic.anchor0Y)
+                    }
+                }
+            }
+            .toFloatArray()
+
+    val cX = if (centerX.isNaN()) calculateCenter(vertices).first else centerX
+    val cY = if (centerY.isNaN()) calculateCenter(vertices).second else centerY
+
+    return RoundedPolygon(features, Point(cX, cY))
+}
+
+/**
  * Calculates an estimated center position for the polygon, returning it. This function should only
  * be called if the center is not already calculated or provided. The Polygon constructor which
  * takes `numVertices` calculates its own center, since it knows exactly where it is centered, at
@@ -456,7 +502,7 @@ fun RoundedPolygon(
  * transforms that occur before the center is calculated will be taken into account automatically
  * since the center calculation is an average of the current location of all cubic anchor points.
  */
-private fun calculateCenter(vertices: FloatArray): Point {
+internal fun calculateCenter(vertices: FloatArray): Point {
     var cumulativeX = 0f
     var cumulativeY = 0f
     var index = 0

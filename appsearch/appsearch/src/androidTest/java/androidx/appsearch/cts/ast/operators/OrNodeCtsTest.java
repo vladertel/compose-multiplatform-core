@@ -20,16 +20,26 @@ import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertThrows;
 
+import androidx.appsearch.ast.NegationNode;
 import androidx.appsearch.ast.Node;
 import androidx.appsearch.ast.TextNode;
+import androidx.appsearch.ast.operators.AndNode;
 import androidx.appsearch.ast.operators.OrNode;
+import androidx.appsearch.flags.CheckFlagsRule;
+import androidx.appsearch.flags.DeviceFlagsValueProvider;
+import androidx.appsearch.flags.Flags;
+import androidx.appsearch.flags.RequiresFlagsEnabled;
 
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
+@RequiresFlagsEnabled(Flags.FLAG_ENABLE_ABSTRACT_SYNTAX_TREES)
 public class OrNodeCtsTest {
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     @Test
     public void testConstructor_buildsOrNode() {
@@ -172,5 +182,27 @@ public class OrNodeCtsTest {
 
         assertThrows(IllegalArgumentException.class, () -> orNode.removeChild(-1));
         assertThrows(IllegalArgumentException.class, () -> orNode.removeChild(3));
+    }
+
+    @Test
+    public void testToString_joinsChildNodesWithOr() {
+        TextNode foo = new TextNode("foo");
+        TextNode bar = new TextNode("bar");
+        TextNode baz = new TextNode("baz");
+        NegationNode notBaz = new NegationNode(baz);
+
+        OrNode orNode = new OrNode(foo, bar, notBaz);
+        assertThat(orNode.toString()).isEqualTo("((foo) OR (bar) OR NOT (baz))");
+    }
+
+    @Test
+    public void testToString_respectsOperatorPrecedence() {
+        TextNode foo = new TextNode("foo");
+        TextNode bar = new TextNode("bar");
+        TextNode baz = new TextNode("baz");
+        AndNode andNode = new AndNode(foo, bar);
+
+        OrNode orNode = new OrNode(andNode, baz);
+        assertThat(orNode.toString()).isEqualTo("(((foo) AND (bar)) OR (baz))");
     }
 }

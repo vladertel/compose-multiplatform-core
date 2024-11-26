@@ -203,7 +203,10 @@ fun SwipeToRevealInList() {
     ScalingLazyColumn(contentPadding = PaddingValues(0.dp)) {
         items(namesList.size, key = { namesList[it] }) {
             val revealState =
-                rememberRevealState(anchorWidth = SwipeToRevealDefaults.DoubleActionAnchorWidth)
+                rememberRevealState(
+                    swipeDirection = SwipeDirection.Both,
+                    anchorWidth = SwipeToRevealDefaults.DoubleActionAnchorWidth
+                )
             val name = remember { namesList[it] }
             SwipeToReveal(
                 revealState = revealState,
@@ -240,6 +243,32 @@ fun SwipeToRevealInList() {
             ) {
                 Button({}, Modifier.fillMaxWidth().padding(horizontal = 4.dp)) { Text(name) }
             }
+        }
+    }
+}
+
+@Composable
+fun SwipeToRevealSingleButtonWithAnchoring() {
+    SwipeToReveal(
+        revealState =
+            rememberRevealState(
+                swipeDirection = SwipeDirection.RightToLeft,
+                anchorWidth = SwipeToRevealDefaults.SingleActionAnchorWidth,
+            ),
+        actions = {
+            primaryAction(
+                onClick = { /* This block is called when the primary action is executed. */ },
+                icon = { Icon(Icons.Outlined.Delete, contentDescription = "Delete") },
+                label = "Delete"
+            )
+            undoPrimaryAction(
+                onClick = { /* This block is called when the undo primary action is executed. */ },
+                label = "Undo Delete"
+            )
+        }
+    ) {
+        Button(modifier = Modifier.fillMaxWidth(), onClick = {}) {
+            Text("This Button has only one action", modifier = Modifier.fillMaxSize())
         }
     }
 }

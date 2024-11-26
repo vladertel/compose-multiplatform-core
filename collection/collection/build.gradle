@@ -86,14 +86,14 @@ kotlin {
         }
 
         jbMain.dependsOn(commonMain)
-        jsNativeMain.dependsOn(jbMain)
-        jsWasmMain.dependsOn(jsNativeMain)
-        jsMain.dependsOn(jsWasmMain)
         jvmMain.dependsOn(jbMain)
+        nonJvmMain.dependsOn(jbMain)
+        jsWasmMain.dependsOn(nonJvmMain)
+        jsMain.dependsOn(jsWasmMain)
 
         wasmJsMain.dependsOn(jsWasmMain)
 
-        nativeMain.dependsOn(jsNativeMain)
+        nativeMain.dependsOn(nonJvmMain)
         linuxArm64Main.dependsOn(nativeMain)
         linuxArm64Test.dependsOn(nativeTest)
         linuxX64Main.dependsOn(nativeMain)

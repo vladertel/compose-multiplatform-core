@@ -16,7 +16,9 @@
 
 package androidx.core.telecom.test.utils
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -82,14 +84,15 @@ object TestUtils {
     private const val CALLBACK_FAILED_EXCEPTION_MSG =
         "callback failed to be completed in the lambda function"
     // non-primitive constants
-    val TEST_PHONE_NUMBER_9001: Uri = Uri.parse("tel:6506959001")
-    val TEST_PHONE_NUMBER_8985: Uri = Uri.parse("tel:6506958985")
+    val CUSTOM_TEST_APP_SCHEME = "CoreTelecomUnitTestScheme:"
+    val TEST_PHONE_NUMBER = "6506959001"
+    val TEST_ADDRESS: Uri = Uri.parse(CUSTOM_TEST_APP_SCHEME + TEST_PHONE_NUMBER)
 
     // Define the minimal set of properties to start an outgoing call
     val OUTGOING_CALL_ATTRIBUTES =
         CallAttributesCompat(
             OUTGOING_NAME,
-            TEST_PHONE_NUMBER_8985,
+            TEST_ADDRESS,
             CallAttributesCompat.DIRECTION_OUTGOING,
             CallAttributesCompat.CALL_TYPE_AUDIO_CALL,
             ALL_CALL_CAPABILITIES
@@ -98,7 +101,7 @@ object TestUtils {
     val OUTGOING_NO_HOLD_CAP_CALL_ATTRIBUTES =
         CallAttributesCompat(
             OUTGOING_NAME,
-            TEST_PHONE_NUMBER_8985,
+            TEST_ADDRESS,
             CallAttributesCompat.DIRECTION_OUTGOING,
             CallAttributesCompat.CALL_TYPE_AUDIO_CALL,
             CallAttributesCompat.SUPPORTS_STREAM
@@ -108,7 +111,7 @@ object TestUtils {
     val INCOMING_CALL_ATTRIBUTES =
         CallAttributesCompat(
             INCOMING_NAME,
-            TEST_PHONE_NUMBER_8985,
+            TEST_ADDRESS,
             CallAttributesCompat.DIRECTION_INCOMING,
             ALL_CALL_CAPABILITIES
         )
@@ -223,14 +226,9 @@ object TestUtils {
 
         val attributes: CallAttributesCompat =
             if (callType != null) {
-                CallAttributesCompat(
-                    TEST_CALL_ATTRIB_NAME,
-                    TEST_PHONE_NUMBER_9001,
-                    callDirection,
-                    callType
-                )
+                CallAttributesCompat(TEST_CALL_ATTRIB_NAME, TEST_ADDRESS, callDirection, callType)
             } else {
-                CallAttributesCompat(TEST_CALL_ATTRIB_NAME, TEST_PHONE_NUMBER_9001, callDirection)
+                CallAttributesCompat(TEST_CALL_ATTRIB_NAME, TEST_ADDRESS, callDirection)
             }
 
         attributes.mHandle = phoneAccountHandle
@@ -414,6 +412,12 @@ class TestCallCallbackListener(private val scope: CoroutineScope) : ITestAppCont
     private val isLocallySilencedFlow: MutableSharedFlow<Pair<String, Boolean>> =
         MutableStateFlow(Pair("", false))
     private val callAddedFlow: MutableSharedFlow<Pair<Int, String>> = MutableSharedFlow(replay = 1)
+    private val isMutedFlow: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    override fun onGlobalMuteStateChanged(isMuted: Boolean) {
+        Log.i("TestCallCallbackListener", "onGlobalMuteStateChanged: isMuted: $isMuted")
+        scope.launch { isMutedFlow.emit(isMuted) }
+    }
 
     override fun onCallAdded(requestId: Int, callId: String?) {
         if (callId == null) return
@@ -459,6 +463,11 @@ class TestCallCallbackListener(private val scope: CoroutineScope) : ITestAppCont
         assertEquals("<LOCAL CALL SILENCE> never received", expectedState, result?.second)
     }
 
+    suspend fun waitForGlobalMuteState(isMuted: Boolean) {
+        val result = withTimeoutOrNull(5000) { isMutedFlow.filter { it == isMuted }.first() }
+        assertEquals("Global mute state never reached the expected state", isMuted, result)
+    }
+
     suspend fun waitForKickParticipant(callId: String, expectedParticipant: Participant?) {
         val result =
             withTimeoutOrNull(5000) {
@@ -467,5 +476,29 @@ class TestCallCallbackListener(private val scope: CoroutineScope) : ITestAppCont
                     .first()
             }
         assertEquals("kick participant action never received", expectedParticipant, result?.second)
+    }
+}
+
+class TestMuteStateReceiver(private val scope: CoroutineScope) : BroadcastReceiver() {
+    private val isMutedFlow: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    suspend fun waitForGlobalMuteState(isMuted: Boolean, id: String = "") {
+        val result =
+            withTimeoutOrNull(5000) {
+                isMutedFlow
+                    .filter {
+                        Log.i("TestMuteStateReceiver", "received $isMuted")
+                        it == isMuted
+                    }
+                    .first()
+            }
+        assertEquals("Global Mute State {$id} never reached the expected state", isMuted, result)
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        if (AudioManager.ACTION_MICROPHONE_MUTE_CHANGED == intent.action) {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            scope.launch { isMutedFlow.emit(audioManager.isMicrophoneMute) }
+        }
     }
 }

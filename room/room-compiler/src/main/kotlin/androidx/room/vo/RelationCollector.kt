@@ -19,7 +19,6 @@ package androidx.room.vo
 import androidx.room.BuiltInTypeConverters
 import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.XCodeBlock
-import androidx.room.compiler.codegen.XCodeBlock.Builder.Companion.addLocalVal
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.processing.XNullability
 import androidx.room.ext.CollectionTypeNames.ARRAY_MAP
@@ -31,6 +30,7 @@ import androidx.room.ext.CommonTypeNames.HASH_SET
 import androidx.room.ext.KotlinCollectionMemberNames
 import androidx.room.ext.KotlinCollectionMemberNames.MUTABLE_LIST_OF
 import androidx.room.ext.KotlinCollectionMemberNames.MUTABLE_SET_OF
+import androidx.room.ext.RoomTypeNames.BYTE_ARRAY_WRAPPER
 import androidx.room.ext.capitalize
 import androidx.room.ext.stripNonJava
 import androidx.room.parser.ParsedQuery
@@ -639,7 +639,7 @@ data class RelationCollector(
                     }
                 SQLTypeAffinity.REAL -> XTypeName.BOXED_DOUBLE
                 SQLTypeAffinity.TEXT -> CommonTypeNames.STRING
-                SQLTypeAffinity.BLOB -> CommonTypeNames.BYTE_BUFFER
+                SQLTypeAffinity.BLOB -> BYTE_ARRAY_WRAPPER
                 else -> {
                     // no affinity default to String
                     CommonTypeNames.STRING

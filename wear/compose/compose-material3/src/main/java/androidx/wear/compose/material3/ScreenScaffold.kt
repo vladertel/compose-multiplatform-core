@@ -16,25 +16,18 @@
 
 package androidx.wear.compose.material3
 
-import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -42,22 +35,26 @@ import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.ActiveFocusListener
 import androidx.wear.compose.foundation.ScrollInfoProvider
-import androidx.wear.compose.foundation.lazy.LazyColumnState
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumnState
 import kotlin.math.roundToInt
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 
 /**
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText] and [ScrollIndicator] according to [scrollState].
@@ -77,9 +74,9 @@ import kotlinx.coroutines.launch
  * @param scrollIndicator The [ScrollIndicator] to display on this screen, which is expected to be
  *   aligned to Center-End. It is recommended to use the Material3 [ScrollIndicator] which is
  *   provided by default. No scroll indicator is displayed if null is passed.
- * @param bottomButton Optional slot for a Button (usually an [EdgeButton]) that takes the available
- *   space below a scrolling list. It will scale up and fade in when the user scrolls to the end of
- *   the list, and scale down and fade out as the user scrolls up.
+ * @param edgeButton Optional slot for a [EdgeButton] that takes the available space below a
+ *   scrolling list. It will scale up and fade in when the user scrolls to the end of the list, and
+ *   scale down and fade out as the user scrolls up.
  * @param content The body content for this screen.
  */
 @Composable
@@ -90,12 +87,12 @@ fun ScreenScaffold(
     scrollIndicator: (@Composable BoxScope.() -> Unit)? = {
         ScrollIndicator(scrollState, modifier = Modifier.align(Alignment.CenterEnd))
     },
-    bottomButton: (@Composable BoxScope.() -> Unit)? = null,
+    edgeButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) =
-    if (bottomButton != null) {
+    if (edgeButton != null) {
         ScreenScaffold(
-            bottomButton,
+            edgeButton,
             ScrollInfoProvider(scrollState),
             modifier,
             timeText,
@@ -116,7 +113,11 @@ fun ScreenScaffold(
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText] and [ScrollIndicator] according to [scrollState].
@@ -127,9 +128,12 @@ fun ScreenScaffold(
  * Example of using AppScaffold and ScreenScaffold:
  *
  * @sample androidx.wear.compose.material3.samples.ScaffoldSample
- * @param scrollState The scroll state for [androidx.wear.compose.foundation.lazy.LazyColumn], used
- *   to drive screen transitions such as [TimeText] scroll away and showing/hiding
- *   [ScrollIndicator].
+ *
+ * Example of using ScreenScaffold with a [EdgeButton]:
+ *
+ * @sample androidx.wear.compose.material3.samples.EdgeButtonListSample
+ * @param scrollState The scroll state for [TransformingLazyColumn], used to drive screen
+ *   transitions such as [TimeText] scroll away and showing/hiding [ScrollIndicator].
  * @param modifier The modifier for the screen scaffold.
  * @param timeText Time text (both time and potentially status message) for this screen, if
  *   different to the time text at the [AppScaffold] level. When null, the time text from the
@@ -137,25 +141,25 @@ fun ScreenScaffold(
  * @param scrollIndicator The [ScrollIndicator] to display on this screen, which is expected to be
  *   aligned to Center-End. It is recommended to use the Material3 [ScrollIndicator] which is
  *   provided by default. No scroll indicator is displayed if null is passed.
- * @param bottomButton Optional slot for a Button (usually an [EdgeButton]) that takes the available
- *   space below a scrolling list. It will scale up and fade in when the user scrolls to the end of
- *   the list, and scale down and fade out as the user scrolls up.
+ * @param edgeButton Optional slot for a [EdgeButton] that takes the available space below a
+ *   scrolling list. It will scale up and fade in when the user scrolls to the end of the list, and
+ *   scale down and fade out as the user scrolls up.
  * @param content The body content for this screen.
  */
 @Composable
 fun ScreenScaffold(
-    scrollState: LazyColumnState,
+    scrollState: TransformingLazyColumnState,
     modifier: Modifier = Modifier,
     timeText: (@Composable () -> Unit)? = null,
     scrollIndicator: (@Composable BoxScope.() -> Unit)? = {
         ScrollIndicator(scrollState, modifier = Modifier.align(Alignment.CenterEnd))
     },
-    bottomButton: (@Composable BoxScope.() -> Unit)? = null,
+    edgeButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) =
-    if (bottomButton != null) {
+    if (edgeButton != null) {
         ScreenScaffold(
-            bottomButton,
+            edgeButton,
             ScrollInfoProvider(scrollState),
             modifier,
             timeText,
@@ -176,7 +180,11 @@ fun ScreenScaffold(
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText] and [ScrollIndicator] according to [scrollState].
@@ -196,9 +204,9 @@ fun ScreenScaffold(
  * @param scrollIndicator The [ScrollIndicator] to display on this screen, which is expected to be
  *   aligned to Center-End. It is recommended to use the Material3 [ScrollIndicator] which is
  *   provided by default. No scroll indicator is displayed if null is passed.
- * @param bottomButton Optional slot for a Button (usually an [EdgeButton]) that takes the available
- *   space below a scrolling list. It will scale up and fade in when the user scrolls to the end of
- *   the list, and scale down and fade out as the user scrolls up.
+ * @param edgeButton Optional slot for a [EdgeButton] that takes the available space below a
+ *   scrolling list. It will scale up and fade in when the user scrolls to the end of the list, and
+ *   scale down and fade out as the user scrolls up.
  * @param content The body content for this screen.
  */
 @Composable
@@ -209,12 +217,12 @@ fun ScreenScaffold(
     scrollIndicator: (@Composable BoxScope.() -> Unit)? = {
         ScrollIndicator(scrollState, modifier = Modifier.align(Alignment.CenterEnd))
     },
-    bottomButton: (@Composable BoxScope.() -> Unit)? = null,
+    edgeButton: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) =
-    if (bottomButton != null) {
+    if (edgeButton != null) {
         ScreenScaffold(
-            bottomButton,
+            edgeButton,
             ScrollInfoProvider(scrollState),
             modifier,
             timeText,
@@ -235,7 +243,11 @@ fun ScreenScaffold(
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText] and [ScrollIndicator] according to [scrollState]. Note that
@@ -271,7 +283,11 @@ fun ScreenScaffold(
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText], [ScrollIndicator] and the bottom button according to a
@@ -279,14 +295,14 @@ fun ScreenScaffold(
  *
  * This version of [ScreenScaffold] has a special slot for a button at the bottom, that grows and
  * shrinks to take the available space after the scrollable content. In this overload, both
- * bottomButton and scrollInfoProvider must be specified.
+ * edgeButton and scrollInfoProvider must be specified.
  *
  * Example of using AppScaffold and ScreenScaffold:
  *
  * @sample androidx.wear.compose.material3.samples.ScaffoldSample
- * @param bottomButton slot for a Button (usually an [EdgeButton]) that takes the available space
- *   below a scrolling list. It will scale up and fade in when the user scrolls to the end of the
- *   list, and scale down and fade out as the user scrolls up.
+ * @param edgeButton slot for a [EdgeButton] that takes the available space below a scrolling list.
+ *   It will scale up and fade in when the user scrolls to the end of the list, and scale down and
+ *   fade out as the user scrolls up.
  * @param scrollInfoProvider Provider for scroll information used to scroll away screen elements
  *   such as [TimeText] and coordinate showing/hiding the [ScrollIndicator], this needs to be a
  *   [ScrollInfoProvider].
@@ -301,7 +317,7 @@ fun ScreenScaffold(
  */
 @Composable
 fun ScreenScaffold(
-    bottomButton: @Composable BoxScope.() -> Unit,
+    edgeButton: @Composable BoxScope.() -> Unit,
     scrollInfoProvider: ScrollInfoProvider,
     modifier: Modifier = Modifier,
     timeText: (@Composable () -> Unit)? = null,
@@ -320,7 +336,7 @@ fun ScreenScaffold(
                     scrollInfoProvider.lastItemOffset.coerceAtLeast(0f)
                 },
                 contentAlignment = Alignment.BottomCenter,
-                content = bottomButton
+                content = edgeButton
             )
         }
     )
@@ -329,7 +345,11 @@ fun ScreenScaffold(
  * [ScreenScaffold] is one of the Wear Material3 scaffold components.
  *
  * The scaffold components [AppScaffold] and [ScreenScaffold] lay out the structure of a screen and
- * coordinate transitions of the [ScrollIndicator] and [TimeText] components.
+ * coordinate transitions of the [ScrollIndicator] and [TimeText] components. [AppScaffold] should
+ * be at the top of the composition (because it provides [ScaffoldState] and layers [TimeText] on
+ * top of all other content) and [ScreenScaffold] should be part of [AppScaffold]'s content. When
+ * used in conjunction with SwipeDismissableNavHost, [AppScaffold] remains at the top of the
+ * composition, whilst [ScreenScaffold] will be placed for each individual composable route.
  *
  * [ScreenScaffold] displays the [ScrollIndicator] at the center-end of the screen by default and
  * coordinates showing/hiding [TimeText] and [ScrollIndicator] according to [scrollInfoProvider].
@@ -376,48 +396,37 @@ fun ScreenScaffold(
     Box(modifier = modifier.fillMaxSize()) {
         content()
         scrollInfoProvider?.let {
-            AnimatedScrollIndicator(
-                scrollInfoProvider = scrollInfoProvider,
+            AnimatedIndicator(
+                isVisible = {
+                    scaffoldState.screenStage.value != ScreenStage.Idle &&
+                        scrollInfoProvider.isScrollable
+                },
                 content = scrollIndicator,
-                stage = { scaffoldState.screenStage.value }
             )
         } ?: scrollIndicator?.let { it() }
     }
 }
 
-@Composable
-private fun AnimatedScrollIndicator(
-    scrollInfoProvider: ScrollInfoProvider,
-    stage: () -> ScreenStage,
-    content: @Composable (BoxScope.() -> Unit)? = null
-) {
-    // Skip if no scroll indicator provided
-    content?.let { scrollIndicator ->
-        val alphaValue = remember { mutableFloatStateOf(0f) }
-        val animationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow)
-        LaunchedEffect(scrollInfoProvider, scrollIndicator) {
-            launch {
-                snapshotFlow {
-                        if (stage() != ScreenStage.Idle && scrollInfoProvider.isScrollable) 1f
-                        else 0f
-                    }
-                    .distinctUntilChanged()
-                    .collectLatest { targetValue ->
-                        animate(
-                            alphaValue.floatValue,
-                            targetValue,
-                            animationSpec = animationSpec
-                        ) { value, _ ->
-                            alphaValue.floatValue = value
-                        }
-                    }
-            }
-        }
-        Box(
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = alphaValue.floatValue },
-            content = scrollIndicator
-        )
-    }
+/** Contains the default values used by [ScreenScaffold] */
+object ScreenScaffoldDefaults {
+    /**
+     * Creates padding values with extra bottom padding for an EdgeButton.
+     *
+     * @param edgeButtonSize The size of the EdgeButton.
+     * @param start The padding on the start side of the content.
+     * @param top The padding on the top side of the content.
+     * @param end The padding on the end side of the content.
+     * @param extraBottom Additional padding to be added to the bottom padding calculated from the
+     *   edge button size.
+     * @return A [PaddingValues] object with the calculated padding.
+     */
+    fun contentPaddingWithEdgeButton(
+        edgeButtonSize: EdgeButtonSize,
+        start: Dp = 0.dp,
+        top: Dp = 0.dp,
+        end: Dp = 0.dp,
+        extraBottom: Dp = 0.dp,
+    ) = PaddingValues(start, top, end, extraBottom + edgeButtonSize.maximumHeightPlusPadding())
 }
 
 // Sets the height that will be used down the line, using a state as parameter, to avoid

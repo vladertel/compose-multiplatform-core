@@ -52,13 +52,13 @@ import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.samples.AlertDialogWithBottomButtonSample
 import androidx.wear.compose.material3.samples.AlertDialogWithConfirmAndDismissSample
 import androidx.wear.compose.material3.samples.AlertDialogWithContentGroupsSample
+import androidx.wear.compose.material3.samples.AlertDialogWithEdgeButtonSample
 
 val AlertDialogs =
     listOf(
-        ComposableDemo("Bottom button") { AlertDialogWithBottomButtonSample() },
+        ComposableDemo("Edge button") { AlertDialogWithEdgeButtonSample() },
         ComposableDemo("Confirm and Dismiss") { AlertDialogWithConfirmAndDismissSample() },
         ComposableDemo("Content groups") { AlertDialogWithContentGroupsSample() },
         ComposableDemo("Button stack") { AlertDialogWithButtonStack() },
@@ -73,7 +73,7 @@ fun AlertDialogBuilder() {
     var showMessage by remember { mutableStateOf(false) }
     var showSecondaryButton by remember { mutableStateOf(false) }
     var showCaption by remember { mutableStateOf(false) }
-    var buttonsType by remember { mutableStateOf(AlertButtonsType.BOTTOM_BUTTON) }
+    var buttonsType by remember { mutableStateOf(AlertButtonsType.EDGE_BUTTON) }
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -127,9 +127,9 @@ fun AlertDialogBuilder() {
             item {
                 RadioButton(
                     modifier = Modifier.fillMaxWidth(),
-                    selected = buttonsType == AlertButtonsType.BOTTOM_BUTTON,
-                    onSelect = { buttonsType = AlertButtonsType.BOTTOM_BUTTON },
-                    label = { Text("Single Bottom button") },
+                    selected = buttonsType == AlertButtonsType.EDGE_BUTTON,
+                    onSelect = { buttonsType = AlertButtonsType.EDGE_BUTTON },
+                    label = { Text("Single EdgeButton") },
                 )
             }
             item {
@@ -145,25 +145,23 @@ fun AlertDialogBuilder() {
                     modifier = Modifier.fillMaxWidth(),
                     selected = buttonsType == AlertButtonsType.NO_BUTTONS,
                     onSelect = { buttonsType = AlertButtonsType.NO_BUTTONS },
-                    label = { Text("No bottom button") },
+                    label = { Text("No EdgeButton") },
                 )
             }
             item { Button(onClick = { showDialog = true }, label = { Text("Show dialog") }) }
         }
     }
 
-    if (showDialog) {
-        CustomAlertDialog(
-            show = true,
-            showIcon = showIcon,
-            showCaption = showCaption,
-            showSecondaryButton = showSecondaryButton,
-            showMessage = showMessage,
-            buttonsType = buttonsType,
-            onConfirmButton = { showDialog = false },
-            onDismissRequest = { showDialog = false }
-        )
-    }
+    CustomAlertDialog(
+        show = showDialog,
+        showIcon = showIcon,
+        showCaption = showCaption,
+        showSecondaryButton = showSecondaryButton,
+        showMessage = showMessage,
+        buttonsType = buttonsType,
+        onConfirmButton = { showDialog = false },
+        onDismissRequest = { showDialog = false }
+    )
 }
 
 @Composable
@@ -190,8 +188,7 @@ fun AlertDialogWithButtonStack() {
             )
         },
         title = { Text("Allow access to your photos?") },
-        text = { Text("Lerp ipsum dolor sit amet.") },
-        bottomButton = null,
+        text = { Text("Lerp ipsum dolor sit amet.") }
     ) {
         item {
             Button(
@@ -258,8 +255,8 @@ private fun CustomAlertDialog(
             if (buttonsType == AlertButtonsType.CONFIRM_DISMISS) {
                 { /* dismiss action */ }
             } else null,
-        onBottomButton =
-            if (buttonsType == AlertButtonsType.BOTTOM_BUTTON) {
+        onEdgeButton =
+            if (buttonsType == AlertButtonsType.EDGE_BUTTON) {
                 onConfirmButton
             } else null,
         content =
@@ -270,7 +267,7 @@ private fun CustomAlertDialog(
                     }
                     if (showCaption) {
                         item { Caption(captionHorizontalPadding) }
-                        if (buttonsType == AlertButtonsType.BOTTOM_BUTTON) {
+                        if (buttonsType == AlertButtonsType.EDGE_BUTTON) {
                             item { AlertDialogDefaults.GroupSeparator() }
                         }
                     }
@@ -302,11 +299,12 @@ private fun Message() {
 
 @Composable
 private fun SecondaryButton() {
+    var checked by remember { mutableStateOf(false) }
     SwitchButton(
         modifier = Modifier.fillMaxWidth(),
-        checked = false,
+        checked = checked,
         enabled = true,
-        onCheckedChange = {},
+        onCheckedChange = { checked = it },
         label = { Text("Don't show again") },
     )
 }
@@ -331,7 +329,7 @@ private fun AlertDialogHelper(
     message: @Composable (() -> Unit)?,
     onDismissButton: (() -> Unit)?,
     onConfirmButton: (() -> Unit)?,
-    onBottomButton: (() -> Unit)?,
+    onEdgeButton: (() -> Unit)?,
     content: (ScalingLazyListScope.() -> Unit)?
 ) {
     if (onConfirmButton != null && onDismissButton != null) {
@@ -347,7 +345,7 @@ private fun AlertDialogHelper(
             dismissButton = { AlertDialogDefaults.DismissButton(onDismissButton) },
             content = content
         )
-    } else
+    } else if (onEdgeButton != null) {
         AlertDialog(
             show = show,
             onDismissRequest = onDismissRequest,
@@ -356,16 +354,25 @@ private fun AlertDialogHelper(
             title = title,
             icon = icon,
             text = message,
-            bottomButton =
-                if (onBottomButton != null) {
-                    { AlertDialogDefaults.BottomButton(onBottomButton) }
-                } else null,
+            edgeButton = { AlertDialogDefaults.EdgeButton(onEdgeButton) },
             content = content
         )
+    } else {
+        AlertDialog(
+            show = show,
+            onDismissRequest = onDismissRequest,
+            modifier = modifier,
+            properties = properties,
+            title = title,
+            icon = icon,
+            text = message,
+            content = content
+        )
+    }
 }
 
 private enum class AlertButtonsType {
     NO_BUTTONS,
-    BOTTOM_BUTTON,
+    EDGE_BUTTON,
     CONFIRM_DISMISS
 }

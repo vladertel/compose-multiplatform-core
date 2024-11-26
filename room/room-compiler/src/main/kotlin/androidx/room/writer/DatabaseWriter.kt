@@ -19,14 +19,11 @@ package androidx.room.writer
 import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.VisibilityModifier
 import androidx.room.compiler.codegen.XCodeBlock
-import androidx.room.compiler.codegen.XCodeBlock.Builder.Companion.addLocalVal
 import androidx.room.compiler.codegen.XFunSpec
-import androidx.room.compiler.codegen.XFunSpec.Builder.Companion.addStatement
 import androidx.room.compiler.codegen.XPropertySpec
-import androidx.room.compiler.codegen.XPropertySpec.Builder.Companion.apply
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.codegen.XTypeSpec
-import androidx.room.compiler.codegen.XTypeSpec.Builder.Companion.addOriginatingElement
+import androidx.room.compiler.codegen.compat.XConverters.applyToJavaPoet
 import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.KotlinCollectionMemberNames
 import androidx.room.ext.KotlinTypeNames
@@ -44,8 +41,11 @@ class DatabaseWriter(
     val database: Database,
     writerContext: WriterContext,
 ) : TypeWriter(writerContext) {
+    private val className = database.implTypeName
+    override val packageName = className.packageName
+
     override fun createTypeSpecBuilder(): XTypeSpec.Builder {
-        return XTypeSpec.classBuilder(codeLanguage, database.implTypeName).apply {
+        return XTypeSpec.classBuilder(codeLanguage, className).apply {
             addOriginatingElement(database.element)
             superclass(database.typeName)
             setVisibility(
@@ -403,14 +403,11 @@ class DatabaseWriter(
                             initializer(lazyInit)
                         }
                     }
-                    .apply(
-                        javaFieldBuilder = {
-                            // The volatile modifier is needed since in Java the memoization is
-                            // generated.
-                            addModifiers(Modifier.VOLATILE)
-                        },
-                        kotlinPropertyBuilder = {}
-                    )
+                    .applyToJavaPoet {
+                        // The volatile modifier is needed since in Java the memoization is
+                        // generated.
+                        addModifiers(Modifier.VOLATILE)
+                    }
                     .build()
             builder.addProperty(privateDaoProperty)
             if (codeLanguage == CodeLanguage.KOTLIN && method.isProperty) {

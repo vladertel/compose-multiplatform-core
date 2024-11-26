@@ -19,36 +19,31 @@ package androidx.wear.compose.material3.samples
 import androidx.annotation.Sampled
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.wear.compose.foundation.SwipeToDismissBoxState
-import androidx.wear.compose.foundation.edgeSwipeToDismiss
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.HorizontalPageIndicator
+import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.VerticalPageIndicator
+import androidx.wear.compose.material3.VerticalPagerScaffold
 
 @Sampled
 @Composable
-fun HorizontalPageIndicatorWithPagerSample(
-    swipeState: SwipeToDismissBoxState,
-) {
+fun HorizontalPageIndicatorWithPagerSample() {
     val pageCount = 9
     val pagerState = rememberPagerState { pageCount }
 
     Box {
-        HorizontalPager(
-            modifier = Modifier.fillMaxSize().edgeSwipeToDismiss(swipeState),
-            state = pagerState,
+        HorizontalPagerScaffold(
+            pagerState = pagerState,
+            pageIndicator = { HorizontalPageIndicator(pagerState = pagerState) }
         ) { page ->
             Box(modifier = Modifier.fillMaxSize()) {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Page #$page")
             }
         }
-        HorizontalPageIndicator(pagerState = pagerState)
     }
 }
 
@@ -59,14 +54,13 @@ fun VerticalPageIndicatorWithPagerSample() {
     val pagerState = rememberPagerState { pageCount }
 
     Box {
-        VerticalPager(
-            modifier = Modifier.fillMaxSize(),
-            state = pagerState,
+        VerticalPagerScaffold(
+            pagerState = pagerState,
+            pageIndicator = { VerticalPageIndicator(pagerState = pagerState) }
         ) { page ->
             Box(modifier = Modifier.fillMaxSize()) {
                 Text(modifier = Modifier.align(Alignment.Center), text = "Page #$page")
             }
         }
-        VerticalPageIndicator(pagerState = pagerState)
     }
 }

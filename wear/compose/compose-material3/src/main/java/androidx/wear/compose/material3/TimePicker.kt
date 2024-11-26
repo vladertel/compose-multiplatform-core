@@ -332,7 +332,7 @@ fun TimePicker(
                         }
                         .focusRequester(focusRequesterConfirmButton)
                         .focusable(),
-                preferredHeight = ButtonDefaults.EdgeButtonHeightSmall,
+                buttonSize = EdgeButtonSize.Small,
                 colors =
                     buttonColors(
                         contentColor = colors.confirmButtonContentColor,
@@ -424,11 +424,11 @@ object TimePickerDefaults {
             return defaultTimePickerColorsCached
                 ?: TimePickerColors(
                         selectedPickerContentColor =
-                            fromToken(TimePickerTokens.SelectedPickerContentColor),
+                            fromToken(TimePickerTokens.SelectedContentColor),
                         unselectedPickerContentColor =
-                            fromToken(TimePickerTokens.UnselectedPickerContentColor),
+                            fromToken(TimePickerTokens.UnselectedContentColor),
                         separatorColor = fromToken(TimePickerTokens.SeparatorColor),
-                        pickerLabelColor = fromToken(TimePickerTokens.PickerLabelColor),
+                        pickerLabelColor = fromToken(TimePickerTokens.LabelColor),
                         confirmButtonContentColor =
                             fromToken(TimePickerTokens.ConfirmButtonContentColor),
                         confirmButtonContainerColor =
@@ -457,13 +457,23 @@ class TimePickerColors(
     val confirmButtonContentColor: Color,
     val confirmButtonContainerColor: Color,
 ) {
-    internal fun copy(
-        selectedPickerContentColor: Color,
-        unselectedPickerContentColor: Color,
-        separatorColor: Color,
-        pickerLabelColor: Color,
-        confirmButtonContentColor: Color,
-        confirmButtonContainerColor: Color,
+    /**
+     * Returns a copy of this TimePickerColors( optionally overriding some of the values.
+     *
+     * @param selectedPickerContentColor The content color of selected picker.
+     * @param unselectedPickerContentColor The content color of unselected pickers.
+     * @param separatorColor The color of separator between the pickers.
+     * @param pickerLabelColor The color of the picker label.
+     * @param confirmButtonContentColor The content color of the confirm button.
+     * @param confirmButtonContainerColor The container color of the confirm button.
+     */
+    fun copy(
+        selectedPickerContentColor: Color = this.selectedPickerContentColor,
+        unselectedPickerContentColor: Color = this.unselectedPickerContentColor,
+        separatorColor: Color = this.separatorColor,
+        pickerLabelColor: Color = this.pickerLabelColor,
+        confirmButtonContentColor: Color = this.confirmButtonContentColor,
+        confirmButtonContainerColor: Color = this.confirmButtonContainerColor,
     ) =
         TimePickerColors(
             selectedPickerContentColor =
@@ -512,17 +522,17 @@ private fun getTimePickerStyles(
     val isLargeScreen = LocalConfiguration.current.screenWidthDp > 225
     val labelTextStyle =
         if (isLargeScreen) {
-                TimePickerTokens.PickerLabelLargeTypography
+                TimePickerTokens.LabelLargeTypography
             } else {
-                TimePickerTokens.PickerLabelTypography
+                TimePickerTokens.LabelTypography
             }
             .value
 
     val optionTextStyle =
         if (isLargeScreen || timePickerType == TimePickerType.HoursMinutes24H) {
-                TimePickerTokens.PickerContentLargeTypography
+                TimePickerTokens.ContentLargeTypography
             } else {
-                TimePickerTokens.PickerContentTypography
+                TimePickerTokens.ContentTypography
             }
             .value
             .copy(textAlign = TextAlign.Center)

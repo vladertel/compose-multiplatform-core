@@ -2,15 +2,31 @@
 package androidx.browser.auth {
 
   @SuppressCompatibility @androidx.browser.auth.ExperimentalAuthTab public class AuthTabIntent {
+    method @SuppressCompatibility @androidx.browser.customtabs.ExperimentalEphemeralBrowsing public boolean isEphemeralBrowsingEnabled();
     method public void launch(androidx.activity.result.ActivityResultLauncher<android.content.Intent!>, android.net.Uri, String);
-    method public static androidx.activity.result.ActivityResultLauncher<android.content.Intent!> registerActivityResultLauncher(androidx.activity.result.ActivityResultCaller, androidx.activity.result.ActivityResultCallback<android.net.Uri!>);
+    method public void launch(androidx.activity.result.ActivityResultLauncher<android.content.Intent!>, android.net.Uri, String, String);
+    method public static androidx.activity.result.ActivityResultLauncher<android.content.Intent!> registerActivityResultLauncher(androidx.activity.result.ActivityResultCaller, androidx.activity.result.ActivityResultCallback<androidx.browser.auth.AuthTabIntent.AuthResult!>);
+    field public static final String EXTRA_HTTPS_REDIRECT_HOST = "androidx.browser.auth.extra.HTTPS_REDIRECT_HOST";
+    field public static final String EXTRA_HTTPS_REDIRECT_PATH = "androidx.browser.auth.extra.HTTPS_REDIRECT_PATH";
     field public static final String EXTRA_LAUNCH_AUTH_TAB = "androidx.browser.auth.extra.LAUNCH_AUTH_TAB";
     field public static final String EXTRA_REDIRECT_SCHEME = "androidx.browser.auth.extra.REDIRECT_SCHEME";
+    field public static final int RESULT_CANCELED = 0; // 0x0
+    field public static final int RESULT_OK = -1; // 0xffffffff
+    field public static final int RESULT_UNKNOWN_CODE = -2; // 0xfffffffe
+    field public static final int RESULT_VERIFICATION_FAILED = 2; // 0x2
+    field public static final int RESULT_VERIFICATION_TIMED_OUT = 3; // 0x3
+    field public final android.content.Intent intent;
+  }
+
+  public static final class AuthTabIntent.AuthResult {
+    field public final int resultCode;
+    field public final android.net.Uri? resultUri;
   }
 
   public static final class AuthTabIntent.Builder {
     ctor public AuthTabIntent.Builder();
     method public androidx.browser.auth.AuthTabIntent build();
+    method @SuppressCompatibility @androidx.browser.customtabs.ExperimentalEphemeralBrowsing public androidx.browser.auth.AuthTabIntent.Builder setEphemeralBrowsingEnabled(boolean);
   }
 
   @SuppressCompatibility @RequiresOptIn @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS) public @interface ExperimentalAuthTab {
@@ -149,6 +165,7 @@ package androidx.browser.customtabs {
     method public static boolean isBackgroundInteractionEnabled(android.content.Intent);
     method public static boolean isBookmarksButtonEnabled(android.content.Intent);
     method public static boolean isDownloadButtonEnabled(android.content.Intent);
+    method @SuppressCompatibility @androidx.browser.customtabs.ExperimentalEphemeralBrowsing public boolean isEphemeralBrowsingEnabled();
     method public static boolean isSendToExternalDefaultHandlerEnabled(android.content.Intent);
     method public void launchUrl(android.content.Context, android.net.Uri);
     method public static android.content.Intent setAlwaysUseBrowserUI(android.content.Intent?);
@@ -187,6 +204,7 @@ package androidx.browser.customtabs {
     field public static final String EXTRA_DISABLE_BACKGROUND_INTERACTION = "androidx.browser.customtabs.extra.DISABLE_BACKGROUND_INTERACTION";
     field public static final String EXTRA_DISABLE_BOOKMARKS_BUTTON = "org.chromium.chrome.browser.customtabs.EXTRA_DISABLE_STAR_BUTTON";
     field public static final String EXTRA_DISABLE_DOWNLOAD_BUTTON = "org.chromium.chrome.browser.customtabs.EXTRA_DISABLE_DOWNLOAD_BUTTON";
+    field public static final String EXTRA_ENABLE_EPHEMERAL_BROWSING = "androidx.browser.customtabs.extra.ENABLE_EPHEMERAL_BROWSING";
     field public static final String EXTRA_ENABLE_INSTANT_APPS = "android.support.customtabs.extra.EXTRA_ENABLE_INSTANT_APPS";
     field public static final String EXTRA_ENABLE_URLBAR_HIDING = "android.support.customtabs.extra.ENABLE_URLBAR_HIDING";
     field public static final String EXTRA_EXIT_ANIMATION_BUNDLE = "android.support.customtabs.extra.EXIT_ANIMATION_BUNDLE";
@@ -250,6 +268,7 @@ package androidx.browser.customtabs {
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setDefaultColorSchemeParams(androidx.browser.customtabs.CustomTabColorSchemeParams);
     method @Deprecated public androidx.browser.customtabs.CustomTabsIntent.Builder setDefaultShareMenuItemEnabled(boolean);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setDownloadButtonEnabled(boolean);
+    method @SuppressCompatibility @androidx.browser.customtabs.ExperimentalEphemeralBrowsing public androidx.browser.customtabs.CustomTabsIntent.Builder setEphemeralBrowsingEnabled(boolean);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setExitAnimations(android.content.Context, @AnimRes int, @AnimRes int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setInitialActivityHeightPx(@Dimension(unit=androidx.annotation.Dimension.PX) int);
     method public androidx.browser.customtabs.CustomTabsIntent.Builder setInitialActivityHeightPx(@Dimension(unit=androidx.annotation.Dimension.PX) int, int);
@@ -355,6 +374,9 @@ package androidx.browser.customtabs {
     method public default void onGreatestScrollPercentageIncreased(@IntRange(from=1, to=100) int, android.os.Bundle);
     method public default void onSessionEnded(boolean, android.os.Bundle);
     method public default void onVerticalScrollEvent(boolean, android.os.Bundle);
+  }
+
+  @SuppressCompatibility @RequiresOptIn(level=androidx.annotation.RequiresOptIn.Level.WARNING) @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS) public @interface ExperimentalEphemeralBrowsing {
   }
 
   @SuppressCompatibility @RequiresOptIn(level=androidx.annotation.RequiresOptIn.Level.WARNING) @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS) public @interface ExperimentalMinimizationCallback {

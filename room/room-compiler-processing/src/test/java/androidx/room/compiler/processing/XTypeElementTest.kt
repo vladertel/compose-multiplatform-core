@@ -33,7 +33,6 @@ import androidx.room.compiler.processing.util.getDeclaredField
 import androidx.room.compiler.processing.util.getDeclaredMethodByJvmName
 import androidx.room.compiler.processing.util.getField
 import androidx.room.compiler.processing.util.getMethodByJvmName
-import androidx.room.compiler.processing.util.kspProcessingEnv
 import androidx.room.compiler.processing.util.runJavaProcessorTest
 import androidx.room.compiler.processing.util.runKspTest
 import androidx.room.compiler.processing.util.runProcessorTest
@@ -977,17 +976,22 @@ class XTypeElementTest(
             val baseCompanion = invocation.processingEnv.requireTypeElement("Base.Companion")
             val objectMethodNames = invocation.objectMethodNames()
             val declaredMethods = base.getDeclaredMethods()
-            assertThat(declaredMethods.jvmNames())
-                .containsExactly(
-                    "baseFun",
-                    "suspendFun",
-                    "privateBaseFun",
-                    "staticBaseFun",
-                    "getName",
-                    "suspendFun2",
-                    "extFun"
-                )
-                .inOrder()
+            val ordered =
+                assertThat(declaredMethods.jvmNames())
+                    .containsExactly(
+                        "baseFun",
+                        "suspendFun",
+                        "privateBaseFun",
+                        "staticBaseFun",
+                        "getName",
+                        "suspendFun2",
+                        "extFun"
+                    )
+            // Member ordering in companion objects cannot be restored in KSP2:
+            // https://github.com/google/ksp/issues/1898
+            if (!invocation.isKsp2) {
+                ordered.inOrder()
+            }
             declaredMethods.forEach { method ->
                 assertWithMessage("Enclosing element of method ${method.jvmName}")
                     .that(method.enclosingElement.name)
@@ -1365,11 +1369,7 @@ class XTypeElementTest(
             val objectMethodNames = invocation.objectMethodNames()
             if (invocation.isKsp) {
                 assertThat(methodNames - objectMethodNames).containsExactly("f1", "f2")
-                if (invocation.kspProcessingEnv.isKsp2 && isPreCompiled) {
-                    assertThat(methodJvmNames - objectMethodNames).containsExactly("f1", "f2")
-                } else {
-                    assertThat(methodJvmNames - objectMethodNames).containsExactly("notF1", "notF2")
-                }
+                assertThat(methodJvmNames - objectMethodNames).containsExactly("notF1", "notF2")
             } else {
                 assertThat(methodNames - objectMethodNames).containsExactly("f1", "f1", "f2")
                 assertThat(methodJvmNames - objectMethodNames)

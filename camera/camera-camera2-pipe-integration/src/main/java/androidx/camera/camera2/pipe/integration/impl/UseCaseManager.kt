@@ -28,6 +28,7 @@ import android.media.MediaCodec
 import android.os.Build
 import androidx.annotation.GuardedBy
 import androidx.annotation.VisibleForTesting
+import androidx.camera.camera2.pipe.CameraDevices
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraGraph.OperatingMode
 import androidx.camera.camera2.pipe.CameraGraph.RepeatingRequestRequirementsBeforeCapture.CompletionBehavior.AT_LEAST
@@ -70,7 +71,6 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
 import androidx.camera.core.concurrent.CameraCoordinator
 import androidx.camera.core.impl.AttachedSurfaceInfo
-import androidx.camera.core.impl.CameraControlInternal
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.CameraInternal
 import androidx.camera.core.impl.CameraMode
@@ -124,12 +124,12 @@ public class UseCaseManager
 @Inject
 constructor(
     private val cameraPipe: CameraPipe,
+    private val cameraDevices: CameraDevices,
     @GuardedBy("lock") private val cameraCoordinator: CameraCoordinator,
     private val callbackMap: CameraCallbackMap,
     private val requestListener: ComboRequestListener,
     private val cameraConfig: CameraConfig,
     private val builder: UseCaseCameraComponent.Builder,
-    private val cameraControl: CameraControlInternal,
     private val zslControl: ZslControl,
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") // Java version required for Dagger
     private val controls: java.util.Set<UseCaseCameraControl>,
@@ -283,7 +283,7 @@ constructor(
                 }
 
                 if (attachedUseCases.isEmpty()) {
-                    cameraControl.setZslDisabledByUserCaseConfig(false)
+                    zslControl.setZslDisabledByUserCaseConfig(false)
                 } else {
                     updateZslDisabledByUseCaseConfigStatus()
                 }
@@ -345,13 +345,12 @@ constructor(
     public suspend fun close() {
         val closingJobs =
             synchronized(lock) {
-                if (attachedUseCases.isNotEmpty()) {
-                    detach(attachedUseCases.toList())
-                }
+                closeCurrentUseCases()
                 meteringRepeating.onUnbind()
                 closingCameraJobs.toList()
             }
         closingJobs.joinAll()
+        cameraDevices.disconnectAll()
     }
 
     override fun toString(): String = "UseCaseManager<${cameraConfig.cameraId}>"
@@ -423,31 +422,9 @@ constructor(
 
     @GuardedBy("lock")
     private fun refreshAttachedUseCases(newUseCases: Set<UseCase>) {
-        val useCases = newUseCases.toList()
+        closeCurrentUseCases()
 
-        // Close prior camera graph
-        camera.let { useCaseCamera ->
-            _activeComponent = null
-            useCaseCamera?.close()?.let { closingJob ->
-                if (sessionProcessorManager != null) {
-                    // If the current session was created for extensions. We need to make sure
-                    // the closing procedures are done. This is needed because the same
-                    // SessionProcessor instance may be reused in the next extensions session, and
-                    // we need to make sure we de-initialize the current SessionProcessor session.
-                    runBlocking { closingJob.join() }
-                } else {
-                    closingCameraJobs.add(closingJob)
-                    closingJob.invokeOnCompletion {
-                        synchronized(lock) { closingCameraJobs.remove(closingJob) }
-                    }
-                }
-            }
-        }
-        sessionProcessorManager?.let {
-            it.close()
-            sessionProcessorManager = null
-            pendingSessionProcessorInitialization = false
-        }
+        val useCases = newUseCases.toList()
 
         // Update list of active useCases
         if (useCases.isEmpty()) {
@@ -512,6 +489,33 @@ constructor(
             val useCaseManagerConfig =
                 UseCaseManagerConfig(useCases, sessionConfigAdapter, graphConfig, streamConfigMap)
             this.tryResumeUseCaseManager(useCaseManagerConfig)
+        }
+    }
+
+    @GuardedBy("lock")
+    private fun closeCurrentUseCases() {
+        // Close prior camera graph
+        camera.let { useCaseCamera ->
+            _activeComponent = null
+            useCaseCamera?.close()?.let { closingJob ->
+                if (sessionProcessorManager != null) {
+                    // If the current session was created for extensions. We need to make sure
+                    // the closing procedures are done. This is needed because the same
+                    // SessionProcessor instance may be reused in the next extensions session, and
+                    // we need to make sure we de-initialize the current SessionProcessor session.
+                    runBlocking { closingJob.join() }
+                } else {
+                    closingCameraJobs.add(closingJob)
+                    closingJob.invokeOnCompletion {
+                        synchronized(lock) { closingCameraJobs.remove(closingJob) }
+                    }
+                }
+            }
+        }
+        sessionProcessorManager?.let {
+            it.close()
+            sessionProcessorManager = null
+            pendingSessionProcessorInitialization = false
         }
     }
 
@@ -846,7 +850,7 @@ constructor(
 
     private fun updateZslDisabledByUseCaseConfigStatus() {
         val disableZsl = attachedUseCases.any { it.currentConfig.isZslDisabled(false) }
-        cameraControl.setZslDisabledByUserCaseConfig(disableZsl)
+        zslControl.setZslDisabledByUserCaseConfig(disableZsl)
     }
 
     /**
@@ -1128,6 +1132,7 @@ constructor(
                 closeCaptureSessionOnDisconnect = shouldCloseCaptureSessionOnDisconnect,
                 closeCameraDeviceOnClose = shouldCloseCameraDeviceOnClose,
                 finalizeSessionOnCloseBehavior = shouldFinalizeSessionOnCloseBehavior,
+                enableRestartDelays = true,
             )
         }
     }

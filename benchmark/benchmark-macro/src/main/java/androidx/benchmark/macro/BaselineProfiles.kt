@@ -24,9 +24,11 @@ import androidx.annotation.VisibleForTesting
 import androidx.benchmark.Arguments
 import androidx.benchmark.DeviceInfo
 import androidx.benchmark.InstrumentationResults
+import androidx.benchmark.Markdown
 import androidx.benchmark.Outputs
 import androidx.benchmark.Shell
 import androidx.benchmark.UserInfo
+import androidx.benchmark.VirtualFile
 import androidx.tracing.trace
 import java.io.File
 
@@ -217,6 +219,10 @@ private fun extractProfile(packageName: String): String {
         "Expected `pm dump-profiles` stdout to be either black or `$expected` but was $stdout"
     }
 
+    if (UserInfo.isAdditionalUser) {
+        return VirtualFile.fromPath("/data/misc/profman/$packageName-primary.prof.txt").readText()
+    }
+
     val fileName = "$packageName-primary.prof.txt"
     Shell.executeScriptSilent("mv /data/misc/profman/$fileName ${Outputs.dirUsableByAppAndShell}/")
 
@@ -321,13 +327,12 @@ private fun summaryRecord(record: Summary): String {
     // Links
 
     // Link to a path with timestamp to prevent studio from caching the file
-    val relativePath =
-        Outputs.relativePathFor(record.profileTsPath).replace("(", "\\(").replace(")", "\\)")
+    val relativePath = Outputs.relativePathFor(record.profileTsPath)
 
     summary.append(
         """
             Total run time Ns: ${record.totalRunTime}.
-            Baseline profile [results](file://$relativePath)
+            Baseline profile ${Markdown.createFileLink("results", relativePath)}
         """
             .trimIndent()
     )

@@ -81,6 +81,9 @@ public class FastScrollView extends FrameLayout implements PaginationModelObserv
     private final PageIndicator mPageIndicator;
     private PaginationModel mPaginationModel;
 
+    /** Indicates the scrubber visibility */
+    private boolean mIsScrubberVisible;
+
     private final ValueObserver<ZoomView.ZoomScroll> mZoomScrollObserver =
             new ValueObserver<ZoomView.ZoomScroll>() {
                 @Override
@@ -268,6 +271,20 @@ public class FastScrollView extends FrameLayout implements PaginationModelObserv
         mDragHandle.animate().setStartDelay(FADE_DELAY_MS).alpha(0F).start();
     }
 
+    /**
+     *  Sets the visibility state of the scrubber and the associated page indicator.
+     */
+    public void setScrubberVisibility(boolean visibility) {
+        mIsScrubberVisible = visibility;
+        if (mIsScrubberVisible) {
+            setState(State.VISIBLE);
+            mPageIndicator.show();
+        } else {
+            setState(State.NONE);
+            mPageIndicator.hide();
+        }
+    }
+
     private void setState(State state) {
         switch (state) {
             case NONE:
@@ -377,6 +394,13 @@ public class FastScrollView extends FrameLayout implements PaginationModelObserv
         if (position == mCurrentPosition) {
             return;
         }
+
+        if (!mIsScrubberVisible) {
+            setState(State.NONE);
+            mPageIndicator.hide();
+            return;
+        }
+
         requireZoomViewAndPaginationModel();
         mCurrentPosition = position;
 
@@ -414,8 +438,13 @@ public class FastScrollView extends FrameLayout implements PaginationModelObserv
         view.setTranslationY(transY);
         View indicatorView = mPageIndicator.getView();
         indicatorView.setY(newPosition - ((float) indicatorView.getHeight() / 2));
-        mPageIndicator.show();
-        setVisible();
+        if (!mIsScrubberVisible) {
+            setState(State.NONE);
+            mPageIndicator.hide();
+        } else {
+            mPageIndicator.show();
+            setVisible();
+        }
     }
 
     /**
@@ -445,8 +474,11 @@ public class FastScrollView extends FrameLayout implements PaginationModelObserv
         // Update PageIndicator as page dimensions become known
         requireZoomViewAndPaginationModel();
         ZoomView.ZoomScroll position = mZoomView.zoomScroll().get();
-        mPageIndicator.setRangeAndZoom(computeImportantRange(position), position.zoom,
-                position.stable);
+
+        if (mZoomView.getIsInitialZoomDone()) {
+            mPageIndicator.setRangeAndZoom(computeImportantRange(position), mZoomView.getZoom(),
+                    position.stable);
+        }
     }
 
     private void requireZoomViewAndPaginationModel() {

@@ -17,8 +17,7 @@
 package androidx.wear.compose.material3
 
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.TweenSpec
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
@@ -55,6 +54,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -63,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.tokens.CheckboxButtonTokens
-import androidx.wear.compose.material3.tokens.MotionTokens
 import androidx.wear.compose.material3.tokens.ShapeTokens
 import androidx.wear.compose.material3.tokens.SplitCheckboxButtonTokens
 import androidx.wear.compose.materialcore.animateSelectionColor
@@ -122,10 +122,17 @@ fun CheckboxButton(
     icon: @Composable (BoxScope.() -> Unit)? = null,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
-) =
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+
     androidx.wear.compose.materialcore.ToggleButton(
         checked = checked,
-        onCheckedChange = onCheckedChange,
+        onCheckedChange = {
+            hapticFeedback.performHapticFeedback(
+                if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff
+            )
+            onCheckedChange(it)
+        },
         label =
             provideScopeContent(
                 contentColor = colors.contentColor(enabled = enabled, checked),
@@ -186,6 +193,7 @@ fun CheckboxButton(
         iconSpacing = ICON_SPACING,
         ripple = ripple()
     )
+}
 
 /**
  * The Wear Material [SplitCheckboxButton] offers slots and a specific layout for a label and
@@ -318,23 +326,31 @@ fun SplitCheckboxButton(
 
         Spacer(modifier = Modifier.size(2.dp))
 
-        val splitBackground = colors.splitContainerColor(enabled, checked).value
+        val splitBackground = if (enabled) containerColor else Color.Black
+        val splitBackgroundOverlay = colors.splitContainerColor(enabled, checked).value
+        val hapticFeedback = LocalHapticFeedback.current
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 Modifier.toggleable(
                         enabled = enabled,
                         value = checked,
-                        onValueChange = onCheckedChange,
+                        onValueChange = {
+                            hapticFeedback.performHapticFeedback(
+                                if (it) HapticFeedbackType.ToggleOn
+                                else HapticFeedbackType.ToggleOff
+                            )
+                            onCheckedChange(it)
+                        },
                         indication = ripple(),
                         interactionSource = toggleInteractionSource
                     )
                     .fillMaxHeight()
                     .clip(SPLIT_SECTIONS_SHAPE)
-                    .background(containerColor)
+                    .background(splitBackground)
                     .drawWithCache {
                         onDrawWithContent {
-                            drawRect(color = splitBackground)
+                            drawRect(color = splitBackgroundOverlay)
                             drawContent()
                         }
                     }
@@ -696,8 +712,9 @@ object CheckboxButtonDefaults {
                         uncheckedBoxColor = fromToken(SplitCheckboxButtonTokens.UncheckedBoxColor),
                         disabledCheckedContainerColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledCheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitCheckboxButtonTokens.DisabledOpacity
+                                .copy(
+                                    alpha =
+                                        SplitCheckboxButtonTokens.DisabledCheckedContainerOpacity
                                 ),
                         disabledCheckedContentColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledCheckedContentColor)
@@ -706,11 +723,6 @@ object CheckboxButtonDefaults {
                                 ),
                         disabledCheckedSecondaryContentColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledCheckedSecondaryLabelColor)
-                                .copy(
-                                    alpha =
-                                        SplitCheckboxButtonTokens
-                                            .DisabledCheckedSecondaryLabelOpacity
-                                )
                                 .toDisabledColor(
                                     disabledAlpha = SplitCheckboxButtonTokens.DisabledOpacity
                                 ),
@@ -720,9 +732,6 @@ object CheckboxButtonDefaults {
                                     alpha =
                                         SplitCheckboxButtonTokens
                                             .DisabledCheckedSplitContainerOpacity
-                                )
-                                .toDisabledColor(
-                                    disabledAlpha = SplitCheckboxButtonTokens.DisabledOpacity
                                 ),
                         disabledCheckedBoxColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledCheckedBoxColor)
@@ -738,8 +747,9 @@ object CheckboxButtonDefaults {
                                 ),
                         disabledUncheckedContainerColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledUncheckedContainerColor)
-                                .toDisabledColor(
-                                    disabledAlpha = SplitCheckboxButtonTokens.DisabledOpacity
+                                .copy(
+                                    alpha =
+                                        SplitCheckboxButtonTokens.DisabledUncheckedContainerOpacity
                                 ),
                         disabledUncheckedContentColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledUncheckedContentColor)
@@ -757,8 +767,10 @@ object CheckboxButtonDefaults {
                             fromToken(
                                     SplitCheckboxButtonTokens.DisabledUncheckedSplitContainerColor
                                 )
-                                .toDisabledColor(
-                                    disabledAlpha = SplitCheckboxButtonTokens.DisabledOpacity
+                                .copy(
+                                    alpha =
+                                        SplitCheckboxButtonTokens
+                                            .DisabledUncheckedSplitContainerOpacity
                                 ),
                         disabledUncheckedBoxColor =
                             fromToken(SplitCheckboxButtonTokens.DisabledUncheckedBoxColor)
@@ -833,29 +845,30 @@ constructor(
     val disabledUncheckedIconColor: Color,
     val disabledUncheckedBoxColor: Color,
 ) {
-    internal fun copy(
-        checkedContainerColor: Color,
-        checkedContentColor: Color,
-        checkedSecondaryContentColor: Color,
-        checkedIconColor: Color,
-        checkedBoxColor: Color,
-        checkedCheckmarkColor: Color,
-        uncheckedContainerColor: Color,
-        uncheckedContentColor: Color,
-        uncheckedSecondaryContentColor: Color,
-        uncheckedIconColor: Color,
-        uncheckedBoxColor: Color,
-        disabledCheckedContainerColor: Color,
-        disabledCheckedContentColor: Color,
-        disabledCheckedSecondaryContentColor: Color,
-        disabledCheckedIconColor: Color,
-        disabledCheckedBoxColor: Color,
-        disabledCheckedCheckmarkColor: Color,
-        disabledUncheckedContainerColor: Color,
-        disabledUncheckedContentColor: Color,
-        disabledUncheckedSecondaryContentColor: Color,
-        disabledUncheckedIconColor: Color,
-        disabledUncheckedBoxColor: Color,
+    /** Returns a copy of this CheckboxButtonColors, optionally overriding some of the values. */
+    fun copy(
+        checkedContainerColor: Color = this.checkedContainerColor,
+        checkedContentColor: Color = this.checkedContentColor,
+        checkedSecondaryContentColor: Color = this.checkedSecondaryContentColor,
+        checkedIconColor: Color = this.checkedIconColor,
+        checkedBoxColor: Color = this.checkedBoxColor,
+        checkedCheckmarkColor: Color = this.checkedCheckmarkColor,
+        uncheckedContainerColor: Color = this.uncheckedContainerColor,
+        uncheckedContentColor: Color = this.uncheckedContentColor,
+        uncheckedSecondaryContentColor: Color = this.uncheckedSecondaryContentColor,
+        uncheckedIconColor: Color = this.uncheckedIconColor,
+        uncheckedBoxColor: Color = this.uncheckedBoxColor,
+        disabledCheckedContainerColor: Color = this.disabledCheckedContainerColor,
+        disabledCheckedContentColor: Color = this.disabledCheckedContentColor,
+        disabledCheckedSecondaryContentColor: Color = this.disabledCheckedSecondaryContentColor,
+        disabledCheckedIconColor: Color = this.disabledCheckedIconColor,
+        disabledCheckedBoxColor: Color = this.disabledCheckedBoxColor,
+        disabledCheckedCheckmarkColor: Color = this.disabledCheckedCheckmarkColor,
+        disabledUncheckedContainerColor: Color = this.disabledUncheckedContainerColor,
+        disabledUncheckedContentColor: Color = this.disabledUncheckedContentColor,
+        disabledUncheckedSecondaryContentColor: Color = this.disabledUncheckedSecondaryContentColor,
+        disabledUncheckedIconColor: Color = this.disabledUncheckedIconColor,
+        disabledUncheckedBoxColor: Color = this.disabledUncheckedBoxColor,
     ): CheckboxButtonColors =
         CheckboxButtonColors(
             checkedContainerColor = checkedContainerColor.takeOrElse { this.checkedContainerColor },
@@ -1143,29 +1156,74 @@ constructor(
     val disabledUncheckedBoxColor: Color,
 ) {
 
-    internal fun copy(
-        checkedContainerColor: Color,
-        checkedContentColor: Color,
-        checkedSecondaryContentColor: Color,
-        checkedSplitContainerColor: Color,
-        checkedBoxColor: Color,
-        checkedCheckmarkColor: Color,
-        uncheckedContainerColor: Color,
-        uncheckedContentColor: Color,
-        uncheckedSecondaryContentColor: Color,
-        uncheckedSplitContainerColor: Color,
-        uncheckedBoxColor: Color,
-        disabledCheckedContainerColor: Color,
-        disabledCheckedContentColor: Color,
-        disabledCheckedSecondaryContentColor: Color,
-        disabledCheckedSplitContainerColor: Color,
-        disabledCheckedBoxColor: Color,
-        disabledCheckedCheckmarkColor: Color,
-        disabledUncheckedContainerColor: Color,
-        disabledUncheckedContentColor: Color,
-        disabledUncheckedSecondaryContentColor: Color,
-        disabledUncheckedSplitContainerColor: Color,
-        disabledUncheckedBoxColor: Color,
+    /**
+     * Returns a copy of this SplitCheckboxButtonColors optionally overriding some of the values.
+     *
+     * @param checkedContainerColor Container or background color when the [SplitCheckboxButton] is
+     *   checked
+     * @param checkedContentColor Color of the content like label when the [SplitCheckboxButton] is
+     *   checked
+     * @param checkedSecondaryContentColor Color of the secondary content like secondary label when
+     *   the [SplitCheckboxButton] is checked
+     * @param checkedSplitContainerColor Split container color when the [SplitCheckboxButton] is
+     *   checked
+     * @param checkedBoxColor Box color when [SplitCheckboxButton] is checked
+     * @param checkedCheckmarkColor Checkmark color when [SplitCheckboxButton] is checked
+     * @param uncheckedContainerColor Container or background color when the [SplitCheckboxButton]
+     *   is unchecked
+     * @param uncheckedContentColor Color of the content like label when the [SplitCheckboxButton]
+     *   is unchecked
+     * @param uncheckedSecondaryContentColor Color of the secondary content like secondary label
+     *   when the [SplitCheckboxButton] is unchecked
+     * @param uncheckedSplitContainerColor Split container color when the [SplitCheckboxButton] is
+     *   unchecked
+     * @param uncheckedBoxColor Box color when the [SplitCheckboxButton] is unchecked
+     * @param disabledCheckedContainerColor Container color when the [SplitCheckboxButton] is
+     *   disabled and checked
+     * @param disabledCheckedContentColor Color of the content like label when the
+     *   [SplitCheckboxButton] is disabled and checked
+     * @param disabledCheckedSecondaryContentColor Color of the secondary content like secondary
+     *   label when the [SplitCheckboxButton] is disabled and checked
+     * @param disabledCheckedSplitContainerColor Split container color when the
+     *   [SplitCheckboxButton] is disabled and checked
+     * @param disabledCheckedBoxColor Box color when the [SplitCheckboxButton] is disabled and
+     *   checked
+     * @param disabledCheckedCheckmarkColor Checkmark color when the [SplitCheckboxButton] is
+     *   disabled and checked
+     * @param disabledUncheckedContainerColor Container color when the [SplitCheckboxButton] is
+     *   unchecked and disabled
+     * @param disabledUncheckedContentColor Color of the content like label when the
+     *   [SplitCheckboxButton] is unchecked and disabled
+     * @param disabledUncheckedSecondaryContentColor Color of the secondary content like secondary
+     *   label when the [SplitCheckboxButton] is unchecked and disabled
+     * @param disabledUncheckedSplitContainerColor Split container color when the
+     *   [SplitCheckboxButton] is unchecked and disabled
+     * @param disabledUncheckedBoxColor Box color when the [SplitCheckboxButton] is disabled and
+     *   unchecked
+     */
+    fun copy(
+        checkedContainerColor: Color = this.checkedContainerColor,
+        checkedContentColor: Color = this.checkedContentColor,
+        checkedSecondaryContentColor: Color = this.checkedSecondaryContentColor,
+        checkedSplitContainerColor: Color = this.checkedSplitContainerColor,
+        checkedBoxColor: Color = this.checkedBoxColor,
+        checkedCheckmarkColor: Color = this.checkedCheckmarkColor,
+        uncheckedContainerColor: Color = this.uncheckedContainerColor,
+        uncheckedContentColor: Color = this.uncheckedContentColor,
+        uncheckedSecondaryContentColor: Color = this.uncheckedSecondaryContentColor,
+        uncheckedSplitContainerColor: Color = this.uncheckedSplitContainerColor,
+        uncheckedBoxColor: Color = this.uncheckedBoxColor,
+        disabledCheckedContainerColor: Color = this.disabledCheckedContainerColor,
+        disabledCheckedContentColor: Color = this.disabledCheckedContentColor,
+        disabledCheckedSecondaryContentColor: Color = this.disabledCheckedSecondaryContentColor,
+        disabledCheckedSplitContainerColor: Color = this.disabledCheckedSplitContainerColor,
+        disabledCheckedBoxColor: Color = this.disabledCheckedBoxColor,
+        disabledCheckedCheckmarkColor: Color = this.disabledCheckedCheckmarkColor,
+        disabledUncheckedContainerColor: Color = this.disabledUncheckedContainerColor,
+        disabledUncheckedContentColor: Color = this.disabledUncheckedContentColor,
+        disabledUncheckedSecondaryContentColor: Color = this.disabledUncheckedSecondaryContentColor,
+        disabledUncheckedSplitContainerColor: Color = this.disabledUncheckedSplitContainerColor,
+        disabledUncheckedBoxColor: Color = this.disabledUncheckedBoxColor,
     ): SplitCheckboxButtonColors =
         SplitCheckboxButtonColors(
             checkedContainerColor = checkedContainerColor.takeOrElse { this.checkedContainerColor },
@@ -1483,7 +1541,7 @@ private val BOX_SIZE = 18.dp
 private val SPLIT_MIN_WIDTH = 48.dp
 private val SPLIT_SECTIONS_SHAPE = ShapeTokens.CornerExtraSmall
 
-private val COLOR_ANIMATION_SPEC: AnimationSpec<Color> =
-    tween(MotionTokens.DurationMedium1, 0, MotionTokens.EasingStandardDecelerate)
-private val PROGRESS_ANIMATION_SPEC: TweenSpec<Float> =
-    tween(MotionTokens.DurationMedium1, 0, MotionTokens.EasingStandardDecelerate)
+private val COLOR_ANIMATION_SPEC: AnimationSpec<Color>
+    @Composable get() = MaterialTheme.motionScheme.slowEffectsSpec()
+private val PROGRESS_ANIMATION_SPEC: FiniteAnimationSpec<Float>
+    @Composable get() = MaterialTheme.motionScheme.fastEffectsSpec()

@@ -16,6 +16,9 @@
 
 package androidx.wear.compose.material3
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -27,10 +30,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -42,8 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,9 +63,13 @@ import androidx.wear.compose.foundation.CurvedScope
 import androidx.wear.compose.foundation.CurvedTextStyle
 import androidx.wear.compose.foundation.padding
 import androidx.wear.compose.material3.tokens.ColorSchemeKeyTokens
+import androidx.wear.compose.material3.tokens.MotionTokens.DurationShort2
+import androidx.wear.compose.material3.tokens.MotionTokens.DurationShort3
+import androidx.wear.compose.material3.tokens.ShapeTokens
 import androidx.wear.compose.materialcore.screenHeightDp
 import androidx.wear.compose.materialcore.screenWidthDp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Shows a [Confirmation] dialog with an icon and optional very short curved text. The length of the
@@ -98,15 +110,33 @@ fun Confirmation(
 ) {
     ConfirmationImpl(
         show = show,
+        performHapticFeedback = null,
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        iconContainer = confirmationIconContainer(true, colors.iconContainerColor),
         curvedText = curvedText,
         colors = colors,
         properties = properties,
         durationMillis = durationMillis,
-        content = content
-    )
+    ) {
+        IconContainer(
+            iconColor = colors.iconColor,
+            iconBackground = confirmationIconContainer(true, colors.iconContainerColor),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.IconContainer(
+    modifier: Modifier = Modifier,
+    iconColor: Color,
+    iconBackground: @Composable BoxScope.() -> Unit,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(modifier.align(Alignment.Center), contentAlignment = Alignment.Center) {
+        iconBackground()
+        CompositionLocalProvider(LocalContentColor provides iconColor) { content() }
+    }
 }
 
 /**
@@ -167,6 +197,13 @@ fun Confirmation(
         onDismissRequest = onDismissRequest,
         properties = properties,
     ) {
+        val alphaAnimatable = remember { Animatable(0f) }
+        val textOpacityAnimationSpec = TextOpacityAnimationSpec
+        LaunchedEffect(Unit) {
+            delay(DurationShort2.toLong())
+            alphaAnimatable.animateTo(1f, textOpacityAnimationSpec)
+        }
+
         Box(Modifier.fillMaxSize()) {
             val horizontalPadding = screenWidthDp().dp * HorizontalLinearContentPaddingFraction
             Column(
@@ -194,7 +231,14 @@ fun Confirmation(
                 ) {
                     if (text != null) {
                         Spacer(Modifier.height(LinearContentSpacing))
-                        text()
+                        Column(
+                            modifier =
+                                Modifier.fillMaxWidth().graphicsLayer {
+                                    alpha = alphaAnimatable.value
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            content = text
+                        )
                         Spacer(Modifier.height(LinearContentSpacing))
                     }
                 }
@@ -239,17 +283,26 @@ fun SuccessConfirmation(
     durationMillis: Long = ConfirmationDefaults.ConfirmationDurationMillis,
     content: @Composable BoxScope.() -> Unit = ConfirmationDefaults.SuccessIcon,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     ConfirmationImpl(
         show = show,
+        performHapticFeedback = {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+        },
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        content = content,
-        iconContainer = successIconContainer(colors.iconContainerColor),
         curvedText = curvedText,
         colors = colors,
         properties = properties,
         durationMillis = durationMillis
-    )
+    ) {
+        IconContainer(
+            modifier = Modifier.fillMaxSize(),
+            iconColor = colors.iconColor,
+            iconBackground = successIconContainer(colors.iconContainerColor),
+            content = content
+        )
+    }
 }
 
 /**
@@ -288,17 +341,36 @@ fun FailureConfirmation(
     durationMillis: Long = ConfirmationDefaults.ConfirmationDurationMillis,
     content: @Composable BoxScope.() -> Unit = ConfirmationDefaults.FailureIcon,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     ConfirmationImpl(
         show = show,
+        performHapticFeedback = { hapticFeedback.performHapticFeedback(HapticFeedbackType.Reject) },
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        iconContainer = failureIconContainer(colors.iconContainerColor),
         curvedText = curvedText,
         colors = colors,
         properties = properties,
         durationMillis = durationMillis,
-        content = content
-    )
+    ) {
+        val translationXAnimatable = remember { Animatable(FailureContentTransition[0]) }
+        LaunchedEffect(Unit) {
+            delay(DurationShort3.toLong())
+            translationXAnimatable.animateTo(
+                FailureContentTransition[1],
+                FailureContentAnimationSpecs[0]
+            )
+            translationXAnimatable.animateTo(
+                FailureContentTransition[2],
+                FailureContentAnimationSpecs[1]
+            )
+        }
+        IconContainer(
+            modifier = Modifier.graphicsLayer { translationX = translationXAnimatable.value },
+            iconColor = colors.iconColor,
+            iconBackground = failureIconContainer(colors.iconContainerColor),
+            content = content
+        )
+    }
 }
 
 /** Contains default values used by [Confirmation] composable. */
@@ -502,7 +574,7 @@ object ConfirmationDefaults {
                     .also { defaultFailureConfirmationColorsCached = it }
         }
 
-    private val IconDelay = 67L
+    private const val IconDelay = DurationShort2.toLong()
 }
 
 /**
@@ -517,15 +589,22 @@ class ConfirmationColors(
     val iconContainerColor: Color,
     val textColor: Color,
 ) {
-    internal fun copy(
-        iconColor: Color? = null,
-        iconContainerColor: Color? = null,
-        textColor: Color? = null
+    /**
+     * Returns a copy of this ConfirmationColors, optionally overriding some of the values.
+     *
+     * @param iconColor Color used to tint the icon.
+     * @param iconContainerColor The color of the container behind the icon.
+     * @param textColor Color used to tint the text.
+     */
+    fun copy(
+        iconColor: Color = this.iconColor,
+        iconContainerColor: Color = this.iconContainerColor,
+        textColor: Color = this.textColor
     ) =
         ConfirmationColors(
-            iconColor = iconColor ?: this.iconColor,
-            iconContainerColor = iconContainerColor ?: this.iconContainerColor,
-            textColor = textColor ?: this.textColor,
+            iconColor = iconColor.takeOrElse { this.iconColor },
+            iconContainerColor = iconContainerColor.takeOrElse { this.iconContainerColor },
+            textColor = textColor.takeOrElse { this.textColor },
         )
 
     override fun equals(other: Any?): Boolean {
@@ -550,14 +629,14 @@ class ConfirmationColors(
 @Composable
 internal fun ConfirmationImpl(
     show: Boolean,
+    performHapticFeedback: (() -> Unit)?,
     onDismissRequest: () -> Unit,
     modifier: Modifier,
-    iconContainer: @Composable BoxScope.() -> Unit,
     curvedText: (CurvedScope.() -> Unit)?,
     colors: ConfirmationColors,
     properties: DialogProperties,
     durationMillis: Long,
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable BoxScope.() -> Unit,
 ) {
     val a11yDurationMillis =
         LocalAccessibilityManager.current?.calculateRecommendedTimeoutMillis(
@@ -569,6 +648,7 @@ internal fun ConfirmationImpl(
 
     LaunchedEffect(show, a11yDurationMillis) {
         if (show) {
+            performHapticFeedback?.invoke()
             delay(a11yDurationMillis)
             onDismissRequest()
         }
@@ -580,13 +660,22 @@ internal fun ConfirmationImpl(
         onDismissRequest = onDismissRequest,
         properties = properties,
     ) {
+        val alphaAnimatable = remember { Animatable(0f) }
+        val textOpacityAnimationSpec = TextOpacityAnimationSpec
+        LaunchedEffect(Unit) {
+            delay(DurationShort2.toLong())
+            alphaAnimatable.animateTo(1f, textOpacityAnimationSpec)
+        }
         Box(modifier = Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                iconContainer()
-                CompositionLocalProvider(LocalContentColor provides colors.iconColor) { content() }
-            }
+            content()
             CompositionLocalProvider(LocalContentColor provides colors.textColor) {
-                curvedText?.let { CurvedLayout(anchor = 90f, contentBuilder = curvedText) }
+                curvedText?.let {
+                    CurvedLayout(
+                        modifier = Modifier.graphicsLayer { alpha = alphaAnimatable.value },
+                        anchor = 90f,
+                        contentBuilder = curvedText
+                    )
+                }
             }
         }
     }
@@ -596,17 +685,37 @@ private fun confirmationIconContainer(
     curvedContent: Boolean,
     color: Color
 ): @Composable BoxScope.() -> Unit = {
-    val iconShape =
-        if (curvedContent) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.large
     val width =
         if (curvedContent) {
             (screenWidthDp() * ConfirmationSizeFraction).dp
         } else ConfirmationLinearIconContainerSize
 
+    val startShape = ShapeTokens.CornerFull
+    val targetShape =
+        (if (curvedContent) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.large)
+            as RoundedCornerShape
+
+    val rotateAnimatable = remember { Animatable(ConfirmationIconInitialAngle) }
+    val shapeAnimatable = remember { Animatable(0f) }
+    val shape =
+        remember(shapeAnimatable) {
+            AnimatedRoundedCornerShape(startShape, targetShape) { shapeAnimatable.value }
+        }
+    val heroShapeMorphAnimationSpec: AnimationSpec<Float> =
+        MaterialTheme.motionScheme.defaultSpatialSpec()
+    val heroShapeRotationAnimationSpec: AnimationSpec<Float> =
+        MaterialTheme.motionScheme.slowEffectsSpec()
+    LaunchedEffect(Unit) {
+        delay(DurationShort2.toLong())
+        launch { shapeAnimatable.animateTo(1f, heroShapeMorphAnimationSpec) }
+        rotateAnimatable.animateTo(0f, heroShapeRotationAnimationSpec)
+    }
+
     Box(
         Modifier.size(width)
             .graphicsLayer {
-                shape = iconShape
+                this.shape = shape
+                rotationZ = rotateAnimatable.value
                 clip = true
             }
             .background(color)
@@ -616,9 +725,16 @@ private fun confirmationIconContainer(
 
 private fun successIconContainer(color: Color): @Composable BoxScope.() -> Unit = {
     val width = screenWidthDp() * SuccessWidthFraction
-    val height = screenHeightDp() * SuccessHeightFraction
+
+    val targetHeight = screenHeightDp() * SuccessHeightFraction.toFloat()
+    val heightAnimatable = remember { Animatable(width) }
+
+    LaunchedEffect(Unit) {
+        delay(DurationShort2.toLong())
+        heightAnimatable.animateTo(targetHeight, SuccessContainerAnimationSpec)
+    }
     Box(
-        Modifier.size(width.dp, height.dp)
+        Modifier.size(width.dp, heightAnimatable.value.dp)
             .graphicsLayer {
                 rotationZ = 45f
                 shape = CircleShape
@@ -629,12 +745,26 @@ private fun successIconContainer(color: Color): @Composable BoxScope.() -> Unit 
 }
 
 private fun failureIconContainer(color: Color): @Composable BoxScope.() -> Unit = {
-    val iconShape = MaterialTheme.shapes.extraLarge
-    val width = screenWidthDp() * FailureSizeFraction
+    val size = screenWidthDp() * FailureSizeFraction
+
+    val startShape = ShapeTokens.CornerFull
+    val targetShape = MaterialTheme.shapes.extraLarge as RoundedCornerShape
+    val shapeAnimatable = remember { Animatable(0f) }
+    val shape =
+        remember(shapeAnimatable) {
+            AnimatedRoundedCornerShape(startShape, targetShape) { shapeAnimatable.value }
+        }
+    val failureContainerAnimationSpec: AnimationSpec<Float> =
+        MaterialTheme.motionScheme.fastEffectsSpec()
+    LaunchedEffect(Unit) {
+        delay(DurationShort2.toLong())
+        shapeAnimatable.animateTo(1f, failureContainerAnimationSpec)
+    }
+
     Box(
-        Modifier.size(width.dp)
+        Modifier.size(size.dp)
             .graphicsLayer {
-                shape = iconShape
+                this.shape = shape
                 clip = true
             }
             .background(color)
@@ -657,3 +787,23 @@ private const val ConfirmationSizeFraction = 1 - ConfirmationSizePaddingFraction
 
 private const val LinearContentMaxLines = 3
 private const val HorizontalLinearContentPaddingFraction = 0.12f
+
+private const val ConfirmationIconInitialAngle = -45f
+
+private val FailureContentTransition = arrayOf(-8f, -15f, 0f)
+private val FailureContentAnimationSpecs =
+    arrayOf(
+        spring(
+            dampingRatio = ExpressiveDefaultDamping,
+            stiffness = ExpressiveDefaultStiffness,
+            visibilityThreshold = 0f
+        ),
+        spring(
+            dampingRatio = 0.5f,
+            stiffness = ExpressiveDefaultStiffness,
+        )
+    )
+private val TextOpacityAnimationSpec: AnimationSpec<Float>
+    @Composable get() = MaterialTheme.motionScheme.fastEffectsSpec()
+private val SuccessContainerAnimationSpec: AnimationSpec<Float> =
+    spring(dampingRatio = 0.55f, stiffness = 800f)

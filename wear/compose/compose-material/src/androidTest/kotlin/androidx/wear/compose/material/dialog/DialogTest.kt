@@ -1181,11 +1181,6 @@ internal fun DialogWithTimeout(
     }
 
     Dialog(showDialog = showDialog, onDismissRequest = currentOnTimeout, modifier = modifier) {
-        Alert(
-            icon = {},
-            title = {},
-            message = { Text("Text") },
-            content = {},
-        )
+        Box(Modifier.fillMaxSize()) { Text("Text") }
     }
 }

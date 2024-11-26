@@ -18,7 +18,6 @@ package androidx.wear.compose.material3
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
@@ -79,8 +78,9 @@ import androidx.wear.compose.material3.tokens.TextButtonTokens
  * @param onLongClickLabel Semantic / accessibility label for the [onLongClick] action.
  * @param enabled Controls the enabled state of the button. When `false`, this button will not be
  *   clickable.
- * @param shape Defines the text button's shape. It is strongly recommended to use the default as
- *   this shape is a key characteristic of the Wear Material3 Theme.
+ * @param shapes Defines the shape for this button. Defaults to a static shape based on
+ *   [TextButtonDefaults.shape], but animated versions are available through
+ *   [TextButtonDefaults.animatedShapes].
  * @param colors [TextButtonColors] that will be used to resolve the background and content color
  *   for this button in different states.
  * @param border Optional [BorderStroke] that will be used to resolve the text button border in
@@ -90,9 +90,8 @@ import androidx.wear.compose.material3.tokens.TextButtonTokens
  *   preview the button in different states. Note that if `null` is provided, interactions will
  *   still happen internally.
  * @param content The content displayed on the text button, expected to be text or image.
- *
- * TODO(b/261838497) Add Material3 UX guidance links
  */
+// TODO(b/261838497) Add Material3 UX guidance links
 @Composable
 fun TextButton(
     onClick: () -> Unit,
@@ -100,12 +99,21 @@ fun TextButton(
     onLongClick: (() -> Unit)? = null,
     onLongClickLabel: String? = null,
     enabled: Boolean = true,
-    shape: Shape = TextButtonDefaults.shape,
+    shapes: TextButtonShapes = TextButtonDefaults.shapes(),
     colors: TextButtonColors = TextButtonDefaults.textButtonColors(),
     border: BorderStroke? = null,
     interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val (finalShape, finalInteractionSource) =
+        animateButtonShape(
+            defaultShape = shapes.shape,
+            pressedShape = shapes.pressed,
+            onPressAnimationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+            onReleaseAnimationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+            interactionSource = interactionSource
+        )
+
     RoundButton(
         onClick = onClick,
         modifier.minimumInteractiveComponentSize().size(TextButtonDefaults.DefaultButtonSize),
@@ -113,8 +121,8 @@ fun TextButton(
         onLongClickLabel = onLongClickLabel,
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
-        interactionSource = interactionSource,
-        shape = shape,
+        interactionSource = finalInteractionSource,
+        shape = finalShape,
         border = { border },
         ripple = ripple(),
         content =
@@ -137,21 +145,33 @@ object TextButtonDefaults {
         @Composable get() = MaterialTheme.shapes.small
 
     /**
+     * Creates a [TextButtonShapes] with a static [shape].
+     *
+     * @param shape The normal shape of the TextButton.
+     */
+    @Composable
+    fun shapes(
+        shape: Shape = TextButtonDefaults.shape,
+    ): TextButtonShapes = TextButtonShapes(shape = shape)
+
+    /**
      * Creates a [Shape] with a animation between two CornerBasedShapes.
      *
      * A simple text button using the default colors, animated when pressed.
      *
      * @sample androidx.wear.compose.material3.samples.TextButtonWithCornerAnimationSample
-     * @param interactionSource the interaction source applied to the Button.
      * @param shape The normal shape of the TextButton.
      * @param pressedShape The pressed shape of the TextButton.
      */
     @Composable
-    fun animatedShape(
-        interactionSource: InteractionSource,
+    fun animatedShapes(
         shape: CornerBasedShape = TextButtonDefaults.shape,
         pressedShape: CornerBasedShape = TextButtonDefaults.pressedShape,
-    ) = animatedPressedButtonShape(interactionSource, shape, pressedShape)
+    ): TextButtonShapes =
+        TextButtonShapes(
+            shape = shape,
+            pressed = pressedShape,
+        )
 
     /**
      * Creates a [TextButtonColors] with the colors for a filled [TextButton]- by default, a colored
@@ -474,11 +494,19 @@ class TextButtonColors(
     val disabledContentColor: Color,
 ) {
 
-    internal fun copy(
-        containerColor: Color,
-        contentColor: Color,
-        disabledContainerColor: Color,
-        disabledContentColor: Color
+    /**
+     * Returns a copy of this TextButtonColors optionally overriding some of the values.
+     *
+     * @param containerColor the background color of this text button when enabled.
+     * @param contentColor the content color of this text button when enabled.
+     * @param disabledContainerColor the background color of this text button when not enabled.
+     * @param disabledContentColor the content color of this text button when not enabled.
+     */
+    fun copy(
+        containerColor: Color = this.containerColor,
+        contentColor: Color = this.contentColor,
+        disabledContainerColor: Color = this.disabledContainerColor,
+        disabledContentColor: Color = this.disabledContentColor
     ) =
         TextButtonColors(
             containerColor = containerColor.takeOrElse { this.containerColor },
@@ -525,6 +553,41 @@ class TextButtonColors(
         result = 31 * result + contentColor.hashCode()
         result = 31 * result + disabledContainerColor.hashCode()
         result = 31 * result + disabledContentColor.hashCode()
+
+        return result
+    }
+}
+
+/**
+ * Represents the shapes used for [TextButton] in various states.
+ *
+ * If [pressed] is non null the shape will be animated on press.
+ *
+ * @param shape the shape of the text button when enabled
+ * @param pressed the shape of the text button when pressed
+ */
+class TextButtonShapes(
+    val shape: Shape,
+    val pressed: Shape? = null,
+) {
+    fun copy(
+        default: Shape = this.shape,
+        pressed: Shape? = this.pressed,
+    ) = TextButtonShapes(default, pressed)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || other !is TextButtonShapes) return false
+
+        if (shape != other.shape) return false
+        if (pressed != other.pressed) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = shape.hashCode()
+        result = 31 * result + pressed.hashCode()
 
         return result
     }

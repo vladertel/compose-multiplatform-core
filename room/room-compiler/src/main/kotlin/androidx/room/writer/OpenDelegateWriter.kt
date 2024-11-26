@@ -19,9 +19,7 @@ package androidx.room.writer
 import androidx.annotation.VisibleForTesting
 import androidx.room.compiler.codegen.VisibilityModifier
 import androidx.room.compiler.codegen.XCodeBlock
-import androidx.room.compiler.codegen.XCodeBlock.Builder.Companion.addLocalVal
 import androidx.room.compiler.codegen.XFunSpec
-import androidx.room.compiler.codegen.XFunSpec.Builder.Companion.addStatement
 import androidx.room.compiler.codegen.XTypeSpec
 import androidx.room.ext.RoomMemberNames
 import androidx.room.ext.RoomTypeNames
@@ -147,7 +145,8 @@ class OpenDelegateWriter(val database: Database) {
                             isMutable = true
                         )
                         methodBuilders.drop(1).forEach {
-                            addStatement("%L = %L(%L)", resultVar, it.name, connectionParamName)
+                            val methodName = it.build().name
+                            addStatement("%L = %L(%L)", resultVar, methodName, connectionParamName)
                             beginControlFlow("if (!%L.isValid)", resultVar).apply {
                                 addStatement("return %L", resultVar)
                             }

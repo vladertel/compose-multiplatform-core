@@ -402,11 +402,26 @@ import java.util.Set;
                 .onUpdateMemberRoutes(Collections.singletonList(route.getDescriptorId()));
     }
 
-    /* package */ void selectRoute(
-            @NonNull MediaRouter.RouteInfo route, @MediaRouter.UnselectReason int unselectReason) {
-        selectRoute(route, unselectReason, /* syncMediaRoute1Provider= */ true);
-    }
-
+    /**
+     * Selects the given {@link MediaRouter.RouteInfo route}.
+     *
+     * <p>This method does two things:
+     *
+     * <ul>
+     *   <li>Updates the currently selected route ({@link #mSelectedRoute}).
+     *   <li>Notifies the {@link MediaRouteProvider} that published the selected route of said
+     *       selection. An exception to this is when {@code syncMediaRoute1Provider} is false, and
+     *       the provider of the route is {@link PlatformMediaRouter1RouteProvider}. This is to
+     *       prevent calling {@link android.media.MediaRouter#selectRoute} as a result of a {@link
+     *       android.media.MediaRouter} callback. See b/294968421#comment59 for details.
+     * </ul>
+     *
+     * @param route The {@link MediaRouter.RouteInfo} to select.
+     * @param unselectReason The reason associated with the route selection.
+     * @param syncMediaRoute1Provider Whether this selection should be passed through to {@link
+     *     PlatformMediaRouter1RouteProvider}. Must only be true when called as a result of an
+     *     explicit application route selection.
+     */
     /* package */ void selectRoute(
             @NonNull MediaRouter.RouteInfo route,
             @MediaRouter.UnselectReason int unselectReason,
@@ -659,7 +674,10 @@ import java.util.Set;
             @NonNull RegisteredMediaRouteProvider provider,
             @NonNull MediaRouteProvider.RouteController controller) {
         if (mSelectedRouteController == controller) {
-            selectRoute(chooseFallbackRoute(), UNSELECT_REASON_STOPPED);
+            selectRoute(
+                    chooseFallbackRoute(),
+                    UNSELECT_REASON_STOPPED,
+                    /* syncMediaRoute1Provider= */ true);
         }
         // TODO: Maybe release a member route controller if the given controller is a member of
         // the selected route.
@@ -1006,9 +1024,10 @@ import java.util.Set;
                     mSelectedRoute != null
                             ? String.format(
                                     Locale.US,
-                                    "%s(BT=%b)",
+                                    "%s(BT=%b, syncMediaRoute1Provider=%b)",
                                     mSelectedRoute.getName(),
-                                    mSelectedRoute.isBluetooth())
+                                    mSelectedRoute.isBluetooth(),
+                                    syncMediaRoute1Provider)
                             : null;
             Log.w(
                     TAG,
@@ -1035,7 +1054,8 @@ import java.util.Set;
             MediaRouteProvider.DynamicGroupRouteController dynamicGroupRouteController =
                     route.getProviderInstance()
                             .onCreateDynamicGroupRouteController(
-                                    route.mDescriptorId, /* controlHints= */ null);
+                                    route.mDescriptorId,
+                                    MediaRouteProvider.RouteControllerOptions.EMPTY);
             // Select route asynchronously.
             if (dynamicGroupRouteController != null) {
                 dynamicGroupRouteController.setOnDynamicRoutesChangedListener(
@@ -1219,7 +1239,7 @@ import java.util.Set;
         if (provider != null) {
             MediaRouter.RouteInfo route = provider.findRouteByDescriptorId(id);
             if (route != null) {
-                route.select();
+                route.select(/* syncMediaRoute1Provider= */ false);
             }
         }
     }

@@ -47,7 +47,6 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.integration.core.util.CameraPipeUtil
-import androidx.camera.integration.core.util.CameraPipeUtil.ignoreTestForCameraPipe
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
@@ -208,19 +207,18 @@ class FlashTest(private val implName: String, private val cameraXConfig: CameraX
 
     @Test
     fun flashEnabledInRequest_whenCapturedWithFlashOnAndSharedEffect() {
-        implName.ignoreTestForCameraPipe(
-            "TODO: b/368559255 - Enable when implemented in camera-pipe"
-        )
-
         verifyRequestAeOrFlashModeForFlashModeCapture(
             ImageCapture.FLASH_MODE_ON,
-            addSharedEffect = true
+            addSharedEffect = true,
+            // In this test, torch as flash workaround should always be used
+            expectedAeMode = CONTROL_AE_MODE_ON,
         )
     }
 
     private fun verifyRequestAeOrFlashModeForFlashModeCapture(
         @ImageCapture.FlashMode flashMode: Int,
         addSharedEffect: Boolean = false,
+        expectedAeMode: Int? = null,
     ) {
         Assume.assumeFalse(
             "Cuttlefish API 29 has AE mode availability issue for flash enabled modes." +
@@ -239,11 +237,12 @@ class FlashTest(private val implName: String, private val cameraXConfig: CameraX
                 @Volatile var isAeModeExpected = true
 
                 private val expectedAeMode =
-                    when (flashMode) {
-                        ImageCapture.FLASH_MODE_ON -> CONTROL_AE_MODE_ON_ALWAYS_FLASH
-                        ImageCapture.FLASH_MODE_AUTO -> CONTROL_AE_MODE_ON_AUTO_FLASH
-                        else -> CONTROL_AE_MODE_ON
-                    }
+                    expectedAeMode
+                        ?: when (flashMode) {
+                            ImageCapture.FLASH_MODE_ON -> CONTROL_AE_MODE_ON_ALWAYS_FLASH
+                            ImageCapture.FLASH_MODE_AUTO -> CONTROL_AE_MODE_ON_AUTO_FLASH
+                            else -> CONTROL_AE_MODE_ON
+                        }
 
                 override fun onCaptureCompleted(
                     session: CameraCaptureSession,
@@ -256,7 +255,7 @@ class FlashTest(private val implName: String, private val cameraXConfig: CameraX
                         isFlashModeSet = true
                     }
 
-                    if (request[CONTROL_AE_MODE] != expectedAeMode) {
+                    if (request[CONTROL_AE_MODE] != this.expectedAeMode) {
                         isAeModeExpected = false
                     }
                 }

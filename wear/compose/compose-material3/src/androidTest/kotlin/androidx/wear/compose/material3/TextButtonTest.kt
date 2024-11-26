@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.testutils.assertShape
 import androidx.compose.ui.Modifier
@@ -329,7 +330,11 @@ class TextButtonTest {
 
         rule.isShape(expectedShape = shape, colors = { TextButtonDefaults.textButtonColors() }) {
             modifier ->
-            TextButton(onClick = {}, modifier = modifier, shape = shape) {
+            TextButton(
+                onClick = {},
+                modifier = modifier,
+                shapes = TextButtonDefaults.shapes(shape)
+            ) {
                 // omit content to allow us to validate the shape by pixel checking.
             }
         }
@@ -519,6 +524,28 @@ class TextButtonTest {
                 ) {}
             }
         )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @Test
+    fun animates_corners_to_75_percent_on_click() {
+        val baseShape = RoundedCornerShape(20.dp)
+        val pressedShape = RoundedCornerShape(0.dp)
+
+        rule.verifyRoundedButtonTapAnimationEnd(
+            baseShape,
+            pressedShape,
+            0.75f,
+            8,
+            color = { TextButtonDefaults.filledTextButtonColors().containerColor }
+        ) { modifier ->
+            TextButton(
+                onClick = {},
+                shapes = TextButtonShapes(baseShape, pressedShape),
+                modifier = modifier,
+                colors = TextButtonDefaults.filledTextButtonColors()
+            ) {}
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
