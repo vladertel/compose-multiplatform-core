@@ -95,7 +95,7 @@ internal class ComposeHostingViewController(
     )
     private var isInsideSwiftUI = false
     private var mediator: ComposeSceneMediator? = null
-    private val layers = UIKitComposeSceneLayersHolder()
+    private val layers = UIKitComposeSceneLayersHolder(configuration.parallelRendering)
     private val layoutDirection get() = getLayoutDirection()
     private var hasViewAppeared: Boolean = false
 
@@ -359,6 +359,7 @@ internal class ComposeHostingViewController(
                     override val isInteropActive = false
                 }
             },
+            useSeparateRenderThreadWhenPossible = configuration.parallelRendering,
             render = { canvas, nanoTime ->
                 mediator?.render(canvas.asComposeCanvas(), nanoTime)
             }
