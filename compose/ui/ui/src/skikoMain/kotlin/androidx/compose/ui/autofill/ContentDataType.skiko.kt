@@ -18,7 +18,8 @@ package androidx.compose.ui.autofill
 
 import kotlin.jvm.JvmInline
 
-// TODO
+// TODO https://youtrack.jetbrains.com/issue/CMP-7154/Adopt-Autofill-semantic-properties
+
 actual typealias NativeContentDataType = Int
 
 @JvmInline

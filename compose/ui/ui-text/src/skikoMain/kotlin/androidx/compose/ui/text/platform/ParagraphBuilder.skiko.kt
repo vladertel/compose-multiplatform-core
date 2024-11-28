@@ -427,7 +427,10 @@ internal class ParagraphBuilder(
     ): List<Op> {
         val cuts = mutableListOf<Cut>()
         for (annotation in annotations) {
-            annotation.item as SpanStyle // TODO(ivan): Support other types
+
+            // TODO https://youtrack.jetbrains.com/issue/CMP-7151/Support-ParagraphIntrinsics-with-annotations
+            annotation.item as SpanStyle
+
             cuts.add(Cut.StyleAdd(annotation.start, annotation.item))
             cuts.add(Cut.StyleRemove(annotation.end, annotation.item))
         }

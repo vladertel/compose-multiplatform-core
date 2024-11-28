@@ -345,6 +345,7 @@ internal class RootNodeOwner(
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
         // TODO: 1.8.0-alpha02 Implement ComposeUiFlags.isRectTrackingEnabled
+        //  https://youtrack.jetbrains.com/issue/CMP-6715/Support-ComposeUiFlags.isRectTrackingEnabled
         override val rectManager = RectManager()
 
         @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
@@ -665,7 +666,7 @@ internal class RootNodeOwner(
             platformContext.setPointerIcon(desiredPointerIcon ?: PointerIcon.Default)
         }
 
-        // TODO
+        // TODO https://youtrack.jetbrains.com/issue/CMP-7145/Properly-adopt-stylus-handwriting-hover-icon
         override fun getStylusHoverIcon(): PointerIcon? = null
         override fun setStylusHoverIcon(value: PointerIcon?) {}
     }

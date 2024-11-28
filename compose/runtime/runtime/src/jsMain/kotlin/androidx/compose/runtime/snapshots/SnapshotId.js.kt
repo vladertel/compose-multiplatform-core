@@ -20,6 +20,8 @@ package androidx.compose.runtime.snapshots
 
 import androidx.collection.mutableDoubleListOf
 
+// TODO https://youtrack.jetbrains.com/issue/CMP-7149/Adopt-non-long-SnapshotId
+
 actual typealias SnapshotId = Double
 
 actual const val SnapshotIdZero: SnapshotId = 0.0

@@ -44,5 +44,5 @@ internal fun rememberOverscrollEffect(applyClip: Boolean): OverscrollEffect? =
     }
 
 internal actual fun CompositionLocalAccessorScope.defaultOverscrollFactory(): OverscrollFactory? =
-    // TODO
+    // TODO https://youtrack.jetbrains.com/issue/CMP-7143/Support-OverscrollFactory-and-LocalOverscrollFactory
     null

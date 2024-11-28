@@ -61,7 +61,7 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
     }
 
     actual fun parse(date: String, pattern: String, locale: CalendarLocale): CalendarDate? {
-        // TODO: Use [locale]
+        // TODO https://youtrack.jetbrains.com/issue/CMP-7146/Properly-use-locale-in-CalendarModel.parse-implementations
         val nsDate = NSDateFormatter().apply {
             setTimeZone(TimeZone.UTC.toNSTimeZone())
             setDateFormat(pattern)

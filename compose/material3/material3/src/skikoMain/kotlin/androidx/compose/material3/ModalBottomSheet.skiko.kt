@@ -30,7 +30,7 @@ import androidx.compose.ui.window.DialogProperties
 actual class ModalBottomSheetProperties
 actual constructor(
     actual val shouldDismissOnBackPress: Boolean,
-    // TODO
+    // TODO https://youtrack.jetbrains.com/issue/CMP-7147/Support-ModalBottomSheetProperties.isAppearanceLightBars-properties
     actual val isAppearanceLightStatusBars: Boolean,
     actual val isAppearanceLightNavigationBars: Boolean,
 ) {

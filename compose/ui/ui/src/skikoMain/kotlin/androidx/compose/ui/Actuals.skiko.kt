@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(DelicateCoroutinesApi::class)
 internal actual fun postDelayed(delayMillis: Long, block: () -> Unit): Any {
-    // TODO
+    // TODO https://youtrack.jetbrains.com/issue/CMP-7153/Remove-usage-of-the-main-thread-for-rect-tracking
     return GlobalScope.launch(Dispatchers.Main) {
         delay(delayMillis)
         block()

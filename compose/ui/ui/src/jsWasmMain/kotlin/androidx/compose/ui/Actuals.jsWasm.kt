@@ -17,7 +17,7 @@
 package androidx.compose.ui
 
 internal actual fun currentTimeMillis(): Long {
-    // TODO
+    // TODO https://youtrack.jetbrains.com/issue/CMP-7152/Implement-currentTimeMillis-for-web
     return 0
 }
 
