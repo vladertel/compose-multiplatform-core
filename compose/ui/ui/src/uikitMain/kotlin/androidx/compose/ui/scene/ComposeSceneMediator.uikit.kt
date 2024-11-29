@@ -450,6 +450,7 @@ internal class ComposeSceneMediator(
     }
 
     fun render(canvas: Canvas, nanoTime: Long) {
+        textInputService.flushEditCommandsIfNeeded(force = true)
         scene.render(canvas, nanoTime)
     }
 
