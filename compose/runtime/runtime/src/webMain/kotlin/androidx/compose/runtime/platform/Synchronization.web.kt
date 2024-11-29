@@ -22,7 +22,5 @@ internal actual typealias SynchronizedObject = Any
 @Suppress("NOTHING_TO_INLINE")
 internal actual inline fun makeSynchronizedObject(ref: Any?) = ref ?: SynchronizedObject()
 
-internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()
-
 @PublishedApi
 internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()

@@ -71,5 +71,3 @@ internal actual class SynchronizedObject {
         }
     }
 }
-
-internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()

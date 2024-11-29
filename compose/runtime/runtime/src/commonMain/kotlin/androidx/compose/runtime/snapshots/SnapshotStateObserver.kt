@@ -29,7 +29,6 @@ import androidx.compose.runtime.composeRuntimeError
 import androidx.compose.runtime.internal.AtomicReference
 import androidx.compose.runtime.internal.currentThreadId
 import androidx.compose.runtime.internal.currentThreadName
-import androidx.compose.runtime.makeSynchronizedObject
 import androidx.compose.runtime.observeDerivedStateRecalculations
 import androidx.compose.runtime.platform.makeSynchronizedObject
 import androidx.compose.runtime.platform.synchronized
