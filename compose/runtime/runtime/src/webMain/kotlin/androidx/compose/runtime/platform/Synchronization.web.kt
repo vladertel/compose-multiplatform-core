@@ -14,6 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.compose.runtime
+package androidx.compose.runtime.platform
 
-internal actual val PTHREAD_MUTEX_ERRORCHECK: Int = platform.posix.PTHREAD_MUTEX_ERRORCHECK
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias SynchronizedObject = Any
+
+@Suppress("NOTHING_TO_INLINE")
+internal actual inline fun makeSynchronizedObject(ref: Any?) = ref ?: SynchronizedObject()
+
+internal actual inline fun makeSynchronizedObject(ref: Any?) = SynchronizedObject()
+
+@PublishedApi
+internal actual inline fun <R> synchronized(lock: SynchronizedObject, block: () -> R): R = block()

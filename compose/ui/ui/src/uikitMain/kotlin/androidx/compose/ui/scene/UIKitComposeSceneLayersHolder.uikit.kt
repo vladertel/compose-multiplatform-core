@@ -17,20 +17,28 @@
 package androidx.compose.ui.scene
 
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.uikit.embedSubview
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.viewinterop.UIKitInteropTransaction
+import androidx.compose.ui.window.ComposeView
 import androidx.compose.ui.window.GestureEvent
 import androidx.compose.ui.window.MetalView
+import kotlin.time.Duration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import org.jetbrains.skia.Canvas
 import platform.UIKit.UIEvent
 import platform.UIKit.UIWindow
 
-// TODO: add cross-fade orientation transition like in `ComposeHostingViewController`
 /**
  * A class responsible for managing and rendering [UIKitComposeSceneLayer]s.
  */
-internal class UIKitComposeSceneLayersHolder {
+internal class UIKitComposeSceneLayersHolder(
+    private val windowContext: PlatformWindowContext,
+    useSeparateRenderThreadWhenPossible: Boolean
+) {
     val hasInvalidations: Boolean
         get() = layers.any { it.hasInvalidations }
 
@@ -45,17 +53,37 @@ internal class UIKitComposeSceneLayersHolder {
      */
     private var removedLayersTransactions = mutableListOf<UIKitInteropTransaction>()
 
-    private val view = UIKitComposeSceneLayersHolderView()
-
     val metalView: MetalView = MetalView(
         ::retrieveAndMergeInteropTransactions,
+        useSeparateRenderThreadWhenPossible,
         ::render
     ).apply {
         canBeOpaque = false
     }
 
-    init {
-        view.embedSubview(metalView)
+    private val view = ComposeView(
+        onDidMoveToWindow = {},
+        onLayoutSubviews = { windowContext.updateWindowContainerSize() },
+        useOpaqueConfiguration = false,
+        transparentForTouches = true,
+        metalView = metalView
+    )
+
+    fun animateSizeTransition(scope: CoroutineScope, duration: Duration) {
+        if (layers.isEmpty()) {
+            return
+        }
+        val animations = listOf(
+            windowContext.prepareAndGetSizeTransitionAnimation()
+        ) + layers.map {
+            it.prepareAndGetSizeTransitionAnimation()
+        }
+
+        view.animateSizeTransition(scope) {
+            animations.map {
+                scope.launch { it.invoke(duration) }
+            }.joinAll()
+        }
     }
 
     /**
@@ -101,6 +129,7 @@ internal class UIKitComposeSceneLayersHolder {
             layer.dispose()
         }
 
+        view.dispose()
         view.removeFromSuperview()
     }
 
@@ -173,7 +202,9 @@ internal class UIKitComposeSceneLayersHolder {
         val removedLayersTransactionsCopy = removedLayersTransactions.toList()
         removedLayersTransactions.clear()
 
-        val transactions = layers.map { it.retrieveInteropTransaction() } + removedLayersTransactionsCopy
+        val transactions = layers.map {
+            it.retrieveInteropTransaction()
+        } + removedLayersTransactionsCopy
         return UIKitInteropTransaction.merge(
             transactions = transactions
         )

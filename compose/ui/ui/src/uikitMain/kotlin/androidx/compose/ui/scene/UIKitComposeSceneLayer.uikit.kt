@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.asDpOffset
-import androidx.compose.ui.unit.asDpSize
+import androidx.compose.ui.unit.asDpRect
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
@@ -47,7 +47,7 @@ internal class UIKitComposeSceneLayer(
     private val onClosed: (UIKitComposeSceneLayer) -> Unit,
     private val createComposeSceneContext: (PlatformContext) -> ComposeSceneContext,
     private val providingCompositionLocals: @Composable (@Composable () -> Unit) -> Unit,
-    metalView: MetalView,
+    private val metalView: MetalView,
     onGestureEvent: (GestureEvent) -> Unit,
     private val initDensity: Density,
     private val initLayoutDirection: LayoutDirection,
@@ -115,21 +115,17 @@ internal class UIKitComposeSceneLayer(
 
     fun render(canvas: Canvas, nanoTime: Long) {
         if (scrimColor != null) {
-            val size = view.bounds.useContents { with(density) { size.asDpSize().toSize() } }
+            val rect = metalView.bounds.useContents { with(density) { asDpRect().toRect() } }
 
-            canvas.drawRect(
-                left = 0f,
-                top = 0f,
-                right = size.width,
-                bottom = size.height,
-                paint = scrimPaint
-            )
+            canvas.drawRect(rect, scrimPaint)
         }
 
         mediator.render(canvas, nanoTime)
     }
 
     fun retrieveInteropTransaction() = mediator.retrieveInteropTransaction()
+
+    fun prepareAndGetSizeTransitionAnimation() = mediator.prepareAndGetSizeTransitionAnimation()
 
     override fun close() {
         onClosed(this)
