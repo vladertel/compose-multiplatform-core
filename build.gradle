@@ -16,6 +16,10 @@
 
 import androidx.build.AndroidXRootPlugin
 import androidx.build.SdkHelperKt
+import dev.iurysouza.modulegraph.LinkText
+import dev.iurysouza.modulegraph.ModuleType
+import dev.iurysouza.modulegraph.Orientation
+import dev.iurysouza.modulegraph.Theme
 
 buildscript {
     SdkHelperKt.setSupportRootFolder(project, project.projectDir)
@@ -28,12 +32,15 @@ buildscript {
         classpath(libs.atomicFuPluginz)
         // This should be removed once https://github.com/Kotlin/kotlinx-atomicfu/issues/399 is fixed
         classpath("org.jetbrains.kotlin:atomicfu:${libs.versions.kotlin.get()}")
+        classpath "dev.iurysouza:modulegraph:0.10.1"
     }
 }
 
 apply from: "buildSrc/dependencies.gradle"
 
 apply plugin: AndroidXRootPlugin
+
+apply plugin: "dev.iurysouza.modulegraph"
 
 // workaround for https://github.com/gradle/gradle/issues/24822
 if (project.hasProperty("androidx.update.signatures")) {
@@ -45,4 +52,9 @@ allprojects {
     this.tasks.configureEach {
         if (it.name == "kotlinStoreYarnLock") it.enabled = false
     }
+}
+
+moduleGraphConfig {
+    readmePath = "./README2.md"
+    heading = "### Module Graph"
 }
