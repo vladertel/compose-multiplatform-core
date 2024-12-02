@@ -23,7 +23,6 @@ import androidx.collection.IntObjectMap
 import androidx.collection.MutableIntSet
 import androidx.collection.mutableIntObjectMapOf
 import androidx.collection.mutableIntSetOf
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.node.OwnerScope
 import androidx.compose.ui.semantics.Role
@@ -122,8 +121,6 @@ internal fun SemanticsNode.isImportantForAccessibility() =
         (unmergedConfig.isMergingSemanticsOfDescendants ||
             unmergedConfig.containsImportantForAccessibility())
 
-// TODO(347749977): go through and remove experimental tag on `invisible` properties
-@OptIn(ExperimentalComposeUiApi::class)
 internal val SemanticsNode.isVisible: Boolean
     get() = !isTransparent && !unmergedConfig.contains(SemanticsProperties.InvisibleToUser)
 
