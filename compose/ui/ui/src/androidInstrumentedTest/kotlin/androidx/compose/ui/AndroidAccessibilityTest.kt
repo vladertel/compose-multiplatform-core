@@ -3645,7 +3645,6 @@ class AndroidAccessibilityTest {
         assertThat(vitrualViewId).isEqualTo(hitTestedId)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     fun testSemanticsHitTest_invisibleToUserSemantics() {
         // Arrange.
@@ -4452,7 +4451,6 @@ class AndroidAccessibilityTest {
         rule.runOnIdle { assertThat(hitNodeId).isEqualTo(InvalidId) }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     fun testAccessibilityNodeInfoTreePruned_invisibleDoesNotPrune() {
         // Arrange.
