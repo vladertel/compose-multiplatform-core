@@ -17,7 +17,6 @@
 package androidx.compose.ui.semantics
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.autofill.ContentDataType
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.geometry.Offset
@@ -116,7 +115,6 @@ object SemanticsProperties {
     /**
      * @see SemanticsPropertyReceiver.invisibleToUser
      */
-    @ExperimentalComposeUiApi
     val InvisibleToUser = SemanticsPropertyKey<Unit>(
         name = "InvisibleToUser",
         mergePolicy = { parentValue, _ ->
@@ -973,7 +971,6 @@ var SemanticsPropertyReceiver.isTraversalGroup by SemanticsProperties.IsTraversa
  * redundant with semantics of their parent, consider [SemanticsModifier.clearAndSetSemantics]
  * instead.
  */
-@ExperimentalComposeUiApi
 fun SemanticsPropertyReceiver.invisibleToUser() {
     this[SemanticsProperties.InvisibleToUser] = Unit
 }

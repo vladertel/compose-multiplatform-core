@@ -41,6 +41,8 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ParentDataModifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -164,6 +166,8 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                         .textRange(range.start, range.end)
                         .hoverable(interactionSource)
                         .pointerHoverIcon(PointerIcon.Hand)
+                        // make a11y not focus links, while still reporting the click action.
+                        .semantics { invisibleToUser() }
                         .combinedClickable(
                             indication = null,
                             interactionSource = interactionSource,
