@@ -1076,6 +1076,32 @@ class NavControllerRouteTest {
 
     @UiThreadTest
     @Test
+    fun testNavigateNestedDuplicateDestination() {
+        val navController = createNavController()
+        navController.graph =
+            navController.createGraph(route = "root", startDestination = "start") {
+                test("start")
+                navigation(route = "second", startDestination = "duplicate") { test("duplicate") }
+                navigation(route = "duplicate", startDestination = "third") { test("third") }
+            }
+        assertThat(navController.currentDestination?.route).isEqualTo("start")
+
+        navController.navigate("second")
+        assertThat(navController.currentBackStack.value.map { it.destination.route })
+            .containsExactly("root", "start", "second", "duplicate")
+
+        navController.navigate("third")
+        assertThat(navController.currentBackStack.value.map { it.destination.route })
+            .containsExactly("root", "start", "second", "duplicate", "duplicate", "third")
+        val duplicateNode =
+            navController.currentBackStack.value
+                .last { it.destination.route == "duplicate" }
+                .destination
+        assertThat(duplicateNode.parent?.route).isEqualTo("root")
+    }
+
+    @UiThreadTest
+    @Test
     fun testNavigateWithObject() {
         val navController = createNavController()
         navController.graph =
@@ -5248,6 +5274,42 @@ class NavControllerRouteTest {
         assertThat(navController.currentDestination?.route).isEqualTo("test?arg={arg}")
         val route2 = navController.currentBackStackEntry?.toRoute<TestClass>()
         assertThat(route2!!.arg).containsExactly(11E123, 11.11)
+    }
+
+    @UiThreadTest
+    @Test
+    fun testNavigateWithObjectEnumList() {
+        @Serializable @SerialName("test") class TestClass(val arg: List<TestEnum>)
+
+        val navController = createNavController()
+        navController.graph =
+            navController.createGraph(
+                startDestination = TestClass(listOf(TestEnum.ONE, TestEnum.TWO))
+            ) {
+                test<TestClass>()
+            }
+        assertThat(navController.currentDestination?.route).isEqualTo("test?arg={arg}")
+        val route = navController.currentBackStackEntry?.toRoute<TestClass>()
+        assertThat(route!!.arg).containsExactly(TestEnum.ONE, TestEnum.TWO)
+    }
+
+    @UiThreadTest
+    @Test
+    fun testNavigateWithObjectNullEnumList() {
+        @Serializable @SerialName("test") class TestClass(val arg: List<TestEnum>? = null)
+
+        val navController = createNavController()
+        navController.graph =
+            navController.createGraph(startDestination = TestClass(null)) { test<TestClass>() }
+
+        assertThat(navController.currentDestination?.route).isEqualTo("test?arg={arg}")
+        val route = navController.currentBackStackEntry?.toRoute<TestClass>()
+        assertThat(route!!.arg).isNull()
+
+        navController.navigate(TestClass(listOf(TestEnum.ONE, TestEnum.TWO)))
+        assertThat(navController.currentDestination?.route).isEqualTo("test?arg={arg}")
+        val route2 = navController.currentBackStackEntry?.toRoute<TestClass>()
+        assertThat(route2!!.arg).containsExactly(TestEnum.ONE, TestEnum.TWO)
     }
 
     @UiThreadTest
