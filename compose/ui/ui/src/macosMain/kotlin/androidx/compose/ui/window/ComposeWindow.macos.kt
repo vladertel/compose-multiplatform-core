@@ -22,8 +22,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.toComposeEvent
+import androidx.compose.ui.input.pointer.MacosCursor
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.platform.MacosTextInputService
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.WindowInfoImpl
@@ -44,6 +46,7 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkikoRenderDelegate
 import platform.AppKit.NSBackingStoreBuffered
+import platform.AppKit.NSCursor
 import platform.AppKit.NSEvent
 import platform.AppKit.NSTrackingActiveAlways
 import platform.AppKit.NSTrackingActiveInKeyWindow
@@ -93,6 +96,10 @@ private class ComposeWindow(
         object : PlatformContext by PlatformContext.Empty {
             override val windowInfo get() = _windowInfo
             override val textInputService get() = macosTextInputService
+            override fun setPointerIcon(pointerIcon: PointerIcon) {
+                val cursor = (pointerIcon as? MacosCursor)?.cursor ?: NSCursor.arrowCursor
+                cursor.set()
+            }
         }
     private val skiaLayer = SkiaLayer()
     private val scene = CanvasLayersComposeScene(
