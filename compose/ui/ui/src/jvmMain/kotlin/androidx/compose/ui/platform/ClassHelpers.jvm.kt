@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,4 @@
 
 package androidx.compose.ui.platform
 
-import kotlin.DeprecationLevel.HIDDEN
-
-@PublishedApi
-@JvmName("synchronized")
-@Deprecated(
-    level = HIDDEN,
-    message = "not expected to be referenced directly as the old version had to be inlined"
-)
-internal inline fun <R> oldSynchronized(lock: SynchronizedObject, block: () -> R): R =
-    kotlin.synchronized(lock, block)
+internal actual fun Any.nativeClass(): Any = this.javaClass
