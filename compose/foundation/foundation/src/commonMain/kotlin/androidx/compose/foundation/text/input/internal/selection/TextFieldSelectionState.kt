@@ -28,6 +28,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.text.DefaultCursorThickness
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextDragObserver
+import androidx.compose.foundation.text.getLineHeight
 import androidx.compose.foundation.text.input.TextFieldCharSequence
 import androidx.compose.foundation.text.input.getSelectedText
 import androidx.compose.foundation.text.input.internal.IndexTransformationType.Deletion
@@ -62,6 +63,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.autofill.AutofillManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.isSpecified
@@ -111,6 +113,9 @@ internal class TextFieldSelectionState(
     var isFocused: Boolean,
     private var isPassword: Boolean,
 ) {
+    /** [AutofillManager] to perform Autofill. */
+    private var autofillManager: AutofillManager? = null
+
     /** [HapticFeedback] handle to perform haptic feedback. */
     private var hapticFeedBack: HapticFeedback? = null
 
@@ -264,6 +269,10 @@ internal class TextFieldSelectionState(
 
         if (!visible) return TextFieldHandleState.Hidden
 
+        // The line height field for the cursor handle state is currently unused.
+        // There is no need to calculate it.
+        val lineHeight = 0f
+
         // text direction is useless for cursor handle, any value is fine.
         return TextFieldHandleState(
             visible = true,
@@ -343,6 +352,7 @@ internal class TextFieldSelectionState(
         enabled: Boolean,
         readOnly: Boolean,
         isPassword: Boolean,
+        autofillManager: AutofillManager?
     ) {
         if (!enabled) {
             hideTextToolbar()
@@ -354,6 +364,7 @@ internal class TextFieldSelectionState(
         this.enabled = enabled
         this.readOnly = readOnly
         this.isPassword = isPassword
+        this.autofillManager = autofillManager
     }
 
     /** Implements the complete set of gestures supported by the cursor handle. */
@@ -431,6 +442,7 @@ internal class TextFieldSelectionState(
         textToolbar = null
         clipboardManager = null
         hapticFeedBack = null
+        autofillManager = null
     }
 
     /**
@@ -1193,6 +1205,7 @@ internal class TextFieldSelectionState(
             } else {
                 Offset.Unspecified
             }
+        val handleOffset = if (isStartHandle) selection.start else selection.end
         return TextFieldHandleState(
             visible = true,
             position = coercedPosition,
@@ -1389,6 +1402,21 @@ internal class TextFieldSelectionState(
     }
 
     /**
+     * Whether autofill can execute upon this text field. The autofill action only appears when the
+     * text field is editable and no text is currently selected.
+     */
+    fun canAutofill(): Boolean = editable && textFieldState.visualText.selection.collapsed
+
+    /**
+     * The method for autofilling.
+     *
+     * Inserts credentials (if there exist any that match this field type) into the text field.
+     */
+    fun autofill() {
+        autofillManager?.requestAutofillForActiveElement()
+    }
+
+    /**
      * This function get the selected region as a Rectangle region, and pass it to [TextToolbar] to
      * make the FloatingToolbar show up in the proper place. In addition, this function passes the
      * copy, paste and cut method as callbacks when "copy", "cut" or "paste" is clicked.
@@ -1403,6 +1431,7 @@ internal class TextFieldSelectionState(
             onPasteRequested = menuItem(canPaste(), None) { paste() },
             onCutRequested = menuItem(canCut(), None) { cut() },
             onSelectAllRequested = menuItem(canSelectAll(), Selection) { selectAll() },
+            onAutofillRequested = menuItem(canAutofill(), None) { autofill() }
         )
     }
 

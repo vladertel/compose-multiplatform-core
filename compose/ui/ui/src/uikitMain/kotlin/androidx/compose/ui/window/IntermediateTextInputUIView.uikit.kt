@@ -29,8 +29,6 @@ import kotlin.time.DurationUnit
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
@@ -89,8 +87,6 @@ internal class IntermediateTextInputUIView(
                 hideEditMenu()
             }
         }
-
-    private val mainScope = MainScope()
 
     /**
      * Callback to handle keyboard presses. The parameter is a [Set] of [UIPress] objects.
@@ -237,18 +233,7 @@ internal class IntermediateTextInputUIView(
             location.toInt() to length.toInt()
         }
         val relativeTextRange = locationRelative until locationRelative + lengthRelative
-
-        // Due to iOS specifics, [setMarkedText] can be called several times in a row. Batching
-        // helps to avoid text input problems, when Composables use parameters set during
-        // recomposition instead of the current ones. Example:
-        // 1. State "1" -> TextField(text = "1")
-        // 2. setMarkedText "12" -> Not equal to TextField(text = "1") -> State "12"
-        // 3. setMarkedText "1" -> Equal to TextField(text = "1") -> State remains "12"
-        // scene.render() - Recomposes TextField
-        // 4. State "12" -> TextField(text = "12") - Invalid state. Should be TextField(text = "1")
-        input?.withBatch {
-            input?.setMarkedText(markedText, relativeTextRange)
-        }
+        input?.setMarkedText(markedText, relativeTextRange)
     }
 
     /**
@@ -510,14 +495,6 @@ internal class IntermediateTextInputUIView(
 
     fun resetOnKeyboardPressesCallback() {
         onKeyboardPresses = NoOpOnKeyboardPresses
-    }
-
-    private fun IOSSkikoInput.withBatch(update: () -> Unit) {
-        beginEditBatch()
-        update()
-        mainScope.launch {
-            endEditBatch()
-        }
     }
 }
 

@@ -20,6 +20,10 @@ import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import kotlin.coroutines.cancellation.CancellationException
 
+internal actual fun classKeyForObject(a: Any): Any {
+    return a::class
+}
+
 // TODO: For non-JVM platforms, you can revive the kotlin-reflect implementation from
 //  https://android-review.googlesource.com/c/platform/frameworks/support/+/2441379
 @OptIn(ExperimentalComposeUiApi::class)
