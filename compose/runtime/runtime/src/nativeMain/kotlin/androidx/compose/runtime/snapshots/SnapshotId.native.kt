@@ -139,3 +139,5 @@ internal actual class SnapshotIdArrayBuilder actual constructor(array: SnapshotI
 internal actual inline fun snapshotIdArrayOf(id: SnapshotId): SnapshotIdArray = longArrayOf(id)
 
 internal actual fun Int.toSnapshotId(): SnapshotId = toLong()
+
+internal actual fun Long.toSnapshotId(): SnapshotId = this
