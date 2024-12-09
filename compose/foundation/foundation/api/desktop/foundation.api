@@ -101,7 +101,6 @@ public final class androidx/compose/foundation/ComposeFoundationFlags {
 	public static field DragGesturePickUpEnabled Z
 	public static final field INSTANCE Landroidx/compose/foundation/ComposeFoundationFlags;
 	public static field NewNestedFlingPropagationEnabled Z
-	public static field RemoveBasicTextGraphicsLayerEnabled Z
 }
 
 public final class androidx/compose/foundation/ContextMenuData {
@@ -318,8 +317,8 @@ public final class androidx/compose/foundation/OverscrollKt {
 	public static final fun getLocalOverscrollFactory ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 	public static final fun overscroll (Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/OverscrollEffect;)Landroidx/compose/ui/Modifier;
 	public static final fun rememberOverscrollEffect (Landroidx/compose/runtime/Composer;I)Landroidx/compose/foundation/OverscrollEffect;
-	public static final fun withoutDrawing (Landroidx/compose/foundation/OverscrollEffect;)Landroidx/compose/foundation/OverscrollEffect;
 	public static final fun withoutEventHandling (Landroidx/compose/foundation/OverscrollEffect;)Landroidx/compose/foundation/OverscrollEffect;
+	public static final fun withoutVisualEffect (Landroidx/compose/foundation/OverscrollEffect;)Landroidx/compose/foundation/OverscrollEffect;
 }
 
 public abstract interface class androidx/compose/foundation/PointerMatcher {
@@ -1131,7 +1130,7 @@ public abstract interface class androidx/compose/foundation/lazy/LazyListScope {
 	public static synthetic fun items$default (Landroidx/compose/foundation/lazy/LazyListScope;ILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 	public static synthetic fun items$default (Landroidx/compose/foundation/lazy/LazyListScope;ILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 	public synthetic fun stickyHeader (Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)V
-	public abstract fun stickyHeader (Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function4;)V
+	public fun stickyHeader (Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function4;)V
 	public static synthetic fun stickyHeader$default (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;ILjava/lang/Object;)V
 	public static synthetic fun stickyHeader$default (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 }
@@ -1146,6 +1145,7 @@ public final class androidx/compose/foundation/lazy/LazyListScope$DefaultImpls {
 	public static synthetic fun items$default (Landroidx/compose/foundation/lazy/LazyListScope;ILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 	public static synthetic fun items$default (Landroidx/compose/foundation/lazy/LazyListScope;ILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 	public static synthetic fun stickyHeader (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)V
+	public static fun stickyHeader (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function4;)V
 	public static synthetic fun stickyHeader$default (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function3;ILjava/lang/Object;)V
 	public static synthetic fun stickyHeader$default (Landroidx/compose/foundation/lazy/LazyListScope;Ljava/lang/Object;Ljava/lang/Object;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)V
 }
@@ -1766,11 +1766,6 @@ public abstract interface class androidx/compose/foundation/relocation/BringInto
 	public abstract fun calculateRectForParent (Landroidx/compose/ui/geometry/Rect;)Landroidx/compose/ui/geometry/Rect;
 }
 
-public final class androidx/compose/foundation/relocation/ScrollIntoView {
-	public static final fun scrollIntoView (Landroidx/compose/ui/node/DelegatableNode;Landroidx/compose/ui/geometry/Rect;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun scrollIntoView$default (Landroidx/compose/ui/node/DelegatableNode;Landroidx/compose/ui/geometry/Rect;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-}
-
 public final class androidx/compose/foundation/selection/SelectableGroupKt {
 	public static final fun selectableGroup (Landroidx/compose/ui/Modifier;)Landroidx/compose/ui/Modifier;
 }
@@ -1939,27 +1934,8 @@ public final class androidx/compose/foundation/text/AutoSizeDefaults {
 	public final fun getMinFontSize-XSAIIZE ()J
 }
 
-public final class androidx/compose/foundation/text/AutofillHighlight {
-	public static final field Companion Landroidx/compose/foundation/text/AutofillHighlight$Companion;
-	public static final synthetic fun box-impl (J)Landroidx/compose/foundation/text/AutofillHighlight;
-	public static fun constructor-impl (J)J
-	public fun equals (Ljava/lang/Object;)Z
-	public static fun equals-impl (JLjava/lang/Object;)Z
-	public static final fun equals-impl0 (JJ)Z
-	public final fun getAutofillHighlightColor-0d7_KjU ()J
-	public fun hashCode ()I
-	public static fun hashCode-impl (J)I
-	public fun toString ()Ljava/lang/String;
-	public static fun toString-impl (J)Ljava/lang/String;
-	public final synthetic fun unbox-impl ()J
-}
-
-public final class androidx/compose/foundation/text/AutofillHighlight$Companion {
-	public final fun getDefault-q3uy-Y0 ()J
-}
-
 public final class androidx/compose/foundation/text/AutofillHighlightKt {
-	public static final fun getLocalAutofillHighlight ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getLocalAutofillHighlightColor ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
 public final class androidx/compose/foundation/text/BasicSecureTextFieldKt {
