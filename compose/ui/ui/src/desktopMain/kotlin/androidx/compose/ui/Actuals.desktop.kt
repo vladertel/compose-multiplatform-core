@@ -17,25 +17,7 @@
 package androidx.compose.ui
 
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import org.jetbrains.skiko.MainUIDispatcher
 
-internal expect val PostDelayedDispatcher: CoroutineContext
-
-@OptIn(DelicateCoroutinesApi::class)
-internal actual fun postDelayed(delayMillis: Long, block: () -> Unit): Any {
-    // TODO https://youtrack.jetbrains.com/issue/CMP-7153
-    return GlobalScope.launch(PostDelayedDispatcher) {
-        delay(delayMillis)
-        block()
-    }
-}
-
-internal actual fun removePost(token: Any?) {
-    val job = token as? Job?
-    job?.cancel()
-}
+internal actual val PostDelayedDispatcher: CoroutineContext
+    get() = MainUIDispatcher
