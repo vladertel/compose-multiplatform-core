@@ -77,13 +77,6 @@ internal suspend fun PointerInputScope.detectDownAndDragGesturesWithObserver(
     coroutineScope {
         launch(start = CoroutineStart.UNDISPATCHED) { detectPreDragGesturesWithObserver(observer) }
         launch(start = CoroutineStart.UNDISPATCHED) { detectDragGesturesWithObserver(observer) }
-            .invokeOnCompletion {
-                // Otherwise observer won't be notified if
-                // composable was disposed before the drag cancellation
-                if (it is CancellationException){
-                    observer.onCancel()
-                }
-            }
     }
 }
 

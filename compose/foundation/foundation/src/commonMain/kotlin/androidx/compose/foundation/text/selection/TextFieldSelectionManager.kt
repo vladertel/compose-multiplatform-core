@@ -461,10 +461,7 @@ internal class TextFieldSelectionManager(val undoManager: UndoManager? = null) {
                 updateFloatingToolbar(show = true)
             }
 
-            override fun onCancel() {
-                draggingHandle = null
-                currentDragPosition = null
-            }
+            override fun onCancel() {}
         }
 
     /** [TextDragObserver] for dragging the cursor to change the selection in TextField. */
