@@ -43,6 +43,7 @@ actual constructor(
             shadowTablesMap = shadowTablesMap,
             viewTables = viewTables,
             tableNames = tableNames,
+            useTempTable = true,
             onInvalidatedTablesIds = {}
         )
 
@@ -78,7 +79,8 @@ actual constructor(
      */
     @JvmOverloads
     actual fun createFlow(vararg tables: String, emitInitialState: Boolean): Flow<Set<String>> {
-        return implementation.createFlow(tables, emitInitialState)
+        val (resolvedTableNames, tableIds) = implementation.validateTableNames(tables)
+        return implementation.createFlow(resolvedTableNames, tableIds, emitInitialState)
     }
 
     /**

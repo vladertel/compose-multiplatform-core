@@ -16,17 +16,14 @@
 
 plugins {
     id("AndroidXPlugin")
-    id("com.android.application")
+    id("com.android.library")
     id("org.jetbrains.kotlin.android")
 }
 
 android {
+    compileSdk 35
+    compileSdkExtension 14
     namespace 'androidx.privacysandbox.ui.integration.testsdkprovider'
-
-    defaultConfig {
-        applicationId "androidx.privacysandbox.ui.integration.testsdkprovider"
-        minSdk 33
-    }
 
     buildTypes {
         release {
@@ -37,11 +34,11 @@ android {
 
 dependencies {
     api(libs.kotlinStdlib)
-    api("androidx.annotation:annotation:1.6.0")
+    api("androidx.annotation:annotation:1.8.1")
+    implementation project(':privacysandbox:sdkruntime:sdkruntime-provider')
     implementation project(':privacysandbox:ui:integration-tests:testaidl')
     implementation project(':privacysandbox:ui:integration-tests:sdkproviderutils')
     implementation project(':privacysandbox:ui:ui-core')
     implementation project(':privacysandbox:ui:ui-provider')
-    implementation project(':privacysandbox:sdkruntime:sdkruntime-client')
     implementation project(':webkit:webkit')
 }

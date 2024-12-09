@@ -22,20 +22,31 @@ import static org.junit.Assert.assertThrows;
 
 import androidx.appsearch.app.PropertyPath;
 import androidx.appsearch.ast.query.PropertyDefinedNode;
-import androidx.appsearch.flags.CheckFlagsRule;
-import androidx.appsearch.flags.DeviceFlagsValueProvider;
 import androidx.appsearch.flags.Flags;
-import androidx.appsearch.flags.RequiresFlagsEnabled;
+import androidx.appsearch.testutil.AppSearchTestUtils;
+import androidx.appsearch.testutil.flags.RequiresFlagsEnabled;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.util.List;
 
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_ABSTRACT_SYNTAX_TREES)
 public class PropertyDefinedNodeCtsTest {
     @Rule
-    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+    public final RuleChain mRuleChain = AppSearchTestUtils.createCommonTestRules();
+
+    @Test
+    public void testEquals_identical() {
+        PropertyDefinedNode propertyDefinedOne = new PropertyDefinedNode(
+                new PropertyPath("example.property.path"));
+        PropertyDefinedNode propertyDefinedTwo = new PropertyDefinedNode(
+                new PropertyPath("example.property.path"));
+
+        assertThat(propertyDefinedOne).isEqualTo(propertyDefinedTwo);
+        assertThat(propertyDefinedOne.hashCode()).isEqualTo(propertyDefinedTwo.hashCode());
+    }
 
     @Test
     public void testConstructor_throwsOnNullPointer() {

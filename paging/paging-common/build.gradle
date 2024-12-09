@@ -22,14 +22,16 @@
  * modifying its settings.
  */
 
+
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.konan.target.Family
 
+
 plugins {
     id("AndroidXPlugin")
-    id("com.android.library")
 }
 
 androidXMultiplatform {
@@ -37,7 +39,16 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-    android()
+    watchos()
+    tvos()
+    androidLibrary {
+        namespace = "androidx.paging.common"
+        withAndroidTestOnDeviceBuilder {
+            it.compilationName = "instrumentedTest"
+            it.defaultSourceSetName = "androidInstrumentedTest"
+            it.sourceSetTreeName = "test"
+        }
+    }
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -46,7 +57,7 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
-                api(project(":annotation:annotation"))
+                api("androidx.annotation:annotation:1.9.1")
             }
         }
 
@@ -120,7 +131,10 @@ androidXMultiplatform {
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family
-                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
+                    if (konanTargetFamily == Family.OSX ||
+                            konanTargetFamily == Family.IOS ||
+                            konanTargetFamily == Family.WATCHOS ||
+                            konanTargetFamily == Family.TVOS) {
                         dependsOn(darwinMain)
                     } else if (konanTargetFamily == Family.LINUX) {
                         dependsOn(linuxMain)
@@ -142,9 +156,7 @@ androidx {
     inceptionYear = "2017"
     description = "Android Paging-Common"
     legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = false
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
     samples(project(":paging:paging-samples"))
-}
-
-android {
-    namespace "androidx.paging.common"
 }

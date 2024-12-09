@@ -18,6 +18,7 @@ package androidx.pdf.viewer.fragment
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -339,7 +340,6 @@ public open class PdfViewerFragment : Fragment() {
                 fastScrollView = fastScrollView!!,
                 zoomView = zoomView!!,
                 paginatedView = paginatedView!!,
-                loadingView = loadingView!!,
                 findInFileView = findInFileView!!,
                 isTextSearchActive = isTextSearchActive,
                 viewState = viewState,
@@ -363,6 +363,9 @@ public open class PdfViewerFragment : Fragment() {
                             onRequestImmersiveMode(false)
                         }
                     }
+
+                    hideSpinner()
+                    showPdfView()
                 },
                 onDocumentLoadFailure = { exception, showErrorView ->
                     // Update state to reflect document load failure.
@@ -430,6 +433,14 @@ public open class PdfViewerFragment : Fragment() {
         delayedContentsAvailable?.run()
         super.onStart()
         started = true
+
+        // Check if the document file exists, return early if not
+        documentUri?.let {
+            val fileExist = checkAndFetchFile(it, false)
+            if (!fileExist) {
+                return
+            }
+        }
         if (delayedEnter || onScreen) {
             onEnter()
             delayedEnter = false
@@ -719,7 +730,7 @@ public open class PdfViewerFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (!documentLoaded) {
+        if (!documentLoaded || paginatedView?.isConfigurationChanged == true) {
             return
         }
         setAnnotationIntentResolvability()
@@ -733,6 +744,11 @@ public open class PdfViewerFragment : Fragment() {
         ) {
             annotationButton?.post { onRequestImmersiveMode(false) }
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        paginatedView?.isConfigurationChanged = true
     }
 
     private fun destroyContentModel() {
@@ -833,6 +849,16 @@ public open class PdfViewerFragment : Fragment() {
             }
     }
 
+    private fun resetViewsAndModels(fileUri: Uri) {
+        if (pdfLoader != null) {
+            pdfLoaderCallbacks?.uri = fileUri
+            paginatedView?.resetModels()
+            destroyContentModel()
+        }
+        fastScrollView?.resetContents()
+        findInFileView?.resetFindInFile()
+    }
+
     private fun loadFile(fileUri: Uri) {
         // Early return if fragment is not in STARTED state
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
@@ -848,29 +874,47 @@ public open class PdfViewerFragment : Fragment() {
                 putParcelable(KEY_DOCUMENT_URI, fileUri)
                 putBoolean(KEY_TEXT_SEARCH_ACTIVE, false)
             }
-        if (pdfLoader != null) {
-            pdfLoaderCallbacks?.uri = fileUri
-            paginatedView?.resetModels()
-            destroyContentModel()
-        }
+
+        // Reset UI components and models before loading the file
+        resetViewsAndModels(fileUri)
         detachViewsAndObservers()
-        fastScrollView?.resetContents()
-        findInFileView?.resetFindInFile()
-        try {
-            validateFileUri(fileUri)
-            fetchFile(fileUri)
-        } catch (error: Exception) {
-            when (error) {
-                is IOException,
-                is SecurityException,
-                is NullPointerException -> handleError(error)
-                else -> throw error
-            }
-        }
+
+        // Validate the file URI and attempt to load the file contents
+        checkAndFetchFile(fileUri, true)
+
         if (localUri != null && localUri != fileUri) {
             onRequestImmersiveMode(true)
         }
         localUri = fileUri
+    }
+
+    private fun checkAndFetchFile(fileUri: Uri, performLoad: Boolean): Boolean {
+        try {
+            validateFileUri(fileUri)
+            fetchFile(fileUri, performLoad)
+            return true
+        } catch (error: Exception) {
+            when (error) {
+                is IOException,
+                is SecurityException,
+                is NullPointerException -> handleFileNotAvailable(fileUri, error)
+                else -> {
+                    throw error
+                }
+            }
+            return false
+        }
+    }
+
+    private fun handleFileNotAvailable(fileUri: Uri, error: Throwable) {
+        // Reset views and models when file error occurs
+        resetViewsAndModels(fileUri)
+
+        // Hide fast scroll and show loading view to display error message
+        fastScrollView?.visibility = View.GONE
+        loadingView?.visibility = View.VISIBLE
+
+        handleError(error)
     }
 
     private fun validateFileUri(fileUri: Uri) {
@@ -879,7 +923,7 @@ public open class PdfViewerFragment : Fragment() {
         }
     }
 
-    private fun fetchFile(fileUri: Uri) {
+    private fun fetchFile(fileUri: Uri, performLoad: Boolean) {
         Preconditions.checkNotNull(fileUri)
         val fileName: String = getFileName(fileUri)
         val openable: FutureValue<Openable> = fetcher?.loadLocal(fileUri)!!
@@ -887,7 +931,10 @@ public open class PdfViewerFragment : Fragment() {
         openable[
             object : FutureValue.Callback<Openable> {
                 override fun available(value: Openable) {
-                    viewerAvailable(fileUri, fileName, value)
+                    // If loading is required, notify the viewer with the available content.
+                    if (performLoad) {
+                        viewerAvailable(fileUri, fileName, value)
+                    }
                 }
 
                 override fun failed(thrown: Throwable) {
@@ -951,8 +998,21 @@ public open class PdfViewerFragment : Fragment() {
         intent.setData(localUri)
         intent.putExtra(EXTRA_PDF_FILE_NAME, getFileName(localUri!!))
         // TODO: Pass current page number to restore it in edit mode.
-        intent.putExtra(EXTRA_STARTING_PAGE, 0)
+        intent.putExtra(EXTRA_STARTING_PAGE, getStartingPageNumber())
         startActivity(intent)
+    }
+
+    private fun getStartingPageNumber(): Int {
+        // Return the page that is centered in the view.
+        return paginationModel?.midPage ?: 0
+    }
+
+    private fun hideSpinner() {
+        loadingView?.visibility = View.GONE
+    }
+
+    private fun showPdfView() {
+        fastScrollView?.visibility = View.VISIBLE
     }
 
     private companion object {

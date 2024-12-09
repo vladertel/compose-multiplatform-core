@@ -2020,11 +2020,11 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             if (layoutNode.nodes.has(Nodes.Semantics)) layoutNode
             else layoutNode.findClosestParentNode { it.nodes.has(Nodes.Semantics) }
 
-        val config = semanticsNode?.semanticsConfiguration ?: return
+        val config = semanticsNode?.collapsedSemantics ?: return
         if (!config.isMergingSemanticsOfDescendants) {
             semanticsNode
                 .findClosestParentNode {
-                    it.semanticsConfiguration?.isMergingSemanticsOfDescendants == true
+                    it.collapsedSemantics?.isMergingSemanticsOfDescendants == true
                 }
                 ?.let { semanticsNode = it }
         }
@@ -2901,14 +2901,26 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     }
 }
 
+// Note: This function was separated into a static function due to b/375509809.
+/**
+ * Calculates custom traversal order for the semantics tree represented by [currentSemanticsNodes]
+ * and saves the result in [outputBeforeMap] and [outputAfterMap].
+ *
+ * @param currentSemanticsNodes: A map of all the nodes in the semantics tree.
+ * @param outputBeforeMap: A mutable map that is an output of this function. It stores references to
+ *   node that should be traversed before the node specified by the id.
+ * @param outputAfterMap: A mutable map that is an output of this function. It stores references to
+ *   node that should be traversed after the node specified by the id.
+ * @param resources: Application resources.
+ */
 private fun setTraversalValues(
     currentSemanticsNodes: IntObjectMap<SemanticsNodeWithAdjustedBounds>,
-    idToBeforeMap: MutableIntIntMap,
-    idToAfterMap: MutableIntIntMap,
+    outputBeforeMap: MutableIntIntMap,
+    outputAfterMap: MutableIntIntMap,
     resources: Resources
 ) {
-    idToBeforeMap.clear()
-    idToAfterMap.clear()
+    outputBeforeMap.clear()
+    outputAfterMap.clear()
 
     val hostSemanticsNode =
         currentSemanticsNodes[AccessibilityNodeProviderCompat.HOST_VIEW_ID]?.semanticsNode!!
@@ -2927,8 +2939,8 @@ private fun setTraversalValues(
     for (i in 1..semanticsOrderList.lastIndex) {
         val prevId = semanticsOrderList[i - 1].id
         val currId = semanticsOrderList[i].id
-        idToBeforeMap[prevId] = currId
-        idToAfterMap[currId] = prevId
+        outputBeforeMap[prevId] = currId
+        outputAfterMap[currId] = prevId
     }
 }
 
@@ -3276,12 +3288,12 @@ private fun SemanticsNode.excludeLineAndPageGranularities(): Boolean {
     val ancestor =
         layoutNode.findClosestParentNode {
             // looking for text field merging node
-            val ancestorSemanticsConfiguration = it.semanticsConfiguration
+            val ancestorSemanticsConfiguration = it.collapsedSemantics
             ancestorSemanticsConfiguration?.isMergingSemanticsOfDescendants == true &&
                 ancestorSemanticsConfiguration.contains(SemanticsProperties.EditableText)
         }
     return ancestor != null &&
-        ancestor.semanticsConfiguration?.getOrNull(SemanticsProperties.Focused) != true
+        ancestor.collapsedSemantics?.getOrNull(SemanticsProperties.Focused) != true
 }
 
 private fun AccessibilityAction<*>.accessibilityEquals(other: Any?): Boolean {

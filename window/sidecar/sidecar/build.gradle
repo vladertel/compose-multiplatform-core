@@ -30,7 +30,8 @@ plugins {
 }
 
 dependencies {
-    implementation("androidx.annotation:annotation:1.1.0")
+    api(libs.jspecify)
+    implementation("androidx.annotation:annotation:1.8.1")
 }
 
 androidx {
@@ -40,7 +41,6 @@ androidx {
     inceptionYear = "2020"
     description = "This version of the OEM extension is deprecated. Please use window:extensions:extensions." +
             "module instead."
-    metalavaK2UastEnabled = true
     doNotDocumentReason = "Should not be published"
 }
 

@@ -89,9 +89,9 @@ class WideNavigationRailTest {
 
         restorationTester.setContent { railState = rememberWideNavigationRailState() }
 
-        assertThat(railState.isExpanded).isFalse()
+        assertThat(railState.targetValue.isExpanded).isFalse()
         restorationTester.emulateSavedInstanceStateRestore()
-        assertThat(railState.isExpanded).isFalse()
+        assertThat(railState.targetValue.isExpanded).isFalse()
     }
 
     @Test

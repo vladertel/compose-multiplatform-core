@@ -24,20 +24,37 @@ import androidx.appsearch.app.PropertyPath;
 import androidx.appsearch.ast.Node;
 import androidx.appsearch.ast.TextNode;
 import androidx.appsearch.ast.operators.PropertyRestrictNode;
-import androidx.appsearch.flags.CheckFlagsRule;
-import androidx.appsearch.flags.DeviceFlagsValueProvider;
 import androidx.appsearch.flags.Flags;
-import androidx.appsearch.flags.RequiresFlagsEnabled;
+import androidx.appsearch.testutil.AppSearchTestUtils;
+import androidx.appsearch.testutil.flags.RequiresFlagsEnabled;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.util.List;
 
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_ABSTRACT_SYNTAX_TREES)
 public class PropertyRestrictNodeTest {
     @Rule
-    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+    public final RuleChain mRuleChain = AppSearchTestUtils.createCommonTestRules();
+
+    @Test
+    public void testEquals_identical() {
+        PropertyPath propertyPathOne = new PropertyPath("example.property.segment");
+        TextNode textNodeOne = new TextNode("foo");
+        PropertyRestrictNode propertyRestrictNodeOne =
+                new PropertyRestrictNode(propertyPathOne, textNodeOne);
+
+        PropertyPath propertyPathTwo = new PropertyPath("example.property.segment");
+        TextNode textNodeTwo = new TextNode("foo");
+        PropertyRestrictNode propertyRestrictNodeTwo =
+                new PropertyRestrictNode(propertyPathTwo, textNodeTwo);
+
+        assertThat(propertyRestrictNodeOne).isEqualTo(propertyRestrictNodeTwo);
+        assertThat(propertyRestrictNodeOne.hashCode())
+                .isEqualTo(propertyRestrictNodeTwo.hashCode());
+    }
 
     @Test
     public void testConstructor_takesPropertyPath() {

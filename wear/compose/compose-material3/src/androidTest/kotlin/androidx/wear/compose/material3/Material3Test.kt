@@ -63,8 +63,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
@@ -406,6 +406,7 @@ fun ComposeContentTestRule.verifyRoundedButtonTapAnimationEnd(
     expectedFramesUntilTarget: Int,
     color: @Composable () -> Color,
     antiAliasingGap: Float = 2f,
+    releaseAfterTap: Boolean = true,
     content: @Composable (Modifier) -> Unit
 ) {
     val expectedAnimationEnd =
@@ -418,7 +419,12 @@ fun ComposeContentTestRule.verifyRoundedButtonTapAnimationEnd(
     }
 
     mainClock.autoAdvance = false
-    onNodeWithTag(TEST_TAG).performClick()
+    onNodeWithTag(TEST_TAG).performTouchInput {
+        down(center)
+        if (releaseAfterTap) {
+            up()
+        }
+    }
 
     /**
      * We are manually advancing by a fixed amount of frames since

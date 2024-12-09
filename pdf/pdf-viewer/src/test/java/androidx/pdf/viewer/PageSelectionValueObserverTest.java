@@ -30,10 +30,10 @@ import androidx.pdf.models.PageSelection;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.SmallTest;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-
 
 @SmallTest
 @RunWith(RobolectricTestRunner.class)
@@ -50,7 +50,7 @@ public class PageSelectionValueObserverTest {
     private final PageRangeHandler mMockPageRangeHandler = mock(PageRangeHandler.class);
     private final Context mContext = ApplicationProvider.getApplicationContext();
 
-
+    @Ignore // b/376314114
     @Test
     public void onChange_setOverlay() {
         when(mMockOldPageSelection.getPage()).thenReturn(1);

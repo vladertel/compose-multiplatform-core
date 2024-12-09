@@ -164,7 +164,7 @@ fun WideNavigationRail(
     WideNavigationRailLayout(
         modifier = modifier,
         isModal = false,
-        expanded = state.isExpanded,
+        expanded = state.targetValue.isExpanded,
         colors = colors,
         shape = shape,
         header = header,
@@ -457,7 +457,7 @@ fun ModalWideNavigationRail(
         }
     val positionProgress =
         animateFloatAsState(
-            targetValue = if (!state.isExpanded) 0f else 1f,
+            targetValue = if (!state.targetValue.isExpanded) 0f else 1f,
             // TODO: Load the motionScheme tokens from the component tokens file.
             animationSpec = MotionSchemeKeyTokens.DefaultEffects.value()
         )
@@ -473,7 +473,7 @@ fun ModalWideNavigationRail(
     val settleToDismiss: suspend (velocity: Float) -> Unit = {
         if (hideOnCollapse) {
             modalState.settle(it)
-            if (!modalState.isExpanded) state.collapse()
+            if (!modalState.targetValue.isExpanded) state.collapse()
         }
     }
 
@@ -521,7 +521,7 @@ fun ModalWideNavigationRail(
         val predictiveBackProgress = remember { Animatable(initialValue = 0f) }
         val predictiveBackState = remember { RailPredictiveBackState() }
 
-        SideEffect { channel.trySend(state.isExpanded) }
+        SideEffect { channel.trySend(state.targetValue.isExpanded) }
 
         ModalWideNavigationRailDialog(
             properties = expandedProperties,
@@ -884,11 +884,16 @@ object WideNavigationRailItemDefaults {
 /** Default values for [ModalWideNavigationRail]. */
 @Immutable
 @ExperimentalMaterial3ExpressiveApi
-expect object ModalWideNavigationRailDefaults {
+object ModalWideNavigationRailDefaults {
 
     /** Properties used to customize the window behavior of a [ModalWideNavigationRail]. */
-    val Properties: ModalWideNavigationRailProperties
+    val Properties: ModalWideNavigationRailProperties =
+        createDefaultModalWideNavigationRailProperties()
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+internal expect fun createDefaultModalWideNavigationRailProperties():
+    ModalWideNavigationRailProperties
 
 @Immutable
 @ExperimentalMaterial3ExpressiveApi

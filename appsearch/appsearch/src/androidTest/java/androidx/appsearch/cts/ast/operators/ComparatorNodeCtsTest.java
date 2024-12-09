@@ -22,20 +22,36 @@ import static org.junit.Assert.assertThrows;
 
 import androidx.appsearch.app.PropertyPath;
 import androidx.appsearch.ast.operators.ComparatorNode;
-import androidx.appsearch.flags.CheckFlagsRule;
-import androidx.appsearch.flags.DeviceFlagsValueProvider;
 import androidx.appsearch.flags.Flags;
-import androidx.appsearch.flags.RequiresFlagsEnabled;
+import androidx.appsearch.testutil.AppSearchTestUtils;
+import androidx.appsearch.testutil.flags.RequiresFlagsEnabled;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 
 import java.util.List;
 
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_ABSTRACT_SYNTAX_TREES)
 public class ComparatorNodeCtsTest {
     @Rule
-    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+    public final RuleChain mRuleChain = AppSearchTestUtils.createCommonTestRules();
+
+    @Test
+    public void testEquals_identical() {
+        PropertyPath propertyPathOne = new PropertyPath("example.property.path");
+        int valueOne = 5;
+        ComparatorNode equalsNodeOne =
+                new ComparatorNode(ComparatorNode.EQUALS, propertyPathOne, valueOne);
+
+        PropertyPath propertyPathTwo = new PropertyPath("example.property.path");
+        int valueTwo = 5;
+        ComparatorNode equalsNodeTwo =
+                new ComparatorNode(ComparatorNode.EQUALS, propertyPathTwo, valueTwo);
+
+        assertThat(equalsNodeOne).isEqualTo(equalsNodeTwo);
+        assertThat(equalsNodeOne.hashCode()).isEqualTo(equalsNodeTwo.hashCode());
+    }
 
     @Test
     public void testConstructor_correctConstruction() {

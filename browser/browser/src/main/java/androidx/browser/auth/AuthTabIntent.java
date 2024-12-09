@@ -16,6 +16,11 @@
 
 package androidx.browser.auth;
 
+import static androidx.browser.customtabs.CustomTabsIntent.COLOR_SCHEME_DARK;
+import static androidx.browser.customtabs.CustomTabsIntent.COLOR_SCHEME_LIGHT;
+import static androidx.browser.customtabs.CustomTabsIntent.COLOR_SCHEME_SYSTEM;
+import static androidx.browser.customtabs.CustomTabsIntent.EXTRA_COLOR_SCHEME;
+import static androidx.browser.customtabs.CustomTabsIntent.EXTRA_COLOR_SCHEME_PARAMS;
 import static androidx.browser.customtabs.CustomTabsIntent.EXTRA_ENABLE_EPHEMERAL_BROWSING;
 import static androidx.browser.customtabs.CustomTabsIntent.EXTRA_SESSION;
 
@@ -24,17 +29,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.SparseArray;
 
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultCaller;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContract;
 import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.IntRange;
 import androidx.annotation.RestrictTo;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.browser.customtabs.ExperimentalEphemeralBrowsing;
+import androidx.core.os.BundleCompat;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -136,7 +145,7 @@ public class AuthTabIntent {
     public static final int RESULT_UNKNOWN_CODE = -2;
 
     /** An {@link Intent} used to start the Auth Tab Activity. */
-    @NonNull public final Intent intent;
+    public final @NonNull Intent intent;
 
     /**
      * Launches an Auth Tab Activity. Must be used for flows that result in a redirect with a custom
@@ -182,6 +191,35 @@ public class AuthTabIntent {
         return intent.getBooleanExtra(EXTRA_ENABLE_EPHEMERAL_BROWSING, false);
     }
 
+    /**
+     * Retrieves the instance of {@link AuthTabColorSchemeParams} from an {@link Intent} for a given
+     * color scheme.
+     *
+     * @param intent      {@link Intent} to retrieve the color scheme params from.
+     * @param colorScheme A constant representing a color scheme. Must not be
+     *                    {@link #COLOR_SCHEME_SYSTEM}.
+     * @return An instance of {@link AuthTabColorSchemeParams} with retrieved params.
+     */
+    public static @NonNull AuthTabColorSchemeParams getColorSchemeParams(@NonNull Intent intent,
+            @CustomTabsIntent.ColorScheme @IntRange(from = COLOR_SCHEME_LIGHT, to =
+                    COLOR_SCHEME_DARK) int colorScheme) {
+        Bundle extras = intent.getExtras();
+        if (extras == null) {
+            return AuthTabColorSchemeParams.fromBundle(null);
+        }
+
+        AuthTabColorSchemeParams defaults = AuthTabColorSchemeParams.fromBundle(extras);
+        SparseArray<Bundle> paramBundles = BundleCompat.getSparseParcelableArray(extras,
+                EXTRA_COLOR_SCHEME_PARAMS, Bundle.class);
+        if (paramBundles != null) {
+            Bundle bundleForScheme = paramBundles.get(colorScheme);
+            if (bundleForScheme != null) {
+                return AuthTabColorSchemeParams.fromBundle(bundleForScheme).withDefaults(defaults);
+            }
+        }
+        return defaults;
+    }
+
     private AuthTabIntent(@NonNull Intent intent) {
         this.intent = intent;
     }
@@ -191,6 +229,10 @@ public class AuthTabIntent {
      */
     public static final class Builder {
         private final Intent mIntent = new Intent(Intent.ACTION_VIEW);
+        private final AuthTabColorSchemeParams.Builder mDefaultColorSchemeBuilder =
+                new AuthTabColorSchemeParams.Builder();
+        private @Nullable SparseArray<Bundle> mColorSchemeParamBundles;
+        private @Nullable Bundle mDefaultColorSchemeBundle;
 
         public Builder() {
         }
@@ -204,9 +246,93 @@ public class AuthTabIntent {
          * @see CustomTabsIntent#EXTRA_ENABLE_EPHEMERAL_BROWSING
          */
         @ExperimentalEphemeralBrowsing
-        @NonNull
-        public AuthTabIntent.Builder setEphemeralBrowsingEnabled(boolean enabled) {
+        public AuthTabIntent.@NonNull Builder setEphemeralBrowsingEnabled(boolean enabled) {
             mIntent.putExtra(EXTRA_ENABLE_EPHEMERAL_BROWSING, enabled);
+            return this;
+        }
+
+        /**
+         * Sets the color scheme that should be applied to the user interface in the Auth Tab.
+         *
+         * @param colorScheme Desired color scheme.
+         * @see CustomTabsIntent#COLOR_SCHEME_SYSTEM
+         * @see CustomTabsIntent#COLOR_SCHEME_LIGHT
+         * @see CustomTabsIntent#COLOR_SCHEME_DARK
+         */
+        @SuppressWarnings("MissingGetterMatchingBuilder")
+        public @NonNull Builder setColorScheme(
+                @CustomTabsIntent.ColorScheme @IntRange(from = COLOR_SCHEME_SYSTEM, to =
+                        COLOR_SCHEME_DARK) int colorScheme) {
+            mIntent.putExtra(EXTRA_COLOR_SCHEME, colorScheme);
+            return this;
+        }
+
+        /**
+         * Sets {@link AuthTabColorSchemeParams} for the given color scheme.
+         *
+         * This allows specifying two different toolbar colors for light and dark schemes.
+         * It can be useful if {@link CustomTabsIntent#COLOR_SCHEME_SYSTEM} is set: the Auth Tab
+         * will follow the system settings and apply the corresponding
+         * {@link AuthTabColorSchemeParams} "on the fly" when the settings change.
+         *
+         * If there is no {@link AuthTabColorSchemeParams} for the current scheme, or a particular
+         * field of it is null, the Auth Tab will fall back to the defaults provided via
+         * {@link #setDefaultColorSchemeParams}.
+         *
+         * Example:
+         * <pre><code>
+         *     AuthTabColorSchemeParams darkParams = new AuthTabColorSchemeParams.Builder()
+         *             .setToolbarColor(darkColor)
+         *             .build();
+         *     AuthTabColorSchemeParams otherParams = new AuthTabColorSchemeParams.Builder()
+         *             .setNavigationBarColor(otherColor)
+         *             .build();
+         *     AuthTabIntent intent = new AuthTabIntent.Builder()
+         *             .setColorScheme(COLOR_SCHEME_SYSTEM)
+         *             .setColorSchemeParams(COLOR_SCHEME_DARK, darkParams)
+         *             .setDefaultColorSchemeParams(otherParams)
+         *             .build();
+         *
+         *     // Setting colors independently of color scheme
+         *     AuthTabColorSchemeParams params = new AuthTabColorSchemeParams.Builder()
+         *             .setToolbarColor(color)
+         *             .setNavigationBarColor(color)
+         *             .build();
+         *     AuthTabIntent intent = new AuthTabIntent.Builder()
+         *             .setDefaultColorSchemeParams(params)
+         *             .build();
+         * </code></pre>
+         *
+         * @param colorScheme A constant representing a color scheme (see {@link #setColorScheme}).
+         *                    It should not be {@link #COLOR_SCHEME_SYSTEM}, because that represents
+         *                    a behavior rather than a particular color scheme.
+         * @param params      An instance of {@link AuthTabColorSchemeParams}.
+         */
+        @SuppressWarnings("MissingGetterMatchingBuilder")
+        public AuthTabIntent.@NonNull Builder setColorSchemeParams(
+                @CustomTabsIntent.ColorScheme @IntRange(from = COLOR_SCHEME_LIGHT, to =
+                        COLOR_SCHEME_DARK) int colorScheme,
+                @NonNull AuthTabColorSchemeParams params) {
+            if (mColorSchemeParamBundles == null) {
+                mColorSchemeParamBundles = new SparseArray<>();
+            }
+            mColorSchemeParamBundles.put(colorScheme, params.toBundle());
+            return this;
+        }
+
+        /**
+         * Sets the default {@link AuthTabColorSchemeParams}.
+         *
+         * This will set a default color scheme that applies when no
+         * {@link AuthTabColorSchemeParams} specified for current color scheme via
+         * {@link #setColorSchemeParams}.
+         *
+         * @param params An instance of {@link AuthTabColorSchemeParams}.
+         */
+        @SuppressWarnings("MissingGetterMatchingBuilder")
+        public AuthTabIntent.@NonNull Builder setDefaultColorSchemeParams(
+                @NonNull AuthTabColorSchemeParams params) {
+            mDefaultColorSchemeBundle = params.toBundle();
             return this;
         }
 
@@ -214,15 +340,28 @@ public class AuthTabIntent {
          * Combines all the options that have been set and returns a new {@link AuthTabIntent}
          * object.
          */
-        @NonNull
-        public AuthTabIntent build() {
+        public @NonNull AuthTabIntent build() {
             mIntent.putExtra(EXTRA_LAUNCH_AUTH_TAB, true);
 
             // Put a null EXTRA_SESSION as a fallback so that this is interpreted as a Custom Tab
             // intent by browser implementations that don't support Auth Tab.
-            Bundle bundle = new Bundle();
-            bundle.putBinder(EXTRA_SESSION, null);
-            mIntent.putExtras(bundle);
+            {
+                Bundle bundle = new Bundle();
+                bundle.putBinder(EXTRA_SESSION, null);
+                mIntent.putExtras(bundle);
+            }
+
+            mIntent.putExtras(mDefaultColorSchemeBuilder.build().toBundle());
+            if (mDefaultColorSchemeBundle != null) {
+                mIntent.putExtras(mDefaultColorSchemeBundle);
+            }
+
+            if (mColorSchemeParamBundles != null) {
+                Bundle bundle = new Bundle();
+                bundle.putSparseParcelableArray(EXTRA_COLOR_SCHEME_PARAMS,
+                        mColorSchemeParamBundles);
+                mIntent.putExtras(bundle);
+            }
 
             return new AuthTabIntent(mIntent);
         }
@@ -239,8 +378,7 @@ public class AuthTabIntent {
      * @param callback An {@link ActivityResultCallback} to be called with the auth result.
      * @return An {@link ActivityResultLauncher} to be passed to {@link #launch}.
      */
-    @NonNull
-    public static ActivityResultLauncher<Intent> registerActivityResultLauncher(
+    public static @NonNull ActivityResultLauncher<Intent> registerActivityResultLauncher(
             @NonNull ActivityResultCaller caller,
             @NonNull ActivityResultCallback<AuthResult> callback) {
         return caller.registerForActivityResult(new AuthenticateUserResultContract(), callback);
@@ -264,8 +402,7 @@ public class AuthTabIntent {
          * The {@link Uri} containing the Auth Tab result data. Null if the `resultCode` isn't
          * {@link RESULT_OK}.
          */
-        @Nullable
-        public final Uri resultUri;
+        public final @Nullable Uri resultUri;
 
         AuthResult(@ResultCode int resultCode, @Nullable Uri resultUri) {
             this.resultCode = resultCode;
@@ -274,15 +411,13 @@ public class AuthTabIntent {
     }
 
     static class AuthenticateUserResultContract extends ActivityResultContract<Intent, AuthResult> {
-        @NonNull
         @Override
-        public Intent createIntent(@NonNull Context context, @NonNull Intent input) {
+        public @NonNull Intent createIntent(@NonNull Context context, @NonNull Intent input) {
             return input;
         }
 
-        @NonNull
         @Override
-        public AuthResult parseResult(int resultCode, @Nullable Intent intent) {
+        public @NonNull AuthResult parseResult(int resultCode, @Nullable Intent intent) {
             Uri resultUri = null;
             switch (resultCode) {
                 case RESULT_OK:

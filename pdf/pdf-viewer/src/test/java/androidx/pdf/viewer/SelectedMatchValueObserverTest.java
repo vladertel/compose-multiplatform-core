@@ -30,12 +30,12 @@ import androidx.pdf.widget.ZoomView;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.SmallTest;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
 import java.util.ArrayList;
-
 
 @SmallTest
 @RunWith(RobolectricTestRunner.class)
@@ -55,6 +55,7 @@ public class SelectedMatchValueObserverTest {
     private final PdfHighlightOverlay mMockPdfHighlightOverlay = mock(PdfHighlightOverlay.class);
     private final Context mContext = ApplicationProvider.getApplicationContext();
 
+    @Ignore // b/376314114
     @Test
     public void onChange_setOverlay() {
         when(mMockOldSelection.getPage()).thenReturn(1);

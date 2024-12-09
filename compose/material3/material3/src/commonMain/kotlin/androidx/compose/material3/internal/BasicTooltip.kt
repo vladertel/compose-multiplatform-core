@@ -88,6 +88,7 @@ internal fun BasicTooltipBox(
     tooltip: @Composable () -> Unit,
     state: TooltipState,
     modifier: Modifier = Modifier,
+    onDismissRequest: (() -> Unit)? = null,
     focusable: Boolean = true,
     enableUserInput: Boolean = true,
     content: @Composable () -> Unit

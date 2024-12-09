@@ -30,14 +30,15 @@ plugins {
 }
 
 dependencies {
-    api("androidx.annotation:annotation:1.2.0")
-    implementation("androidx.collection:collection:1.0.0")
+    api(libs.jspecify)
+    api("androidx.annotation:annotation:1.8.1")
+    implementation("androidx.collection:collection:1.4.2")
 
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testCore)
     androidTestImplementation(libs.testRunner)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy)
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy)
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockito)
     androidTestImplementation(libs.truth)
     androidTestAnnotationProcessor project(":versionedparcelable:versionedparcelable-compiler")
 }
@@ -63,5 +64,4 @@ androidx {
     inceptionYear = "2018"
     description = "Provides a stable but relatively compact binary serialization format that can be passed across processes or persisted safely."
     failOnDeprecationWarnings = false
-    metalavaK2UastEnabled = true
 }

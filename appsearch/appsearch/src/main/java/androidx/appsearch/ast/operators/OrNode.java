@@ -28,6 +28,7 @@ import androidx.core.util.Preconditions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * {@link Node} that represents logical OR of nodes.
@@ -76,6 +77,14 @@ public final class OrNode implements Node{
     }
 
     /**
+     * Returns the index of the first instance of the node, or -1 if the node does not exist.
+     */
+    public int getIndexOfChild(@NonNull Node node) {
+        Preconditions.checkNotNull(node);
+        return mChildren.indexOf(node);
+    }
+
+    /**
      * Set the nodes being logically ORed over by this node.
      *
      * @param childNodes A list of {@link Node} representing the nodes to be logically ORed over
@@ -111,16 +120,20 @@ public final class OrNode implements Node{
     }
 
     /**
-     * Remove tbe child {@link Node} at the given index from the list of child nodes.
+     * Removes the given {@link Node} from the list of child nodes. If multiple copies of the node
+     * exist, then the first {@link Node} that matches the provided {@link Node} will be removed.
+     * If the node does not exist, the list will be unchanged.
      *
      * <p>The list of child nodes must contain at least 3 nodes to perform this operation.
+     *
+     * @return {@code true} if the node was removed, {@code false} if the node was not removed i.e.
+     * the node was not found.
      */
-    public void removeChild(int index) {
-        Preconditions.checkState(mChildren.size() > 2, "List of child nodes must"
+    public boolean removeChild(@NonNull Node node) {
+        Preconditions.checkState(mChildren.size() > 2, "List of child nodes must "
                 + "contain at least 3 nodes in order to remove.");
-        Preconditions.checkArgumentInRange(index, /*lower=*/ 0, /*upper=*/ mChildren.size() - 1,
-                /*valueName=*/ "Index");
-        mChildren.remove(index);
+        Preconditions.checkNotNull(node);
+        return mChildren.remove(node);
     }
 
     /**
@@ -133,5 +146,18 @@ public final class OrNode implements Node{
     @Override
     public String toString() {
         return "(" + TextUtils.join(" OR ", mChildren) + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrNode orNode = (OrNode) o;
+        return Objects.equals(mChildren, orNode.mChildren);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(mChildren);
     }
 }

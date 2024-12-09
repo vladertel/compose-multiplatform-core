@@ -26,7 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.CornerBasedShape
@@ -113,18 +113,21 @@ internal fun rememberAnimatedPressedButtonShape(
     onPressAnimationSpec: FiniteAnimationSpec<Float>,
     onReleaseAnimationSpec: FiniteAnimationSpec<Float>,
 ): Shape {
-    val pressed = interactionSource.collectIsPressedAsState()
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(pressed.value) {
-        when (pressed.value) {
-            true -> scope.launch { progress.animateTo(1f, animationSpec = onPressAnimationSpec) }
-            false -> {
-                waitUntil {
-                    !progress.isRunning || progress.value > MIN_REQUIRED_ANIMATION_PROGRESS
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press ->
+                    scope.launch { progress.animateTo(1f, animationSpec = onPressAnimationSpec) }
+                is PressInteraction.Cancel,
+                is PressInteraction.Release -> {
+                    waitUntil {
+                        !progress.isRunning || progress.value > MIN_REQUIRED_ANIMATION_PROGRESS
+                    }
+                    scope.launch { progress.animateTo(0f, animationSpec = onReleaseAnimationSpec) }
                 }
-                scope.launch { progress.animateTo(0f, animationSpec = onReleaseAnimationSpec) }
             }
         }
     }
@@ -175,39 +178,39 @@ internal fun animateButtonShape(
 internal fun animateToggleButtonShape(
     uncheckedShape: Shape,
     checkedShape: Shape?,
-    pressedShape: Shape?,
+    uncheckedPressedShape: Shape?,
+    checkedPressedShape: Shape?,
     onPressAnimationSpec: FiniteAnimationSpec<Float>,
     onReleaseAnimationSpec: FiniteAnimationSpec<Float>,
     checked: Boolean,
     interactionSource: MutableInteractionSource?
 ): Pair<Shape, MutableInteractionSource?> {
     return if (checkedShape == null) {
-        // Reuse presssed animation
-
+        // Reuse pressed animation
         return animateButtonShape(
             defaultShape = uncheckedShape,
-            pressedShape = pressedShape,
+            pressedShape = uncheckedPressedShape,
             onPressAnimationSpec = onPressAnimationSpec,
             onReleaseAnimationSpec = onReleaseAnimationSpec,
             interactionSource = interactionSource
         )
     } else if (
         uncheckedShape is RoundedCornerShape &&
-            pressedShape is RoundedCornerShape &&
-            checkedShape is RoundedCornerShape
+            checkedShape is RoundedCornerShape &&
+            uncheckedPressedShape is RoundedCornerShape &&
+            checkedPressedShape is RoundedCornerShape
     ) {
         // Animate between the corner radius
 
         val finalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
 
-        val pressed = finalInteractionSource.collectIsPressedAsState()
-
         val finalShape =
             rememberAnimatedToggleRoundedCornerShape(
+                interactionSource = finalInteractionSource,
                 uncheckedCornerSize = uncheckedShape.topEnd,
                 checkedCornerSize = checkedShape.topEnd,
-                pressedCornerSize = pressedShape.topEnd,
-                pressed = pressed.value,
+                uncheckedPressedCornerSize = uncheckedPressedShape.topEnd,
+                checkedPressedCornerSize = checkedPressedShape.topEnd,
                 checked = checked,
                 onPressAnimationSpec = onPressAnimationSpec,
                 onReleaseAnimationSpec = onReleaseAnimationSpec,

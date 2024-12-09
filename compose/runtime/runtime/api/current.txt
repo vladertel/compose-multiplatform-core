@@ -974,22 +974,8 @@ package androidx.compose.runtime.snapshots {
   }
 
   public final class SnapshotId_jvmKt {
-    method public static inline operator int compareTo(long, int other);
-    method public static inline operator int compareTo(long, long other);
-    method public static inline operator long div(long, int other);
-    method public static inline operator long minus(long, int other);
-    method public static inline operator long minus(long, long other);
-    method public static inline operator long plus(long, int other);
-    method public static inline operator long times(long, int other);
     method public static inline int toInt(long);
-    property public static final long SnapshotIdInvalidValue;
-    property public static final long SnapshotIdMax;
-    property public static final int SnapshotIdSize;
-    property public static final long SnapshotIdZero;
-    field public static final long SnapshotIdInvalidValue = -1L; // 0xffffffffffffffffL
-    field public static final long SnapshotIdMax = 9223372036854775807L; // 0x7fffffffffffffffL
-    field public static final int SnapshotIdSize = 64; // 0x40
-    field public static final long SnapshotIdZero = 0L; // 0x0L
+    method public static inline long toLong(long);
   }
 
   public final class SnapshotKt {
@@ -1152,6 +1138,10 @@ package androidx.compose.runtime.tooling {
     property public abstract boolean isEmpty;
   }
 
+  public final class CompositionDataKt {
+    method public static androidx.compose.runtime.tooling.CompositionInstance? findCompositionInstance(androidx.compose.runtime.tooling.CompositionData);
+  }
+
   @kotlin.jvm.JvmDefaultWithCompatibility public interface CompositionGroup extends androidx.compose.runtime.tooling.CompositionData {
     method public Iterable<java.lang.Object?> getData();
     method public default int getGroupSize();
@@ -1167,6 +1157,14 @@ package androidx.compose.runtime.tooling {
     property public abstract Object? node;
     property public default int slotsSize;
     property public abstract String? sourceInfo;
+  }
+
+  public interface CompositionInstance {
+    method public androidx.compose.runtime.tooling.CompositionGroup? findContextGroup();
+    method public androidx.compose.runtime.tooling.CompositionData getData();
+    method public androidx.compose.runtime.tooling.CompositionInstance? getParent();
+    property public abstract androidx.compose.runtime.tooling.CompositionData data;
+    property public abstract androidx.compose.runtime.tooling.CompositionInstance? parent;
   }
 
   @SuppressCompatibility @androidx.compose.runtime.ExperimentalComposeRuntimeApi public interface CompositionObserver {

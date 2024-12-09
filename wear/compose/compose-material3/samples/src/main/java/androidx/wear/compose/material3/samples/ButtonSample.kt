@@ -17,13 +17,16 @@
 package androidx.wear.compose.material3.samples
 
 import androidx.annotation.Sampled
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
@@ -36,8 +39,8 @@ import androidx.wear.compose.material3.Text
 
 @Sampled
 @Composable
-fun SimpleButtonSample() {
-    Button(onClick = { /* Do something */ }, label = { Text("Button") })
+fun SimpleButtonSample(modifier: Modifier = Modifier) {
+    Button(onClick = { /* Do something */ }, label = { Text("Simple Button") }, modifier = modifier)
 }
 
 @Sampled
@@ -196,7 +199,9 @@ fun OutlinedButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
 fun SimpleChildButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
     ChildButton(
         onClick = { /* Do something */ },
-        label = { Text("Child Button") },
+        label = {
+            Text("Child Button", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        },
         modifier = modifier,
     )
 }
@@ -221,14 +226,14 @@ fun ChildButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
 
 @Sampled
 @Composable
-fun CompactButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
+fun CompactButtonSample(modifier: Modifier = Modifier) {
     CompactButton(
         onClick = { /* Do something */ },
         icon = {
             Icon(
                 painter = painterResource(R.drawable.ic_favorite_rounded),
                 contentDescription = "Favorite icon",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
+                modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize)
             )
         },
         modifier = modifier,
@@ -242,7 +247,7 @@ fun CompactButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
 fun CompactButtonWithOnLongClickSample(
     onClickHandler: () -> Unit,
     onLongClickHandler: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth()
+    modifier: Modifier = Modifier
 ) {
     CompactButton(
         onClick = onClickHandler,
@@ -255,14 +260,14 @@ fun CompactButtonWithOnLongClickSample(
 
 @Sampled
 @Composable
-fun FilledTonalCompactButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
+fun FilledTonalCompactButtonSample(modifier: Modifier = Modifier) {
     CompactButton(
         onClick = { /* Do something */ },
         icon = {
             Icon(
                 painter = painterResource(R.drawable.ic_favorite_rounded),
                 contentDescription = "Favorite icon",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
+                modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize)
             )
         },
         colors = ButtonDefaults.filledTonalButtonColors(),
@@ -274,20 +279,19 @@ fun FilledTonalCompactButtonSample(modifier: Modifier = Modifier.fillMaxWidth())
 
 @Sampled
 @Composable
-fun OutlinedCompactButtonSample(modifier: Modifier = Modifier.fillMaxWidth()) {
+fun OutlinedCompactButtonSample(modifier: Modifier = Modifier) {
     CompactButton(
         onClick = { /* Do something */ },
-        icon = {
-            Icon(
-                Icons.Filled.ArrowDropDown,
-                contentDescription = "Expand",
-                modifier = Modifier.size(ButtonDefaults.SmallIconSize)
-            )
-        },
         colors = ButtonDefaults.outlinedButtonColors(),
         border = ButtonDefaults.outlinedButtonBorder(enabled = true),
         modifier = modifier,
     ) {
         Text("Show More", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Icon(
+            Icons.Filled.ArrowDropDown,
+            contentDescription = "Expand",
+            modifier = Modifier.size(ButtonDefaults.ExtraSmallIconSize)
+        )
     }
 }

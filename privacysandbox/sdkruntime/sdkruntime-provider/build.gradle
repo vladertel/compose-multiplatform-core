@@ -38,14 +38,14 @@ dependencies {
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.junit)
 
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy) // DexMaker has it"s own MockMaker
-    androidTestImplementation(libs.dexmakerMockitoInline, excludes.bytebuddy) // DexMaker has it"s own MockMaker
+    androidTestImplementation(libs.mockitoCore)
+    androidTestImplementation(libs.dexmakerMockitoInline)
 }
 
 android {
     namespace "androidx.privacysandbox.sdkruntime.provider"
-    compileSdk = 34
-    compileSdkExtension = 10
+    compileSdk = 35
+    compileSdkExtension = 14
 }
 
 androidx {

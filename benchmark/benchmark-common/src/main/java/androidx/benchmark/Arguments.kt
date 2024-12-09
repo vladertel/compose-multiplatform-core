@@ -82,15 +82,16 @@ object Arguments {
     internal val iterations: Int?
     internal val profiler: Profiler?
     internal val profilerDefault: Boolean
-    internal val profilerSampleFrequency: Int
+    internal val profilerSampleFrequencyHz: Int
     internal val profilerSampleDurationSeconds: Long
     internal val profilerSkipWhenDurationRisksAnr: Boolean
     internal val profilerPerfCompareEnable: Boolean
     internal val thermalThrottleSleepDurationSeconds: Long
-    private val cpuEventCounterEnable: Boolean
+    val cpuEventCounterEnable: Boolean // non-internal, checked in CpuEventCounterBenchmark
     internal val cpuEventCounterMask: Int
     internal val requireAot: Boolean
     internal val requireJitDisabledIfRooted: Boolean
+    val throwOnMainThreadMeasureRepeated: Boolean // non-internal, used in BenchmarkRule
     val runOnMainDeadlineSeconds: Long // non-internal, used in BenchmarkRule
 
     internal var error: String? = null
@@ -245,7 +246,7 @@ object Arguments {
         val profilerState = arguments.getProfiler(outputEnable)
         profiler = profilerState.first
         profilerDefault = profilerState.second
-        profilerSampleFrequency =
+        profilerSampleFrequencyHz =
             arguments.getBenchmarkArgument("profiling.sampleFrequency")?.ifBlank { null }?.toInt()
                 ?: 1000
         profilerSampleDurationSeconds =
@@ -262,7 +263,7 @@ object Arguments {
             Log.d(
                 BenchmarkState.TAG,
                 "Profiler ${profiler.javaClass.simpleName}, freq " +
-                    "$profilerSampleFrequency, duration $profilerSampleDurationSeconds"
+                    "$profilerSampleFrequencyHz, duration $profilerSampleDurationSeconds"
             )
         }
 
@@ -340,6 +341,9 @@ object Arguments {
         requireAot = arguments.getBenchmarkArgument("requireAot")?.toBoolean() ?: false
         requireJitDisabledIfRooted =
             arguments.getBenchmarkArgument("requireJitDisabledIfRooted")?.toBoolean() ?: false
+
+        throwOnMainThreadMeasureRepeated =
+            arguments.getBenchmarkArgument("throwOnMainThreadMeasureRepeated")?.toBoolean() ?: false
 
         if (arguments.getString("orchestratorService") != null) {
             InstrumentationResults.scheduleIdeWarningOnNextReport(

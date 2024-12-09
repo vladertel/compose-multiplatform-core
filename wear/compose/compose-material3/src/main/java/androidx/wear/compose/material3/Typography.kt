@@ -23,6 +23,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextMotion
 import androidx.wear.compose.material3.tokens.TypographyKeyTokens
 import androidx.wear.compose.material3.tokens.TypographyTokens
 
@@ -31,10 +32,7 @@ import androidx.wear.compose.material3.tokens.TypographyTokens
  *
  * The text styles in this typography are scaled according to the user's preferred font size in the
  * system settings. Larger font sizes can be fixed if necessary in order to avoid pressure on screen
- * space, because they are already sufficiently accessible. Here is an example of fixing the font
- * size for DisplayLarge:
- *
- * @sample androidx.wear.compose.material3.samples.FixedFontSize
+ * space, because they are already sufficiently accessible.
  *
  * Display styles are utilized for large, short strings of text used to display highly glanceable
  * hero information, significant metrics, confidence or expressive brand moments.
@@ -332,6 +330,7 @@ internal val DefaultTextStyle =
     TextStyle.Default.copy(
         platformStyle = PlatformTextStyle(includeFontPadding = DefaultIncludeFontPadding),
         lineHeightStyle = DefaultLineHeightStyle,
+        textMotion = TextMotion.Animated,
     )
 
 /** Helper function for typography tokens. */

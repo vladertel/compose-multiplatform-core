@@ -31,17 +31,23 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutIntervalContent
 import androidx.compose.foundation.lazy.layout.LazyLayoutItemProvider
 import androidx.compose.foundation.lazy.layout.getDefaultLazyLayoutKey
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.wear.compose.foundation.rememberActiveFocusRequester
 import androidx.wear.compose.foundation.rotary.RotaryScrollableBehavior
 import androidx.wear.compose.foundation.rotary.RotaryScrollableDefaults
@@ -85,6 +91,8 @@ fun TransformingLazyColumn(
     rotaryScrollableBehavior: RotaryScrollableBehavior? = RotaryScrollableDefaults.behavior(state),
     content: TransformingLazyColumnScope.() -> Unit
 ) {
+    val graphicsContext = LocalGraphicsContext.current
+
     TransformingLazyColumnImpl(
         modifier = modifier,
         state = state,
@@ -93,7 +101,9 @@ fun TransformingLazyColumn(
         measurementStrategyProvider = {
             TransformingLazyColumnContentPaddingMeasurementStrategy(
                 contentPadding = contentPadding,
-                intrinsicMeasureScope = this
+                intrinsicMeasureScope = this,
+                graphicsContext = graphicsContext,
+                itemAnimator = state.animator,
             )
         },
         flingBehavior = flingBehavior,
@@ -145,9 +155,17 @@ fun TransformingLazyColumn(
         flingBehavior = flingBehavior,
         userScrollEnabled = userScrollEnabled,
         rotaryScrollableBehavior = rotaryScrollableBehavior,
-        content = content,
+        content = content
     )
 }
+
+/**
+ * Composition local for components that need to be able to react to being inside a
+ * [TransformingLazyColumn]'s item.
+ */
+val LocalTransformingLazyColumnItemScope:
+    ProvidableCompositionLocal<TransformingLazyColumnItemScope?> =
+    compositionLocalOf(structuralEqualityPolicy()) { null }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -210,6 +228,7 @@ internal fun TransformingLazyColumnImpl(
         itemProvider = itemProviderLambda,
         modifier =
             modifier
+                .then(state.animator.modifier)
                 .then(
                     if (rotaryScrollableBehavior != null && userScrollEnabled)
                         Modifier.rotaryScrollable(
@@ -250,8 +269,10 @@ internal class TransformingLazyColumnItemProvider(
     override fun Item(index: Int, key: Any) {
         val itemScope =
             remember(index) { TransformingLazyColumnItemScopeImpl(index, state = state) }
-        intervalContent.withInterval(index) { localIndex, content ->
-            content.item(itemScope, localIndex)
+        CompositionLocalProvider(LocalTransformingLazyColumnItemScope provides itemScope) {
+            intervalContent.withInterval(index) { localIndex, content ->
+                content.item(itemScope, localIndex)
+            }
         }
     }
 
@@ -280,7 +301,7 @@ internal class TransformingLazyColumnItemProvider(
 internal class NearestRangeKeyIndexMap(
     nearestRange: IntRange,
     intervalContent: LazyLayoutIntervalContent<*>
-) {
+) : LazyLayoutKeyIndexMap {
     private val map: ObjectIntMap<Any>
     private val keys: Array<Any?>
     private val keysStartIndex: Int
@@ -319,7 +340,7 @@ internal class NearestRangeKeyIndexMap(
         }
     }
 
-    fun getIndex(key: Any): Int = map.getOrElse(key) { -1 }
+    override fun getIndex(key: Any): Int = map.getOrElse(key) { -1 }
 
-    fun getKey(index: Int) = keys.getOrElse(index - keysStartIndex) { null }
+    override fun getKey(index: Int) = keys.getOrElse(index - keysStartIndex) { null }
 }

@@ -47,9 +47,11 @@ dependencies {
     androidTestImplementation(libs.truth)
     androidTestImplementation project(path: ':appcompat:appcompat')
     androidTestImplementation project(':recyclerview:recyclerview')
+    androidTestImplementation project(':privacysandbox:ui:integration-tests:testingutils')
 }
 
 android {
+    compileSdk 35
     namespace "androidx.privacysandbox.ui.tests"
 }
 

@@ -16,6 +16,11 @@
 
 package androidx.compose.ui.platform
 
+import kotlin.DeprecationLevel.HIDDEN
+
+@Suppress("ACTUAL_WITHOUT_EXPECT") // https://youtrack.jetbrains.com/issue/KT-37316
+internal actual typealias AtomicInt = java.util.concurrent.atomic.AtomicInteger
+
 internal actual fun simpleIdentityToString(obj: Any, name: String?): String {
     val className =
         name
@@ -30,3 +35,11 @@ internal actual fun simpleIdentityToString(obj: Any, name: String?): String {
 
 internal actual fun Any.nativeClass(): Any = this.javaClass
 
+@PublishedApi
+@JvmName("synchronized")
+@Deprecated(
+    level = HIDDEN,
+    message = "not expected to be referenced directly as the old version had to be inlined"
+)
+internal inline fun <R> oldSynchronized(lock: SynchronizedObject, block: () -> R): R =
+    kotlin.synchronized(lock, block)

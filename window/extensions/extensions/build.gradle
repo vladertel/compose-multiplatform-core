@@ -30,7 +30,8 @@ plugins {
 }
 
 dependencies {
-    implementation("androidx.annotation:annotation:1.6.0")
+    api(libs.jspecify)
+    implementation("androidx.annotation:annotation:1.8.1")
     implementation("androidx.annotation:annotation-experimental:1.4.1")
     compileOnly("androidx.window.extensions.core:core:1.0.0")
 
@@ -44,8 +45,8 @@ dependencies {
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.testRules)
     androidTestImplementation(libs.truth)
-    androidTestImplementation(libs.dexmakerMockito, excludes.bytebuddy)
-    androidTestImplementation(libs.mockitoCore, excludes.bytebuddy)
+    androidTestImplementation(libs.dexmakerMockito)
+    androidTestImplementation(libs.mockitoCore)
 }
 
 androidx {
@@ -57,7 +58,6 @@ androidx {
             "This module declares the interface the the core component of this library " +
             "(androidx.window:window) will use when communicating with the " +
             "device-specific OEM extension."
-    metalavaK2UastEnabled = true
 }
 
 android {

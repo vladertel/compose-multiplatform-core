@@ -18,13 +18,18 @@ package androidx.wear.compose.material3
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
@@ -44,8 +49,8 @@ import kotlinx.coroutines.launch
  */
 @Stable
 private class AnimatedToggleRoundedCornerShape(
-    var startCornerSize: CornerSize,
-    var endCornerSize: CornerSize,
+    val startCornerSize: MutableState<CornerSize>,
+    val endCornerSize: MutableState<CornerSize>,
     var progress: () -> Float,
 ) : Shape {
     override fun createOutline(
@@ -53,7 +58,8 @@ private class AnimatedToggleRoundedCornerShape(
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline {
-        val animatedCornerSize = AnimatedCornerSize(startCornerSize, endCornerSize, progress)
+        val animatedCornerSize =
+            AnimatedCornerSize(startCornerSize.value, endCornerSize.value, progress)
         val animatedCornerSizePx = animatedCornerSize.toPx(size, density)
 
         return Outline.Rounded(
@@ -73,73 +79,65 @@ private class AnimatedToggleRoundedCornerShape(
  */
 @Composable
 internal fun rememberAnimatedToggleRoundedCornerShape(
+    interactionSource: InteractionSource,
     uncheckedCornerSize: CornerSize,
     checkedCornerSize: CornerSize,
-    pressedCornerSize: CornerSize,
-    pressed: Boolean,
+    uncheckedPressedCornerSize: CornerSize,
+    checkedPressedCornerSize: CornerSize,
     checked: Boolean,
     onPressAnimationSpec: FiniteAnimationSpec<Float>,
     onReleaseAnimationSpec: FiniteAnimationSpec<Float>,
 ): Shape {
-    val toggleState =
-        when {
-            pressed -> ToggleState.Pressed
-            checked -> ToggleState.Checked
-            else -> ToggleState.Unchecked
-        }
-
-    val previous = remember { mutableStateOf(toggleState) }
     val scope = rememberCoroutineScope()
-    val progress = remember { Animatable(1f) }
-
-    val toggledCornerSize =
-        toggleState.cornerSize(uncheckedCornerSize, checkedCornerSize, pressedCornerSize)
-    val animationSpec = if (pressed) onPressAnimationSpec else onReleaseAnimationSpec
+    val progress = remember { Animatable(0f) }
+    val endCornerSize = remember {
+        mutableStateOf(if (checked) checkedPressedCornerSize else uncheckedPressedCornerSize)
+    }
 
     val animatedShape = remember {
         AnimatedToggleRoundedCornerShape(
-            startCornerSize = toggledCornerSize,
-            endCornerSize = toggledCornerSize,
+            startCornerSize =
+                mutableStateOf(if (checked) checkedCornerSize else uncheckedCornerSize),
+            endCornerSize =
+                mutableStateOf(
+                    if (checked) checkedPressedCornerSize else uncheckedPressedCornerSize
+                ),
             progress = { progress.value },
         )
     }
 
-    LaunchedEffect(toggleState) {
-        // Allow the press up animation to finish its minimum duration before starting the next
-        if (!pressed) {
-            waitUntil { !progress.isRunning || progress.value > MIN_REQUIRED_ANIMATION_PROGRESS }
-        }
+    LaunchedEffect(checked) {
+        animatedShape.startCornerSize.value =
+            if (checked) checkedCornerSize else uncheckedCornerSize
+        // We don't update the endCornerSize directly here, because that would cause a jump in the
+        // animation, when the pressed shape is released and checked state changes.
+        // Instead the animation end value will be updated on the next press.
+        endCornerSize.value = if (checked) checkedPressedCornerSize else uncheckedPressedCornerSize
+    }
 
-        if (toggleState != previous.value) {
-            animatedShape.startCornerSize = animatedShape.endCornerSize
-            animatedShape.endCornerSize = toggledCornerSize
-            previous.value = toggleState
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    // Update the endCornerSize to the correct pressed value, depending on the
+                    // checked state, when the press is initialized.
+                    animatedShape.endCornerSize.value = endCornerSize.value
 
-            scope.launch {
-                progress.snapTo(1f - progress.value)
-                progress.animateTo(1f, animationSpec = animationSpec)
+                    scope.launch { progress.animateTo(1f, animationSpec = onPressAnimationSpec) }
+                }
+                is PressInteraction.Cancel,
+                is PressInteraction.Release -> {
+                    waitUntil {
+                        !progress.isRunning || progress.value > MIN_REQUIRED_ANIMATION_PROGRESS
+                    }
+
+                    scope.launch { progress.animateTo(0f, animationSpec = onReleaseAnimationSpec) }
+                }
             }
         }
     }
 
     return animatedShape
-}
-
-private fun ToggleState.cornerSize(
-    uncheckedCornerSize: CornerSize,
-    checkedCornerSize: CornerSize,
-    pressedCornerSize: CornerSize,
-) =
-    when (this) {
-        ToggleState.Unchecked -> uncheckedCornerSize
-        ToggleState.Checked -> checkedCornerSize
-        ToggleState.Pressed -> pressedCornerSize
-    }
-
-internal enum class ToggleState {
-    Unchecked,
-    Checked,
-    Pressed,
 }
 
 private const val MIN_REQUIRED_ANIMATION_PROGRESS = 0.75f

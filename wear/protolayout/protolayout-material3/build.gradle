@@ -30,6 +30,7 @@ plugins {
 }
 
 dependencies {
+    api(libs.jspecify)
     annotationProcessor(libs.nullaway)
     api(project(":wear:protolayout:protolayout"))
     api(project(":wear:protolayout:protolayout-expression"))
@@ -50,11 +51,33 @@ dependencies {
     testImplementation(libs.testRules)
     testImplementation(libs.truth)
     testImplementation(project(":wear:protolayout:protolayout-proto"))
+    testImplementation(project(":wear:protolayout:protolayout-testing"))
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(project(":test:screenshot:screenshot"))
+    androidTestImplementation("androidx.core:core:1.7.0")
+    androidTestImplementation(project(":test:screenshot:screenshot"))
+    androidTestImplementation(project(":wear:protolayout:protolayout-renderer"))
+    androidTestImplementation(project(":wear:protolayout:protolayout-proto"))
 }
 
 android {
+    compileSdk 35
+
     defaultConfig {
         minSdkVersion 26
+    }
+
+    sourceSets {
+        androidTest.assets.srcDirs += project.rootDir.absolutePath + "/../../golden/wear/wear-protolayout-material3"
+    }
+
+    defaultConfig {
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     namespace "androidx.wear.protolayout.material3"
@@ -66,6 +89,7 @@ android {
 androidx {
     name = "androidx.wear.protolayout:protolayout-material3"
     type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
+    samples(project(":wear:protolayout:protolayout-material3-samples"))
     inceptionYear = "2024"
     description = "Material3 components library for ProtoLayout."
     samples(project(":wear:protolayout:protolayout-material3-samples"))

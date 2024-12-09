@@ -76,8 +76,15 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onSizeChanged
@@ -93,6 +100,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isFinite
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastMaxOfOrNull
+import androidx.compose.ui.util.fastSumBy
 import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.math.max
@@ -1562,6 +1571,8 @@ object TopAppBarDefaults {
      * Returns a pinned [TopAppBarScrollBehavior] that tracks nested-scroll callbacks and updates
      * its [TopAppBarState.contentOffset] accordingly.
      *
+     * The returned [TopAppBarScrollBehavior] is remembered across compositions.
+     *
      * @param state the state object to be used to control or observe the top app bar's scroll
      *   state. See [rememberTopAppBarState] for a state that is remembered across compositions.
      * @param canScroll a callback used to determine whether scroll events are to be handled by this
@@ -1572,12 +1583,15 @@ object TopAppBarDefaults {
     fun pinnedScrollBehavior(
         state: TopAppBarState = rememberTopAppBarState(),
         canScroll: () -> Boolean = { true }
-    ): TopAppBarScrollBehavior = PinnedScrollBehavior(state = state, canScroll = canScroll)
+    ): TopAppBarScrollBehavior =
+        remember(state, canScroll) { PinnedScrollBehavior(state = state, canScroll = canScroll) }
 
     /**
      * Returns a [TopAppBarScrollBehavior]. A top app bar that is set up with this
      * [TopAppBarScrollBehavior] will immediately collapse when the content is pulled up, and will
      * immediately appear when the content is pulled down.
+     *
+     * The returned [TopAppBarScrollBehavior] is remembered across compositions.
      *
      * @param state the state object to be used to control or observe the top app bar's scroll
      *   state. See [rememberTopAppBarState] for a state that is remembered across compositions.
@@ -1613,6 +1627,8 @@ object TopAppBarDefaults {
      * [TopAppBarScrollBehavior] will immediately collapse when the content is pulled up, and will
      * immediately appear when the content is pulled down.
      *
+     * The returned [TopAppBarScrollBehavior] is remembered across compositions.
+     *
      * @param state the state object to be used to control or observe the top app bar's scroll
      *   state. See [rememberTopAppBarState] for a state that is remembered across compositions.
      * @param canScroll a callback used to determine whether scroll events are to be handled by this
@@ -1635,13 +1651,15 @@ object TopAppBarDefaults {
         flingAnimationSpec: DecayAnimationSpec<Float>? = rememberSplineBasedDecay(),
         reverseLayout: Boolean = false
     ): TopAppBarScrollBehavior =
-        EnterAlwaysScrollBehavior(
-            state = state,
-            snapAnimationSpec = snapAnimationSpec,
-            flingAnimationSpec = flingAnimationSpec,
-            canScroll = canScroll,
-            reverseLayout = reverseLayout
-        )
+        remember(state, canScroll, snapAnimationSpec, flingAnimationSpec, reverseLayout) {
+            EnterAlwaysScrollBehavior(
+                state = state,
+                snapAnimationSpec = snapAnimationSpec,
+                flingAnimationSpec = flingAnimationSpec,
+                canScroll = canScroll,
+                reverseLayout = reverseLayout
+            )
+        }
 
     /**
      * Returns a [TopAppBarScrollBehavior] that adjusts its properties to affect the colors and
@@ -1650,6 +1668,8 @@ object TopAppBarDefaults {
      * A top app bar that is set up with this [TopAppBarScrollBehavior] will immediately collapse
      * when the nested content is pulled up, and will expand back the collapsed area when the
      * content is pulled all the way down.
+     *
+     * The returned [TopAppBarScrollBehavior] is remembered across compositions.
      *
      * @param state the state object to be used to control or observe the top app bar's scroll
      *   state. See [rememberTopAppBarState] for a state that is remembered across compositions.
@@ -1836,7 +1856,7 @@ class TopAppBarState(
  * container color according to the top app bar scroll state. It does not animate the leading,
  * headline, or trailing colors.
  *
- * @param containerColor the color used for the background of this BottomAppBar. Use
+ * @param containerColor the color used for the background of this TopAppBar. Use
  *   [Color.Transparent] to have no color.
  * @param scrolledContainerColor the container color when content is scrolled behind it
  * @param navigationIconContentColor the content color used for the navigation icon
@@ -2022,6 +2042,8 @@ object BottomAppBarDefaults {
      * [BottomAppBarScrollBehavior] will immediately collapse when the content is pulled up, and
      * will immediately appear when the content is pulled down.
      *
+     * The returned [BottomAppBarScrollBehavior] is remembered across compositions.
+     *
      * @param state the state object to be used to control or observe the bottom app bar's scroll
      *   state. See [rememberBottomAppBarState] for a state that is remembered across compositions.
      * @param canScroll a callback used to determine whether scroll events are to be handled by this
@@ -2041,12 +2063,14 @@ object BottomAppBarDefaults {
         snapAnimationSpec: AnimationSpec<Float>? = MotionSchemeKeyTokens.FastSpatial.value(),
         flingAnimationSpec: DecayAnimationSpec<Float>? = rememberSplineBasedDecay()
     ): BottomAppBarScrollBehavior =
-        ExitAlwaysScrollBehavior(
-            state = state,
-            snapAnimationSpec = snapAnimationSpec,
-            flingAnimationSpec = flingAnimationSpec,
-            canScroll = canScroll
-        )
+        remember(state, canScroll, snapAnimationSpec, flingAnimationSpec) {
+            ExitAlwaysScrollBehavior(
+                state = state,
+                snapAnimationSpec = snapAnimationSpec,
+                flingAnimationSpec = flingAnimationSpec,
+                canScroll = canScroll
+            )
+        }
 }
 
 /**
@@ -2211,18 +2235,19 @@ private class ExitAlwaysScrollBehavior(
             ): Offset {
                 if (!canScroll()) return Offset.Zero
                 state.contentOffset += consumed.y
-                if (state.heightOffset == 0f || state.heightOffset == state.heightOffsetLimit) {
-                    if (consumed.y == 0f && available.y > 0f) {
-                        // Reset the total content offset to zero when scrolling all the way down.
-                        // This will eliminate some float precision inaccuracies.
-                        state.contentOffset = 0f
-                    }
-                }
                 state.heightOffset = state.heightOffset + consumed.y
                 return Offset.Zero
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (
+                    available.y > 0f &&
+                        (state.heightOffset == 0f || state.heightOffset == state.heightOffsetLimit)
+                ) {
+                    // Reset the total content offset to zero when scrolling all the way down.
+                    // This will eliminate some float precision inaccuracies.
+                    state.contentOffset = 0f
+                }
                 val superConsumed = super.onPostFling(consumed, available)
                 return superConsumed +
                     settleAppBarBottom(state, available.y, flingAnimationSpec, snapAnimationSpec)
@@ -2673,8 +2698,38 @@ private fun TopAppBarLayout(
                 )
             }
         },
-        modifier = modifier
-    ) { measurables, constraints ->
+        modifier = modifier,
+        measurePolicy =
+            remember(
+                scrolledOffset,
+                titleVerticalArrangement,
+                titleHorizontalAlignment,
+                titleBottomPadding,
+                expandedHeight
+            ) {
+                TopAppBarMeasurePolicy(
+                    scrolledOffset,
+                    titleVerticalArrangement,
+                    titleHorizontalAlignment,
+                    titleBottomPadding,
+                    expandedHeight
+                )
+            }
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private class TopAppBarMeasurePolicy(
+    val scrolledOffset: ScrolledOffset,
+    val titleVerticalArrangement: Arrangement.Vertical,
+    val titleHorizontalAlignment: TopAppBarTitleAlignment,
+    val titleBottomPadding: Int,
+    val expandedHeight: Dp
+) : MeasurePolicy {
+    override fun MeasureScope.measure(
+        measurables: List<Measurable>,
+        constraints: Constraints
+    ): MeasureResult {
         val navigationIconPlaceable =
             measurables
                 .fastFirst { it.layoutId == "navigationIcon" }
@@ -2717,6 +2772,56 @@ private fun TopAppBarLayout(
                 (maxLayoutHeight + heightOffset).coerceAtLeast(0)
             }
 
+        return placeTopAppBar(
+            constraints,
+            layoutHeight,
+            maxLayoutHeight,
+            navigationIconPlaceable,
+            titlePlaceable,
+            actionIconsPlaceable,
+            titleBaseline
+        )
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int
+    ) = measurables.fastSumBy { it.minIntrinsicWidth(height) }
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int
+    ): Int {
+        return max(
+            expandedHeight.roundToPx(),
+            measurables.fastMaxOfOrNull { it.minIntrinsicHeight(width) } ?: 0
+        )
+    }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(
+        measurables: List<IntrinsicMeasurable>,
+        height: Int
+    ) = measurables.fastSumBy { it.maxIntrinsicWidth(height) }
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(
+        measurables: List<IntrinsicMeasurable>,
+        width: Int
+    ): Int {
+        return max(
+            expandedHeight.roundToPx(),
+            measurables.fastMaxOfOrNull { it.maxIntrinsicHeight(width) } ?: 0
+        )
+    }
+
+    private fun MeasureScope.placeTopAppBar(
+        constraints: Constraints,
+        layoutHeight: Int,
+        maxLayoutHeight: Int,
+        navigationIconPlaceable: Placeable,
+        titlePlaceable: Placeable,
+        actionIconsPlaceable: Placeable,
+        titleBaseline: Int
+    ): MeasureResult =
         layout(constraints.maxWidth, layoutHeight) {
             // Navigation icon
             navigationIconPlaceable.placeRelative(
@@ -2790,7 +2895,6 @@ private fun TopAppBarLayout(
                 y = (layoutHeight - actionIconsPlaceable.height) / 2
             )
         }
-    }
 }
 
 /** A functional interface for providing an app-bar scroll offset. */
@@ -2822,14 +2926,17 @@ private class PinnedScrollBehavior(
                 source: NestedScrollSource
             ): Offset {
                 if (!canScroll()) return Offset.Zero
-                if (consumed.y == 0f && available.y > 0f) {
+                state.contentOffset += consumed.y
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (available.y > 0f) {
                     // Reset the total content offset to zero when scrolling all the way down.
                     // This will eliminate some float precision inaccuracies.
                     state.contentOffset = 0f
-                } else {
-                    state.contentOffset += consumed.y
                 }
-                return Offset.Zero
+                return super.onPostFling(consumed, available)
             }
         }
 }
@@ -2889,18 +2996,19 @@ private class EnterAlwaysScrollBehavior(
             ): Offset {
                 if (!canScroll()) return Offset.Zero
                 state.contentOffset += consumed.y
-                if (state.heightOffset == 0f || state.heightOffset == state.heightOffsetLimit) {
-                    if (consumed.y == 0f && available.y > 0f) {
-                        // Reset the total content offset to zero when scrolling all the way down.
-                        // This will eliminate some float precision inaccuracies.
-                        state.contentOffset = 0f
-                    }
-                }
                 if (!reverseLayout) state.heightOffset += consumed.y
                 return Offset.Zero
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (
+                    available.y > 0f &&
+                        (state.heightOffset == 0f || state.heightOffset == state.heightOffsetLimit)
+                ) {
+                    // Reset the total content offset to zero when scrolling all the way down.
+                    // This will eliminate some float precision inaccuracies.
+                    state.contentOffset = 0f
+                }
                 val superConsumed = super.onPostFling(consumed, available)
                 return superConsumed +
                     settleAppBar(state, available.y, flingAnimationSpec, snapAnimationSpec)
@@ -2965,12 +3073,6 @@ private class ExitUntilCollapsedScrollBehavior(
                     return Offset(0f, state.heightOffset - oldHeightOffset)
                 }
 
-                if (consumed.y == 0f && available.y > 0) {
-                    // Reset the total content offset to zero when scrolling all the way down. This
-                    // will eliminate some float precision inaccuracies.
-                    state.contentOffset = 0f
-                }
-
                 if (available.y > 0f) {
                     // Adjust the height offset in case the consumed delta Y is less than what was
                     // recorded as available delta Y in the pre-scroll.
@@ -2982,6 +3084,11 @@ private class ExitUntilCollapsedScrollBehavior(
             }
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (available.y > 0) {
+                    // Reset the total content offset to zero when scrolling all the way down. This
+                    // will eliminate some float precision inaccuracies.
+                    state.contentOffset = 0f
+                }
                 val superConsumed = super.onPostFling(consumed, available)
                 return superConsumed +
                     settleAppBar(state, available.y, flingAnimationSpec, snapAnimationSpec)
