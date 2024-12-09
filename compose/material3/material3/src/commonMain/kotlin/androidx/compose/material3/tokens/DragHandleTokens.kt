@@ -13,14 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// VERSION: 7_0_1
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
-package androidx.compose.material3.internal
+package androidx.compose.material3.tokens
 
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.Easing
+import androidx.compose.ui.unit.dp
 
-private val PredictiveBackEasing: Easing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
-
-internal object PredictiveBack {
-    internal fun transform(progress: Float) = PredictiveBackEasing.transform(progress)
+internal object DragHandleTokens {
+    val Color = ColorSchemeKeyTokens.Outline
+    val ContainerWidth = 24.0.dp
+    val Elevation = ElevationTokens.Level0
+    val Height = 48.0.dp
+    val PressedColor = ColorSchemeKeyTokens.OnSurface
+    val PressedElevation = ElevationTokens.Level0
+    val PressedHeight = 52.0.dp
+    val PressedShape = ShapeKeyTokens.CornerMedium
+    val PressedWidth = 12.0.dp
+    val Shape = ShapeKeyTokens.CornerFull
+    val Width = 4.0.dp
 }
