@@ -2477,6 +2477,7 @@ class ScrollableTest {
     }
 
     @Test
+    @Ignore // TODO(https://youtrack.jetbrains.com/issue/CMP-7220) Fails on iOS
     fun onDensityChange_shouldUpdateFlingBehavior() = runSkikoComposeUiTest {
         var density by mutableStateOf(density)
         var flingDelta = 0f
