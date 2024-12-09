@@ -23,7 +23,6 @@ import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavArgument
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import kotlin.jvm.JvmInline
 import kotlin.reflect.typeOf
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -69,7 +68,7 @@ class NavArgumentGeneratorTest {
         val converted = serializer<TestClass>().generateNavArguments()
         val expected =
             navArgument("arg") {
-                type = InternalNavType.StringNonNullableType
+                type = NavType.StringType
                 nullable = false
             }
         assertThat(converted).containsExactlyInOrder(expected)
@@ -112,34 +111,6 @@ class NavArgumentGeneratorTest {
         val expected =
             navArgument("arg") {
                 type = InternalNavType.BoolNullableType
-                nullable = true
-            }
-        assertThat(converted).containsExactlyInOrder(expected)
-        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
-    }
-
-    @Test
-    fun convertToDouble() {
-        @Serializable class TestClass(val arg: Double)
-
-        val converted = serializer<TestClass>().generateNavArguments()
-        val expected =
-            navArgument("arg") {
-                type = InternalNavType.DoubleType
-                nullable = false
-            }
-        assertThat(converted).containsExactlyInOrder(expected)
-        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
-    }
-
-    @Test
-    fun convertToDoubleNullable() {
-        @Serializable class TestClass(val arg: Double?)
-
-        val converted = serializer<TestClass>().generateNavArguments()
-        val expected =
-            navArgument("arg") {
-                type = InternalNavType.DoubleNullableType
                 nullable = true
             }
         assertThat(converted).containsExactlyInOrder(expected)
@@ -483,34 +454,6 @@ class NavArgumentGeneratorTest {
     }
 
     @Test
-    fun convertToDoubleArray() {
-        @Serializable class TestClass(val arg: DoubleArray)
-
-        val converted = serializer<TestClass>().generateNavArguments()
-        val expected =
-            navArgument("arg") {
-                type = InternalNavType.DoubleArrayType
-                nullable = false
-            }
-        assertThat(converted).containsExactlyInOrder(expected)
-        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
-    }
-
-    @Test
-    fun convertToDoubleArrayNullable() {
-        @Serializable class TestClass(val arg: DoubleArray?)
-
-        val converted = serializer<TestClass>().generateNavArguments()
-        val expected =
-            navArgument("arg") {
-                type = InternalNavType.DoubleArrayType
-                nullable = true
-            }
-        assertThat(converted).containsExactlyInOrder(expected)
-        assertThat(converted[0].argument.isDefaultValueUnknown).isFalse()
-    }
-
-    @Test
     fun convertToStringArray() {
         @Serializable class TestClass(val arg: Array<String>)
 
@@ -608,45 +551,12 @@ class NavArgumentGeneratorTest {
     }
 
     @Test
-    fun convertValueClass() {
-        // test value class as destination route
-        val converted = serializer<TestValueClass>().generateNavArguments()
-        val expected =
-            navArgument("arg") {
-                type = NavType.IntType
-                nullable = false
-                unknownDefaultValuePresent = false
-            }
-        assertThat(converted).containsExactlyInOrder(expected)
-
-        // test value class as route arg
-        @Serializable class TestClass(val arg: TestValueClass)
-        val navType =
-            object : NavType<TestValueClass>(false) {
-                override fun put(bundle: Bundle, key: String, value: TestValueClass) {}
-
-                override fun get(bundle: Bundle, key: String): TestValueClass? = null
-
-                override fun parseValue(value: String): TestValueClass = TestValueClass(0)
-            }
-        val converted2 =
-            serializer<TestClass>().generateNavArguments(mapOf(typeOf<TestValueClass>() to navType))
-        val expected2 =
-            navArgument("arg") {
-                type = navType
-                nullable = false
-                unknownDefaultValuePresent = false
-            }
-        assertThat(converted2).containsExactlyInOrder(expected2)
-    }
-
-    @Test
     fun convertWithDefaultValue() {
         @Serializable class TestClass(val arg: String = "test")
         val converted = serializer<TestClass>().generateNavArguments()
         val expected =
             navArgument("arg") {
-                type = InternalNavType.StringNonNullableType
+                type = NavType.StringType
                 nullable = false
                 unknownDefaultValuePresent = true
             }
@@ -694,10 +604,8 @@ class NavArgumentGeneratorTest {
 
         assertThat(exception.message)
             .isEqualTo(
-                "Route androidx.navigation.serialization.NavArgumentGeneratorTest" +
-                    ".convertIllegalCustomType.TestClass could not find any NavType for " +
-                    "argument arg of type kotlin.collections.LinkedHashSet - typeMap " +
-                    "received was {}"
+                "Cannot cast arg of type kotlin.collections.LinkedHashSet to a NavType. " +
+                    "Make sure to provide custom NavType for this argument."
             )
     }
 
@@ -957,7 +865,7 @@ class NavArgumentGeneratorTest {
                 .generateNavArguments(mapOf(typeOf<ArrayList<Int>>() to CustomIntList))
         val expectedString =
             navArgument("arg") {
-                type = InternalNavType.StringNonNullableType
+                type = NavType.StringType
                 nullable = false
             }
         val expectedIntList =
@@ -1046,10 +954,8 @@ class NavArgumentGeneratorTest {
         assertThat(exception.message)
             .isEqualTo(
                 "Cannot generate NavArguments for polymorphic serializer " +
-                    "kotlinx.serialization.PolymorphicSerializer(baseClass: " +
-                    "class androidx.navigation.serialization." +
-                    "NavArgumentGeneratorTest\$abstractClassInvalid\$TestClass (Kotlin reflection " +
-                    "is not available)). Arguments can only be generated from concrete classes " +
+                    "kotlinx.serialization.PolymorphicSerializer(baseClass: ${TestClass::class})." +
+                    " Arguments can only be generated from concrete classes " +
                     "or objects."
             )
     }
@@ -1088,8 +994,6 @@ class NavArgumentGeneratorTest {
             }
         assertThat(converted).containsExactlyInOrder(expected)
     }
-
-    @Serializable @JvmInline value class TestValueClass(val arg: Int)
 
     // writing our own assert so we don't need to override NamedNavArgument's equals
     // and hashcode which will need to be public api.
