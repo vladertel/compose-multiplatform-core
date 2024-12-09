@@ -115,8 +115,8 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(project(":compose:ui:ui-util"))
                 implementation(project(":compose:ui:ui-geometry"))
 
-                implementation(project(":collection:collection"))
                 implementation(project(":annotation:annotation"))
+                implementation(project(":collection:collection"))
             }
 
             jvmMain.dependencies {
