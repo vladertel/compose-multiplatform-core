@@ -17,12 +17,6 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.ui.graphics.Color
-import kotlin.jvm.JvmInline
 
-@JvmInline
-actual value class AutofillHighlight actual constructor(actual val autofillHighlightColor: Color) {
-    actual companion object {
-        // TODO https://youtrack.jetbrains.com/issue/CMP-7144/Support-Autofill-highlight-capability
-        actual val Default = AutofillHighlight(Color.Unspecified)
-    }
-}
+internal actual fun autofillHighlightColor(): Color =
+    Color.Unspecified

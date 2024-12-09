@@ -19,7 +19,6 @@
 package androidx.compose.ui.layout
 
 import androidx.collection.IntObjectMap
-import androidx.collection.intObjectMapOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
@@ -54,8 +53,6 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.semantics.EmptySemanticsModifier
-import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -165,10 +162,8 @@ private class FakeOwner(
 
     override fun onDetach(node: LayoutNode) {}
 
-    override val root: LayoutNode = LayoutNode()
-
-    override val semanticsOwner: SemanticsOwner =
-        SemanticsOwner(root, EmptySemanticsModifier(), intObjectMapOf())
+    override val root: LayoutNode
+        get() = TODO("Not yet implemented")
 
     override val layoutNodes: IntObjectMap<LayoutNode>
         get() = TODO("Not yet implemented")

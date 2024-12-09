@@ -17,6 +17,7 @@
 @file:OptIn(
     InternalComposeApi::class,
 )
+@file:Suppress("NOTHING_TO_INLINE", "KotlinRedundantDiagnosticSuppress")
 
 package androidx.compose.runtime
 
@@ -31,6 +32,7 @@ import androidx.collection.emptyScatterMap
 import androidx.collection.mutableScatterMapOf
 import androidx.collection.mutableScatterSetOf
 import androidx.compose.runtime.Composer.Companion.equals
+import androidx.compose.runtime.ComposerImpl.CompositionContextHolder
 import androidx.compose.runtime.changelist.ChangeList
 import androidx.compose.runtime.changelist.ComposerChangeListWriter
 import androidx.compose.runtime.changelist.FixupList
@@ -47,6 +49,8 @@ import androidx.compose.runtime.snapshots.fastForEach
 import androidx.compose.runtime.snapshots.fastMap
 import androidx.compose.runtime.snapshots.fastToSet
 import androidx.compose.runtime.tooling.CompositionData
+import androidx.compose.runtime.tooling.CompositionGroup
+import androidx.compose.runtime.tooling.CompositionInstance
 import androidx.compose.runtime.tooling.LocalInspectionTables
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -77,11 +81,11 @@ private class GroupInfo(
  */
 internal interface RememberManager {
     /** The [RememberObserver] is being remembered by a slot in the slot table. */
-    fun remembering(instance: RememberObserver)
+    fun remembering(instance: RememberObserverHolder)
 
     /** The [RememberObserver] is being forgotten by a slot in the slot table. */
     fun forgetting(
-        instance: RememberObserver,
+        instance: RememberObserverHolder,
         endRelativeOrder: Int,
         priority: Int,
         endRelativeAfter: Int
@@ -1651,7 +1655,7 @@ internal class ComposerImpl(
         }
 
         parentProvider.read(LocalInspectionTables)?.let {
-            it.add(slotTable)
+            it.add(compositionData)
             parentContext.recordInspectionTable(it)
         }
         startGroup(parentContext.compoundHashKey)
@@ -2153,11 +2157,12 @@ internal class ComposerImpl(
     internal fun updateCachedValue(value: Any?) {
         val toStore =
             if (value is RememberObserver) {
+                val holder = RememberObserverHolder(value, rememberObserverAnchor())
                 if (inserting) {
-                    changeListWriter.remember(value)
+                    changeListWriter.remember(holder)
                 }
                 abandonSet.add(value)
-                RememberObserverHolder(value, rememberObserverAnchor())
+                holder
             } else value
         updateValue(toStore)
     }
@@ -2185,8 +2190,18 @@ internal class ComposerImpl(
             } else null
         }
 
+    private var _compositionData: CompositionData? = null
+
     override val compositionData: CompositionData
-        get() = slotTable
+        get() {
+            val data = _compositionData
+            if (data == null) {
+                val newData = CompositionDataImpl(composition)
+                _compositionData = newData
+                return newData
+            }
+            return data
+        }
 
     /** Schedule a side effect to run when we apply composition changes. */
     override fun recordSideEffect(effect: () -> Unit) {
@@ -3942,8 +3957,9 @@ internal class ComposerImpl(
      * A holder that will dispose of its [CompositionContext] when it leaves the composition that
      * will not have its reference made visible to user code.
      */
-    private class CompositionContextHolder(val ref: ComposerImpl.CompositionContextImpl) :
+    internal class CompositionContextHolder(val ref: ComposerImpl.CompositionContextImpl) :
         ReusableRememberObserver {
+
         override fun onRemembered() {}
 
         override fun onAbandoned() {
@@ -3956,7 +3972,7 @@ internal class ComposerImpl(
     }
 
     @OptIn(ExperimentalComposeRuntimeApi::class)
-    private inner class CompositionContextImpl(
+    internal inner class CompositionContextImpl(
         override val compoundHashKey: Int,
         override val collectingParameterInformation: Boolean,
         override val collectingSourceInformation: Boolean,
@@ -4008,7 +4024,7 @@ internal class ComposerImpl(
         @OptIn(ExperimentalComposeApi::class)
         @get:OptIn(ExperimentalComposeApi::class)
         override val recomposeCoroutineContext: CoroutineContext
-            get() = composition.recomposeCoroutineContext
+            get() = this@ComposerImpl.composition.recomposeCoroutineContext
 
         override fun composeInitial(
             composition: ControlledComposition,
@@ -4103,9 +4119,11 @@ internal class ComposerImpl(
         override fun reportRemovedComposition(composition: ControlledComposition) {
             parentContext.reportRemovedComposition(composition)
         }
+
+        override val composition: Composition
+            get() = this@ComposerImpl.composition
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     private inline fun updateCompoundKeyWhenWeEnterGroup(
         groupKey: Int,
         rGroupIndex: Int,
@@ -4120,12 +4138,10 @@ internal class ComposerImpl(
         else updateCompoundKeyWhenWeEnterGroupKeyHash(dataKey.hashCode(), 0)
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     private inline fun updateCompoundKeyWhenWeEnterGroupKeyHash(keyHash: Int, rGroupIndex: Int) {
         compoundKeyHash = (((compoundKeyHash rol 3) xor keyHash) rol 3) xor rGroupIndex
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     private inline fun updateCompoundKeyWhenWeExitGroup(
         groupKey: Int,
         rGroupIndex: Int,
@@ -4140,7 +4156,6 @@ internal class ComposerImpl(
         else updateCompoundKeyWhenWeExitGroupKeyHash(dataKey.hashCode(), 0)
     }
 
-    @Suppress("NOTHING_TO_INLINE")
     private inline fun updateCompoundKeyWhenWeExitGroupKeyHash(groupKey: Int, rGroupIndex: Int) {
         compoundKeyHash = (((compoundKeyHash xor rGroupIndex) ror 3) xor groupKey.hashCode()) ror 3
     }
@@ -4310,12 +4325,7 @@ internal fun SlotWriter.removeCurrentGroup(rememberManager: RememberManager) {
         if (slot is RememberObserverHolder) {
             val endRelativeSlotIndex = slotsSize - slotIndex
             withAfterAnchorInfo(slot.after) { priority, endRelativeAfter ->
-                rememberManager.forgetting(
-                    slot.wrapped,
-                    endRelativeSlotIndex,
-                    priority,
-                    endRelativeAfter
-                )
+                rememberManager.forgetting(slot, endRelativeSlotIndex, priority, endRelativeAfter)
             }
         }
         if (slot is RecomposeScopeImpl) {
@@ -4363,7 +4373,7 @@ internal fun SlotWriter.deactivateCurrentGroup(rememberManager: RememberManager)
                     val endRelativeOrder = slotsSize - slotIndex
                     withAfterAnchorInfo(data.after) { priority, endRelativeAfter ->
                         rememberManager.forgetting(
-                            wrapped,
+                            data,
                             endRelativeOrder,
                             priority,
                             endRelativeAfter
@@ -4649,7 +4659,9 @@ internal inline fun debugRuntimeCheck(value: Boolean, lazyMessage: () -> String)
     }
 }
 
-internal fun runtimeCheck(value: Boolean) = runtimeCheck(value) { "Check failed" }
+internal inline fun debugRuntimeCheck(value: Boolean) = debugRuntimeCheck(value) { "Check failed" }
+
+internal inline fun runtimeCheck(value: Boolean) = runtimeCheck(value) { "Check failed" }
 
 internal fun composeRuntimeError(message: String): Nothing {
     throw ComposeRuntimeError(
@@ -4808,4 +4820,70 @@ internal fun extractMovableContentAtCurrent(
         }
     }
     return state
+}
+
+internal class CompositionDataImpl(val composition: Composition) :
+    CompositionData, CompositionInstance {
+    private val slotTable
+        get() = (composition as CompositionImpl).slotTable
+
+    override val compositionGroups: Iterable<CompositionGroup>
+        get() = slotTable.compositionGroups
+
+    override val isEmpty: Boolean
+        get() = slotTable.isEmpty
+
+    override fun find(identityToFind: Any): CompositionGroup? = slotTable.find(identityToFind)
+
+    override fun hashCode(): Int = composition.hashCode() * 31
+
+    override fun equals(other: Any?): Boolean =
+        other is CompositionDataImpl && composition == other.composition
+
+    override val parent: CompositionInstance?
+        get() = composition.parent?.let { CompositionDataImpl(it) }
+
+    override val data: CompositionData
+        get() = this
+
+    override fun findContextGroup(): CompositionGroup? {
+        val parentSlotTable = composition.parent?.slotTable ?: return null
+        val context = composition.context
+
+        parentSlotTable.read { reader ->
+            fun scanGroup(group: Int, end: Int): CompositionGroup? {
+                var current = group
+                while (current < end) {
+                    val next = current + reader.groupSize(current)
+                    if (
+                        reader.hasMark(current) &&
+                            reader.groupKey(current) == referenceKey &&
+                            reader.groupObjectKey(current) == reference
+                    ) {
+                        val contextHolder = reader.groupGet(current, 0) as? CompositionContextHolder
+                        if (contextHolder != null && contextHolder.ref == context) {
+                            return parentSlotTable.compositionGroupOf(current)
+                        }
+                    }
+                    if (reader.containsMark(current)) {
+                        scanGroup(current + 1, next)?.let {
+                            return it
+                        }
+                    }
+                    current = next
+                }
+                return null
+            }
+            return scanGroup(0, reader.size)
+        }
+    }
+
+    private val Composition.slotTable
+        get() = (this as? CompositionImpl)?.slotTable
+
+    private val Composition.context
+        get() = (this as? CompositionImpl)?.parent
+
+    private val Composition.parent
+        get() = context?.composition
 }
