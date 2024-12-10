@@ -983,7 +983,7 @@ interface TestComponent {
 private class ComposeComponent(val name: String): TestComponent {
     override var isFocused = false
     private val focusRequester = FocusRequester()
-    override fun requestFocus() = focusRequester.requestFocus()
+    override fun requestFocus() { focusRequester.requestFocus() }
     override fun toString() = name
 
     val modifier = Modifier
