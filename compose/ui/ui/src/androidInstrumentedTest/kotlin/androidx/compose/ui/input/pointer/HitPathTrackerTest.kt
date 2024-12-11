@@ -62,7 +62,6 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -3361,6 +3360,9 @@ private class MockOwner(
     override val rootForTest: RootForTest
         get() = TODO("Not yet implemented")
 
+    override val layoutNodes: IntObjectMap<LayoutNode>
+        get() = TODO("Not yet implemented")
+
     override val hapticFeedBack: HapticFeedback
         get() = TODO("Not yet implemented")
 
@@ -3415,9 +3417,6 @@ private class MockOwner(
         get() = TODO("Not yet implemented")
 
     override val focusOwner: FocusOwner
-        get() = TODO("Not yet implemented")
-
-    override val semanticsOwner: SemanticsOwner
         get() = TODO("Not yet implemented")
 
     override val windowInfo: WindowInfo
@@ -3565,11 +3564,7 @@ private class MockOwner(
     }
 
     override var measureIteration: Long = 0
-
     override val viewConfiguration: ViewConfiguration
-        get() = TODO("Not yet implemented")
-
-    override val layoutNodes: IntObjectMap<LayoutNode>
         get() = TODO("Not yet implemented")
 
     override val sharedDrawScope = LayoutNodeDrawScope()

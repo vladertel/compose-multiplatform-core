@@ -151,7 +151,7 @@ internal class RootNodeOwner(
             isTraversalGroup = true
         }
     val owner: Owner = OwnerImpl(layoutDirection, coroutineContext)
-    val semanticsOwner = SemanticsOwner(owner.root, rootSemanticsNode, owner.layoutNodes)
+    val semanticsOwner = SemanticsOwner(owner.root, rootSemanticsNode)
     var size: IntSize? = size
         set(value) {
             field = value
@@ -341,7 +341,6 @@ internal class RootNodeOwner(
 
         override val dragAndDropManager = this@RootNodeOwner.dragAndDropOwner
         override val pointerIconService = PointerIconServiceImpl()
-        override val semanticsOwner get() = this@RootNodeOwner.semanticsOwner
         override val focusOwner get() = this@RootNodeOwner.focusOwner
         override val windowInfo get() = platformContext.windowInfo
         // TODO: 1.8.0-alpha02 Implement ComposeUiFlags.isRectTrackingEnabled

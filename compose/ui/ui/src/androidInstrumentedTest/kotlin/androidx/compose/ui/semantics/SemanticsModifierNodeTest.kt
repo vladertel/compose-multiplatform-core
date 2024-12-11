@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.compose.ui.semantics
 
 import androidx.compose.foundation.layout.Box
@@ -21,190 +20,254 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.ComposeUiFlags
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.elementOf
 import androidx.compose.ui.node.invalidateSemantics
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.node.requireLayoutNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 
 @SmallTest
-@RunWith(Parameterized::class)
-class SemanticsModifierNodeTest(private val precomputedSemantics: Boolean) {
+@RunWith(AndroidJUnit4::class)
+class SemanticsModifierNodeTest {
     @get:Rule val rule = createComposeRule()
 
-    companion object {
-        @JvmStatic
-        @Parameterized.Parameters(name = "pre-computed semantics = {0}")
-        fun initParameters() = listOf(false, true)
-    }
+    @Test
+    fun applySemantics_firstComposition() {
+        // Arrange.
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
 
-    @Before
-    fun setup() {
-        @OptIn(ExperimentalComposeUiApi::class)
-        ComposeUiFlags.isSemanticAutofillEnabled = precomputedSemantics
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(0) }
     }
 
     @Test
     fun applySemantics_calledWhenSemanticsIsRead() {
         // Arrange.
-        var applySemanticsInvoked = false
-        rule.setContent {
-            Box(
-                Modifier.elementOf(
-                    TestSemanticsModifier {
-                        testTag = "TestTag"
-                        applySemanticsInvoked = true
-                    }
-                )
-            )
-        }
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+
+        // Act.
+        rule.onNodeWithTag("TestTag").assertExists()
+
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
+    }
+
+    @Test
+    fun applySemantics_calledWhenFetchSemanticsNodeIsCalled() {
+        // Arrange.
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
 
         // Act.
         rule.onNodeWithTag("TestTag").fetchSemanticsNode()
 
         // Assert.
-        rule.runOnIdle { assertThat(applySemanticsInvoked).isTrue() }
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
     }
 
     @Test
-    fun invalidateSemantics_applySemanticsIsCalled() {
+    fun applySemantics_multipleCallsToFetchSemanticsNodeDoesNotTriggerMultipleCalls() {
         // Arrange.
-        var applySemanticsInvoked: Boolean
-        val semanticsModifier = TestSemanticsModifier {
-            testTag = "TestTag"
-            applySemanticsInvoked = true
-        }
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
         rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
-        applySemanticsInvoked = false
+
+        // Act.
+        rule.onNodeWithTag("TestTag").fetchSemanticsNode()
+        rule.onNodeWithTag("TestTag").fetchSemanticsNode()
+        rule.onNodeWithTag("TestTag").fetchSemanticsNode()
+
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
+    }
+
+    @Test
+    fun applySemantics_InResponseToInvalidateSemantics() {
+        // Arrange.
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
 
         // Act.
         rule.runOnIdle { semanticsModifier.invalidateSemantics() }
 
-        // Assert - Apply semantics is not called when we calculate semantics lazily.
-        if (precomputedSemantics) {
-            assertThat(applySemanticsInvoked).isTrue()
-        } else {
-            assertThat(applySemanticsInvoked).isFalse()
-        }
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(0) }
     }
 
     @Test
-    fun invalidateSemantics_applySemanticsNotCalledAgain_whenSemanticsConfigurationIsRead() {
+    fun applySemantics_calledAgainInResponseToInvalidateSemantics() {
         // Arrange.
-        lateinit var rootForTest: RootForTest
-        var applySemanticsInvoked = false
-        var invocationCount = 0
-        val semanticsModifier = TestSemanticsModifier {
-            testTag = "TestTag"
-            text = AnnotatedString("Text ${invocationCount++}")
-            applySemanticsInvoked = true
-        }
-        rule.setContent {
-            rootForTest = LocalView.current as RootForTest
-            Box(Modifier.elementOf(semanticsModifier))
-        }
-        val semanticsId = rule.onNodeWithTag("TestTag").semanticsId()
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+
+        // Act.
+        rule.onNodeWithTag("TestTag").assertExists()
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.onNodeWithTag("TestTag").assertExists()
+
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(2) }
+    }
+
+    @Test
+    fun applySemantics_calledInResponseToMultipleInvalidateSemantics() {
+        // Arrange.
+        val semanticsModifier = TestSemanticsModifier { testTag = "TestTag" }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+
+        // Act.
+        rule.onNodeWithTag("TestTag").assertExists()
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.runOnIdle { semanticsModifier.invalidateSemantics() }
+        rule.onNodeWithTag("TestTag").assertExists()
+
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(2) }
+    }
+
+    @Test
+    fun applySemantics_calledAutomaticallyInResponseToChangesToObservedReads() {
+        // Arrange.
+        var tag by mutableStateOf("tag1")
+        val semanticsModifier = TestSemanticsModifier { testTag = tag }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+        rule.onNodeWithTag("tag1").assertExists()
+        semanticsModifier.resetCounters()
+
+        // Act,
+        rule.runOnIdle { tag = "tag2" }
+        rule.onNodeWithTag("tag2").assertExists()
+
+        // Assert - additional invocation due to the change in mutable state.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
+    }
+
+    @Test
+    fun applySemantics_notCalledAutomaticallyInResponseToChangesToNonObservedReads() {
+        // Arrange.
+        var tag = "tag1"
+        val semanticsModifier = TestSemanticsModifier { testTag = tag }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+        rule.onNodeWithTag("tag1").assertExists()
+        semanticsModifier.resetCounters()
+
+        // Act,
+        rule.runOnIdle { tag = "tag2" }
+
+        // Assert - Can't find the new item without invalidation.
+        rule.onNodeWithTag("tag2").assertDoesNotExist()
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(0) }
+    }
+
+    @Test
+    fun applySemantics_calledInResponseToChangesToNonObservedReads_whenInvalidated() {
+        // Arrange.
+        var tag = "tag1"
+        val semanticsModifier = TestSemanticsModifier { testTag = tag }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
+        rule.onNodeWithTag("tag1").assertExists()
+        semanticsModifier.resetCounters()
+
+        // Act,
         rule.runOnIdle {
+            tag = "tag2"
             semanticsModifier.invalidateSemantics()
-            applySemanticsInvoked = false
         }
 
-        // Act.
-        val semanticsInfo = checkNotNull(rootForTest.semanticsOwner[semanticsId])
-        val semanticsConfiguration = semanticsInfo.semanticsConfiguration
-
-        // Assert - Configuration recalculated when we calculate semantics lazily.
-        if (precomputedSemantics) {
-            assertThat(applySemanticsInvoked).isFalse()
-        } else {
-            assertThat(applySemanticsInvoked).isTrue()
-        }
-        assertThat(semanticsConfiguration?.text()).containsExactly("Text 2")
+        // Assert - finds the new item after invalidation.
+        rule.onNodeWithTag("tag2").assertExists()
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
     }
 
     @Test
-    fun readingSemanticsConfigurationOfDeactivatedNode() {
+    fun applySemantics_notCalledForDeactivatedNode() {
         // Arrange.
         lateinit var lazyListState: LazyListState
-        lateinit var rootForTest: RootForTest
+        val semanticsModifiers = List(2) { TestSemanticsModifier { testTag = "$it" } }
         rule.setContent {
-            rootForTest = LocalView.current as RootForTest
             lazyListState = rememberLazyListState()
             LazyRow(state = lazyListState, modifier = Modifier.size(10.dp)) {
-                items(2) { index ->
-                    Box(Modifier.size(10.dp).testTag("$index").elementOf(TestSemanticsModifier {}))
-                }
+                items(2) { index -> Box(Modifier.size(10.dp).elementOf(semanticsModifiers[index])) }
             }
         }
-        val semanticsId = rule.onNodeWithTag("0").semanticsId()
-        val semanticsInfo = checkNotNull(rootForTest.semanticsOwner[semanticsId])
+        rule.runOnIdle { semanticsModifiers[0].resetCounters() }
 
         // Act.
         rule.runOnIdle { lazyListState.requestScrollToItem(1) }
-        val semanticsConfiguration = rule.runOnIdle { semanticsInfo.semanticsConfiguration }
 
         // Assert.
-        rule.runOnIdle {
-            assertThat(semanticsInfo.isDeactivated).isTrue()
-            assertThat(semanticsConfiguration).isNull()
-        }
+        rule.onNodeWithTag("0").assertDoesNotExist()
+        assertThat(semanticsModifiers[0].applySemanticsInvocations).isEqualTo(0)
+        assertThat(semanticsModifiers[0].requireLayoutNode().collapsedSemantics).isNull()
+        assertThat(semanticsModifiers[0].applySemanticsInvocations).isEqualTo(0)
     }
 
     @Test
-    fun readingSemanticsConfigurationOfDeactivatedNode_afterCallingInvalidate() {
+    fun invalidateSemantics_onDeactivatedNodeDoesNotCrash() {
         // Arrange.
         lateinit var lazyListState: LazyListState
-        lateinit var rootForTest: RootForTest
-        val semanticsModifierNodes = List(2) { TestSemanticsModifier {} }
+        val semanticsModifiers = List(2) { TestSemanticsModifier { testTag = "$it" } }
         rule.setContent {
-            rootForTest = LocalView.current as RootForTest
             lazyListState = rememberLazyListState()
             LazyRow(state = lazyListState, modifier = Modifier.size(10.dp)) {
-                items(2) { index ->
-                    Box(
-                        Modifier.size(10.dp)
-                            .testTag("$index")
-                            .elementOf(semanticsModifierNodes[index])
-                    )
-                }
+                items(2) { index -> Box(Modifier.size(10.dp).elementOf(semanticsModifiers[index])) }
             }
         }
-        val semanticsId = rule.onNodeWithTag("0").semanticsId()
-        val semanticsInfo = checkNotNull(rootForTest.semanticsOwner[semanticsId])
+        rule.runOnIdle { lazyListState.requestScrollToItem(1) }
 
         // Act.
-        rule.runOnIdle { lazyListState.requestScrollToItem(1) }
-        semanticsModifierNodes[0].invalidateSemantics()
-        val semanticsConfiguration = rule.runOnIdle { semanticsInfo.semanticsConfiguration }
+        rule.runOnIdle { semanticsModifiers[0].invalidateSemantics() }
 
         // Assert.
-        rule.runOnIdle {
-            assertThat(semanticsInfo.isDeactivated).isTrue()
-            assertThat(semanticsConfiguration).isNull()
-        }
+        rule.onNodeWithTag("0").assertDoesNotExist()
+        assertThat(semanticsModifiers[0].requireLayoutNode().collapsedSemantics).isNull()
     }
 
-    fun SemanticsConfiguration.text() = getOrNull(SemanticsProperties.Text)?.map { it.text }
+    @Test
+    fun invalidateSemantics_calledWithinApplySemantics_doesNotTriggerAnotherCallToApplySemantics() {
+        // Arrange.
+        lateinit var semanticsModifier: TestSemanticsModifier
+        semanticsModifier = TestSemanticsModifier {
+            testTag = "tag"
+            semanticsModifier.invalidateSemantics()
+        }
+        rule.setContent { Box(Modifier.elementOf(semanticsModifier)) }
 
-    class TestSemanticsModifier(
+        // Act.
+        rule.onNodeWithTag("tag").assertExists()
+
+        // Assert.
+        rule.runOnIdle { assertThat(semanticsModifier.applySemanticsInvocations).isEqualTo(1) }
+    }
+
+    private class TestSemanticsModifier(
         private val onApplySemantics: SemanticsPropertyReceiver.() -> Unit
     ) : SemanticsModifierNode, Modifier.Node() {
+        var applySemanticsInvocations = 0
+
+        fun resetCounters() {
+            applySemanticsInvocations = 0
+        }
+
         override fun SemanticsPropertyReceiver.applySemantics() {
+            applySemanticsInvocations++
             onApplySemantics.invoke(this)
         }
     }

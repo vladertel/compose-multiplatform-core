@@ -18,7 +18,6 @@
 package androidx.compose.ui.node
 
 import androidx.collection.IntObjectMap
-import androidx.collection.intObjectMapOf
 import androidx.compose.testutils.TestViewConfiguration
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -67,10 +66,8 @@ import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.platform.invertTo
-import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsModifier
-import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
@@ -2317,8 +2314,6 @@ private class EmptyLayoutModifier : LayoutModifier {
 internal class MockOwner(
     private val position: IntOffset = IntOffset.Zero,
     override val root: LayoutNode = LayoutNode(),
-    override val semanticsOwner: SemanticsOwner =
-        SemanticsOwner(root, EmptySemanticsModifier(), intObjectMapOf()),
     override val coroutineContext: CoroutineContext =
         Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 ) : Owner {
@@ -2328,6 +2323,9 @@ internal class MockOwner(
     var layoutChangeCount = 0
 
     override val rootForTest: RootForTest
+        get() = TODO("Not yet implemented")
+
+    override val layoutNodes: IntObjectMap<LayoutNode>
         get() = TODO("Not yet implemented")
 
     override val hapticFeedBack: HapticFeedback
@@ -2549,9 +2547,6 @@ internal class MockOwner(
 
     override var measureIteration: Long = 0
     override val viewConfiguration: ViewConfiguration
-        get() = TODO("Not yet implemented")
-
-    override val layoutNodes: IntObjectMap<LayoutNode>
         get() = TODO("Not yet implemented")
 
     override val sharedDrawScope = LayoutNodeDrawScope()

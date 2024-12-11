@@ -135,7 +135,7 @@ internal class FocusOwnerImpl(
      */
     override fun takeFocus(focusDirection: FocusDirection, previouslyFocusedRect: Rect?): Boolean {
         return focusSearch(focusDirection, previouslyFocusedRect) {
-            it.requestFocus(focusDirection) ?: false
+            it.requestFocus(focusDirection)
         } ?: false
     }
 
@@ -203,11 +203,17 @@ internal class FocusOwnerImpl(
      */
     override fun moveFocus(focusDirection: FocusDirection): Boolean {
         var requestFocusSuccess: Boolean? = false
+        val generationBefore = focusTransactionManager.generation
         val focusSearchSuccess =
             focusSearch(focusDirection, onFocusRectInterop()) {
                 requestFocusSuccess = it.requestFocus(focusDirection)
                 requestFocusSuccess ?: false
             }
+        val generationAfter = focusTransactionManager.generation
+        if (focusSearchSuccess == true && generationBefore != generationAfter) {
+            // There was a successful requestFocus() during the focusSearch
+            return true
+        }
 
         // If focus search was cancelled, or if focus search succeeded but request focus was
         // cancelled, it implies that moveFocus() failed.
@@ -316,8 +322,10 @@ internal class FocusOwnerImpl(
         event: RotaryScrollEvent,
         onFocusedItem: () -> Boolean
     ): Boolean {
-        check(!focusInvalidationManager.hasPendingInvalidation()) {
-            "Dispatching rotary event while focus system is invalidated."
+        if (focusInvalidationManager.hasPendingInvalidation()) {
+            // Ignoring this to unblock b/379289347.
+            println("$Warning: Dispatching rotary event while the focus system is invalidated.")
+            return false
         }
 
         val focusedRotaryInputNode =

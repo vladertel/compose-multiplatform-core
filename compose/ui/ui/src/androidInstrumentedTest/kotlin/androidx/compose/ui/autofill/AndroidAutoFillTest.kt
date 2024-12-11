@@ -78,7 +78,6 @@ class AndroidAutoFillTest {
     @Test
     fun onProvideAutofillVirtualStructure_populatesViewStructure() {
         if (isSemanticAutofillEnabled) return
-
         // Arrange.
         val viewStructure: ViewStructure = FakeViewStructure()
         val autofillNode =
@@ -114,7 +113,6 @@ class AndroidAutoFillTest {
     @Test
     fun autofill_triggersOnFill() {
         if (isSemanticAutofillEnabled) return
-
         // Arrange.
         val expectedValue = "PersonName"
         var autofilledValue = ""

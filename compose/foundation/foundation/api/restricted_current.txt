@@ -110,11 +110,9 @@ package androidx.compose.foundation {
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public final class ComposeFoundationFlags {
     property public final boolean DragGesturePickUpEnabled;
     property public final boolean NewNestedFlingPropagationEnabled;
-    property public final boolean RemoveBasicTextGraphicsLayerEnabled;
     field public static boolean DragGesturePickUpEnabled;
     field public static final androidx.compose.foundation.ComposeFoundationFlags INSTANCE;
     field public static boolean NewNestedFlingPropagationEnabled;
-    field public static boolean RemoveBasicTextGraphicsLayerEnabled;
   }
 
   public final class DarkThemeKt {
@@ -258,8 +256,8 @@ package androidx.compose.foundation {
     method public static androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.OverscrollFactory?> getLocalOverscrollFactory();
     method public static androidx.compose.ui.Modifier overscroll(androidx.compose.ui.Modifier, androidx.compose.foundation.OverscrollEffect? overscrollEffect);
     method @androidx.compose.runtime.Composable public static androidx.compose.foundation.OverscrollEffect? rememberOverscrollEffect();
-    method @androidx.compose.runtime.Stable public static androidx.compose.foundation.OverscrollEffect withoutDrawing(androidx.compose.foundation.OverscrollEffect);
     method @androidx.compose.runtime.Stable public static androidx.compose.foundation.OverscrollEffect withoutEventHandling(androidx.compose.foundation.OverscrollEffect);
+    method @androidx.compose.runtime.Stable public static androidx.compose.foundation.OverscrollEffect withoutVisualEffect(androidx.compose.foundation.OverscrollEffect);
     property public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.OverscrollFactory?> LocalOverscrollFactory;
   }
 
@@ -927,7 +925,7 @@ package androidx.compose.foundation.lazy {
     method public default void items(int count, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,? extends java.lang.Object?> contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.LazyItemScope,? super java.lang.Integer,kotlin.Unit> itemContent);
     method @Deprecated public void items(int count, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.LazyItemScope,? super java.lang.Integer,kotlin.Unit> itemContent);
     method @Deprecated public void stickyHeader(optional Object? key, optional Object? contentType, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.LazyItemScope,kotlin.Unit> content);
-    method public void stickyHeader(optional Object? key, optional Object? contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.LazyItemScope,? super java.lang.Integer,kotlin.Unit> content);
+    method public default void stickyHeader(optional Object? key, optional Object? contentType, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.lazy.LazyItemScope,? super java.lang.Integer,kotlin.Unit> content);
   }
 
   public final class LazyListScrollScopeKt {
@@ -1542,16 +1540,12 @@ package androidx.compose.foundation.relocation {
   public final class BringIntoViewRequesterKt {
     method public static androidx.compose.foundation.relocation.BringIntoViewRequester BringIntoViewRequester();
     method public static androidx.compose.ui.Modifier bringIntoViewRequester(androidx.compose.ui.Modifier, androidx.compose.foundation.relocation.BringIntoViewRequester bringIntoViewRequester);
-    method public static androidx.compose.ui.Modifier bringIntoViewResponder(androidx.compose.ui.Modifier, androidx.compose.foundation.relocation.BringIntoViewResponder responder);
+    method @Deprecated public static androidx.compose.ui.Modifier bringIntoViewResponder(androidx.compose.ui.Modifier, androidx.compose.foundation.relocation.BringIntoViewResponder responder);
   }
 
-  public interface BringIntoViewResponder {
-    method public suspend Object? bringChildIntoView(kotlin.jvm.functions.Function0<androidx.compose.ui.geometry.Rect?> localRect, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-    method public androidx.compose.ui.geometry.Rect calculateRectForParent(androidx.compose.ui.geometry.Rect localRect);
-  }
-
-  public final class ScrollIntoView {
-    method public static suspend Object? scrollIntoView(androidx.compose.ui.node.DelegatableNode, optional androidx.compose.ui.geometry.Rect? rect, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  @Deprecated public interface BringIntoViewResponder {
+    method @Deprecated public suspend Object? bringChildIntoView(kotlin.jvm.functions.Function0<androidx.compose.ui.geometry.Rect?> localRect, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method @Deprecated public androidx.compose.ui.geometry.Rect calculateRectForParent(androidx.compose.ui.geometry.Rect localRect);
   }
 
 }
@@ -1697,21 +1691,9 @@ package androidx.compose.foundation.text {
     field public static final androidx.compose.foundation.text.AutoSizeDefaults INSTANCE;
   }
 
-  @kotlin.jvm.JvmInline public final value class AutofillHighlight {
-    ctor public AutofillHighlight(long autofillHighlightColor);
-    method public long getAutofillHighlightColor();
-    property public final long autofillHighlightColor;
-    field public static final androidx.compose.foundation.text.AutofillHighlight.Companion Companion;
-  }
-
-  public static final class AutofillHighlight.Companion {
-    method public long getDefault();
-    property public final long Default;
-  }
-
   public final class AutofillHighlightKt {
-    method public static androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.text.AutofillHighlight> getLocalAutofillHighlight();
-    property public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.text.AutofillHighlight> LocalAutofillHighlight;
+    method public static androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.graphics.Color> getLocalAutofillHighlightColor();
+    property public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.graphics.Color> LocalAutofillHighlightColor;
   }
 
   public final class BasicSecureTextFieldKt {

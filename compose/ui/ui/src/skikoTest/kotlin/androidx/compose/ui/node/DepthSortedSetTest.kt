@@ -213,7 +213,6 @@ class DepthSortedSetTest {
         override fun localToScreen(localPosition: Offset): Offset = throw IllegalStateException()
         override val dragAndDropManager: DragAndDropManager get() = throw IllegalStateException()
         override val pointerIconService: PointerIconService get() = throw IllegalStateException()
-        override val semanticsOwner: SemanticsOwner get() = throw IllegalStateException()
         override val focusOwner: FocusOwner get() = throw IllegalStateException()
         override val windowInfo: WindowInfo get() = throw IllegalStateException()
         override val rectManager: RectManager get() = throw IllegalStateException()

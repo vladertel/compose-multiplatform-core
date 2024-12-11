@@ -1051,18 +1051,8 @@ public final class androidx/compose/runtime/snapshots/SnapshotContextElementKt {
 }
 
 public final class androidx/compose/runtime/snapshots/SnapshotId_jvmKt {
-	public static final field SnapshotIdInvalidValue J
-	public static final field SnapshotIdMax J
-	public static final field SnapshotIdSize I
-	public static final field SnapshotIdZero J
-	public static final fun compareTo (JI)I
-	public static final fun compareTo (JJ)I
-	public static final fun div (JI)J
-	public static final fun minus (JI)J
-	public static final fun minus (JJ)J
-	public static final fun plus (JI)J
-	public static final fun times (JI)J
 	public static final fun toInt (J)I
+	public static final fun toLong (J)J
 }
 
 public final class androidx/compose/runtime/snapshots/SnapshotKt {
@@ -1234,6 +1224,10 @@ public abstract interface class androidx/compose/runtime/tooling/CompositionData
 	public abstract fun isEmpty ()Z
 }
 
+public final class androidx/compose/runtime/tooling/CompositionDataKt {
+	public static final fun findCompositionInstance (Landroidx/compose/runtime/tooling/CompositionData;)Landroidx/compose/runtime/tooling/CompositionInstance;
+}
+
 public abstract interface class androidx/compose/runtime/tooling/CompositionGroup : androidx/compose/runtime/tooling/CompositionData {
 	public abstract fun getData ()Ljava/lang/Iterable;
 	public fun getGroupSize ()I
@@ -1249,6 +1243,12 @@ public final class androidx/compose/runtime/tooling/CompositionGroup$DefaultImpl
 	public static fun getGroupSize (Landroidx/compose/runtime/tooling/CompositionGroup;)I
 	public static fun getIdentity (Landroidx/compose/runtime/tooling/CompositionGroup;)Ljava/lang/Object;
 	public static fun getSlotsSize (Landroidx/compose/runtime/tooling/CompositionGroup;)I
+}
+
+public abstract interface class androidx/compose/runtime/tooling/CompositionInstance {
+	public abstract fun findContextGroup ()Landroidx/compose/runtime/tooling/CompositionGroup;
+	public abstract fun getData ()Landroidx/compose/runtime/tooling/CompositionData;
+	public abstract fun getParent ()Landroidx/compose/runtime/tooling/CompositionInstance;
 }
 
 public abstract interface class androidx/compose/runtime/tooling/CompositionObserver {

@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -132,8 +131,6 @@ internal interface Owner : PositionCalculator {
     val softwareKeyboardController: SoftwareKeyboardController
 
     val pointerIconService: PointerIconService
-
-    val semanticsOwner: SemanticsOwner
 
     /** Provide a focus owner that controls focus within Compose. */
     val focusOwner: FocusOwner
@@ -270,6 +267,9 @@ internal interface Owner : PositionCalculator {
     fun onLayoutChange(layoutNode: LayoutNode)
 
     fun onLayoutNodeDeactivated(layoutNode: LayoutNode)
+
+    /** Called to do internal upkeep when a [layoutNode] is reused. */
+    fun onLayoutNodeReused(layoutNode: LayoutNode, oldSemanticsId: Int) {}
 
     /**
      * The position and/or size of an interop view (typically, an android.view.View) has changed. On
