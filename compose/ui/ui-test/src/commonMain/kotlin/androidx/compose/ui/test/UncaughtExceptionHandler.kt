@@ -20,6 +20,7 @@ import androidx.compose.ui.test.platform.makeSynchronizedObject
 import androidx.compose.ui.test.platform.synchronized
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineExceptionHandler
 
 /**
  * Similar to [TestCoroutineExceptionHandler], but with clearing all thrown exceptions

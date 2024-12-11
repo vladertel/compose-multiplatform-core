@@ -941,7 +941,9 @@ public final class androidx/compose/ui/focus/FocusRequester {
 	public fun <init> ()V
 	public final fun captureFocus ()Z
 	public final fun freeFocus ()Z
-	public final fun requestFocus ()V
+	public final synthetic fun requestFocus ()V
+	public final fun requestFocus-3ESFkO8 (I)Z
+	public static synthetic fun requestFocus-3ESFkO8$default (Landroidx/compose/ui/focus/FocusRequester;IILjava/lang/Object;)Z
 	public final fun restoreFocusedChild ()Z
 	public final fun saveFocusedChild ()Z
 }
@@ -1015,7 +1017,9 @@ public abstract interface class androidx/compose/ui/focus/FocusState {
 public abstract interface class androidx/compose/ui/focus/FocusTargetModifierNode : androidx/compose/ui/node/DelegatableNode {
 	public abstract fun getFocusState ()Landroidx/compose/ui/focus/FocusState;
 	public abstract fun getFocusability-LCbbffg ()I
-	public abstract fun requestFocus ()Z
+	public abstract synthetic fun requestFocus ()Z
+	public abstract fun requestFocus-3ESFkO8 (I)Z
+	public static synthetic fun requestFocus-3ESFkO8$default (Landroidx/compose/ui/focus/FocusTargetModifierNode;IILjava/lang/Object;)Z
 	public abstract fun setFocusability-josRg5g (I)V
 }
 
@@ -3471,6 +3475,10 @@ public abstract class androidx/compose/ui/platform/InspectorValueInfo : androidx
 	public fun getValueOverride ()Ljava/lang/Object;
 }
 
+public final class androidx/compose/ui/platform/JvmActuals_jvmKt {
+	public static final synthetic fun synchronized (Landroidx/compose/ui/platform/SynchronizedObject;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
 public final class androidx/compose/ui/platform/NativeClipboard {
 	public static final field $stable I
 	public fun <init> ()V
@@ -3677,6 +3685,15 @@ public abstract interface class androidx/compose/ui/platform/WindowInfo {
 	public fun getContainerSize-YbymL2g ()J
 	public fun getKeyboardModifiers-k7X9c1A ()I
 	public abstract fun isWindowFocused ()Z
+}
+
+public abstract interface class androidx/compose/ui/relocation/BringIntoViewModifierNode : androidx/compose/ui/node/DelegatableNode {
+	public abstract fun bringIntoView (Landroidx/compose/ui/layout/LayoutCoordinates;Lkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class androidx/compose/ui/relocation/BringIntoViewModifierNodeKt {
+	public static final fun bringIntoView (Landroidx/compose/ui/node/DelegatableNode;Lkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun bringIntoView$default (Landroidx/compose/ui/node/DelegatableNode;Lkotlin/jvm/functions/Function0;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class androidx/compose/ui/res/DesktopSvgResources_desktopKt {
