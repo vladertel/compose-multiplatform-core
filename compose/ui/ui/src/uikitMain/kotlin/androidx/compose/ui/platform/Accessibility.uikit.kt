@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.viewinterop.InteropWrappingView
 import androidx.compose.ui.viewinterop.NativeAccessibilityViewSemanticsKey
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.roundToInt
 import kotlin.time.measureTime
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
@@ -53,6 +54,9 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.skiko.OS
+import org.jetbrains.skiko.OSVersion
+import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectZero
@@ -77,8 +81,11 @@ import platform.UIKit.UIAccessibilityTraitImage
 import platform.UIKit.UIAccessibilityTraitNone
 import platform.UIKit.UIAccessibilityTraitNotEnabled
 import platform.UIKit.UIAccessibilityTraitSelected
+import platform.UIKit.UIAccessibilityTraitStaticText
+import platform.UIKit.UIAccessibilityTraitToggleButton
 import platform.UIKit.UIAccessibilityTraitUpdatesFrequently
 import platform.UIKit.UIAccessibilityTraits
+import platform.UIKit.UITextInputProtocol
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 import platform.UIKit.accessibilityCustomActions
@@ -108,7 +115,6 @@ private class CachedAccessibilityPropertyKey<V>
 
 private object CachedAccessibilityPropertyKeys {
     val accessibilityLabel = CachedAccessibilityPropertyKey<String?>()
-    val isAccessibilityElement = CachedAccessibilityPropertyKey<Boolean>()
     val accessibilityIdentifier = CachedAccessibilityPropertyKey<String?>()
     val accessibilityHint = CachedAccessibilityPropertyKey<String?>()
     val accessibilityCustomActions = CachedAccessibilityPropertyKey<List<UIAccessibilityCustomAction>>()
@@ -117,6 +123,10 @@ private object CachedAccessibilityPropertyKeys {
     val accessibilityFrame = CachedAccessibilityPropertyKey<CValue<CGRect>>()
     val nativeAccessibilityView = CachedAccessibilityPropertyKey<InteropWrappingView?>()
 }
+
+// Private accessibility trait for text fields
+internal val CMPAccessibilityTraitTextField: UIAccessibilityTraits = 1UL shl 18
+internal val CMPAccessibilityTraitIsEditing: UIAccessibilityTraits = 1UL shl 21
 
 /**
  * Represents a projection of the Compose semantics node to the iOS world.
@@ -343,6 +353,22 @@ private class AccessibilityElement(
         val action = onClick.action ?: return false
 
         return action()
+    }
+
+    override fun accessibilityIncrement() {
+        updateProgress(increment = true)
+    }
+
+    override fun accessibilityDecrement() {
+        updateProgress(increment = false)
+    }
+
+    private fun updateProgress(increment: Boolean) {
+        val progress = cachedConfig.getOrNull(SemanticsProperties.ProgressBarRangeInfo) ?: return
+        val setProgress = cachedConfig.getOrNull(SemanticsActions.SetProgress) ?: return
+        val step = (progress.range.endInclusive - progress.range.start) / progress.steps
+        val value = progress.current + if (increment) step else -step
+        setProgress.action?.invoke(value)
     }
 
     /**
@@ -593,10 +619,11 @@ private class AccessibilityElement(
         }
     }
 
-    override fun isAccessibilityElement(): Boolean =
-        getOrElse(CachedAccessibilityPropertyKeys.isAccessibilityElement) {
-            semanticsNode.isAccessibilityElement
-        }
+    override fun isAccessibilityElement(): Boolean {
+        // Node visibility changes don't trigger accessibility semantic recalculation.
+        // This value should not be cached. See [SemanticsNode.isHidden]
+        return semanticsNode.isAccessibilityElement
+    }
 
     override fun accessibilityIdentifier(): String? =
         getOrElse(CachedAccessibilityPropertyKeys.accessibilityIdentifier) {
@@ -647,6 +674,12 @@ private class AccessibilityElement(
                 result = result or UIAccessibilityTraitNotEnabled
             }
 
+            config.getOrNull(SemanticsProperties.Selected)?.let { selected ->
+                if (selected) {
+                    result = result or UIAccessibilityTraitSelected
+                }
+            }
+
             if (config.contains(SemanticsProperties.Heading)) {
                 result = result or UIAccessibilityTraitHeader
             }
@@ -663,17 +696,23 @@ private class AccessibilityElement(
                 }
             }
 
-            config.getOrNull(SemanticsProperties.LiveRegion)?.let {
-                result = result or UIAccessibilityTraitUpdatesFrequently
+            if (config.contains(SemanticsProperties.ProgressBarRangeInfo)) {
+                if (config.contains(SemanticsActions.SetProgress)) {
+                    result = result or UIAccessibilityTraitAdjustable
+                }
             }
 
-            config.getOrNull(SemanticsActions.OnClick)?.let {
+            if (config.contains(SemanticsProperties.EditableText) &&
+                config.contains(SemanticsActions.SetText)
+            ) {
+                result = result or CMPAccessibilityTraitTextField
+            } else if (config.contains(SemanticsActions.OnClick)) {
                 result = result or UIAccessibilityTraitButton
             }
 
             config.getOrNull(SemanticsProperties.Role)?.let { role ->
                 when (role) {
-                    Role.Button, Role.RadioButton, Role.Checkbox, Role.Switch -> {
+                    Role.Button -> {
                         result = result or UIAccessibilityTraitButton
                     }
 
@@ -684,16 +723,45 @@ private class AccessibilityElement(
                     Role.Image -> {
                         result = result or UIAccessibilityTraitImage
                     }
+
+                    Role.Switch -> {
+                        if (available(OS.Ios to OSVersion(major = 17))) {
+                            result = result or UIAccessibilityTraitToggleButton
+                        }
+                    }
                 }
+            }
+
+            if (result == UIAccessibilityTraitNone &&
+                config.contains(SemanticsProperties.Text) &&
+                config.contains(SemanticsActions.GetTextLayoutResult) &&
+                config.contains(SemanticsActions.ShowTextSubstitution)
+            ) {
+                result = result or UIAccessibilityTraitStaticText
             }
 
             result
         }
 
+    override fun accessibilityTextInputResponder(): UITextInputProtocol? {
+        return null
+    }
 
     override fun accessibilityValue(): String? =
         getOrElse(CachedAccessibilityPropertyKeys.accessibilityValue) {
-            cachedConfig.getOrNull(SemanticsProperties.StateDescription)
+            cachedConfig.getOrNull(SemanticsProperties.StateDescription)?.let {
+                return@getOrElse it
+            }
+
+            cachedConfig.getOrNull(SemanticsProperties.ProgressBarRangeInfo)?.let {
+                return@getOrElse if (!it.range.isEmpty()) {
+                    val fraction = (it.current - it.range.start) /
+                        (it.range.endInclusive - it.range.start)
+                    "${(fraction * 100f).roundToInt()}%"
+                } else {
+                    null
+                }
+            }
         }
 
     override fun accessibilityFrame(): CValue<CGRect> =
@@ -703,7 +771,6 @@ private class AccessibilityElement(
             // which can be different from the root UIWindow space.
             mediator.convertToAppWindowCGRect(semanticsNode.boundsInWindow)
         }
-
 
     override fun accessibilityPerformEscape(): Boolean {
         if (!isAlive) {
@@ -796,7 +863,6 @@ private class AccessibilityElement(
         logger.apply {
             log("${indent}AccessibilityElement_$semanticsNodeId")
             log("$indent  containmentChain: ${debugContainmentChain()}")
-            log("$indent  isAccessibilityElement: $isAccessibilityElement")
             log("$indent  accessibilityLabel: $accessibilityLabel")
             log("$indent  accessibilityValue: $accessibilityValue")
             log("$indent  accessibilityTraits: $accessibilityTraits")
@@ -812,7 +878,7 @@ private class AccessibilityElement(
         }
 
         val containsPoint = semanticsNode.boundsInWindow.contains(offsetInWindow)
-        if (containsPoint && isAccessibilityElement) {
+        if (containsPoint && semanticsNode.isAccessibilityElement) {
             return this
         }
 
@@ -1095,6 +1161,7 @@ internal class AccessibilityMediator(
         accessibilityDebugLogger?.log("AccessibilityMediator for $view created")
 
         view.accessibilityElements = listOf<NSObject>()
+        var notificationName = UIAccessibilityScreenChangedNotification
         coroutineScope.launch {
             // The main loop that listens for invalidations and performs the tree syncing
             // Will exit on CancellationException from within await on `invalidationChannel.receive()`
@@ -1118,8 +1185,10 @@ internal class AccessibilityMediator(
 
                     debugLogger?.log("AccessibilityMediator.sync took $time")
                     debugLogger?.log("LayoutChanged, newElementToFocus: ${result.newElementToFocus}")
+                    UIAccessibilityPostNotification(notificationName, result.newElementToFocus)
 
-                    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, result.newElementToFocus)
+                    // Post screen change notification only once
+                    notificationName = UIAccessibilityLayoutChangedNotification
                 } else {
                     if (view.accessibilityElements?.isEmpty() != true) {
                         view.accessibilityElements = listOf<NSObject>()
@@ -1479,26 +1548,25 @@ private val SemanticsNode.isValid: Boolean
 private val SemanticsNode.isRTL: Boolean
     get() = layoutInfo.layoutDirection == LayoutDirection.Rtl
 
-private val SemanticsNode.isAccessibilityElement: Boolean get() {
-    val config = this.config
+private val SemanticsNode.isAccessibilityElement: Boolean
+    get() = isScreenReaderFocusable()
 
-    @Suppress("DEPRECATION")
-    return if (isHidden) {
-        false
-    } else {
-        if (config.getOrNull(SemanticsProperties.IsTraversalGroup) == true
-            || config.contains(SemanticsProperties.IsPopup)
-            || config.contains(SemanticsProperties.IsDialog)
-        ) {
-            false
-        } else if (config.getOrNull(SemanticsProperties.IsContainer) == true &&
-            config.props.size == 1
-        ) {
-            false
-        } else {
-            config.containsImportantForAccessibility()
-        }
-    }
+// Simplified version of the isScreenReaderFocusable() from the
+// AndroidComposeViewAccessibilityDelegateCompat.android.kt
+private fun SemanticsNode.isScreenReaderFocusable(): Boolean {
+    return !isHidden &&
+        (unmergedConfig.isMergingSemanticsOfDescendants ||
+            isUnmergedLeafNode && isSpeakingNode)
+}
+
+private val SemanticsNode.isSpeakingNode: Boolean get() {
+    return unmergedConfig.contains(SemanticsProperties.ContentDescription) ||
+        unmergedConfig.contains(SemanticsProperties.EditableText) ||
+        unmergedConfig.contains(SemanticsProperties.Text) ||
+        unmergedConfig.contains(SemanticsProperties.StateDescription) ||
+        unmergedConfig.contains(SemanticsProperties.ToggleableState) ||
+        unmergedConfig.contains(SemanticsProperties.Selected) ||
+        unmergedConfig.contains(SemanticsProperties.ProgressBarRangeInfo)
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
